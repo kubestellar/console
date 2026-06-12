@@ -19,7 +19,7 @@ import (
 func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "pods", getDemoPods())
+		return demoResponse(c, "pods", getDemoPods())
 	}
 
 	cluster := c.Query("cluster")
@@ -81,7 +81,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "issues", getDemoPodIssues())
+		return demoResponse(c, "issues", getDemoPodIssues())
 	}
 
 	cluster := c.Query("cluster")

@@ -609,40 +609,6 @@ func getDemoWorkloads() []v1alpha1.Workload {
 	}
 }
 
-// Demo pod network stats — realistic throughput for multi-tenancy topology
-func getDemoPodNetworkStats() []PodNetworkStats {
-	/** Realistic throughput values (bytes/sec) for demo visualization */
-	const kvEth0RxRate int64 = 10240 // 10 KB/s — KubeVirt data-plane rx
-	const kvEth0TxRate int64 = 5120  // 5 KB/s — KubeVirt data-plane tx
-	const kvEth1RxRate int64 = 2560  // 2.5 KB/s — KubeVirt control-plane rx
-	const kvEth1TxRate int64 = 1280  // 1.3 KB/s — KubeVirt control-plane tx
-	const k3sEth0RxRate int64 = 5120 // 5 KB/s — K3s management rx
-	const k3sEth0TxRate int64 = 2560 // 2.5 KB/s — K3s management tx
-	const k3sEth1RxRate int64 = 1280 // 1.3 KB/s — K3s control-plane rx
-	const k3sEth1TxRate int64 = 640  // 0.6 KB/s — K3s control-plane tx
-
-	return []PodNetworkStats{
-		{
-			PodName:   "tenant-1-vm-virt-launcher-abc12",
-			Namespace: "tenant-1-ns1",
-			Component: "kubevirt",
-			Interfaces: []InterfaceStats{
-				{Name: "eth0", RxBytes: kvEth0RxRate * networkStatsPollIntervalSec, TxBytes: kvEth0TxRate * networkStatsPollIntervalSec, RxBytesPerSec: kvEth0RxRate, TxBytesPerSec: kvEth0TxRate},
-				{Name: "eth1", RxBytes: kvEth1RxRate * networkStatsPollIntervalSec, TxBytes: kvEth1TxRate * networkStatsPollIntervalSec, RxBytesPerSec: kvEth1RxRate, TxBytesPerSec: kvEth1TxRate},
-			},
-		},
-		{
-			PodName:   "k3s-server-xyz89",
-			Namespace: "tenant-1-ns2",
-			Component: "k3s",
-			Interfaces: []InterfaceStats{
-				{Name: "eth0", RxBytes: k3sEth0RxRate * networkStatsPollIntervalSec, TxBytes: k3sEth0TxRate * networkStatsPollIntervalSec, RxBytesPerSec: k3sEth0RxRate, TxBytesPerSec: k3sEth0TxRate},
-				{Name: "eth1", RxBytes: k3sEth1RxRate * networkStatsPollIntervalSec, TxBytes: k3sEth1TxRate * networkStatsPollIntervalSec, RxBytesPerSec: k3sEth1RxRate, TxBytesPerSec: k3sEth1TxRate},
-			},
-		},
-	}
-}
-
 // Helper function to return demo data response
 func demoResponse(c *fiber.Ctx, key string, data interface{}) error {
 	return c.JSON(fiber.Map{key: data, "source": "demo"})

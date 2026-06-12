@@ -3,17 +3,20 @@ package gitops
 import (
 	"testing"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/testutil"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
 )
 
-// setupTestEnv wraps the parent package's SetupTestEnv for gitops tests.
-func setupTestEnv(t *testing.T) *handlers.TestEnv {
-	return handlers.SetupTestEnv(t)
+// fiberTestTimeout is the default timeout (ms) for fiber app.Test() calls.
+const fiberTestTimeout = testutil.FiberTestTimeout
+
+// setupTestEnv creates a shared test environment for gitops package tests.
+func setupTestEnv(t *testing.T) *testutil.TestEnv {
+	return testutil.SetupTestEnv(t)
 }
 
-// injectDynamicCluster wraps the parent package's InjectDynamicCluster for gitops tests.
-func injectDynamicCluster(env *handlers.TestEnv, clusterName string, gvrKinds map[schema.GroupVersionResource]string) *fake.FakeDynamicClient {
-	return handlers.InjectDynamicCluster(env, clusterName, gvrKinds)
+// injectDynamicCluster injects a fake dynamic client for the given cluster.
+func injectDynamicCluster(env *testutil.TestEnv, clusterName string, gvrKinds map[schema.GroupVersionResource]string) *fake.FakeDynamicClient {
+	return testutil.InjectDynamicCluster(env, clusterName, gvrKinds)
 }

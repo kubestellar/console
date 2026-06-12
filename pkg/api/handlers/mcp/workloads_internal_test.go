@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"encoding/json"

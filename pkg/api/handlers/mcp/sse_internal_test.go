@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"context"
@@ -22,10 +22,6 @@ import (
 )
 
 // sseTestTimeoutMs is the timeout (in milliseconds) passed to env.App.Test
-// for SSE endpoint requests. The streaming deadline inside the handler is
-// much larger (sseOverallDeadline) but tests only need enough time for the
-// fake client to return.
-const sseTestTimeoutMs = 15_000
 
 // seedWarningEvent returns a corev1.Event with Type=Warning that the fake
 // client will return when ListEvents is called. The reason is encoded into

@@ -283,7 +283,7 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "logs", getDemoPodLogs())
+		return demoResponse(c, "logs", getDemoPodLogs())
 	}
 
 	cluster := c.Query("cluster")
@@ -401,7 +401,7 @@ var AllowedDeployTools = map[string]bool{
 func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "hosts", getWasmCloudHosts())
+		return demoResponse(c, "hosts", getWasmCloudHosts())
 	}
 
 	// For non-demo mode, we'll return an empty list for now
@@ -413,7 +413,7 @@ func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetWasmCloudActors(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "actors", getWasmCloudActors())
+		return demoResponse(c, "actors", getWasmCloudActors())
 	}
 
 	// For non-demo mode, we'll return an empty list for now
@@ -575,24 +575,12 @@ const networkStatsPollIntervalSec int64 = 15
 // whose network stats we want to collect.
 var multiTenancyLabels = []string{"virt-launcher", "k3s", "ovnkube-node"}
 
-// InterfaceStats describes byte-rate counters for a single network interface.
-type InterfaceStats struct {
-	Name          string `json:"name"`
-	RxBytes       int64  `json:"rxBytes"`
-	TxBytes       int64  `json:"txBytes"`
-	RxBytesPerSec int64  `json:"rxBytesPerSec"`
-	TxBytesPerSec int64  `json:"txBytesPerSec"`
-}
+// InterfaceStats and PodNetworkStats are defined in the parent handlers package
+// to avoid import cycles. Use type aliases so existing code in this package
+// continues to work without qualification.
+type InterfaceStats = handlers.InterfaceStats
+type PodNetworkStats = handlers.PodNetworkStats
 
-// PodNetworkStats holds the network throughput data for one pod.
-type PodNetworkStats struct {
-	PodName    string           `json:"podName"`
-	Namespace  string           `json:"namespace"`
-	Component  string           `json:"component"`
-	Interfaces []InterfaceStats `json:"interfaces"`
-}
-
-// classifyComponent maps a pod's app label to a topology component name.
 func classifyComponent(labels map[string]string) string {
 	app, ok := labels["app"]
 	if !ok {
@@ -610,6 +598,40 @@ func classifyComponent(labels map[string]string) string {
 	}
 }
 
+// getDemoPodNetworkStats returns realistic sample pod network stats for demo mode.
+// Defined here since it is only used by GetPodNetworkStats in this package.
+func getDemoPodNetworkStats() []PodNetworkStats {
+	const kvEth0RxRate int64 = 10240 // 10 KB/s — KubeVirt data-plane rx
+	const kvEth0TxRate int64 = 5120  // 5 KB/s — KubeVirt data-plane tx
+	const kvEth1RxRate int64 = 2560  // 2.5 KB/s — KubeVirt control-plane rx
+	const kvEth1TxRate int64 = 1280  // 1.3 KB/s — KubeVirt control-plane tx
+	const k3sEth0RxRate int64 = 5120 // 5 KB/s — K3s management rx
+	const k3sEth0TxRate int64 = 2560 // 2.5 KB/s — K3s management tx
+	const k3sEth1RxRate int64 = 1280 // 1.3 KB/s — K3s control-plane rx
+	const k3sEth1TxRate int64 = 640  // 0.6 KB/s — K3s control-plane tx
+
+	return []PodNetworkStats{
+		{
+			PodName:   "tenant-1-vm-virt-launcher-abc12",
+			Namespace: "tenant-1-ns1",
+			Component: "kubevirt",
+			Interfaces: []InterfaceStats{
+				{Name: "eth0", RxBytes: kvEth0RxRate * networkStatsPollIntervalSec, TxBytes: kvEth0TxRate * networkStatsPollIntervalSec, RxBytesPerSec: kvEth0RxRate, TxBytesPerSec: kvEth0TxRate},
+				{Name: "eth1", RxBytes: kvEth1RxRate * networkStatsPollIntervalSec, TxBytes: kvEth1TxRate * networkStatsPollIntervalSec, RxBytesPerSec: kvEth1RxRate, TxBytesPerSec: kvEth1TxRate},
+			},
+		},
+		{
+			PodName:   "k3s-server-xyz89",
+			Namespace: "tenant-1-ns2",
+			Component: "k3s",
+			Interfaces: []InterfaceStats{
+				{Name: "eth0", RxBytes: k3sEth0RxRate * networkStatsPollIntervalSec, TxBytes: k3sEth0TxRate * networkStatsPollIntervalSec, RxBytesPerSec: k3sEth0RxRate, TxBytesPerSec: k3sEth0TxRate},
+				{Name: "eth1", RxBytes: k3sEth1RxRate * networkStatsPollIntervalSec, TxBytes: k3sEth1TxRate * networkStatsPollIntervalSec, RxBytesPerSec: k3sEth1RxRate, TxBytesPerSec: k3sEth1TxRate},
+			},
+		},
+	}
+}
+
 // GetPodNetworkStats returns network interface stats for pods with
 // multi-tenancy labels (KubeVirt virt-launcher, K3s server, OVN).
 // Data comes from the kubelet stats/summary API via the Kubernetes proxy.
@@ -618,7 +640,7 @@ func classifyComponent(labels map[string]string) string {
 func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 	// Demo mode: return realistic sample data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "stats", getDemoPodNetworkStats())
+		return demoResponse(c, "stats", getDemoPodNetworkStats())
 	}
 
 	if h.k8sClient == nil {

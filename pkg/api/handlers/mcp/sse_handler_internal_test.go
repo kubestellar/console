@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"encoding/json"
@@ -63,7 +63,7 @@ func TestSSEHandler_GetPodsStream_NoClusterAccessReturns503(t *testing.T) {
 
 	var payload map[string]string
 	require.NoError(t, json.Unmarshal(body, &payload))
-	assert.Equal(t, noClusterAccessMsg, payload["error"])
+	assert.Equal(t, "No cluster access", payload["error"])
 }
 
 func TestSSEHandler_FindPodIssuesStream_WithoutClientReturnsEmptyStream(t *testing.T) {

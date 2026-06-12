@@ -77,7 +77,7 @@ func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	if cluster != "" {
-		if err := mcpValidateName("cluster", cluster); err != nil {
+		if err := validateK8sName("cluster", cluster); err != nil {
 			return err
 		}
 	}

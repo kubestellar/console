@@ -63,6 +63,9 @@ const appPrivateKeyEnv = "KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY"
 // Useful in forks / enterprise deployments that rename the App.
 const appSlugEnv = "KUBESTELLAR_CONSOLE_APP_SLUG"
 
+// AppSlugEnv is the exported form of appSlugEnv for use by tests in other packages.
+const AppSlugEnv = appSlugEnv
+
 // DefaultConsoleAppSlug is the expected slug of the App that authored
 // console-submitted issues. Rewards classifier checks this against the
 // performed_via_github_app.slug field on each issue.

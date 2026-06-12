@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/safego"
 	"golang.org/x/time/rate"
 
@@ -58,7 +60,7 @@ const (
 
 // githubProxyAPIBase is the base URL for proxied GitHub API requests.
 // Configurable via GITHUB_API_BASE_URL env var to support GitHub Enterprise Server.
-var githubProxyAPIBase = GetEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBaseDefault)
+var githubProxyAPIBase = handlers.GetEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBaseDefault)
 
 var githubProxyClient = client.GitHub
 
@@ -506,7 +508,7 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 // GitHub PAT from server-side settings.
 func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
 	// Global token management requires console admin role
-	if err := RequireAdmin(c, h.store); err != nil {
+	if err := auth.RequireAdmin(c, h.store); err != nil {
 		return err
 	}
 

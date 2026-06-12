@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"context"
@@ -117,8 +117,7 @@ func TestMCPHandlers_RespondClusterResources_WithErrorTracker(t *testing.T) {
 	app.Get("/test", func(c *fiber.Ctx) error {
 		items := []string{"item1"}
 		errTracker := &clusterErrorTracker{
-			errorCount: 1,
-			errors:     []clusterError{{cluster: "test-cluster", err: errors.New("test error")}},
+			errors: []ClusterError{{Cluster: "test-cluster", ErrorType: "unknown", Message: "test error"}},
 		}
 		return respondClusterResources(c, "items", items, errTracker)
 	})

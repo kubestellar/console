@@ -123,3 +123,15 @@ func sseCacheSet(key string, data interface{}) {
 	sseCache[key] = &sseCacheEntry{data: data, fetchedAt: time.Now()}
 	sseCacheMu.Unlock()
 }
+
+// SSECacheGet is the exported form of sseCacheGet for use by sub-packages.
+func SSECacheGet(key string) interface{} { return sseCacheGet(key) }
+
+// SSECacheSet is the exported form of sseCacheSet for use by sub-packages.
+func SSECacheSet(key string, data interface{}) { sseCacheSet(key, data) }
+
+// SSEFetchGroupDo executes fn via the shared singleflight group, coalescing
+// concurrent fetches for the same key into a single call.
+func SSEFetchGroupDo(key string, fn func() (interface{}, error)) (interface{}, error, bool) {
+	return sseFetchGroup.Do(key, fn)
+}

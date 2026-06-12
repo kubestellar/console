@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 // cronFieldCount is the number of fields in a standard cron expression.
@@ -54,6 +57,9 @@ func isValidK8sName(name string) bool {
 	return k8sNamePattern.MatchString(name)
 }
 
+// IsValidK8sName is the exported form of isValidK8sName for use by sub-packages.
+func IsValidK8sName(name string) bool { return isValidK8sName(name) }
+
 // isValidK8sVersion validates a Kubernetes API version string.
 func isValidK8sVersion(version string) bool {
 	if len(version) > MaxK8sNameLen {
@@ -61,3 +67,36 @@ func isValidK8sVersion(version string) bool {
 	}
 	return k8sVersionPattern.MatchString(version)
 }
+
+// validateK8sName checks that a non-empty string is a valid Kubernetes name and
+// returns an HTTP 400 fiber error when invalid. Empty values are allowed (they
+// mean "all" in most contexts).
+func validateK8sName(param, value string) error {
+	if value == "" {
+		return nil
+	}
+	if len(value) > maxK8sNameLen {
+		return fiber.NewError(fiber.StatusBadRequest,
+			fmt.Sprintf("invalid %s: exceeds maximum length of %d characters", param, maxK8sNameLen))
+	}
+	if strings.ContainsAny(value, ";\n\r`") {
+		return fiber.NewError(fiber.StatusBadRequest,
+			fmt.Sprintf("invalid %s: contains disallowed characters", param))
+	}
+	if !k8sNamePattern.MatchString(value) {
+		return fiber.NewError(fiber.StatusBadRequest,
+			fmt.Sprintf("invalid %s: must consist of lowercase alphanumeric characters, '-', or '.'", param))
+	}
+	return nil
+}
+
+// validateClusterAndNamespace validates both cluster and namespace query parameters.
+func validateClusterAndNamespace(cluster, namespace string) error {
+	if err := validateK8sName("cluster", cluster); err != nil {
+		return err
+	}
+	return validateK8sName("namespace", namespace)
+}
+
+// IsValidK8sVersion is the exported form of isValidK8sVersion for use by sub-packages.
+func IsValidK8sVersion(version string) bool { return isValidK8sVersion(version) }
