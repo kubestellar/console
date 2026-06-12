@@ -226,3 +226,35 @@ func compareFloat(actual float64, op, value string) bool {
 		return false
 	}
 }
+
+// clusterGPUCount returns the total GPU count across all nodes in a cluster.
+func clusterGPUCount(nodes []k8s.NodeInfo) int {
+	total := 0
+	for _, node := range nodes {
+		total += node.GPUCount
+	}
+	return total
+}
+
+// clusterGPUTypes returns the distinct GPU types present across all nodes in a cluster.
+func clusterGPUTypes(nodes []k8s.NodeInfo) []string {
+	seen := make(map[string]bool)
+	types := make([]string, 0)
+	for _, node := range nodes {
+		if node.GPUType != "" && !seen[node.GPUType] {
+			seen[node.GPUType] = true
+			types = append(types, node.GPUType)
+		}
+	}
+	return types
+}
+
+// compareStringSet returns true if any element in set matches the operator/value filter.
+func compareStringSet(set []string, operator, value string) bool {
+	for _, s := range set {
+		if matchString(s, operator, value) {
+			return true
+		}
+	}
+	return false
+}

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -140,4 +141,70 @@ func TestEvaluateClusterGroup_NoDynamicFiltersNoClient(t *testing.T) {
 	}
 	result := h.evaluateClusterGroup(context.Background(), group)
 	assert.Empty(t, result)
+}
+
+// ---------- clusterGPUCount ----------
+
+func TestClusterGPUCount(t *testing.T) {
+	tests := []struct {
+		name  string
+		nodes []k8s.NodeInfo
+		want  int
+	}{
+		{"empty", []k8s.NodeInfo{}, 0},
+		{"no_gpus", []k8s.NodeInfo{{Name: "n1", GPUCount: 0}}, 0},
+		{"single_node", []k8s.NodeInfo{{Name: "n1", GPUCount: 4}}, 4},
+		{"multi_node", []k8s.NodeInfo{{Name: "n1", GPUCount: 2}, {Name: "n2", GPUCount: 8}}, 10},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, clusterGPUCount(tt.nodes))
+		})
+	}
+}
+
+// ---------- clusterGPUTypes ----------
+
+func TestClusterGPUTypes(t *testing.T) {
+	tests := []struct {
+		name  string
+		nodes []k8s.NodeInfo
+		want  []string
+	}{
+		{"empty", []k8s.NodeInfo{}, []string{}},
+		{"no_type", []k8s.NodeInfo{{Name: "n1", GPUType: ""}}, []string{}},
+		{"single_type", []k8s.NodeInfo{{Name: "n1", GPUType: "A100"}}, []string{"A100"}},
+		{"dedup", []k8s.NodeInfo{{GPUType: "A100"}, {GPUType: "A100"}, {GPUType: "H100"}}, []string{"A100", "H100"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := clusterGPUTypes(tt.nodes)
+			sort.Strings(result)
+			sort.Strings(tt.want)
+			assert.Equal(t, tt.want, result)
+		})
+	}
+}
+
+// ---------- compareStringSet ----------
+
+func TestCompareStringSet(t *testing.T) {
+	tests := []struct {
+		name     string
+		set      []string
+		operator string
+		value    string
+		want     bool
+	}{
+		{"empty_set", []string{}, "eq", "A100", false},
+		{"eq_match", []string{"A100", "H100"}, "eq", "A100", true},
+		{"eq_no_match", []string{"A100", "H100"}, "eq", "V100", false},
+		{"contains_match", []string{"NVIDIA A100"}, "contains", "A100", true},
+		{"contains_no_match", []string{"NVIDIA H100"}, "contains", "A100", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, compareStringSet(tt.set, tt.operator, tt.value))
+		})
+	}
 }
