@@ -8,6 +8,10 @@ import (
 // cronFieldCount is the number of fields in a standard cron expression.
 const cronFieldCount = 5
 
+// maxK8sNameLen is the maximum allowed length for Kubernetes resource names (RFC 1123).
+// This constant is used by both handlers and gitops packages.
+const maxK8sNameLen = 253
+
 // cronFieldPattern matches a single cron field (digits, *, /, -, comma).
 var cronFieldPattern = regexp.MustCompile(`^[\d\*,/\-]+$`)
 
