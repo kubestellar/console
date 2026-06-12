@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -226,11 +227,15 @@ func TestAuditExportDestinationValidation_Integration(t *testing.T) {
 	// Create audit entries
 	ctx := context.Background()
 	for i := 0; i < 5; i++ {
-		entry := &store.AuditEntry{
-			UserID:    "user-1",
-			Action:    "test-action",
-			Details:   "test details",
-			IPAddress: "127.0.0.1",
+		entry := &store.StellarAuditEntry{
+			ID:         uuid.New().String(),
+			Ts:         time.Now().UTC(),
+			UserID:     "user-1",
+			Action:     "test-action",
+			EntityType: "test-entity",
+			EntityID:   "test-id",
+			Cluster:    "test-cluster",
+			Detail:     "test details",
 		}
 		err := testStore.CreateAuditEntry(ctx, entry)
 		require.NoError(t, err)
