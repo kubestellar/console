@@ -12,7 +12,6 @@ import { useNavigationHistory } from '../../hooks/useNavigationHistory'
 import { useLastRoute } from '../../hooks/useLastRoute'
 import {
   useDemoMode,
-  hasRealToken,
   isDemoModeForced,
 } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'

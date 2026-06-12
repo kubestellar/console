@@ -350,8 +350,13 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const isDemoMode = isDemoUser()
+  const [isDemoMode, setIsDemoMode] = useState(false)
   const countOnly = options?.countOnly === true
+
+  // Check demo mode on mount
+  useEffect(() => {
+    isDemoUser().then(setIsDemoMode)
+  }, [])
 
   const loadRequests = useCallback(async () => {
     // In demo mode, use mock data

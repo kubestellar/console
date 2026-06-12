@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Calendar,
@@ -19,7 +19,7 @@ import {
   useClusters } from '../../hooks/useMCP'
 import { ReservationFormModal, type GPUClusterInfo } from './ReservationFormModal'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useDemoMode, hasRealToken } from '../../hooks/useDemoMode'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../ui/Toast'
