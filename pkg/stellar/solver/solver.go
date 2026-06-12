@@ -251,20 +251,18 @@ func dispatchAction(
 	// Note: dedupe_key + solve_id are written via an explicit UPDATE because the
 	// generic CreateStellarExecution signature predates these columns. A future
 	// migration that adds them to the create-path will remove this follow-up.
-	if input != nil {
-		_ = storage.CreateStellarExecution(ctx, &store.StellarExecution{
-			UserID:      input.UserID,
-			MissionID:   "solver",
-			TriggerType: "solve",
-			TriggerData: marshalTriggerData(input.SolveID, actionType),
-			Status:      status,
-			RawInput:    fmt.Sprintf("Action %s on %s/%s/%s", actionType, input.Cluster, input.Namespace, name),
-			Output:      outcome,
+	_ = storage.CreateStellarExecution(ctx, &store.StellarExecution{
+		UserID:      input.UserID,
+		MissionID:   "solver",
+		TriggerType: "solve",
+		TriggerData: marshalTriggerData(input.SolveID, actionType),
+		Status:      status,
+		RawInput:    fmt.Sprintf("Action %s on %s/%s/%s", actionType, input.Cluster, input.Namespace, name),
+		Output:      outcome,
 		DurationMs:  durationMs,
 		StartedAt:   now,
 		CompletedAt: &completed,
 	})
-	}
 	if dispatchErr != nil {
 		return action.ID, outcome, dispatchErr
 	}
