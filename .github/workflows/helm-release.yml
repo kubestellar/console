@@ -94,7 +94,7 @@ jobs:
           cp ../deploy/helm/kubestellar-console/artifacthub-repo.yml .
           helm repo index . --url https://kubestellar.github.io/console
           git add .
-          git commit -m "Release Helm chart ${{ steps.version.outputs.version }}" || echo "No changes"
+          git commit -s -m "Release Helm chart ${{ steps.version.outputs.version }}" || echo "No changes"
           git push origin gh-pages --force
 
       - name: Log in to GitHub Container Registry

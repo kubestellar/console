@@ -26,6 +26,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to checksum"
           else
-            git commit -m "🌱 Update deploy.sh.sha256"
+            git commit -s -m "🌱 Update deploy.sh.sha256"
             git push
           fi

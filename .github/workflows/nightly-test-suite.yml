@@ -189,7 +189,7 @@ jobs:
           fi
 
           git add "${RESULTS_DIR}/${DATE}.json" 2>/dev/null || true
-          git commit -m "chore: nightly test results for ${DATE}
+          git commit -s -m "chore: nightly test results for ${DATE}
 
           Passed: $(jq -r '.summary.passed' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')/$( jq -r '.summary.total' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')
           Failed: $(jq -r '.summary.failed' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')
