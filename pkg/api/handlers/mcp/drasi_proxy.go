@@ -1,4 +1,4 @@
-// Package handlers implements the HTTP API for the KubeStellar Console.
+// Package mcp implements the HTTP API for the KubeStellar Console.
 //
 // drasi_proxy.go: a generic reverse proxy for the Drasi REST API.
 //

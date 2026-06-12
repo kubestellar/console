@@ -21,8 +21,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/mcp"
 	"github.com/kubestellar/console/pkg/k8s"
-	"github.com/kubestellar/console/pkg/mcp"
+	mcppkg "github.com/kubestellar/console/pkg/mcp"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -612,7 +613,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 			})
 		}
 
-		handlers.WaitWithDeadline(&wg, clusterCancel, handlers.MaxResponseDeadline)
+		mcp.WaitWithDeadline(&wg, clusterCancel, mcp.MaxResponseDeadline)
 		return c.JSON(fiber.Map{"kustomizations": allKustomizations})
 	}
 

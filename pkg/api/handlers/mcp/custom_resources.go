@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"sync"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/safego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +62,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 		return err
 	}
 
-	if IsDemoMode(c) {
+	if handlers.IsDemoMode(c) {
 		return c.JSON(CustomResourceResponse{Items: []CustomResourceItem{}, IsDemoData: true})
 	}
 

@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"context"
@@ -11,6 +11,8 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/api/handlers"
 
 	"github.com/kubestellar/console/pkg/api/audit"
 
@@ -231,7 +233,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"resourceQuota": quota, "source": "k8s"})
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // DeleteResourceQuota deletes a ResourceQuota
@@ -270,7 +272,7 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"deleted": true, "name": name, "namespace": namespace, "cluster": cluster})
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // GetPodLogs returns logs from a pod
@@ -280,8 +282,8 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 	}
 
 	// Demo mode: return demo data immediately
-	if IsDemoMode(c) {
-		return demoResponse(c, "logs", getDemoPodLogs())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "logs", getDemoPodLogs())
 	}
 
 	cluster := c.Query("cluster")
@@ -317,7 +319,7 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"logs": logs, "source": "k8s"})
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // CallToolRequest represents a request to call an MCP tool
@@ -398,8 +400,8 @@ var AllowedDeployTools = map[string]bool{
 // GetWasmCloudHosts returns wasmCloud hosts from clusters
 func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if IsDemoMode(c) {
-		return demoResponse(c, "hosts", getWasmCloudHosts())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "hosts", getWasmCloudHosts())
 	}
 
 	// For non-demo mode, we'll return an empty list for now
@@ -410,8 +412,8 @@ func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 // GetWasmCloudActors returns wasmCloud actors from clusters
 func (h *MCPHandlers) GetWasmCloudActors(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if IsDemoMode(c) {
-		return demoResponse(c, "actors", getWasmCloudActors())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "actors", getWasmCloudActors())
 	}
 
 	// For non-demo mode, we'll return an empty list for now
@@ -615,12 +617,12 @@ func classifyComponent(labels map[string]string) string {
 // frontend can fall back to demo values.
 func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 	// Demo mode: return realistic sample data immediately
-	if IsDemoMode(c) {
-		return demoResponse(c, "stats", getDemoPodNetworkStats())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "stats", getDemoPodNetworkStats())
 	}
 
 	if h.k8sClient == nil {
-		return ErrNoClusterAccess(c)
+		return handlers.ErrNoClusterAccess(c)
 	}
 
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
@@ -791,7 +793,7 @@ func fetchPodInterfaceStats(
 // support which will be added in a future iteration. For now, it returns an
 // empty yaml field so the frontend can gracefully fall back to demo YAML.
 func (h *MCPHandlers) GetResourceYAML(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if handlers.IsDemoMode(c) {
 		return c.JSON(fiber.Map{"yaml": "", "source": "demo"})
 	}
 

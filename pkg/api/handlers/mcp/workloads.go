@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/api/handlers"
+
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 )
@@ -16,8 +18,8 @@ import (
 // GetPods returns pods for a namespace/cluster
 func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if IsDemoMode(c) {
-		return demoResponse(c, "pods", getDemoPods())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "pods", getDemoPods())
 	}
 
 	cluster := c.Query("cluster")
@@ -72,14 +74,14 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"pods": pods, "source": "k8s"})
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // FindPodIssues returns pods with issues
 func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if IsDemoMode(c) {
-		return demoResponse(c, "issues", getDemoPodIssues())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "issues", getDemoPodIssues())
 	}
 
 	cluster := c.Query("cluster")
@@ -130,7 +132,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"issues": issues, "source": "k8s"})
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // FindDeploymentIssues returns deployments with issues

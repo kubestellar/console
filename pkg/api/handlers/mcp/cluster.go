@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"sync"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/api/handlers"
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
@@ -47,8 +49,8 @@ func finishClusterHealthWarmup() {
 // ListClusters returns all discovered clusters with health data
 func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately without trying real clusters
-	if IsDemoMode(c) {
-		return demoResponse(c, "clusters", getDemoClusters())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "clusters", getDemoClusters())
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -113,7 +115,7 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"clusters": clusters, "source": "k8s"})
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // GetClusterHealth returns health for a specific cluster
@@ -124,7 +126,7 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 	}
 
 	// Demo mode: return demo data immediately
-	if IsDemoMode(c) {
+	if handlers.IsDemoMode(c) {
 		return c.JSON(getDemoClusterHealth(cluster))
 	}
 
@@ -149,14 +151,14 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 		return c.JSON(health)
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // GetAllClusterHealth returns health for all clusters
 func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if IsDemoMode(c) {
-		return demoResponse(c, "health", getDemoAllClusterHealth())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "health", getDemoAllClusterHealth())
 	}
 
 	// Use direct k8s client for this as it's more efficient
@@ -171,14 +173,14 @@ func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"health": health})
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // GetNodes returns detailed node information
 func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if IsDemoMode(c) {
-		return demoResponse(c, "nodes", getDemoNodes())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "nodes", getDemoNodes())
 	}
 
 	cluster := c.Query("cluster")
@@ -242,14 +244,14 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // GetEvents returns events from clusters
 func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if IsDemoMode(c) {
-		return demoResponse(c, "events", getDemoEvents())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "events", getDemoEvents())
 	}
 
 	cluster := c.Query("cluster")
@@ -352,14 +354,14 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"events": events, "source": "k8s", "cluster": cluster})
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // GetWarningEvents returns warning events from clusters
 func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if IsDemoMode(c) {
-		return demoResponse(c, "events", getDemoWarningEvents())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "events", getDemoWarningEvents())
 	}
 
 	cluster := c.Query("cluster")
@@ -459,14 +461,14 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"events": events, "source": "k8s", "cluster": cluster})
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // CheckSecurityIssues returns security misconfigurations
 func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if IsDemoMode(c) {
-		return demoResponse(c, "issues", getDemoSecurityIssues())
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, "issues", getDemoSecurityIssues())
 	}
 
 	cluster := c.Query("cluster")
@@ -533,7 +535,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"issues": issues, "source": "k8s"})
 	}
 
-	return ErrNoClusterAccess(c)
+	return handlers.ErrNoClusterAccess(c)
 }
 
 // GetNamespacesOverview returns namespace counts across all healthy clusters.

@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/api/handlers"
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
@@ -72,7 +74,7 @@ var sanitizedErrorMessages = map[string]string{
 func HandleK8sError(c *fiber.Ctx, err error) error {
 	if errors.Is(err, k8s.ErrNoClusterConfigured) {
 		slog.Info("[MCP] no cluster configured")
-		return ErrNoClusterAccess(c)
+		return handlers.ErrNoClusterAccess(c)
 	}
 
 	errType := k8s.ClassifyError(err.Error())

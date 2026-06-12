@@ -1,9 +1,11 @@
-package handlers
+package mcp
 
 import (
 	"context"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/api/handlers"
 
 	"github.com/kubestellar/console/pkg/k8s"
 )
@@ -18,11 +20,11 @@ func (h *MCPHandlers) withDemoFallback(
 	demoData any,
 	handler func(client *k8s.MultiClusterClient) error,
 ) error {
-	if IsDemoMode(c) {
-		return demoResponse(c, demoKey, demoData)
+	if handlers.IsDemoMode(c) {
+		return handlers.demoResponse(c, demoKey, demoData)
 	}
 	if h.k8sClient == nil {
-		return ErrNoClusterAccess(c)
+		return handlers.ErrNoClusterAccess(c)
 	}
 	return handler(h.k8sClient)
 }
