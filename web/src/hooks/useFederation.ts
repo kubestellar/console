@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { agentFetch } from './mcp/shared'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthTokenSync } from '../lib/authToken'
 import { useDemoMode } from './useDemoMode'
 
 // ============================================================================
@@ -338,8 +338,8 @@ function getDemoFederationAwareness(): FederationAwareness {
 const FEDERATION_POLL_INTERVAL_MS = 30_000
 const FEDERATION_DETECT_CACHE_TTL_MS = 300_000
 
-async function authHeaders(): Promise<Record<string, string>> {
-  const token = await getStoredAuthToken()
+function authHeaders(): Record<string, string> {
+  const token = getStoredAuthTokenSync()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

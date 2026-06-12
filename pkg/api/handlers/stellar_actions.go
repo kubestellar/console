@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/k8s"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -353,7 +354,7 @@ func (h *Handler) executeDirectAction(c *fiber.Ctx, userID string, body executeA
 	execCtx, cancel := context.WithTimeout(c.UserContext(), executeActionMaxTimeout)
 	defer cancel()
 
-	outcome, dispatchErr := scheduler.Dispatch(execCtx, h.k8sClient, *action)
+	outcome, dispatchErr := scheduler.Dispatch(execCtx, h.k8sClient.(*k8s.MultiClusterClient), *action)
 	startTime := now
 	durationMs := int(time.Since(startTime).Milliseconds())
 

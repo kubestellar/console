@@ -4,8 +4,9 @@ import (
 	"context"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/middleware"
-	"github.com/kubestellar/console/pkg/api/models"
+	"github.com/kubestellar/console/pkg/models"
 )
 
 // isDemoMode checks if the request has the X-Demo-Mode header set to "true"
@@ -14,7 +15,7 @@ func isDemoMode(c *fiber.Ctx) bool {
 }
 
 // requireAdmin verifies the requesting user has admin role.
-func requireAdmin(c *fiber.Ctx, s interface{ GetUser(context.Context, string) (*models.User, error) }) error {
+func requireAdmin(c *fiber.Ctx, s interface{ GetUser(context.Context, uuid.UUID) (*models.User, error) }) error {
 	if s == nil {
 		return nil
 	}

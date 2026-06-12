@@ -358,7 +358,7 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 	// Fall back to osascript display notification (no click handler support).
 	safego.GoWith("device-tracker-notification", func() {
 		if tnPath, err := exec.LookPath("terminal-notifier"); err == nil {
-			cmd := execCommand(tnPath,
+			cmd := exec.Command(tnPath,
 				"-title", "KubeStellar Console",
 				"-subtitle", title,
 				"-message", message,
@@ -384,7 +384,7 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 		}
 		script := fmt.Sprintf(`display notification "%s" with title "%s" sound name "Glass"`,
 			sanitize(message), sanitize(title))
-		cmd := execCommand("osascript", "-e", script)
+		cmd := exec.Command("osascript", "-e", script)
 		if err := cmd.Run(); err != nil {
 			slog.Error("[DeviceTracker] failed to send notification", "error", err)
 		}

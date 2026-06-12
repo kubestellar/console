@@ -4,7 +4,7 @@ import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthTokenSync } from '../lib/authToken'
 import { MCP_HOOK_TIMEOUT_MS } from '../lib/constants/network'
 
 const AGENT_RESOLVE_TIMEOUT_MS = 30_000
@@ -44,8 +44,8 @@ export class DependencyResolutionRateLimitError extends Error {
   }
 }
 
-async function authHeaders(): Promise<Record<string, string>> {
-  const token = await getStoredAuthToken()
+function authHeaders(): Record<string, string> {
+  const token = getStoredAuthTokenSync()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

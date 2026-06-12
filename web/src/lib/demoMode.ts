@@ -18,7 +18,7 @@
 
 import { clearAllRegisteredCaches } from './modeTransition'
 import { DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE } from './constants'
-import { getStoredAuthToken, setStoredAuthToken } from './authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync, setStoredAuthToken } from './authToken'
 const DEMO_MODE_KEY = STORAGE_KEY_DEMO_MODE
 const DEMO_TOKEN = DEMO_TOKEN_VALUE
 const GPU_CACHE_KEY = 'kubestellar-gpu-cache'
@@ -113,7 +113,7 @@ function handleStorageEvent(e: StorageEvent) {
 // Initialize from localStorage or environment
 if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(DEMO_MODE_KEY)
-  const hasDemoToken = await await getStoredAuthToken() === DEMO_TOKEN
+  const hasDemoToken = getStoredAuthTokenSync() === DEMO_TOKEN
   const userExplicitlyDisabled = stored === 'false'
 
   // Priority: Netlify > explicit preference > demo token fallback
@@ -260,7 +260,8 @@ export function activatePublicDemoMode(): void {
   localStorage.setItem(STORAGE_KEY_ONBOARDED, 'true')
   setDemoMode(true, true)
 
-  if (hasRealToken()) return
+  const token = getStoredAuthTokenSync()
+  if (token && token !== DEMO_TOKEN) return
 
   localStorage.removeItem(STORAGE_KEY_USER_CACHE)
   localStorage.removeItem(STORAGE_KEY_HAS_SESSION)

@@ -131,7 +131,7 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, tc := range targetClusters {
-		if err := validateKubeContext(tc); err != nil {
+		if err := kube.ValidateKubeContext(tc); err != nil {
 			slog.Error("invalid target cluster for scale request", "targetCluster", tc, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
@@ -269,14 +269,14 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
-	if err := validateKubeContext(req.SourceCluster); err != nil {
+	if err := kube.ValidateKubeContext(req.SourceCluster); err != nil {
 		slog.Error("invalid source cluster for deploy request", "sourceCluster", req.SourceCluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	for _, tc := range req.TargetClusters {
-		if err := validateKubeContext(tc); err != nil {
+		if err := kube.ValidateKubeContext(tc); err != nil {
 			slog.Error("invalid target cluster for deploy request", "targetCluster", tc, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
@@ -388,7 +388,7 @@ func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := validateKubeContext(req.Cluster); err != nil {
+	if err := kube.ValidateKubeContext(req.Cluster); err != nil {
 		slog.Error("invalid cluster for delete workload request", "cluster", req.Cluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 )
 
@@ -44,12 +45,12 @@ func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	// SECURITY: validate context names to prevent kubectl flag injection (#14238).
-	if err := validateKubeContext(req.OldName); err != nil {
+	if err := kube.ValidateKubeContext(req.OldName); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, protocol.ErrorPayload{Code: "invalid_names", Message: "invalid old context name"})
 		return
 	}
-	if err := validateKubeContext(req.NewName); err != nil {
+	if err := kube.ValidateKubeContext(req.NewName); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, protocol.ErrorPayload{Code: "invalid_names", Message: "invalid new context name"})
 		return

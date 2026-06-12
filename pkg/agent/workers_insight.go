@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 // InsightEnrichmentCacheTTL is how long individual enrichments are cached
@@ -305,7 +307,7 @@ func buildInsightEnrichmentPrompt(insights []InsightSummary) string {
 	// Prepend untrusted-data guard so the AI treats cluster-sourced fields
 	// as display-only and resists prompt injection via crafted pod logs,
 	// event descriptions, or resource names (#9486).
-	b.WriteString(UntrustedDataSystemPrompt)
+	b.WriteString(kube.UntrustedDataSystemPrompt)
 	b.WriteString("You are a Kubernetes operations expert. Analyze these cross-cluster insights and provide enriched analysis.\n\n")
 	b.WriteString("For each insight, provide:\n")
 	b.WriteString("1. A clear, actionable description (replace the heuristic description)\n")
@@ -322,9 +324,9 @@ func buildInsightEnrichmentPrompt(insights []InsightSummary) string {
 		b.WriteString(fmt.Sprintf("Category: %s\n", insight.Category))
 		// Scrub secrets from insight text fields before sending to AI providers (#9481).
 		// Wrap untrusted cluster data in delimiters to guard against prompt injection (#9486).
-		b.WriteString(fmt.Sprintf("Title: %s\n", ScrubSecrets(insight.Title)))
+		b.WriteString(fmt.Sprintf("Title: %s\n", kube.ScrubSecrets(insight.Title)))
 		b.WriteString(fmt.Sprintf("Description: %s\n",
-			WrapUntrustedData("insight-description", ScrubSecrets(insight.Description))))
+			kube.WrapUntrustedData("insight-description", kube.ScrubSecrets(insight.Description))))
 		b.WriteString(fmt.Sprintf("Severity: %s\n", insight.Severity))
 		b.WriteString(fmt.Sprintf("Affected Clusters: %s\n", strings.Join(insight.AffectedClusters, ", ")))
 		if len(insight.Metrics) > 0 {

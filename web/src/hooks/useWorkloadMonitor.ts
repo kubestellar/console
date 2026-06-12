@@ -5,9 +5,9 @@ import type {
   MonitorIssue,
   ResourceHealthStatus } from '../types/workloadMonitor'
 import { DEFAULT_REFRESH_MS } from '../types/workloadMonitor'
-import { getStoredAuthToken } from '../lib/authToken'
-async function authHeaders(): Promise<Record<string, string>> {
-  const token = await getStoredAuthToken()
+import { getStoredAuthTokenSync } from '../lib/authToken'
+function authHeaders(): Record<string, string> {
+  const token = getStoredAuthTokenSync()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

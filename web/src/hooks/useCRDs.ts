@@ -10,7 +10,7 @@
 
 import { useMemo } from 'react'
 import { useClusters } from './useMCP'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthTokenSync } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { createCachedHook } from '../lib/cache'
 
@@ -50,8 +50,8 @@ interface CRDListResponse {
 // Auth Helper
 // ============================================================================
 
-async function authHeaders(): Promise<Record<string, string>> {
-  const token = await getStoredAuthToken()
+function authHeaders(): Record<string, string> {
+  const token = getStoredAuthTokenSync()
   const headers: Record<string, string> = { 'Accept': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePersistence } from './usePersistence'
 import { useClusterGroups as useCRClusterGroups, ClusterGroup as CRClusterGroup } from './useConsoleCRs'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthTokenSync } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { useToast } from '../components/ui/Toast'
 
@@ -81,8 +81,8 @@ function saveGroups(groups: ClusterGroup[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(groups))
 }
 
-async function authHeaders(): Promise<Record<string, string>> {
-  const token = await getStoredAuthToken()
+function authHeaders(): Record<string, string> {
+  const token = getStoredAuthTokenSync()
   const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

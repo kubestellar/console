@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -212,7 +213,7 @@ func (s *Server) handleHelmRollback(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := detachedHelmCtx()
 	defer cancel()
 
-	cmd := execCommandContext(ctx, "helm", args...)
+	cmd := exec.CommandContext(ctx, "helm", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -285,7 +286,7 @@ func (s *Server) handleHelmUninstall(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := detachedHelmCtx()
 	defer cancel()
 
-	cmd := execCommandContext(ctx, "helm", args...)
+	cmd := exec.CommandContext(ctx, "helm", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -382,7 +383,7 @@ func (s *Server) handleHelmUpgrade(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := detachedHelmCtx()
 	defer cancel()
 
-	cmd := execCommandContext(ctx, "helm", args...)
+	cmd := exec.CommandContext(ctx, "helm", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -408,7 +409,7 @@ func (s *Server) handleHelmUpgrade(w http.ResponseWriter, r *http.Request) {
 		tmpFile.Close()
 
 		args = append(args, "-f", tmpFile.Name())
-		cmd = execCommandContext(ctx, "helm", args...)
+		cmd = exec.CommandContext(ctx, "helm", args...)
 		stdout.Reset()
 		stderr.Reset()
 		cmd.Stdout = &stdout

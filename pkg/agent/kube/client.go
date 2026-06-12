@@ -35,7 +35,7 @@ const (
 	// full disk read + YAML parse. Two seconds is short enough to feel
 	// responsive after the user adds a context, long enough to absorb bursty
 	// polling. (#8075)
-	kubectlReloadMinInterval = 2 * time.Second
+	KubectlReloadMinInterval = 2 * time.Second
 )
 
 // execCommand allows mocking exec.Command for testing
@@ -218,7 +218,7 @@ var allowedScaleResources = map[string]bool{
 }
 
 // allowedRolloutSubcommands restricts rollout to read-only operations (#7205).
-var allowedRolloutSubcommands = map[string]bool{
+var AllowedRolloutSubcommands = map[string]bool{
 	"status":  true,
 	"history": true,
 }
@@ -243,7 +243,7 @@ var blockedConfigSubcommands = map[string]bool{
 	"rename-context":  true, // handled via dedicated endpoint with validation
 }
 
-func validateKubectlArgs(args []string) bool {
+func ValidateKubectlArgs(args []string) bool {
 	if len(args) == 0 {
 		return false
 	}
@@ -262,7 +262,7 @@ func validateKubectlArgs(args []string) bool {
 			return false // Need at least "rollout <subcommand>"
 		}
 		subcommand := strings.ToLower(args[1])
-		if !allowedRolloutSubcommands[subcommand] {
+		if !AllowedRolloutSubcommands[subcommand] {
 			return false
 		}
 	}
@@ -352,7 +352,7 @@ func validateKubectlArgs(args []string) bool {
 }
 
 func (k *KubectlProxy) validateArgs(args []string) bool {
-	return validateKubectlArgs(args)
+	return ValidateKubectlArgs(args)
 }
 
 func (k *KubectlProxy) GetCurrentContext() string {
@@ -842,12 +842,12 @@ func (k *KubectlProxy) TestClusterConnection(req TestConnectionRequest) (*TestCo
 
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return &TestConnectionResult{Reachable: false, Error: agent.SanitizeAgentError("create client", err)}, nil
+		return &TestConnectionResult{Reachable: false, Error: fmt.Sprintf("failed to create client: %v", err)}, nil
 	}
 
 	version, err := client.Discovery().ServerVersion()
 	if err != nil {
-		return &TestConnectionResult{Reachable: false, Error: agent.SanitizeAgentError("test connection", err)}, nil
+		return &TestConnectionResult{Reachable: false, Error: fmt.Sprintf("failed to test connection: %v", err)}, nil
 	}
 
 	return &TestConnectionResult{

@@ -259,7 +259,7 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 	// misinterpreted as flags by git, regardless of their content.
 	args = append(args, "--", repoURL, tempDir)
 
-	cmd := execCommandContext(ctx, "git", args...) // #nosec G204 -- validated above; no shell invoked
+	cmd := exec.CommandContext(ctx, "git", args...) // #nosec G204 -- validated above; no shell invoked
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
@@ -494,7 +494,7 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "--context", req.Cluster)
 	}
 
-	cmd := execCommandContext(ctx, "kubectl", args...)
+	cmd := exec.CommandContext(ctx, "kubectl", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -620,7 +620,7 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "--dry-run=client")
 	}
 
-	cmd := execCommandContext(ctx, "kubectl", args...)
+	cmd := exec.CommandContext(ctx, "kubectl", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

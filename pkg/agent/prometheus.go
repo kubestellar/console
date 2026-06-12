@@ -85,7 +85,7 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 
 	// SECURITY: Validate cluster and namespace against safe character sets to
 	// prevent SSRF and path-traversal via crafted query parameters (#7175).
-	if err := validateKubeContext(cluster); err != nil {
+	if err := kube.ValidateKubeContext(cluster); err != nil {
 		slog.Error("[Prometheus] invalid cluster parameter", "error", err)
 		writePrometheusError(w, http.StatusBadRequest, "invalid cluster parameter")
 		return
