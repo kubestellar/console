@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -18,6 +19,9 @@ import (
 )
 
 func TestListGateways(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping integration test: set KC_INTEGRATION_TESTS=1 to run")
+	}
 	now := metav1.Now()
 	validGateway := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -147,6 +151,9 @@ func TestListGateways(t *testing.T) {
 }
 
 func TestListHTTPRoutes(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping integration test: set KC_INTEGRATION_TESTS=1 to run")
+	}
 	now := metav1.Now()
 	validRoute := &unstructured.Unstructured{
 		Object: map[string]interface{}{

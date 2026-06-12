@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -99,6 +100,9 @@ func TestDeleteWorkload(t *testing.T) {
 }
 
 func TestGetClusterCapabilities(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping integration test: set KC_INTEGRATION_TESTS=1 to run")
+	}
 	m, _ := NewMultiClusterClient("")
 
 	node1 := &corev1.Node{
