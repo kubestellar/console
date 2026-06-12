@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"

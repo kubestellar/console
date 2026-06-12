@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/api/middleware"
 )
 
