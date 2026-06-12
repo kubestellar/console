@@ -21,6 +21,9 @@ var k8sVersionPattern = regexp.MustCompile(`^v[0-9]+([a-z]+[0-9]+)?$`)
 // maxCronFieldLen is the maximum length of a single cron field to prevent abuse.
 const maxCronFieldLen = 64
 
+// maxK8sNameLen is the maximum allowed length for Kubernetes resource names (RFC 1123)
+const maxK8sNameLen = 253
+
 // isValidCronSchedule validates a 5-field cron expression.
 // It does not validate semantic correctness (e.g. day 32), only structural format.
 func isValidCronSchedule(schedule string) bool {
