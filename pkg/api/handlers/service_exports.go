@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers/mcp"
 	"github.com/kubestellar/console/pkg/k8s"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -63,9 +64,9 @@ type ServiceExportSummary struct {
 // handler returns 500 with the same structure populated so operators can see
 // which clusters failed.
 type ServiceExportListResponse struct {
-	Exports       []ServiceExportSummary `json:"exports"`
-	IsDemoData    bool                   `json:"isDemoData"`
-	ClusterErrors []ClusterError         `json:"clusterErrors,omitempty"`
+	Exports       []ServiceExportSummary    `json:"exports"`
+	IsDemoData    bool                      `json:"isDemoData"`
+	ClusterErrors []mcp.ClusterError        `json:"clusterErrors,omitempty"`
 }
 
 // HTTP status code for service unavailable

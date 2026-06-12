@@ -3,15 +3,17 @@ package github
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/client"
-	"github.com/kubestellar/console/pkg/safego"
-	"golang.org/x/sync/singleflight"
 	"io"
 	"log/slog"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/client"
+	"github.com/kubestellar/console/pkg/safego"
+	"golang.org/x/sync/singleflight"
 )
 
 // NightlyWorkflow defines a GitHub Actions workflow to monitor.
@@ -226,7 +228,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	// Fetch jobs for this run
 	jobsURL := fmt.Sprintf("%s/repos/%s/actions/runs/%d/jobs?per_page=30",
-		ResolveGitHubAPIBase(), repo, runID)
+		handlers.ResolveGitHubAPIBase(), repo, runID)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", jobsURL, nil)
 	if err != nil {

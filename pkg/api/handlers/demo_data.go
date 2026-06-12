@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers/mcp"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 )
@@ -610,7 +611,7 @@ func getDemoWorkloads() []v1alpha1.Workload {
 }
 
 // Demo pod network stats — realistic throughput for multi-tenancy topology
-func getDemoPodNetworkStats() []PodNetworkStats {
+func getDemoPodNetworkStats() []mcp.PodNetworkStats {
 	/** Realistic throughput values (bytes/sec) for demo visualization */
 	const kvEth0RxRate int64 = 10240 // 10 KB/s — KubeVirt data-plane rx
 	const kvEth0TxRate int64 = 5120  // 5 KB/s — KubeVirt data-plane tx
@@ -621,12 +622,14 @@ func getDemoPodNetworkStats() []PodNetworkStats {
 	const k3sEth1RxRate int64 = 1280 // 1.3 KB/s — K3s control-plane rx
 	const k3sEth1TxRate int64 = 640  // 0.6 KB/s — K3s control-plane tx
 
-	return []PodNetworkStats{
+	const networkStatsPollIntervalSec = mcp.NetworkStatsPollIntervalSec
+
+	return []mcp.PodNetworkStats{
 		{
 			PodName:   "tenant-1-vm-virt-launcher-abc12",
 			Namespace: "tenant-1-ns1",
 			Component: "kubevirt",
-			Interfaces: []InterfaceStats{
+			Interfaces: []mcp.InterfaceStats{
 				{Name: "eth0", RxBytes: kvEth0RxRate * networkStatsPollIntervalSec, TxBytes: kvEth0TxRate * networkStatsPollIntervalSec, RxBytesPerSec: kvEth0RxRate, TxBytesPerSec: kvEth0TxRate},
 				{Name: "eth1", RxBytes: kvEth1RxRate * networkStatsPollIntervalSec, TxBytes: kvEth1TxRate * networkStatsPollIntervalSec, RxBytesPerSec: kvEth1RxRate, TxBytesPerSec: kvEth1TxRate},
 			},
@@ -635,7 +638,7 @@ func getDemoPodNetworkStats() []PodNetworkStats {
 			PodName:   "k3s-server-xyz89",
 			Namespace: "tenant-1-ns2",
 			Component: "k3s",
-			Interfaces: []InterfaceStats{
+			Interfaces: []mcp.InterfaceStats{
 				{Name: "eth0", RxBytes: k3sEth0RxRate * networkStatsPollIntervalSec, TxBytes: k3sEth0TxRate * networkStatsPollIntervalSec, RxBytesPerSec: k3sEth0RxRate, TxBytesPerSec: k3sEth0TxRate},
 				{Name: "eth1", RxBytes: k3sEth1RxRate * networkStatsPollIntervalSec, TxBytes: k3sEth1TxRate * networkStatsPollIntervalSec, RxBytesPerSec: k3sEth1RxRate, TxBytesPerSec: k3sEth1TxRate},
 			},

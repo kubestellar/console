@@ -102,3 +102,9 @@ func mcpValidateClusterAndNamespace(cluster, namespace string) error {
 	}
 	return mcpValidateName("namespace", namespace)
 }
+
+// ValidateClusterAndNamespace is the exported version of mcpValidateClusterAndNamespace
+// for use by handlers outside the mcp package.
+func ValidateClusterAndNamespace(cluster, namespace string) error {
+	return mcpValidateClusterAndNamespace(cluster, namespace)
+}

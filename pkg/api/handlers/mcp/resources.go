@@ -567,9 +567,10 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 // Kept short because kubelet stats/summary can be slow on large clusters.
 const podNetworkStatsTimeout = 10 * time.Second
 
-// networkStatsPollIntervalSec is the expected frontend polling interval in seconds.
+// NetworkStatsPollIntervalSec is the expected frontend polling interval in seconds.
 // Used to estimate per-second rates from cumulative kubelet byte counters.
-const networkStatsPollIntervalSec int64 = 15
+// Exported for use by demo data generators in the parent handlers package.
+const NetworkStatsPollIntervalSec int64 = 15
 
 // multiTenancyLabels are the app-label values for multi-tenancy infrastructure pods
 // whose network stats we want to collect.
@@ -777,8 +778,8 @@ func fetchPodInterfaceStats(
 					// byte counters, not per-second rates. The frontend computes
 					// deltas between successive polls.  We provide a rough estimate
 					// here by dividing by the expected poll interval.
-					RxBytesPerSec: rxBytes / networkStatsPollIntervalSec,
-					TxBytesPerSec: txBytes / networkStatsPollIntervalSec,
+					RxBytesPerSec: rxBytes / NetworkStatsPollIntervalSec,
+					TxBytesPerSec: txBytes / NetworkStatsPollIntervalSec,
 				})
 			}
 			return result
