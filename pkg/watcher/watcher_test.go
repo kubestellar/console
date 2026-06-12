@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"crypto/tls"
+
+	"github.com/stretchr/testify/require"
 	"crypto/x509"
 )
 
@@ -248,7 +250,8 @@ func TestRun_HTTPMode(t *testing.T) {
 	defer backend.Close()
 
 	// Extract backend port
-	backendURL, _ := net.ResolveTCPAddr("tcp", backend.Listener.Addr().String())
+	backendURL, err := net.ResolveTCPAddr("tcp", backend.Listener.Addr().String())
+	require.NoError(t, err, "failed to resolve TCP address")
 	backendPort := backendURL.Port
 
 	// Create temp dir for PID and stage files
@@ -340,8 +343,9 @@ func TestRun_TLSMode(t *testing.T) {
 	}))
 	defer backend.Close()
 
-	backendURL, _ := net.ResolveTCPAddr("tcp", backend.Listener.Addr().String())
+	backendURL, err := net.ResolveTCPAddr("tcp", backend.Listener.Addr().String())
 	backendPort := backendURL.Port
+	require.NoError(t, err, "failed to resolve TCP address")
 
 	tmpDir := t.TempDir()
 	pidFile := filepath.Join(tmpDir, "watcher.pid")

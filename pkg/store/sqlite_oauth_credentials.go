@@ -84,7 +84,8 @@ func (s *SQLiteStore) GetOAuthCredentials(ctx context.Context) (clientID, client
 			return "", "", fmt.Errorf("failed to persist encrypted secret during migration: %w", err)
 		}
 
-		return clientID, plaintextSecret.String, nil
+		plaintextValue := plaintextSecret.String
+		return clientID, plaintextValue, nil
 	}
 
 	// No credentials found in any format
