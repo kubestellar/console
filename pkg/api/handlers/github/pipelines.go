@@ -6,7 +6,7 @@
 // Netlify Function only covers console.kubestellar.io).
 //
 // If two versions drift, the Netlify function is the canonical source.
-package handlers
+package github
 
 import (
 	"context"

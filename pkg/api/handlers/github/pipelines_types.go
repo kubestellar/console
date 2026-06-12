@@ -2,7 +2,7 @@
 //
 // Type definitions, constants, and package-level variables extracted from
 // github_pipelines.go. Shared by handler methods and helper functions.
-package handlers
+package github
 
 import (
 	"os"
