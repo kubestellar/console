@@ -93,6 +93,39 @@ func TestValidateHelmChartVersion(t *testing.T) {
 	}
 }
 
+func TestValidateHelmChartHost(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		// Plain repo/chart references — no URL scheme, no SSRF risk
+		{"plain repo chart", "bitnami/nginx", false},
+		{"plain chart name", "nginx", false},
+		// OCI with public registry — allowed
+		{"valid oci registry", "oci://registry-1.docker.io/bitnamicharts/nginx", false},
+		// HTTPS chart archive with public host — allowed
+		{"valid https archive", "https://charts.bitnami.com/bitnami/nginx-1.0.0.tgz", false},
+		// OCI pointing to private IP — blocked (original #17530 fix)
+		{"oci private ip", "oci://192.168.1.1/charts/evil", true},
+		{"oci metadata service", "oci://169.254.169.254/charts/evil", true},
+		{"oci loopback", "oci://127.0.0.1/charts/evil", true},
+		// HTTPS pointing to private IP — blocked by #18074 fix
+		{"https private ip", "https://10.0.0.1/evil.tgz", true},
+		{"https metadata service", "https://169.254.169.254/latest/meta-data/iam/security-credentials/", true},
+		{"https loopback", "https://127.0.0.1/evil.tgz", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateHelmChartHost(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateHelmChartHost(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestServer_HandleHelmRollback(t *testing.T) {
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand

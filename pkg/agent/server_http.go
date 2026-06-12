@@ -15,6 +15,7 @@ import (
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/kubestellar/console/pkg/agent/updater"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
@@ -189,6 +190,24 @@ func resolveBackendPort() int {
 // backendHealthURL returns the /health URL for the currently resolved backend port.
 func backendHealthURL() string {
 	return fmt.Sprintf("%s://%s:%d%s", backendHealthScheme, backendHealthHost, resolveBackendPort(), backendHealthPath)
+}
+
+// waitForBackendHealth polls the backend /health endpoint until it responds
+// with HTTP 200 or the retry limit is reached. Used by the auto-updater to
+// verify the backend restarted successfully after a binary replacement.
+func waitForBackendHealth() bool {
+	healthURL := backendHealthURL()
+	for i := 0; i < healthCheckRetries; i++ {
+		resp, err := healthCheckHTTPClient.Get(healthURL)
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				return true
+			}
+		}
+		time.Sleep(healthCheckDelay)
+	}
+	return false
 }
 
 // handleRestartBackend kills the existing backend on its resolved listen port and starts a new one.
@@ -459,7 +478,7 @@ func (s *Server) handleAutoUpdateConfig(w http.ResponseWriter, r *http.Request) 
 				channel = all.AutoUpdateChannel
 			}
 		}
-		writeJSON(w, AutoUpdateConfigRequest{
+		writeJSON(w, updater.AutoUpdateConfigRequest{
 			Enabled: enabled,
 			Channel: channel,
 		})
@@ -467,7 +486,7 @@ func (s *Server) handleAutoUpdateConfig(w http.ResponseWriter, r *http.Request) 
 	case "POST":
 		// Limit request body to prevent OOM from oversized payloads (#7268)
 		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
-		var req AutoUpdateConfigRequest
+		var req updater.AutoUpdateConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]string{"error": "invalid request body"})

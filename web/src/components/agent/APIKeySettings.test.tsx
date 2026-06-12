@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import * as APIKeySettingsModule from './APIKeySettings'
 import { APIKeySettings, buildBaseURLPayload } from './APIKeySettings'
 
 const translations: Record<string, string> = {
@@ -68,8 +67,8 @@ describe('APIKeySettings Component', () => {
   })
 
   it('exports APIKeySettings component', () => {
-    expect(APIKeySettingsModule.APIKeySettings).toBeDefined()
-    expect(typeof APIKeySettingsModule.APIKeySettings).toBe('function')
+    expect(APIKeySettings).toBeDefined()
+    expect(typeof APIKeySettings).toBe('function')
   })
 
   it('shows the empty state when no providers are available after filtering', async () => {

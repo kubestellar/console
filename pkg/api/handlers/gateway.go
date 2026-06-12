@@ -43,7 +43,7 @@ func NewGatewayHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub) *GatewayHan
 // GET /api/gateway/gateways
 func (h *GatewayHandlers) ListGateways(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	// Optional filters
@@ -84,7 +84,7 @@ func (h *GatewayHandlers) ListGateways(c *fiber.Ctx) error {
 // GET /api/gateway/httproutes
 func (h *GatewayHandlers) ListHTTPRoutes(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	// Optional filters
@@ -125,7 +125,7 @@ func (h *GatewayHandlers) ListHTTPRoutes(c *fiber.Ctx) error {
 // GET /api/gateway/status
 func (h *GatewayHandlers) GetGatewayAPIStatus(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), gatewayDefaultTimeout)
@@ -159,7 +159,7 @@ func (h *GatewayHandlers) GetGatewayAPIStatus(c *fiber.Ctx) error {
 // GET /api/gateway/gateways/:cluster/:namespace/:name
 func (h *GatewayHandlers) GetGateway(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -187,7 +187,7 @@ func (h *GatewayHandlers) GetGateway(c *fiber.Ctx) error {
 // GET /api/gateway/httproutes/:cluster/:namespace/:name
 func (h *GatewayHandlers) GetHTTPRoute(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")

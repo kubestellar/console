@@ -112,6 +112,10 @@ const siemWebhookTimeout = 30 * time.Second
 // shape without breaking older integrations.
 const webhookPayloadVersion = 1
 
+// destinationURLValidator can be overridden in tests that exercise loopback
+// httptest servers. Production code always uses ssrf.ValidateURL.
+var destinationURLValidator = ssrf.ValidateURL
+
 // WebhookDestination POSTs batches of audit events as JSON to a configurable
 // URL. It is the first concrete adapter for #9643; see ErrDestinationUnsupported
 // for the other providers.
@@ -136,7 +140,7 @@ func NewWebhookDestination(url string, client *http.Client) (*WebhookDestination
 		return nil, errors.New("webhook destination: url is required")
 	}
 	// SSRF protection: reject URLs that resolve to private/internal IPs (#17533).
-	if err := ssrf.ValidateURL(url); err != nil {
+	if err := destinationURLValidator(url); err != nil {
 		return nil, fmt.Errorf("webhook destination: %w", err)
 	}
 	if client == nil {

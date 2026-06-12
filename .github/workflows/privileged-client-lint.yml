@@ -65,10 +65,10 @@ jobs:
             exit 1
           fi
 
-          # Load allowlist (one basename per line, # comments ignored).
-          ALLOWED_BASENAMES=$(grep -vE '^\s*(#|$)' "$ALLOWLIST_FILE" | sort -u)
-          echo "Allowed basenames:"
-          echo "$ALLOWED_BASENAMES" | sed 's/^/  /'
+          # Load allowlist (one subpath per line relative to HANDLER_DIR, # comments ignored).
+          ALLOWED_SUBPATHS=$(grep -vE '^\s*(#|$)' "$ALLOWLIST_FILE" | sort -u)
+          echo "Allowed subpaths:"
+          echo "$ALLOWED_SUBPATHS" | sed 's/^/  /'
           echo
 
           # The three patterns to guard:
@@ -97,8 +97,9 @@ jobs:
           DISALLOWED=""
           while IFS= read -r line; do
             file_path=$(printf '%s' "$line" | cut -d: -f1)
-            base=$(basename "$file_path")
-            if ! printf '%s\n' "$ALLOWED_BASENAMES" | grep -qx "$base"; then
+            # Compute subpath relative to HANDLER_DIR (e.g. "mcp/resources.go")
+            subpath="${file_path#${HANDLER_DIR}/}"
+            if ! printf '%s\n' "$ALLOWED_SUBPATHS" | grep -qx "$subpath"; then
               DISALLOWED="$DISALLOWED$line"$'\n'
             fi
           done <<< "$CANDIDATES"
@@ -112,7 +113,7 @@ jobs:
           echo "::error::Found privileged-client mutation(s) in non-allowlisted file(s)."
           echo
           echo "The backend pod ServiceAccount may only be used for the GPU"
-          echo "reservation exception (mcp_resources.go ResourceQuota handlers),"
+          echo "reservation exception (mcp/resources.go ResourceQuota handlers),"
           echo "the console self-upgrade (self_upgrade.go), and the system-"
           echo "internal persistence reconciler (console_persistence.go)."
           echo "Every other k8s mutation must go through kc-agent at"

@@ -242,7 +242,7 @@ func newAuthTestServerWithToken() *Server {
 	}
 
 	return &Server{
-		kubectl:        &kube.KubectlProxy{config: config},
+		kubectl:        kube.NewTestKubectlProxy(config),
 		allowedOrigins: []string{testAllowedOrigin},
 		agentToken:     testTokenValue,
 		tokenExplicit:  true, // treat test token as explicitly set so origin bypass doesn't fire
@@ -259,7 +259,7 @@ func newAuthTestServerNoToken() *Server {
 	}
 
 	return &Server{
-		kubectl:        &kube.KubectlProxy{config: config},
+		kubectl:        kube.NewTestKubectlProxy(config),
 		allowedOrigins: []string{testAllowedOrigin},
 		agentToken:     "", // No token — all requests pass validateToken
 		registry:       &Registry{providers: make(map[string]AIProvider)},

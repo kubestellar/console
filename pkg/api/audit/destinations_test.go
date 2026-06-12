@@ -9,6 +9,8 @@ package audit
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -78,12 +80,18 @@ func TestRegisterDestinationFallsBackToStubOnMissingConfig(t *testing.T) {
 func TestRegisterDestinationSplunkWithFullConfig(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
+	allowLoopbackDestinations(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
 
 	adapter, err := RegisterDestination(DestinationConfig{
 		ID:       "splunk-prod",
 		Name:     "Splunk Prod",
 		Provider: ProviderSplunk,
-		URL:      "https://splunk.example.com",
+		URL:      srv.URL,
 		Token:    "abc123",
 	})
 	if err != nil {
@@ -103,11 +111,17 @@ func TestRegisterDestinationSplunkWithFullConfig(t *testing.T) {
 func TestRegisterDestinationElasticWithURL(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
+	allowLoopbackDestinations(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
 
 	adapter, err := RegisterDestination(DestinationConfig{
 		ID:       "elastic-prod",
 		Provider: ProviderElastic,
-		URL:      "https://es.example.com:9200",
+		URL:      srv.URL,
 	})
 	if err != nil {
 		t.Fatalf("RegisterDestination: %v", err)

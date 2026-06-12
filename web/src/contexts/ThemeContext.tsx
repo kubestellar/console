@@ -153,6 +153,12 @@ function applyTheme(theme: Theme) {
     }
   } catch (error: unknown) {
     console.error('Error applying theme:', error)
+    // Dispatch event for monitoring (theme errors shouldn't break the app)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('theme-error', {
+        detail: { error: error instanceof Error ? error.message : String(error), timestamp: Date.now() }
+      }))
+    }
   }
 }
 

@@ -39,7 +39,7 @@ type SendAlertNotificationRequest struct {
 
 // requireAdmin checks that the caller has the admin role.
 // Returns a 403 Forbidden response if not, or nil on success.
-func (h *NotificationHandler) requireAdmin(c *fiber.Ctx) error {
+func (h *NotificationHandler) RequireAdmin(c *fiber.Ctx) error {
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
 	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
@@ -53,7 +53,7 @@ func (h *NotificationHandler) requireAdmin(c *fiber.Ctx) error {
 func (h *NotificationHandler) TestNotification(c *fiber.Ctx) error {
 	// Only admins may trigger test notifications — they open outbound
 	// connections to Slack/SMTP/PagerDuty/OpsGenie (#5410).
-	if err := h.requireAdmin(c); err != nil {
+	if err := h.RequireAdmin(c); err != nil {
 		return err
 	}
 
@@ -90,7 +90,7 @@ func (h *NotificationHandler) TestNotification(c *fiber.Ctx) error {
 func (h *NotificationHandler) SendAlertNotification(c *fiber.Ctx) error {
 	// Only admins may send real alert notifications — they trigger outbound
 	// messages to Slack/email/PagerDuty channels (#5413).
-	if err := h.requireAdmin(c); err != nil {
+	if err := h.RequireAdmin(c); err != nil {
 		return err
 	}
 

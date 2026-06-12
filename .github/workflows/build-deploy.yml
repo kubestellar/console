@@ -125,9 +125,9 @@ jobs:
       - name: Export digest
         if: github.event_name != 'pull_request'
         run: |
-          mkdir -p "${RUNNER_TEMP}/digests"
+          mkdir -p "${{ runner.temp }}/digests"
           digest="${{ steps.build.outputs.digest }}"
-          touch "${RUNNER_TEMP}/digests/${digest#sha256:}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       - name: Upload digest
         if: github.event_name != 'pull_request'
@@ -216,7 +216,7 @@ jobs:
 
       - name: Configure kubeconfig from SA token
         run: |
-          export KUBECONFIG="$RUNNER_TEMP/kubeconfig"
+          export KUBECONFIG="${{ runner.temp }}/kubeconfig"
           SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
           CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
           kubectl config set-cluster in-cluster \
@@ -349,7 +349,7 @@ jobs:
 
       - name: Configure kubeconfig from SA token
         run: |
-          export KUBECONFIG="$RUNNER_TEMP/kubeconfig"
+          export KUBECONFIG="${{ runner.temp }}/kubeconfig"
           SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
           CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
           kubectl config set-cluster in-cluster \

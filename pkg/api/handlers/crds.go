@@ -75,7 +75,7 @@ const statusServiceUnavailableCRD = fiber.StatusServiceUnavailable
 // ListCRDs returns all CRDs across clusters
 // GET /api/crds
 func (h *CRDHandlers) ListCRDs(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(CRDListResponse{
 			CRDs:       getDemoCRDs(),
 			IsDemoData: true,

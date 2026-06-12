@@ -622,7 +622,7 @@ func TestExecutionOperations(t *testing.T) {
 		UserID:    userID,
 		MissionID: missionID,
 		Status:    "running",
-		CreatedAt: time.Now(),
+		StartedAt: time.Now(),
 	}
 
 	t.Run("create execution", func(t *testing.T) {
@@ -658,7 +658,7 @@ func TestMemoryOperations(t *testing.T) {
 		ID:       "mem-1",
 		UserID:   userID,
 		Category: "observation",
-		Content:  "Test memory",
+		Summary:  "Test memory",
 	}
 
 	t.Run("create memory entry", func(t *testing.T) {
@@ -720,13 +720,13 @@ func TestWatchOperations(t *testing.T) {
 	userID := "user-1"
 
 	watch := &store.StellarWatch{
-		ID:        "watch-1",
-		UserID:    userID,
-		Cluster:   "prod",
-		Namespace: "default",
-		Kind:      "Deployment",
-		Name:      "nginx",
-		Status:    "active",
+		ID:           "watch-1",
+		UserID:       userID,
+		Cluster:      "prod",
+		Namespace:    "default",
+		ResourceKind: "Deployment",
+		ResourceName: "nginx",
+		Status:       "active",
 	}
 
 	t.Run("create watch", func(t *testing.T) {
@@ -760,7 +760,6 @@ func TestObservationOperations(t *testing.T) {
 
 	obs := &store.StellarObservation{
 		ID:      "obs-1",
-		UserID:  userID,
 		Cluster: "prod",
 		Summary: "Test observation",
 	}
@@ -907,4 +906,241 @@ func TestMissionValidationEdgeCases(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "trigger type")
 	})
+}
+
+func TestListMissionsLimitNormalization(t *testing.T) {
+	ms := newMockStore()
+	svc := stellar.New(ms)
+	ctx := context.Background()
+	userID := "user-1"
+
+	ms.missions["m1"] = &store.StellarMission{ID: "m1", UserID: userID, Name: "X"}
+
+	tests := []struct {
+		name  string
+		limit int
+	}{
+		{"zero limit normalizes", 0},
+		{"negative limit normalizes", -5},
+		{"exceeds max normalizes", stellar.MaxListLimit + 100},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			missions, err := svc.ListMissions(ctx, userID, tc.limit, 0)
+			require.NoError(t, err)
+			assert.Len(t, missions, 1)
+		})
+	}
+}
+
+func TestListExecutionsLimitNormalization(t *testing.T) {
+	ms := newMockStore()
+	svc := stellar.New(ms)
+	ctx := context.Background()
+	userID := "user-1"
+
+	ms.executions["e1"] = &store.StellarExecution{ID: "e1", UserID: userID, MissionID: "m1", Status: "completed"}
+
+	tests := []struct {
+		name  string
+		limit int
+	}{
+		{"zero limit normalizes", 0},
+		{"negative limit normalizes", -1},
+		{"exceeds max normalizes", stellar.MaxListLimit + 1},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			executions, err := svc.ListExecutions(ctx, userID, "", "", tc.limit, 0)
+			require.NoError(t, err)
+			assert.Len(t, executions, 1)
+		})
+	}
+}
+
+func TestListActionsLimitNormalization(t *testing.T) {
+	ms := newMockStore()
+	svc := stellar.New(ms)
+	ctx := context.Background()
+	userID := "user-1"
+
+	ms.actions["a1"] = &store.StellarAction{ID: "a1", UserID: userID, ActionType: "Restart", Status: "pending"}
+
+	tests := []struct {
+		name  string
+		limit int
+	}{
+		{"zero limit normalizes", 0},
+		{"negative limit normalizes", -10},
+		{"exceeds max normalizes", stellar.MaxListLimit + 50},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actions, err := svc.ListActions(ctx, userID, "", tc.limit, 0)
+			require.NoError(t, err)
+			assert.Len(t, actions, 1)
+		})
+	}
+}
+
+func TestListMemoryEntriesLimitNormalization(t *testing.T) {
+	ms := newMockStore()
+	svc := stellar.New(ms)
+	ctx := context.Background()
+	userID := "user-1"
+
+	ms.memoryEntries = []store.StellarMemoryEntry{{ID: "mem-1", UserID: userID, Category: "obs"}}
+
+	tests := []struct {
+		name  string
+		limit int
+	}{
+		{"zero limit normalizes", 0},
+		{"negative limit normalizes", -3},
+		{"exceeds max normalizes", stellar.MaxListLimit + 200},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			entries, err := svc.ListMemoryEntries(ctx, userID, "", "", tc.limit, 0)
+			require.NoError(t, err)
+			assert.Len(t, entries, 1)
+		})
+	}
+}
+
+func TestSearchMemoryEntriesLimitNormalization(t *testing.T) {
+	ms := newMockStore()
+	svc := stellar.New(ms)
+	ctx := context.Background()
+	userID := "user-1"
+
+	ms.memoryEntries = []store.StellarMemoryEntry{{ID: "mem-1", UserID: userID, Category: "obs"}}
+
+	tests := []struct {
+		name  string
+		limit int
+	}{
+		{"zero limit normalizes", 0},
+		{"negative limit normalizes", -1},
+		{"exceeds max normalizes", stellar.MaxListLimit + 1},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			entries, err := svc.SearchMemoryEntries(ctx, userID, "test", tc.limit)
+			require.NoError(t, err)
+			assert.Len(t, entries, 1)
+		})
+	}
+}
+
+func TestListNotificationsLimitNormalization(t *testing.T) {
+	ms := newMockStore()
+	svc := stellar.New(ms)
+	ctx := context.Background()
+	userID := "user-1"
+
+	ms.notifications["n1"] = &store.StellarNotification{ID: "n1", UserID: userID, Title: "Alert"}
+
+	tests := []struct {
+		name  string
+		limit int
+	}{
+		{"zero limit normalizes", 0},
+		{"negative limit normalizes", -1},
+		{"exceeds max normalizes", stellar.MaxListLimit + 1},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			notifications, err := svc.ListNotifications(ctx, userID, tc.limit, false)
+			require.NoError(t, err)
+			assert.Len(t, notifications, 1)
+		})
+	}
+}
+
+func TestActionValidationEdgeCases(t *testing.T) {
+	svc := stellar.New(newMockStore())
+	ctx := context.Background()
+
+	t.Run("create action with invalid input returns error", func(t *testing.T) {
+		action := &store.StellarAction{ID: "bad-1"}
+		err := svc.CreateAction(ctx, action)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, stellar.ErrInvalidInput)
+	})
+
+	t.Run("create nil action returns error", func(t *testing.T) {
+		err := svc.CreateAction(ctx, nil)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, stellar.ErrInvalidInput)
+	})
+}
+
+func TestCreateMissionValidation(t *testing.T) {
+	svc := stellar.New(newMockStore())
+	ctx := context.Background()
+
+	t.Run("create mission with empty name returns error", func(t *testing.T) {
+		mission := &store.StellarMission{
+			ID:     "m-1",
+			UserID: "user-1",
+			Name:   "",
+			Goal:   "some goal",
+		}
+		err := svc.CreateMission(ctx, mission)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, stellar.ErrInvalidInput)
+	})
+
+	t.Run("update mission with nil returns error", func(t *testing.T) {
+		err := svc.UpdateMission(ctx, nil)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, stellar.ErrInvalidInput)
+	})
+
+	t.Run("create mission with all valid trigger types", func(t *testing.T) {
+		triggers := []string{"manual", "cron", "kubernetes-event", "prometheus-alert", "github-webhook", "api", "chained-completion"}
+		for _, trigger := range triggers {
+			mission := &store.StellarMission{
+				ID:          "m-" + trigger,
+				UserID:      "user-1",
+				Name:        "Mission " + trigger,
+				TriggerType: trigger,
+			}
+			err := svc.CreateMission(ctx, mission)
+			assert.NoError(t, err, "trigger type %q should be valid", trigger)
+		}
+	})
+
+	t.Run("create mission with all valid execution modes", func(t *testing.T) {
+		modes := []string{"local-only", "cloud-only", "hybrid"}
+		for _, mode := range modes {
+			mission := &store.StellarMission{
+				ID:            "m-" + mode,
+				UserID:        "user-1",
+				Name:          "Mission " + mode,
+				ExecutionMode: mode,
+			}
+			err := svc.CreateMission(ctx, mission)
+			assert.NoError(t, err, "execution mode %q should be valid", mode)
+		}
+	})
+}
+
+func TestGetMissionNotFound(t *testing.T) {
+	svc := stellar.New(newMockStore())
+	ctx := context.Background()
+
+	_, err := svc.GetMission(ctx, "user-1", "nonexistent-id")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, stellar.ErrNotFound)
+}
+
+func TestGetPreferencesNotFound(t *testing.T) {
+	svc := stellar.New(newMockStore())
+	ctx := context.Background()
+
+	_, err := svc.GetPreferences(ctx, "user-no-prefs")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, stellar.ErrNotFound)
 }

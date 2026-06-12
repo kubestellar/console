@@ -17,6 +17,7 @@ import (
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
+	"github.com/kubestellar/console/pkg/api/handlers/mcp"
 )
 
 // bulkUtilizationsMaxIDs caps the number of reservation ids a single
@@ -93,7 +94,7 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 	if input.Namespace == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Namespace is required")
 	}
-	if err := mcpValidateClusterAndNamespace(input.Cluster, input.Namespace); err != nil {
+	if err := mcp.ValidateClusterAndNamespace(input.Cluster, input.Namespace); err != nil {
 		return err
 	}
 	if input.GPUCount < 1 {

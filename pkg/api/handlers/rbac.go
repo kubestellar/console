@@ -53,7 +53,7 @@ func NewRBACHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *RBACHandl
 }
 
 // ListConsoleUsers returns a page of console users. Supports limit/offset
-// query params via parsePageParams (#6595); a response may therefore be a
+// query params via ParsePageParams (#6595); a response may therefore be a
 // partial page. Absent limit yields the store default page size.
 //
 // SECURITY: Restricted to admin users to prevent non-admin users from
@@ -71,9 +71,9 @@ func (h *RBACHandler) ListConsoleUsers(c *fiber.Ctx) error {
 	}
 
 	// #6595: bound the read. ?limit=&offset= follow the same contract as the
-	// feedback list endpoints (see parsePageParams). Absent limit → store
+	// feedback list endpoints (see ParsePageParams). Absent limit → store
 	// default; malformed/oversized limit → HTTP 400.
-	limit, offset, err := parsePageParams(c)
+	limit, offset, err := ParsePageParams(c)
 	if err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
@@ -317,7 +317,7 @@ func (h *RBACHandler) ListK8sRoles(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
@@ -365,7 +365,7 @@ func (h *RBACHandler) ListK8sRoleBindings(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
@@ -428,7 +428,7 @@ func (h *RBACHandler) ListK8sUsers(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
@@ -463,7 +463,7 @@ func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")

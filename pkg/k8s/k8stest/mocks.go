@@ -161,6 +161,7 @@ func BuildGVRMap() map[schema.GroupVersionResource]string {
 		{Group: "apps", Version: "v1", Resource: "deployments"}:                                             "DeploymentList",
 		{Group: "apps", Version: "v1", Resource: "statefulsets"}:                                            "StatefulSetList",
 		{Group: "apps", Version: "v1", Resource: "daemonsets"}:                                              "DaemonSetList",
+		{Group: "", Version: "v1", Resource: "pods"}:                                                        "PodList",
 		{Group: "", Version: "v1", Resource: "services"}:                                                    "ServiceList",
 		{Group: "", Version: "v1", Resource: "configmaps"}:                                                  "ConfigMapList",
 		{Group: "", Version: "v1", Resource: "secrets"}:                                                     "SecretList",

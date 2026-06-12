@@ -48,9 +48,3 @@ func isWindows() bool {
 	return true
 }
 
-// chmodIfSupported is a no-op on Windows. Windows does not use POSIX file
-// permission bits; attempting os.Chmod can return "permission denied" or
-// silently succeed depending on the filesystem (#11075).
-func chmodIfSupported(_ string, _ uint32) error {
-	return nil
-}

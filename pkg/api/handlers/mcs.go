@@ -42,7 +42,7 @@ func NewMCSHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub) *MCSHandlers {
 // GET /api/mcs/exports
 func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	// Optional filters
@@ -56,7 +56,7 @@ func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 		// Get exports for specific cluster
 		exports, err := h.k8sClient.ListServiceExportsForCluster(ctx, cluster, namespace)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{
 			"items":      exports,
@@ -68,7 +68,7 @@ func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 	// Get exports across all clusters
 	list, err := h.k8sClient.ListServiceExports(ctx)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	return c.JSON(list)
@@ -78,7 +78,7 @@ func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 // GET /api/mcs/imports
 func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	// Optional filters
@@ -92,7 +92,7 @@ func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 		// Get imports for specific cluster
 		imports, err := h.k8sClient.ListServiceImportsForCluster(ctx, cluster, namespace)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{
 			"items":      imports,
@@ -104,7 +104,7 @@ func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 	// Get imports across all clusters
 	list, err := h.k8sClient.ListServiceImports(ctx)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	return c.JSON(list)
@@ -114,7 +114,7 @@ func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 // GET /api/mcs/status
 func (h *MCSHandlers) GetMCSStatus(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcsDefaultTimeout)
@@ -122,7 +122,7 @@ func (h *MCSHandlers) GetMCSStatus(c *fiber.Ctx) error {
 
 	clusters, _, err := h.k8sClient.HealthyClusters(ctx)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	type clusterMCSStatus struct {
@@ -148,7 +148,7 @@ func (h *MCSHandlers) GetMCSStatus(c *fiber.Ctx) error {
 // GET /api/mcs/exports/:cluster/:namespace/:name
 func (h *MCSHandlers) GetServiceExport(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -160,7 +160,7 @@ func (h *MCSHandlers) GetServiceExport(c *fiber.Ctx) error {
 
 	exports, err := h.k8sClient.ListServiceExportsForCluster(ctx, cluster, namespace)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	for _, export := range exports {
@@ -176,7 +176,7 @@ func (h *MCSHandlers) GetServiceExport(c *fiber.Ctx) error {
 // GET /api/mcs/imports/:cluster/:namespace/:name
 func (h *MCSHandlers) GetServiceImport(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -188,7 +188,7 @@ func (h *MCSHandlers) GetServiceImport(c *fiber.Ctx) error {
 
 	imports, err := h.k8sClient.ListServiceImportsForCluster(ctx, cluster, namespace)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	for _, imp := range imports {

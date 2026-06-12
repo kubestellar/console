@@ -140,7 +140,7 @@ func ACMMBadgeHandler(c *fiber.Ctx) error {
 	}
 
 	// Demo mode support
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		badge := &shieldsEndpointBadge{
 			SchemaVersion: 1,
 			Label:         "ACMM",

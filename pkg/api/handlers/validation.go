@@ -8,6 +8,10 @@ import (
 // cronFieldCount is the number of fields in a standard cron expression.
 const cronFieldCount = 5
 
+// maxK8sNameLen is the maximum allowed length for Kubernetes resource names (RFC 1123).
+// This constant is used by both handlers and gitops packages.
+const maxK8sNameLen = 253
+
 // cronFieldPattern matches a single cron field (digits, *, /, -, comma).
 var cronFieldPattern = regexp.MustCompile(`^[\d\*,/\-]+$`)
 
@@ -39,10 +43,12 @@ func isValidCronSchedule(schedule string) bool {
 	return true
 }
 
+// MaxK8sNameLen is the maximum length for a Kubernetes resource name (DNS-1123 subdomain).
+const MaxK8sNameLen = 253
+
 // isValidK8sName validates a Kubernetes-style DNS name (group or resource).
-// Uses maxK8sNameLen (253) defined in gitops.go.
 func isValidK8sName(name string) bool {
-	if len(name) > maxK8sNameLen {
+	if len(name) > MaxK8sNameLen {
 		return false
 	}
 	return k8sNamePattern.MatchString(name)
@@ -50,7 +56,7 @@ func isValidK8sName(name string) bool {
 
 // isValidK8sVersion validates a Kubernetes API version string.
 func isValidK8sVersion(version string) bool {
-	if len(version) > maxK8sNameLen {
+	if len(version) > MaxK8sNameLen {
 		return false
 	}
 	return k8sVersionPattern.MatchString(version)

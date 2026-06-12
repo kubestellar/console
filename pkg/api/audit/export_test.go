@@ -1,6 +1,8 @@
 package audit
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -8,15 +10,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func allowLoopbackDestinations(t *testing.T) {
+	t.Helper()
+	orig := destinationURLValidator
+	destinationURLValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { destinationURLValidator = orig })
+}
+
 func TestRegisterDestination_FullFlow(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
+	allowLoopbackDestinations(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
 
 	cfg := DestinationConfig{
 		ID:       "test-webhook",
 		Name:     "Test Webhook",
 		Provider: ProviderWebhook,
-		URL:      "http://example.com/webhook",
+		URL:      srv.URL,
 	}
 
 	adapter, err := RegisterDestination(cfg)
@@ -33,12 +48,18 @@ func TestRegisterDestination_FullFlow(t *testing.T) {
 func TestBuildSummary(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
+	allowLoopbackDestinations(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
 
 	// Add a destination
 	_, err := RegisterDestination(DestinationConfig{
 		ID:       "dest-1",
 		Provider: ProviderWebhook,
-		URL:      "http://x",
+		URL:      srv.URL,
 	})
 	require.NoError(t, err)
 

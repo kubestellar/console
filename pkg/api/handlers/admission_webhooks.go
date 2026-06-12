@@ -89,7 +89,7 @@ const statusServiceUnavailableWebhook = fiber.StatusServiceUnavailable
 // ListWebhooks returns all admission webhook configurations across clusters
 // GET /api/admission-webhooks
 func (h *WebhookHandlers) ListWebhooks(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(WebhookListResponse{
 			Webhooks:   getDemoWebhooks(),
 			IsDemoData: true,

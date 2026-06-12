@@ -7,6 +7,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"os/exec"
 	"regexp"
 	"strings"
 	"time"
@@ -23,6 +24,15 @@ var allowLoopbackForTests bool
 // cliProviderExecutionTimeout bounds standalone CLI-based providers when the
 // caller has not already attached a deadline.
 const cliProviderExecutionTimeout = 5 * time.Minute
+
+// execCommand allows mocking exec.Command for testing
+var execCommand = exec.Command
+
+// execCommandContext allows mocking exec.CommandContext for testing
+var execCommandContext = exec.CommandContext
+
+// fakeExecCommandContext is a test helper for mocking exec.CommandContext
+var fakeExecCommandContext func(context.Context, string, ...string) *exec.Cmd
 
 // aiProviderHTTPClient is reused across AI provider API calls to enable
 // connection pooling and reduce per-request allocation overhead.

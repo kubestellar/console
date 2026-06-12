@@ -57,6 +57,7 @@ func TestElasticDestination_Send(t *testing.T) {
 }
 
 func TestElasticDestination_DefaultIndex(t *testing.T) {
+	allowLoopbackDestinations(t)
 	dest, err := NewElasticDestination("http://localhost:9200", "", nil)
 	require.NoError(t, err)
 	assert.Equal(t, elasticDefaultIndex, dest.index)

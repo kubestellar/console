@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s/k8stest"
+	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -80,9 +80,9 @@ func TestNewFakeClientAllowAll(t *testing.T) {
 	fc := k8stest.NewFakeClientAllowAll()
 	
 	// Create a test SSAR
-	ssar := &corev1.SelfSubjectAccessReview{
-		Spec: corev1.SelfSubjectAccessReviewSpec{
-			ResourceAttributes: &corev1.ResourceAttributes{
+	ssar := &authv1.SelfSubjectAccessReview{
+		Spec: authv1.SelfSubjectAccessReviewSpec{
+			ResourceAttributes: &authv1.ResourceAttributes{
 				Verb:     "list",
 				Resource: "pods",
 			},
@@ -103,9 +103,9 @@ func TestNewFakeClientAllowAll(t *testing.T) {
 func TestNewFakeClientDenyAll(t *testing.T) {
 	fc := k8stest.NewFakeClientDenyAll()
 	
-	ssar := &corev1.SelfSubjectAccessReview{
-		Spec: corev1.SelfSubjectAccessReviewSpec{
-			ResourceAttributes: &corev1.ResourceAttributes{
+	ssar := &authv1.SelfSubjectAccessReview{
+		Spec: authv1.SelfSubjectAccessReviewSpec{
+			ResourceAttributes: &authv1.ResourceAttributes{
 				Verb:     "list",
 				Resource: "pods",
 			},

@@ -228,7 +228,7 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 	}
 
 	// Demo mode support
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(demoACMMScan(repo))
 	}
 

@@ -61,7 +61,7 @@ type traceRequest struct {
 
 // RunTrace invokes an Inspektor Gadget tool
 func (h *GadgetHandler) RunTrace(c *fiber.Ctx) error {
-	if err := requireAdmin(c, h.userStore); err != nil {
+	if err := RequireAdmin(c, h.userStore); err != nil {
 		return err
 	}
 

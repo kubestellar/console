@@ -343,7 +343,7 @@ func (m *MultiClusterClient) HealthyClusters(ctx context.Context) (healthy []Clu
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	for _, cl := range all {
-		if h, ok := m.healthCache[cl.Context]; ok && !h.Reachable {
+		if h, ok := m.healthCache[cl.Context]; ok && h != nil && !h.Reachable {
 			cl.NeverConnected = h.LastSeen == ""
 			offline = append(offline, cl)
 		} else {

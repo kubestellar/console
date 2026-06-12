@@ -15,7 +15,7 @@ func TestDemoDataHelpers(t *testing.T) {
 
 	t.Run("isDemoMode", func(t *testing.T) {
 		app.Get("/is-demo", func(c *fiber.Ctx) error {
-			return c.JSON(fiber.Map{"isDemo": isDemoMode(c)})
+			return c.JSON(fiber.Map{"isDemo": IsDemoMode(c)})
 		})
 
 		// Case 1: Header set to true
@@ -42,7 +42,7 @@ func TestDemoDataHelpers(t *testing.T) {
 
 	t.Run("errNoClusterAccess", func(t *testing.T) {
 		app.Get("/no-access", func(c *fiber.Ctx) error {
-			return errNoClusterAccess(c)
+			return ErrNoClusterAccess(c)
 		})
 
 		req := httptest.NewRequest("GET", "/no-access", nil)

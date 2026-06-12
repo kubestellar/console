@@ -6,12 +6,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/api/handlers/mcp"
 )
 
-// isDemoMode checks if the request has the X-Demo-Mode header set to "true"
+// IsDemoMode checks if the request has the X-Demo-Mode header set to "true"
 // When demo mode is enabled, handlers should return demo data immediately
-// without attempting to connect to real clusters
-func isDemoMode(c *fiber.Ctx) bool {
+// without attempting to connect to real clusters.
+// Exported for use in sub-packages like gitops.
+func IsDemoMode(c *fiber.Ctx) bool {
 	return c.Get("X-Demo-Mode") == "true"
 }
 
@@ -21,7 +23,9 @@ func isDemoMode(c *fiber.Ctx) bool {
 // ensures the message stays in sync across handlers (#9830).
 const noClusterAccessMsg = "No cluster access"
 
-func errNoClusterAccess(c *fiber.Ctx) error {
+// ErrNoClusterAccess returns a standard error for missing cluster access.
+// Exported for use in sub-packages like gitops.
+func ErrNoClusterAccess(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": noClusterAccessMsg})
 }
 
@@ -607,7 +611,7 @@ func getDemoWorkloads() []v1alpha1.Workload {
 }
 
 // Demo pod network stats — realistic throughput for multi-tenancy topology
-func getDemoPodNetworkStats() []PodNetworkStats {
+func getDemoPodNetworkStats() []mcp.PodNetworkStats {
 	/** Realistic throughput values (bytes/sec) for demo visualization */
 	const kvEth0RxRate int64 = 10240 // 10 KB/s — KubeVirt data-plane rx
 	const kvEth0TxRate int64 = 5120  // 5 KB/s — KubeVirt data-plane tx
@@ -623,18 +627,18 @@ func getDemoPodNetworkStats() []PodNetworkStats {
 			PodName:   "tenant-1-vm-virt-launcher-abc12",
 			Namespace: "tenant-1-ns1",
 			Component: "kubevirt",
-			Interfaces: []InterfaceStats{
-				{Name: "eth0", RxBytes: kvEth0RxRate * networkStatsPollIntervalSec, TxBytes: kvEth0TxRate * networkStatsPollIntervalSec, RxBytesPerSec: kvEth0RxRate, TxBytesPerSec: kvEth0TxRate},
-				{Name: "eth1", RxBytes: kvEth1RxRate * networkStatsPollIntervalSec, TxBytes: kvEth1TxRate * networkStatsPollIntervalSec, RxBytesPerSec: kvEth1RxRate, TxBytesPerSec: kvEth1TxRate},
+			Interfaces: []mcp.InterfaceStats{
+				{Name: "eth0", RxBytes: kvEth0RxRate * mcp.NetworkStatsPollIntervalSec, TxBytes: kvEth0TxRate * mcp.NetworkStatsPollIntervalSec, RxBytesPerSec: kvEth0RxRate, TxBytesPerSec: kvEth0TxRate},
+				{Name: "eth1", RxBytes: kvEth1RxRate * mcp.NetworkStatsPollIntervalSec, TxBytes: kvEth1TxRate * mcp.NetworkStatsPollIntervalSec, RxBytesPerSec: kvEth1RxRate, TxBytesPerSec: kvEth1TxRate},
 			},
 		},
 		{
 			PodName:   "k3s-server-xyz89",
 			Namespace: "tenant-1-ns2",
 			Component: "k3s",
-			Interfaces: []InterfaceStats{
-				{Name: "eth0", RxBytes: k3sEth0RxRate * networkStatsPollIntervalSec, TxBytes: k3sEth0TxRate * networkStatsPollIntervalSec, RxBytesPerSec: k3sEth0RxRate, TxBytesPerSec: k3sEth0TxRate},
-				{Name: "eth1", RxBytes: k3sEth1RxRate * networkStatsPollIntervalSec, TxBytes: k3sEth1TxRate * networkStatsPollIntervalSec, RxBytesPerSec: k3sEth1RxRate, TxBytesPerSec: k3sEth1TxRate},
+			Interfaces: []mcp.InterfaceStats{
+				{Name: "eth0", RxBytes: k3sEth0RxRate * mcp.NetworkStatsPollIntervalSec, TxBytes: k3sEth0TxRate * mcp.NetworkStatsPollIntervalSec, RxBytesPerSec: k3sEth0RxRate, TxBytesPerSec: k3sEth0TxRate},
+				{Name: "eth1", RxBytes: k3sEth1RxRate * mcp.NetworkStatsPollIntervalSec, TxBytes: k3sEth1TxRate * mcp.NetworkStatsPollIntervalSec, RxBytesPerSec: k3sEth1RxRate, TxBytesPerSec: k3sEth1TxRate},
 			},
 		},
 	}

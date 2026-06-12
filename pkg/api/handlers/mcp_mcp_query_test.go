@@ -127,7 +127,7 @@ func TestWaitWithDeadline_Integration(t *testing.T) {
 	queryAllClustersWithTimeout(context.Background(), clusters, 2*time.Second, queryFn)
 	duration := time.Since(start)
 
-	// Since maxResponseDeadline is 30s, this won't timeout by maxResponseDeadline.
+	// Since MaxResponseDeadline is 30s, this won't timeout by MaxResponseDeadline.
 	// But it should finish around 1s + overhead.
 	assert.Less(t, duration, 2*time.Second)
 }

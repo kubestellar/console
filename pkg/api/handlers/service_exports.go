@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/dynamic"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/kubestellar/console/pkg/api/handlers/mcp"
 )
 
 // svcExportListTimeout is the timeout for listing ServiceExports across all clusters.
@@ -65,7 +66,7 @@ type ServiceExportSummary struct {
 type ServiceExportListResponse struct {
 	Exports       []ServiceExportSummary `json:"exports"`
 	IsDemoData    bool                   `json:"isDemoData"`
-	ClusterErrors []ClusterError         `json:"clusterErrors,omitempty"`
+	ClusterErrors []mcp.ClusterError         `json:"clusterErrors,omitempty"`
 }
 
 // HTTP status code for service unavailable

@@ -19,7 +19,7 @@ import (
 
 // requireAdmin checks that the requesting user has the admin role.
 // Returns a Fiber error if not authorized, nil if authorized (#4750).
-func (h *ConsolePersistenceHandlers) requireAdmin(c *fiber.Ctx) error {
+func (h *ConsolePersistenceHandlers) RequireAdmin(c *fiber.Ctx) error {
 	if h.userStore == nil {
 		return nil // no user store — skip check (dev/demo mode)
 	}
@@ -69,7 +69,7 @@ func (h *ConsolePersistenceHandlers) checkClusterHealth(ctx context.Context, clu
 func (h *ConsolePersistenceHandlers) getClusterClient(clusterName string) (dynamic.Interface, *rest.Config, error) {
 	if h.k8sClient == nil {
 		// Factory callback has no *fiber.Ctx, so we cannot call
-		// errNoClusterAccess(c) directly. Use the shared noClusterAccessMsg
+		// ErrNoClusterAccess(c) directly. Use the shared noClusterAccessMsg
 		// constant so the error message stays unified with the helper (#9830).
 		return nil, nil, fiber.NewError(fiber.StatusServiceUnavailable, noClusterAccessMsg)
 	}

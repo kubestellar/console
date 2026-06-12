@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/feedback"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -29,7 +30,7 @@ func (g *feedbackRouteGroup) Register(routes *routeSetupContext) {
 	api := routes.api
 	feedbackHandler := routes.feedback
 	if feedbackHandler == nil {
-		feedbackHandler = handlers.NewFeedbackHandler(g.store, handlers.LoadFeedbackConfig())
+		feedbackHandler = feedback.NewFeedbackHandler(g.store, feedback.LoadFeedbackConfig())
 		routes.feedback = feedbackHandler
 	}
 
