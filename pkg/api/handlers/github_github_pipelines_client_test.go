@@ -68,6 +68,9 @@ func TestGHGetWithRetry_SuccessFirstAttempt(t *testing.T) {
 
 	resp, err := handler.ghGetWithRetry(context.Background(), "/test")
 	require.NoError(t, err)
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 

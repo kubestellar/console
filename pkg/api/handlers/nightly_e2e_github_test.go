@@ -55,6 +55,9 @@ func TestNightlyE2EHandler_GetRuns_Success(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
 	resp, _ := app.Test(req, 10000)
 
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var result NightlyE2EResponse
@@ -95,6 +98,9 @@ func TestNightlyE2EHandler_GetRuns_CacheBehavior(t *testing.T) {
 
 	req1 := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
 	resp1, _ := app.Test(req1, 10000)
+	if resp1 == nil {
+		t.Fatal("expected non-nil response")
+	}
 	assert.Equal(t, http.StatusOK, resp1.StatusCode)
 
 	var result1 NightlyE2EResponse
@@ -104,6 +110,9 @@ func TestNightlyE2EHandler_GetRuns_CacheBehavior(t *testing.T) {
 
 	req2 := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
 	resp2, _ := app.Test(req2, 10000)
+	if resp2 == nil {
+		t.Fatal("expected non-nil response")
+	}
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
 
 	var result2 NightlyE2EResponse
@@ -144,6 +153,9 @@ func TestNightlyE2EHandler_GetRunLogs_Success(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/llm-d/llm-d/123", nil)
 	resp, _ := app.Test(req, 10000)
 
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var result RunLogsResponse
@@ -160,6 +172,9 @@ func TestNightlyE2EHandler_GetRunLogs_InvalidRunId(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/owner/repo/invalid", nil)
 	resp, _ := app.Test(req, 5000)
 
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	body, _ := io.ReadAll(resp.Body)

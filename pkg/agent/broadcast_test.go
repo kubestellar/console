@@ -102,7 +102,11 @@ func TestBroadcastToClients_RemovesDeadClients(t *testing.T) {
 	defer cleanup()
 
 	// Close client 0's underlying TCP connection to simulate a dead peer.
-	clients[0].UnderlyingConn().Close()
+	if clients[0] != nil {
+		if uc := clients[0].UnderlyingConn(); uc != nil {
+			uc.Close()
+		}
+	}
 	// Give the kernel time to register the broken pipe.
 	time.Sleep(100 * time.Millisecond)
 

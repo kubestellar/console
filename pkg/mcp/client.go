@@ -412,7 +412,10 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (j
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("context done")
 	case resp := <-respCh:
 		if resp.Error != nil {
 			return nil, fmt.Errorf("RPC error %d: %s", resp.Error.Code, resp.Error.Message)
