@@ -81,7 +81,6 @@ export const QuantumControlPanel: React.FC = () => {
   const [showClearCredentialsDialog, setShowClearCredentialsDialog] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
-  const [isRefreshingAuth, setIsRefreshingAuth] = useState(false)
   const [statusTab, setStatusTab] = useState<'system' | 'job'>('system')
   // Marks the wall-clock time of the last `authenticated:true` we observed in
   // THIS browser session. Persisted cache entries from a prior session don't
