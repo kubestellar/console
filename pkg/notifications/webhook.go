@@ -74,14 +74,34 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 	if u.Scheme == "http" && !isLoopbackHost(u.Hostname()) {
 		return nil, fmt.Errorf("webhook URL must use https (plaintext http allowed only for loopback hosts)")
 	}
-	if err := checkWebhookHostAllowed(u.Hostname()); err != nil {
-		return nil, err
-	}
 	// SSRF protection: resolve hostname and reject private/internal IPs.
 	// This prevents webhook URLs from reaching cloud metadata, RFC 1918,
 	// CGNAT, and other internal services (#17532).
-	if err := ssrf.ValidateHost(u.Hostname()); err != nil {
-		return nil, fmt.Errorf("webhook URL blocked: %w", err)
+	//
+	// Skip SSRF validation for:
+	// 1. Loopback addresses (already explicitly allowed for HTTP above)
+	// 2. Hosts in the admin-curated KC_WEBHOOK_ALLOWED_HOSTS allowlist
+	//
+	// This preserves SSRF protection for external webhooks while allowing
+	// local development and admin-approved hosts to bypass the validation.
+	isAllowlisted := false
+	if raw := os.Getenv(webhookAllowedHostsEnv); raw != "" {
+		for _, allowed := range strings.Split(raw, ",") {
+			allowed = strings.TrimSpace(allowed)
+			if allowed != "" && strings.EqualFold(allowed, u.Hostname()) {
+				isAllowlisted = true
+				break
+			}
+		}
+	}
+	if !isLoopbackHost(u.Hostname()) && !isAllowlisted {
+		if err := ssrf.ValidateHost(u.Hostname()); err != nil {
+			return nil, fmt.Errorf("webhook URL blocked: %w", err)
+		}
+	}
+	// Still enforce the allowlist check for non-SSRF reasons (operator restriction).
+	if err := checkWebhookHostAllowed(u.Hostname()); err != nil {
+		return nil, err
 	}
 	return &WebhookNotifier{
 		URL: webhookURL,
@@ -91,10 +111,23 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 			// redirect hop. Without this a permitted host could 30x to
 			// an internal endpoint and the request would still be sent.
 			CheckRedirect: func(req *http.Request, _ []*http.Request) error {
-				if err := checkWebhookHostAllowed(req.URL.Hostname()); err != nil {
-					return err
+				// Apply same SSRF bypass logic for redirects.
+				isRedirectAllowlisted := false
+				if raw := os.Getenv(webhookAllowedHostsEnv); raw != "" {
+					for _, allowed := range strings.Split(raw, ",") {
+						allowed = strings.TrimSpace(allowed)
+						if allowed != "" && strings.EqualFold(allowed, req.URL.Hostname()) {
+							isRedirectAllowlisted = true
+							break
+						}
+					}
 				}
-				return ssrf.ValidateHost(req.URL.Hostname())
+				if !isLoopbackHost(req.URL.Hostname()) && !isRedirectAllowlisted {
+					if err := ssrf.ValidateHost(req.URL.Hostname()); err != nil {
+						return err
+					}
+				}
+				return checkWebhookHostAllowed(req.URL.Hostname())
 			},
 		},
 	}, nil
