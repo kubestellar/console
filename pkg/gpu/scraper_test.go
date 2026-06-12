@@ -1,4 +1,4 @@
-package dcgm
+package gpu
 
 import (
 	"context"

@@ -21,6 +21,7 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar/providers"
 	"github.com/kubestellar/console/pkg/store"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -175,6 +176,7 @@ type stellarK8sClient interface {
 	DeduplicatedClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
 	ListClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
 	GetWarningEvents(ctx context.Context, contextName, namespace string, limit int) ([]k8s.Event, error)
+	GetClient(contextName string) (kubernetes.Interface, error)
 }
 
 // Handler exposes persistence and operational APIs for the Stellar assistant.

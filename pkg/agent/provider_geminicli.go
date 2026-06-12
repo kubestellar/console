@@ -107,7 +107,7 @@ func (g *GeminiCLIProvider) StreamChat(ctx context.Context, req *ChatRequest, on
 		defer cancel()
 	}
 
-	cmd := execCommandContext(ctx, g.cliPath, "-p", prompt, "--approval-mode=yolo")
+	cmd := exec.CommandContext(ctx, g.cliPath, "-p", prompt, "--approval-mode=yolo")
 	cmd.Env = append(os.Environ(), "NO_COLOR=1")
 	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 

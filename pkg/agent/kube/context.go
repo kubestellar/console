@@ -8,7 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubestellar/console/pkg/agent"
+	"github.com/kubestellar/console/pkg/ai"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
 )
@@ -35,7 +36,7 @@ func SetClusterContextProviders(bridge *mcp.Bridge, k8sClient *k8s.MultiClusterC
 	providerClusterContextState.k8sClient = k8sClient
 }
 
-func buildLiveClusterContext(ctx context.Context, req *agent.ChatRequest) string {
+func buildLiveClusterContext(ctx context.Context, req *ai.ChatRequest) string {
 	if req == nil {
 		return ""
 	}
@@ -71,11 +72,11 @@ func buildLiveClusterContext(ctx context.Context, req *agent.ChatRequest) string
 	sb.WriteString("LIVE KUBERNETES CONTEXT — use this live cluster state when answering.\n")
 	sb.WriteString("<cluster-data>\n")
 	if namespace != "" {
-		sb.WriteString(fmt.Sprintf("Scoped namespace: %s\n", agent.SanitizeK8sStringForPrompt(namespace)))
+		sb.WriteString(fmt.Sprintf("Scoped namespace: %s\n", sanitize.PromptString(namespace)))
 	}
 
 	for _, cluster := range clusters {
-		sanitizedCluster := agent.SanitizeK8sStringForPrompt(cluster)
+		sanitizedCluster := sanitize.PromptString(cluster)
 		sb.WriteString(fmt.Sprintf("\nCluster: %s\n", sanitizedCluster))
 		appendClusterHealth(&sb, ctxWithTimeout, bridge, k8sClient, cluster)
 		appendPodIssues(&sb, ctxWithTimeout, bridge, k8sClient, cluster, namespace)
@@ -90,7 +91,7 @@ func buildLiveClusterContext(ctx context.Context, req *agent.ChatRequest) string
 	return sb.String()
 }
 
-func resolveScopedClusters(req *agent.ChatRequest) []string {
+func resolveScopedClusters(req *ai.ChatRequest) []string {
 	if req == nil || req.Context == nil {
 		return nil
 	}
@@ -112,7 +113,7 @@ func resolveScopedClusters(req *agent.ChatRequest) []string {
 	return uniqueSortedStrings(names)
 }
 
-func resolveScopedNamespace(req *agent.ChatRequest) string {
+func resolveScopedNamespace(req *ai.ChatRequest) string {
 	if req == nil || req.Context == nil {
 		return ""
 	}
@@ -156,7 +157,7 @@ func appendClusterHealth(sb *strings.Builder, ctx context.Context, bridge *mcp.B
 			sb.WriteString(fmt.Sprintf("Health: healthy=%t reachable=%t nodes=%d readyNodes=%d pods=%d cpuCores=%d memoryGB=%.1f\n",
 				health.Healthy, health.Reachable, health.NodeCount, health.ReadyNodes, health.PodCount, health.CpuCores, health.MemoryGB))
 			if len(health.Issues) > 0 {
-				sb.WriteString(fmt.Sprintf("Health issues: %s\n", strings.Join(agent.SanitizeK8sStringsForPrompt(health.Issues), "; ")))
+				sb.WriteString(fmt.Sprintf("Health issues: %s\n", strings.Join(sanitize.PromptStrings(health.Issues), "; ")))
 			}
 			return
 		}
@@ -168,7 +169,7 @@ func appendClusterHealth(sb *strings.Builder, ctx context.Context, bridge *mcp.B
 			sb.WriteString(fmt.Sprintf("Health: healthy=%t reachable=%t nodes=%d readyNodes=%d pods=%d cpuCores=%d memoryGB=%.1f\n",
 				health.Healthy, health.Reachable, health.NodeCount, health.ReadyNodes, health.PodCount, health.CpuCores, health.MemoryGB))
 			if len(health.Issues) > 0 {
-				sb.WriteString(fmt.Sprintf("Health issues: %s\n", strings.Join(agent.SanitizeK8sStringsForPrompt(health.Issues), "; ")))
+				sb.WriteString(fmt.Sprintf("Health issues: %s\n", strings.Join(sanitize.PromptStrings(health.Issues), "; ")))
 			}
 			return
 		}
@@ -210,16 +211,16 @@ func appendFormattedBridgePodIssues(sb *strings.Builder, issues []mcp.PodIssue) 
 	sb.WriteString("Pod issues:\n")
 	for _, issue := range issues {
 		line := fmt.Sprintf("- %s/%s status=%s restarts=%d",
-			agent.SanitizeK8sStringForPrompt(issue.Namespace),
-			agent.SanitizeK8sStringForPrompt(issue.Name),
-			agent.SanitizeK8sStringForPrompt(issue.Status),
+			sanitize.PromptString(issue.Namespace),
+			sanitize.PromptString(issue.Name),
+			sanitize.PromptString(issue.Status),
 			issue.Restarts,
 		)
 		if issue.Reason != "" {
-			line += fmt.Sprintf(" reason=%s", agent.SanitizeK8sStringForPrompt(issue.Reason))
+			line += fmt.Sprintf(" reason=%s", sanitize.PromptString(issue.Reason))
 		}
 		if len(issue.Issues) > 0 {
-			line += fmt.Sprintf(" issues=%s", strings.Join(agent.SanitizeK8sStringsForPrompt(issue.Issues), "; "))
+			line += fmt.Sprintf(" issues=%s", strings.Join(sanitize.PromptStrings(issue.Issues), "; "))
 		}
 		sb.WriteString(line + "\n")
 	}
@@ -238,16 +239,16 @@ func appendFormattedPodIssues(sb *strings.Builder, issues []k8s.PodIssue) {
 	sb.WriteString("Pod issues:\n")
 	for _, issue := range issues {
 		line := fmt.Sprintf("- %s/%s status=%s restarts=%d",
-			agent.SanitizeK8sStringForPrompt(issue.Namespace),
-			agent.SanitizeK8sStringForPrompt(issue.Name),
-			agent.SanitizeK8sStringForPrompt(issue.Status),
+			sanitize.PromptString(issue.Namespace),
+			sanitize.PromptString(issue.Name),
+			sanitize.PromptString(issue.Status),
 			issue.Restarts,
 		)
 		if issue.Reason != "" {
-			line += fmt.Sprintf(" reason=%s", agent.SanitizeK8sStringForPrompt(issue.Reason))
+			line += fmt.Sprintf(" reason=%s", sanitize.PromptString(issue.Reason))
 		}
 		if len(issue.Issues) > 0 {
-			line += fmt.Sprintf(" issues=%s", strings.Join(agent.SanitizeK8sStringsForPrompt(issue.Issues), "; "))
+			line += fmt.Sprintf(" issues=%s", strings.Join(sanitize.PromptStrings(issue.Issues), "; "))
 		}
 		sb.WriteString(line + "\n")
 	}
@@ -281,14 +282,14 @@ func appendFormattedBridgeWarningEvents(sb *strings.Builder, events []mcp.Event)
 
 	sb.WriteString("Recent warning events:\n")
 	for _, event := range events {
-		message := agent.SanitizeK8sStringForPrompt(strings.TrimSpace(event.Message))
+		message := sanitize.PromptString(strings.TrimSpace(event.Message))
 		if len(message) > providerClusterContextMessageLimit {
 			message = message[:providerClusterContextMessageLimit-3] + "..."
 		}
 		line := fmt.Sprintf("- %s %s/%s x%d: %s",
-			agent.SanitizeK8sStringForPrompt(event.Reason),
-			agent.SanitizeK8sStringForPrompt(event.Namespace),
-			agent.SanitizeK8sStringForPrompt(event.Object),
+			sanitize.PromptString(event.Reason),
+			sanitize.PromptString(event.Namespace),
+			sanitize.PromptString(event.Object),
 			event.Count,
 			message,
 		)
@@ -304,14 +305,14 @@ func appendFormattedWarningEvents(sb *strings.Builder, events []k8s.Event) {
 
 	sb.WriteString("Recent warning events:\n")
 	for _, event := range events {
-		message := agent.SanitizeK8sStringForPrompt(strings.TrimSpace(event.Message))
+		message := sanitize.PromptString(strings.TrimSpace(event.Message))
 		if len(message) > providerClusterContextMessageLimit {
 			message = message[:providerClusterContextMessageLimit-3] + "..."
 		}
 		line := fmt.Sprintf("- %s %s/%s x%d: %s",
-			agent.SanitizeK8sStringForPrompt(event.Reason),
-			agent.SanitizeK8sStringForPrompt(event.Namespace),
-			agent.SanitizeK8sStringForPrompt(event.Object),
+			sanitize.PromptString(event.Reason),
+			sanitize.PromptString(event.Namespace),
+			sanitize.PromptString(event.Object),
 			event.Count,
 			message,
 		)

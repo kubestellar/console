@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
@@ -22,7 +23,7 @@ func init() {
 		if k8sClient != nil {
 			k = k8sClient.(*k8s.MultiClusterClient)
 		}
-		SetClusterContextProviders(b, k)
+		kube.SetClusterContextProviders(b, k)
 	}
 	ai.GetConfigManager = func() interface{} {
 		return GetConfigManager()

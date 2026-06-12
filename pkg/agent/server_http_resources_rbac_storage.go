@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -199,7 +200,7 @@ func (s *Server) createRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
 	// #8034 Copilot followup: validate cluster context at the HTTP boundary
 	// so we return a specific 400 instead of passing empty/malformed values
 	// down to the apiserver and getting back an opaque 500.
-	if err := validateKubeContext(req.Cluster); err != nil {
+	if err := kube.ValidateKubeContext(req.Cluster); err != nil {
 		slog.Error("invalid cluster for role binding request", "cluster", req.Cluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})

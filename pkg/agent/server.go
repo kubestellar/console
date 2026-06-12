@@ -183,7 +183,7 @@ type Server struct {
 	deviceTracker *DeviceTracker
 
 	// Local cluster management
-	localClusters *LocalClusterManager
+	localClusters *kube.LocalClusterManager
 	clusterOpsWG  sync.WaitGroup // tracks in-flight cluster create/delete/lifecycle goroutines
 
 	// Backend process management (for restart-from-UI)
@@ -242,7 +242,7 @@ func NewServer(cfg Config) (*Server, error) {
 		// Don't fail - kubectl functionality still works
 	}
 
-	SetClusterContextProviders(nil, k8sClient)
+	kube.SetClusterContextProviders(nil, k8sClient)
 	runKubeAPIPreflightChecks(kubectl)
 
 	// Initialize AI providers
@@ -370,7 +370,7 @@ func NewServer(cfg Config) (*Server, error) {
 	server.insightWorker = NewInsightWorker(server.registry, server.BroadcastToClients)
 
 	// Initialize local cluster manager with broadcast callback for progress updates
-	server.localClusters = NewLocalClusterManager(server.BroadcastToClients)
+	server.localClusters = kube.NewLocalClusterManager(server.BroadcastToClients)
 
 	// Initialize auto-update checker
 	server.updateChecker = NewUpdateChecker(UpdateCheckerConfig{

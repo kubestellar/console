@@ -7,8 +7,13 @@ import (
 	"net/http"
 	"os/exec"
 
-	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/safego"
+)
+
+const (
+	progressDone   = 100 // Operation completed successfully
+	progressFailed = 0   // Operation failed
 )
 
 // handleCloudCLIStatus detects installed cloud CLIs (aws, gcloud, az, oc)

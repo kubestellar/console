@@ -5,11 +5,20 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+// Legacy test helpers — kept for backwards compatibility with existing tests.
+// New tests should use the pkg/k8s/k8stest package instead, which provides
+// more comprehensive mock infrastructure and better isolation from real
+// kubeconfig/in-cluster config.
+//
+// See pkg/k8s/k8stest/README.md for migration guide and examples.
+
 // injectTestClusters populates m.rawConfig with fake kubeconfig entries for
 // each provided context name so that DeduplicatedClusters / ListClusters
 // returns them without attempting to load real kubeconfig from disk. Used
 // by multi-cluster list tests (MCS, Gateway, Workload capability, etc.)
 // that rely on the DeduplicatedClusters hot-reload fix (#6659, #6661–#6663).
+//
+// DEPRECATED: Use k8stest.FakeMultiClusterSetup instead for new tests.
 func injectTestClusters(m *MultiClusterClient, names ...string) {
 	cfg := &api.Config{
 		Contexts: map[string]*api.Context{},
@@ -28,6 +37,8 @@ func injectTestClusters(m *MultiClusterClient, names ...string) {
 // buildTestGVRMap returns the comprehensive GVR-to-ListKind map needed by
 // fake dynamic clients when tests exercise dependency resolution, monitoring,
 // or deploy logic that touches many resource types.
+//
+// DEPRECATED: Use k8stest.BuildGVRMap() instead for new tests.
 func buildTestGVRMap() map[schema.GroupVersionResource]string {
 	return map[schema.GroupVersionResource]string{
 		{Group: "apps", Version: "v1", Resource: "deployments"}:                                             "DeploymentList",

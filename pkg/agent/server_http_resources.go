@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
 )
@@ -87,7 +88,7 @@ func (s *Server) handleClustersHTTP(w http.ResponseWriter, r *http.Request) {
 	// Throttled reload: the frontend polls this endpoint and a full disk read
 	// per request was wasteful. ReloadIfStale skips the load when the in-memory
 	// snapshot is younger than kubectlReloadMinInterval. (#8075)
-	s.kubectl.ReloadIfStale(kubectlReloadMinInterval)
+	s.kubectl.ReloadIfStale(kube.KubectlReloadMinInterval)
 	clusters, current := s.kubectl.ListContexts()
 	writeJSON(w, protocol.ClustersPayload{Clusters: clusters, Current: current})
 }

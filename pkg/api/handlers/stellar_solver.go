@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/k8s"
 	"context"
 	"fmt"
 	"html"
@@ -357,7 +358,7 @@ func (h *Handler) autoTriggerSolve(ctx context.Context, event IncomingEvent, not
 		if err := h.store.UpdateStellarActionStatus(ctx, action.ID, "running", "", ""); err != nil {
 			slog.Warn("[StellarSolver] failed to update action status to running", "actionId", action.ID, "error", err)
 		}
-		outcome, dispatchErr := scheduler.Dispatch(ctx, h.k8sClient, *action)
+		outcome, dispatchErr := scheduler.Dispatch(ctx, h.k8sClient.(*k8s.MultiClusterClient), *action)
 		status := "completed"
 		if dispatchErr != nil {
 			status = "failed"

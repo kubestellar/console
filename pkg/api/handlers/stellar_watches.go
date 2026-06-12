@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/k8s"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -534,7 +535,7 @@ func (h *Handler) autoExecuteAction(ctx context.Context, e IncomingEvent, rec *s
 
 	execCtx, cancel := context.WithTimeout(ctx, executeActionMaxTimeout)
 	defer cancel()
-	outcome, dispatchErr := scheduler.Dispatch(execCtx, h.k8sClient, *action)
+	outcome, dispatchErr := scheduler.Dispatch(execCtx, h.k8sClient.(*k8s.MultiClusterClient), *action)
 	durationMs := int(time.Since(now).Milliseconds())
 
 	status := "completed"

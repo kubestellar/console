@@ -3,6 +3,8 @@ package agent
 import (
 	"fmt"
 	"strings"
+
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 // mixedModeRejectedCommand records an LLM-generated command that failed
@@ -193,7 +195,7 @@ func validateMixedModeKubectlCommand(args []string) (bool, string) {
 	}
 
 	verb := strings.ToLower(args[0])
-	if !validateKubectlArgs(args) {
+	if !kube.ValidateKubectlArgs(args) {
 		if verb == "config" {
 			return false, "kubectl config mutations are blocked in mixed mode"
 		}
@@ -257,7 +259,7 @@ func isMixedModeSafeKubectlCommand(args []string) bool {
 		return mixedModeConfigReadOnlySubcommands[subcommand] && !hasMixedModeBlockedFlag(args[1:], map[string]bool{"--raw": true})
 	case "rollout":
 		subcommand := firstMixedModePositionalArg(args[1:])
-		return allowedRolloutSubcommands[subcommand]
+		return kube.AllowedRolloutSubcommands[subcommand]
 	default:
 		return false
 	}
