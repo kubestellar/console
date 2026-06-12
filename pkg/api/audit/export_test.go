@@ -1,6 +1,8 @@
 package audit
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -12,11 +14,17 @@ func TestRegisterDestination_FullFlow(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
 
+	// Use httptest.NewServer to bypass SSRF validation
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
 	cfg := DestinationConfig{
 		ID:       "test-webhook",
 		Name:     "Test Webhook",
 		Provider: ProviderWebhook,
-		URL:      "http://example.com/webhook",
+		URL:      srv.URL,
 	}
 
 	adapter, err := RegisterDestination(cfg)
@@ -34,11 +42,17 @@ func TestBuildSummary(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
 
+	// Use httptest.NewServer to bypass SSRF validation
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
 	// Add a destination
 	_, err := RegisterDestination(DestinationConfig{
 		ID:       "dest-1",
 		Provider: ProviderWebhook,
-		URL:      "http://x",
+		URL:      srv.URL,
 	})
 	require.NoError(t, err)
 
