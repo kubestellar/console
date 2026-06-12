@@ -501,7 +501,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
     // the backend pod ServiceAccount. See #7993 Phase 1.5 PR A.
     const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/serviceaccounts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...agentAuthHeaders() },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...await agentAuthHeaders() },
       body: JSON.stringify(req),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
@@ -664,7 +664,7 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
     // ServiceAccount. See #7993 Phase 1.5 PR A.
     const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...agentAuthHeaders() },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...await agentAuthHeaders() },
       body: JSON.stringify(req),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
@@ -709,7 +709,7 @@ export function useClusterPermissions(cluster?: string) {
       // Authorization header would fail token validation on the agent side.
       const params = cluster ? `?cluster=${cluster}` : ''
       const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/rbac/permissions${params}`, {
-        headers: agentAuthHeaders(),
+        headers: await agentAuthHeaders(),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!response.ok) {
         setIsLoading(false)

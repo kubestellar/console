@@ -83,7 +83,7 @@ export function useHelmActions(): UseHelmActionsResult {
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: helmAgentAuthHeaders(),
+        headers: await helmAgentAuthHeaders(),
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
