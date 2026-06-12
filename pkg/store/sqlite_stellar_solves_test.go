@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 
@@ -148,4 +149,180 @@ func createSolveForTest(t *testing.T, store *SQLiteStore, solve *StellarSolve) *
 	require.NoError(t, store.CreateSolve(ctx, solve))
 	require.NotEmpty(t, solve.ID)
 	return solve
+}
+
+func TestCreateSolveIfNoneActive(t *testing.T) {
+	store := OpenTestDB(t)
+
+	t.Run("creates solve when none exists", func(t *testing.T) {
+		solve := &StellarSolve{
+			EventID:   "event-new",
+			UserID:    "user-1",
+			Cluster:   "prod-a",
+			Namespace: "default",
+			Workload:  "api",
+			Summary:   "first solve",
+		}
+
+		created, isNew, err := store.CreateSolveIfNoneActive(ctx, solve)
+		require.NoError(t, err)
+		require.True(t, isNew, "should be new solve")
+		require.NotNil(t, created)
+		require.NotEmpty(t, created.ID)
+		require.Equal(t, "running", created.Status)
+		require.Equal(t, "event-new", created.EventID)
+	})
+
+	t.Run("returns existing solve without creating duplicate", func(t *testing.T) {
+		eventID := "event-concurrent"
+		existing := createSolveForTest(t, store, &StellarSolve{
+			EventID:   eventID,
+			UserID:    "user-1",
+			Cluster:   "prod-a",
+			Namespace: "default",
+			Workload:  "api",
+			Summary:   "existing",
+		})
+
+		newSolve := &StellarSolve{
+			EventID:   eventID,
+			UserID:    "user-2",
+			Cluster:   "prod-b",
+			Namespace: "other",
+			Workload:  "worker",
+			Summary:   "should not be created",
+		}
+
+		result, isNew, err := store.CreateSolveIfNoneActive(ctx, newSolve)
+		require.NoError(t, err)
+		require.False(t, isNew, "should return existing")
+		require.NotNil(t, result)
+		require.Equal(t, existing.ID, result.ID, "should return existing solve ID")
+		require.Equal(t, "existing", result.Summary, "should have original summary")
+	})
+
+	t.Run("creates new solve after previous is resolved", func(t *testing.T) {
+		eventID := "event-resolved"
+		oldSolve := createSolveForTest(t, store, &StellarSolve{
+			EventID:   eventID,
+			UserID:    "user-1",
+			Cluster:   "prod-a",
+			Namespace: "default",
+			Workload:  "api",
+			Summary:   "old",
+		})
+
+		require.NoError(t, store.UpdateSolveStatus(ctx, oldSolve.ID, "resolved", "fixed", "", ""))
+
+		newSolve := &StellarSolve{
+			EventID:   eventID,
+			UserID:    "user-1",
+			Cluster:   "prod-a",
+			Namespace: "default",
+			Workload:  "api",
+			Summary:   "new solve after resolution",
+		}
+
+		result, isNew, err := store.CreateSolveIfNoneActive(ctx, newSolve)
+		require.NoError(t, err)
+		require.True(t, isNew, "should create new solve after old one resolved")
+		require.NotNil(t, result)
+		require.NotEqual(t, oldSolve.ID, result.ID, "should have different ID")
+		require.Equal(t, "new solve after resolution", result.Summary)
+	})
+}
+
+func TestBumpActionPriority(t *testing.T) {
+	store := OpenTestDB(t)
+
+	action := &StellarAction{
+		UserID:      "user-1",
+		Description: "Test action",
+		ActionType:  "restart",
+		Cluster:     "prod-a",
+		Status:      "pending_approval",
+		CreatedBy:   "user-1",
+	}
+	require.NoError(t, store.CreateStellarAction(ctx, action))
+	require.NotEmpty(t, action.ID)
+
+	t.Run("sets bumped_at timestamp", func(t *testing.T) {
+		before := time.Now()
+		err := store.BumpActionPriority(ctx, action.ID)
+		require.NoError(t, err)
+
+		var bumpedAt sql.NullTime
+		err = store.db.QueryRowContext(ctx, `SELECT bumped_at FROM stellar_actions WHERE id = ?`, action.ID).Scan(&bumpedAt)
+		require.NoError(t, err)
+		require.True(t, bumpedAt.Valid, "bumped_at should be set")
+		require.True(t, bumpedAt.Time.After(before.Add(-1*time.Second)))
+	})
+
+	t.Run("bumping multiple times updates timestamp", func(t *testing.T) {
+		require.NoError(t, store.BumpActionPriority(ctx, action.ID))
+		time.Sleep(10 * time.Millisecond)
+
+		firstBump := time.Now()
+		require.NoError(t, store.BumpActionPriority(ctx, action.ID))
+
+		var bumpedAt sql.NullTime
+		err := store.db.QueryRowContext(ctx, `SELECT bumped_at FROM stellar_actions WHERE id = ?`, action.ID).Scan(&bumpedAt)
+		require.NoError(t, err)
+		require.True(t, bumpedAt.Time.After(firstBump.Add(-1*time.Second)))
+	})
+
+	t.Run("no error on missing action ID", func(t *testing.T) {
+		err := store.BumpActionPriority(ctx, "nonexistent-action")
+		require.NoError(t, err, "bumping missing action should not error")
+	})
+}
+
+func TestSupersedeAction(t *testing.T) {
+	store := OpenTestDB(t)
+
+	action := &StellarAction{
+		UserID:      "user-1",
+		Description: "Test action",
+		ActionType:  "restart",
+		Cluster:     "prod-a",
+		Status:      "pending_approval",
+		CreatedBy:   "user-1",
+	}
+	require.NoError(t, store.CreateStellarAction(ctx, action))
+
+	t.Run("marks action as superseded with reason in outcome", func(t *testing.T) {
+		reason := "operator manually fixed the issue"
+		err := store.SupersedeAction(ctx, action.ID, reason)
+		require.NoError(t, err)
+
+		updated, err := store.GetStellarAction(ctx, "user-1", action.ID)
+		require.NoError(t, err)
+		require.Equal(t, "superseded", updated.Status)
+		require.Equal(t, reason, updated.Outcome)
+	})
+
+	t.Run("updates updated_at timestamp", func(t *testing.T) {
+		action2 := &StellarAction{
+			UserID:      "user-1",
+			Description: "Test action 2",
+			ActionType:  "rollback",
+			Cluster:     "prod-b",
+			Status:      "pending_approval",
+			CreatedBy:   "user-1",
+		}
+		require.NoError(t, store.CreateStellarAction(ctx, action2))
+
+		err := store.SupersedeAction(ctx, action2.ID, "automated resolution")
+		require.NoError(t, err)
+
+		updated, err := store.GetStellarAction(ctx, "user-1", action2.ID)
+		require.NoError(t, err)
+		require.Equal(t, "superseded", updated.Status)
+		require.Equal(t, "automated resolution", updated.Outcome)
+	})
+
+	t.Run("no error on missing action", func(t *testing.T) {
+		err := store.SupersedeAction(ctx, "nonexistent", "some reason")
+		require.NoError(t, err, "superseding missing action should not error")
+	})
 }
