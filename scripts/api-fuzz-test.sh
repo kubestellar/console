@@ -10,8 +10,8 @@
 #   - Go 1.18+ installed (native fuzzing support)
 #
 # Output:
-#   /tmp/fuzz-report.json                — JSON results
-#   /tmp/fuzz-summary.md                 — human-readable summary
+#   test-results/fuzz-report.json                — JSON results
+#   test-results/fuzz-summary.md                 — human-readable summary
 #
 # Exit code:
 #   0 — no crashes found
@@ -48,9 +48,12 @@ fi
 # Fuzz targets
 # ============================================================================
 
-REPORT_JSON="/tmp/fuzz-report.json"
-REPORT_MD="/tmp/fuzz-summary.md"
-TMPDIR_FUZZ=$(mktemp -d)
+# Use project directory for output to avoid /tmp restrictions
+mkdir -p test-results
+REPORT_JSON="test-results/fuzz-report.json"
+REPORT_MD="test-results/fuzz-summary.md"
+TMPDIR_FUZZ="test-results/.fuzz-tmp-$$"
+mkdir -p "$TMPDIR_FUZZ"
 trap 'rm -rf "$TMPDIR_FUZZ"' EXIT
 
 echo -e "${BOLD}═══════════════════════════════════════════════════${NC}"

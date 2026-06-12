@@ -10,8 +10,8 @@
 #   - Go installed
 #
 # Output:
-#   /tmp/settings-migration-report.json    — JSON test results
-#   /tmp/settings-migration-summary.md     — human-readable summary
+#   test-results/settings-migration-report.json    — JSON test results
+#   test-results/settings-migration-summary.md     — human-readable summary
 #
 # Exit code:
 #   0 — all tests pass
@@ -32,9 +32,12 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
-REPORT_JSON="/tmp/settings-migration-report.json"
-REPORT_MD="/tmp/settings-migration-summary.md"
-TMPDIR_SM=$(mktemp -d)
+# Use project directory for output to avoid /tmp restrictions
+mkdir -p test-results
+REPORT_JSON="test-results/settings-migration-report.json"
+REPORT_MD="test-results/settings-migration-summary.md"
+TMPDIR_SM="test-results/.settings-migration-tmp-$$"
+mkdir -p "$TMPDIR_SM"
 trap 'rm -rf "$TMPDIR_SM"' EXIT
 
 if ! command -v go &>/dev/null; then

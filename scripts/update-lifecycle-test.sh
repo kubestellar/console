@@ -10,8 +10,8 @@
 #   - Go installed
 #
 # Output:
-#   /tmp/update-lifecycle-report.json    — JSON test results
-#   /tmp/update-lifecycle-summary.md     — human-readable summary
+#   test-results/update-lifecycle-report.json    — JSON test results
+#   test-results/update-lifecycle-summary.md     — human-readable summary
 #
 # Exit code:
 #   0 — all tests pass
@@ -32,9 +32,12 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
-REPORT_JSON="/tmp/update-lifecycle-report.json"
-REPORT_MD="/tmp/update-lifecycle-summary.md"
-TMPDIR_UL=$(mktemp -d)
+# Use project directory for output to avoid /tmp restrictions
+mkdir -p test-results
+REPORT_JSON="test-results/update-lifecycle-report.json"
+REPORT_MD="test-results/update-lifecycle-summary.md"
+TMPDIR_UL="test-results/.update-lifecycle-tmp-$$"
+mkdir -p "$TMPDIR_UL"
 trap 'rm -rf "$TMPDIR_UL"' EXIT
 
 if ! command -v go &>/dev/null; then

@@ -11,8 +11,8 @@
 #   - websocat or wscat installed (auto-detected)
 #
 # Output:
-#   /tmp/websocket-resilience-report.json — full JSON data
-#   /tmp/websocket-resilience-summary.md  — human-readable summary
+#   test-results/websocket-resilience-report.json — full JSON data
+#   test-results/websocket-resilience-summary.md  — human-readable summary
 #
 # Exit code:
 #   0 — all tests pass
@@ -40,9 +40,12 @@ for arg in "$@"; do
   esac
 done
 
-REPORT_JSON="/tmp/websocket-resilience-report.json"
-REPORT_MD="/tmp/websocket-resilience-summary.md"
-TMPDIR_WS=$(mktemp -d)
+# Use project directory for output to avoid /tmp restrictions
+mkdir -p test-results
+REPORT_JSON="test-results/websocket-resilience-report.json"
+REPORT_MD="test-results/websocket-resilience-summary.md"
+TMPDIR_WS="test-results/.websocket-resilience-tmp-$$"
+mkdir -p "$TMPDIR_WS"
 trap 'rm -rf "$TMPDIR_WS"' EXIT
 
 TIMEOUT_SECONDS=5

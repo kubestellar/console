@@ -10,8 +10,8 @@
 #   - Go installed
 #
 # Output:
-#   /tmp/auth-lifecycle-report.json    — JSON test results
-#   /tmp/auth-lifecycle-summary.md     — human-readable summary
+#   test-results/auth-lifecycle-report.json    — JSON test results
+#   test-results/auth-lifecycle-summary.md     — human-readable summary
 #
 # Exit code:
 #   0 — all tests pass
@@ -32,9 +32,12 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
-REPORT_JSON="/tmp/auth-lifecycle-report.json"
-REPORT_MD="/tmp/auth-lifecycle-summary.md"
-TMPDIR_AUTH=$(mktemp -d)
+# Use project directory for output to avoid /tmp restrictions
+mkdir -p test-results
+REPORT_JSON="test-results/auth-lifecycle-report.json"
+REPORT_MD="test-results/auth-lifecycle-summary.md"
+TMPDIR_AUTH="test-results/.auth-lifecycle-tmp-$$"
+mkdir -p "$TMPDIR_AUTH"
 trap 'rm -rf "$TMPDIR_AUTH"' EXIT
 
 if ! command -v go &>/dev/null; then
