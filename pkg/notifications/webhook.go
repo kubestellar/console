@@ -80,8 +80,12 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 	// SSRF protection: resolve hostname and reject private/internal IPs.
 	// This prevents webhook URLs from reaching cloud metadata, RFC 1918,
 	// CGNAT, and other internal services (#17532).
-	if err := ssrf.ValidateHost(u.Hostname()); err != nil {
-		return nil, fmt.Errorf("webhook URL blocked: %w", err)
+	// Skip validation for loopback addresses (local dev/testing) and
+	// allowlisted hosts (admin-curated, SSRF DNS check redundant) (#17888).
+	if !isLoopbackHost(u.Hostname()) && !isHostAllowlisted(u.Hostname()) {
+		if err := ssrf.ValidateHost(u.Hostname()); err != nil {
+			return nil, fmt.Errorf("webhook URL blocked: %w", err)
+		}
 	}
 	return &WebhookNotifier{
 		URL: webhookURL,
@@ -94,7 +98,11 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 				if err := checkWebhookHostAllowed(req.URL.Hostname()); err != nil {
 					return err
 				}
-				return ssrf.ValidateHost(req.URL.Hostname())
+				// Skip SSRF validation for loopback and allowlisted hosts (#17888).
+				if !isLoopbackHost(req.URL.Hostname()) && !isHostAllowlisted(req.URL.Hostname()) {
+					return ssrf.ValidateHost(req.URL.Hostname())
+				}
+				return nil
 			},
 		},
 	}, nil
@@ -130,6 +138,25 @@ func isLoopbackHost(host string) bool {
 	return false
 }
 
+// isHostAllowlisted returns true if host is present in the KC_WEBHOOK_ALLOWED_HOSTS
+// allowlist. Used to skip SSRF validation for admin-curated hosts (#17888).
+func isHostAllowlisted(host string) bool {
+	raw := os.Getenv(webhookAllowedHostsEnv)
+	if raw == "" {
+		return false
+	}
+	for _, allowed := range strings.Split(raw, ",") {
+		allowed = strings.TrimSpace(allowed)
+		if allowed == "" {
+			continue
+		}
+		if strings.EqualFold(allowed, host) {
+			return true
+		}
+	}
+	return false
+}
+
 // checkWebhookHostAllowed enforces the optional KC_WEBHOOK_ALLOWED_HOSTS
 // env allowlist. Empty env = allow all (default). This keeps the change
 // backwards compatible while giving operators a simple knob to block SSRF.
@@ -138,14 +165,8 @@ func checkWebhookHostAllowed(host string) error {
 	if raw == "" {
 		return nil
 	}
-	for _, allowed := range strings.Split(raw, ",") {
-		allowed = strings.TrimSpace(allowed)
-		if allowed == "" {
-			continue
-		}
-		if strings.EqualFold(allowed, host) {
-			return nil
-		}
+	if isHostAllowlisted(host) {
+		return nil
 	}
 	return fmt.Errorf("webhook host %q not in %s allowlist", host, webhookAllowedHostsEnv)
 }
