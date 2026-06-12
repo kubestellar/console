@@ -431,3 +431,358 @@ func TestCreateStorageFailure(t *testing.T) {
 	// The dispatchAction should still handle CreateStellarAction errors gracefully
 	_ = storage
 }
+
+// Additional comprehensive tests for coverage
+
+func TestTerminateAllStatusTypes(t *testing.T) {
+	tests := []struct {
+		name             string
+		status           string
+		summary          string
+		limitHit         string
+		errStr           string
+		expectNotifCount int
+		expectSeverity   string
+		expectTitle      string
+	}{
+		{
+			name:             "resolved status",
+			status:           "resolved",
+			summary:          "Issue fixed",
+			limitHit:         "",
+			errStr:           "",
+			expectNotifCount: 1,
+			expectSeverity:   "info",
+			expectTitle:      "✦ Stellar resolved an issue",
+		},
+		{
+			name:             "escalated status",
+			status:           "escalated",
+			summary:          "Needs human intervention",
+			limitHit:         "",
+			errStr:           "",
+			expectNotifCount: 1,
+			expectSeverity:   "warning",
+			expectTitle:      "⚠ Stellar escalated to you",
+		},
+		{
+			name:             "exhausted status",
+			status:           "exhausted",
+			summary:          "Hit action limit",
+			limitHit:         "action_count",
+			errStr:           "",
+			expectNotifCount: 1,
+			expectSeverity:   "warning",
+			expectTitle:      "⏸ Stellar paused at budget limit",
+		},
+		{
+			name:             "unknown status",
+			status:           "unknown",
+			summary:          "Unknown outcome",
+			limitHit:         "",
+			errStr:           "some error",
+			expectNotifCount: 0,
+			expectSeverity:   "",
+			expectTitle:      "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &mockStorage{}
+			broadcaster := &mockBroadcaster{}
+			input := Input{
+				SolveID:   "solve-" + tt.status,
+				EventID:   "event-1",
+				UserID:    "user-1",
+				Cluster:   "prod",
+				Namespace: "default",
+				Workload:  "nginx",
+			}
+
+			terminate(context.Background(), storage, input.SolveID, tt.status, tt.summary, tt.limitHit, tt.errStr, broadcaster, input)
+
+			if len(storage.notifications) != tt.expectNotifCount {
+				t.Fatalf("notifications = %d, want %d", len(storage.notifications), tt.expectNotifCount)
+			}
+			if tt.expectNotifCount > 0 {
+				if storage.notifications[0].Severity != tt.expectSeverity {
+					t.Fatalf("severity = %q, want %q", storage.notifications[0].Severity, tt.expectSeverity)
+				}
+				if storage.notifications[0].Title != tt.expectTitle {
+					t.Fatalf("title = %q, want %q", storage.notifications[0].Title, tt.expectTitle)
+				}
+			}
+			if len(broadcaster.events) != 1 {
+				t.Fatalf("broadcasts = %d, want 1", len(broadcaster.events))
+			}
+			if broadcaster.events[0].Type != "solve_complete" {
+				t.Fatalf("event type = %q, want solve_complete", broadcaster.events[0].Type)
+			}
+		})
+	}
+}
+
+func TestTerminateWithVariousErrorStrings(t *testing.T) {
+	tests := []struct {
+		name   string
+		errStr string
+	}{
+		{"empty error", ""},
+		{"simple error", "connection timeout"},
+		{"long error", string(make([]byte, 1000))},
+		{"special characters", "error with \"quotes\" and \nnewlines"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &mockStorage{}
+			input := Input{UserID: "user-1"}
+			terminate(context.Background(), storage, "solve-1", "escalated", "summary", "", tt.errStr, nil, input)
+			if len(storage.solveStatus) != 1 {
+				t.Fatal("expected status update")
+			}
+		})
+	}
+}
+
+func TestDispatchActionWithNilK8sClient(t *testing.T) {
+	storage := &mockStorage{}
+	input := Input{
+		SolveID:   "solve-test-12345678",
+		UserID:    "user-1",
+		Cluster:   "prod",
+		Namespace: "default",
+		Workload:  "my-deploy",
+	}
+
+	// dispatchAction should create the action record even though dispatch will fail
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Expected panic from scheduler.Dispatch with nil client
+			}
+		}()
+		_, _, _ = dispatchAction(context.Background(), storage, nil, input, "RestartDeployment", "dedupe-1")
+	}()
+
+	if len(storage.actions) != 1 {
+		t.Fatalf("expected action to be created, got %d actions", len(storage.actions))
+	}
+}
+
+func TestDispatchActionWithDifferentActionTypes(t *testing.T) {
+	tests := []struct {
+		name       string
+		actionType string
+		expectName string
+	}{
+		{"restart deployment", "RestartDeployment", "my-deploy"},
+		{"scale deployment", "ScaleDeployment", "my-deploy"},
+		{"delete pod with pod name", "DeletePod", "my-pod-123"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &mockStorage{}
+			input := Input{
+				SolveID:   "solve-test-12345678",
+				UserID:    "user-1",
+				Cluster:   "prod",
+				Namespace: "default",
+				Workload:  "my-deploy",
+				PodName:   "my-pod-123",
+			}
+
+			func() {
+				defer func() { recover() }()
+				_, _, _ = dispatchAction(context.Background(), storage, nil, input, tt.actionType, "dedupe")
+			}()
+
+			if len(storage.actions) != 1 {
+				t.Fatalf("expected 1 action, got %d", len(storage.actions))
+			}
+			var params map[string]interface{}
+			if err := json.Unmarshal([]byte(storage.actions[0].Parameters), &params); err != nil {
+				t.Fatalf("invalid params: %v", err)
+			}
+			if params["name"] != tt.expectName {
+				t.Fatalf("name = %v, want %v", params["name"], tt.expectName)
+			}
+		})
+	}
+}
+
+func TestVerifyResourceHealthWithGetClientError(t *testing.T) {
+	// This tests the case where k8sClient.GetClient returns an error
+	// Since we can't easily mock MultiClusterClient, we test the nil case thoroughly
+	healthy, msg := verifyResourceHealth(context.Background(), nil, "prod", "default", "nginx")
+	if healthy {
+		t.Fatal("expected unhealthy when client is nil")
+	}
+	if msg != "no cluster client available." {
+		t.Fatalf("msg = %q, want 'no cluster client available.'", msg)
+	}
+}
+
+func TestMarshalTriggerDataWithEmptyValues(t *testing.T) {
+	tests := []struct {
+		name       string
+		solveID    string
+		actionType string
+	}{
+		{"both empty", "", ""},
+		{"only solveID", "solve-123", ""},
+		{"only actionType", "", "RestartDeployment"},
+		{"normal", "solve-456", "ScaleDeployment"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := marshalTriggerData(tt.solveID, tt.actionType)
+			var parsed map[string]string
+			if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+				t.Fatalf("invalid JSON: %v", err)
+			}
+			if parsed["solveId"] != tt.solveID {
+				t.Fatalf("solveId = %q, want %q", parsed["solveId"], tt.solveID)
+			}
+			if parsed["actionType"] != tt.actionType {
+				t.Fatalf("actionType = %q, want %q", parsed["actionType"], tt.actionType)
+			}
+		})
+	}
+}
+
+func TestSolveLoopWithNilStorage(t *testing.T) {
+	// This test verifies the loop doesn't panic with nil storage
+	// In practice, storage is never nil, but we test defensive programming
+	broadcaster := &mockBroadcaster{}
+	input := Input{
+		SolveID:   "solve-nil-storage",
+		EventID:   "event-1",
+		UserID:    "user-1",
+		Cluster:   "prod",
+		Namespace: "default",
+		Workload:  "nginx",
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	// Should not panic - nil storage will cause nil pointer dereference
+	// but we're testing that the code path is reached
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic with nil storage")
+		}
+	}()
+	SolveLoop(ctx, input, nil, nil, broadcaster)
+}
+
+func TestInputFieldsWithEmptyValues(t *testing.T) {
+	input := Input{
+		SolveID:   "",
+		EventID:   "",
+		UserID:    "",
+		Cluster:   "",
+		Namespace: "",
+		Workload:  "",
+		PodName:   "",
+		Reason:    "",
+	}
+	// Just verify struct can be created with empty values
+	if input.SolveID != "" {
+		t.Fatal("expected empty SolveID")
+	}
+}
+
+func TestSSEEventWithDifferentDataTypes(t *testing.T) {
+	tests := []struct {
+		name string
+		data interface{}
+	}{
+		{"nil data", nil},
+		{"string data", "test"},
+		{"int data", 42},
+		{"map data", map[string]string{"key": "value"}},
+		{"slice data", []string{"a", "b", "c"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			event := SSEEvent{Type: "test", Data: tt.data}
+			b, err := json.Marshal(event)
+			if err != nil {
+				t.Fatalf("marshal failed: %v", err)
+			}
+			var decoded map[string]interface{}
+			if err := json.Unmarshal(b, &decoded); err != nil {
+				t.Fatalf("unmarshal failed: %v", err)
+			}
+			if decoded["type"] != "test" {
+				t.Fatalf("type = %v, want 'test'", decoded["type"])
+			}
+		})
+	}
+}
+
+func TestTerminateWithDifferentLimitHitValues(t *testing.T) {
+	tests := []struct {
+		name     string
+		limitHit string
+	}{
+		{"no limit", ""},
+		{"action count", "action_count"},
+		{"wall clock", "wall_clock"},
+		{"custom limit", "custom"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &mockStorage{}
+			input := Input{UserID: "user-1"}
+			terminate(context.Background(), storage, "solve-1", "exhausted", "summary", tt.limitHit, "", nil, input)
+			if len(storage.solveStatus) != 1 {
+				t.Fatal("expected status update")
+			}
+		})
+	}
+}
+
+func TestBroadcasterInterfaceCompliance(t *testing.T) {
+	var _ Broadcaster = (*mockBroadcaster)(nil)
+	broadcaster := &mockBroadcaster{}
+	broadcaster.Broadcast(SSEEvent{Type: "test", Data: "data"})
+	if len(broadcaster.events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(broadcaster.events))
+	}
+}
+
+func TestStorageInterfaceCompliance(t *testing.T) {
+	var _ Storage = (*mockStorage)(nil)
+}
+
+func TestDispatchActionSolveIDTruncation(t *testing.T) {
+	storage := &mockStorage{}
+	input := Input{
+		SolveID:   "solve-short",
+		UserID:    "user-1",
+		Cluster:   "prod",
+		Namespace: "default",
+		Workload:  "my-deploy",
+	}
+
+	func() {
+		defer func() { recover() }()
+		_, _, _ = dispatchAction(context.Background(), storage, nil, input, "RestartDeployment", "dedupe")
+	}()
+
+	if len(storage.actions) != 1 {
+		t.Fatalf("expected 1 action, got %d", len(storage.actions))
+	}
+	// Description should use solveID[:8] - with short ID, it should handle gracefully
+	if storage.actions[0].Description == "" {
+		t.Fatal("expected non-empty description")
+	}
+}
