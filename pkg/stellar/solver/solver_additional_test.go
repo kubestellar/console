@@ -8,7 +8,6 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -45,7 +44,7 @@ func TestSolveLoopActionLimit(t *testing.T) {
 	})
 	
 	multiClient := &k8s.MultiClusterClient{}
-	multiClient.AddClient("test-cluster", fakeClient)
+	multiClient.SetClient("test-cluster", fakeClient)
 
 	ctx := context.Background()
 	SolveLoop(ctx, input, storage, multiClient, broadcaster)
@@ -93,7 +92,7 @@ func TestSolveLoopResolutionAfterFirstAction(t *testing.T) {
 	})
 	
 	multiClient := &k8s.MultiClusterClient{}
-	multiClient.AddClient("test-cluster", fakeClient)
+	multiClient.SetClient("test-cluster", fakeClient)
 
 	ctx := context.Background()
 	SolveLoop(ctx, input, storage, multiClient, broadcaster)
@@ -135,7 +134,7 @@ func TestSolveLoopContextCancelledDuringObserve(t *testing.T) {
 	})
 	
 	multiClient := &k8s.MultiClusterClient{}
-	multiClient.AddClient("test-cluster", fakeClient)
+	multiClient.SetClient("test-cluster", fakeClient)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -181,7 +180,7 @@ func TestSolveLoopNilBroadcasterHandling(t *testing.T) {
 	})
 	
 	multiClient := &k8s.MultiClusterClient{}
-	multiClient.AddClient("test-cluster", fakeClient)
+	multiClient.SetClient("test-cluster", fakeClient)
 
 	ctx := context.Background()
 	// nil broadcaster should not panic
@@ -199,7 +198,7 @@ func TestVerifyResourceHealthDeploymentReadError(t *testing.T) {
 	// Empty clientset - deployment doesn't exist
 	fakeClient := fake.NewSimpleClientset()
 	multiClient := &k8s.MultiClusterClient{}
-	multiClient.AddClient("test-cluster", fakeClient)
+	multiClient.SetClient("test-cluster", fakeClient)
 
 	healthy, msg := verifyResourceHealth(context.Background(), multiClient, "test-cluster", "default", "nonexistent")
 	
@@ -244,7 +243,7 @@ func TestVerifyResourceHealthPartiallyReady(t *testing.T) {
 	})
 	
 	multiClient := &k8s.MultiClusterClient{}
-	multiClient.AddClient("test-cluster", fakeClient)
+	multiClient.SetClient("test-cluster", fakeClient)
 
 	healthy, msg := verifyResourceHealth(context.Background(), multiClient, "test-cluster", "default", "partial-deploy")
 	
@@ -272,7 +271,7 @@ func TestVerifyResourceHealthZeroReplicas(t *testing.T) {
 	})
 	
 	multiClient := &k8s.MultiClusterClient{}
-	multiClient.AddClient("test-cluster", fakeClient)
+	multiClient.SetClient("test-cluster", fakeClient)
 
 	healthy, msg := verifyResourceHealth(context.Background(), multiClient, "test-cluster", "default", "zero-deploy")
 	
