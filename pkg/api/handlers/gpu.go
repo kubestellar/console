@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,6 +19,41 @@ import (
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
+
+// gpuNamePattern matches valid Kubernetes resource names (RFC 1123 DNS subdomain).
+// Must be lowercase alphanumeric, may contain '-' and '.', max 253 characters.
+var gpuNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9.\-]*[a-z0-9])?$`)
+
+const gpuMaxNameLen = 253
+
+// gpuValidateName checks that a non-empty string is a valid Kubernetes name.
+// Empty values are allowed (they mean "all" in most contexts). Returns an
+// HTTP 400 fiber error with the parameter name in the message when invalid.
+// Inlined from mcp/validate.go to avoid import cycle.
+func gpuValidateName(param, value string) error {
+	if value == "" {
+		return nil
+	}
+	if len(value) > gpuMaxNameLen {
+		return fiber.NewError(fiber.StatusBadRequest,
+			fmt.Sprintf("invalid %s: exceeds maximum length of %d characters", param, gpuMaxNameLen))
+	}
+	if !gpuNamePattern.MatchString(value) {
+		return fiber.NewError(fiber.StatusBadRequest,
+			fmt.Sprintf("invalid %s: must consist of lowercase alphanumeric characters, '-', or '.'", param))
+	}
+	return nil
+}
+
+// gpuValidateClusterAndNamespace is a convenience helper that validates both the
+// cluster and namespace query parameters in a single call.
+// Inlined from mcp/validate.go to avoid import cycle.
+func gpuValidateClusterAndNamespace(cluster, namespace string) error {
+	if err := gpuValidateName("cluster", cluster); err != nil {
+		return err
+	}
+	return gpuValidateName("namespace", namespace)
+}
 
 // bulkUtilizationsMaxIDs caps the number of reservation ids a single
 // GetBulkUtilizations API request may ask for. This is a DoS guard at the
@@ -73,7 +109,7 @@ func NewGPUHandler(s store.Store, capacityProvider ClusterCapacityProvider, k8sC
 // CreateReservation creates a new GPU reservation
 func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 	// Require at least editor role — viewers cannot create GPU reservations (#16547).
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -93,7 +129,7 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 	if input.Namespace == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Namespace is required")
 	}
-	if err := mcpValidateClusterAndNamespace(input.Cluster, input.Namespace); err != nil {
+	if err := gpuValidateClusterAndNamespace(input.Cluster, input.Namespace); err != nil {
 		return err
 	}
 	if input.GPUCount < 1 {
@@ -291,7 +327,7 @@ func (h *GPUHandler) GetReservation(c *fiber.Ctx) error {
 // Only the owner or an admin may modify a reservation (#5416).
 func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 	// Require at least editor role — viewers cannot update GPU reservations (#16547).
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -454,7 +490,7 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 // Only the owner or an admin may delete a reservation (#5417).
 func (h *GPUHandler) DeleteReservation(c *fiber.Ctx) error {
 	// Require at least editor role — viewers cannot delete GPU reservations (#16547).
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 

@@ -72,15 +72,15 @@ func (h *AttestationHandler) RegisterPublicRoutes(r fiber.Router) {
 
 func (h *AttestationHandler) getScore(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
-		return demoResponse(c, "attestation", getDemoAttestationScores())
+		return DemoResponse(c, "attestation", GetDemoAttestationScores())
 	}
 	// TODO: replace with live signal collection when backends land.
-	return c.JSON(getDemoAttestationScores())
+	return c.JSON(GetDemoAttestationScores())
 }
 
 // ── Demo data ───────────────────────────────────────────────────────────────
 
-func getDemoAttestationScores() AttestationResponse {
+func GetDemoAttestationScores() AttestationResponse {
 	return AttestationResponse{
 		Clusters: []ClusterAttestationScore{
 			buildDemoCluster("eks-prod-us-east-1", 92, 95, 88, 100),

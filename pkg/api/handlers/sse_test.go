@@ -164,16 +164,16 @@ func TestStreamClusters_EmitsClusterErrorOnFailure(t *testing.T) {
 
 	// The failing cluster must emit the new cluster_error event, carrying
 	// its name and the error message.
-	assert.Contains(t, body, "event: "+sseEventClusterError, "stream must contain cluster_error event")
+	assert.Contains(t, body, "event: "+"cluster_error", "stream must contain cluster_error event")
 	assert.Contains(t, body, "\"cluster\":\"cluster-bad\"", "cluster_error payload must reference cluster-bad")
 	assert.Contains(t, body, "cluster query failed", "cluster_error payload must include the sanitized error message")
 
 	// The healthy cluster must still produce a cluster_data event.
-	assert.Contains(t, body, "event: "+sseEventClusterData, "healthy cluster should still emit cluster_data")
+	assert.Contains(t, body, "event: "+"cluster_data", "healthy cluster should still emit cluster_data")
 	assert.Contains(t, body, "\"cluster\":\"cluster-ok\"", "cluster-ok should appear as cluster_data")
 
 	// The final done event should still fire.
-	assert.Contains(t, body, "event: "+sseEventDone, "stream must end with done event")
+	assert.Contains(t, body, "event: "+"done", "stream must end with done event")
 
 	// Existing event-name strings must be unchanged (regression guard).
 	assert.True(t, strings.Contains(body, "cluster_data"))
@@ -380,10 +380,10 @@ func TestGetJobsStream_EmitsClusterErrorOnFailure(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	body := readSSEBody(t, resp)
-	assert.Contains(t, body, "event: "+sseEventClusterError, "failing cluster must emit cluster_error event")
+	assert.Contains(t, body, "event: "+"cluster_error", "failing cluster must emit cluster_error event")
 	assert.Contains(t, body, "\"cluster\":\"cluster-bad\"", "cluster_error payload must name the failing cluster")
 	assert.Contains(t, body, "cluster query failed", "cluster_error payload must include the sanitized error message")
-	assert.Contains(t, body, "event: "+sseEventClusterData, "healthy cluster must still emit cluster_data")
+	assert.Contains(t, body, "event: "+"cluster_data", "healthy cluster must still emit cluster_data")
 	assert.Contains(t, body, "\"cluster\":\"cluster-ok\"", "cluster-ok must appear in cluster_data")
-	assert.Contains(t, body, "event: "+sseEventDone, "stream must end with done event")
+	assert.Contains(t, body, "event: "+"done", "stream must end with done event")
 }

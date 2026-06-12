@@ -19,14 +19,14 @@ import (
 func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "pods", getDemoPods())
+		return handlers.DemoResponse(c, "pods", handlers.GetDemoPods())
 	}
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 	labelSelector := c.Query("labelSelector")
 
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 	if err := mcpValidateLabelSelector(labelSelector); err != nil {
@@ -51,7 +51,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return HandleK8sError(c, err)
+				return handlers.HandleK8sError(c, err)
 			}
 
 			allPods, errTracker := queryAllClustersWithTimeout(c.Context(), clusters, mcpExtendedTimeout,
@@ -66,7 +66,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 
 		pods, err := h.k8sClient.GetPods(ctx, cluster, namespace)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		if pods == nil {
 			pods = make([]k8s.PodInfo, 0)
@@ -81,13 +81,13 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "issues", getDemoPodIssues())
+		return handlers.DemoResponse(c, "issues", handlers.GetDemoPodIssues())
 	}
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
@@ -109,7 +109,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return HandleK8sError(c, err)
+				return handlers.HandleK8sError(c, err)
 			}
 
 			allIssues, errTracker := queryAllClustersWithTimeout(c.Context(), clusters, mcpExtendedTimeout,
@@ -124,7 +124,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 
 		issues, err := h.k8sClient.FindPodIssues(ctx, cluster, namespace)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		if issues == nil {
 			issues = make([]k8s.PodIssue, 0)
@@ -137,11 +137,11 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 
 // FindDeploymentIssues returns deployments with issues
 func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "issues", getDemoDeploymentIssues(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "issues", handlers.GetDemoDeploymentIssues(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
-		if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 			return err
 		}
 
@@ -149,7 +149,7 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
-				return HandleK8sError(c, err)
+				return handlers.HandleK8sError(c, err)
 			}
 
 			allIssues, errTracker := queryAllClusters(c.Context(), clusters,
@@ -163,7 +163,7 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 		defer cancel()
 		issues, err := client.FindDeploymentIssues(ctx, cluster, namespace)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		if issues == nil {
 			issues = make([]k8s.DeploymentIssue, 0)
@@ -174,11 +174,11 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 
 // GetDeployments returns deployments with rollout status
 func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "deployments", getDemoDeployments(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "deployments", handlers.GetDemoDeployments(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
-		if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 			return err
 		}
 
@@ -186,7 +186,7 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
-				return HandleK8sError(c, err)
+				return handlers.HandleK8sError(c, err)
 			}
 
 			allDeployments, _ := queryAllClusters(c.Context(), clusters,
@@ -200,7 +200,7 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 		defer cancel()
 		deployments, err := client.GetDeployments(ctx, cluster, namespace)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		if deployments == nil {
 			deployments = make([]k8s.Deployment, 0)
@@ -211,18 +211,18 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 
 // GetServices returns services from clusters
 func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "services", getDemoServices(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "services", handlers.GetDemoServices(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
-		if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 			return err
 		}
 
 		if cluster == "" {
 			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
-				return HandleK8sError(c, err)
+				return handlers.HandleK8sError(c, err)
 			}
 
 			var wg sync.WaitGroup
@@ -299,7 +299,7 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 
 		services, err := client.GetServices(ctx, cluster, namespace)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		if services == nil {
 			services = make([]k8s.Service, 0)
@@ -310,18 +310,18 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 
 // GetJobs returns jobs from clusters
 func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "jobs", getDemoJobs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "jobs", handlers.GetDemoJobs(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
-		if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 			return err
 		}
 
 		if cluster == "" {
 			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
-				return HandleK8sError(c, err)
+				return handlers.HandleK8sError(c, err)
 			}
 
 			allJobs, _ := queryAllClusters(c.Context(), clusters,
@@ -336,7 +336,7 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 
 		jobs, err := client.GetJobs(ctx, cluster, namespace)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		if jobs == nil {
 			jobs = make([]k8s.Job, 0)
@@ -347,18 +347,18 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 
 // GetHPAs returns HPAs from clusters
 func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "hpas", getDemoHPAs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "hpas", handlers.GetDemoHPAs(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
-		if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 			return err
 		}
 
 		if cluster == "" {
 			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
-				return HandleK8sError(c, err)
+				return handlers.HandleK8sError(c, err)
 			}
 
 			allHPAs, _ := queryAllClusters(c.Context(), clusters,
@@ -373,7 +373,7 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 
 		hpas, err := client.GetHPAs(ctx, cluster, namespace)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		if hpas == nil {
 			hpas = make([]k8s.HPA, 0)
@@ -384,18 +384,18 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 
 // GetReplicaSets returns ReplicaSets from clusters
 func (h *MCPHandlers) GetReplicaSets(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "replicasets", getDemoReplicaSets(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "replicasets", handlers.GetDemoReplicaSets(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
-		if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 			return err
 		}
 
 		if cluster == "" {
 			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
-				return HandleK8sError(c, err)
+				return handlers.HandleK8sError(c, err)
 			}
 
 			allItems, _ := queryAllClusters(c.Context(), clusters,
@@ -410,7 +410,7 @@ func (h *MCPHandlers) GetReplicaSets(c *fiber.Ctx) error {
 
 		items, err := client.GetReplicaSets(ctx, cluster, namespace)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		if items == nil {
 			items = make([]k8s.ReplicaSet, 0)
@@ -421,18 +421,18 @@ func (h *MCPHandlers) GetReplicaSets(c *fiber.Ctx) error {
 
 // GetStatefulSets returns StatefulSets from clusters
 func (h *MCPHandlers) GetStatefulSets(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "statefulsets", getDemoStatefulSets(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "statefulsets", handlers.GetDemoStatefulSets(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
-		if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 			return err
 		}
 
 		if cluster == "" {
 			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
-				return HandleK8sError(c, err)
+				return handlers.HandleK8sError(c, err)
 			}
 
 			allItems, _ := queryAllClusters(c.Context(), clusters,
@@ -447,7 +447,7 @@ func (h *MCPHandlers) GetStatefulSets(c *fiber.Ctx) error {
 
 		items, err := client.GetStatefulSets(ctx, cluster, namespace)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		if items == nil {
 			items = make([]k8s.StatefulSet, 0)
@@ -458,18 +458,18 @@ func (h *MCPHandlers) GetStatefulSets(c *fiber.Ctx) error {
 
 // GetDaemonSets returns DaemonSets from clusters
 func (h *MCPHandlers) GetDaemonSets(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "daemonsets", getDemoDaemonSets(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "daemonsets", handlers.GetDemoDaemonSets(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
-		if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 			return err
 		}
 
 		if cluster == "" {
 			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
-				return HandleK8sError(c, err)
+				return handlers.HandleK8sError(c, err)
 			}
 
 			allItems, _ := queryAllClusters(c.Context(), clusters,
@@ -484,7 +484,7 @@ func (h *MCPHandlers) GetDaemonSets(c *fiber.Ctx) error {
 
 		items, err := client.GetDaemonSets(ctx, cluster, namespace)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		if items == nil {
 			items = make([]k8s.DaemonSet, 0)
@@ -495,18 +495,18 @@ func (h *MCPHandlers) GetDaemonSets(c *fiber.Ctx) error {
 
 // GetCronJobs returns CronJobs from clusters
 func (h *MCPHandlers) GetCronJobs(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "cronjobs", getDemoCronJobs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "cronjobs", handlers.GetDemoCronJobs(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
-		if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 			return err
 		}
 
 		if cluster == "" {
 			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
-				return HandleK8sError(c, err)
+				return handlers.HandleK8sError(c, err)
 			}
 
 			allItems, _ := queryAllClusters(c.Context(), clusters,
@@ -521,7 +521,7 @@ func (h *MCPHandlers) GetCronJobs(c *fiber.Ctx) error {
 
 		items, err := client.GetCronJobs(ctx, cluster, namespace)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		if items == nil {
 			items = make([]k8s.CronJob, 0)
@@ -534,12 +534,12 @@ func (h *MCPHandlers) GetCronJobs(c *fiber.Ctx) error {
 // DaemonSets) from clusters. This is the non-streaming counterpart of
 // GetWorkloadsStream, used by the widget export system (/api/mcp/workloads).
 func (h *MCPHandlers) GetWorkloads(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "workloads", getDemoWorkloads(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "workloads", handlers.GetDemoWorkloads(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 		workloadType := c.Query("type")
 
-		if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 			return err
 		}
 		if err := mcpValidateWorkloadType(workloadType); err != nil {

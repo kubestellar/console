@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +13,31 @@ import (
 	"github.com/kubestellar/console/pkg/k8s"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
+
+// limaNamePattern matches valid Kubernetes resource names (RFC 1123 DNS subdomain).
+// Must be lowercase alphanumeric, may contain '-' and '.', max 253 characters.
+var limaNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9.\-]*[a-z0-9])?$`)
+
+const limaMaxNameLen = 253
+
+// limaValidateName checks that a non-empty string is a valid Kubernetes name.
+// Empty values are allowed (they mean "all" in most contexts). Returns an
+// HTTP 400 fiber error with the parameter name in the message when invalid.
+// Inlined from mcp/validate.go to avoid import cycle.
+func limaValidateName(param, value string) error {
+	if value == "" {
+		return nil
+	}
+	if len(value) > limaMaxNameLen {
+		return fiber.NewError(fiber.StatusBadRequest,
+			fmt.Sprintf("invalid %s: exceeds maximum length of %d characters", param, limaMaxNameLen))
+	}
+	if !limaNamePattern.MatchString(value) {
+		return fiber.NewError(fiber.StatusBadRequest,
+			fmt.Sprintf("invalid %s: must consist of lowercase alphanumeric characters, '-', or '.'", param))
+	}
+	return nil
+}
 
 // limaListTimeout is the timeout for listing Lima nodes across all clusters.
 const limaListTimeout = 30 * time.Second
@@ -63,7 +90,7 @@ type LimaListResponse struct {
 func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
 		return c.JSON(LimaListResponse{
-			LimaInstances: getDemoLimaInstances(),
+			LimaInstances: GetDemoLimaInstances(),
 			IsDemoData:    true,
 		})
 	}
@@ -77,7 +104,7 @@ func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	if cluster != "" {
-		if err := mcpValidateName("cluster", cluster); err != nil {
+		if err := limaValidateName("cluster", cluster); err != nil {
 			return err
 		}
 	}

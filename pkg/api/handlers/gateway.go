@@ -57,7 +57,7 @@ func (h *GatewayHandlers) ListGateways(c *fiber.Ctx) error {
 		// Get gateways for specific cluster
 		gateways, err := h.k8sClient.ListGatewaysForCluster(ctx, cluster, namespace)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{
 			"items":      gateways,
@@ -74,7 +74,7 @@ func (h *GatewayHandlers) ListGateways(c *fiber.Ctx) error {
 			slog.Warn("partial gateway list failure", "error", err)
 			return c.JSON(list)
 		}
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	return c.JSON(list)
@@ -98,7 +98,7 @@ func (h *GatewayHandlers) ListHTTPRoutes(c *fiber.Ctx) error {
 		// Get routes for specific cluster
 		routes, err := h.k8sClient.ListHTTPRoutesForCluster(ctx, cluster, namespace)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{
 			"items":      routes,
@@ -115,7 +115,7 @@ func (h *GatewayHandlers) ListHTTPRoutes(c *fiber.Ctx) error {
 			slog.Warn("partial httproute list failure", "error", err)
 			return c.JSON(list)
 		}
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	return c.JSON(list)
@@ -133,7 +133,7 @@ func (h *GatewayHandlers) GetGatewayAPIStatus(c *fiber.Ctx) error {
 
 	clusters, _, err := h.k8sClient.HealthyClusters(ctx)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	type clusterGatewayStatus struct {
@@ -171,7 +171,7 @@ func (h *GatewayHandlers) GetGateway(c *fiber.Ctx) error {
 
 	gateways, err := h.k8sClient.ListGatewaysForCluster(ctx, cluster, namespace)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	for _, gw := range gateways {
@@ -199,7 +199,7 @@ func (h *GatewayHandlers) GetHTTPRoute(c *fiber.Ctx) error {
 
 	routes, err := h.k8sClient.ListHTTPRoutesForCluster(ctx, cluster, namespace)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	for _, route := range routes {

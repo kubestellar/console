@@ -25,12 +25,12 @@ func RequireAdmin(c *fiber.Ctx, s store.Store) error {
 
 // requireEditorOrAdmin re-exports auth.RequireEditorOrAdmin for backward compatibility.
 // New code should import github.com/kubestellar/console/pkg/api/handlers/auth directly.
-func requireEditorOrAdmin(c *fiber.Ctx, s store.Store) error {
+func RequireEditorOrAdmin(c *fiber.Ctx, s store.Store) error {
 	return auth.RequireEditorOrAdmin(c, s)
 }
 
 // requireViewerOrAbove re-exports auth.RequireViewerOrAbove for backward compatibility.
-func requireViewerOrAbove(c *fiber.Ctx, s store.Store) error {
+func RequireViewerOrAbove(c *fiber.Ctx, s store.Store) error {
 	return auth.RequireViewerOrAbove(c, s)
 }
 

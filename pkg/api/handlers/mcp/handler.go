@@ -201,3 +201,7 @@ func (h *MCPHandlers) GetDeployTools(c *fiber.Ctx) error {
 	tools := h.bridge.GetDeployTools()
 	return c.JSON(fiber.Map{"tools": tools})
 }
+
+
+// Bridge is an alias for MCPHandlers for backward compatibility with gitops package.
+type Bridge = MCPHandlers

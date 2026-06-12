@@ -140,8 +140,8 @@ func TestWorkflowRunURLPattern_Match(t *testing.T) {
 
 // ── Handler-level tests ───────────────────────────────────────────────────────
 
-// demoDetectionRunsResponse is the outer wrapper shape returned by demoResponse().
-// demoResponse() serializes as {"agentic-detection-runs": <payload>, "source": "demo"}.
+// demoDetectionRunsResponse is the outer wrapper shape returned by DemoResponse().
+// DemoResponse() serializes as {"agentic-detection-runs": <payload>, "source": "demo"}.
 type demoDetectionRunsResponse struct {
 	Payload DetectionRunsResponse `json:"agentic-detection-runs"`
 	Source  string                `json:"source"`
@@ -350,7 +350,7 @@ func TestFetchDetectionRuns_InvalidJSON(t *testing.T) {
 // ── Demo data structure tests ─────────────────────────────────────────────────
 
 func TestGetDemoDetectionRuns_Structure(t *testing.T) {
-	result := getDemoDetectionRuns()
+	result := GetDemoDetectionRuns()
 
 	assert.True(t, result.IsDemoData)
 	assert.Equal(t, "demo", result.Source)

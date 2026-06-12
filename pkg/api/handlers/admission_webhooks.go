@@ -91,7 +91,7 @@ const statusServiceUnavailableWebhook = fiber.StatusServiceUnavailable
 func (h *WebhookHandlers) ListWebhooks(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
 		return c.JSON(WebhookListResponse{
-			Webhooks:   getDemoWebhooks(),
+			Webhooks:   GetDemoWebhooks(),
 			IsDemoData: true,
 		})
 	}

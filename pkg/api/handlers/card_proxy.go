@@ -146,7 +146,7 @@ func NewCardProxyHandler(s store.Store) *CardProxyHandler {
 func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	// Require at least editor role — viewers and anonymous users must not be
 	// able to trigger outbound requests through the proxy (#12436).
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 

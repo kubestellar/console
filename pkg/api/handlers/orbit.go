@@ -183,7 +183,7 @@ func (h *OrbitHandler) ListMissions(c *fiber.Ctx) error {
 // CreateMission saves a new orbit mission owned by the current user.
 // POST /api/orbit/missions
 func (h *OrbitHandler) CreateMission(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers/htypes"
 	"github.com/kubestellar/console/pkg/k8s"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -65,7 +66,7 @@ type ServiceExportSummary struct {
 type ServiceExportListResponse struct {
 	Exports       []ServiceExportSummary `json:"exports"`
 	IsDemoData    bool                   `json:"isDemoData"`
-	ClusterErrors []ClusterError         `json:"clusterErrors,omitempty"`
+	ClusterErrors []htypes.ClusterError         `json:"clusterErrors,omitempty"`
 }
 
 // HTTP status code for service unavailable
@@ -94,7 +95,7 @@ func (h *ServiceExportHandlers) ListServiceExports(c *fiber.Ctx) error {
 	}
 
 	allExports := make([]ServiceExportSummary, 0, len(clusters)*4)
-	clusterErrors := make([]ClusterError, 0, len(clusters))
+	clusterErrors := make([]htypes.ClusterError, 0, len(clusters))
 	// successCount tracks how many clusters were queried successfully (even if
 	// they returned zero exports). We use this instead of len(allExports) > 0
 	// because a cluster can legitimately have no ServiceExports and still
@@ -105,7 +106,7 @@ func (h *ServiceExportHandlers) ListServiceExports(c *fiber.Ctx) error {
 		client, err := h.k8sClient.GetDynamicClient(cluster.Name)
 		if err != nil {
 			slog.Error("[ServiceExports] failed to get dynamic client", "cluster", cluster.Name, "error", err)
-			clusterErrors = append(clusterErrors, ClusterError{
+			clusterErrors = append(clusterErrors, htypes.ClusterError{
 				Cluster:   cluster.Name,
 				ErrorType: "dynamic_client_unavailable",
 				Message:   "cluster client unavailable",
@@ -121,7 +122,7 @@ func (h *ServiceExportHandlers) ListServiceExports(c *fiber.Ctx) error {
 			// the error so clients can distinguish "cluster has no exports"
 			// from "cluster could not be queried" (#6483).
 			slog.Error("[ServiceExports] failed to list exports", "cluster", cluster.Name, "error", err)
-			clusterErrors = append(clusterErrors, ClusterError{
+			clusterErrors = append(clusterErrors, htypes.ClusterError{
 				Cluster:   cluster.Name,
 				ErrorType: "list_failed",
 				Message:   "failed to list service exports",

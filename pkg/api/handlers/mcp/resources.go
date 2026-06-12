@@ -27,16 +27,16 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
-	return h.withDemoFallback(c, "configmaps", getDemoConfigMaps(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "configmaps", handlers.GetDemoConfigMaps(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ConfigMap, error) {
 			return client.GetConfigMaps(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "configmaps", items, errTracker)
 	})
@@ -45,23 +45,23 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 // GetSecrets returns Secrets from clusters.
 // Requires editor or admin role — Secrets contain sensitive data (CWE-862, #16731).
 func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
-	return h.withDemoFallback(c, "secrets", getDemoSecrets(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "secrets", handlers.GetDemoSecrets(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.Secret, error) {
 			return client.GetSecrets(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "secrets", items, errTracker)
 	})
@@ -72,16 +72,16 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
-	return h.withDemoFallback(c, "serviceAccounts", getDemoServiceAccounts(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "serviceAccounts", handlers.GetDemoServiceAccounts(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ServiceAccount, error) {
 			return client.GetServiceAccounts(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "serviceAccounts", items, errTracker)
 	})
@@ -92,16 +92,16 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
-	return h.withDemoFallback(c, "pvcs", getDemoPVCs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "pvcs", handlers.GetDemoPVCs(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.PVC, error) {
 			return client.GetPVCs(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "pvcs", items, errTracker)
 	})
@@ -110,16 +110,16 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 // GetPVs returns PersistentVolumes from clusters
 func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
-	if err := mcpValidateName("cluster", cluster); err != nil {
+	if err := ValidateName("cluster", cluster); err != nil {
 		return err
 	}
 
-	return h.withDemoFallback(c, "pvs", getDemoPVs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "pvs", handlers.GetDemoPVs(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.PV, error) {
 			return client.GetPVs(ctx, clusterName)
 		})
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "pvs", items, errTracker)
 	})
@@ -130,16 +130,16 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
-	return h.withDemoFallback(c, "resourceQuotas", getDemoResourceQuotas(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "resourceQuotas", handlers.GetDemoResourceQuotas(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ResourceQuota, error) {
 			return client.GetResourceQuotas(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "resourceQuotas", items, errTracker)
 	})
@@ -150,16 +150,16 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
-	return h.withDemoFallback(c, "limitRanges", getDemoLimitRanges(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "limitRanges", handlers.GetDemoLimitRanges(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.LimitRange, error) {
 			return client.GetLimitRanges(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "limitRanges", items, errTracker)
 	})
@@ -170,7 +170,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 	// SECURITY (#7490, #7492): mutating endpoint requires editor or admin role.
 	// This also covers the ensure_namespace path (#7492) since the whole handler
 	// is gated before any namespace or quota creation occurs.
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -191,10 +191,10 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 	if req.Cluster == "" || req.Name == "" || req.Namespace == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster, name, and namespace are required"})
 	}
-	if err := mcpValidateClusterAndNamespace(req.Cluster, req.Namespace); err != nil {
+	if err := ValidateClusterAndNamespace(req.Cluster, req.Namespace); err != nil {
 		return err
 	}
-	if err := mcpValidateName("name", req.Name); err != nil {
+	if err := ValidateName("name", req.Name); err != nil {
 		return err
 	}
 
@@ -224,7 +224,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 
 		quota, err := h.k8sClient.CreateOrUpdateResourceQuota(ctx, req.Cluster, spec)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 
 		audit.Log(c, audit.ActionCreateResourceQuota, "resource_quota", req.Name,
@@ -239,7 +239,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 // DeleteResourceQuota deletes a ResourceQuota
 func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 	// SECURITY (#7491): destructive endpoint requires editor or admin role.
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -250,10 +250,10 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 	if cluster == "" || namespace == "" || name == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster, namespace, and name are required"})
 	}
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
-	if err := mcpValidateName("name", name); err != nil {
+	if err := ValidateName("name", name); err != nil {
 		return err
 	}
 
@@ -263,7 +263,7 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 
 		err := h.k8sClient.DeleteResourceQuota(ctx, cluster, namespace, name)
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 
 		audit.Log(c, audit.ActionDeleteResourceQuota, "resource_quota", name,
@@ -277,13 +277,13 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 
 // GetPodLogs returns logs from a pod
 func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "logs", getDemoPodLogs())
+		return handlers.DemoResponse(c, "logs", handlers.GetDemoPodLogs())
 	}
 
 	cluster := c.Query("cluster")
@@ -295,13 +295,13 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 	if cluster == "" || namespace == "" || pod == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster, namespace, and pod are required"})
 	}
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
-	if err := mcpValidateName("pod", pod); err != nil {
+	if err := ValidateName("pod", pod); err != nil {
 		return err
 	}
-	if err := mcpValidateName("container", container); err != nil {
+	if err := ValidateName("container", container); err != nil {
 		return err
 	}
 	if err := mcpValidatePositiveInt("tail", tailLines, mcpMaxTailLines); err != nil {
@@ -314,7 +314,7 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 
 		logs, err := h.k8sClient.GetPodLogs(ctx, cluster, namespace, pod, container, int64(tailLines))
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{"logs": logs, "source": "k8s"})
 	}
@@ -401,7 +401,7 @@ var AllowedDeployTools = map[string]bool{
 func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "hosts", getWasmCloudHosts())
+		return handlers.DemoResponse(c, "hosts", handlers.GetWasmCloudHosts())
 	}
 
 	// For non-demo mode, we'll return an empty list for now
@@ -413,7 +413,7 @@ func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetWasmCloudActors(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "actors", getWasmCloudActors())
+		return handlers.DemoResponse(c, "actors", handlers.GetWasmCloudActors())
 	}
 
 	// For non-demo mode, we'll return an empty list for now
@@ -441,7 +441,7 @@ func validateToolName(name string, allowedTools map[string]bool) error {
 func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 	// SECURITY (#7495): tool-call endpoint can expose sensitive cluster data;
 	// require at least editor role to invoke tools.
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -464,7 +464,7 @@ func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 
 	result, err := h.bridge.CallOpsTool(ctx, req.Name, req.Arguments)
 	if err != nil {
-		return HandleK8sError(c, err)
+		return handlers.HandleK8sError(c, err)
 	}
 
 	return c.JSON(result)
@@ -474,7 +474,7 @@ func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 func (h *MCPHandlers) CallDeployTool(c *fiber.Ctx) error {
 	// SECURITY (#7495): tool-call endpoint can expose sensitive cluster data;
 	// require at least editor role to invoke tools.
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -497,7 +497,7 @@ func (h *MCPHandlers) CallDeployTool(c *fiber.Ctx) error {
 
 	result, err := h.bridge.CallDeployTool(ctx, req.Name, req.Arguments)
 	if err != nil {
-		return HandleK8sError(c, err)
+		return handlers.HandleK8sError(c, err)
 	}
 
 	return c.JSON(result)
@@ -508,16 +508,16 @@ func (h *MCPHandlers) CallDeployTool(c *fiber.Ctx) error {
 // (case-insensitive) are included in the response.
 func (h *MCPHandlers) GetFlatcarNodes(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
-	if err := mcpValidateName("cluster", cluster); err != nil {
+	if err := ValidateName("cluster", cluster); err != nil {
 		return err
 	}
 
-	return h.withDemoFallback(c, "nodes", getDemoFlatcarNodes(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "nodes", handlers.GetDemoFlatcarNodes(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.FlatcarNodeInfo, error) {
 			return client.GetFlatcarNodes(ctx, clusterName)
 		})
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "nodes", items, errTracker)
 	})
@@ -528,16 +528,16 @@ func (h *MCPHandlers) GetIngresses(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
-	return h.withDemoFallback(c, "ingresses", getDemoIngresses(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "ingresses", handlers.GetDemoIngresses(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.Ingress, error) {
 			return client.GetIngresses(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "ingresses", items, errTracker)
 	})
@@ -548,16 +548,16 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
-	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
-	return h.withDemoFallback(c, "networkpolicies", getDemoNetworkPolicies(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "networkpolicies", handlers.GetDemoNetworkPolicies(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.NetworkPolicy, error) {
 			return client.GetNetworkPolicies(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return HandleK8sError(c, err)
+			return handlers.HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "networkpolicies", items, errTracker)
 	})
@@ -618,7 +618,7 @@ func classifyComponent(labels map[string]string) string {
 func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 	// Demo mode: return realistic sample data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "stats", getDemoPodNetworkStats())
+		return handlers.DemoResponse(c, "stats", handlers.GetDemoPodNetworkStats())
 	}
 
 	if h.k8sClient == nil {

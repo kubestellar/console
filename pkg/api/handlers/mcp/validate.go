@@ -37,7 +37,7 @@ var mcpAllowedWorkloadTypes = map[string]bool{
 // mcpValidateName checks that a non-empty string is a valid Kubernetes name.
 // Empty values are allowed (they mean "all" in most contexts). Returns an
 // HTTP 400 fiber error with the parameter name in the message when invalid.
-func mcpValidateName(param, value string) error {
+func ValidateName(param, value string) error {
 	if value == "" {
 		return nil
 	}
@@ -96,9 +96,9 @@ func mcpValidateWorkloadType(value string) error {
 
 // mcpValidateClusterAndNamespace is a convenience helper that validates both the
 // cluster and namespace query parameters in a single call.
-func mcpValidateClusterAndNamespace(cluster, namespace string) error {
-	if err := mcpValidateName("cluster", cluster); err != nil {
+func ValidateClusterAndNamespace(cluster, namespace string) error {
+	if err := ValidateName("cluster", cluster); err != nil {
 		return err
 	}
-	return mcpValidateName("namespace", namespace)
+	return ValidateName("namespace", namespace)
 }

@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"github.com/kubestellar/console/pkg/safego"

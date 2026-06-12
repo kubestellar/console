@@ -10,7 +10,7 @@ import (
 
 // handleK8sError translates a Kubernetes API error into the appropriate HTTP response.
 // Timeout/cancellation → 504; all other errors → 500.
-func handleK8sError(c *fiber.Ctx, err error) error {
+func HandleK8sError(c *fiber.Ctx, err error) error {
 	if err == nil {
 		return nil
 	}

@@ -28,7 +28,7 @@ func (h *DataResidencyHandler) RegisterPublicRoutes(group fiber.Router) {
 // GET /api/compliance/residency/rules
 func (h *DataResidencyHandler) ListRules(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
-		return demoResponse(c, "rules", h.engine.Rules())
+		return DemoResponse(c, "rules", h.engine.Rules())
 	}
 	return c.JSON(h.engine.Rules())
 }
@@ -46,7 +46,7 @@ func (h *DataResidencyHandler) ListRegions(c *fiber.Ctx) error {
 		for i, r := range regions {
 			result[i] = regionInfo{Code: r, Label: residency.RegionLabel(r)}
 		}
-		return demoResponse(c, "regions", result)
+		return DemoResponse(c, "regions", result)
 	}
 
 	type regionInfo struct {
@@ -66,7 +66,7 @@ func (h *DataResidencyHandler) ListRegions(c *fiber.Ctx) error {
 // GET /api/compliance/residency/clusters
 func (h *DataResidencyHandler) ListClusterRegions(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
-		return demoResponse(c, "clusterRegions", h.engine.ClusterRegions())
+		return DemoResponse(c, "clusterRegions", h.engine.ClusterRegions())
 	}
 	return c.JSON(h.engine.ClusterRegions())
 }
@@ -76,7 +76,7 @@ func (h *DataResidencyHandler) ListClusterRegions(c *fiber.Ctx) error {
 func (h *DataResidencyHandler) ListViolations(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
 		violations, _ := h.engine.Evaluate()
-		return demoResponse(c, "violations", violations)
+		return DemoResponse(c, "violations", violations)
 	}
 	violations, _ := h.engine.Evaluate()
 	return c.JSON(violations)
@@ -86,7 +86,7 @@ func (h *DataResidencyHandler) ListViolations(c *fiber.Ctx) error {
 // GET /api/compliance/residency/summary
 func (h *DataResidencyHandler) GetSummary(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
-		return demoResponse(c, "summary", h.engine.Summary())
+		return DemoResponse(c, "summary", h.engine.Summary())
 	}
 	return c.JSON(h.engine.Summary())
 }

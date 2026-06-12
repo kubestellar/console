@@ -77,7 +77,7 @@ const statusServiceUnavailableCRD = fiber.StatusServiceUnavailable
 func (h *CRDHandlers) ListCRDs(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
 		return c.JSON(CRDListResponse{
-			CRDs:       getDemoCRDs(),
+			CRDs:       GetDemoCRDs(),
 			IsDemoData: true,
 		})
 	}
