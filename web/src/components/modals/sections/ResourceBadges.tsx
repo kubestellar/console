@@ -209,9 +209,9 @@ export function NamespaceBadge({
 }: NamespaceBadgeProps) {
   const { t } = useTranslation('common')
   const sizeClasses = {
-    sm: onClick ? 'text-2xs px-2 py-1.5 min-h-11 min-w-11' : 'text-2xs px-1.5 py-0.5',
-    md: onClick ? 'text-xs px-2.5 py-2 min-h-11 min-w-11' : 'text-xs px-2 py-0.5',
-    lg: onClick ? 'text-sm px-3 py-2 min-h-11 min-w-11' : 'text-sm px-2.5 py-1',
+    sm: onClick ? 'text-2xs p-3 min-h-11 min-w-11' : 'text-2xs px-1.5 py-0.5',
+    md: onClick ? 'text-xs p-3 min-h-11 min-w-11' : 'text-xs px-2 py-0.5',
+    lg: onClick ? 'text-sm p-3 min-h-11 min-w-11' : 'text-sm px-2.5 py-1',
   }
 
   const iconSizes = {
@@ -258,9 +258,9 @@ export function ResourceKindBadge({
   const colors = RESOURCE_COLORS[kind] || DEFAULT_COLORS
 
   const sizeClasses = {
-    sm: onClick ? 'text-2xs px-2 py-1.5 min-h-11 min-w-11' : 'text-2xs px-1.5 py-0.5',
-    md: onClick ? 'text-xs px-2.5 py-2 min-h-11 min-w-11' : 'text-xs px-2 py-0.5',
-    lg: onClick ? 'text-sm px-3 py-2 min-h-11 min-w-11' : 'text-sm px-2.5 py-1',
+    sm: onClick ? 'text-2xs p-3 min-h-11 min-w-11' : 'text-2xs px-1.5 py-0.5',
+    md: onClick ? 'text-xs p-3 min-h-11 min-w-11' : 'text-xs px-2 py-0.5',
+    lg: onClick ? 'text-sm p-3 min-h-11 min-w-11' : 'text-sm px-2.5 py-1',
   }
 
   const iconSizes = {

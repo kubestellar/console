@@ -128,7 +128,7 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
   if (error) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
       <p className="text-red-400 font-medium">{error}</p>
-      <button type="button" onClick={handleRetry} disabled={isRetrying} className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1 min-h-11 min-w-11 px-3 py-2 disabled:opacity-50"><RefreshCw className={cn('w-4 h-4', isRetrying && 'animate-spin')} /> Retry</button>
+      <button type="button" onClick={handleRetry} disabled={isRetrying} className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1 p-3 min-h-11 min-w-11 disabled:opacity-50"><RefreshCw className={cn('w-4 h-4', isRetrying && 'animate-spin')} /> Retry</button>
     </div>
   )
 

@@ -76,7 +76,7 @@ export function ProgressToast({
                   </span>
                   {!watchdogStage && (
                     restartState === 'restarting' ? (
-                      <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-2 min-h-11 min-w-11 bg-muted text-muted-foreground rounded text-xs cursor-wait">
+                      <button disabled className="ml-1 flex items-center gap-1.5 p-3 min-h-11 min-w-11 bg-muted text-muted-foreground rounded text-xs cursor-wait">
                         <Loader2 className="w-3 h-3 animate-spin" />
                         {t('layout.restarting')}
                       </button>
