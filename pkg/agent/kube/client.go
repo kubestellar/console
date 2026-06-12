@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubestellar/console/pkg/agent"
+	agenterrors "github.com/kubestellar/console/pkg/agent/errors"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -843,12 +843,12 @@ func (k *KubectlProxy) TestClusterConnection(req TestConnectionRequest) (*TestCo
 
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return &TestConnectionResult{Reachable: false, Error: agent.SanitizeAgentError("create client", err)}, nil
+		return &TestConnectionResult{Reachable: false, Error: agenterrors.SanitizeAgentError("create client", err)}, nil
 	}
 
 	version, err := client.Discovery().ServerVersion()
 	if err != nil {
-		return &TestConnectionResult{Reachable: false, Error: agent.SanitizeAgentError("test connection", err)}, nil
+		return &TestConnectionResult{Reachable: false, Error: agenterrors.SanitizeAgentError("test connection", err)}, nil
 	}
 
 	return &TestConnectionResult{

@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/middleware"
-	"github.com/kubestellar/console/pkg/api/models"
+	"github.com/kubestellar/console/pkg/models"
 )
 
 // isDemoMode checks if the request has the X-Demo-Mode header set to "true"
