@@ -169,6 +169,11 @@ func clusterFilterNeedsNodes(filters []v1alpha1.ClusterFilter) bool {
 
 const floatEpsilon = 1e-9
 
+// CompareBool compares boolean values with the given operator
+func CompareBool(actual bool, op, value string) bool {
+	return compareBool(actual, op, value)
+}
+
 func compareBool(actual bool, op, value string) bool {
 	expected := strings.EqualFold(value, "true")
 	switch op {
@@ -179,6 +184,11 @@ func compareBool(actual bool, op, value string) bool {
 	default:
 		return actual == expected
 	}
+}
+
+// CompareInt compares integer values with the given operator
+func CompareInt(actual int64, op, value string) bool {
+	return compareInt(actual, op, value)
 }
 
 func compareInt(actual int64, op, value string) bool {
@@ -202,6 +212,11 @@ func compareInt(actual int64, op, value string) bool {
 	default:
 		return false
 	}
+}
+
+// CompareFloat compares float values with the given operator
+func CompareFloat(actual float64, op, value string) bool {
+	return compareFloat(actual, op, value)
 }
 
 func compareFloat(actual float64, op, value string) bool {

@@ -30,6 +30,13 @@ func sanitizeK8sStringsForPrompt(values []string) []string {
 	return sanitize.PromptStrings(values)
 }
 
+// SanitizeK8sStringsForPrompt neutralizes prompt-sensitive user-controlled strings.
+//
+// Deprecated: Use sanitize.PromptStrings directly.
+func SanitizeK8sStringsForPrompt(values []string) []string {
+	return sanitize.PromptStrings(values)
+}
+
 func sanitizeClusterHealthForPrompt(health *k8s.ClusterHealth) *k8s.ClusterHealth {
 	if health == nil {
 		return nil

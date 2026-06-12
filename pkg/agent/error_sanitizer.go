@@ -24,6 +24,14 @@ func sanitizeAgentError(operation string, err error) string {
 	if err == nil {
 		return sanitizedAgentFallback(operation)
 	}
+	return SanitizeAgentError(operation, err)
+}
+
+// SanitizeAgentError produces user-safe error messages from k8s client errors.
+func SanitizeAgentError(operation string, err error) string {
+	if err == nil {
+		return sanitizedAgentFallback(operation)
+	}
 
 	switch {
 	case k8serrors.IsForbidden(err), k8serrors.IsUnauthorized(err):
