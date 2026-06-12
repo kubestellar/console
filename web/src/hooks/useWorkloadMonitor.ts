@@ -6,7 +6,7 @@ import type {
   ResourceHealthStatus } from '../types/workloadMonitor'
 import { DEFAULT_REFRESH_MS } from '../types/workloadMonitor'
 import { getStoredAuthToken } from '../lib/authToken'
-function authHeaders(): Record<string, string> {
+async function authHeaders(): Record<string, string> {
   const token = await getStoredAuthToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }

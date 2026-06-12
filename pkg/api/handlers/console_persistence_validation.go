@@ -2,12 +2,15 @@ package handlers
 
 import (
 	"context"
+	"math"
+	"strconv"
+	"strings"
+	"sync"
+	"log/slog"
+	
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
-	"log/slog"
-	"strings"
-	"sync"
 )
 
 // evaluateClusterGroup evaluates which clusters match a group's criteria.
@@ -162,4 +165,64 @@ func clusterFilterNeedsNodes(filters []v1alpha1.ClusterFilter) bool {
 		}
 	}
 	return false
+}
+
+const floatEpsilon = 1e-9
+
+func compareBool(actual bool, op, value string) bool {
+	expected := strings.EqualFold(value, "true")
+	switch op {
+	case "eq":
+		return actual == expected
+	case "neq":
+		return actual != expected
+	default:
+		return actual == expected
+	}
+}
+
+func compareInt(actual int64, op, value string) bool {
+	expected, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return false
+	}
+	switch op {
+	case "eq":
+		return actual == expected
+	case "neq":
+		return actual != expected
+	case "gt":
+		return actual > expected
+	case "gte":
+		return actual >= expected
+	case "lt":
+		return actual < expected
+	case "lte":
+		return actual <= expected
+	default:
+		return false
+	}
+}
+
+func compareFloat(actual float64, op, value string) bool {
+	expected, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return false
+	}
+	switch op {
+	case "eq":
+		return math.Abs(actual-expected) < floatEpsilon
+	case "neq":
+		return math.Abs(actual-expected) >= floatEpsilon
+	case "gt":
+		return actual > expected
+	case "gte":
+		return actual >= expected || math.Abs(actual-expected) < floatEpsilon
+	case "lt":
+		return actual < expected && math.Abs(actual-expected) >= floatEpsilon
+	case "lte":
+		return actual <= expected || math.Abs(actual-expected) < floatEpsilon
+	default:
+		return false
+	}
 }

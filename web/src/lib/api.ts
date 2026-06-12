@@ -1,6 +1,6 @@
 /* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { MCP_HOOK_TIMEOUT_MS, BACKEND_HEALTH_CHECK_TIMEOUT_MS, STORAGE_KEY_USER_CACHE, STORAGE_KEY_HAS_SESSION, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
-import { clearStoredAuthToken, getStoredAuthToken } from './authToken'
+import { clearStoredAuthToken, getStoredAuthToken, getStoredAuthTokenSync } from './authToken'
 import { emitSessionExpired, emitHttpError } from './analytics'
 import {
   reportBackendAvailable,
@@ -165,7 +165,7 @@ function performSessionExpiry(): void {
   // We pass credentials:'include' so the browser sends the cookie. We don't
   // await the response and we ignore failures — the client-side clear below
   // is the source of truth for logout.
-  const expiredToken = getStoredAuthToken()
+  const expiredToken = getStoredAuthTokenSync()
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     if (expiredToken && expiredToken !== DEMO_TOKEN_VALUE) {
@@ -571,7 +571,7 @@ class ApiClient {
     }
   }
 
-  private getHeaders(): Record<string, string> {
+  private async getHeaders(): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       // #8830 — the /api group middleware rejects state-changing requests
@@ -585,7 +585,7 @@ class ApiClient {
     return headers
   }
 
-  private hasToken(): boolean {
+  private async hasToken(): Promise<boolean> {
     const token = await getStoredAuthToken()
     if (token && token !== DEMO_TOKEN_VALUE) return true
     // #6590 / #8087 — A cookie-only session has no JS-readable token, only
@@ -627,7 +627,7 @@ class ApiClient {
       throw new BackendUnavailableError()
     }
 
-    const headers = { ...this.getHeaders(), ...options?.headers }
+    const headers = { ...await this.getHeaders(), ...options?.headers }
     const { controller, timeoutId } = this.createAbortController(options?.timeout ?? DEFAULT_TIMEOUT)
     const signal = options?.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal
 
@@ -692,7 +692,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'POST',
-        headers: { ...this.getHeaders(), ...options?.headers },
+        headers: { ...await this.getHeaders(), ...options?.headers },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       })
@@ -747,7 +747,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'PATCH',
-        headers: { ...this.getHeaders(), ...options?.headers },
+        headers: { ...await this.getHeaders(), ...options?.headers },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       })
@@ -798,7 +798,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'PUT',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       })
@@ -853,7 +853,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'DELETE',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         signal: controller.signal,
       })
       clearTimeout(timeoutId)

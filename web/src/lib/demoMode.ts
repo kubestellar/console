@@ -229,7 +229,7 @@ export function subscribeDemoMode(callback: (value: boolean) => void): () => voi
  *
  * Replaces all `!token || token === 'demo-token'` patterns.
  */
-export function isDemoToken(): boolean {
+export async function isDemoToken(): boolean {
   const token = await getStoredAuthToken()
   return !token || token === DEMO_TOKEN
 }
@@ -237,7 +237,7 @@ export function isDemoToken(): boolean {
 /**
  * Check if we have a real (non-demo) authentication token.
  */
-export function hasRealToken(): boolean {
+export async function hasRealToken(): boolean {
   const token = await getStoredAuthToken()
   return !!token && token !== DEMO_TOKEN
 }

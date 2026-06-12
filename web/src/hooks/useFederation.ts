@@ -338,7 +338,7 @@ function getDemoFederationAwareness(): FederationAwareness {
 const FEDERATION_POLL_INTERVAL_MS = 30_000
 const FEDERATION_DETECT_CACHE_TTL_MS = 300_000
 
-function authHeaders(): Record<string, string> {
+async function authHeaders(): Record<string, string> {
   const token = await getStoredAuthToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`

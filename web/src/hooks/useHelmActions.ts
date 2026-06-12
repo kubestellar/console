@@ -13,7 +13,7 @@ import { getStoredAuthToken } from '../lib/authToken'
 // kc-agent. The agent runs `helm` under the user's own kubeconfig instead of
 // the backend pod ServiceAccount. The request bodies are identical — only
 // the URL changes.
-function helmAgentAuthHeaders(): Record<string, string> {
+async function helmAgentAuthHeaders(): Record<string, string> {
   const token = await getStoredAuthToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
   if (token) headers['Authorization'] = `Bearer ${token}`

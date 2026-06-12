@@ -84,7 +84,7 @@ export interface UseWorkloadsResult {
   refetch: (signal?: AbortSignal) => Promise<void>
 }
 
-export function authHeaders(): Record<string, string> {
+export async function authHeaders(): Record<string, string> {
   const token = await getStoredAuthToken()
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`

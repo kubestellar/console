@@ -55,7 +55,7 @@ function toFrontendCard(card: BackendCard): DashboardCard {
 // Debounce helper
 const debounceTimers: Record<string, ReturnType<typeof setTimeout>> = {}
 
-function debounce(key: string, fn: () => void, delay: number) {
+async function debounce(key: string, fn: () => void, delay: number) {
   if (debounceTimers[key]) {
     clearTimeout(debounceTimers[key])
   }

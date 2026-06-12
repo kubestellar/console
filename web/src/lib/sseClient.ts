@@ -123,7 +123,7 @@ function parseSSEChunk(
  * On connection errors, automatically retries with exponential backoff
  * (up to SSE_MAX_RECONNECT_ATTEMPTS attempts) before rejecting.
  */
-export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
+export async function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   const { url, params, onClusterData, onClusterError, onDone, itemsKey, signal } = options
 
   // In demo mode, skip SSE connection attempts entirely to prevent retry errors (#12596)

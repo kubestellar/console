@@ -20,7 +20,7 @@ import {
 import { getStoredAuthToken } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
-function authHeaders(): Record<string, string> {
+async function authHeaders(): Record<string, string> {
   const token = await getStoredAuthToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
@@ -101,7 +101,7 @@ export function getBenchmarkStreamSince(): string {
   return streamState.since
 }
 
-function startGlobalStream(since: string) {
+async function startGlobalStream(since: string) {
   streamState = { ...streamState, isStreaming: true, status: 'connecting', since }
   notifySubscribers()
 

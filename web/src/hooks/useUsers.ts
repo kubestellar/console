@@ -25,7 +25,7 @@ import type {
 // allowed origins when KC_AGENT_TOKEN is unset — so we simply omit the
 // Authorization header when no token is configured. Mirrors authHeaders() in
 // useWorkloads.ts.
-function agentAuthHeaders(): Record<string, string> {
+async function agentAuthHeaders(): Record<string, string> {
   const token = await getStoredAuthToken()
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`

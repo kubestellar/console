@@ -16,7 +16,7 @@ const FEEDBACK_ATTACHMENT_LIMIT_ERROR = 'Attachments are too large to submit. Ke
 // hardcoded sample queue. The `kc-has-session` flag is set by /auth/refresh
 // once the backend confirms a cookie-backed session, so it's the authoritative
 // signal that a real user is logged in even with an empty localStorage token.
-function isDemoUser(): boolean {
+async function isDemoUser(): boolean {
   if (localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true') return false
   const token = await await getStoredAuthToken() || localStorage.getItem(STORAGE_KEY_TOKEN)
   return !token || token === DEMO_TOKEN_VALUE

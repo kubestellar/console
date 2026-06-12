@@ -88,7 +88,7 @@ export function isTerminalStatus(s: DeployMissionStatus): boolean {
   return s === 'orbit' || s === 'abort' || s === 'partial'
 }
 
-export function authHeaders(): Record<string, string> {
+export async function authHeaders(): Record<string, string> {
   const token = await getStoredAuthToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }

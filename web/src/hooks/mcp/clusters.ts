@@ -172,7 +172,7 @@ export function useClusters() {
   }, [isDemoMode])
 
   // Trigger initial fetch only once (shared across all hook instances)
-  useEffect(() => {
+  useEffect(async () => {
     if (!initialFetchStarted) {
       setInitialFetchStarted(true)
       fullFetchClusters()

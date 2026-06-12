@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDemoMode, isDemoModeForced } from './useDemoMode'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../lib/authToken'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 /**
@@ -244,7 +244,7 @@ function stopPresenceConnection() {
 }
 
 // Start WebSocket presence connection (backend mode)
-function startPresenceConnection() {
+async function startPresenceConnection() {
   if (presenceStarted) return
 
   const token = await getStoredAuthToken()
@@ -318,7 +318,7 @@ function startPresenceConnection() {
       presenceReconnectTimer = setTimeout(() => {
         presenceReconnectTimer = null
         presenceReconnectAttempts++
-        if (presenceStarted && getStoredAuthToken()) connect()
+        if (presenceStarted && getStoredAuthTokenSync()) connect()
       }, delay)
     }
 
