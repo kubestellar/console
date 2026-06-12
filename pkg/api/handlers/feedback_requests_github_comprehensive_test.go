@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestVerifyGitHubIssueOwnership_Success(t *testing.T) {
+func TestVerifyGitHubIssueOwnership_Success_Comprehensive(t *testing.T) {
 	handler := NewFeedbackHandler(new(test.MockStore), FeedbackConfig{GitHubToken: "test-token"})
 	handler.appTokenProvider = nil
 	handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
@@ -45,7 +45,7 @@ func TestVerifyGitHubIssueOwnership_CaseInsensitiveLogin(t *testing.T) {
 	assert.NoError(t, err, "Login comparison should be case-insensitive")
 }
 
-func TestVerifyGitHubIssueOwnership_WrongOwner(t *testing.T) {
+func TestVerifyGitHubIssueOwnership_WrongOwner_Comprehensive(t *testing.T) {
 	handler := NewFeedbackHandler(new(test.MockStore), FeedbackConfig{GitHubToken: "test-token"})
 	handler.appTokenProvider = nil
 	handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
@@ -86,7 +86,7 @@ func TestVerifyGitHubIssueOwnership_IssueNotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "GitHub issue not found")
 }
 
-func TestFetchGitHubIssue_NoToken(t *testing.T) {
+func TestFetchGitHubIssue_NoToken_Comprehensive(t *testing.T) {
 	handler := NewFeedbackHandler(new(test.MockStore), FeedbackConfig{})
 	handler.appTokenProvider = nil
 

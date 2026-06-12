@@ -414,7 +414,7 @@ func TestLinkIssueAsSubIssue_Failure(t *testing.T) {
 	assert.Contains(t, err.Error(), "GitHub sub-issue API returned 404")
 }
 
-func TestCreateGitHubIssueInRepo_ScreenshotValidation(t *testing.T) {
+func TestCreateGitHubIssueInRepo_ScreenshotValidation_Comprehensive(t *testing.T) {
 	mockStore := new(test.MockStore)
 	handler := NewFeedbackHandler(mockStore, FeedbackConfig{GitHubToken: "test-token"})
 	handler.appTokenProvider = nil

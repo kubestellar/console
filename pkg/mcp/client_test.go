@@ -520,7 +520,7 @@ func TestClient_Send_WriteTimeout(t *testing.T) {
 	}
 
 	// Override timeout for faster test
-	originalTimeout := stdinWriteTimeout
+	_ = stdinWriteTimeout // acknowledge the const exists; can't override it in test
 	defer func() {
 		// Can't actually change the const, but we test the timeout path
 	}()

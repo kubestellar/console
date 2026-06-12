@@ -9,7 +9,10 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -266,13 +269,11 @@ func TestRun_HTTPMode(t *testing.T) {
 
 	// Run watcher in goroutine
 	errCh := make(chan error, 1)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	go func() {
-		errCh := Run(cfg)
-		if errCh != nil && errCh != http.ErrServerClosed {
-			t.Logf("Run error: %v", errCh)
+		runErr := Run(cfg)
+		if runErr != nil && runErr != http.ErrServerClosed {
+			t.Logf("Run error: %v", runErr)
 		}
 	}()
 
@@ -288,8 +289,9 @@ func TestRun_HTTPMode(t *testing.T) {
 		t.Fatal("PID file is empty")
 	}
 
-	// Signal shutdown
-	cancel()
+	// Signal shutdown via process signal
+	proc, _ := os.FindProcess(os.Getpid())
+	proc.Signal(syscall.SIGINT)
 
 	// Wait for shutdown with timeout
 	select {

@@ -2,7 +2,6 @@ package observer
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -22,6 +21,12 @@ type mockProvider struct {
 }
 
 func (m *mockProvider) Name() string { return "mock" }
+
+func (m *mockProvider) Health(_ context.Context) providers.HealthResult {
+	return providers.HealthResult{Available: true}
+}
+
+func (m *mockProvider) SupportsStreaming() bool { return false }
 
 func (m *mockProvider) Generate(_ context.Context, _ providers.GenerateRequest) (*providers.GenerateResponse, error) {
 	m.callCount++

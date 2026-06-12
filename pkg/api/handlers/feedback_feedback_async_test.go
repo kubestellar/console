@@ -80,5 +80,3 @@ func TestRunAsyncGitHubOp_MultipleOperations(t *testing.T) {
 
 	assert.Equal(t, numOps, len(completed), "all operations should complete")
 }
-
-const maxConcurrentGitHubOps = 10 // Must match the value in feedback_async.go

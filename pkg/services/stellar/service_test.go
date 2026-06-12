@@ -392,7 +392,7 @@ func (m *mockStore) UpdateNotificationBody(ctx context.Context, dedupeKey, newBo
 
 func TestMissionValidation(t *testing.T) {
 	svc := stellar.New(newMockStore())
-	ctx := context.Background()
+	_ = context.Background() // available for future subtests
 
 	t.Run("valid mission", func(t *testing.T) {
 		mission := &store.StellarMission{

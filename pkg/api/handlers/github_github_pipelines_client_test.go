@@ -172,9 +172,4 @@ func TestGHGetWithRetry_NetworkError(t *testing.T) {
 	assert.Error(t, err, "should return error on network failure")
 }
 
-// Constants that must match the values in github_pipelines_client.go
-const (
-	GH_RETRY_MAX_ATTEMPTS  = 3
-	GH_RETRY_BASE_DELAY_MS = 100
-	GH_RETRY_MAX_DELAY_MS  = 5000
-)
+// Constants are declared in github_pipelines_types.go — no need to redeclare here.
