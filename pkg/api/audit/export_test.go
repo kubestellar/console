@@ -10,11 +10,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func allowLoopbackDestinations(t *testing.T) {
+	t.Helper()
+	orig := destinationURLValidator
+	destinationURLValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { destinationURLValidator = orig })
+}
+
 func TestRegisterDestination_FullFlow(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
+	allowLoopbackDestinations(t)
 
-	// Use httptest.NewServer to bypass SSRF validation
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -41,8 +48,8 @@ func TestRegisterDestination_FullFlow(t *testing.T) {
 func TestBuildSummary(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
+	allowLoopbackDestinations(t)
 
-	// Use httptest.NewServer to bypass SSRF validation
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))

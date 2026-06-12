@@ -15,8 +15,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/kubestellar/console/pkg/ssrf"
 )
 
 // splunkTimeout bounds every outbound Splunk HEC POST. Chosen to cover the
@@ -72,7 +70,7 @@ func NewSplunkDestination(url, token string, client *http.Client) (*SplunkDestin
 	// SSRF protection: reject URLs that resolve to private/internal IPs (#17533).
 	// Skip validation when caller provides a custom client (tests with localhost).
 	if client == nil {
-		if err := ssrf.ValidateURL(url); err != nil {
+		if err := destinationURLValidator(url); err != nil {
 			return nil, fmt.Errorf("splunk destination: %w", err)
 		}
 		client = &http.Client{Timeout: splunkTimeout}

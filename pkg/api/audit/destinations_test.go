@@ -80,8 +80,8 @@ func TestRegisterDestinationFallsBackToStubOnMissingConfig(t *testing.T) {
 func TestRegisterDestinationSplunkWithFullConfig(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
+	allowLoopbackDestinations(t)
 
-	// Use httptest.NewServer to bypass SSRF validation
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -111,8 +111,8 @@ func TestRegisterDestinationSplunkWithFullConfig(t *testing.T) {
 func TestRegisterDestinationElasticWithURL(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
+	allowLoopbackDestinations(t)
 
-	// Use httptest.NewServer to bypass SSRF validation
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
