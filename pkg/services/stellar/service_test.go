@@ -622,7 +622,7 @@ func TestExecutionOperations(t *testing.T) {
 		UserID:    userID,
 		MissionID: missionID,
 		Status:    "running",
-		CreatedAt: time.Now(),
+		StartedAt: time.Now(),
 	}
 
 	t.Run("create execution", func(t *testing.T) {
@@ -658,7 +658,7 @@ func TestMemoryOperations(t *testing.T) {
 		ID:       "mem-1",
 		UserID:   userID,
 		Category: "observation",
-		Content:  "Test memory",
+		Summary:  "Test memory",
 	}
 
 	t.Run("create memory entry", func(t *testing.T) {
@@ -720,13 +720,13 @@ func TestWatchOperations(t *testing.T) {
 	userID := "user-1"
 
 	watch := &store.StellarWatch{
-		ID:        "watch-1",
-		UserID:    userID,
-		Cluster:   "prod",
-		Namespace: "default",
-		Kind:      "Deployment",
-		Name:      "nginx",
-		Status:    "active",
+		ID:           "watch-1",
+		UserID:       userID,
+		Cluster:      "prod",
+		Namespace:    "default",
+		ResourceKind: "Deployment",
+		ResourceName: "nginx",
+		Status:       "active",
 	}
 
 	t.Run("create watch", func(t *testing.T) {
@@ -760,10 +760,10 @@ func TestObservationOperations(t *testing.T) {
 
 	obs := &store.StellarObservation{
 		ID:      "obs-1",
-		UserID:  userID,
 		Cluster: "prod",
 		Summary: "Test observation",
 	}
+	_ = userID // userID used by other subtests in this function
 
 	t.Run("create observation", func(t *testing.T) {
 		id, err := svc.CreateObservation(ctx, obs)

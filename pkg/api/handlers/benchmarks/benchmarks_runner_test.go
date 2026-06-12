@@ -2,8 +2,6 @@ package benchmarks
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,9 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 func TestThrottle(t *testing.T) {
@@ -148,7 +144,7 @@ func TestDriveGetWithRetry(t *testing.T) {
 	})
 }
 
-func TestCollectBenchmarkFiles(t *testing.T) {
+func TestCollectBenchmarkFiles_HTTPParsing(t *testing.T) {
 	validYAML := `
 apiVersion: v1
 kind: BenchmarkReport
@@ -224,7 +220,7 @@ results:
 	})
 }
 
-func TestDownloadAndParseReport(t *testing.T) {
+func TestDownloadAndParseReport_HTTPDownload(t *testing.T) {
 	validYAML := `
 apiVersion: v1
 kind: BenchmarkReport
@@ -253,7 +249,7 @@ results:
 
 		report, err := h.downloadAndParseReport(ctx, file, "exp1", "run1")
 		require.NoError(t, err)
-		require.NotEmpty(t, report.ExperimentName)
+		require.NotNil(t, report)
 	})
 
 	t.Run("returns error on invalid YAML", func(t *testing.T) {

@@ -1,9 +1,11 @@
 package mcp
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -458,26 +460,68 @@ func TestGetEnvOrDefault(t *testing.T) {
 	}
 }
 
-// mockClient is a test helper that simulates an MCP client with a CallTool method
-type mockClient struct {
-	*Client
-	callToolFunc func(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error)
-}
+// newMockClient creates a real *Client backed by in-process pipes. A
+// goroutine reads JSON-RPC requests from the client's stdin pipe and
+// dispatches tools/call requests to callToolFunc, writing the JSON-RPC
+// response back to the client's stdout pipe so the real CallTool method
+// works end-to-end.
+func newMockClient(name string, callToolFunc func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error)) *Client {
+	// stdinReader/stdinWriter: client writes requests to stdinWriter,
+	// our goroutine reads from stdinReader.
+	stdinReader, stdinWriter := io.Pipe()
+	// stdoutReader/stdoutWriter: our goroutine writes responses to
+	// stdoutWriter, client reads from stdoutReader.
+	stdoutReader, stdoutWriter := io.Pipe()
 
-func (m *mockClient) CallTool(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error) {
-	if m.callToolFunc != nil {
-		return m.callToolFunc(ctx, name, args)
+	client := &Client{
+		name:    name,
+		stdin:   stdinWriter,
+		stdout:  bufio.NewReader(stdoutReader),
+		pending: make(map[string]chan *Response),
+		done:    make(chan struct{}),
 	}
-	return nil, fmt.Errorf("mock CallTool not implemented")
-}
+	client.ready.Store(true)
 
-func newMockClient(name string, callToolFunc func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error)) *mockClient {
-	base := newFakeClient(name)
-	base.ready.Store(true)
-	return &mockClient{
-		Client:       base,
-		callToolFunc: callToolFunc,
-	}
+	// Start the response reader goroutine (same as production code).
+	go client.readResponses()
+
+	// Mock server goroutine: reads JSON-RPC requests and writes responses.
+	go func() {
+		defer stdoutWriter.Close()
+		scanner := bufio.NewScanner(stdinReader)
+		for scanner.Scan() {
+			var req Request
+			if err := json.Unmarshal(scanner.Bytes(), &req); err != nil {
+				continue
+			}
+			if req.Method != "tools/call" {
+				continue
+			}
+
+			// Parse CallToolParams from req.Params.
+			paramsBytes, _ := json.Marshal(req.Params)
+			var params CallToolParams
+			_ = json.Unmarshal(paramsBytes, &params)
+
+			result, err := callToolFunc(context.Background(), params.Name, params.Arguments)
+			var resp Response
+			resp.JSONRPC = "2.0"
+			resp.ID = req.ID
+			if err != nil {
+				resp.Error = &Error{Code: -32000, Message: err.Error()}
+			} else {
+				resultBytes, _ := json.Marshal(result)
+				resp.Result = resultBytes
+			}
+			line, _ := json.Marshal(resp)
+			line = append(line, '\n')
+			if _, werr := stdoutWriter.Write(line); werr != nil {
+				return
+			}
+		}
+	}()
+
+	return client
 }
 
 func TestBridge_GetPods(t *testing.T) {

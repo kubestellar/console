@@ -75,6 +75,10 @@ func (m *mockUserStore) GetUser(ctx context.Context, id uuid.UUID) (*models.User
 	return m.user, m.err
 }
 
+func (m *mockUserStore) PruneOldExecutions(_ context.Context, _ int) (int64, error) {
+	return 0, nil
+}
+
 func TestIsAdminUser(t *testing.T) {
 	adminID := uuid.New()
 	userID := uuid.New()
@@ -94,7 +98,7 @@ func TestIsAdminUser(t *testing.T) {
 		{
 			name:     "regular user",
 			userID:   userID,
-			userRole: models.UserRoleUser,
+			userRole: models.UserRoleViewer,
 			wantAdmin: false,
 		},
 		{
@@ -106,7 +110,7 @@ func TestIsAdminUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var mockStore store.Store = &mockUserStore{
+			mockStore := &mockUserStore{
 				user: &models.User{ID: tt.userID, Role: tt.userRole},
 			}
 			handler := &Handler{store: mockStore}

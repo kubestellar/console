@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 )
 

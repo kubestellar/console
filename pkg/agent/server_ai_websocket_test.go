@@ -126,11 +126,9 @@ func TestServer_HandleWebSocket_TokenRequired(t *testing.T) {
 }
 
 func TestServer_HandleWebSocket_MessageRouting(t *testing.T) {
-	mockProxy := &kube.KubectlProxy{
-		config: &clientcmdapi.Config{
-			Contexts: map[string]*clientcmdapi.Context{"c1": {Cluster: "c1"}},
-		},
-	}
+	mockProxy := kube.NewTestKubectlProxy(&clientcmdapi.Config{
+		Contexts: map[string]*clientcmdapi.Context{"c1": {Cluster: "c1"}},
+	})
 	s := &Server{
 		allowedOrigins: []string{"*"},
 		upgrader:       websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }},

@@ -301,7 +301,7 @@ func TestStreamReportsHandler(t *testing.T) {
 	}
 }
 
-func TestParseSinceDuration(t *testing.T) {
+func TestParseSinceDuration_Validation(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -357,7 +357,7 @@ func TestParseSinceDuration(t *testing.T) {
 	}
 }
 
-func TestNormalizeSinceKey(t *testing.T) {
+func TestNormalizeSinceKey_Validation(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -408,7 +408,7 @@ func TestNormalizeSinceKey(t *testing.T) {
 	}
 }
 
-func TestIsAfterCutoff(t *testing.T) {
+func TestIsAfterCutoff_Validation(t *testing.T) {
 	now := time.Now()
 	yesterday := now.Add(-24 * time.Hour)
 	tomorrow := now.Add(24 * time.Hour)
