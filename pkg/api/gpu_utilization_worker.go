@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kubestellar/console/pkg/dcgm"
+	"github.com/kubestellar/console/pkg/gpu"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/models"
@@ -212,7 +212,7 @@ func (w *GPUUtilizationWorker) collectUtilization() {
 func (w *GPUUtilizationWorker) scrapeDCGMPerCluster(
 	reservations []models.GPUReservation,
 	timeout time.Duration,
-) map[string]map[string]*dcgm.NamespaceMetrics {
+) map[string]map[string]*gpu.NamespaceMetrics {
 	if !w.dcgmEnabled {
 		return nil
 	}
@@ -223,8 +223,8 @@ func (w *GPUUtilizationWorker) scrapeDCGMPerCluster(
 		clusters[reservations[i].Cluster] = struct{}{}
 	}
 
-	out := make(map[string]map[string]*dcgm.NamespaceMetrics, len(clusters))
-	scrapeConfig := dcgm.ScrapeConfig{
+	out := make(map[string]map[string]*gpu.NamespaceMetrics, len(clusters))
+	scrapeConfig := gpu.ScrapeConfig{
 		Namespace: w.dcgmNamespace,
 		Service:   w.dcgmService,
 	}
@@ -236,7 +236,7 @@ func (w *GPUUtilizationWorker) scrapeDCGMPerCluster(
 			continue
 		}
 		ctx, cancel := context.WithTimeout(w.baseCtx, timeout)
-		metrics, err := dcgm.ScrapeByNamespace(ctx, restConfig, scrapeConfig)
+		metrics, err := gpu.ScrapeByNamespace(ctx, restConfig, scrapeConfig)
 		cancel()
 		if err != nil {
 			// Log at debug — the feature is opt-in and a 503 / missing Service
@@ -257,7 +257,7 @@ func (w *GPUUtilizationWorker) scrapeDCGMPerCluster(
 func (w *GPUUtilizationWorker) collectForReservation(
 	ctx context.Context,
 	reservation *models.GPUReservation,
-	dcgmClusterMetrics map[string]*dcgm.NamespaceMetrics,
+	dcgmClusterMetrics map[string]*gpu.NamespaceMetrics,
 ) {
 	cluster := reservation.Cluster
 	namespace := reservation.Namespace

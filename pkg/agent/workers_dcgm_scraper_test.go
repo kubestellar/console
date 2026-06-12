@@ -10,7 +10,7 @@ import (
 )
 
 // dcgmFixtureMultiNamespace is a DCGM exporter text-format payload for
-// verifying the shim delegates correctly to pkg/dcgm.
+// verifying the shim delegates correctly to pkg/gpu.
 const dcgmFixtureMultiNamespace = `# HELP DCGM_FI_DEV_FB_USED Framebuffer memory used (in MiB).
 # TYPE DCGM_FI_DEV_FB_USED gauge
 DCGM_FI_DEV_FB_USED{gpu="0",UUID="GPU-abc",Hostname="node-1",namespace="ml-team",pod="trainer-0",container="worker"} 40960
@@ -20,7 +20,7 @@ DCGM_FI_DEV_FB_FREE{gpu="0",UUID="GPU-abc",Hostname="node-1",namespace="ml-team"
 `
 
 // TestScrapeDCGMByNamespace_ShimDelegates verifies that the shim wrapper
-// correctly delegates to the dcgm package implementation.
+// correctly delegates to the gpu package implementation.
 func TestScrapeDCGMByNamespace_ShimDelegates(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4")

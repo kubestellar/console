@@ -1,7 +1,7 @@
-// Package dcgm provides a client for scraping NVIDIA DCGM exporter metrics
+// Package gpu provides a client for scraping NVIDIA DCGM exporter metrics
 // via the Kubernetes API server service proxy. It is extracted from pkg/agent
-// to break the pkg/api → pkg/agent import dependency (#17131).
-package dcgm
+// to break the pkg/api → pkg/agent import dependency (#17131, #17640).
+package gpu
 
 import (
 	"context"
