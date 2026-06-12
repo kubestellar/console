@@ -153,7 +153,7 @@ export function Layout({ children: _children }: LayoutProps) {
 
   useEffect(() => {
     async function checkAuthNoAgent() {
-      const { hasRealToken } = await import('../../lib/demoMode')
+      const { hasRealToken } = await import('@/lib/demoMode')
       const hasReal = await hasRealToken()
       setIsAuthenticatedNoAgent(hasReal && agentStatus !== 'connected')
     }

@@ -80,7 +80,7 @@ export function GPUReservations() {
 
   useEffect(() => {
     async function checkGpuLiveMode() {
-      const { hasRealToken } = await import('../../lib/demoMode')
+      const { hasRealToken } = await import('@/lib/demoMode')
       const hasReal = await hasRealToken()
       setGpuLiveMode(isInClusterMode && isAuthenticated && hasReal)
     }

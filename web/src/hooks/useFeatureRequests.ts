@@ -355,7 +355,7 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
 
   // Check demo mode on mount
   useEffect(() => {
-    isDemoUser().then(setIsDemoMode)
+    isDemoUser().then((isDemo) => setIsDemoMode(isDemo))
   }, [])
 
   const loadRequests = useCallback(async () => {
@@ -500,7 +500,7 @@ export function useNotifications() {
 
   // Check demo mode on mount
   useEffect(() => {
-    isDemoUser().then(setIsDemoMode)
+    isDemoUser().then((isDemo) => setIsDemoMode(isDemo))
   }, [])
 
   // Get unread count for a specific feature request
