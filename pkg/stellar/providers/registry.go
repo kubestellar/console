@@ -199,6 +199,21 @@ func (r *Registry) Available() []string {
 	return out
 }
 
+// Register adds a provider to the registry for testing purposes.
+// If isDefault is true, sets this provider as the default provider.
+func (r *Registry) Register(provider Provider, models []string, isDefault bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	name := provider.Name()
+	r.global[name] = provider
+	if isDefault {
+		r.defaultName = name
+		if len(models) > 0 {
+			r.defaultModel = models[0]
+		}
+	}
+}
+
 func displayName(name string) string {
 	m := map[string]string{
 		"ollama":         "Ollama",
