@@ -120,35 +120,59 @@ export default defineConfig(({ mode }) => ({
             ['cards-quantum', ['/src/components/cards/quantum/', '/src/components/cards/cardRegistry.quantum']],
             ['cards-networking', ['/src/components/cards/cilium_status/', '/src/components/cards/linkerd_status/', '/src/components/cards/envoy_status/', '/src/components/cards/contour_status/', '/src/components/cards/cni_status/', '/src/components/cards/coredns_status/', '/src/components/cards/nats_status/', '/src/components/cards/grpc_status/']],
             ['cards-platform', ['/src/components/cards/crossplane-status/', '/src/components/cards/knative_status/', '/src/components/cards/keda_status/', '/src/components/cards/dapr_status/', '/src/components/cards/kubevela_status/', '/src/components/cards/harbor_status/', '/src/components/cards/strimzi_status/', '/src/components/cards/volcano_status/', '/src/components/cards/openkruise_status/', '/src/components/cards/cardRegistry.platform']],
+            // Split remaining cards into smaller groups to avoid oversized cards-misc
+            ['cards-workloads', ['/src/components/cards/workload-detection/', '/src/components/cards/workload-monitor/']],
+            ['cards-storage', ['/src/components/cards/vitess_status/', '/src/components/cards/minio_status/', '/src/components/cards/etcd_status/']],
+            ['cards-messaging', ['/src/components/cards/kafka_status/', '/src/components/cards/rabbitmq_status/', '/src/components/cards/redis_status/']],
             ['cards-misc', ['/src/components/cards/']],
-            // Split drilldown views into their own chunk
+            // Split drilldown views by type to reduce chunk size
+            ['drilldown-k8s', ['/src/components/drilldown/views/PodLogs', '/src/components/drilldown/views/PodEvents', '/src/components/drilldown/views/PodTerminal', '/src/components/drilldown/views/NamespaceDetails']],
+            ['drilldown-data', ['/src/components/drilldown/views/LogViewer', '/src/components/drilldown/views/MetricsViewer', '/src/components/drilldown/views/EventTimeline']],
             ['drilldown', ['/src/components/drilldown/']],
-            // Dashboard and layout
+            // Dashboard and layout split by concern
+            ['dashboard-customizer', ['/src/components/dashboard/customizer/', '/src/components/dashboard/shared/cardCatalog']],
             ['dashboard-core', ['/src/components/dashboard/', '/src/lib/dashboards/', '/src/lib/unified/dashboard/']],
+            ['layout-sidebar', ['/src/components/layout/Sidebar', '/src/components/layout/Navigation', '/src/components/layout/MobileMenu']],
             ['layout-shell', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
+            // Split contexts and providers into smaller groups
+            ['contexts-dashboard', ['/src/contexts/DashboardProvider', '/src/contexts/DrillDownProvider', '/src/contexts/AlertsProvider']],
+            ['contexts-global', ['/src/contexts/GlobalFiltersProvider', '/src/contexts/ThemeProvider', '/src/contexts/AuthProvider']],
             ['contexts-providers', ['/src/contexts/', '/src/hooks/useDrillDown', '/src/hooks/useRewards', '/src/hooks/useMissions', '/src/hooks/useGlobalFilters']],
             ['hooks-data', ['/src/hooks/useCached', '/src/hooks/useCache', '/src/hooks/useCluster', '/src/hooks/useDashboard']],
             ['lib-cache', ['/src/lib/cache/']],
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
-            ['app-shell', ['/src/App.tsx', '/src/hooks/usePersistedSettings']],
+            // Split app shell to reduce size
+            ['app-routes', ['/src/App.tsx']],
+            ['app-shell', ['/src/hooks/usePersistedSettings', '/src/hooks/useAppInit']],
             ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
           ] as const
           for (const [chunkName, needles] of sourceChunkRules) {
             if (needles.some(needle => id.includes(needle))) return chunkName
           }
           if (!id.includes('node_modules')) return
-          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router') || id.includes('/scheduler/') || id.includes('/react-reconciler/')) return 'react-vendor'
+          // React core (split scheduler separately to reduce main react bundle)
+          if (id.includes('/scheduler/')) return 'react-scheduler-vendor'
+          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router') || id.includes('/react-reconciler/')) return 'react-vendor'
+          // three.js ecosystem (split into smaller chunks)
           if (id.includes('/three-stdlib/')) return 'three-stdlib-vendor'
+          if (id.includes('/@react-three/fiber/')) return 'three-fiber-vendor'
+          if (id.includes('/@react-three/drei/')) return 'three-drei-vendor'
           if (id.includes('/@react-three/') || id.includes('/zustand/') || id.includes('/stats-gl/')) return 'three-react-vendor'
-          if (id.includes('/three/')) return 'three-core-vendor'
+          if (id.includes('/three/build/three.module.js')) return 'three-core-vendor'
+          if (id.includes('/three/')) return 'three-extras-vendor'
+          // Chart libraries
           if (id.includes('/zrender/')) return 'zrender-vendor'
           if (id.includes('/echarts-for-react/')) return 'echarts-react-vendor'
           if (id.includes('/echarts/')) return 'echarts-vendor'
           if (id.includes('/framer-motion/')) return 'motion-vendor'
-          if (id.includes('/@xterm/addon-fit/')) return 'xterm-addon-vendor'
+          // Terminal (split addons from core)
+          if (id.includes('/@xterm/addon-')) return 'xterm-addon-vendor'
+          if (id.includes('/@xterm/xterm/')) return 'xterm-core-vendor'
           if (id.includes('/@xterm/')) return 'xterm-vendor'
-          if (id.includes('/lucide-react/') || id.includes('/@dnd-kit/')) return 'ui-vendor'
+          // UI libraries
+          if (id.includes('/lucide-react/')) return 'lucide-vendor'
+          if (id.includes('/@dnd-kit/')) return 'dnd-vendor'
           if (
             id.includes('/react-markdown/') ||
             id.includes('/remark-') ||
