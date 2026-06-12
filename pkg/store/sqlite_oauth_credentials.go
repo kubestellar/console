@@ -74,6 +74,9 @@ func (s *SQLiteStore) GetOAuthCredentials(ctx context.Context) (clientID, client
 		if err != nil {
 			return "", "", fmt.Errorf("failed to encrypt legacy plaintext secret during migration: %w", err)
 		}
+		if encrypted == nil {
+			return "", "", fmt.Errorf("encryption failed: encrypted credential is nil")
+		}
 
 		// Update the row with encrypted data, clear plaintext column
 		if _, err := s.db.ExecContext(ctx,

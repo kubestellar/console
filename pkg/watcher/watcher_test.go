@@ -252,6 +252,7 @@ func TestRun_HTTPMode(t *testing.T) {
 	// Extract backend port
 	backendURL, err := net.ResolveTCPAddr("tcp", backend.Listener.Addr().String())
 	require.NoError(t, err, "failed to resolve TCP address")
+	require.NotNil(t, backendURL, "backendURL is nil")
 	backendPort := backendURL.Port
 
 	// Create temp dir for PID and stage files
@@ -344,6 +345,7 @@ func TestRun_TLSMode(t *testing.T) {
 	defer backend.Close()
 
 	backendURL, err := net.ResolveTCPAddr("tcp", backend.Listener.Addr().String())
+	require.NotNil(t, backendURL, "backendURL is nil")
 	backendPort := backendURL.Port
 	require.NoError(t, err, "failed to resolve TCP address")
 
