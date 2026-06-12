@@ -7,9 +7,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // crdListTimeout is the timeout for listing CRDs across all clusters.
@@ -22,12 +24,20 @@ var crdGVR = schema.GroupVersionResource{
 	Resource: "customresourcedefinitions",
 }
 
-// CRDHandlers handles Custom Resource Definition API endpoints
-type CRDHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+// crdClient defines the narrow subset of k8s.MultiClusterClient used by CRDHandlers.
+type crdClient interface {
+	DeduplicatedClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
+	ListClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
+	GetDynamicClient(contextName string) (dynamic.Interface, error)
 }
 
-// NewCRDHandlers creates a new CRD handlers instance
+// CRDHandlers handles Custom Resource Definition API endpoints
+type CRDHandlers struct {
+	k8sClient crdClient
+}
+
+// NewCRDHandlers creates a new CRD handlers instance.
+// Accepts *k8s.MultiClusterClient (or any crdClient implementation).
 func NewCRDHandlers(k8sClient *k8s.MultiClusterClient) *CRDHandlers {
 	return &CRDHandlers{
 		k8sClient: k8sClient,

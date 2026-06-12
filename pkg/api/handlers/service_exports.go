@@ -7,9 +7,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // svcExportListTimeout is the timeout for listing ServiceExports across all clusters.
@@ -22,12 +24,20 @@ var serviceExportGVR = schema.GroupVersionResource{
 	Resource: "serviceexports",
 }
 
-// ServiceExportHandlers handles MCS ServiceExport API endpoints
-type ServiceExportHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+// serviceExportClient defines the narrow subset of k8s.MultiClusterClient used by ServiceExportHandlers.
+type serviceExportClient interface {
+	DeduplicatedClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
+	ListClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
+	GetDynamicClient(contextName string) (dynamic.Interface, error)
 }
 
-// NewServiceExportHandlers creates a new ServiceExport handlers instance
+// ServiceExportHandlers handles MCS ServiceExport API endpoints
+type ServiceExportHandlers struct {
+	k8sClient serviceExportClient
+}
+
+// NewServiceExportHandlers creates a new ServiceExport handlers instance.
+// Accepts *k8s.MultiClusterClient (or any serviceExportClient implementation).
 func NewServiceExportHandlers(k8sClient *k8s.MultiClusterClient) *ServiceExportHandlers {
 	return &ServiceExportHandlers{
 		k8sClient: k8sClient,
