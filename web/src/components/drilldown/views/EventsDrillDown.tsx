@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
-import { AlertCircle, RefreshCw, Terminal, Copy, CheckCircle, Server, Layers, ChevronLeft } from 'lucide-react'
+import { AlertCircle, RefreshCw, Terminal, Copy, CheckCircle, Server, Layers, ChevronLeft, ChevronRight, Search, Filter } from 'lucide-react'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { getDemoMode } from '../../../hooks/useDemoMode'
@@ -9,6 +9,7 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { POLL_INTERVAL_MS, UI_FEEDBACK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import { agentFetch } from '../../../hooks/mcp/shared'
 import { copyToClipboard } from '../../../lib/clipboard'
+import { cn } from '../../../lib/cn'
 
 interface ClusterEvent {
   type: string
@@ -26,6 +27,11 @@ interface ClusterEvent {
 interface Props {
   data: Record<string, unknown>
 }
+
+/** Events displayed per page. */
+const PAGE_SIZE = 20
+
+type TypeFilter = 'all' | 'Warning' | 'Normal'
 
 // Skeleton component for loading state
 function EventsSkeleton() {
@@ -67,9 +73,10 @@ export function EventsDrillDown({ data }: Props) {
   const [copied, setCopied] = useState(false)
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Pagination constants (UI controls will be added in task #8)
-  const currentPage = 1
-  const pageSize = 20
+  // Interactive controls
+  const [currentPage, setCurrentPage] = useState(1)
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Fetch events from local agent (no auth required)
   const refetch = useCallback(async (silent = false) => {
@@ -120,26 +127,60 @@ export function EventsDrillDown({ data }: Props) {
     }
   }, [refetch])
 
-  // Filter by object name, sort by lastSeen, and paginate
-  const { filteredEvents } = useMemo(() => {
+  // Reset to page 1 when the viewed resource changes so stale page numbers
+  // don't persist across drilldown navigations to different resources.
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [objectName, clusterShort, namespace])
+
+  // Reset to page 1 when filters change so users always see results from the top.
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [typeFilter, searchQuery])
+
+  // Full pre-paginated dataset: apply objectName, type, and search filters then sort.
+  // Stat tiles read from this so they always reflect the complete matching set,
+  // not just the items visible on the current page.
+  const allFilteredSortedEvents = useMemo(() => {
     let result = events
 
-    // Filter by object name if specified
     if (objectName) {
       result = result.filter(e => e.object.toLowerCase().includes(objectName.toLowerCase()))
     }
+    if (typeFilter !== 'all') {
+      result = result.filter(e => e.type === typeFilter)
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(e =>
+        e.reason.toLowerCase().includes(q) ||
+        e.message.toLowerCase().includes(q) ||
+        e.object.toLowerCase().includes(q)
+      )
+    }
 
-    // Sort by lastSeen (descending)
-    result = [...result].sort((a, b) => {
-      return new Date(b.lastSeen || 0).getTime() - new Date(a.lastSeen || 0).getTime()
-    })
+    return [...result].sort((a, b) =>
+      new Date(b.lastSeen || 0).getTime() - new Date(a.lastSeen || 0).getTime()
+    )
+  }, [events, objectName, typeFilter, searchQuery])
 
-    // Paginate
-    const start = (currentPage - 1) * pageSize
-    result = result.slice(start, start + pageSize)
+  // Paginated slice used only for rendering the event list
+  const pagedEvents = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return allFilteredSortedEvents.slice(start, start + PAGE_SIZE)
+  }, [allFilteredSortedEvents, currentPage])
 
-    return { filteredEvents: result }
-  }, [events, objectName, currentPage])
+  const totalPages = Math.max(1, Math.ceil(allFilteredSortedEvents.length / PAGE_SIZE))
+
+  const warningCount = allFilteredSortedEvents.filter(e => e.type === 'Warning').length
+  const normalCount = allFilteredSortedEvents.filter(e => e.type === 'Normal').length
+
+  const hasActiveFilters = typeFilter !== 'all' || searchQuery !== ''
+
+  const clearFilters = () => {
+    setTypeFilter('all')
+    setSearchQuery('')
+  }
 
   const copyCommand = () => {
     const cmd = objectName
@@ -228,29 +269,62 @@ export function EventsDrillDown({ data }: Props) {
         </button>
       </div>
 
-      {/* Stats */}
+      {/* Stats — computed from the full filtered set, not from the current page */}
       <div className="grid grid-cols-3 gap-4">
         <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-2xl font-bold text-foreground">{filteredEvents.length}</div>
+          <div className="text-2xl font-bold text-foreground">{allFilteredSortedEvents.length}</div>
           <div className="text-sm text-muted-foreground">{t('drilldown.events.totalEvents', 'Total Events')}</div>
         </div>
         <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-2xl font-bold text-yellow-400">
-            {filteredEvents.filter(e => e.type === 'Warning').length}
-          </div>
+          <div className="text-2xl font-bold text-yellow-400">{warningCount}</div>
           <div className="text-sm text-muted-foreground">{t('common.warnings', 'Warnings')}</div>
         </div>
         <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-2xl font-bold text-green-400">
-            {filteredEvents.filter(e => e.type === 'Normal').length}
-          </div>
+          <div className="text-2xl font-bold text-green-400">{normalCount}</div>
           <div className="text-sm text-muted-foreground">{t('common.normal')}</div>
         </div>
       </div>
 
+      {/* Search and type filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder={t('common.search', 'Search')}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-card/50 border border-border rounded-lg text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/50"
+            data-testid="events-search"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <select
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value as TypeFilter)}
+            className="bg-card/50 border border-border rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/50"
+            data-testid="events-type-filter"
+          >
+            <option value="all">{t('drilldown.events.allTypes', 'All Types')}</option>
+            <option value="Warning">{t('common.warning', 'Warning')}</option>
+            <option value="Normal">{t('common.normal', 'Normal')}</option>
+          </select>
+        </div>
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="events-clear-filters"
+          >
+            {t('common.clearFilters', 'Clear filters')}
+          </button>
+        )}
+      </div>
+
       {/* Events List */}
       <div className="space-y-2">
-        {filteredEvents.map((event, i) => (
+        {pagedEvents.map((event, i) => (
           <div
             key={i}
             className={`p-4 rounded-lg border-l-4 ${
@@ -283,31 +357,99 @@ export function EventsDrillDown({ data }: Props) {
         ))}
       </div>
 
-      {filteredEvents.length === 0 && (
+      {/* Empty state when filters produce no results */}
+      {allFilteredSortedEvents.length === 0 && (
         <div className="space-y-4">
           <div className="text-center py-6">
-            <p className="text-muted-foreground">{t('drilldown.events.noEventsFoundFor', { name: objectName || clusterShort, defaultValue: `No events found for ${objectName || clusterShort}` })}</p>
-            <p className="text-xs text-muted-foreground mt-1">{t('drilldown.events.eventsExpiredHint', 'Events may have expired or require authentication')}</p>
+            {hasActiveFilters ? (
+              <>
+                <p className="text-muted-foreground">
+                  {t('drilldown.events.noEventsMatchFilters', 'No events match the active filters.')}
+                </p>
+                <button
+                  onClick={clearFilters}
+                  className="mt-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                >
+                  {t('common.clearFilters', 'Clear filters')}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground">{t('drilldown.events.noEventsFoundFor', { name: objectName || clusterShort, defaultValue: `No events found for ${objectName || clusterShort}` })}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('drilldown.events.eventsExpiredHint', 'Events may have expired or require authentication')}</p>
+              </>
+            )}
           </div>
 
-          {/* Kubectl fallback */}
-          <div className="p-4 rounded-lg bg-card/50 border border-border">
-            <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Terminal className="w-4 h-4" />
-              {t('drilldown.actions.getEvents', 'Get Events via kubectl')}
-            </h4>
-            <div className="flex items-center justify-between p-2 rounded bg-background/50 font-mono text-xs">
-              <code className="text-muted-foreground truncate">
-                kubectl --context {clusterShort} get events{objectName ? ` --field-selector involvedObject.name=${objectName}` : ''}{namespace ? ` -n ${namespace}` : ' -A'} --sort-by=.lastTimestamp
-              </code>
-              <button
-                onClick={copyCommand}
-                className="ml-2 p-1 hover:bg-card rounded shrink-0"
-                title={t('drilldown.tooltips.copyCommand')}
-              >
-                {copied ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
-              </button>
+          {/* Kubectl fallback — only shown when no active filters are hiding results */}
+          {!hasActiveFilters && (
+            <div className="p-4 rounded-lg bg-card/50 border border-border">
+              <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <Terminal className="w-4 h-4" />
+                {t('drilldown.actions.getEvents', 'Get Events via kubectl')}
+              </h4>
+              <div className="flex items-center justify-between p-2 rounded bg-background/50 font-mono text-xs">
+                <code className="text-muted-foreground truncate">
+                  kubectl --context {clusterShort} get events{objectName ? ` --field-selector involvedObject.name=${objectName}` : ''}{namespace ? ` -n ${namespace}` : ' -A'} --sort-by=.lastTimestamp
+                </code>
+                <button
+                  onClick={copyCommand}
+                  className="ml-2 p-1 hover:bg-card rounded shrink-0"
+                  title={t('drilldown.tooltips.copyCommand')}
+                >
+                  {copied ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
+                </button>
+              </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Pagination controls — shown only when there is more than one page */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2 text-sm text-muted-foreground border-t border-border">
+          <span>
+            {t('drilldown.events.showingRange', {
+              from: (currentPage - 1) * PAGE_SIZE + 1,
+              to: Math.min(currentPage * PAGE_SIZE, allFilteredSortedEvents.length),
+              total: allFilteredSortedEvents.length,
+              defaultValue: `Showing ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, allFilteredSortedEvents.length)} of ${allFilteredSortedEvents.length}`,
+            })}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(p => p - 1)}
+              disabled={currentPage === 1}
+              aria-label={t('common.previousPage', 'Previous page')}
+              className={cn(
+                'p-1.5 rounded-lg transition-colors',
+                currentPage === 1
+                  ? 'text-muted-foreground/40 cursor-not-allowed'
+                  : 'hover:bg-card text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-2 tabular-nums">
+              {t('drilldown.events.pageOf', {
+                page: currentPage,
+                total: totalPages,
+                defaultValue: `Page ${currentPage} of ${totalPages}`,
+              })}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => p + 1)}
+              disabled={currentPage === totalPages}
+              aria-label={t('common.nextPage', 'Next page')}
+              className={cn(
+                'p-1.5 rounded-lg transition-colors',
+                currentPage === totalPages
+                  ? 'text-muted-foreground/40 cursor-not-allowed'
+                  : 'hover:bg-card text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
