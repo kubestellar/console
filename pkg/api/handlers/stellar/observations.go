@@ -13,12 +13,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/stellar/prompts"
 	"github.com/kubestellar/console/pkg/stellar/providers"
 	"github.com/kubestellar/console/pkg/store"
-	"github.com/kubestellar/console/pkg/api/handlers/auth"
 )
 
 func (h *Handler) GetState(c *fiber.Ctx) error {
@@ -173,7 +174,7 @@ func (h *Handler) Ask(c *fiber.Ctx) error {
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON body"})
 	}
-	body.Prompt = sanitizePromptInput(body.Prompt)
+	body.Prompt = sanitize.PromptString(body.Prompt)
 	body.Cluster = strings.TrimSpace(body.Cluster)
 	body.Provider = strings.TrimSpace(body.Provider)
 	body.Model = strings.TrimSpace(body.Model)

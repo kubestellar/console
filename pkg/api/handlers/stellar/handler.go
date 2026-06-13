@@ -952,18 +952,6 @@ func isDestructiveAction(t string) bool {
 	return t == "DeleteCluster" || t == "DeletePod" || t == "CordonNode"
 }
 
-func sanitizePromptInput(s string) string {
-	s = strings.ReplaceAll(s, "```", "'''")
-	s = strings.ReplaceAll(s, "<system>", "")
-	s = strings.ReplaceAll(s, "</system>", "")
-	s = strings.ReplaceAll(s, "[INST]", "")
-	s = strings.ReplaceAll(s, "[/INST]", "")
-	if len(s) > 2000 {
-		s = s[:2000]
-	}
-	return strings.TrimSpace(s)
-}
-
 func ptr[T any](v T) *T { return &v }
 
 func truncateString(s string, n int) string {
