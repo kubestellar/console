@@ -156,13 +156,13 @@ We welcome community input on priorities:
 ## Strategic Health — June 2026
 
 > Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
-> **Last updated:** 2026-06-12 (07:25 PM EDT, pass 3)
+> **Last updated:** 2026-06-12 (11:54 PM EDT, pass 5 — day-end)
 
 ### Current Risk Register
 
 | Risk | Severity | Issue | Status |
 |------|----------|-------|--------|
-| Scanner merge loop: 19 build breaks in 12h — main broken near-continuously | 🔴 Critical | #18211, #18218 | Escalating |
+| Scanner merge loop: 29 build breaks on 2026-06-12 — main broken ~continuously all day | 🔴 Critical | #18218 | Stabilizing (4h green by EOD) |
 | v0.4 Q3 2026 deadline at risk — zero feature PRs with 18 days until Q3 | 🔴 Critical | #18189 | New |
 | Organic contributor drought — all "human" PRs are hive bot, ratio <4% | 🟠 High | #18093 | Ongoing |
 | ADOPTERS.md created but self-referential — no external adopters listed | 🟠 High | #18188 | New |
@@ -190,9 +190,9 @@ Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), the foll
 
 | Signal | Target | Current |
 |--------|--------|---------|
-| Main branch build stability | Green ≥14 consecutive days | 🔴 19 breaks today — broken near-continuously (#18218) |
+| Main branch build stability | Green ≥14 consecutive days | 🔴 29 breaks on 2026-06-12 — stable last 4h of day (#18218) |
 | External adopters in ADOPTERS.md | ≥3 confirmed orgs | ❌ 0 external (KubeStellar self-listed only) |
-| Human contributor ratio | ≥10% of merged PRs | ❌ <4% (hive bot dominates recent merges) |
+| Human contributor ratio | ≥10% of merged PRs | ❌ 0% — 30/30 recent merges are hive; maintainer PR #18097 closed by automation |
 | v0.4 feature work started | ≥1 feature PR open | ❌ Zero feature PRs (scoping doc merged: #18208) |
 | PR triage SLA | Defined + enforced | ❌ Undefined |
 | Coverage — handler package | >80% | ❌ 39 files uncovered (#18093) |
