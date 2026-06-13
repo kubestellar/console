@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/kubestellar/console/pkg/agent/providers"
 	"fmt"
 	"log/slog"
 	"os"
@@ -317,24 +318,24 @@ func InitializeProviders() error {
 	// Register tool-capable agents FIRST so they become the default.
 	// Tool-capable agents can execute kubectl, helm, and other commands.
 	// Order matters: the first available agent becomes the default.
-	registry.Register(NewClaudeCodeProvider())
-	registry.Register(NewBobProvider())
+	registry.Register(providers.NewClaudeCodeProvider())
+	registry.Register(providers.NewBobProvider())
 
 	// Register in-cluster Kagenti agent (preferred when in-cluster)
-	if p := NewKagentiProvider(); p != nil {
+	if p := providers.NewKagentiProvider(); p != nil {
 		registry.Register(p)
 	}
 
 	// Register CLI-based tool-capable agents
-	registry.Register(NewCodexProvider())
-	registry.Register(NewGeminiCLIProvider())
-	registry.Register(NewAntigravityProvider())
-	registry.Register(NewGooseProvider())
+	registry.Register(providers.NewCodexProvider())
+	registry.Register(providers.NewGeminiCLIProvider())
+	registry.Register(providers.NewAntigravityProvider())
+	registry.Register(providers.NewGooseProvider())
 
 	// Register copilot-cli LAST among tool-capable agents.
 	// copilot-cli suggests commands as text rather than executing them,
 	// so it should only be the default when no other agent is available (#3609).
-	registry.Register(NewCopilotCLIProvider())
+	registry.Register(providers.NewCopilotCLIProvider())
 
 	// Register chat-only local LLM providers AFTER the tool-capable CLI agents.
 	// Rationale: missions need to execute cluster commands, so they must route
@@ -349,13 +350,13 @@ func InitializeProviders() error {
 	// set (or a sensible loopback default applies, for Ollama and LM Studio).
 	// See docs/security/SECURITY-MODEL.md §3 for the posture these runners
 	// unlock.
-	registry.Register(NewOllamaProvider())
-	registry.Register(NewLlamaCppProvider())
-	registry.Register(NewLocalAIProvider())
-	registry.Register(NewVLLMProvider())
-	registry.Register(NewLMStudioProvider())
-	registry.Register(NewRHAIISProvider())
-	registry.Register(NewRamalamaProvider())
+	registry.Register(providers.NewOllamaProvider())
+	registry.Register(providers.NewLlamaCppProvider())
+	registry.Register(providers.NewLocalAIProvider())
+	registry.Register(providers.NewVLLMProvider())
+	registry.Register(providers.NewLMStudioProvider())
+	registry.Register(providers.NewRHAIISProvider())
+	registry.Register(providers.NewRamalamaProvider())
 
 	// Register the OpenAI-compatible gateway and frontend providers. These
 	// have existed in the codebase but were previously unregistered because
@@ -363,9 +364,9 @@ func InitializeProviders() error {
 	// registering them is safe and lets operators pick a remote
 	// OpenAI-compatible endpoint from the dropdown (Groq LPU, OpenRouter
 	// gateway, or a self-hosted Open WebUI behind their own model).
-	registry.Register(NewGroqProvider())
-	registry.Register(NewOpenRouterProvider())
-	registry.Register(NewOpenWebUIProvider())
+	registry.Register(providers.NewGroqProvider())
+	registry.Register(providers.NewOpenRouterProvider())
+	registry.Register(providers.NewOpenWebUIProvider())
 
 	// NOTE: API-only vendor agents (Claude API, OpenAI direct, Gemini API) and
 	// IDE-based agents (Cursor, Windsurf, Cline, etc.) remain intentionally
