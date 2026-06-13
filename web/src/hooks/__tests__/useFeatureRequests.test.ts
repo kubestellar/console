@@ -30,8 +30,13 @@ import { api } from '../../lib/api'
 
 describe('useFeatureRequests', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     localStorage.clear()
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('loads demo data when no token', async () => {

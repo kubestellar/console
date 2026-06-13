@@ -34,14 +34,16 @@ async function renderSnoozedMissionsHook() {
 
 describe('useSnoozedMissions', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     localStorage.clear()
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
     vi.useFakeTimers()
     vi.setSystemTime(NOW_MS)
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   it('starts with empty snoozed and dismissed lists', async () => {

@@ -35,7 +35,13 @@ const {
 } = mod.__testables
 
 beforeEach(() => {
+  vi.useRealTimers()
   localStorage.clear()
+  vi.restoreAllMocks()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 describe('agentAuthHeaders', () => {

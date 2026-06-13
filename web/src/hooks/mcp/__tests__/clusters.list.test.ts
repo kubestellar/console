@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import type { ClusterInfo, ClusterHealth } from '../types'
 import { STORAGE_KEY_TOKEN } from '../../../lib/constants'
@@ -160,10 +160,15 @@ function resetSharedState() {
 
 describe('useClusters', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     resetSharedState()
     mockFullFetchClusters.mockClear()
     mockConnectSharedWebSocket.mockClear()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('returns initial state from shared cache', async () => {
@@ -254,10 +259,15 @@ describe('useClusters', () => {
 
 describe('Shared cache / pub-sub', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     resetSharedState()
     mockFullFetchClusters.mockClear()
     mockConnectSharedWebSocket.mockClear()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('two concurrent hook instances receive the same cache update', async () => {
@@ -316,10 +326,15 @@ describe('Shared cache / pub-sub', () => {
 
 describe('Shared WebSocket singleton', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     resetSharedState()
     mockFullFetchClusters.mockClear()
     mockConnectSharedWebSocket.mockClear()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('only one connection is attempted for multiple hook instances', async () => {
@@ -370,10 +385,15 @@ describe('Shared WebSocket singleton', () => {
 
 describe('useClusters — deduplication integration', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     resetSharedState()
     mockFullFetchClusters.mockClear()
     mockConnectSharedWebSocket.mockClear()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('deduplicatedClusters collapses same-server contexts', async () => {
@@ -417,11 +437,16 @@ describe('useClusters — deduplication integration', () => {
 
 describe('useClusters — demo mode transitions', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     resetSharedState()
     mockFullFetchClusters.mockClear()
     mockConnectSharedWebSocket.mockClear()
     mockTriggerAggressiveDetection.mockClear()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('triggers aggressive detection when switching FROM demo to live mode', async () => {
@@ -472,9 +497,14 @@ describe('useClusters — demo mode transitions', () => {
 
 describe('useClusters — refetch', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     resetSharedState()
     mockFullFetchClusters.mockClear()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('refetch() calls fullFetchClusters', () => {
@@ -504,9 +534,14 @@ describe('useClusters — refetch', () => {
 
 describe('useClusters — cache state fields', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     resetSharedState()
     mockFullFetchClusters.mockClear()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('exposes consecutiveFailures and isFailed from cache', async () => {
@@ -571,10 +606,15 @@ describe('useClusters — cache state fields', () => {
 
 describe('useClusters — deduplication and metric sharing', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     resetSharedState()
     mockFullFetchClusters.mockClear()
     mockConnectSharedWebSocket.mockClear()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('deduplicatedClusters removes duplicates sharing the same server URL', async () => {
@@ -644,10 +684,15 @@ describe('useClusters — deduplication and metric sharing', () => {
 
 describe('useClusters — demo mode transition', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     resetSharedState()
     mockFullFetchClusters.mockClear()
     mockConnectSharedWebSocket.mockClear()
     mockTriggerAggressiveDetection.mockClear()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('calls triggerAggressiveDetection when switching FROM demo to live', async () => {
@@ -680,9 +725,14 @@ describe('useClusters — demo mode transition', () => {
 
 describe('useClusters — refetch callback', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     resetSharedState()
     mockFullFetchClusters.mockClear()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('refetch() triggers fullFetchClusters', async () => {
@@ -706,9 +756,14 @@ describe('useClusters — refetch callback', () => {
 
 describe('useClusters — deduplicatedClusters', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     resetSharedState()
     mockFullFetchClusters.mockClear()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('returns deduplicated clusters array', async () => {

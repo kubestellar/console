@@ -161,8 +161,13 @@ function makeT2Definition(overrides: Partial<DynamicCardDefinition> = {}): Dynam
 
 describe('DynamicCard', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
     mockUseCardData.mockReturnValue(makeUseCardDataReturn())
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('shows missing-config error when config is undefined', () => {
@@ -597,7 +602,12 @@ describe('Tier2CardRuntime', () => {
   const definition = makeT2Definition()
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('shows compiling spinner initially', () => {

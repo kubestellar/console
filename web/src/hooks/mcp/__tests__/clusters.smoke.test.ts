@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 
 const {
@@ -96,7 +96,8 @@ import { useClusters, useMCPStatus } from '../clusters'
 
 describe('clusters smoke coverage', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
     localStorage.clear()
     localStorage.setItem('token', 'test-token')
     sharedState.initialFetchStarted = false
@@ -124,6 +125,10 @@ describe('clusters smoke coverage', () => {
       error: null,
       lastRefresh: null,
     }
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('bootstraps cluster polling from the shared cache and opens the shared websocket', async () => {

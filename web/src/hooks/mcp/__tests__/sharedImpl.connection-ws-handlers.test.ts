@@ -120,12 +120,13 @@ async function connectAndGetWs(): Promise<MockWebSocket> {
 // ── Setup / Teardown ──────────────────────────────────────────────────────────
 
 beforeEach(() => {
+  vi.useRealTimers()
   vi.useFakeTimers()
   // Advance past WS_BACKEND_RECHECK_INTERVAL (60_000ms) so module-level
   // wsBackendUnavailable flag from a previous test's MAX-reconnect guard
   // doesn't block new connections.
   vi.advanceTimersByTime(61_000)
-  vi.clearAllMocks()
+  vi.restoreAllMocks()
   resetSharedWsState()
   localStorage.clear()
   sessionStorage.clear()
@@ -136,6 +137,7 @@ afterEach(() => {
   cleanupSharedWebSocket()
   vi.useRealTimers()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 // ── ws.onopen ─────────────────────────────────────────────────────────────────
