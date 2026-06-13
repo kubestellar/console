@@ -24,7 +24,10 @@ func (s *Server) getClaudeInfo() *protocol.ClaudeInfo {
 		providerNames = append(providerNames, p.DisplayName)
 	}
 
-	sessionIn, sessionOut, todayIn, todayOut := s.tokens.GetUsage()
+	var sessionIn, sessionOut, todayIn, todayOut int
+	if s.tokens != nil {
+		sessionIn, sessionOut, todayIn, todayOut = s.tokens.GetUsage()
+	}
 
 	return &protocol.ClaudeInfo{
 		Installed: true,
@@ -44,17 +47,25 @@ func (s *Server) getClaudeInfo() *protocol.ClaudeInfo {
 
 // isSessionQuotaExceeded delegates to the token tracker.
 func (s *Server) isSessionQuotaExceeded() bool {
+	if s.tokens == nil {
+		return false
+	}
 	return s.tokens.IsQuotaExceeded()
 }
 
 // sessionTokenQuotaMessage delegates to the token tracker.
 func (s *Server) sessionTokenQuotaMessage() string {
+	if s.tokens == nil {
+		return ""
+	}
 	return s.tokens.QuotaMessage()
 }
 
 // addTokenUsage delegates to the token tracker.
 func (s *Server) addTokenUsage(usage *ai.ProviderTokenUsage) {
-	s.tokens.AddUsage(usage)
+	if s.tokens != nil {
+		s.tokens.AddUsage(usage)
+	}
 }
 
 // extractCommandsFromResponse parses an LLM thinking response to find
