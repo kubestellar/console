@@ -156,46 +156,49 @@ We welcome community input on priorities:
 ## Strategic Health — June 2026
 
 > Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
-> **Last updated:** 2026-06-12 (11:54 PM EDT, pass 5 — day-end)
+> **Last updated:** 2026-06-13 (06:07 AM EDT, pass 8 — early morning)
 
 ### Current Risk Register
 
 | Risk | Severity | Issue | Status |
 |------|----------|-------|--------|
-| Scanner merge loop: 29 build breaks on 2026-06-12 — main broken ~continuously all day | 🔴 Critical | #18218 | Stabilizing (4h green by EOD) |
-| v0.4 Q3 2026 deadline at risk — zero feature PRs with 18 days until Q3 | 🔴 Critical | #18189 | New |
-| Organic contributor drought — all "human" PRs are hive bot, ratio <4% | 🟠 High | #18093 | Ongoing |
-| ADOPTERS.md created but self-referential — no external adopters listed | 🟠 High | #18188 | New |
-| 5 stale needs-rebase PRs blocking architecture refactor momentum | 🟠 High | #18190 | New |
+| Scanner merge loop: 20+ build breaks across June 12–13 (root cause unresolved) | 🔴 Critical | #18218 | Stable last 2h — gate still absent |
+| v0.4 Q3 2026 deadline at risk — community PR #18264 is first feature contribution; no llm-d work started | 🔴 Critical | — | Ongoing |
+| CNCF security audit Q2 action overdue — ROADMAP requires filing request; deadline passed | 🔴 Critical | #18207 | Requires @clubanderson action |
+| Community PR #18264 (@bmvinay7, 1285 additions) awaiting human review — only automated review so far | 🟠 High | #18305 | 1 auto-review, 0 human reviews |
+| Organic contributor drought — 20/20 recent merges are hive bot; 0% human ratio | 🟠 High | — | Ongoing |
+| ADOPTERS.md created but self-referential — no external adopters listed | 🟠 High | — | Ongoing |
+| Playwright Firefox nightly failing (#18304) — cross-browser test coverage at risk | 🟠 High | #18304 | Open, unresolved |
 | PR triage SLA absent — ai-needs-human PRs lack escalation path | 🟡 Medium | #18037 | Ongoing |
-| Tech-debt arch refactors on hold (#17123, #17124, #17576, #17878, #17882, #17883) | 🟡 Medium | #17883 | Ongoing |
+| Tech-debt arch refactors: #17124, #17576, #17882, #17883 still open | 🟡 Medium | #17883 | Architect making progress |
 | Stellar subsystem — no GA milestone or alpha exit criteria | 🟡 Medium | #17757 | Tracked |
 | CNCF incubation tracker on `hold` | 🟡 Medium | #4072 | Blocked |
-| ~~Merge gate disabled (first filing)~~ | ~~🔴 Critical~~ | ~~#17852~~ | ✅ Closed |
-| ~~DCO sign-off failures on automation PRs~~ | ~~🔴 Critical~~ | ~~#17966~~ | ✅ Closed |
+| ~~29 build breaks (June 12) / nightly CI trifecta~~ | ~~🔴 Critical~~ | ~~#18299-18301~~ | ✅ Resolved |
+| ~~Coverage suite: 67 failures~~ | ~~🟠 High~~ | ~~#18226~~ | ✅ Fixed via #18270, #18290 |
+| ~~Merge gate disabled~~ | ~~🔴 Critical~~ | ~~#17852~~ | ✅ Closed |
+| ~~DCO sign-off failures~~ | ~~🔴 Critical~~ | ~~#17966~~ | ✅ Closed |
 | ~~Coverage suite 415 failures~~ | ~~🟠 High~~ | ~~#17856~~ | ✅ Closed |
-| ~~Adoption metrics all TBD~~ | ~~🟡 Medium~~ | ~~#17965~~ | ✅ Closed |
 
 ### v0.4 Delivery Prerequisites
 
-Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), the following blockers must be resolved — in priority order:
+Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), the following must be resolved:
 
-1. **Build stabilization** (#18184, #18187) — Main is broken as of 2026-06-12. Restore green main and enable required status checks on `main` before any feature work is reliable.
-2. **v0.4 feature kickoff** (#18189) — Q3 starts July 1 (18 days). Designate feature captain and open at least one implementation PR for llm-d, Drasi, or kagent integration before July 1.
-3. **Stale PR cleanup** (#18190) — 5 needs-rebase PRs must be rebased or closed within 1 week.
-4. **External adopter recruitment** (#18188) — ADOPTERS.md has only KubeStellar itself; recruit ≥3 external organizations before CNCF application.
-5. **Coverage gap closure** (#18093) — 39 source files in `pkg/api/handlers` still lack test coverage.
+1. **Required status checks on `main`** (#18218) — 20+ build breaks from June 12–13 confirm pre-merge compilation gate is missing. Until enabled, all feature PRs risk introducing breaks and blocking community contributors.
+2. **v0.4 feature kickoff** — Q3 starts July 1 (~18 days). First community feature PR (#18264, semantic search) is open and needs timely review to signal welcoming culture and unblock momentum.
+3. **Human reviewer assignment** (#18305) — Community PR #18264 has only automated Copilot review. A human maintainer review comment is needed within 24h.
+4. **External adopter recruitment** — ADOPTERS.md lists only KubeStellar itself; recruit ≥3 external organizations before CNCF application.
+5. **CNCF security audit filing** (#18207) — Q2 2026 deadline passed; file the audit request at `github.com/cncf/toc/issues` promptly.
 
 ### Adoption Readiness
 
 | Signal | Target | Current |
 |--------|--------|---------|
-| Main branch build stability | Green ≥14 consecutive days | 🔴 29 breaks on 2026-06-12 — stable last 4h of day (#18218) |
+| Main branch build stability | Green ≥14 consecutive days | ⚠️ 20+ breaks June 12–13; stable last ~2h as of 06:07 AM EDT (#18218) |
 | External adopters in ADOPTERS.md | ≥3 confirmed orgs | ❌ 0 external (KubeStellar self-listed only) |
-| Human contributor ratio | ≥10% of merged PRs | ❌ 0% — 30/30 recent merges are hive; maintainer PR #18097 closed by automation |
-| v0.4 feature work started | ≥1 feature PR open | ❌ Zero feature PRs (scoping doc merged: #18208) |
+| Human contributor ratio | ≥10% of merged PRs | ❌ 0% — 20/20 recent merges are hive bot; maintainer PR #18097 closed by automation |
+| v0.4 feature work started | ≥1 feature PR open | ⚠️ #18264 (community, semantic search) open — no llm-d/Drasi/kagent PRs yet |
+| Community PR review SLA | Human review within 48h | ❌ #18264 open 12h — auto-review only, 0 human reviews (#18305) |
 | PR triage SLA | Defined + enforced | ❌ Undefined |
-| Coverage — handler package | >80% | ❌ 39 files uncovered (#18093) |
-| DCO compliance on automation PRs | 100% of merged PRs signed | ⚠️ Gaps in stale PR backlog (#18190) |
+| Cross-browser test coverage | Playwright Chrome + Firefox nightly green | ❌ Firefox nightly failing (#18304) |
 | CNCF incubation application | Filed | ⏸ On hold (#4072) |
 
