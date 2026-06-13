@@ -1,4 +1,4 @@
-package agent
+package workers
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 )
@@ -77,7 +78,7 @@ type AIAnalysisRequest struct {
 // PredictionWorker runs AI analysis in the background
 type PredictionWorker struct {
 	k8sClient   *k8s.MultiClusterClient
-	registry    *Registry
+	registry    ProviderRegistry
 	settings    PredictionSettings
 	predictions []AIPrediction
 	providers   []string
@@ -99,7 +100,7 @@ type PredictionWorker struct {
 	broadcast func(msgType string, payload interface{})
 
 	// Token tracking callback
-	trackTokens func(usage *ProviderTokenUsage)
+	trackTokens func(usage *ai.ProviderTokenUsage)
 	// loggedClusterError suppresses repeated "no kubeconfig" errors. This is
 	// read/written from runAnalysis, which can be invoked concurrently from
 	// the ticker goroutine and from on-demand Trigger() callers, so it must
@@ -108,7 +109,7 @@ type PredictionWorker struct {
 }
 
 // NewPredictionWorker creates a new prediction worker
-func NewPredictionWorker(k8sClient *k8s.MultiClusterClient, registry *Registry, broadcast func(string, interface{}), trackTokens func(*ProviderTokenUsage)) *PredictionWorker {
+func NewPredictionWorker(k8sClient *k8s.MultiClusterClient, registry ProviderRegistry, broadcast func(string, interface{}), trackTokens func(*ai.ProviderTokenUsage)) *PredictionWorker {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &PredictionWorker{
 		k8sClient:   k8sClient,

@@ -1,4 +1,4 @@
-package agent
+package workers
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/ai"
 )
 
 // InsightEnrichmentCacheTTL is how long individual enrichments are cached
@@ -71,7 +72,7 @@ type InsightWorker struct {
 	mu          sync.RWMutex
 	cache       map[string]insightCacheEntry
 	cacheTime   time.Time
-	registry    *Registry
+	registry    ProviderRegistry
 	broadcast   func(msgType string, payload interface{})
 	isEnriching bool
 
@@ -84,7 +85,7 @@ type InsightWorker struct {
 }
 
 // NewInsightWorker creates a new InsightWorker
-func NewInsightWorker(registry *Registry, broadcast func(msgType string, payload interface{})) *InsightWorker {
+func NewInsightWorker(registry ProviderRegistry, broadcast func(msgType string, payload interface{})) *InsightWorker {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &InsightWorker{
 		cache:          make(map[string]insightCacheEntry),
@@ -257,7 +258,7 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 			continue
 		}
 
-		req := &ChatRequest{
+		req := &ai.ChatRequest{
 			SessionID: fmt.Sprintf("insight-enrich-%d", time.Now().Unix()),
 			Prompt:    prompt,
 		}

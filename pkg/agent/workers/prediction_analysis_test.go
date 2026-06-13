@@ -1,8 +1,9 @@
-package agent
+package workers
 
 import (
 	"testing"
 
+	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/k8s"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -15,13 +16,10 @@ func newTestWorkerForMerge(t *testing.T) *PredictionWorker {
 		Clusters: map[string]*api.Cluster{"cl1": {Server: "s1"}},
 	})
 
-	reg := &Registry{
-		providers:     make(map[string]AIProvider),
-		selectedAgent: make(map[string]string),
-	}
+	reg := newMockProviderRegistry()
 
 	broadcast := func(msg string, payload interface{}) {}
-	trackTokens := func(usage *ProviderTokenUsage) {}
+	trackTokens := func(usage *ai.ProviderTokenUsage) {}
 
 	return NewPredictionWorker(m, reg, broadcast, trackTokens)
 }
@@ -184,17 +182,14 @@ func TestGetAvailableProviders_WithRegisteredProvider(t *testing.T) {
 		Clusters: map[string]*api.Cluster{"cl1": {Server: "s1"}},
 	})
 
-	reg := &Registry{
-		providers:     make(map[string]AIProvider),
-		selectedAgent: make(map[string]string),
-	}
+	reg := newMockProviderRegistry()
 
 	// Register a mock provider named "bob" (one of the hardcoded names)
 	mockP := &WorkerMockProvider{name: "bob"}
 	reg.Register(mockP)
 
 	broadcast := func(msg string, payload interface{}) {}
-	trackTokens := func(usage *ProviderTokenUsage) {}
+	trackTokens := func(usage *ai.ProviderTokenUsage) {}
 
 	w := NewPredictionWorker(m, reg, broadcast, trackTokens)
 

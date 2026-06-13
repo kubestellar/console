@@ -1,4 +1,4 @@
-package agent
+package workers
 
 import (
 	"encoding/json"
@@ -11,6 +11,11 @@ import (
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
+
+// leakTestDrainDelay is how long to wait after Stop() for background
+// goroutines to settle before checking for leaks.
+const leakTestDrainDelay = 300 * time.Millisecond
+
 
 const (
 	// boundsTestOverflow is how many extra snapshots beyond maxSnapshots to add,

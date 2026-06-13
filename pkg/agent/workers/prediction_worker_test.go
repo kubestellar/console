@@ -1,4 +1,4 @@
-package agent
+package workers
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/k8s"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -20,8 +21,8 @@ func (m *WorkerMockProvider) DisplayName() string { return m.name }
 func (m *WorkerMockProvider) Description() string { return m.name }
 func (m *WorkerMockProvider) Provider() string    { return "mock" }
 func (m *WorkerMockProvider) IsAvailable() bool   { return true }
-func (m *WorkerMockProvider) Capabilities() ProviderCapability { return CapabilityChat }
-func (m *WorkerMockProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
+func (m *WorkerMockProvider) Capabilities() ai.ProviderCapability { return ai.CapabilityChat }
+func (m *WorkerMockProvider) Chat(ctx context.Context, req *ai.ChatRequest) (*ai.ChatResponse, error) {
 	// Return a JSON that looks like predictions
 	result := struct {
 		Predictions []map[string]interface{} `json:"predictions"`
@@ -40,14 +41,14 @@ func (m *WorkerMockProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatR
 		},
 	}
 	data, _ := json.Marshal(result)
-	return &ChatResponse{
+	return &ai.ChatResponse{
 		Content: string(data),
 		Agent:   m.name,
 		Done:    true,
 	}, nil
 }
 
-func (m *WorkerMockProvider) StreamChat(ctx context.Context, req *ChatRequest, onChunk func(string)) (*ChatResponse, error) {
+func (m *WorkerMockProvider) StreamChat(ctx context.Context, req *ai.ChatRequest, onChunk func(string)) (*ai.ChatResponse, error) {
 	resp, err := m.Chat(ctx, req)
 	if err == nil && onChunk != nil {
 		onChunk(resp.Content)
@@ -65,20 +66,17 @@ func TestPredictionWorker(t *testing.T) {
 	m.InjectClient("c1", k8sfake.NewSimpleClientset())
 
 	// 2. Setup mock registry
-	reg := &Registry{
-		providers:     make(map[string]AIProvider),
-		selectedAgent: make(map[string]string),
-	}
+	reg := newMockProviderRegistry()
 	mockP := &WorkerMockProvider{name: "mock-ai"}
 	reg.Register(mockP)
-	reg.SetDefault("mock-ai")
+	reg.defName = "mock-ai"
 
 	var broadcastedMsg string
 	broadcast := func(msg string, payload interface{}) {
 		broadcastedMsg = msg
 	}
 
-	trackTokens := func(usage *ProviderTokenUsage) {}
+	trackTokens := func(usage *ai.ProviderTokenUsage) {}
 
 	worker := NewPredictionWorker(m, reg, broadcast, trackTokens)
 

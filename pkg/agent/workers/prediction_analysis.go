@@ -1,4 +1,4 @@
-package agent
+package workers
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/safego"
 )
 
@@ -375,9 +376,9 @@ func (w *PredictionWorker) getAvailableProviders() []string {
 	return providers
 }
 
-func (w *PredictionWorker) analyzeWithProvider(ctx context.Context, provider AIProvider, prompt string) ([]AIPrediction, error) {
+func (w *PredictionWorker) analyzeWithProvider(ctx context.Context, provider ai.Provider, prompt string) ([]AIPrediction, error) {
 	// Use the provider's chat interface
-	req := &ChatRequest{
+	req := &ai.ChatRequest{
 		SessionID: fmt.Sprintf("prediction-%d", time.Now().Unix()),
 		Prompt:    prompt,
 	}
