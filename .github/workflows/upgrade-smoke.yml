@@ -107,6 +107,8 @@ jobs:
             --set image.pullPolicy=IfNotPresent \
             --set 'extraEnv[0].name=DEV_MODE' \
             --set-string 'extraEnv[0].value=true' \
+            --set 'extraEnv[1].name=ALLOW_DEV_MODE_IN_CLUSTER' \
+            --set-string 'extraEnv[1].value=true' \
             --wait --timeout=${{ env.HELM_INSTALL_TIMEOUT }}
 
       - name: Port-forward and verify baseline health
