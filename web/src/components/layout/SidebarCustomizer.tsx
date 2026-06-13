@@ -94,7 +94,13 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
     return knownRoutes.filter((route) => !configuredRoutes.has(route.href))
   }, [config.primaryNav, config.secondaryNav, knownRoutes])
 
-  useEffect(() => () => dismissTimerRef.current && clearTimeout(dismissTimerRef.current), [])
+  useEffect(() => {
+    return () => {
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current)
+      }
+    }
+  }, [])
 
   const setGenerationFeedback = (message: string, type: Exclude<GenerationResultType, null>, timeout: number) => {
     if (dismissTimerRef.current) {
