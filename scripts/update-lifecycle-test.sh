@@ -279,7 +279,7 @@ echo ""
 
 echo -e "${BOLD}Phase 4: Update mechanism source verification${NC}"
 
-CHECKER_FILE="pkg/agent/update_checker.go"
+CHECKER_FILE="pkg/agent/updater/checker.go"
 
 TOTAL=$((TOTAL + 1))
 if grep -q "atomic" "$CHECKER_FILE" 2>/dev/null; then
