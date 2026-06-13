@@ -86,11 +86,39 @@ jobs:
           docker tag ${{ env.IMAGE_REPO }}:${{ env.TARGET_TAG }} \
                      ${{ env.IMAGE_REPO }}:${{ env.BASELINE_TAG }}
 
-      - name: Create Kind cluster
+      - name: Create Kind cluster with local registry
         uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1
         with:
           cluster_name: upgrade-smoke
           wait: 60s
+          config: |
+            kind: Cluster
+            apiVersion: kind.x-k8s.io/v1alpha4
+            containerdConfigPatches:
+            - |-
+              [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5000"]
+                endpoint = ["http://kind-registry:5000"]
+
+      - name: Create local registry container
+        run: |
+          # Create a local Docker registry for Kind to use
+          if ! docker ps | grep -q kind-registry; then
+            docker run -d --restart=always -p 5000:5000 --name kind-registry registry:2
+          fi
+          # Connect the registry to the Kind network
+          docker network connect kind kind-registry 2>/dev/null || true
+          # Document the local registry for kubectl
+          kubectl apply -f - <<EOF
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: local-registry-hosting
+            namespace: kube-public
+          data:
+            localRegistryHosting.v1: |
+              host: "localhost:5000"
+              help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
+          EOF
 
       - name: Load images into Kind
         run: |
@@ -135,7 +163,7 @@ jobs:
         run: |
           # DEV_MODE auto-creates a dev-user on /auth/github and returns
           # a kc_auth HttpOnly cookie. All /api/* routes require this JWT.
-          COOKIE_JAR=/tmp/cookies.txt
+          COOKIE_JAR="${GITHUB_WORKSPACE}/cookies.txt"
           curl -sS --max-time 10 \
             -c "$COOKIE_JAR" \
             -o /dev/null \
@@ -173,22 +201,22 @@ jobs:
       - name: Trigger upgrade to HEAD
         run: |
           echo "Triggering upgrade to tag: ${{ env.TARGET_TAG }}"
-          HTTP_CODE=$(curl -sS -o /tmp/trigger_response.json -w '%{http_code}' \
+          HTTP_CODE=$(curl -sS -o "${GITHUB_WORKSPACE}/trigger_response.json" -w '%{http_code}' \
             -X POST http://127.0.0.1:8080/api/self-upgrade/trigger \
             -b "$COOKIE_JAR" \
             -H 'Content-Type: application/json' \
             -H 'X-Requested-With: XMLHttpRequest' \
             -d '{"imageTag":"${{ env.TARGET_TAG }}"}')
           echo "HTTP $HTTP_CODE"
-          cat /tmp/trigger_response.json | jq . 2>/dev/null || cat /tmp/trigger_response.json
+          cat "${GITHUB_WORKSPACE}/trigger_response.json" | jq . 2>/dev/null || cat "${GITHUB_WORKSPACE}/trigger_response.json"
 
           if [ "$HTTP_CODE" -ge 400 ]; then
             echo "FAIL: trigger returned HTTP $HTTP_CODE"
             exit 1
           fi
 
-          jq -e '.success == true' /tmp/trigger_response.json \
-            || { echo "FAIL: trigger returned success=false"; jq -r '.error // .message // "no detail"' /tmp/trigger_response.json; exit 1; }
+          jq -e '.success == true' "${GITHUB_WORKSPACE}/trigger_response.json" \
+            || { echo "FAIL: trigger returned success=false"; jq -r '.error // .message // "no detail"' "${GITHUB_WORKSPACE}/trigger_response.json"; exit 1; }
 
       - name: Poll Deployment image until rollover to :ci-head
         run: |
