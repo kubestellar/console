@@ -16,6 +16,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"],
       "echarts-for-react": ["./src/lib/compat/echarts-for-react/index.tsx"],
@@ -23,5 +24,12 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test"]
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.stories.ts",
+    "src/**/*.stories.tsx",
+    "src/test",
+    "e2e"
+  ]
 }
