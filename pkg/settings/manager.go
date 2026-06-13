@@ -377,6 +377,9 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 		sm.settings = DefaultSettings()
 	}
 
+	// Apply defaults for zero-value fields
+	applyDefaults(all)
+
 	// Update plaintext settings
 	sm.settings.Settings.AIMode = all.AIMode
 	sm.settings.Settings.Predictions = all.Predictions
@@ -640,4 +643,48 @@ func (m *SettingsManager) SetKeyPath(path string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.keyPath = path
+}
+
+// applyDefaults fills in zero-value fields in AllSettings with sensible defaults
+func applyDefaults(all *AllSettings) {
+	if all == nil {
+		return
+	}
+
+	defaults := DefaultSettings()
+
+	// Apply defaults for prediction thresholds
+	if all.Predictions.Thresholds.HighRestartCount == 0 {
+		all.Predictions.Thresholds.HighRestartCount = defaults.Settings.Predictions.Thresholds.HighRestartCount
+	}
+	if all.Predictions.Thresholds.CPUPressure == 0 {
+		all.Predictions.Thresholds.CPUPressure = defaults.Settings.Predictions.Thresholds.CPUPressure
+	}
+	if all.Predictions.Thresholds.MemoryPressure == 0 {
+		all.Predictions.Thresholds.MemoryPressure = defaults.Settings.Predictions.Thresholds.MemoryPressure
+	}
+	if all.Predictions.Thresholds.GPUMemoryPressure == 0 {
+		all.Predictions.Thresholds.GPUMemoryPressure = defaults.Settings.Predictions.Thresholds.GPUMemoryPressure
+	}
+
+	// Apply defaults for token usage thresholds
+	if all.TokenUsage.WarningThreshold == 0 {
+		all.TokenUsage.WarningThreshold = defaults.Settings.TokenUsage.WarningThreshold
+	}
+	if all.TokenUsage.CriticalThreshold == 0 {
+		all.TokenUsage.CriticalThreshold = defaults.Settings.TokenUsage.CriticalThreshold
+	}
+	if all.TokenUsage.StopThreshold == 0 {
+		all.TokenUsage.StopThreshold = defaults.Settings.TokenUsage.StopThreshold
+	}
+
+	// Apply default for AIMode if empty
+	if all.AIMode == "" {
+		all.AIMode = defaults.Settings.AIMode
+	}
+
+	// Apply default for Theme if empty
+	if all.Theme == "" {
+		all.Theme = defaults.Settings.Theme
+	}
 }
