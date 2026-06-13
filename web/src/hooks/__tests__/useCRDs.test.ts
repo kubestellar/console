@@ -199,9 +199,10 @@ const LIVE_CRDS: CRDData[] = [
 ]
 
 function resetState() {
+  // Restore real timers first to flush any pending timer-based state from prior test
+  vi.useRealTimers()
+  vi.restoreAllMocks()
   vi.stubGlobal('fetch', mockFetch)
-  vi.clearAllMocks()
-  vi.useFakeTimers({ shouldAdvanceTime: true })
   localStorage.clear()
   mockClustersReturn = {
     deduplicatedClusters: [
@@ -213,7 +214,6 @@ function resetState() {
   }
   mockCacheState = {}
   mockFetch.mockReset()
-  // Re-stub fetch after each test since setup.ts vi.unstubAllGlobals() clears it
   vi.stubGlobal('fetch', mockFetch)
   mockGetStoredAuthToken.mockReset()
   mockGetStoredAuthToken.mockReturnValue(null)
@@ -226,7 +226,7 @@ function resetState() {
 describe('useCRDs', () => {
   beforeEach(resetState)
   afterEach(() => {
-    vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   it('fetches CRD data from /api/crds on mount when clusters are loaded', async () => {
