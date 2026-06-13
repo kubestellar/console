@@ -19,29 +19,16 @@ func TestIsDemoMode(t *testing.T) {
 		header   string
 		expected bool
 	}{
-		{
-			name:     "demo mode enabled",
-			header:   "true",
-			expected: true,
-		},
-		{
-			name:     "demo mode disabled",
-			header:   "false",
-			expected: false,
-		},
-		{
-			name:     "demo mode header missing",
-			header:   "",
-			expected: false,
-		},
-		{
-			name:     "demo mode invalid value",
-			header:   "TRUE",
-			expected: false,
-		},
+		{name: "demo mode enabled", header: "true", expected: true},
+		{name: "demo mode disabled", header: "false", expected: false},
+		{name: "demo mode header missing", header: "", expected: false},
+		{name: "demo mode invalid value - TRUE", header: "TRUE", expected: false},
+		{name: "demo mode numeric 1", header: "1", expected: false},
+		{name: "demo mode yes value", header: "yes", expected: false},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			app := fiber.New()
 			var result bool
@@ -134,7 +121,6 @@ func TestRequireAdmin(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := fiber.New()
 			app.Get("/test", func(c *fiber.Ctx) error {
-				// Set userID in context via middleware pattern
 				c.Locals("userID", tt.userID)
 				err := requireAdmin(c, tt.store)
 				if err != nil {
