@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"os"
 	"strings"
 
 	"github.com/kubestellar/console/pkg/k8s"
@@ -15,6 +16,30 @@ func NewTestKubectlProxy(config *api.Config) *KubectlProxy {
 		kubeconfig: "", // empty for test instances
 		config:     config,
 	}
+}
+
+// SetLookPathForTest sets the lookPath function for testing.
+// Returns a cleanup function that restores the original value.
+func SetLookPathForTest(fn func(string) (string, error)) func() {
+	old := lookPath
+	lookPath = fn
+	return func() { lookPath = old }
+}
+
+// SetStandardToolCandidatesForTest sets the standardToolCandidates function for testing.
+// Returns a cleanup function that restores the original value.
+func SetStandardToolCandidatesForTest(fn func(string) []string) func() {
+	old := standardToolCandidates
+	standardToolCandidates = fn
+	return func() { standardToolCandidates = old }
+}
+
+// SetStatFileForTest sets the statFile function for testing.
+// Returns a cleanup function that restores the original value.
+func SetStatFileForTest(fn func(string) (os.FileInfo, error)) func() {
+	old := statFile
+	statFile = fn
+	return func() { statFile = old }
 }
 
 // AppendFormattedWarningEvents formats warning events and appends them to the builder.

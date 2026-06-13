@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"testing"
 	"time"
+
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 func TestServer_HandleCloudCLIStatus(t *testing.T) {
@@ -40,19 +42,16 @@ func TestServer_HandleCloudCLIStatus(t *testing.T) {
 
 func TestServer_HandleLocalClusterTools(t *testing.T) {
 	// Mock lookPath to simulate tool detection without invoking real executables.
-	oldLookPath := lookPath
-	oldStandardToolCandidates := standardToolCandidates
-	defer func() {
-		lookPath = oldLookPath
-		standardToolCandidates = oldStandardToolCandidates
-	}()
-	standardToolCandidates = func(string) []string { return nil }
-	lookPath = func(file string) (string, error) {
+	cleanupLookPath := kube.SetLookPathForTest(func(file string) (string, error) {
 		if file == "kind" {
 			return "/usr/local/bin/kind", nil
 		}
 		return "", &execError{file}
-	}
+	})
+	defer cleanupLookPath()
+
+	cleanupCandidates := kube.SetStandardToolCandidatesForTest(func(string) []string { return nil })
+	defer cleanupCandidates()
 
 	// Mock execCommand so DetectTools does not invoke real binaries (e.g.
 	// "kind version"). The stub command exits 0 with empty output, which is

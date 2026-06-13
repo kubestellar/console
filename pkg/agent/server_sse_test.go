@@ -39,10 +39,7 @@ func newTestServerForSSE(t *testing.T, contexts map[string]*api.Context) (*Serve
 		cfg.AuthInfos[name] = &api.AuthInfo{}
 	}
 
-	proxy := &kube.KubectlProxy{
-		kubeconfig: "/dev/null",
-		config:     cfg,
-	}
+	proxy := kube.NewTestKubectlProxy(cfg)
 
 	srv := &Server{
 		k8sClient:      k8sMock,
@@ -562,7 +559,7 @@ func TestHandleJobsStreamSSE_Unauthorized(t *testing.T) {
 
 func TestHandleJobsStreamSSE_NilK8sClient(t *testing.T) {
 	srv := &Server{
-		kubectl:        &kube.KubectlProxy{kubeconfig: "/dev/null", config: &api.Config{}},
+		kubectl:        kube.NewTestKubectlProxy(&api.Config{}),
 		k8sClient:      nil,
 		allowedOrigins: []string{"*"},
 		agentToken:     "",
