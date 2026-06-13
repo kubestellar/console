@@ -24,7 +24,7 @@ func (s *Server) getClaudeInfo() *protocol.ClaudeInfo {
 		providerNames = append(providerNames, p.DisplayName)
 	}
 
-	var sessionIn, sessionOut, todayIn, todayOut int
+	var sessionIn, sessionOut, todayIn, todayOut int64
 	if s.tokens != nil {
 		sessionIn, sessionOut, todayIn, todayOut = s.tokens.GetUsage()
 	}
