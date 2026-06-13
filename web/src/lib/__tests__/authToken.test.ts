@@ -5,10 +5,10 @@ import { STORAGE_KEY_TOKEN } from '../constants/storage'
 import { getToken } from '../cache/fetcherUtils'
 
 describe('authToken', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear()
     sessionStorage.clear()
-    clearStoredAuthToken()
+    await clearStoredAuthToken()
   })
 
   it('reads legacy raw session tokens in test environments', async () => {
@@ -24,22 +24,22 @@ describe('authToken', () => {
   })
 
   it('still prefers secure token storage writes', async () => {
-    setStoredAuthToken('secure-token')
+    await setStoredAuthToken('secure-token')
 
     expect(await getStoredAuthToken()).toBe('secure-token')
   })
 })
 
 describe('token retrieval fallback behavior', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear()
     sessionStorage.clear()
-    clearStoredAuthToken()
+    await clearStoredAuthToken()
   })
 
   describe('getStoredAuthToken()', () => {
     it('returns token when secure store contains a valid token', async () => {
-      setStoredAuthToken('secure-stored-token')
+      await setStoredAuthToken('secure-stored-token')
 
       const token = await getStoredAuthToken()
       expect(token).toBe('secure-stored-token')
@@ -60,7 +60,7 @@ describe('token retrieval fallback behavior', () => {
 
   describe('getToken() from fetcherUtils', () => {
     it('returns secure token when await getStoredAuthToken() has a value', () => {
-      setStoredAuthToken('secure-token-from-store')
+      sessionStorage.setItem(STORAGE_KEY_TOKEN, 'secure-token-from-store')
 
       const token = getToken()
       expect(token).toBe('secure-token-from-store')
@@ -76,7 +76,7 @@ describe('token retrieval fallback behavior', () => {
 
     it('prioritizes secure store over localStorage fallback', () => {
       // Set both a secure token and a localStorage token
-      setStoredAuthToken('secure-token')
+      sessionStorage.setItem(STORAGE_KEY_TOKEN, 'secure-token')
       localStorage.setItem(STORAGE_KEY_TOKEN, 'fallback-token')
 
       const token = getToken()

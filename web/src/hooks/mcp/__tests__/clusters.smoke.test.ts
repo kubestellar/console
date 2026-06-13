@@ -126,7 +126,7 @@ describe('clusters smoke coverage', () => {
     }
   })
 
-  it('bootstraps cluster polling from the shared cache and opens the shared websocket', () => {
+  it('bootstraps cluster polling from the shared cache and opens the shared websocket', async () => {
     const { result } = renderHook(() => useClusters())
 
     expect(result.current.clusters).toHaveLength(2)
@@ -137,7 +137,9 @@ describe('clusters smoke coverage', () => {
       isComplete: true,
     })
     expect(mockFullFetchClusters).toHaveBeenCalledTimes(1)
-    expect(mockConnectSharedWebSocket).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(mockConnectSharedWebSocket).toHaveBeenCalledTimes(1)
+    })
     expect(mockSubscribePolling).toHaveBeenCalledWith('clusters', 30_000, expect.any(Function))
   })
 

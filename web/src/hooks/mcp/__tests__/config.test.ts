@@ -1109,9 +1109,7 @@ describe('REST error recovery', () => {
 
     const { result } = renderHook(() => useConfigMaps())
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    // When isDemoMode() returns true in the catch, demo configmaps are returned
-    expect(result.current.configmaps.length).toBeGreaterThan(0)
+    await waitFor(() => expect(result.current.configmaps.length).toBeGreaterThan(0))
     expect(result.current.error).toBeNull()
   })
 

@@ -614,7 +614,7 @@ class ApiClient {
   async get<T = unknown>(path: string, options?: { headers?: Record<string, string>; timeout?: number; requiresAuth?: boolean; signal?: AbortSignal }): Promise<{ data: T }> {
     // Skip API calls to protected endpoints when not authenticated
     const isPublicPath = PUBLIC_API_PREFIXES.some(prefix => path.startsWith(prefix))
-    if (options?.requiresAuth !== false && !isPublicPath && !this.hasToken()) {
+    if (options?.requiresAuth !== false && !isPublicPath && !await this.hasToken()) {
       // Do NOT emit a GA4 error here — this is expected behavior when an
       // unauthenticated user visits a protected page. Emitting it caused
       // false-positive monitoring alerts (#9968, #9979, #9980, #9984).

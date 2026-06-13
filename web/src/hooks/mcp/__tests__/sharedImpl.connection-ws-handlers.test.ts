@@ -291,8 +291,7 @@ describe('ws.onclose — reconnect scheduling', () => {
       }
     })
 
-    vi.runAllTimers()
-    await Promise.resolve() // flush microtasks from getWsAuthParams
+    await vi.runAllTimersAsync()
 
     expect(sharedWebSocket.reconnectAttempts).toBe(1)
     expect(reconnectWs).not.toBeNull()
