@@ -16,6 +16,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"],
       "echarts-for-react": ["./src/lib/compat/echarts-for-react/index.tsx"],
