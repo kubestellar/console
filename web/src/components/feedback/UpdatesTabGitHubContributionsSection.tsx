@@ -94,7 +94,7 @@ export function GitHubContributionsSection({
               </StatusBadge>
             )}
             {githubRewards.breakdown.other_issues > 0 && (
-              <StatusBadge color="purple" size="xs" rounded="full" className="bg-gray-500/20! text-muted-foreground!" icon={<AlertCircle className="w-2.5 h-2.5" />}>
+              <StatusBadge color="purple" size="xs" rounded="full" className="bg-gray-500/20! dark:bg-gray-400/20! text-muted-foreground!" icon={<AlertCircle className="w-2.5 h-2.5" />}>
                 {githubRewards.breakdown.other_issues} Issues
               </StatusBadge>
             )}

@@ -66,7 +66,7 @@ const ERROR_DISPLAY: Record<PreflightErrorCode, { icon: typeof ShieldAlert; colo
   UNKNOWN_EXECUTION_FAILURE: {
     icon: AlertTriangle,
     color: 'text-gray-400',
-    bgColor: 'bg-gray-500/10',
+    bgColor: 'bg-gray-500/10 dark:bg-gray-400/10',
     title: 'Preflight Check Failed' } }
 
 // ============================================================================

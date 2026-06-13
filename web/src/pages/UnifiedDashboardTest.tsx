@@ -84,7 +84,7 @@ export function UnifiedDashboardTest() {
               migrationStatus.status === 'unified' ? 'bg-green-500/20 text-green-400' :
               migrationStatus.status === 'ready' ? 'bg-blue-500/20 text-blue-400' :
               migrationStatus.status === 'excluded' ? 'bg-orange-500/20 text-orange-400' :
-              'bg-gray-500/20 text-muted-foreground'
+              'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground'
             }`}>
               {migrationStatus.status}
             </span>
