@@ -1,0 +1,182 @@
+name: Scanner Merge Guardrails
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: read
+
+jobs:
+  enforce-guardrails:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'kubestellar-hive[bot]' || github.event.pull_request.user.login == 'app/kubestellar-hive'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Check Scanner Merge Eligibility
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const yaml = require('js-yaml');
+            
+            // Load scanner config
+            const configPath = '.github/scanner-config.yml';
+            let config;
+            try {
+              const configFile = fs.readFileSync(configPath, 'utf8');
+              config = yaml.load(configFile);
+            } catch (e) {
+              core.warning(`Could not load scanner config: ${e.message}`);
+              return;
+            }
+            
+            const pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
+            
+            // 1. Check if circuit breaker is open (main branch has failing builds)
+            if (config.scanner.circuit_breaker.pause_on_main_build_failure) {
+              const mainBranch = await github.rest.repos.getBranch({
+                owner,
+                repo,
+                branch: 'main'
+              });
+              
+              const mainCommit = mainBranch.data.commit;
+              const checks = await github.rest.checks.listForRef({
+                owner,
+                repo,
+                ref: mainCommit.sha
+              });
+              
+              const requiredChecks = config.scanner.pre_merge_checks.required_checks;
+              const failingRequiredChecks = checks.data.check_runs.filter(check => 
+                requiredChecks.includes(check.name) && 
+                (check.conclusion === 'failure' || check.conclusion === 'timed_out')
+              );
+              
+              if (failingRequiredChecks.length > 0) {
+                core.setFailed(`🚫 Circuit breaker OPEN: Main branch has failing required checks (${failingRequiredChecks.map(c => c.name).join(', ')}). Scanner merges are paused for ${config.scanner.circuit_breaker.cooldown_minutes} minutes.`);
+                
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  labels: ['scanner-paused', 'main-build-broken']
+                });
+                
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  body: `## 🚫 Scanner Merge Guardrails: Circuit Breaker Open\n\nThis PR cannot be auto-merged because the main branch currently has failing builds:\n\n${failingRequiredChecks.map(c => `- ❌ ${c.name}`).join('\n')}\n\n**Cooldown:** ${config.scanner.circuit_breaker.cooldown_minutes} minutes\n\n**Reason:** This guardrail prevents cascading build breaks from scanner merge loops.\n\n**Next Steps:**\n1. Fix the failing checks on main\n2. Wait for main to be green for ${config.scanner.circuit_breaker.cooldown_minutes} minutes\n3. Re-trigger this PR\n\nSee issue #18218 for context.`
+                });
+                
+                return;
+              }
+            }
+            
+            // 2. Check merge rate limits
+            const mergeRateLimit = config.scanner.rate_limits.max_merges_per_hour;
+            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+            
+            const recentMerges = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${owner}/${repo} is:pr is:merged author:app/kubestellar-hive merged:>${oneHourAgo}`,
+              per_page: 100
+            });
+            
+            if (recentMerges.data.total_count >= mergeRateLimit) {
+              core.setFailed(`🚫 Rate limit exceeded: ${recentMerges.data.total_count} PRs merged in the last hour (limit: ${mergeRateLimit})`);
+              
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pr.number,
+                labels: ['scanner-rate-limited']
+              });
+              
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr.number,
+                body: `## 🚫 Scanner Merge Guardrails: Rate Limit Exceeded\n\nThis PR cannot be auto-merged because the scanner has already merged **${recentMerges.data.total_count} PRs** in the last hour.\n\n**Rate Limit:** ${mergeRateLimit} merges per hour\n**Cooldown:** Wait until the rate limit window resets\n\n**Reason:** This guardrail prevents rapid consecutive merges that can cause build instability.\n\nSee issue #18218 for context.`
+              });
+              
+              return;
+            }
+            
+            // 3. Require all checks passing (no --admin bypass)
+            if (config.scanner.pre_merge_checks.require_all_checks_passing) {
+              const prChecks = await github.rest.checks.listForRef({
+                owner,
+                repo,
+                ref: pr.head.sha
+              });
+              
+              const requiredChecks = config.scanner.pre_merge_checks.required_checks;
+              const failingChecks = prChecks.data.check_runs.filter(check => 
+                requiredChecks.includes(check.name) && 
+                check.conclusion !== 'success'
+              );
+              
+              if (failingChecks.length > 0) {
+                core.setFailed(`🚫 Required checks not passing: ${failingChecks.map(c => c.name).join(', ')}`);
+                
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  labels: ['scanner-checks-failing']
+                });
+                
+                return;
+              }
+            }
+            
+            // 4. Check for recent scanner-caused build breaks
+            if (config.scanner.pre_merge_checks.prevent_merge_if_recent_break) {
+              const recentBreakWindow = config.scanner.pre_merge_checks.recent_break_window_minutes;
+              const recentBreakTime = new Date(Date.now() - recentBreakWindow * 60 * 1000).toISOString();
+              
+              const recentBuildBreaks = await github.rest.search.issuesAndPullRequests({
+                q: `repo:${owner}/${repo} is:issue is:open label:build-break created:>${recentBreakTime}`,
+                per_page: 10
+              });
+              
+              if (recentBuildBreaks.data.total_count > 0) {
+                core.warning(`⚠️ Recent build breaks detected (${recentBuildBreaks.data.total_count}). Exercising caution.`);
+                
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  labels: ['scanner-needs-review']
+                });
+                
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  body: `## ⚠️ Scanner Merge Guardrails: Recent Build Breaks Detected\n\nThere ${recentBuildBreaks.data.total_count === 1 ? 'is' : 'are'} **${recentBuildBreaks.data.total_count} open build break issue(s)** created in the last ${recentBreakWindow} minutes.\n\n**Action:** This PR requires human review before auto-merge to prevent potential merge loops.\n\nSee issue #18218 for context.`
+                });
+              }
+            }
+            
+            core.info('✅ All scanner merge guardrails passed');
+            
+      - name: Update Status
+        if: always()
+        run: |
+          echo "Scanner guardrail check complete"
+          echo "Status: ${{ steps.check.outcome }}"

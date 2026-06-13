@@ -19,5 +19,22 @@ rules:
   - name: ci-gate
     description: Build and lint must pass before merge
     enforcement: blocking
-    required_checks: ["build", "lint"]
-    ignored_checks: ["playwright"]
+    required_checks: ["build", "lint", "go-test"]
+    ignored_checks: ["playwright", "tide"]
+    allow_admin_bypass: false
+  
+  - name: scanner-rate-limit
+    description: Scanner merge rate limiting to prevent cascading build breaks
+    enforcement: blocking
+    bot_users: ["app/kubestellar-hive"]
+    max_merges_per_hour: 3
+    cooldown_on_build_failure_minutes: 30
+    
+  - name: scanner-merge-guardrails
+    description: Additional safety checks for automated merges
+    enforcement: blocking
+    bot_users: ["app/kubestellar-hive"]
+    require_green_base_branch: true
+    require_all_checks_passing: true
+    prevent_merge_loop: true
+    max_consecutive_bot_merges: 3
