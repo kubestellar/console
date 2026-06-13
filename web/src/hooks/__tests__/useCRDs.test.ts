@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
+import { clearAllCaches } from '../../lib/cache'
 
 // ---------------------------------------------------------------------------
 // Mock dependencies
@@ -237,14 +238,15 @@ function resetState() {
 // ---------------------------------------------------------------------------
 
 describe('useCRDs', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetState()
+    await clearAllCaches()
   })
 
   afterEach(() => {
     vi.clearAllTimers()
     vi.useRealTimers()
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
   })
 
   it('fetches CRD data from /api/crds on mount when clusters are loaded', async () => {
