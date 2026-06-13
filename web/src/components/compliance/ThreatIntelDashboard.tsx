@@ -74,10 +74,10 @@ const IOC_STATUS_ICON: Record<string, React.ReactNode> = {
   false_positive: <Eye className="w-4 h-4 text-gray-400" />,
 }
 
-const SCORE_GOOD = 'rgb(34,197,94)'
-const SCORE_WARN = 'rgb(234,179,8)'
-const SCORE_BAD = 'rgb(239,68,68)'
-const RING_BG = 'rgb(55,65,81)'
+const SCORE_GOOD = 'hsl(var(--success))'
+const SCORE_WARN = 'hsl(var(--warning))'
+const SCORE_BAD = 'hsl(var(--destructive))'
+const RING_BG = 'hsl(var(--muted))'
 
 function RiskScoreRing({ score, size = 80 }: { score: number; size?: number }) {
   const r = (size - 8) / 2

@@ -17,7 +17,7 @@ const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   analyze: { bg: 'bg-blue-500/15', color: 'text-blue-400' },
   upgrade: { bg: 'bg-green-500/15', color: 'text-green-400' },
   deploy: { bg: 'bg-purple-500/15', color: 'text-purple-400' },
-  custom: { bg: 'bg-gray-500/15', color: 'text-muted-foreground' },
+  custom: { bg: 'bg-muted/50', color: 'text-muted-foreground' },
 }
 
 interface FixerCardProps {

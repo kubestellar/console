@@ -100,9 +100,9 @@ function showExpiryWarningBanner(onRefresh: () => void): void {
   const BANNER_PAD_V_PX = '12px'
   const BANNER_PAD_H_PX = '20px'
   const BANNER_RADIUS_PX = '8px'
-  const WARN_BG = 'rgba(234,179,8,0.15)'       // yellow-500 at 15% opacity
-  const WARN_BORDER = 'rgba(234,179,8,0.4)'     // yellow-500 at 40% opacity
-  const WARN_TEXT = '#fbbf24'                    // amber-400 text
+  const WARN_BG = 'hsl(var(--warning) / 0.15)'
+  const WARN_BORDER = 'hsl(var(--warning) / 0.4)'
+  const WARN_TEXT = 'hsl(var(--warning-foreground))'
   const BTN_MARGIN_LEFT_PX = '8px'
   const BTN_PAD_V_PX = '4px'
   const BTN_PAD_H_PX = '12px'
@@ -131,8 +131,8 @@ function showExpiryWarningBanner(onRefresh: () => void): void {
   btn.textContent = i18n.t('session.refreshNow')
   btn.style.cssText = `
     margin-left: ${BTN_MARGIN_LEFT_PX}; padding: ${BTN_PAD_V_PX} ${BTN_PAD_H_PX}; border-radius: ${BANNER_RADIUS_PX};
-    background: rgba(234,179,8,0.3); border: 1px solid rgba(234,179,8,0.5);
-    color: #fbbf24; cursor: pointer; font-size: 13px; font-family: inherit;
+    background: hsl(var(--warning) / 0.3); border: 1px solid hsl(var(--warning) / 0.5);
+    color: hsl(var(--warning-foreground)); cursor: pointer; font-size: 13px; font-family: inherit;
   `
   btn.onclick = () => {
     onRefresh()

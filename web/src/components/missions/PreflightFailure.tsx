@@ -65,8 +65,8 @@ const ERROR_DISPLAY: Record<PreflightErrorCode, { icon: typeof ShieldAlert; colo
     title: 'Missing Tools' },
   UNKNOWN_EXECUTION_FAILURE: {
     icon: AlertTriangle,
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-500/10',
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted/40',
     title: 'Preflight Check Failed' } }
 
 // ============================================================================

@@ -254,9 +254,9 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
   )
 
   const licensePieData = summary ? [
-    { label: 'Compliant', count: summary.license_compliant, color: 'rgb(34,197,94)' },
-    { label: 'Non-Compliant', count: summary.license_non_compliant, color: 'rgb(239,68,68)' },
-    { label: 'Unknown', count: summary.license_unknown, color: 'rgb(107,114,128)' },
+    { label: 'Compliant', count: summary.license_compliant, color: 'hsl(var(--success))' },
+    { label: 'Non-Compliant', count: summary.license_non_compliant, color: 'hsl(var(--destructive))' },
+    { label: 'Unknown', count: summary.license_unknown, color: 'hsl(var(--muted-foreground))' },
   ] : []
   const licenseTotal = licensePieData.reduce((a, b) => a + b.count, 0)
 

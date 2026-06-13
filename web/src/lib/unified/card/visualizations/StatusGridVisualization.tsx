@@ -50,7 +50,7 @@ const BG_COLORS: Record<string, string> = {
   cyan: 'bg-cyan-500/10',
   blue: 'bg-blue-500/10',
   red: 'bg-red-500/10',
-  gray: 'bg-gray-500/10',
+  gray: 'bg-muted/40',
   indigo: 'bg-blue-500/10',
   pink: 'bg-purple-500/10',
   teal: 'bg-cyan-500/10',
