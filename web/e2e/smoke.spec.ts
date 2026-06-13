@@ -162,9 +162,9 @@ test.describe('Smoke Tests', () => {
       // Firefox-specific: Wait for Settings page to actually render before asserting URL.
       // In Firefox, there's a race where ProtectedRoute hasn't finished auth init yet,
       // causing a redirect to home. Waiting for Settings-specific content ensures the
-      // page loaded correctly. (#18304)
+      // page loaded correctly. Use waitForURL() to handle late redirects. (#18304)
+      await page.waitForURL('**/settings', { timeout: 10000 })
       await expect(page.locator('h1:has-text("Settings")')).toBeVisible({ timeout: 10000 })
-      expect(page.url()).toContain('/settings')
 
       // Click the logo button (has aria-label "Go to home dashboard").
       // The navbar renders two such buttons — the logo and the wordmark —
