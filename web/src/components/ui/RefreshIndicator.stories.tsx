@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { fn } from '@storybook/test'
 import { RefreshIndicator, RefreshButton, RefreshSpinner } from './RefreshIndicator'
+
+const NOOP = () => {}
 
 const meta = {
   title: 'UI/RefreshIndicator',
@@ -141,7 +142,7 @@ export const ButtonIdle: Story = {
     <RefreshButton
       isRefreshing={false}
       lastRefresh={new Date()}
-      onRefresh={fn()}
+      onRefresh={NOOP}
     />
   ),
 }
@@ -153,7 +154,7 @@ export const ButtonRefreshing: Story = {
     <RefreshButton
       isRefreshing
       lastRefresh={new Date()}
-      onRefresh={fn()}
+      onRefresh={NOOP}
     />
   ),
 }
@@ -167,7 +168,7 @@ export const ButtonFailed: Story = {
       isFailed
       consecutiveFailures={3}
       lastRefresh={new Date(Date.now() - FIVE_MINUTES_MS)}
-      onRefresh={fn()}
+      onRefresh={NOOP}
     />
   ),
 }
@@ -180,7 +181,7 @@ export const ButtonDisabled: Story = {
       isRefreshing={false}
       disabled
       lastRefresh={new Date()}
-      onRefresh={fn()}
+      onRefresh={NOOP}
     />
   ),
 }
@@ -191,19 +192,19 @@ export const ButtonAllStates: Story = {
   render: () => (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <RefreshButton isRefreshing={false} lastRefresh={new Date()} onRefresh={fn()} />
+        <RefreshButton isRefreshing={false} lastRefresh={new Date()} onRefresh={NOOP} />
         <span className="text-xs text-muted-foreground">Idle</span>
       </div>
       <div className="flex items-center gap-3">
-        <RefreshButton isRefreshing lastRefresh={new Date()} onRefresh={fn()} />
+        <RefreshButton isRefreshing lastRefresh={new Date()} onRefresh={NOOP} />
         <span className="text-xs text-muted-foreground">Refreshing</span>
       </div>
       <div className="flex items-center gap-3">
-        <RefreshButton isRefreshing={false} isFailed consecutiveFailures={2} lastRefresh={new Date(Date.now() - FIVE_MINUTES_MS)} onRefresh={fn()} />
+        <RefreshButton isRefreshing={false} isFailed consecutiveFailures={2} lastRefresh={new Date(Date.now() - FIVE_MINUTES_MS)} onRefresh={NOOP} />
         <span className="text-xs text-muted-foreground">Failed</span>
       </div>
       <div className="flex items-center gap-3">
-        <RefreshButton isRefreshing={false} disabled lastRefresh={new Date()} onRefresh={fn()} />
+        <RefreshButton isRefreshing={false} disabled lastRefresh={new Date()} onRefresh={NOOP} />
         <span className="text-xs text-muted-foreground">Disabled</span>
       </div>
     </div>

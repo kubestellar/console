@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { fn } from '@storybook/test'
 import { FeatureHintTooltip } from './FeatureHintTooltip'
+
+const NOOP = () => {}
 
 const meta = {
   title: 'UI/FeatureHintTooltip',
@@ -14,7 +15,7 @@ const meta = {
     },
   },
   args: {
-    onDismiss: fn(),
+    onDismiss: NOOP,
   },
   decorators: [
     (Story) => (
@@ -96,7 +97,7 @@ export const AllPlacements: Story = {
             <FeatureHintTooltip
               message={`Hint positioned ${placement}`}
               placement={placement}
-              onDismiss={fn()}
+              onDismiss={NOOP}
             />
           </div>
         </div>

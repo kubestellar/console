@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { fn } from '@storybook/test'
 import { Download, Plus, ArrowRight, Trash2, Settings } from 'lucide-react'
 import { Button } from './Button'
+
+const NOOP = () => {}
 
 const meta = {
   title: 'UI/Button',
@@ -21,7 +22,7 @@ const meta = {
     disabled: { control: 'boolean' },
   },
   args: {
-    onClick: fn(),
+    onClick: NOOP,
   },
 } satisfies Meta<typeof Button>
 

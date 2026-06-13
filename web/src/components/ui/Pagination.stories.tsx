@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { fn } from '@storybook/test'
 import { Pagination } from './Pagination'
+
+const NOOP = () => {}
 
 const meta = {
   title: 'UI/Pagination',
@@ -14,8 +15,8 @@ const meta = {
     showItemsPerPage: { control: 'boolean' },
   },
   args: {
-    onPageChange: fn(),
-    onItemsPerPageChange: fn(),
+    onPageChange: NOOP,
+    onItemsPerPageChange: NOOP,
   },
 } satisfies Meta<typeof Pagination>
 
