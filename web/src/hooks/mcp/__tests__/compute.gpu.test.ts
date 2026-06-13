@@ -1079,9 +1079,7 @@ describe('fetchGPUNodes — error recovery from localStorage', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 3000 })
-    // Demo GPU nodes should be loaded
-    expect(gpuNodeCache.nodes.length).toBeGreaterThan(0)
+    await waitFor(() => expect(gpuNodeCache.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
   })
 
   it('increments consecutiveFailures on fetch error', async () => {

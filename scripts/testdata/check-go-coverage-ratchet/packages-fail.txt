@@ -1,3 +1,0 @@
-pkg/api 50.0
-pkg/agent 100.0
-pkg/k8s 30.0

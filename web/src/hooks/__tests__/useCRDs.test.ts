@@ -57,6 +57,7 @@ vi.mock('../../lib/constants/network', () => ({
 
 vi.mock('../../lib/authToken', () => ({
   getStoredAuthToken: () => mockGetStoredAuthToken(),
+  getStoredAuthTokenSync: () => mockGetStoredAuthToken(),
 }))
 
 // Stateful useCache/createCachedHook mock — calls the real fetcher, tracks

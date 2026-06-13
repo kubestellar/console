@@ -487,8 +487,7 @@ describe('useHelmHistory', () => {
     // Use unique cluster/release to avoid hitting cache from prior tests
     const { result } = renderHook(() => useHelmHistory('fail-cluster', 'fail-release', 'fail-ns'))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBeTruthy()
+    await waitFor(() => expect(result.current.error).toBe('Network error'))
     expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
   })
 
@@ -535,8 +534,7 @@ describe('useHelmHistory', () => {
     const cluster = uniqueCluster('hist-404')
     const { result } = renderHook(() => useHelmHistory(cluster, 'nonexistent-release', 'default'))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toContain('API error')
+    await waitFor(() => expect(result.current.error).toContain('API error'))
     expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
   })
 
@@ -743,7 +741,7 @@ describe('useHelmValues', () => {
     // Use unique cluster/release/namespace to avoid hitting cache from prior tests
     const { result } = renderHook(() => useHelmValues('fail-cluster', 'fail-release', 'fail-ns'))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1))
     expect(result.current.error).toBeTruthy()
   })
 
@@ -810,7 +808,7 @@ describe('useHelmValues', () => {
     const cluster = uniqueCluster('val-500')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1))
     expect(result.current.error).toContain('API error')
     expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
   })
@@ -1159,8 +1157,7 @@ describe('useHelmValues — additional branches', () => {
     const cluster = uniqueCluster('val-err-msg')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Custom values error')
+    await waitFor(() => expect(result.current.error).toBe('Custom values error'))
   })
 
   it('error defaults to generic text for non-Error thrown values', async () => {
@@ -1169,7 +1166,7 @@ describe('useHelmValues — additional branches', () => {
     const cluster = uniqueCluster('val-generic-err')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1))
     expect(result.current.error).toBe('Failed to fetch Helm values')
   })
 

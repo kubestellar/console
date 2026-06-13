@@ -105,6 +105,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
                 installInfo.kbPaths,
               )
               const clusterContext = clusters.length > 0
+                // clusters[0] is intentional: used only when length === 1 (singular message)
                 ? `\n\n**Target cluster(s):** ${clusters.join(', ')}\n\nPlease install on ${clusters.length === 1 ? `cluster "${clusters[0]}"` : `the following clusters: ${clusters.join(', ')}`}.`
                 : ''
               setPendingMission({ prompt: prompt + clusterContext, clusters })

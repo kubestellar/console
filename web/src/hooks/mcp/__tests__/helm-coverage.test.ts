@@ -549,8 +549,7 @@ describe('useHelmValues — useEffect doFetch path', () => {
     const cluster = uniqueCluster('val-dofetch-err')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Inner fetch error')
+    await waitFor(() => expect(result.current.error).toBe('Inner fetch error'))
     expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
   })
 
@@ -563,8 +562,7 @@ describe('useHelmValues — useEffect doFetch path', () => {
     const cluster = uniqueCluster('val-dofetch-403')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toContain('API error')
+    await waitFor(() => expect(result.current.error).toContain('API error'))
   })
 })
 

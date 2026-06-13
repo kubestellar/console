@@ -428,6 +428,7 @@ describe('Tier1CardRuntime', () => {
       }
       render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
       expect(screen.getByTestId('skeleton-text')).toBeInTheDocument()
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled())
 
       // Cleanup
       await act(async () => {
@@ -482,12 +483,14 @@ describe('Tier1CardRuntime', () => {
       await act(async () => {
         render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
       })
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/things',
-        expect.objectContaining({
-          headers: { Authorization: 'Bearer test-token' },
-        })
-      )
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/things',
+          expect.objectContaining({
+            headers: { Authorization: 'Bearer test-token' },
+          })
+        )
+      })
     })
 
     it('sends no Authorization header when token is absent', async () => {

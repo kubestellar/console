@@ -122,6 +122,7 @@ export function Kubectl() {
       return
     }
 
+    // clusters[0] is intentional: only auto-selected when exactly ONE cluster exists (unambiguous choice)
     if (clusters.length === SINGLE_VISIBLE_CLUSTER_COUNT) {
       setSelectedContext(clusters[0].name)
     }

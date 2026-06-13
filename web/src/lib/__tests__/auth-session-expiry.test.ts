@@ -16,6 +16,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import React from 'react'
+const authModule = await import('../auth')
 
 // ── Mocks ───────────────────────���──────────────────────────────────────────
 
@@ -142,30 +143,30 @@ afterEach(() => {
 
 describe('isJWTExpired — session expiry detection', () => {
   it('returns true for a JWT that has already expired', async () => {
-    const { isJWTExpired } = await import('../auth')
+    const { isJWTExpired } = authModule
     const expired = makeExpiredJwt()
     expect(isJWTExpired(expired)).toBe(true)
   })
 
   it('returns false for a JWT that is still valid', async () => {
-    const { isJWTExpired } = await import('../auth')
+    const { isJWTExpired } = authModule
     const valid = makeValidJwt()
     expect(isJWTExpired(valid)).toBe(false)
   })
 
   it('returns false for non-JWT tokens (opaque tokens)', async () => {
-    const { isJWTExpired } = await import('../auth')
+    const { isJWTExpired } = authModule
     // Opaque tokens can't be decoded — function returns false to let backend decide
     expect(isJWTExpired('opaque-session-token-abc123')).toBe(false)
   })
 
   it('returns false for demo token', async () => {
-    const { isJWTExpired } = await import('../auth')
+    const { isJWTExpired } = authModule
     expect(isJWTExpired('demo-token')).toBe(false)
   })
 
   it('returns true for a JWT that expired exactly now (boundary)', async () => {
-    const { isJWTExpired } = await import('../auth')
+    const { isJWTExpired } = authModule
     // exp is exactly now — Date.now() >= expiryMs should be true
     const nowSeconds = Math.floor(Date.now() / MS_PER_SECOND)
     const token = makeJwt({ exp: nowSeconds })
@@ -196,15 +197,9 @@ describe('refreshUser with expired JWT (#8507)', () => {
     const { result } = renderHook(() => useAuth(), { wrapper })
 
     // Wait for refreshUser to process the expired token
-    await waitFor(
-      () => {
-        // After detecting expired JWT, auth should clear the token
-        // The user should either be null (login redirect) or demo-user (fallback)
-        // but never blank-screen — isLoading should resolve to false
-        expect(result.current.isLoading).toBe(false)
-      },
-      { timeout: 5_000 },
-    )
+    await waitFor(() => {
+      expect(result.current.token).not.toBe(expired)
+    }, { timeout: 5_000 })
 
     // Token should no longer resolve to the expired session token.
     expect(readStoredSessionToken()).not.toBe(expired)
@@ -229,12 +224,10 @@ describe('refreshUser with expired JWT (#8507)', () => {
 
     // The critical assertion: isLoading MUST resolve to false.
     // A blank screen happens when isLoading stays true forever.
-    await waitFor(
-      () => {
-        expect(result.current.isLoading).toBe(false)
-      },
-      { timeout: 5_000 },
-    )
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.token).not.toBe(expired)
+    }, { timeout: 5_000 })
 
     // Either: user is null (=> login page renders) or user is demo-user (=> demo mode)
     // Both are valid — blank screen is the failure case

@@ -10,6 +10,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
+import { clearStoredAuthToken, getStoredAuthToken, setStoredAuthToken } from '../authToken'
 
 // ---------------------------------------------------------------------------
 // Mocks — declared before importing the module under test
@@ -80,18 +81,8 @@ const AUTH_USER_CACHE_KEY = 'kc-user-cache'
 const STORAGE_KEY_TOKEN = 'token'
 const AUTH_TOKEN_SYNC_KEY = 'kc-auth-token-sync'
 
-function readStoredSessionToken(): string | null {
-  const rawValue = sessionStorage.getItem(STORAGE_KEY_TOKEN)
-  if (!rawValue) {
-    return null
-  }
-
-  try {
-    const parsed = JSON.parse(rawValue) as { token?: string }
-    return typeof parsed.token === 'string' ? parsed.token : rawValue
-  } catch {
-    return rawValue
-  }
+async function readStoredSessionToken(): Promise<string | null> {
+  return getStoredAuthToken()
 }
 
 // ---------------------------------------------------------------------------
@@ -490,9 +481,11 @@ async function renderWithAuthProvider() {
 }
 
 describe('AuthProvider', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     localStorage.clear()
+    sessionStorage.clear()
+    await clearStoredAuthToken()
     document.getElementById('session-expiry-warning')?.remove()
     document.getElementById('session-banner-animation')?.remove()
     // Default: backend down, no OAuth
@@ -503,8 +496,10 @@ describe('AuthProvider', () => {
     vi.stubGlobal('fetch', vi.fn())
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllGlobals()
+    sessionStorage.clear()
+    await clearStoredAuthToken()
   })
 
   // ---------- Initial state ----------
@@ -791,7 +786,7 @@ describe('AuthProvider', () => {
 
   it('clears user, token, and localStorage on logout', async () => {
     // Start authenticated
-    localStorage.setItem(STORAGE_KEY_TOKEN, 'demo-token')
+    await setStoredAuthToken('demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
 
     const { result } = await renderWithAuthProvider()
@@ -801,14 +796,16 @@ describe('AuthProvider', () => {
     })
     expect(result.current.isAuthenticated).toBe(true)
 
-    act(() => {
-      result.current.logout()
+    await act(async () => {
+      await result.current.logout()
     })
 
-    expect(result.current.user).toBeNull()
-    expect(result.current.token).toBeNull()
-    expect(result.current.isAuthenticated).toBe(false)
-    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBeNull()
+    await waitFor(() => {
+      expect(result.current.user).toBeNull()
+      expect(result.current.token).toBeNull()
+      expect(result.current.isAuthenticated).toBe(false)
+    })
+    await expect(getStoredAuthToken()).resolves.toBeNull()
     expect(mockEmitLogout).toHaveBeenCalled()
     expect(mockClearCache).toHaveBeenCalled()
   })
@@ -828,8 +825,8 @@ describe('AuthProvider', () => {
       result.current.setToken('new-jwt-token', true)
     })
 
-    expect(result.current.token).toBe('new-jwt-token')
-    expect(readStoredSessionToken()).toBe('new-jwt-token')
+    await waitFor(() => expect(result.current.token).toBe('new-jwt-token'))
+    await expect(readStoredSessionToken()).resolves.toBe('new-jwt-token')
     // setToken clears cached user (cacheUser(null))
     expect(localStorage.getItem(AUTH_USER_CACHE_KEY)).toBeNull()
     // Sets a temp user with onboarded flag
@@ -907,22 +904,22 @@ describe('AuthProvider', () => {
   // ---------- Storage event listener ----------
 
   it('updates token when auth sync event fires with a new session token', async () => {
-    localStorage.setItem(STORAGE_KEY_TOKEN, 'demo-token')
+    await setStoredAuthToken('demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
 
     const { result } = await renderWithAuthProvider()
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const newToken = 'refreshed-jwt-token'
-    act(() => {
-      localStorage.setItem(STORAGE_KEY_TOKEN, newToken)
+    await act(async () => {
+      await setStoredAuthToken(newToken)
       window.dispatchEvent(new StorageEvent('storage', {
         key: AUTH_TOKEN_SYNC_KEY,
         newValue: JSON.stringify({ state: 'session', ts: Date.now() }),
       }))
     })
 
-    expect(result.current.token).toBe(newToken)
+    await waitFor(() => expect(result.current.token).toBe(newToken))
   })
 
   it('ignores storage events for non-token keys', async () => {
@@ -1235,7 +1232,7 @@ describe('AuthProvider', () => {
   // ---------- logout clears user cache from localStorage ----------
 
   it('logout removes user cache from localStorage', async () => {
-    localStorage.setItem(STORAGE_KEY_TOKEN, 'demo-token')
+    await setStoredAuthToken('demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
 
     const { result } = await renderWithAuthProvider()
@@ -1244,11 +1241,11 @@ describe('AuthProvider', () => {
     // Verify cache is set (demo user gets cached)
     expect(localStorage.getItem(AUTH_USER_CACHE_KEY)).not.toBeNull()
 
-    act(() => {
-      result.current.logout()
+    await act(async () => {
+      await result.current.logout()
     })
 
-    expect(localStorage.getItem(AUTH_USER_CACHE_KEY)).toBeNull()
-    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBeNull()
+    await waitFor(() => expect(localStorage.getItem(AUTH_USER_CACHE_KEY)).toBeNull())
+    await expect(getStoredAuthToken()).resolves.toBeNull()
   })
 })

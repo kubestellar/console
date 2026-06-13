@@ -52,7 +52,7 @@ describe('useSnoozedMissions', () => {
   })
 
   it('falls back to empty state when persisted JSON is invalid', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     localStorage.setItem(STORAGE_KEY, '{invalid-json')
 
     const { result } = await renderSnoozedMissionsHook()

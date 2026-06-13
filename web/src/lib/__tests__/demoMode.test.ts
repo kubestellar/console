@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
 import {
   isDemoMode,
   isDemoToken,
@@ -25,36 +26,36 @@ describe('isDemoMode', () => {
 describe('isDemoToken', () => {
   beforeEach(() => { localStorage.clear() })
 
-  it('returns true when no token', () => {
-    expect(isDemoToken()).toBe(true)
+  it('returns true when no token', async () => {
+    await expect(isDemoToken()).resolves.toBe(true)
   })
 
-  it('returns true for demo-token', () => {
+  it('returns true for demo-token', async () => {
     localStorage.setItem('token', 'demo-token')
-    expect(isDemoToken()).toBe(true)
+    await expect(isDemoToken()).resolves.toBe(true)
   })
 
-  it('returns false for real token', () => {
+  it('returns false for real token', async () => {
     localStorage.setItem('token', 'real-jwt-token')
-    expect(isDemoToken()).toBe(false)
+    await expect(isDemoToken()).resolves.toBe(false)
   })
 })
 
 describe('hasRealToken', () => {
   beforeEach(() => { localStorage.clear() })
 
-  it('returns false when no token', () => {
-    expect(hasRealToken()).toBe(false)
+  it('returns false when no token', async () => {
+    await expect(hasRealToken()).resolves.toBe(false)
   })
 
-  it('returns false for demo token', () => {
+  it('returns false for demo token', async () => {
     localStorage.setItem('token', 'demo-token')
-    expect(hasRealToken()).toBe(false)
+    await expect(hasRealToken()).resolves.toBe(false)
   })
 
-  it('returns true for real token', () => {
+  it('returns true for real token', async () => {
     localStorage.setItem('token', 'real-jwt-token')
-    expect(hasRealToken()).toBe(true)
+    await expect(hasRealToken()).resolves.toBe(true)
   })
 })
 
@@ -151,7 +152,7 @@ describe('setDemoToken', () => {
 
   it('stores demo-token in auth storage', async () => {
     setDemoToken()
-    expect(await getStoredAuthToken()).toBe('demo-token')
+    await waitFor(async () => expect(await getStoredAuthToken()).toBe('demo-token'))
   })
 })
 
@@ -169,7 +170,7 @@ describe('activatePublicDemoMode', () => {
 
     expect(localStorage.getItem('kc-demo-mode')).toBe('true')
     expect(localStorage.getItem('demo-user-onboarded')).toBe('true')
-    expect(await getStoredAuthToken()).toBe('demo-token')
+    await waitFor(async () => expect(await getStoredAuthToken()).toBe('demo-token'))
     expect(localStorage.getItem('kc-user-cache')).toBeNull()
     expect(localStorage.getItem('kc-has-session')).toBeNull()
   })

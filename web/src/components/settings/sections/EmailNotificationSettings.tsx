@@ -105,8 +105,9 @@ export function EmailNotificationSettings({
             type="text"
             value={config.emailSMTPHost || ''}
             onChange={e => updateConfig({ emailSMTPHost: e.target.value })}
+            disabled={isLoading}
             placeholder="smtp.gmail.com"
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -141,8 +142,9 @@ export function EmailNotificationSettings({
           type="email"
           value={config.emailFrom || ''}
           onChange={e => updateConfig({ emailFrom: e.target.value })}
+          disabled={isLoading}
           placeholder="alerts@example.com"
-          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
 
@@ -155,8 +157,9 @@ export function EmailNotificationSettings({
           type="text"
           value={config.emailTo || ''}
           onChange={e => updateConfig({ emailTo: e.target.value })}
+          disabled={isLoading}
           placeholder="team@example.com, oncall@example.com"
-          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <p className="text-xs text-muted-foreground mt-1">
           {t('settings.notifications.email.toHint')}

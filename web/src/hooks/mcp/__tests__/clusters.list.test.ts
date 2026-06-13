@@ -322,14 +322,16 @@ describe('Shared WebSocket singleton', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
   })
 
-  it('only one connection is attempted for multiple hook instances', () => {
+  it('only one connection is attempted for multiple hook instances', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'test-token')
     // jsdom default hostname is 'localhost' – satisfies the isLocalhost check
     renderHook(() => useClusters()) // sets initialFetchStarted → true, calls connectSharedWebSocket
     renderHook(() => useClusters()) // initialFetchStarted is now true → block skipped
     renderHook(() => useClusters())
 
-    expect(mockConnectSharedWebSocket).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(mockConnectSharedWebSocket).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('connection is not attempted when not on localhost', () => {

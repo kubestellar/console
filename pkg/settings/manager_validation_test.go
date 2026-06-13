@@ -422,7 +422,7 @@ func TestValidation_GetAll_WithoutKey(t *testing.T) {
 
 	// Add some encrypted data
 	sm.settings.Encrypted.APIKeys = &EncryptedField{
-		Ciphertext: []byte("encrypted-data"),
+		Ciphertext: "encrypted-data",
 	}
 
 	all, err := sm.GetAll()
