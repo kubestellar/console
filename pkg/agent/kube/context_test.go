@@ -147,6 +147,186 @@ func TestSetClusterContextProviders(t *testing.T) {
 	providerClusterContextState.mu.RUnlock()
 }
 
+func TestBuildLiveClusterContext(t *testing.T) {
+	tests := []struct {
+		name           string
+		req            *ai.ChatRequest
+		bridge         *mcp.Bridge
+		k8sClient      *k8s.MultiClusterClient
+		wantEmpty      bool
+		wantContains   []string
+		wantNotContain []string
+	}{
+		{
+			name:      "nil context returns empty string",
+			req:       nil,
+			bridge:    nil,
+			k8sClient: nil,
+			wantEmpty: true,
+		},
+		{
+			name:      "nil request returns empty string",
+			req:       nil,
+			bridge:    &mcp.Bridge{},
+			k8sClient: nil,
+			wantEmpty: true,
+		},
+		{
+			name:      "no providers configured returns empty string",
+			req:       &ai.ChatRequest{Prompt: "test"},
+			bridge:    nil,
+			k8sClient: nil,
+			wantEmpty: true,
+		},
+		{
+			name: "scoped clusters from context are used",
+			req: &ai.ChatRequest{
+				Prompt: "test",
+				Context: map[string]string{
+					"cluster": "prod-west",
+				},
+			},
+			bridge:    &mcp.Bridge{},
+			k8sClient: nil,
+			wantContains: []string{
+				"LIVE KUBERNETES CONTEXT",
+				"<cluster-data>",
+				"Cluster: prod-west",
+				"</cluster-data>",
+			},
+		},
+		{
+			name: "scoped namespace is included when present",
+			req: &ai.ChatRequest{
+				Prompt: "test",
+				Context: map[string]string{
+					"cluster":   "prod",
+					"namespace": "kube-system",
+				},
+			},
+			bridge:    &mcp.Bridge{},
+			k8sClient: nil,
+			wantContains: []string{
+				"Scoped namespace: kube-system",
+				"Cluster: prod",
+			},
+		},
+		{
+			name: "multiple clusters from context are processed",
+			req: &ai.ChatRequest{
+				Prompt: "test",
+				Context: map[string]string{
+					"clusters": "alpha, beta, gamma",
+				},
+			},
+			bridge:    &mcp.Bridge{},
+			k8sClient: nil,
+			wantContains: []string{
+				"Cluster: alpha",
+				"Cluster: beta",
+				"Cluster: gamma",
+			},
+		},
+		{
+			name: "truncates clusters beyond limit",
+			req: &ai.ChatRequest{
+				Prompt: "test",
+				Context: map[string]string{
+					"clusters": "c1, c2, c3, c4, c5, c6, c7, c8",
+				},
+			},
+			bridge:    &mcp.Bridge{},
+			k8sClient: nil,
+			wantContains: []string{
+				"Cluster: c1",
+				"Cluster: c5",
+				"Additional clusters omitted from context: 3",
+			},
+			wantNotContain: []string{
+				"Cluster: c6",
+				"Cluster: c7",
+				"Cluster: c8",
+			},
+		},
+		{
+			name: "health section is appended for each cluster",
+			req: &ai.ChatRequest{
+				Prompt: "test",
+				Context: map[string]string{
+					"cluster": "test-cluster",
+				},
+			},
+			bridge:    &mcp.Bridge{},
+			k8sClient: nil,
+			wantContains: []string{
+				"Cluster: test-cluster",
+				"Health:",
+			},
+		},
+		{
+			name: "pod issues section is appended for each cluster",
+			req: &ai.ChatRequest{
+				Prompt: "test",
+				Context: map[string]string{
+					"cluster": "test-cluster",
+				},
+			},
+			bridge:    &mcp.Bridge{},
+			k8sClient: nil,
+			wantContains: []string{
+				"Cluster: test-cluster",
+				"Pod issues:",
+			},
+		},
+		{
+			name: "warning events section is appended for each cluster",
+			req: &ai.ChatRequest{
+				Prompt: "test",
+				Context: map[string]string{
+					"cluster": "test-cluster",
+				},
+			},
+			bridge:    &mcp.Bridge{},
+			k8sClient: nil,
+			wantContains: []string{
+				"Cluster: test-cluster",
+				"Recent warning events:",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up provider state
+			providerClusterContextState.mu.Lock()
+			providerClusterContextState.bridge = tt.bridge
+			providerClusterContextState.k8sClient = tt.k8sClient
+			providerClusterContextState.mu.Unlock()
+
+			got := buildLiveClusterContext(nil, tt.req)
+
+			if tt.wantEmpty {
+				if got != "" {
+					t.Errorf("expected empty string, got %q", got)
+				}
+				return
+			}
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(got, want) {
+					t.Errorf("expected output to contain %q, got:\n%s", want, got)
+				}
+			}
+
+			for _, notWant := range tt.wantNotContain {
+				if strings.Contains(got, notWant) {
+					t.Errorf("expected output to NOT contain %q, got:\n%s", notWant, got)
+				}
+			}
+		})
+	}
+}
+
 func TestBuildLiveClusterContext_NilRequest(t *testing.T) {
 	t.Helper()
 
