@@ -3,7 +3,7 @@
 // Platform-specific file locking using flock(2) for Unix systems.
 // Used by saveTokenUsage / loadTokenUsage to serialize access across
 // concurrent kc-agent instances (#9730).
-package agent
+package tokentracker
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ import (
 // processes (separate kc-agent instances) are serialized, not just
 // goroutines within a single process.
 func acquireFileLock(path string) (release func(), err error) {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, agentFileMode)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, fileMode)
 	if err != nil {
 		return nil, fmt.Errorf("open lock file: %w", err)
 	}

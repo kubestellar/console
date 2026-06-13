@@ -1,88 +1,52 @@
 package agent
 
 import (
-	"encoding/json"
-	"os"
 	"strings"
 	"testing"
-	"time"
+
+	"github.com/kubestellar/console/pkg/agent/tokentracker"
 )
 
 func TestServer_TokenUsageDebounce(t *testing.T) {
-	// Setup temp home for token usage file
-	tmpDir, err := os.MkdirTemp("", "agent-tokens-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-	t.Setenv("HOME", tmpDir)
-
+	// The debounce/flush logic is now in the tokentracker package.
+	// Here we verify the Server delegation still works end-to-end.
 	s := &Server{
-		todayDate: time.Now().Format("2006-01-02"),
+		tokens: tokentracker.New(0),
 	}
 
-	usage := &ProviderTokenUsage{
+	s.addTokenUsage(&ProviderTokenUsage{
 		InputTokens:  100,
 		OutputTokens: 50,
 		TotalTokens:  150,
-	}
+	})
 
-	// 1. Add usage
-	s.addTokenUsage(usage)
-
-	s.tokenMux.RLock()
-	if s.sessionTokensIn != 100 || s.sessionTokensOut != 50 {
-		t.Errorf("Expected 100/50 session tokens, got %d/%d", s.sessionTokensIn, s.sessionTokensOut)
-	}
-	s.tokenMux.RUnlock()
-
-	// 2. Verify file NOT written immediately (debounce)
-	path := getTokenUsagePath()
-	if _, err := os.Stat(path); err == nil {
-		t.Error("Token usage file should not be written immediately due to debounce")
-	}
-
-	// 3. Force save
-	s.saveTokenUsage()
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("Failed to read usage file: %v", err)
-	}
-
-	var saved tokenUsageData
-	if err := json.Unmarshal(data, &saved); err != nil {
-		t.Fatalf("Failed to unmarshal usage data: %v", err)
-	}
-
-	if saved.InputIn != 100 || saved.OutputOut != 50 {
-		t.Errorf("Expected 100/50 in file, got %d/%d", saved.InputIn, saved.OutputOut)
+	sessionIn, sessionOut, _, _ := s.tokens.GetUsage()
+	if sessionIn != 100 || sessionOut != 50 {
+		t.Errorf("Expected 100/50 session tokens, got %d/%d", sessionIn, sessionOut)
 	}
 }
 
 func TestServer_SessionQuota(t *testing.T) {
 	s := &Server{
-		sessionTokenQuota: 500,
+		tokens: tokentracker.New(500),
 	}
 
 	if s.isSessionQuotaExceeded() {
 		t.Fatal("Quota should not be exceeded initially")
 	}
 
-	// Add usage under quota
 	s.addTokenUsage(&ProviderTokenUsage{InputTokens: 200, OutputTokens: 200})
 	if s.isSessionQuotaExceeded() {
 		t.Fatal("Quota should not be exceeded at 400/500")
 	}
 
-	// Add usage over quota
 	s.addTokenUsage(&ProviderTokenUsage{InputTokens: 100, OutputTokens: 1})
 	if !s.isSessionQuotaExceeded() {
 		t.Fatal("Quota should be exceeded at 501/500")
 	}
 
 	msg := s.sessionTokenQuotaMessage()
-	if !contains(msg, "Session token quota exceeded") {
+	if !strings.Contains(msg, "KC_SESSION_TOKEN_QUOTA") {
 		t.Errorf("Unexpected quota message: %s", msg)
 	}
 }
@@ -128,8 +92,4 @@ func TestExtractCommands(t *testing.T) {
 			}
 		})
 	}
-}
-
-func contains(s, substr string) bool {
-	return strings.Contains(s, substr)
 }

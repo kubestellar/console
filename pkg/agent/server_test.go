@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/agent/tokentracker"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/settings"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -2263,57 +2264,38 @@ func TestServer_HandlePredictionsFeedback_WrongMethod(t *testing.T) {
 
 func TestServer_AddTokenUsage(t *testing.T) {
 	server := &Server{
-		sessionStart: time.Now(),
-		todayDate:    time.Now().Format("2006-01-02"),
+		tokens: tokentracker.New(0),
 	}
 
-	// Add some usage
 	server.addTokenUsage(&ProviderTokenUsage{InputTokens: 100, OutputTokens: 200})
 
-	server.tokenMux.RLock()
-	defer server.tokenMux.RUnlock()
-
-	if server.sessionTokensIn != 100 {
-		t.Errorf("Expected 100 input tokens, got %d", server.sessionTokensIn)
+	sessionIn, sessionOut, todayIn, todayOut := server.tokens.GetUsage()
+	if sessionIn != 100 {
+		t.Errorf("Expected 100 input tokens, got %d", sessionIn)
 	}
-	if server.sessionTokensOut != 200 {
-		t.Errorf("Expected 200 output tokens, got %d", server.sessionTokensOut)
+	if sessionOut != 200 {
+		t.Errorf("Expected 200 output tokens, got %d", sessionOut)
 	}
-	if server.todayTokensIn != 100 {
-		t.Errorf("Expected 100 today input tokens, got %d", server.todayTokensIn)
+	if todayIn != 100 {
+		t.Errorf("Expected 100 today input tokens, got %d", todayIn)
 	}
-	if server.todayTokensOut != 200 {
-		t.Errorf("Expected 200 today output tokens, got %d", server.todayTokensOut)
+	if todayOut != 200 {
+		t.Errorf("Expected 200 today output tokens, got %d", todayOut)
 	}
 }
 
 func TestServer_AddTokenUsage_DayRollover(t *testing.T) {
+	// Day rollover logic is tested in tokentracker package.
+	// This verifies Server delegation still functions.
 	server := &Server{
-		sessionStart:     time.Now(),
-		todayDate:        "2020-01-01", // Old date to trigger rollover
-		todayTokensIn:    1000,
-		todayTokensOut:   2000,
-		sessionTokensIn:  500,
-		sessionTokensOut: 1000,
+		tokens: tokentracker.New(0),
 	}
 
-	// Add usage - should reset daily counters
 	server.addTokenUsage(&ProviderTokenUsage{InputTokens: 100, OutputTokens: 200})
 
-	server.tokenMux.RLock()
-	defer server.tokenMux.RUnlock()
-
-	// Daily should be reset to just the new values
-	if server.todayTokensIn != 100 {
-		t.Errorf("Expected 100 today input tokens after rollover, got %d", server.todayTokensIn)
-	}
-	if server.todayTokensOut != 200 {
-		t.Errorf("Expected 200 today output tokens after rollover, got %d", server.todayTokensOut)
-	}
-
-	// Session should accumulate
-	if server.sessionTokensIn != 600 {
-		t.Errorf("Expected 600 session input tokens, got %d", server.sessionTokensIn)
+	sessionIn, sessionOut, _, _ := server.tokens.GetUsage()
+	if sessionIn != 100 || sessionOut != 200 {
+		t.Errorf("Expected 100/200, got %d/%d", sessionIn, sessionOut)
 	}
 }
 
@@ -2329,9 +2311,8 @@ func TestServer_GetClaudeInfo_NoKeys(t *testing.T) {
 	}()
 
 	server := &Server{
-		registry:     &Registry{providers: make(map[string]AIProvider)},
-		sessionStart: time.Now(),
-		todayDate:    time.Now().Format("2006-01-02"),
+		registry: &Registry{providers: make(map[string]AIProvider)},
+		tokens:   tokentracker.New(0),
 	}
 
 	info := server.getClaudeInfo()
@@ -2550,15 +2531,7 @@ func TestErrorPayload(t *testing.T) {
 	}
 }
 
-func TestServer_GetTokenUsagePath(t *testing.T) {
-	path := getTokenUsagePath()
-	if path == "" {
-		t.Error("Expected non-empty path")
-	}
-	if !strings.Contains(path, ".kc") && !strings.Contains(path, "token-usage") {
-		t.Errorf("Path doesn't look right: %s", path)
-	}
-}
+// TestServer_GetTokenUsagePath removed — logic moved to tokentracker package.
 
 // ============================================================================
 // Helper Function Tests - errorResponse, promptNeedsToolExecution, etc.
@@ -2922,13 +2895,14 @@ func TestServer_GetClaudeInfo_WithProviders(t *testing.T) {
 				providers:     tt.providers,
 				selectedAgent: make(map[string]string),
 			}
+			tr := tokentracker.New(0)
+			// Seed token counters via AddUsage to match test expectations
+			if tt.sessionIn > 0 || tt.sessionOut > 0 {
+				tr.AddUsage(&ProviderTokenUsage{InputTokens: int(tt.sessionIn), OutputTokens: int(tt.sessionOut)})
+			}
 			server := &Server{
-				registry:         registry,
-				sessionTokensIn:  tt.sessionIn,
-				sessionTokensOut: tt.sessionOut,
-				todayTokensIn:    tt.todayIn,
-				todayTokensOut:   tt.todayOut,
-				todayDate:        time.Now().Format("2006-01-02"),
+				registry: registry,
+				tokens:   tr,
 			}
 
 			info := server.getClaudeInfo()
@@ -2957,73 +2931,21 @@ func TestServer_GetClaudeInfo_WithProviders(t *testing.T) {
 	}
 }
 
+// TestServer_LoadTokenUsage — logic moved to tokentracker package (tracker_test.go).
+// This test now just verifies the delegation compiles and runs.
 func TestServer_LoadTokenUsage(t *testing.T) {
-	// Create temp file for token usage
-	tmpFile, err := os.CreateTemp("", "token-usage-*.json")
+	tmpDir, err := os.MkdirTemp("", "token-load-*")
 	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
+		t.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer os.RemoveAll(tmpDir)
+	t.Setenv("HOME", tmpDir)
 
-	today := time.Now().Format("2006-01-02")
-
-	tests := []struct {
-		name          string
-		fileContent   string
-		wantInputIn   int64
-		wantOutputOut int64
-	}{
-		{
-			name:          "Valid today's data",
-			fileContent:   fmt.Sprintf(`{"date":"%s","inputIn":500,"outputOut":1000}`, today),
-			wantInputIn:   500,
-			wantOutputOut: 1000,
-		},
-		{
-			name:          "Old date - should not load",
-			fileContent:   `{"date":"2020-01-01","inputIn":500,"outputOut":1000}`,
-			wantInputIn:   0,
-			wantOutputOut: 0,
-		},
-		{
-			name:          "Invalid JSON",
-			fileContent:   `not valid json`,
-			wantInputIn:   0,
-			wantOutputOut: 0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Write test data
-			if err := os.WriteFile(tmpFile.Name(), []byte(tt.fileContent), 0644); err != nil {
-				t.Fatalf("Failed to write test file: %v", err)
-			}
-
-			// Override getTokenUsagePath for this test
-			originalPath := getTokenUsagePath
-			defer func() { _ = originalPath }()
-
-			server := &Server{
-				sessionStart: time.Now(),
-				todayDate:    today,
-			}
-
-			// Manually load from temp file
-			data, _ := os.ReadFile(tmpFile.Name())
-			var usage tokenUsageData
-			if json.Unmarshal(data, &usage) == nil && usage.Date == today {
-				server.todayTokensIn = usage.InputIn
-				server.todayTokensOut = usage.OutputOut
-			}
-
-			if server.todayTokensIn != tt.wantInputIn {
-				t.Errorf("todayTokensIn = %d, want %d", server.todayTokensIn, tt.wantInputIn)
-			}
-			if server.todayTokensOut != tt.wantOutputOut {
-				t.Errorf("todayTokensOut = %d, want %d", server.todayTokensOut, tt.wantOutputOut)
-			}
-		})
+	tr := tokentracker.New(0)
+	tr.Load() // no file, should not panic
+	_, _, todayIn, todayOut := tr.GetUsage()
+	if todayIn != 0 || todayOut != 0 {
+		t.Errorf("Expected 0/0 from empty load, got %d/%d", todayIn, todayOut)
 	}
 }
 

@@ -3,7 +3,7 @@
 // Platform-specific file locking for Windows using LockFileEx.
 // Used by saveTokenUsage / loadTokenUsage to serialize access across
 // concurrent kc-agent instances (#9730).
-package agent
+package tokentracker
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ const lockfileExclusiveLock = 0x00000002
 // exclusive lock via LockFileEx. The caller MUST call the returned release
 // function when done.
 func acquireFileLock(path string) (release func(), err error) {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, agentFileMode)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, fileMode)
 	if err != nil {
 		return nil, fmt.Errorf("open lock file: %w", err)
 	}
