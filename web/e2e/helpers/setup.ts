@@ -663,7 +663,7 @@ export async function waitForNetworkIdleBestEffort(
   try {
     await page.waitForLoadState('networkidle', { timeout: timeoutMs })
   } catch {
-    if (process.env.E2E_VERBOSE_WAITS) {
+    if (typeof process !== 'undefined' && process.env.E2E_VERBOSE_WAITS) {
       // eslint-disable-next-line no-console -- Opt-in debug logging for tests
       console.warn(
         `[e2e] networkidle timed out after ${timeoutMs}ms${label ? ` (${label})` : ''} — page may have long-lived WebSocket/SSE connections`

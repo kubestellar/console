@@ -107,7 +107,7 @@ export function useLocalClusterTools() {
   const { progress: clusterProgress, dismiss: dismissProgress, isStale: clusterProgressIsStale } = useClusterProgress()
 
   // Track pending setTimeout IDs for cleanup on unmount
-  const pendingTimeoutsRef = useRef<NodeJS.Timeout[]>([])
+  const pendingTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   // Fetch detected tools
   const fetchTools = async () => {

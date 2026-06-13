@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { DEMO_TOKEN_VALUE, STORAGE_KEY_TOKEN } from './constants/storage'
 import { clearToken, getToken, setToken } from './secureTokenStore'
 
