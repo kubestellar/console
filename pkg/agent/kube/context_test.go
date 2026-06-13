@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -303,7 +304,7 @@ func TestBuildLiveClusterContext(t *testing.T) {
 			providerClusterContextState.k8sClient = tt.k8sClient
 			providerClusterContextState.mu.Unlock()
 
-			got := buildLiveClusterContext(nil, tt.req)
+			got := buildLiveClusterContext(context.Background(), tt.req)
 
 			if tt.wantEmpty {
 				if got != "" {
@@ -330,7 +331,7 @@ func TestBuildLiveClusterContext(t *testing.T) {
 func TestBuildLiveClusterContext_NilRequest(t *testing.T) {
 	t.Helper()
 
-	got := buildLiveClusterContext(nil, nil)
+	got := buildLiveClusterContext(context.Background(), nil)
 	if got != "" {
 		t.Fatalf("expected empty string for nil request, got %q", got)
 	}
@@ -346,7 +347,7 @@ func TestBuildLiveClusterContext_NoProvidersConfigured(t *testing.T) {
 	providerClusterContextState.mu.Unlock()
 
 	req := &ai.ChatRequest{Prompt: "test"}
-	got := buildLiveClusterContext(nil, req)
+	got := buildLiveClusterContext(context.Background(), req)
 	if got != "" {
 		t.Fatalf("expected empty string when no providers configured, got %q", got)
 	}
