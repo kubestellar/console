@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kubestellar/console/pkg/agent/updater"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/settings"
 	appsv1 "k8s.io/api/apps/v1"
@@ -251,7 +252,7 @@ func TestHandleAutoUpdateConfig_SaveAllError_Returns500(t *testing.T) {
 	mgr.SetSettingsPath("/dev/null/no-such-dir/settings.json")
 	defer mgr.SetSettingsPath(original)
 
-	checker := &UpdateChecker{channel: "stable"}
+	checker := updater.NewUpdateChecker(updater.UpdateCheckerConfig{})
 	server := &Server{
 		allowedOrigins: []string{"*"},
 		agentToken:     "",
@@ -268,9 +269,7 @@ func TestHandleAutoUpdateConfig_SaveAllError_Returns500(t *testing.T) {
 	if w.Code != http.StatusInternalServerError {
 		t.Errorf("expected 500, got %d", w.Code)
 	}
-	checker.mu.Lock()
-	ch := checker.channel
-	checker.mu.Unlock()
+	ch := checker.Status().Channel
 	if ch != "stable" {
 		t.Errorf("updateChecker.Configure must not be called on SaveAll failure, but channel changed to %q", ch)
 	}

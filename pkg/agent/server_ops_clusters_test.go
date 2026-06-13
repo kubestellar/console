@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"testing"
 	"time"
+
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 func TestServer_HandleCloudCLIStatus(t *testing.T) {
@@ -39,20 +41,16 @@ func TestServer_HandleCloudCLIStatus(t *testing.T) {
 }
 
 func TestServer_HandleLocalClusterTools(t *testing.T) {
-	// Mock lookPath to simulate tool detection without invoking real executables.
-	oldLookPath := lookPath
-	oldStandardToolCandidates := standardToolCandidates
-	defer func() {
-		lookPath = oldLookPath
-		standardToolCandidates = oldStandardToolCandidates
-	}()
-	standardToolCandidates = func(string) []string { return nil }
-	lookPath = func(file string) (string, error) {
+	// Mock kube package vars to simulate tool detection without real executables.
+	restoreLookPath := kube.SetLookPathForTest(func(file string) (string, error) {
 		if file == "kind" {
 			return "/usr/local/bin/kind", nil
 		}
 		return "", &execError{file}
-	}
+	})
+	defer restoreLookPath()
+	restoreCandidates := kube.SetStandardToolCandidatesForTest(func(string) []string { return nil })
+	defer restoreCandidates()
 
 	// Mock execCommand so DetectTools does not invoke real binaries (e.g.
 	// "kind version"). The stub command exits 0 with empty output, which is
@@ -65,7 +63,7 @@ func TestServer_HandleLocalClusterTools(t *testing.T) {
 
 	s := &Server{
 		allowedOrigins: []string{"*"},
-		localClusters:  NewLocalClusterManager(nil),
+		localClusters:  kube.NewLocalClusterManager(nil),
 	}
 
 	req := httptest.NewRequest("GET", "/local-cluster-tools", nil)
@@ -78,7 +76,7 @@ func TestServer_HandleLocalClusterTools(t *testing.T) {
 	}
 
 	var resp struct {
-		Tools []LocalClusterTool `json:"tools"`
+		Tools []kube.LocalClusterTool `json:"tools"`
 	}
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
@@ -109,31 +107,25 @@ func (f fakeExecutableInfoOps) IsDir() bool        { return false }
 func (f fakeExecutableInfoOps) Sys() interface{}   { return nil }
 
 func TestServer_HandleLocalClusterTools_RequestedToolsFallback(t *testing.T) {
-	oldLookPath := lookPath
-	oldStatFile := statFile
-	oldStandardToolCandidates := standardToolCandidates
-	defer func() {
-		lookPath = oldLookPath
-		statFile = oldStatFile
-		standardToolCandidates = oldStandardToolCandidates
-	}()
-
-	lookPath = func(file string) (string, error) {
+	restoreLookPath := kube.SetLookPathForTest(func(file string) (string, error) {
 		return "", &execError{file}
-	}
-	standardToolCandidates = func(name string) []string {
-		return []string{"/usr/local/bin/" + name}
-	}
-	statFile = func(name string) (os.FileInfo, error) {
+	})
+	defer restoreLookPath()
+	restoreStat := kube.SetStatFileForTest(func(name string) (os.FileInfo, error) {
 		if name == "/usr/local/bin/helm" {
 			return fakeExecutableInfoOps{name: "helm"}, nil
 		}
 		return nil, errors.New("not found")
-	}
+	})
+	defer restoreStat()
+	restoreCandidates := kube.SetStandardToolCandidatesForTest(func(name string) []string {
+		return []string{"/usr/local/bin/" + name}
+	})
+	defer restoreCandidates()
 
 	s := &Server{
 		allowedOrigins: []string{"*"},
-		localClusters:  NewLocalClusterManager(nil),
+		localClusters:  kube.NewLocalClusterManager(nil),
 	}
 
 	req := httptest.NewRequest("GET", "/local-cluster-tools?tool=helm", nil)
@@ -149,7 +141,7 @@ func TestServer_HandleLocalClusterTools_RequestedToolsFallback(t *testing.T) {
 	}
 
 	var resp struct {
-		Tools []LocalClusterTool `json:"tools"`
+		Tools []kube.LocalClusterTool `json:"tools"`
 	}
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
@@ -172,7 +164,7 @@ func TestServer_HandleLocalClusters_List(t *testing.T) {
 
 	s := &Server{
 		allowedOrigins: []string{"*"},
-		localClusters:  NewLocalClusterManager(nil),
+		localClusters:  kube.NewLocalClusterManager(nil),
 	}
 
 	req := httptest.NewRequest("GET", "/local-clusters", nil)

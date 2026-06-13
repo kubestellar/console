@@ -60,7 +60,7 @@ func TestServer_HandleHealth_CORS(t *testing.T) {
 	server := &Server{
 		allowedOrigins: []string{"http://allowed.com"},
 		registry:       &Registry{providers: make(map[string]AIProvider)},
-		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
+		kubectl:        kube.NewTestKubectlProxy(&api.Config{}),
 	}
 
 	// Case 1: Allowed Origin
@@ -90,7 +90,7 @@ func TestServer_HandleStatus(t *testing.T) {
 		},
 	}
 	server := &Server{
-		kubectl:        &kube.KubectlProxy{config: config},
+		kubectl:        kube.NewTestKubectlProxy(config),
 		allowedOrigins: []string{"http://allowed.com"},
 		agentToken:     "test-token",
 		tokenExplicit:  true,
@@ -225,7 +225,7 @@ func TestServer_HandleClustersHTTP(t *testing.T) {
 			"c1": {Server: "https://c1.com"},
 		},
 	}
-	mockProxy := &kube.KubectlProxy{config: config}
+	mockProxy := kube.NewTestKubectlProxy(config)
 	server := &Server{
 		kubectl:        mockProxy,
 		allowedOrigins: []string{"*"},
@@ -271,10 +271,7 @@ func TestServer_HandleRenameContextHTTP(t *testing.T) {
 	execCommandContext = fakeExecCommandContext
 
 	// Setup proxy
-	proxy := &kube.KubectlProxy{
-		kubeconfig: "/tmp/config",
-		config:     &api.Config{},
-	}
+	proxy := kube.NewTestKubectlProxy(&api.Config{})
 
 	server := &Server{
 		kubectl:        proxy,
@@ -323,10 +320,7 @@ func TestServer_ResourceHandlers(t *testing.T) {
 	config := &api.Config{
 		CurrentContext: "ctx-1",
 	}
-	proxy := &kube.KubectlProxy{
-		config:     config,
-		kubeconfig: "/tmp/config",
-	}
+	proxy := kube.NewTestKubectlProxy(config)
 
 	// Create mock k8s client
 	k8sClient, _ := k8s.NewMultiClusterClient("")
@@ -973,7 +967,7 @@ func TestMatchOrigin(t *testing.T) {
 
 func TestServer_HandleClustersHTTP_Unauthorized(t *testing.T) {
 	server := &Server{
-		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
+		kubectl:        kube.NewTestKubectlProxy(&api.Config{}),
 		agentToken:     "secret", // require token
 		allowedOrigins: []string{"*"},
 	}
@@ -992,7 +986,7 @@ func TestServer_HandleClustersHTTP_Unauthorized(t *testing.T) {
 
 func TestServer_HandleClustersHTTP_OPTIONS(t *testing.T) {
 	server := &Server{
-		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
+		kubectl:        kube.NewTestKubectlProxy(&api.Config{}),
 		allowedOrigins: []string{"http://allowed.com"},
 	}
 
@@ -1434,7 +1428,7 @@ func (fakeFileInfo) Sys() interface{}   { return nil }
 
 func TestServer_HandleRenameContextHTTP_Unauthorized(t *testing.T) {
 	server := &Server{
-		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
+		kubectl:        kube.NewTestKubectlProxy(&api.Config{}),
 		agentToken:     "secret",
 		allowedOrigins: []string{"*"},
 	}
@@ -1452,7 +1446,7 @@ func TestServer_HandleRenameContextHTTP_Unauthorized(t *testing.T) {
 
 func TestServer_HandleRenameContextHTTP_WrongMethod(t *testing.T) {
 	server := &Server{
-		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
+		kubectl:        kube.NewTestKubectlProxy(&api.Config{}),
 		allowedOrigins: []string{"*"},
 	}
 
@@ -1472,10 +1466,7 @@ func TestServer_HandleRenameContextHTTP_MissingNames(t *testing.T) {
 	execCommandContext = fakeExecCommandContext
 
 	server := &Server{
-		kubectl: &kube.KubectlProxy{
-			config:     &api.Config{},
-			kubeconfig: "/tmp/config",
-		},
+		kubectl: kube.NewTestKubectlProxy(&api.Config{}),
 		allowedOrigins: []string{"*"},
 	}
 
@@ -1499,10 +1490,7 @@ func TestServer_HandleRenameContextHTTP_FlagInjection(t *testing.T) {
 	execCommandContext = fakeExecCommandContext
 
 	server := &Server{
-		kubectl: &kube.KubectlProxy{
-			config:     &api.Config{},
-			kubeconfig: "/tmp/config",
-		},
+		kubectl: kube.NewTestKubectlProxy(&api.Config{}),
 		allowedOrigins: []string{"*"},
 	}
 
@@ -2130,7 +2118,7 @@ func TestServer_ValidateAPIKeyValue_EmptyKey(t *testing.T) {
 
 func TestServer_HandleHealth_OPTIONS(t *testing.T) {
 	server := &Server{
-		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
+		kubectl:        kube.NewTestKubectlProxy(&api.Config{}),
 		registry:       &Registry{providers: make(map[string]AIProvider)},
 		allowedOrigins: []string{"http://localhost"},
 	}
@@ -3417,7 +3405,7 @@ func TestCheckPingHealth_AllScenarios(t *testing.T) {
 
 func TestServer_HandleLocalClusterTools_GET(t *testing.T) {
 	server := &Server{
-		localClusters:  NewLocalClusterManager(nil),
+		localClusters:  kube.NewLocalClusterManager(nil),
 		allowedOrigins: []string{"*"},
 	}
 
@@ -3433,7 +3421,7 @@ func TestServer_HandleLocalClusterTools_GET(t *testing.T) {
 
 func TestServer_HandleLocalClusters_GET(t *testing.T) {
 	server := &Server{
-		localClusters:  NewLocalClusterManager(nil),
+		localClusters:  kube.NewLocalClusterManager(nil),
 		allowedOrigins: []string{"*"},
 	}
 
@@ -3449,7 +3437,7 @@ func TestServer_HandleLocalClusters_GET(t *testing.T) {
 
 func TestServer_HandleLocalClusters_WrongMethod(t *testing.T) {
 	server := &Server{
-		localClusters:  NewLocalClusterManager(nil),
+		localClusters:  kube.NewLocalClusterManager(nil),
 		allowedOrigins: []string{"*"},
 	}
 
@@ -3464,7 +3452,7 @@ func TestServer_HandleLocalClusters_WrongMethod(t *testing.T) {
 
 func TestServer_HandleLocalClusterTools_WrongMethod(t *testing.T) {
 	server := &Server{
-		localClusters:  NewLocalClusterManager(nil),
+		localClusters:  kube.NewLocalClusterManager(nil),
 		allowedOrigins: []string{"*"},
 	}
 

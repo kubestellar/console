@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -85,7 +86,7 @@ func TestServer_HandleVClusterCheck(t *testing.T) {
 
 	s := &Server{
 		allowedOrigins: []string{"*"},
-		localClusters:  &LocalClusterManager{},
+		localClusters:  &kube.LocalClusterManager{},
 	}
 
 	req := httptest.NewRequest("GET", "/vcluster/check", nil)
