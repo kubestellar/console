@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { GitPullRequestArrow, ExternalLink, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../lib/modals'
 import { Button } from '../ui/Button'
 import { useAuth } from '../../lib/auth'
@@ -27,6 +28,7 @@ export function RequestApprovalModal({
   state,
   installedProjects,
 }: RequestApprovalModalProps) {
+  const { t } = useTranslation()
   const { token } = useAuth()
   const { showToast } = useToast()
   const [repo, setRepo] = useState('')
@@ -200,13 +202,13 @@ export function RequestApprovalModal({
 
               <div className="rounded-lg border border-border bg-secondary/50 p-3">
                 <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                  Issue will include
+                  {t('missionControl.approval.issueWillInclude')}
                 </h4>
                 <ul className="text-xs text-muted-foreground space-y-1">
                   <li>Mission description and {state.projects.length} project{state.projects.length !== 1 ? 's' : ''}</li>
                   <li>Cluster assignments ({state.assignments.filter(a => (a.projectNames ?? []).length > 0).length} clusters)</li>
-                  <li>Phased rollout plan with estimates</li>
-                  <li>Approval checklist for reviewers</li>
+                  <li>{t('missionControl.approval.phasedRolloutPlan')}</li>
+                  <li>{t('missionControl.approval.approvalChecklist')}</li>
                   <li>"View in Console" deep link for interactive review</li>
                 </ul>
               </div>
@@ -214,7 +216,7 @@ export function RequestApprovalModal({
               {checkingGitHubToken ? (
                 <p className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 text-xs text-muted-foreground">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Checking GitHub access…</span>
+                  <span>{t('missionControl.approval.checkingGitHubAccess')}</span>
                 </p>
               ) : tokenCheckError ? (
                 <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">

@@ -2497,7 +2497,31 @@
       "dryRunValidation": "Dry-run validation",
       "unifiedDeployment": "Unified deployment"
     },
-    "projectAdded": "Project added to mission"
+    "projectAdded": "Project added to mission",
+    "blueprintInfo": {
+      "phasedSafetyFeatures": "Safety Features",
+      "parallelConsiderations": "Considerations",
+      "safeForProduction": "Safe for production environments",
+      "automaticPauseOnFailure": "Automatic pause on failure",
+      "retrySkipIndividual": "Retry/skip individual projects",
+      "dependenciesValidatedPerPhase": "Dependencies validated per phase",
+      "rollbackPlanGenerated": "Rollback plan generated for each phase",
+      "allMissionsParallel": "All missions launched in parallel",
+      "noDependencyGating": "No dependency gating — order not guaranteed",
+      "fastestDeployment": "Fastest possible deployment",
+      "failuresDontBlock": "Failures don't block other projects",
+      "manualInterventionNeeded": "May need manual intervention if deps fail"
+    },
+    "approval": {
+      "issueWillInclude": "Issue will include",
+      "phasedRolloutPlan": "Phased rollout plan with estimates",
+      "approvalChecklist": "Approval checklist for reviewers",
+      "checkingGitHubAccess": "Checking GitHub access…"
+    },
+    "fixerDefinition": {
+      "loadingCatalogWorkloads": "Loading additional catalog workloads…",
+      "catalogLoadError": "Could not load the latest workload catalog. Static suggestions are still available."
+    }
   },
   "auth": {
     "sessionExpiresSoon": "Session expires soon",
@@ -2605,7 +2629,6 @@
     "yourRequestsCount_one": "{{count}} request",
     "yourRequestsCount_other": "{{count}} requests",
     "reportBugOrFeature": "Report a bug or request a feature",
-    "viewFullLeaderboard": "View Full Leaderboard",
     "draftRestored": "Draft restored."
   },
   "nps": {
@@ -2796,7 +2819,8 @@
     "upgradeFailed": "Upgrade failed"
   },
   "updates": {
-    "loadingPullRequests": "Loading recent pull requests…"
+    "loadingRecentPullRequests": "Loading recent pull requests…",
+    "updateNow": "Update now"
   },
   "drilldown": {
     "goBack": "Go back",
@@ -5082,7 +5106,8 @@
     "viewResourceAria": "View {{kind}} resources"
   },
   "deployments": {
-    "errorLoading": "Error loading deployment data"
+    "errorLoading": "Error loading deployment data",
+    "allHealthy": "All healthy"
   },
   "workloads": {
     "title": "Workloads",
@@ -5443,9 +5468,5 @@
     "updating": "Updating",
     "loadingNamespaces": "Loading namespaces…",
     "updatingEllipsis": "Updating..."
-  },
-  "updates": {
-    "loadingRecentPullRequests": "Loading recent pull requests…",
-    "updateNow": "Update now"
   }
 }
