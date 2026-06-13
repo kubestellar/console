@@ -23,7 +23,7 @@ func TestListFeatureRequests_Unauthorized(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "should reject unauthenticated request")
 }
 
@@ -38,14 +38,14 @@ func TestListFeatureRequests_InvalidPageParams(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	// Invalid limit should be handled gracefully or rejected
 	assert.True(t, resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusBadRequest)
 }
 
 func TestListFeatureRequests_FiltersUntriagedRequests(t *testing.T) {
 	userID := uuid.New()
-	
+
 	mockStore := &test.MockStore{}
 	requests := []models.FeatureRequest{
 		{ID: uuid.New(), Title: "Triaged", Status: models.RequestStatusTriageAccepted},
@@ -55,7 +55,7 @@ func TestListFeatureRequests_FiltersUntriagedRequests(t *testing.T) {
 	}
 	mockStore.On("GetUserFeatureRequests", userID, 0, 0).Return(requests, nil)
 	mockStore.On("CountUserPendingFeatureRequests", userID).Return(2, nil)
-	
+
 	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
 	app.Get("/api/feedback/requests", handler.ListFeatureRequests)
 
@@ -65,7 +65,7 @@ func TestListFeatureRequests_FiltersUntriagedRequests(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	// Response should filter out Open and NeedsTriage statuses
 }
@@ -81,16 +81,18 @@ func TestListAllFeatureRequests_Unauthorized(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "should reject unauthenticated request")
 }
 
 func TestListAllFeatureRequests_CountOnly(t *testing.T) {
 	userID := uuid.New()
-	
+
 	mockStore := &test.MockStore{}
+	mockStore.On("GetUser", userID).Return(nil, nil)
+	mockStore.On("GetUserFeatureRequests", userID, 0, 0).Return([]models.FeatureRequest{}, nil)
 	// Count-only mode should not require full request data
-	
+
 	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
 	app.Get("/api/feedback/requests/all", handler.ListAllFeatureRequests)
 
@@ -101,7 +103,7 @@ func TestListAllFeatureRequests_CountOnly(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	// Accept either success or service unavailable (no GitHub config)
 	assert.True(t, resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusServiceUnavailable,
 		"should return OK or 503 for count_only mode")
@@ -125,7 +127,7 @@ func TestParsePageParams_Defaults(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	// Should use default values (typically 0 for both)
 	assert.True(t, limit >= 0 && offset >= 0, "should return non-negative values")

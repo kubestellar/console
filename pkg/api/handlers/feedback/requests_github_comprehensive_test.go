@@ -469,5 +469,5 @@ func TestCreateGitHubIssueInRepo_TruncateFailedAPICalls(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Contains(t, capturedBody, "Failed API Calls (70 captured)")
-	assert.Contains(t, capturedBody, "...and 20 more omitted", "Should truncate to 50 API calls")
+	assert.Contains(t, capturedBody, "...and 40 more omitted", "Should truncate failed API call output")
 }

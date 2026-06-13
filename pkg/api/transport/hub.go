@@ -76,6 +76,19 @@ type Client struct {
 	writeMu sync.Mutex
 }
 
+// NewClient constructs a Hub client with the supplied connection metadata.
+func NewClient(conn *websocket.Conn, netConn net.Conn, userID uuid.UUID, send chan []byte) *Client {
+	if send == nil {
+		send = make(chan []byte, 256)
+	}
+	return &Client{
+		conn:    conn,
+		netConn: netConn,
+		userID:  userID,
+		send:    send,
+	}
+}
+
 // closeConn closes the underlying network connection exactly once (#6584).
 // Safe to call from any goroutine (DisconnectUser, writer, reader defer).
 //
@@ -99,6 +112,11 @@ func (cl *Client) closeConn() {
 		}
 		cl.writeMu.Unlock()
 	})
+}
+
+// Close closes the underlying client connection exactly once.
+func (cl *Client) Close() {
+	cl.closeConn()
 }
 
 // Hub maintains active WebSocket connections
@@ -297,6 +315,40 @@ func (h *Hub) Close() {
 		}
 		h.mu.Unlock()
 	})
+}
+
+// Register queues a client registration request unless the hub has already been
+// shut down. It returns true when the client was queued successfully.
+func (h *Hub) Register(client *Client) bool {
+	select {
+	case h.register <- client:
+		return true
+	case <-h.done:
+		return false
+	}
+}
+
+// Unregister queues a client removal request unless the hub has already been
+// shut down. It returns true when the client was queued successfully.
+func (h *Hub) Unregister(client *Client) bool {
+	select {
+	case h.unregister <- client:
+		return true
+	case <-h.done:
+		return false
+	}
+}
+
+// IncrementActiveConnections increments the optimistic in-flight connection
+// counter used for capacity checks.
+func (h *Hub) IncrementActiveConnections() int64 {
+	return atomic.AddInt64(&h.activeConns, 1)
+}
+
+// DecrementActiveConnections decrements the optimistic in-flight connection
+// counter used for capacity checks.
+func (h *Hub) DecrementActiveConnections() int64 {
+	return atomic.AddInt64(&h.activeConns, -1)
 }
 
 // Broadcast sends a message to all clients of a user.
@@ -587,9 +639,9 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 
 	// Check connection limit using atomic counter to prevent TOCTOU race (#11877).
 	// Increment first, then check — if over limit, decrement and reject.
-	currentConns := atomic.AddInt64(&h.activeConns, 1)
+	currentConns := h.IncrementActiveConnections()
 	if int(currentConns) > h.maxConnections {
-		atomic.AddInt64(&h.activeConns, -1)
+		h.DecrementActiveConnections()
 		slog.Warn("[WebSocket] SECURITY: rejected connection - limit reached",
 			"user", userID, "current", currentConns-1, "limit", h.maxConnections)
 		if err := conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "server at capacity"}}); err != nil {
@@ -611,22 +663,15 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 		return nil
 	})
 
-	client := &Client{
-		conn:    conn,
-		netConn: conn.NetConn(), // #9736 — capture before releaseConn can nil the wrapper
-		userID:  userID,
-		send:    make(chan []byte, 256),
-	}
+	client := NewClient(conn, conn.NetConn(), userID, make(chan []byte, 256))
 
 	// Register with the hub, but abort if the hub has already been shut down
 	// (e.g. during server shutdown or a race between Close and a new
 	// connection). A plain blocking send would leak this goroutine forever
 	// because the hub Run loop has exited and is no longer draining the
 	// register channel (#6479).
-	select {
-	case h.register <- client:
-	case <-h.done:
-		atomic.AddInt64(&h.activeConns, -1) // #11877 — undo pre-increment
+	if !h.Register(client) {
+		h.DecrementActiveConnections() // #11877 — undo pre-increment
 		client.closeConn()
 		return
 	}
@@ -684,10 +729,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	defer func() {
 		// Best-effort unregister; abort if the hub has been shut down so we
 		// don't leak this goroutine waiting for a dead receiver (#6479).
-		select {
-		case h.unregister <- client:
-		case <-h.done:
-		}
+		_ = h.Unregister(client)
 		// #6584 — close exactly once across all goroutines.
 		client.closeConn()
 

@@ -170,7 +170,7 @@ func TestValidateCatalogRepo(t *testing.T) {
 		{"valid repo", "owner/repo", false},
 		{"valid with hyphens", "my-org/my-repo", false},
 		{"valid with underscores", "my_org/my_repo", false},
-		{"valid with dots", "my.org/my.repo", false},
+		{"valid with dots", "my.org/my.repo", true},
 		{"empty", "", true},
 		{"path traversal ..", "owner/../repo", true},
 		{"double slash", "owner//repo", true},

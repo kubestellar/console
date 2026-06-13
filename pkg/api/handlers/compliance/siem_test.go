@@ -32,6 +32,10 @@ import (
 const testWebhookSendTimeout = 5 * time.Second
 
 func TestWebhookDestination_SendPOSTsExpectedPayload(t *testing.T) {
+	origValidator := audit.DestinationURLValidatorForTest()
+	audit.SetDestinationURLValidatorForTest(func(string) error { return nil })
+	t.Cleanup(func() { audit.SetDestinationURLValidatorForTest(origValidator) })
+
 	var (
 		gotMethod      atomic.Value // string
 		gotContentType atomic.Value // string
@@ -85,6 +89,10 @@ func TestWebhookDestination_SendPOSTsExpectedPayload(t *testing.T) {
 }
 
 func TestWebhookDestination_SendSkipsEmptyBatch(t *testing.T) {
+	origValidator := audit.DestinationURLValidatorForTest()
+	audit.SetDestinationURLValidatorForTest(func(string) error { return nil })
+	t.Cleanup(func() { audit.SetDestinationURLValidatorForTest(origValidator) })
+
 	var called atomic.Bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called.Store(true)
@@ -98,6 +106,10 @@ func TestWebhookDestination_SendSkipsEmptyBatch(t *testing.T) {
 }
 
 func TestWebhookDestination_SendReturnsErrorOnNon2xx(t *testing.T) {
+	origValidator := audit.DestinationURLValidatorForTest()
+	audit.SetDestinationURLValidatorForTest(func(string) error { return nil })
+	t.Cleanup(func() { audit.SetDestinationURLValidatorForTest(origValidator) })
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadGateway)
 	}))

@@ -234,6 +234,7 @@ func TestListServiceExportsMock(t *testing.T) {
 	})
 
 	t.Run("Empty result set returns 200", func(t *testing.T) {
+		env := setupTestEnv(t)
 		mock := &mockMCSClient{}
 		handler := &MCSHandlers{k8sClient: mock, hub: env.Hub}
 		env.App.Get("/api/mcs/exports", handler.ListServiceExports)

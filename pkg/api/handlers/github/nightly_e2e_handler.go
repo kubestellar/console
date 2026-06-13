@@ -6,6 +6,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -197,8 +199,35 @@ func (h *NightlyE2EHandler) GetRuns(c *fiber.Ctx) error {
 // Query params: repo (e.g. "llm-d/llm-d"), runId (numeric).
 // Returns JSON with job names and their truncated log output.
 func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
+	if strings.EqualFold(strings.TrimSpace(c.Get("X-Demo-Mode")), "true") {
+		return c.JSON(RunLogsResponse{
+			Jobs: []JobLog{
+				{Name: "demo-job", Conclusion: "success", Log: "Demo mode run logs"},
+			},
+		})
+	}
+
 	repo := c.Query("repo")
+	if repo == "" {
+		owner := strings.TrimSpace(c.Params("owner"))
+		repoName := strings.TrimSpace(c.Params("repo"))
+		if owner != "" && repoName != "" {
+			repo = owner + "/" + repoName
+		}
+	}
 	runID := c.QueryInt("runId", 0)
+	if runID == 0 {
+		rawRunID := strings.TrimSpace(c.Params("runId"))
+		if rawRunID != "" {
+			parsedRunID, err := strconv.Atoi(rawRunID)
+			if err != nil {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "invalid runId",
+				})
+			}
+			runID = parsedRunID
+		}
+	}
 	if repo == "" || runID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "repo and runId query params are required",

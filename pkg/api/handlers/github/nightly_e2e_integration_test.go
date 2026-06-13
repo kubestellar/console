@@ -169,7 +169,7 @@ func TestNightlyE2EHandler_GetRunLogs_Success(t *testing.T) {
 func TestNightlyE2EHandler_GetRunLogs_InvalidRunId(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
-	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/owner/repo/invalid", nil)
+	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/llm-d/llm-d/invalid", nil)
 	resp, _ := app.Test(req, 5000)
 
 	if resp == nil {

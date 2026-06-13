@@ -1,0 +1,9 @@
+{
+  "name": "install-cert-manager",
+  "title": "Install cert-manager",
+  "qualityScore": 82,
+  "qualityPass": true,
+  "cncfProjects": [
+    "cert-manager"
+  ]
+}

@@ -16,14 +16,14 @@ import (
 
 func TestCreateGitHubIssueInRepo_IssueBodyFormatting(t *testing.T) {
 	tests := []struct {
-		name            string
-		request         *models.FeatureRequest
-		user            *models.User
-		screenshots     []string
-		consoleErrors   []models.ConsoleError
-		failedApiCalls  []models.FailedApiCall
-		diagnostics     *models.DiagnosticInfo
-		expectedInBody  []string
+		name              string
+		request           *models.FeatureRequest
+		user              *models.User
+		screenshots       []string
+		consoleErrors     []models.ConsoleError
+		failedApiCalls    []models.FailedApiCall
+		diagnostics       *models.DiagnosticInfo
+		expectedInBody    []string
 		notExpectedInBody []string
 	}{
 		{
@@ -44,7 +44,7 @@ func TestCreateGitHubIssueInRepo_IssueBodyFormatting(t *testing.T) {
 			diagnostics:    nil,
 			expectedInBody: []string{
 				"User Request",
-				"Type:** Bug",
+				"Type:** bug",
 				"Target:** Console Application",
 				"Submitted by:** @testuser",
 				"Console Request ID:**",
@@ -87,7 +87,7 @@ func TestCreateGitHubIssueInRepo_IssueBodyFormatting(t *testing.T) {
 			failedApiCalls: nil,
 			diagnostics:    nil,
 			expectedInBody: []string{
-				"Type:** Feature",
+				"Type:** feature",
 				"Browser Console Errors (2 captured)",
 				"`[2024-01-01T10:00:00Z]` **error** (network): Failed to load resource",
 				"`[2024-01-01T10:00:01Z]` **warn**: Deprecated API usage",
@@ -166,22 +166,22 @@ func TestCreateGitHubIssueInRepo_IssueBodyFormatting(t *testing.T) {
 				},
 			},
 			diagnostics: &models.DiagnosticInfo{
-				AgentVersion:           "v1.2.3",
-				CommitSHA:              "abc123",
-				BuildTime:              "2024-01-01",
-				GoVersion:              "go1.21.0",
-				AgentOS:                "linux",
-				AgentArch:              "amd64",
-				InstallMethod:          "binary",
-				ConsoleDeployMode:      "standalone",
-				ActiveAgentBackend:     "local",
-				BackendWSStatus:        "connected",
-				Clusters:               3,
-				ClusterContext:         "my-cluster",
-				AgentConnectionStatus:  "healthy",
+				AgentVersion:            "v1.2.3",
+				CommitSHA:               "abc123",
+				BuildTime:               "2024-01-01",
+				GoVersion:               "go1.21.0",
+				AgentOS:                 "linux",
+				AgentArch:               "amd64",
+				InstallMethod:           "binary",
+				ConsoleDeployMode:       "standalone",
+				ActiveAgentBackend:      "local",
+				BackendWSStatus:         "connected",
+				Clusters:                3,
+				ClusterContext:          "my-cluster",
+				AgentConnectionStatus:   "healthy",
 				AgentConnectionFailures: 0,
-				BrowserUA:              "Mozilla/5.0",
-				BrowserPlatform:        "Linux x86_64",
+				BrowserUA:               "Mozilla/5.0",
+				BrowserPlatform:         "Linux x86_64",
 			},
 			expectedInBody: []string{
 				"Browser Console Errors (1 captured)",
@@ -427,10 +427,10 @@ func TestCreateGitHubIssueInRepo_ScreenshotValidation_Comprehensive(t *testing.T
 	})}
 
 	screenshots := []string{
-		"data:image/png;base64,iVBORw0KGgo=",  // valid
-		"invalid-data-uri",                     // invalid
-		"data:image/jpeg;base64,/9j/4AAQ",     // valid
-		"no-comma-separator",                   // invalid
+		"data:image/png;base64,iVBORw0KGgo=", // valid
+		"invalid-data-uri",                   // invalid
+		"data:image/jpeg;base64,/9j/4AAQ",    // valid
+		"no-comma-separator",                 // invalid
 	}
 
 	request := &models.FeatureRequest{

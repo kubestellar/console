@@ -116,13 +116,17 @@ func isLabelPermissionError(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := err.Error()
+	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "403") && strings.Contains(msg, "label")
 }
 
 func isInsufficientIssuePermissionError(respBody string) bool {
 	msg := strings.ToLower(respBody)
+	if strings.Contains(msg, "\"resource\":\"label\"") || (strings.Contains(msg, "label") && strings.Contains(msg, "field")) {
+		return false
+	}
 	return strings.Contains(msg, "resource not accessible by personal access token") ||
+		strings.Contains(msg, "resource not accessible by integration") ||
 		(strings.Contains(msg, "insufficient") && strings.Contains(msg, "permission"))
 }
 

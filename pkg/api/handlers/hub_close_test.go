@@ -20,7 +20,8 @@ func TestHubBroadcastAfterClose(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		// This call should return promptly via the `case <-h.done` arm.
+		// This call should return promptly because Close makes Broadcast
+		// non-blocking for a shut down hub.
 		h.Broadcast(uuid.New(), Message{Type: "test", Data: "payload"})
 		close(done)
 	}()
@@ -41,16 +42,13 @@ func TestHubRegisterChannelsAbortOnClose(t *testing.T) {
 	h.Close()
 
 	// Simulate the register send from HandleConnection.
-	client := &Client{userID: uuid.Nil, send: make(chan []byte, 1)}
+	client := NewClient(nil, nil, uuid.Nil, make(chan []byte, 1))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		select {
-		case h.register <- client:
-		case <-h.done:
-		}
+		_ = h.Register(client)
 	}()
 
 	waitCh := make(chan struct{})

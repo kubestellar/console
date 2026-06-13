@@ -51,10 +51,9 @@ func TestSolverStorageAdapter(t *testing.T) {
 		mockStore := new(test.MockStore)
 		handler := &Handler{store: mockStore}
 
-		// This tests that the type assertion pattern works
+		// MockStore now satisfies solveFullStore, so the assertion must succeed.
 		_, ok := handler.store.(solveFullStore)
-		// MockStore doesn't implement solveFullStore, so this should be false
-		assert.False(t, ok)
+		assert.True(t, ok)
 	})
 }
 

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -60,11 +61,17 @@ func TestGetPreferences(t *testing.T) {
 				err:   tt.storeErr,
 			}
 			handler := &Handler{store: mockStore}
+			userUUID := uuid.New()
+			if tt.userID != "" {
+				if mockStore.prefs != nil {
+					mockStore.prefs.UserID = userUUID.String()
+				}
+			}
 
 			app := fiber.New()
 			app.Use(func(c *fiber.Ctx) error {
 				if tt.userID != "" {
-					c.Locals("stellarUserID", tt.userID)
+					c.Locals("userID", userUUID)
 				}
 				return c.Next()
 			})
@@ -92,14 +99,14 @@ func TestUpdatePreferences(t *testing.T) {
 			userID: "user-123",
 			body: putStellarPreferencesRequest{
 				DefaultProvider: "claude",
-				ExecutionMode:   "manual",
+				ExecutionMode:   "hybrid",
 				Timezone:        "UTC",
 				ProactiveMode:   true,
 				PinnedClusters:  []string{"cluster-1", "cluster-2"},
 			},
 			wantStatusCode: fiber.StatusOK,
 			wantProvider:   "claude",
-			wantMode:       "manual",
+			wantMode:       "hybrid",
 		},
 		{
 			name:   "empty values use defaults",
@@ -135,11 +142,12 @@ func TestUpdatePreferences(t *testing.T) {
 				prefs: &store.StellarPreferences{},
 			}
 			handler := &Handler{store: mockStore}
+			userUUID := uuid.New()
 
 			app := fiber.New()
 			app.Use(func(c *fiber.Ctx) error {
 				if tt.userID != "" {
-					c.Locals("stellarUserID", tt.userID)
+					c.Locals("userID", userUUID)
 				}
 				return c.Next()
 			})
@@ -165,10 +173,11 @@ func TestUpdatePreferences(t *testing.T) {
 func TestUpdatePreferences_InvalidJSON(t *testing.T) {
 	mockStore := &mockStellarPrefsStore{}
 	handler := &Handler{store: mockStore}
+	userUUID := uuid.New()
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
-		c.Locals("stellarUserID", "user-123")
+		c.Locals("userID", userUUID)
 		return c.Next()
 	})
 	app.Put("/api/stellar/preferences", handler.UpdatePreferences)

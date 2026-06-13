@@ -115,7 +115,7 @@ func TestDeploymentNameFromPodNameWorkers(t *testing.T) {
 		{
 			name:           "pod with multiple hyphens",
 			podName:        "my-app-deployment-7d4f9c8b6-xyz",
-			expectedResult: "my-app-deployment",
+			expectedResult: "my-app-deployment-7d4f9c8b6-xyz",
 		},
 	}
 

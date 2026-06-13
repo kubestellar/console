@@ -300,6 +300,7 @@ func TestListGatewaysMock(t *testing.T) {
 	})
 
 	t.Run("Empty result set returns 200", func(t *testing.T) {
+		env := setupTestEnv(t)
 		mock := &mockGatewayClient{}
 		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
 		env.App.Get("/api/gateway/gateways", handler.ListGateways)

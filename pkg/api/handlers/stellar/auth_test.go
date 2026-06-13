@@ -16,17 +16,19 @@ import (
 func TestRequireUser(t *testing.T) {
 	tests := []struct {
 		name      string
-		userID    string
+		userID    uuid.UUID
+		wantUser  string
 		wantError bool
 	}{
 		{
 			name:      "valid user ID",
-			userID:    "user-123",
+			userID:    uuid.MustParse("00000000-0000-0000-0000-000000000123"),
+			wantUser:  "00000000-0000-0000-0000-000000000123",
 			wantError: false,
 		},
 		{
 			name:      "missing user ID",
-			userID:    "",
+			userID:    uuid.Nil,
 			wantError: true,
 		},
 	}
@@ -38,8 +40,8 @@ func TestRequireUser(t *testing.T) {
 
 			app := fiber.New()
 			app.Get("/test", func(c *fiber.Ctx) error {
-				if tt.userID != "" {
-					c.Locals("stellarUserID", tt.userID)
+				if tt.userID != uuid.Nil {
+					c.Locals("userID", tt.userID)
 				}
 				userID, err := handler.requireUser(c)
 				if tt.wantError {
@@ -47,7 +49,7 @@ func TestRequireUser(t *testing.T) {
 					return err
 				}
 				require.NoError(t, err)
-				assert.Equal(t, tt.userID, userID)
+				assert.Equal(t, tt.wantUser, userID)
 				return c.SendStatus(fiber.StatusOK)
 			})
 
@@ -79,26 +81,26 @@ func TestIsAdminUser(t *testing.T) {
 	userID := uuid.New()
 
 	tests := []struct {
-		name     string
-		userID   uuid.UUID
-		userRole models.UserRole
+		name      string
+		userID    uuid.UUID
+		userRole  models.UserRole
 		wantAdmin bool
 	}{
 		{
-			name:     "admin user",
-			userID:   adminID,
-			userRole: models.UserRoleAdmin,
+			name:      "admin user",
+			userID:    adminID,
+			userRole:  models.UserRoleAdmin,
 			wantAdmin: true,
 		},
 		{
-			name:     "regular user",
-			userID:   userID,
-			userRole: models.UserRoleViewer,
+			name:      "regular user",
+			userID:    userID,
+			userRole:  models.UserRoleViewer,
 			wantAdmin: false,
 		},
 		{
-			name:     "nil user ID",
-			userID:   uuid.Nil,
+			name:      "nil user ID",
+			userID:    uuid.Nil,
 			wantAdmin: false,
 		},
 	}

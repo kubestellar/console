@@ -116,6 +116,16 @@ const webhookPayloadVersion = 1
 // httptest servers. Production code always uses ssrf.ValidateURL.
 var destinationURLValidator = ssrf.ValidateURL
 
+// DestinationURLValidatorForTest returns the current destination URL validator.
+func DestinationURLValidatorForTest() func(string) error {
+	return destinationURLValidator
+}
+
+// SetDestinationURLValidatorForTest overrides destinationURLValidator for tests.
+func SetDestinationURLValidatorForTest(validator func(string) error) {
+	destinationURLValidator = validator
+}
+
 // WebhookDestination POSTs batches of audit events as JSON to a configurable
 // URL. It is the first concrete adapter for #9643; see ErrDestinationUnsupported
 // for the other providers.

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "count": 1,
+  "missions": [
+    {
+      "path": "fixes/cncf-install/install-cert-manager.json",
+      "title": "Install cert-manager",
+      "qualityScore": 82,
+      "qualityPass": true,
+      "cncfProjects": [
+        "cert-manager"
+      ]
+    }
+  ]
+}

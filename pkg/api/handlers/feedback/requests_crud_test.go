@@ -1,7 +1,6 @@
 package feedback
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -26,7 +25,7 @@ func TestCloseRequest_Unauthorized(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "should reject unauthenticated request")
 }
 
@@ -41,17 +40,17 @@ func TestCloseRequest_InvalidRequestID(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "should reject invalid request ID")
 }
 
 func TestCloseRequest_NotFound(t *testing.T) {
 	userID := uuid.New()
 	requestID := uuid.New()
-	
+
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequest", context.Background(), requestID).Return(nil, nil)
-	
+	mockStore.On("GetFeatureRequest", requestID).Return(nil, nil)
+
 	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
 
@@ -61,7 +60,7 @@ func TestCloseRequest_NotFound(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode, "should return 404 for non-existent request")
 }
 
@@ -69,13 +68,13 @@ func TestCloseRequest_AccessDenied(t *testing.T) {
 	userID := uuid.New()
 	requestID := uuid.New()
 	otherUserID := uuid.New()
-	
+
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequest", context.Background(), requestID).Return(&models.FeatureRequest{
+	mockStore.On("GetFeatureRequest", requestID).Return(&models.FeatureRequest{
 		ID:     requestID,
 		UserID: otherUserID,
 	}, nil)
-	
+
 	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
 
@@ -85,21 +84,21 @@ func TestCloseRequest_AccessDenied(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode, "should deny access to other user's request")
 }
 
 func TestCloseRequest_StoreError(t *testing.T) {
 	userID := uuid.New()
 	requestID := uuid.New()
-	
+
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequest", context.Background(), requestID).Return(&models.FeatureRequest{
+	mockStore.On("GetFeatureRequest", requestID).Return(&models.FeatureRequest{
 		ID:     requestID,
 		UserID: userID,
 	}, nil)
-	mockStore.On("CloseFeatureRequest", context.Background(), requestID, true).Return(errors.New("database error"))
-	
+	mockStore.On("CloseFeatureRequest", requestID, true).Return(errors.New("database error"))
+
 	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
 
@@ -109,7 +108,7 @@ func TestCloseRequest_StoreError(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode, "should return 500 on store error")
 }
 
@@ -126,7 +125,7 @@ func TestCreateFeatureRequest_Unauthorized(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "should reject unauthenticated request")
 }
 
@@ -142,6 +141,6 @@ func TestCreateFeatureRequest_InvalidJSON(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "should reject invalid JSON")
 }

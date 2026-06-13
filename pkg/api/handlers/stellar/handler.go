@@ -355,8 +355,10 @@ func stellarSSEAudienceFromUserID(userID string) (string, bool, bool) {
 func NewHandler(s Store, k8sClient *k8s.MultiClusterClient, opts ...HandlerOption) *Handler {
 	h := &Handler{
 		store:            s,
-		k8sClient:        k8sClient,
 		providerRegistry: providers.NewRegistry(),
+	}
+	if k8sClient != nil {
+		h.k8sClient = k8sClient
 	}
 	for _, opt := range opts {
 		opt(h)

@@ -130,8 +130,8 @@ func TestHandleDeploymentStatus_MissingDeploymentRef(t *testing.T) {
 
 func TestFindFeatureRequest_NotFound(t *testing.T) {
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).Return(nil, nil)
-	
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(nil, nil)
+
 	handler := &FeedbackHandler{store: mockStore}
 	request := handler.findFeatureRequest(context.Background(), 123)
 	assert.Nil(t, request, "should return nil when request not found")
@@ -139,8 +139,8 @@ func TestFindFeatureRequest_NotFound(t *testing.T) {
 
 func TestFindFeatureRequest_StoreError(t *testing.T) {
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).Return(nil, errors.New("database error"))
-	
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(nil, errors.New("database error"))
+
 	handler := &FeedbackHandler{store: mockStore}
 	request := handler.findFeatureRequest(context.Background(), 123)
 	assert.Nil(t, request, "should return nil when store returns error")
@@ -153,8 +153,8 @@ func TestFindFeatureRequest_Success(t *testing.T) {
 		Title:             "Test Request",
 		GitHubIssueNumber: intPtr(123),
 	}
-	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).Return(expectedRequest, nil)
-	
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(expectedRequest, nil)
+
 	handler := &FeedbackHandler{store: mockStore}
 	request := handler.findFeatureRequest(context.Background(), 123)
 	assert.NotNil(t, request, "should return request when found")

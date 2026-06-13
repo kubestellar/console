@@ -6,10 +6,8 @@ import (
 	"net"
 	"os"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
-
 
 	fasthttpws "github.com/fasthttp/websocket"
 	"github.com/gofiber/contrib/websocket"
@@ -61,27 +59,24 @@ func TestHubRegistration(t *testing.T) {
 	defer h.Close()
 
 	userID := uuid.New()
-	client := &Client{
-		userID: userID,
-		send:   make(chan []byte, 256),
-	}
+	client := NewClient(nil, nil, userID, make(chan []byte, 256))
 
 	// Simulate what HandleConnection does: pre-increment activeConns before registering
-	atomic.AddInt64(&h.activeConns, 1)
-	h.register <- client
+	h.IncrementActiveConnections()
+	require.True(t, h.Register(client))
 	time.Sleep(50 * time.Millisecond)
 
 	assert.Equal(t, 1, h.GetActiveUsersCount())
 	assert.Equal(t, 1, h.GetTotalConnectionsCount())
 
-	h.unregister <- client
+	require.True(t, h.Unregister(client))
 	time.Sleep(50 * time.Millisecond)
 
 	assert.Equal(t, 0, h.GetActiveUsersCount())
 	assert.Equal(t, 0, h.GetTotalConnectionsCount())
 }
 
-// 2. Non-blocking Broadcasts: Verify that h.Broadcast does not block the entire server 
+// 2. Non-blocking Broadcasts: Verify that h.Broadcast does not block the entire server
 func TestHubNonBlockingBroadcast(t *testing.T) {
 	// 2a. Test h.Broadcast returning immediately when h.broadcast is full
 	h := NewHub()
@@ -133,16 +128,11 @@ func TestHubSlowClientDisconnect(t *testing.T) {
 
 	userID := uuid.New()
 
-	client := &Client{
-		conn:    serverConn,
-		netConn: serverNetConn,
-		userID:  userID,
-		send:    make(chan []byte, 1), // small buffer
-	}
+	client := NewClient(serverConn, serverNetConn, userID, make(chan []byte, 1)) // small buffer
 
 	// Simulate what HandleConnection does: pre-increment activeConns before registering
-	atomic.AddInt64(&h.activeConns, 1)
-	h.register <- client
+	h.IncrementActiveConnections()
+	require.True(t, h.Register(client))
 	time.Sleep(50 * time.Millisecond)
 
 	// Fill the client buffer (capacity 1) and cause overflow
@@ -175,19 +165,14 @@ func TestClientThreadSafeClosing(t *testing.T) {
 
 	connReady.Wait()
 
-	client := &Client{
-		conn:    serverConn,
-		netConn: serverNetConn,
-		userID:  uuid.New(),
-		send:    make(chan []byte, 256),
-	}
+	client := NewClient(serverConn, serverNetConn, uuid.New(), make(chan []byte, 256))
 
 	var wg sync.WaitGroup
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			client.closeConn()
+			client.Close()
 		}()
 	}
 
@@ -260,7 +245,7 @@ func TestSessionLimits(t *testing.T) {
 		// So we do a non-blocking short read to see if an error follows.
 		conn.UnderlyingConn().SetReadDeadline(time.Now().Add(50 * time.Millisecond))
 		_, msg2, err2 := conn.ReadMessage()
-		conn.UnderlyingConn().SetReadDeadline(time.Time{}) // Reset 
+		conn.UnderlyingConn().SetReadDeadline(time.Time{}) // Reset
 		if err2 == nil {
 			var resp2 Message
 			json.Unmarshal(msg2, &resp2)
@@ -268,7 +253,7 @@ func TestSessionLimits(t *testing.T) {
 				return conn, fmt.Errorf("server error: %v", resp2.Data)
 			}
 		}
-		
+
 		return conn, nil
 	}
 

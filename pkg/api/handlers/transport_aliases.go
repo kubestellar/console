@@ -11,3 +11,6 @@ type Client = transport.Client
 
 // NewHub delegates to transport.NewHub.
 var NewHub = transport.NewHub
+
+// NewClient delegates to transport.NewClient.
+var NewClient = transport.NewClient

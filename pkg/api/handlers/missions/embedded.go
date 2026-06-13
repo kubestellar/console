@@ -25,7 +25,7 @@ func (h *MissionsHandler) embeddedMissionFile(repoPath string) (*githubFetchResu
 	return &githubFetchResult{
 		Body:        body,
 		StatusCode:  http.StatusOK,
-		ContentType: "text/plain",
+		ContentType: http.DetectContentType(body),
 		CacheStatus: cacheStatusEmbedded,
 	}, true
 }
