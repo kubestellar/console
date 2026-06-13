@@ -67,14 +67,14 @@ func TestHubRegistration(t *testing.T) {
 	}
 
 	// Simulate what HandleConnection does: pre-increment activeConns before registering
-	atomic.AddInt64(&h.activeConns, 1)
-	h.register <- client
+	// Pre-increment handled by TestRegisterClient
+	h.TestRegisterClient(client)
 	time.Sleep(50 * time.Millisecond)
 
 	assert.Equal(t, 1, h.GetActiveUsersCount())
 	assert.Equal(t, 1, h.GetTotalConnectionsCount())
 
-	h.unregister <- client
+	h.TestUnregisterClient(client)
 	time.Sleep(50 * time.Millisecond)
 
 	assert.Equal(t, 0, h.GetActiveUsersCount())
@@ -141,8 +141,8 @@ func TestHubSlowClientDisconnect(t *testing.T) {
 	}
 
 	// Simulate what HandleConnection does: pre-increment activeConns before registering
-	atomic.AddInt64(&h.activeConns, 1)
-	h.register <- client
+	// Pre-increment handled by TestRegisterClient
+	h.TestRegisterClient(client)
 	time.Sleep(50 * time.Millisecond)
 
 	// Fill the client buffer (capacity 1) and cause overflow

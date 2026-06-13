@@ -39,10 +39,10 @@ const minikubeStatusTimeout = 5 * time.Second
 
 var (
 	// execCommand is already declared in kubectl.go
-	lookPath                  = exec.LookPath
-	statFile                  = os.Stat
+	LookPath                  = exec.LookPath
+	StatFile                  = os.Stat
 	userHomeDir               = os.UserHomeDir
-	standardToolCandidates    = defaultStandardToolCandidates
+	StandardToolCandidates    = defaultStandardToolCandidates
 	k3dVersionRegexp          = regexp.MustCompile(`v([\d.]+)`)
 	minikubeProfileNameRegexp = regexp.MustCompile(`"Name":\s*"([^"]+)"`)
 	vclusterVersionRegexp     = regexp.MustCompile(`v?([\d.]+)`)

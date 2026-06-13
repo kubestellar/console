@@ -76,7 +76,7 @@ func (m *LocalClusterManager) CreateVCluster(name, namespace string) error {
 	// Phase 1: Validating
 	m.broadcastProgress("vcluster", name, "validating", "Checking vcluster CLI...", progressValidating)
 
-	if _, err := lookPath("vcluster"); err != nil {
+	if _, err := LookPath("vcluster"); err != nil {
 		return fmt.Errorf("vcluster CLI is not installed")
 	}
 

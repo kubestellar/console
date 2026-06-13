@@ -48,8 +48,8 @@ func TestHubRegisterChannelsAbortOnClose(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		select {
-		case h.register <- client:
-		case <-h.done:
+		case h.TestGetRegisterChan() <- client:
+		case <-h.TestGetDoneChan():
 		}
 	}()
 

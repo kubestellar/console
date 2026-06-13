@@ -11,15 +11,15 @@ import (
 )
 
 func TestLocalClusterManager(t *testing.T) {
-	// 1. Mock lookPath and execCommand
-	oldLookPath := lookPath
+	// 1. Mock LookPath and execCommand
+	oldLookPath := LookPath
 	oldExecCommand := execCommand
 	defer func() {
-		lookPath = oldLookPath
+		LookPath = oldLookPath
 		execCommand = oldExecCommand
 	}()
 
-	lookPath = func(file string) (string, error) {
+	LookPath = func(file string) (string, error) {
 		return "/usr/local/bin/" + file, nil
 	}
 
@@ -144,14 +144,14 @@ func TestLocalClusterManager_CreateCluster_ErrorContainsDetails(t *testing.T) {
 }
 
 func TestCreateVCluster_ConnectsAfterCreate(t *testing.T) {
-	oldLookPath := lookPath
+	oldLookPath := LookPath
 	oldExecCommand := execCommand
 	defer func() {
-		lookPath = oldLookPath
+		LookPath = oldLookPath
 		execCommand = oldExecCommand
 	}()
 
-	lookPath = func(file string) (string, error) {
+	LookPath = func(file string) (string, error) {
 		if file == "vcluster" {
 			return "/usr/local/bin/vcluster", nil
 		}
@@ -193,14 +193,14 @@ func TestCreateVCluster_ConnectsAfterCreate(t *testing.T) {
 }
 
 func TestCreateVCluster_ReturnsConnectFailure(t *testing.T) {
-	oldLookPath := lookPath
+	oldLookPath := LookPath
 	oldExecCommand := execCommand
 	defer func() {
-		lookPath = oldLookPath
+		LookPath = oldLookPath
 		execCommand = oldExecCommand
 	}()
 
-	lookPath = func(file string) (string, error) {
+	LookPath = func(file string) (string, error) {
 		if file == "vcluster" {
 			return "/usr/local/bin/vcluster", nil
 		}
@@ -349,22 +349,22 @@ func TestDisconnectVCluster_DoesNotUnsetWhenDifferentContextActive(t *testing.T)
 }
 
 func TestLocalClusterManager_DetectNamedTools_FallbackStandardLocation(t *testing.T) {
-	oldLookPath := lookPath
-	oldStatFile := statFile
-	oldStandardToolCandidates := standardToolCandidates
+	oldLookPath := LookPath
+	oldStatFile := StatFile
+	oldStandardToolCandidates := StandardToolCandidates
 	defer func() {
-		lookPath = oldLookPath
-		statFile = oldStatFile
-		standardToolCandidates = oldStandardToolCandidates
+		LookPath = oldLookPath
+		StatFile = oldStatFile
+		StandardToolCandidates = oldStandardToolCandidates
 	}()
 
-	lookPath = func(file string) (string, error) {
+	LookPath = func(file string) (string, error) {
 		return "", errors.New("not on PATH")
 	}
-	standardToolCandidates = func(name string) []string {
+	StandardToolCandidates = func(name string) []string {
 		return []string{"/usr/local/bin/" + name}
 	}
-	statFile = func(name string) (os.FileInfo, error) {
+	StatFile = func(name string) (os.FileInfo, error) {
 		if name == "/usr/local/bin/helm" {
 			return fakeExecutableInfo{name: "helm"}, nil
 		}

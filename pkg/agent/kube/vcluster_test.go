@@ -11,10 +11,10 @@ import (
 // --- detectVCluster ---
 
 func TestDetectVCluster_NotInstalled(t *testing.T) {
-	oldLookPath := lookPath
-	defer func() { lookPath = oldLookPath }()
+	oldLookPath := LookPath
+	defer func() { LookPath = oldLookPath }()
 
-	lookPath = func(file string) (string, error) {
+	LookPath = func(file string) (string, error) {
 		return "", exec.ErrNotFound
 	}
 
@@ -26,14 +26,14 @@ func TestDetectVCluster_NotInstalled(t *testing.T) {
 }
 
 func TestDetectVCluster_Installed(t *testing.T) {
-	oldLookPath := lookPath
+	oldLookPath := LookPath
 	oldExecCommand := execCommand
 	defer func() {
-		lookPath = oldLookPath
+		LookPath = oldLookPath
 		execCommand = oldExecCommand
 	}()
 
-	lookPath = func(file string) (string, error) {
+	LookPath = func(file string) (string, error) {
 		return "/usr/local/bin/" + file, nil
 	}
 	execCommand = func(name string, arg ...string) *exec.Cmd {
@@ -158,14 +158,14 @@ func TestListVClusters_InvalidJSON(t *testing.T) {
 // --- CreateVCluster ---
 
 func TestCreateVCluster_NoVClusterCLI(t *testing.T) {
-	oldLookPath := lookPath
+	oldLookPath := LookPath
 	oldExecCommand := execCommand
 	defer func() {
-		lookPath = oldLookPath
+		LookPath = oldLookPath
 		execCommand = oldExecCommand
 	}()
 
-	lookPath = func(file string) (string, error) {
+	LookPath = func(file string) (string, error) {
 		return "", exec.ErrNotFound
 	}
 	execCommand = func(name string, arg ...string) *exec.Cmd {
@@ -183,14 +183,14 @@ func TestCreateVCluster_NoVClusterCLI(t *testing.T) {
 }
 
 func TestCreateVCluster_CreateFails(t *testing.T) {
-	oldLookPath := lookPath
+	oldLookPath := LookPath
 	oldExecCommand := execCommand
 	defer func() {
-		lookPath = oldLookPath
+		LookPath = oldLookPath
 		execCommand = oldExecCommand
 	}()
 
-	lookPath = func(file string) (string, error) {
+	LookPath = func(file string) (string, error) {
 		return "/usr/local/bin/vcluster", nil
 	}
 	execCommand = func(name string, arg ...string) *exec.Cmd {
@@ -211,14 +211,14 @@ func TestCreateVCluster_CreateFails(t *testing.T) {
 }
 
 func TestCreateVCluster_Success(t *testing.T) {
-	oldLookPath := lookPath
+	oldLookPath := LookPath
 	oldExecCommand := execCommand
 	defer func() {
-		lookPath = oldLookPath
+		LookPath = oldLookPath
 		execCommand = oldExecCommand
 	}()
 
-	lookPath = func(file string) (string, error) {
+	LookPath = func(file string) (string, error) {
 		return "/usr/local/bin/vcluster", nil
 	}
 	execCommand = func(name string, arg ...string) *exec.Cmd {

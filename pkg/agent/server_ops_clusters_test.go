@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"testing"
 	"time"
+
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 func TestServer_HandleCloudCLIStatus(t *testing.T) {
@@ -39,15 +41,15 @@ func TestServer_HandleCloudCLIStatus(t *testing.T) {
 }
 
 func TestServer_HandleLocalClusterTools(t *testing.T) {
-	// Mock lookPath to simulate tool detection without invoking real executables.
-	oldLookPath := lookPath
-	oldStandardToolCandidates := standardToolCandidates
+	// Mock kube.LookPath to simulate tool detection without invoking real executables.
+	oldLookPath := kube.LookPath
+	oldStandardToolCandidates := kube.StandardToolCandidates
 	defer func() {
-		lookPath = oldLookPath
-		standardToolCandidates = oldStandardToolCandidates
+		kube.LookPath = oldLookPath
+		kube.StandardToolCandidates = oldStandardToolCandidates
 	}()
-	standardToolCandidates = func(string) []string { return nil }
-	lookPath = func(file string) (string, error) {
+	kube.StandardToolCandidates = func(string) []string { return nil }
+	kube.LookPath = func(file string) (string, error) {
 		if file == "kind" {
 			return "/usr/local/bin/kind", nil
 		}
@@ -109,22 +111,22 @@ func (f fakeExecutableInfoOps) IsDir() bool        { return false }
 func (f fakeExecutableInfoOps) Sys() interface{}   { return nil }
 
 func TestServer_HandleLocalClusterTools_RequestedToolsFallback(t *testing.T) {
-	oldLookPath := lookPath
-	oldStatFile := statFile
-	oldStandardToolCandidates := standardToolCandidates
+	oldLookPath := kube.LookPath
+	oldStatFile := kube.StatFile
+	oldStandardToolCandidates := kube.StandardToolCandidates
 	defer func() {
-		lookPath = oldLookPath
-		statFile = oldStatFile
-		standardToolCandidates = oldStandardToolCandidates
+		kube.LookPath = oldLookPath
+		kube.StatFile = oldStatFile
+		kube.StandardToolCandidates = oldStandardToolCandidates
 	}()
 
-	lookPath = func(file string) (string, error) {
+	kube.LookPath = func(file string) (string, error) {
 		return "", &execError{file}
 	}
-	standardToolCandidates = func(name string) []string {
+	kube.StandardToolCandidates = func(name string) []string {
 		return []string{"/usr/local/bin/" + name}
 	}
-	statFile = func(name string) (os.FileInfo, error) {
+	kube.StatFile = func(name string) (os.FileInfo, error) {
 		if name == "/usr/local/bin/helm" {
 			return fakeExecutableInfoOps{name: "helm"}, nil
 		}

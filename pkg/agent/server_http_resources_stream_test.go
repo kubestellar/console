@@ -303,10 +303,7 @@ func newTestKubectlProxy(clusterNames ...string) *kube.KubectlProxy {
 	if len(clusterNames) > 0 {
 		cfg.CurrentContext = clusterNames[0]
 	}
-	return &kube.KubectlProxy{
-		kubeconfig: "/dev/null",
-		config:     cfg,
-	}
+	return kube.NewTestKubectlProxy(cfg)
 }
 
 // mustTestK8sClient creates a MultiClusterClient for testing (no actual cluster).

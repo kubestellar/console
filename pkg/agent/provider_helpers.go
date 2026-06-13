@@ -31,9 +31,6 @@ var execCommand = exec.Command
 // execCommandContext allows mocking exec.CommandContext for testing
 var execCommandContext = exec.CommandContext
 
-// fakeExecCommandContext is a test helper for mocking exec.CommandContext
-var fakeExecCommandContext func(context.Context, string, ...string) *exec.Cmd
-
 // aiProviderHTTPClient is reused across AI provider API calls to enable
 // connection pooling and reduce per-request allocation overhead.
 var aiProviderHTTPClient = newRestrictedAIProviderHTTPClient(aiProviderHTTPTimeout)

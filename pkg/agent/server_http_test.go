@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kubestellar/console/pkg/agent/updater"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/settings"
 	appsv1 "k8s.io/api/apps/v1"
@@ -251,7 +252,7 @@ func TestHandleAutoUpdateConfig_SaveAllError_Returns500(t *testing.T) {
 	mgr.SetSettingsPath("/dev/null/no-such-dir/settings.json")
 	defer mgr.SetSettingsPath(original)
 
-	checker := &UpdateChecker{channel: "stable"}
+	checker := updater.NewUpdateChecker(updater.UpdateCheckerConfig{Version: "test"})
 	server := &Server{
 		allowedOrigins: []string{"*"},
 		agentToken:     "",
