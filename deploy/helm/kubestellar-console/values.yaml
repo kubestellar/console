@@ -278,6 +278,17 @@ selfUpgrade:
   enabled: true
 
 # Additional environment variables
+# Use this to pass extra environment variables to the console container.
+#
+# Security hardening:
+#   If you do not use Tier-2 dynamic cards, set DISABLE_DYNAMIC_CARDS=true to
+#   remove 'unsafe-eval' from the Content-Security-Policy header, tightening
+#   the browser XSS mitigation for your deployment (see issue #18326).
+#
+# Example:
+#   extraEnv:
+#     - name: DISABLE_DYNAMIC_CARDS
+#       value: "true"
 extraEnv: []
 
 # Optional kubeconfig mount for multi-cluster installs.
