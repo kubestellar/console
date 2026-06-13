@@ -156,7 +156,54 @@ We welcome community input on priorities:
 ## Strategic Health — June 2026
 
 > Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
-> **Last updated:** 2026-06-13 (08:10 AM EDT, pass 9)
+> **Last updated:** 2026-06-13 (10:53 AM EDT, pass 10)
+
+### Current Risk Register
+
+| Risk | Severity | Issue | Status |
+|------|----------|-------|--------|
+| GitHub branch protection unenforced: guardrails PR #18329 advisory-only — 4 merges in 2min 3h after "fix" | 🔴 Critical | #18355 | Requires @clubanderson to enable required status checks in GitHub Settings |
+| Auth smoke test failing (#18354): OAuth/agent token contract broken — behavioral regression in auth flow | 🔴 Critical | #18354 | OPEN, unresolved |
+| CNCF security audit Q2 action overdue — deadline passed, CSP finding compounds urgency | 🔴 Critical | #18207 | Requires @clubanderson action |
+| Community PR #18264 (@bmvinay7) prow-gated: hive LGTM blocked — human collaborator `/lgtm` required; 26h+ open | 🟠 High | #18305 | PR MERGEABLE; awaiting collaborator LGTM |
+| v0.4 Q3 2026 deadline at risk — first community PR stuck in prow gate; no llm-d/Drasi/kagent PRs yet | 🟠 High | — | Ongoing |
+| CSP `unsafe-eval` in default config — sec-check documenting DISABLE_DYNAMIC_CARDS in Helm chart | 🟠 High | #18326 | PRs #18341, #18342 merged (fix + docs) |
+| Organic contributor drought — 100% hive bot merge ratio | 🟠 High | — | Ongoing |
+| ADOPTERS.md created but self-referential — no external adopters listed | 🟠 High | — | Ongoing |
+| PR triage SLA absent — ai-needs-human PRs lack escalation path | 🟡 Medium | #18037 | Ongoing |
+| Tech-debt arch refactors: #17124, #17576, #17882, #17883 still open | 🟡 Medium | #17883 | Architect making progress (#18352 merged) |
+| Stellar subsystem — no GA milestone or alpha exit criteria | 🟡 Medium | #17757 | Tracked |
+| CNCF incubation tracker on `hold` | 🟡 Medium | #4072 | Blocked |
+| ~~Scanner merge loop~~ | ~~🔴 Critical~~ | ~~#18218~~ | ⚠️ Config files merged (#18329) but enforcement absent — see #18355 |
+| ~~Playwright Firefox nightly failing~~ | ~~🟠 High~~ | ~~#18304~~ | ✅ Fixed via #18315 |
+| ~~Nightly CI trifecta~~ | ~~🔴 Critical~~ | ~~#18299-18301~~ | ✅ Resolved |
+| ~~Coverage suite: 67 failures~~ | ~~🟠 High~~ | ~~#18226~~ | ✅ Fixed |
+| ~~Merge gate disabled~~ | ~~🔴 Critical~~ | ~~#17852~~ | ✅ Closed |
+| ~~DCO sign-off failures~~ | ~~🔴 Critical~~ | ~~#17966~~ | ✅ Closed |
+
+### v0.4 Delivery Prerequisites
+
+Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), the following must be resolved — ordered by urgency:
+
+1. **Enable GitHub branch protection on `main`** (#18355) — Go to [branch protection settings](https://github.com/kubestellar/console/settings/branch_protection_rules) and require status checks (`build`, `lint`, `go-test`) to pass before merging. Policy files cannot substitute for this. This is the single action with the highest leverage on build stability, community contributor confidence, and CNCF governance signals. Estimated time: 5 minutes.
+2. **Human collaborator LGTM on PR #18264** (#18305) — The prow gate requires `/lgtm` from a human collaborator. This is now 26+ hours open with zero human engagement. A single `/lgtm` from `@clubanderson` merges the first external community contribution and anchors the project's contributor-welcoming culture.
+3. **Investigate and fix auth smoke test regression** (#18354) — OAuth/agent token contract failing. One of the recent scanner PRs may have broken auth behavior.
+4. **CNCF security audit filing** (#18207) — File the audit request at `github.com/cncf/toc/issues`. CSP hardening (#18326) is being addressed by sec-check; audit filing is the gap.
+5. **v0.4 feature kickoff** — Q3 starts July 1 (~18 days). Open at least one implementation PR for llm-d, Drasi, or kagent integration.
+6. **External adopter recruitment** — Recruit ≥3 external organizations for ADOPTERS.md before CNCF application.
+
+### Adoption Readiness
+
+| Signal | Target | Current |
+|--------|--------|---------|
+| Main branch build stability | Green ≥14 consecutive days | 🔴 4 active build breaks (#18343-18346); guardrails unenforced (#18355) |
+| Auth contract stability | Auth smoke test green | 🔴 Failing (#18354) — OAuth/agent token contract broken |
+| External adopters in ADOPTERS.md | ≥3 confirmed orgs | ❌ 0 external (KubeStellar self-listed only) |
+| Human contributor ratio | ≥10% of merged PRs | ❌ 0% — all recent merges are hive bot |
+| v0.4 feature work started | ≥1 feature PR merged | ⚠️ #18264 (community, semantic search) OPEN — prow-gated 26h+ |
+| Community PR merge time | ≤7 days for first-time contributors | ❌ 26h+ open; 0 human reviews |
+| CNCF security audit | Filed in Q2 2026 | ❌ Q2 deadline passed; not filed (#18207) |
+| CNCF incubation application | Filed | ⏸ On hold (#4072) |
 
 ### Current Risk Register
 
