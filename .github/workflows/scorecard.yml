@@ -7,13 +7,13 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-permissions: {}
+permissions:
+  security-events: write
+  contents: read
+  actions: read
+  id-token: write
 
 jobs:
   analysis:
-    permissions:
-      security-events: write
-      contents: read
-      actions: read
-      id-token: write
-    uses: kubestellar/infra/.github/workflows/reusable-scorecard.yml@af322d48cc67ade7345cabc6a0ed55c6c7040ee4  # main
+    uses: kubestellar/infra/.github/workflows/reusable-scorecard.yml@main
+    secrets: inherit
