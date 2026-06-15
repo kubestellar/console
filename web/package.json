@@ -100,7 +100,7 @@
     "@axe-core/playwright": "^4.11.3",
     "@eslint/js": "^10.0.1",
     "@netlify/functions": "^5.3.0",
-    "@playwright/test": "^1.60.0",
+    "@playwright/test": "^1.61.0",
     "@storybook/addon-a11y": "^10.4.4",
     "@storybook/react": "^10.4.4",
     "@storybook/react-vite": "^10.4.4",
