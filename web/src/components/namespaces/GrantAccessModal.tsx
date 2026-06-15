@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Shield, Loader2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 import { authFetch } from '../../lib/api'
+import { useTeams } from '../../hooks/useTeams'
 import type { NamespaceDetails, NamespaceAccessEntry } from './types'
 
 const COMMON_SUBJECTS = {
@@ -24,6 +25,7 @@ const COMMON_SUBJECTS = {
     'platform-team',
     'sre-team',
   ],
+  Team: [],
   ServiceAccount: [
     'default',
     'deployer',
@@ -42,13 +44,21 @@ interface GrantAccessModalProps {
 
 export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted }: GrantAccessModalProps) {
   const { t } = useTranslation()
-  const [subjectKind, setSubjectKind] = useState<'User' | 'Group' | 'ServiceAccount'>('User')
+  const { teams } = useTeams()
+  const [subjectKind, setSubjectKind] = useState<'User' | 'Group' | 'Team' | 'ServiceAccount'>('User')
   const [subjectName, setSubjectName] = useState('')
   const [subjectNS, setSubjectNS] = useState('')
   const [role, setRole] = useState('admin')
   const [granting, setGranting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDropdown, setShowDropdown] = useState(false)
+
+  // Populate Team subjects from live team data
+  useEffect(() => {
+    if (subjectKind === 'Team' && teams.length > 0) {
+      COMMON_SUBJECTS.Team = teams.map(t => t.name)
+    }
+  }, [subjectKind, teams])
 
   // Filter out subjects that already have access
   const existingSubjectNames = new Set(
@@ -57,7 +67,8 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
       .map(e => e.subjectName)
   )
 
-  const availableSubjects = COMMON_SUBJECTS[subjectKind].filter(
+  const subjectSource = subjectKind === 'Team' ? COMMON_SUBJECTS.Team : COMMON_SUBJECTS[subjectKind]
+  const availableSubjects = (subjectSource || []).filter(
     name => !existingSubjectNames.has(name)
   )
 
@@ -68,24 +79,15 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
     setError(null)
 
     try {
-      // Granting namespace access creates a RoleBinding on a managed cluster,
-      // so it must run under the user's kubeconfig via kc-agent, not the
-      // backend pod ServiceAccount. See #7993 Phase 1.5 PR A. The backend
-      // POST /api/namespaces/:name/access route still exists and will be
-      // removed as part of Phase 2 once all frontend callers are migrated —
-      // this switches the only caller over. The agent's /rolebindings POST
-      // handler accepts this shape directly and normalizes it into a full
-      // CreateRoleBindingRequest before calling the shared pkg/k8s method.
-      // #8034 Copilot followup: use authFetch() which already injects the
-      // Bearer token and applies the default fetch timeout, instead of a
-      // per-file agentAuthHeaders() helper.
+      const k8sSubjectKind = subjectKind === 'Team' ? 'Group' : subjectKind
+
       const res = await authFetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cluster: namespace.cluster,
           namespace: namespace.name,
-          subjectKind,
+          subjectKind: k8sSubjectKind,
           subjectName,
           subjectNamespace: subjectKind === 'ServiceAccount' ? subjectNS : undefined,
           role,
@@ -164,13 +166,14 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
             >
               <option value="User">{t('namespaces.subjectUser')}</option>
               <option value="Group">{t('namespaces.subjectGroup')}</option>
+              <option value="Team">{t('teams.teams')}</option>
               <option value="ServiceAccount">{t('namespaces.subjectServiceAccount')}</option>
             </select>
           </div>
 
           <div className="relative">
             <label className="block text-sm font-medium text-muted-foreground mb-1">
-              {subjectKind === 'User' ? 'Username / Email' : subjectKind === 'Group' ? 'Group Name' : 'Service Account Name'}
+              {subjectKind === 'User' ? 'Username / Email' : subjectKind === 'Group' ? 'Group Name' : subjectKind === 'Team' ? 'Team Name' : 'Service Account Name'}
             </label>
             <div className="relative">
               <input
@@ -178,7 +181,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
                 value={subjectName}
                 onChange={(e) => setSubjectName(e.target.value)}
                 onFocus={() => setShowDropdown(true)}
-                placeholder={subjectKind === 'User' ? 'Select or type a user...' : subjectKind === 'Group' ? 'Select or type a group...' : 'Select or type a service account...'}
+                placeholder={subjectKind === 'User' ? 'Select or type a user...' : subjectKind === 'Group' ? 'Select or type a group...' : subjectKind === 'Team' ? 'Select or type a team...' : 'Select or type a service account...'}
                 className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
               />
               {showDropdown && availableSubjects.length > 0 && (

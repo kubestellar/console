@@ -27,6 +27,7 @@ export const ROUTES = {
   // Settings & Management
   SETTINGS: '/settings',
   USERS: '/users',
+  TEAMS: '/teams',
   
   // Core Resources
   CLUSTERS: '/clusters',
