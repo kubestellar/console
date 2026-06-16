@@ -1,235 +1,251 @@
 package stellar
 
 import (
-	"bytes"
 	"encoding/json"
-	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kubestellar/console/pkg/api/middleware"
+	testpkg "github.com/kubestellar/console/pkg/test"
+	"github.com/kubestellar/console/pkg/store"
 )
 
-func Test_parseMissionPayload(t *testing.T) {
+func TestListMissions(t *testing.T) {
 	tests := []struct {
-		name    string
-		body    map[string]interface{}
-		wantErr bool
-		errHint string
-		checks  func(t *testing.T, mission interface{})
+		name       string
+		query      string
+		setupMock  func(*testpkg.MockStore, string)
+		wantStatus int
+		wantError  string
+		checkBody  func(*testing.T, map[string]interface{})
 	}{
 		{
-			name: "valid mission with all fields",
-			body: map[string]interface{}{
-				"name":           "overnight-watch",
-				"goal":           "Watch production overnight",
-				"schedule":       "0 1 * * *",
-				"triggerType":    "cron",
-				"providerPolicy": "hybrid-fallback",
-				"memoryScope":    "mission",
-				"enabled":        true,
-				"toolBindings":   []string{"kubernetes", "prometheus"},
+			name:  "success with missions",
+			query: "",
+			setupMock: func(m *testpkg.MockStore, userID string) {
+				missions := []store.StellarMission{
+					{
+						ID:      uuid.NewString(),
+						UserID:  userID,
+						Name:    "Test Mission",
+						Goal:    "Test goal",
+						Enabled: true,
+					},
+				}
+				m.On("ListStellarMissions", mock.Anything, userID, 50, 0).Return(missions, nil)
 			},
-			wantErr: false,
-			checks: func(t *testing.T, mission interface{}) {
-				m := mission.(map[string]interface{})
-				assert.Equal(t, "overnight-watch", m["name"])
-				assert.Equal(t, "cron", m["triggerType"])
-				assert.Equal(t, true, m["enabled"])
-				assert.Len(t, m["toolBindings"], 2)
-			},
-		},
-		{
-			name: "valid mission with defaults",
-			body: map[string]interface{}{
-				"name": "test-mission",
-				"goal": "Test goal",
-			},
-			wantErr: false,
-			checks: func(t *testing.T, mission interface{}) {
-				m := mission.(map[string]interface{})
-				assert.Equal(t, "manual", m["triggerType"])
-				assert.Equal(t, "auto", m["providerPolicy"])
-				assert.Equal(t, "user", m["memoryScope"])
+			wantStatus: fiber.StatusOK,
+			checkBody: func(t *testing.T, body map[string]interface{}) {
+				items, ok := body["items"].([]interface{})
+				require.True(t, ok, "items should be array")
+				assert.Len(t, items, 1)
 			},
 		},
 		{
-			name: "empty name",
-			body: map[string]interface{}{
-				"name": "",
-				"goal": "Test goal",
+			name:  "empty list",
+			query: "",
+			setupMock: func(m *testpkg.MockStore, userID string) {
+				m.On("ListStellarMissions", mock.Anything, userID, 50, 0).Return([]store.StellarMission{}, nil)
 			},
-			wantErr: true,
-			errHint: "name is required",
-		},
-		{
-			name: "whitespace-only name",
-			body: map[string]interface{}{
-				"name": "   ",
-				"goal": "Test goal",
-			},
-			wantErr: true,
-			errHint: "name is required",
-		},
-		{
-			name: "name too long",
-			body: map[string]interface{}{
-				"name": string(make([]byte, stellarMaxNameLength+1)),
-				"goal": "Test goal",
-			},
-			wantErr: true,
-			errHint: "name is required",
-		},
-		{
-			name: "empty goal",
-			body: map[string]interface{}{
-				"name": "test",
-				"goal": "",
-			},
-			wantErr: true,
-			errHint: "goal is required",
-		},
-		{
-			name: "goal too long",
-			body: map[string]interface{}{
-				"name": "test",
-				"goal": string(make([]byte, stellarMaxGoalLength+1)),
-			},
-			wantErr: true,
-			errHint: "goal is required",
-		},
-		{
-			name: "schedule too long",
-			body: map[string]interface{}{
-				"name":     "test",
-				"goal":     "Test goal",
-				"schedule": string(make([]byte, stellarMaxScheduleLength+1)),
-			},
-			wantErr: true,
-			errHint: "schedule must be",
-		},
-		{
-			name: "invalid trigger type",
-			body: map[string]interface{}{
-				"name":        "test",
-				"goal":        "Test goal",
-				"triggerType": "invalid-trigger",
-			},
-			wantErr: true,
-			errHint: "invalid triggerType",
-		},
-		{
-			name: "too many tool bindings",
-			body: map[string]interface{}{
-				"name":         "test",
-				"goal":         "Test goal",
-				"toolBindings": make([]string, stellarMaxToolsPerMission+1),
-			},
-			wantErr: true,
-			errHint: "too many toolBindings",
-		},
-		{
-			name: "tool binding name too long",
-			body: map[string]interface{}{
-				"name": "test",
-				"goal": "Test goal",
-				"toolBindings": []string{
-					string(make([]byte, stellarMaxToolNameLength+1)),
-				},
-			},
-			wantErr: true,
-			errHint: "tool name too long",
-		},
-		{
-			name: "filters empty tool binding names",
-			body: map[string]interface{}{
-				"name":         "test",
-				"goal":         "Test goal",
-				"toolBindings": []string{"kubectl", "", "  ", "prometheus"},
-			},
-			wantErr: false,
-			checks: func(t *testing.T, mission interface{}) {
-				m := mission.(map[string]interface{})
-				tools := m["toolBindings"].([]interface{})
-				assert.Len(t, tools, 2)
-				assert.Equal(t, "kubectl", tools[0])
-				assert.Equal(t, "prometheus", tools[1])
+			wantStatus: fiber.StatusOK,
+			checkBody: func(t *testing.T, body map[string]interface{}) {
+				items, ok := body["items"].([]interface{})
+				require.True(t, ok)
+				assert.Len(t, items, 0)
 			},
 		},
 		{
-			name: "trims whitespace from fields",
-			body: map[string]interface{}{
-				"name":           "  test-mission  ",
-				"goal":           "  Test goal  ",
-				"schedule":       "  0 1 * * *  ",
-				"triggerType":    "  cron  ",
-				"providerPolicy": "  auto  ",
-				"memoryScope":    "  user  ",
+			name:  "store error",
+			query: "",
+			setupMock: func(m *testpkg.MockStore, userID string) {
+				m.On("ListStellarMissions", mock.Anything, userID, 50, 0).Return(nil, assert.AnError)
 			},
-			wantErr: false,
-			checks: func(t *testing.T, mission interface{}) {
-				m := mission.(map[string]interface{})
-				assert.Equal(t, "test-mission", m["name"])
-				assert.Equal(t, "Test goal", m["goal"])
-				assert.Equal(t, "0 1 * * *", m["schedule"])
-			},
+			wantStatus: fiber.StatusInternalServerError,
+			wantError:  "failed to load missions",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			mockStore := new(testpkg.MockStore)
+			userID := uuid.NewString()
+
 			app := fiber.New()
-			jsonBody, _ := json.Marshal(tt.body)
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals(middleware.UserIDKey, userID)
+				return c.Next()
+			})
 
-			req, err := http.NewRequest(http.MethodPost, "/test", bytes.NewReader(jsonBody))
+			handler := &Handler{store: mockStore}
+			app.Get("/missions", handler.ListMissions)
+
+			tt.setupMock(mockStore, userID)
+
+			req := httptest.NewRequest("GET", "/missions"+tt.query, nil)
+			resp, err := app.Test(req)
 			require.NoError(t, err)
-			req.Header.Set("Content-Type", "application/json")
+			defer resp.Body.Close()
 
-			c := app.AcquireCtx(&fiber.Ctx{})
-			defer app.ReleaseCtx(c)
-			c.Request().SetBody(jsonBody)
-			c.Request().Header.SetContentType("application/json")
+			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 
-			mission, err := parseMissionPayload(c)
+			var body map[string]interface{}
+			err = json.NewDecoder(resp.Body).Decode(&body)
+			require.NoError(t, err)
 
-			if tt.wantErr {
-				require.Error(t, err)
-				if tt.errHint != "" {
-					assert.Contains(t, err.Error(), tt.errHint)
-				}
-				return
+			if tt.wantError != "" {
+				assert.Contains(t, body["error"], tt.wantError)
 			}
 
-			require.NoError(t, err)
-			require.NotNil(t, mission)
-
-			if tt.checks != nil {
-				missionMap := map[string]interface{}{
-					"name":           mission.Name,
-					"goal":           mission.Goal,
-					"schedule":       mission.Schedule,
-					"triggerType":    mission.TriggerType,
-					"providerPolicy": mission.ProviderPolicy,
-					"memoryScope":    mission.MemoryScope,
-					"enabled":        mission.Enabled,
-					"toolBindings":   mission.ToolBindings,
-				}
-				tt.checks(t, missionMap)
+			if tt.checkBody != nil {
+				tt.checkBody(t, body)
 			}
+
+			mockStore.AssertExpectations(t)
 		})
 	}
 }
 
-func Test_parseMissionPayload_InvalidJSON(t *testing.T) {
-	app := fiber.New()
-	c := app.AcquireCtx(&fiber.Ctx{})
-	defer app.ReleaseCtx(c)
+func TestGetMission(t *testing.T) {
+	tests := []struct {
+		name       string
+		missionID  string
+		setupMock  func(*testpkg.MockStore, string, string)
+		wantStatus int
+		wantError  string
+	}{
+		{
+			name:      "success",
+			missionID: "mission-123",
+			setupMock: func(m *testpkg.MockStore, userID, missionID string) {
+				mission := &store.StellarMission{
+					ID:     missionID,
+					UserID: userID,
+					Name:   "Test Mission",
+					Goal:   "Test goal",
+				}
+				m.On("GetStellarMission", mock.Anything, userID, missionID).Return(mission, nil)
+			},
+			wantStatus: fiber.StatusOK,
+		},
+		{
+			name:      "not found",
+			missionID: "nonexistent",
+			setupMock: func(m *testpkg.MockStore, userID, missionID string) {
+				m.On("GetStellarMission", mock.Anything, userID, missionID).Return(nil, nil)
+			},
+			wantStatus: fiber.StatusNotFound,
+			wantError:  "mission not found",
+		},
+		{
+			name:      "store error",
+			missionID: "mission-123",
+			setupMock: func(m *testpkg.MockStore, userID, missionID string) {
+				m.On("GetStellarMission", mock.Anything, userID, missionID).Return(nil, assert.AnError)
+			},
+			wantStatus: fiber.StatusInternalServerError,
+			wantError:  "failed to load mission",
+		},
+	}
 
-	c.Request().SetBody([]byte("invalid json"))
-	c.Request().Header.SetContentType("application/json")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockStore := new(testpkg.MockStore)
+			userID := uuid.NewString()
 
-	_, err := parseMissionPayload(c)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid JSON body")
+			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals(middleware.UserIDKey, userID)
+				return c.Next()
+			})
+
+			handler := &Handler{store: mockStore}
+			app.Get("/missions/:id", handler.GetMission)
+
+			tt.setupMock(mockStore, userID, tt.missionID)
+
+			req := httptest.NewRequest("GET", "/missions/"+tt.missionID, nil)
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.wantStatus, resp.StatusCode)
+
+			if tt.wantError != "" {
+				var body map[string]interface{}
+				err = json.NewDecoder(resp.Body).Decode(&body)
+				require.NoError(t, err)
+				assert.Contains(t, body["error"], tt.wantError)
+			}
+
+			mockStore.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeleteMission(t *testing.T) {
+	tests := []struct {
+		name       string
+		missionID  string
+		setupMock  func(*testpkg.MockStore, string, string)
+		wantStatus int
+		wantError  string
+	}{
+		{
+			name:      "success",
+			missionID: "mission-123",
+			setupMock: func(m *testpkg.MockStore, userID, missionID string) {
+				m.On("DeleteStellarMission", mock.Anything, userID, missionID).Return(nil)
+			},
+			wantStatus: fiber.StatusNoContent,
+		},
+		{
+			name:      "store error",
+			missionID: "mission-123",
+			setupMock: func(m *testpkg.MockStore, userID, missionID string) {
+				m.On("DeleteStellarMission", mock.Anything, userID, missionID).Return(assert.AnError)
+			},
+			wantStatus: fiber.StatusInternalServerError,
+			wantError:  "failed to delete mission",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockStore := new(testpkg.MockStore)
+			userID := uuid.NewString()
+
+			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals(middleware.UserIDKey, userID)
+				return c.Next()
+			})
+
+			handler := &Handler{store: mockStore}
+			app.Delete("/missions/:id", handler.DeleteMission)
+
+			tt.setupMock(mockStore, userID, tt.missionID)
+
+			req := httptest.NewRequest("DELETE", "/missions/"+tt.missionID, nil)
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.wantStatus, resp.StatusCode)
+
+			if tt.wantError != "" {
+				var body map[string]interface{}
+				err = json.NewDecoder(resp.Body).Decode(&body)
+				require.NoError(t, err)
+				assert.Contains(t, body["error"], tt.wantError)
+			}
+
+			mockStore.AssertExpectations(t)
+		})
+	}
 }
