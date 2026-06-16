@@ -1,7 +1,6 @@
 package workloads
 
 import (
-	"context"
 	"net/http"
 	"path/filepath"
 	"testing"
@@ -205,4 +204,11 @@ func addClusterToRawConfig(client *k8s.MultiClusterClient, cluster string) {
 	cfg.Clusters[cluster] = &api.Cluster{Server: "https://" + cluster + ":6443"}
 	cfg.Contexts[cluster] = &api.Context{Cluster: cluster, AuthInfo: "test-user"}
 	client.SetRawConfig(cfg)
+}
+func (m *MockStore) GetTeam(ctx context.Context, teamID uuid.UUID) (*models.Team, error) {
+	args := m.Called(ctx, teamID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Team), args.Error(1)
 }
