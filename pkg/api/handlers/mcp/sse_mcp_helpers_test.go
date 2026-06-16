@@ -3,7 +3,12 @@ package mcp
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"io"
+	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -232,4 +237,121 @@ func TestWriteSSEEvent_ErrorHandling(t *testing.T) {
 		err := writeSSEEvent(w, "test", make(chan int))
 		assert.Error(t, err)
 	})
+}
+
+// TestWaitWithDeadlineSSE tests the unexported waitWithDeadline helper defined in
+// sse_mcp_helpers.go (distinct from the exported WaitWithDeadline in handler.go).
+func TestWaitWithDeadlineSSE(t *testing.T) {
+	tests := []struct {
+		name         string
+		goroutines   int
+		workDuration time.Duration
+		deadline     time.Duration
+		wantTimeout  bool
+	}{
+		{
+			name:         "all goroutines complete before deadline",
+			goroutines:   3,
+			workDuration: 10 * time.Millisecond,
+			deadline:     200 * time.Millisecond,
+			wantTimeout:  false,
+		},
+		{
+			name:         "deadline reached before goroutines finish",
+			goroutines:   3,
+			workDuration: 500 * time.Millisecond,
+			deadline:     50 * time.Millisecond,
+			wantTimeout:  true,
+		},
+		{
+			name:         "zero goroutines completes immediately",
+			goroutines:   0,
+			workDuration: 0,
+			deadline:     100 * time.Millisecond,
+			wantTimeout:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			ctx, cancel := context.WithCancel(context.Background())
+
+			for i := 0; i < tt.goroutines; i++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					select {
+					case <-time.After(tt.workDuration):
+					case <-ctx.Done():
+					}
+				}()
+			}
+
+			timedOut := waitWithDeadline(&wg, cancel, tt.deadline)
+			cancel() // ensure cleanup even when not timed out
+
+			assert.Equal(t, tt.wantTimeout, timedOut)
+		})
+	}
+}
+
+// TestStreamDemoSSE verifies that streamDemoSSE sets the correct SSE headers
+// and writes connected / demo_data / done events to the response.
+func TestStreamDemoSSE(t *testing.T) {
+	tests := []struct {
+		name     string
+		dataKey  string
+		demoData interface{}
+	}{
+		{
+			name:     "string demo data",
+			dataKey:  "pods",
+			demoData: []string{"pod-1", "pod-2"},
+		},
+		{
+			name:     "map demo data",
+			dataKey:  "status",
+			demoData: fiber.Map{"healthy": true, "count": 3},
+		},
+		{
+			name:     "nil demo data",
+			dataKey:  "items",
+			demoData: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+			app.Get("/sse", func(c *fiber.Ctx) error {
+				return streamDemoSSE(c, tt.dataKey, tt.demoData)
+			})
+
+			req := httptest.NewRequest("GET", "/sse", nil)
+			resp, err := app.Test(req, 5000)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			// Verify SSE headers
+			assert.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
+			assert.Equal(t, "no-cache", resp.Header.Get("Cache-Control"))
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			bodyStr := string(body)
+
+			// All three mandatory events must be present
+			assert.Contains(t, bodyStr, "event: connected")
+			assert.Contains(t, bodyStr, "event: demo_data")
+			assert.Contains(t, bodyStr, "event: done")
+
+			// demo_data event must contain source=demo and the correct data key
+			assert.Contains(t, bodyStr, `"source":"demo"`)
+			assert.Contains(t, bodyStr, `"`+tt.dataKey+`"`)
+
+			// done event must carry demo:true
+			assert.Contains(t, bodyStr, `"demo":true`)
+		})
+	}
 }
