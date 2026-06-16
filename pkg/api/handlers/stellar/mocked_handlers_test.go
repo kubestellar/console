@@ -396,7 +396,7 @@ func TestStellarResolveNotification_UpdatesResolvedFields(t *testing.T) {
 		UserID:    userID,
 		Title:     "CrashLoopBackOff",
 		Body:      "pod crashed repeatedly",
-		DedupeKey: "ev:Pod:api-7c9d",
+		DedupeKey: "ev:prod:Pod:api-7c9d",
 		CreatedAt: createdAt,
 		Status:    "open",
 	}
@@ -409,7 +409,7 @@ func TestStellarResolveNotification_UpdatesResolvedFields(t *testing.T) {
 			notification.Read &&
 			notification.ReadAt != nil &&
 			notification.BatchTimestamp != nil &&
-			notification.AffectedResource == "CrashLoopBackOff" &&
+			notification.AffectedResource == "Pod/api-7c9d" &&
 			notification.ErrorMessage == "pod crashed repeatedly"
 	})).Return(nil).Once()
 
