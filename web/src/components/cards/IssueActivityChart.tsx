@@ -82,6 +82,8 @@ const CHART_HEIGHT_PX = 320
 const DATA_ZOOM_SLIDER_HEIGHT_PX = 20
 /** Slider bottom offset in pixels */
 const DATA_ZOOM_SLIDER_BOTTOM_PX = 5
+/** Tooltip marker size in pixels */
+const TOOLTIP_MARKER_SIZE_PX = 8
 /** Opacity for area-fill behind the PR-merged line */
 const PR_MERGED_AREA_ALPHA = 0.08
 /** Font size for dataZoom text labels */
@@ -419,7 +421,7 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
           const dateLabel = `<span style="color:${CHART_TOOLTIP_LABEL_COLOR};font-weight:600">${dow}, ${fullDate}</span>`
           const lines = params.map(
             p =>
-              `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:${TOOLTIP_INLINE_GAP_PX}px;"></span>${p.seriesName}: <b>${p.value}</b>`
+              `<span style="display:inline-block;width:${TOOLTIP_MARKER_SIZE_PX}px;height:${TOOLTIP_MARKER_SIZE_PX}px;border-radius:50%;background:${p.color};margin-right:${TOOLTIP_INLINE_GAP_PX}px;"></span>${p.seriesName}: <b>${p.value}</b>`
           )
           return `${dateLabel}<br/>${lines.join('<br/>')}`
         },
