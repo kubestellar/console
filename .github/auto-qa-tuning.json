@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-06-13T04:30:06Z",
+  "last_updated": "2026-06-14T04:30:53Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -11,11 +11,11 @@
       "last_evaluated": "2026-06-11T04:30:46Z"
     },
     "security": {
-      "merged": 74,
-      "closed": 67,
-      "acceptance_rate": 0.52,
+      "merged": 80,
+      "closed": 68,
+      "acceptance_rate": 0.54,
       "status": "normal",
-      "last_evaluated": "2026-06-13T04:30:06Z"
+      "last_evaluated": "2026-06-14T04:30:53Z"
     },
     "a11y": {
       "merged": 53,
@@ -25,32 +25,32 @@
       "last_evaluated": "2026-06-13T04:30:06Z"
     },
     "operator": {
-      "merged": 477,
+      "merged": 497,
       "closed": 253,
-      "acceptance_rate": 0.65,
+      "acceptance_rate": 0.66,
       "status": "normal",
-      "last_evaluated": "2026-06-13T04:30:06Z"
+      "last_evaluated": "2026-06-14T04:30:53Z"
     },
     "sre": {
-      "merged": 256,
+      "merged": 267,
       "closed": 80,
-      "acceptance_rate": 0.76,
+      "acceptance_rate": 0.77,
       "status": "normal",
-      "last_evaluated": "2026-06-13T04:30:06Z"
+      "last_evaluated": "2026-06-14T04:30:53Z"
     },
     "features": {
-      "merged": 16,
+      "merged": 17,
       "closed": 9,
-      "acceptance_rate": 0.64,
+      "acceptance_rate": 0.65,
       "status": "normal",
-      "last_evaluated": "2026-06-13T04:30:06Z"
+      "last_evaluated": "2026-06-14T04:30:53Z"
     },
     "resilience": {
-      "merged": 71,
+      "merged": 72,
       "closed": 64,
       "acceptance_rate": 0.53,
       "status": "normal",
-      "last_evaluated": "2026-06-13T04:30:06Z"
+      "last_evaluated": "2026-06-14T04:30:53Z"
     },
     "consistency": {
       "merged": 29,
@@ -61,18 +61,12 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "S",
+    "best_pr_size": "XXL",
     "size_acceptance": {},
     "type_acceptance": {},
-    "common_rejection_reasons": [
-      "- PR #17105: Closing as duplicate — superseded by #17104 which was already merged.",
-      "- PR #17058: Closing as duplicate — #17057 fixed #17056 and was merged first (all CI green).",
-      "- PR #17020: Closing in favor of #17019 which is in better shape (mergeable, no conflicts). Both address the same CWE-306 issue #17016.",
-      "- PR #17011: Closing — superseded by #17013 which fixes all issues addressed here (#16971, #17003, #17004, #16984, #16974) in a consolidated PR.",
-      "- PR #17006: Closing — superseded by #17013 which includes the #16903 fix (agent token memory-only) in a consolidated security PR."
-    ],
+    "common_rejection_reasons": [],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-06-07"
+    "last_report_date": "2026-06-14"
   },
   "cncf_insights": {
     "last_scan_date": "2026-06-10",
@@ -92,13 +86,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-04-04",
-      "total_merged": 131,
-      "total_closed": 132,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-04-05",
       "total_merged": 131,
@@ -319,15 +306,22 @@
       "total_closed": 531,
       "categories_blocked": [],
       "categories_boosted": []
+    },
+    {
+      "date": "2026-06-14",
+      "total_merged": 1031,
+      "total_closed": 532,
+      "categories_blocked": [],
+      "categories_boosted": []
     }
   ],
   "rotation_weights": {
     "performance": 0.93,
-    "security": 0.78,
+    "security": 0.81,
     "a11y": 0.99,
-    "operator": 0.98,
-    "sre": 1.14,
-    "features": 0.96,
+    "operator": 0.99,
+    "sre": 1.16,
+    "features": 0.98,
     "resilience": 0.8,
     "consistency": 0.87
   },
@@ -335,9 +329,15 @@
   "pr_guidance": "Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs.",
   "regression_insights": {
     "focus_overrides": [],
-    "repeat_issue_patterns": [],
-    "total_issues_7d": 53,
-    "repeat_pattern_count": 0,
-    "last_analyzed": "2026-06-13T04:30:06Z"
+    "repeat_issue_patterns": [
+      "[nightly:ttfi] Time-To-First-Interactive (TTFI) failed — N-N-N",
+      "[nightly:security] Security Compliance failed — N-N-N",
+      "[nightly:interaction] Interaction Compliance failed — N-N-N",
+      "[nightly:iNn] iNn Compliance failed — N-N-N",
+      "[nightly:error-resilience] Error Resilience failed — N-N-N"
+    ],
+    "total_issues_7d": 71,
+    "repeat_pattern_count": 19,
+    "last_analyzed": "2026-06-16T04:32:28Z"
   }
 }
