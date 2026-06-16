@@ -105,13 +105,6 @@ func setupTestEnv(t *testing.T) *testEnv {
 		Role: "admin",
 	}, nil).Maybe()
 
-	// Initialize a MockStore with a pre-configured admin user so RBAC-protected
-	mockStore := new(test.MockStore)
-	mockStore.On("GetUser", testAdminUserID).Return(&models.User{
-		ID:   testAdminUserID,
-		Role: "admin",
-	}, nil).Maybe()
-
 	mockStore.On("AddTeamMember", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 
 	// Cluster-group CRUD handlers persist definitions to the store (#7013).

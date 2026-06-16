@@ -403,3 +403,6 @@ func (f *feedbackStoreStub) AddTeamMember(ctx context.Context, teamID, userID uu
 func (f *feedbackStoreStub) CreateTeam(ctx context.Context, team *models.Team, memberIDs []uuid.UUID) error {
 	return nil
 }
+func (f *feedbackStoreStub) DeleteTeam(ctx context.Context, id uuid.UUID) error {
+	return nil
+}

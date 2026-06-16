@@ -858,3 +858,18 @@ func (m *MockStore) ListStellarAuditLog(_ context.Context, _ string, _ int) ([]s
 }
 
 func (m *MockStore) Close() error { return nil }
+
+func (m *MockStore) CreateTeam(ctx context.Context, team *models.Team, memberIDs []uuid.UUID) error {
+	args := m.Called(ctx, team, memberIDs)
+	return args.Error(0)
+}
+
+func (m *MockStore) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
+	args := m.Called(ctx, teamID, userID, role)
+	return args.Error(0)
+}
+
+func (m *MockStore) GetTeam(ctx context.Context, id uuid.UUID) (*models.Team, error) {
+	args := m.Called(ctx, id)
+	return args.Get(0).(*models.Team), args.Error(1)
+}
