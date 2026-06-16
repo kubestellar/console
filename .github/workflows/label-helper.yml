@@ -4,13 +4,12 @@ on:
   issue_comment:
     types: [created]
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   label-helper:
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
-    uses: kubestellar/infra/.github/workflows/reusable-label-helper.yml@a160acca0bdce1ac6c649e006d680d5f6d53024e  # main
+    uses: kubestellar/infra/.github/workflows/reusable-label-helper.yml@main
     secrets: inherit

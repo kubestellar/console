@@ -4,10 +4,10 @@ on:
   issues:
     types: [labeled]
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  issues: write
 
 jobs:
   label:
-    permissions:
-      issues: write
-    uses: kubestellar/infra/.github/workflows/reusable-add-help-wanted.yml@af322d48cc67ade7345cabc6a0ed55c6c7040ee4  # main
+    uses: kubestellar/infra/.github/workflows/reusable-add-help-wanted.yml@main
+    secrets: inherit

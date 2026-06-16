@@ -50,6 +50,10 @@ func (h *GatewayHandlers) ListGateways(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), gatewayDefaultTimeout)
 	defer cancel()
 
@@ -90,6 +94,10 @@ func (h *GatewayHandlers) ListHTTPRoutes(c *fiber.Ctx) error {
 	// Optional filters
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), gatewayDefaultTimeout)
 	defer cancel()
@@ -166,6 +174,13 @@ func (h *GatewayHandlers) GetGateway(c *fiber.Ctx) error {
 	namespace := c.Params("namespace")
 	name := c.Params("name")
 
+	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+	if err := validateK8sName("name", name); err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), gatewayDefaultTimeout)
 	defer cancel()
 
@@ -193,6 +208,13 @@ func (h *GatewayHandlers) GetHTTPRoute(c *fiber.Ctx) error {
 	cluster := c.Params("cluster")
 	namespace := c.Params("namespace")
 	name := c.Params("name")
+
+	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+	if err := validateK8sName("name", name); err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), gatewayDefaultTimeout)
 	defer cancel()

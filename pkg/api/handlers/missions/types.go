@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/kb/rag"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -127,6 +128,13 @@ type MissionsHandler struct {
 	githubRawURL string // defaults to "https://raw.githubusercontent.com"
 	cache        *missionsResponseCache
 	store        store.Store // optional; nil disables gap tracking
+
+	// retriever holds the lazily-built semantic search index over the KB. It is
+	// rebuilt when the underlying index.json content changes (tracked by
+	// retrieverFingerprint).
+	retrieverMu          sync.Mutex
+	retriever            *rag.Retriever
+	retrieverFingerprint string
 }
 
 // cacheStatus indicates whether a fetchWithCache result came from a fresh cache

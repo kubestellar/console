@@ -234,6 +234,10 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), k8s.RBACDefaultTimeout)
 	defer cancel()
 
@@ -324,6 +328,10 @@ func (h *RBACHandler) ListK8sRoles(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	includeSystem := c.Query("includeSystem") == "true"
 
+	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), k8s.RBACDefaultTimeout)
 	defer cancel()
 
@@ -371,6 +379,10 @@ func (h *RBACHandler) ListK8sRoleBindings(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 	includeSystem := c.Query("includeSystem") == "true"
+
+	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), k8s.RBACDefaultTimeout)
 	defer cancel()
@@ -435,6 +447,9 @@ func (h *RBACHandler) ListK8sUsers(c *fiber.Ctx) error {
 	if cluster == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
 	}
+	if err := validateK8sName("cluster", cluster); err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), k8s.RBACDefaultTimeout)
 	defer cancel()
@@ -469,6 +484,9 @@ func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	if cluster == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
+	}
+	if err := validateK8sName("cluster", cluster); err != nil {
+		return err
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), rbacAnalysisTimeout)

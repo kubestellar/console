@@ -14,7 +14,10 @@ import (
 
 // ---------- Score Exposure ----------
 
-func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, error) {
+// fetchMissionIndexBytes returns the raw fixes/index.json payload, fetching from
+// the public console-kb repo with an embedded snapshot fallback and caching the
+// result. Shared by score exposure and semantic search.
+func (h *MissionsHandler) fetchMissionIndexBytes(c *fiber.Ctx) ([]byte, error) {
 	cacheKey := "index:master:fixes/index.json"
 	url := fmt.Sprintf("%s/kubestellar/console-kb/master/fixes/index.json", h.githubRawURL)
 
@@ -28,7 +31,6 @@ func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, err
 		}
 	}
 
-	var body = res.Body
 	if res.CacheStatus == cacheStatusMiss {
 		if res.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("GitHub raw content error")
@@ -41,6 +43,15 @@ func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, err
 			fetchedAt:   time.Now(),
 		})
 		slog.Info("[missions] cache MISS, stored (index json)", "bytes", len(res.Body))
+	}
+
+	return res.Body, nil
+}
+
+func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, error) {
+	body, err := h.fetchMissionIndexBytes(c)
+	if err != nil {
+		return nil, err
 	}
 
 	var index indexJsonFormat

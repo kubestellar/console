@@ -44,7 +44,7 @@ function ComparisonCell(
 
   return (
     <span className="inline-flex flex-col">
-      <span className={highlightStyle ? textClass : 'text-slate-300'}>{value}</span>
+      <span className={highlightStyle ? textClass : 'text-slate-400'}>{value}</span>
       {note && <span className="text-xs text-muted-foreground">{note}</span>}
     </span>
   )
@@ -81,7 +81,7 @@ export function ComparisonTable({
               <tbody>
                 {rows.map((row, index) => (
                   <tr key={row.feature} className={`border-b border-slate-800/50 ${index % 2 === 0 ? 'bg-slate-900/20' : ''}`}>
-                    <td className="p-4 font-medium text-slate-200">{row.feature}</td>
+                    <td className="p-4 font-medium text-foreground">{row.feature}</td>
                     <td className="p-4">
                       <ComparisonCell value={row.competitor} note={row.competitorNote} />
                     </td>
@@ -112,7 +112,7 @@ export function ComparisonTable({
           <table className="w-max min-w-full text-left">
           <thead>
             <tr className="border-b border-slate-700/50 bg-slate-800/60">
-              <th className="px-6 py-4 text-sm font-semibold text-slate-300">Feature</th>
+              <th className="px-6 py-4 text-sm font-semibold text-slate-400">Feature</th>
               <th className="px-6 py-4 text-sm font-semibold text-slate-400">
                 {competitorSubtitle ? (
                   <span className="inline-flex items-center gap-1.5">
@@ -132,7 +132,7 @@ export function ComparisonTable({
                   key={row.feature}
                   className={`border-b border-slate-700/30 ${index % 2 === 0 ? 'bg-slate-800/20' : 'bg-transparent'}`}
                 >
-                  <td className="px-6 py-3.5 text-sm font-medium text-slate-200">{row.feature}</td>
+                  <td className="px-6 py-3.5 text-sm font-medium text-foreground">{row.feature}</td>
                   <td className="px-6 py-3.5 text-sm">
                     <ComparisonCell value={row.competitor} note={row.competitorNote} />
                   </td>

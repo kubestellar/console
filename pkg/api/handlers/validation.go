@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 // cronFieldCount is the number of fields in a standard cron expression.
@@ -60,4 +63,27 @@ func IsValidK8sVersion(version string) bool {
 		return false
 	}
 	return k8sVersionPattern.MatchString(version)
+}
+
+// validateK8sName checks that a non-empty string is a valid Kubernetes resource name.
+// Empty values are allowed (they mean "all" in query param context). Returns a
+// 400 fiber error with the parameter name in the message when invalid.
+func validateK8sName(param, value string) error {
+	if value == "" {
+		return nil
+	}
+	if !IsValidK8sName(value) {
+		return fiber.NewError(fiber.StatusBadRequest,
+			fmt.Sprintf("invalid %s: must be a valid Kubernetes resource name (lowercase alphanumeric, '-', '.')", param))
+	}
+	return nil
+}
+
+// validateClusterAndNamespace is a convenience helper that validates both the
+// cluster and namespace query parameters in a single call.
+func validateClusterAndNamespace(cluster, namespace string) error {
+	if err := validateK8sName("cluster", cluster); err != nil {
+		return err
+	}
+	return validateK8sName("namespace", namespace)
 }
