@@ -2,7 +2,7 @@ import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { RefreshButton, RefreshIndicator } from './RefreshIndicator'
+import { RefreshButton, RefreshIndicator, RefreshSpinner } from './RefreshIndicator'
 
 // Mock react-i18next so useTranslation returns a passthrough t()
 vi.mock('react-i18next', () => ({
@@ -52,12 +52,13 @@ describe('RefreshIndicator & RefreshButton', () => {
     // 4️⃣ Shows spinning state when isRefreshing is true
     // Testing RefreshIndicator to fulfill "aria-label reflects updating state"
     // and "spinner element exists" from the requirements.
-    render(<RefreshIndicator isRefreshing={true} />)
+    const { container } = render(<RefreshIndicator isRefreshing={true} />)
 
     const indicator = screen.getByRole('status')
     expect(indicator).toHaveAttribute('aria-label', 'Updating data')
     expect(indicator).toHaveAttribute('title', 'common.updatingEllipsis')
     expect(screen.getByText('common.updating')).toBeInTheDocument()
+    expect(container.querySelector('.animate-spin')).toBeInTheDocument()
   })
 
   it('displays last refreshed timestamp when provided', () => {
@@ -119,6 +120,21 @@ describe('RefreshIndicator & RefreshButton', () => {
 
       // Now spinner should stop
       expect(screen.getByRole('button')).not.toBeDisabled()
+    })
+
+    it('renders RefreshSpinner with animate-spin only while refreshing', async () => {
+      vi.useFakeTimers()
+      const { container, rerender } = render(<RefreshSpinner isRefreshing={true} />)
+      expect(container.querySelector('.animate-spin')).toBeInTheDocument()
+
+      rerender(<RefreshSpinner isRefreshing={false} />)
+      expect(container.querySelector('.animate-spin')).toBeInTheDocument()
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+      await Promise.resolve()
+      expect(container.querySelector('.animate-spin')).not.toBeInTheDocument()
     })
   })
 })

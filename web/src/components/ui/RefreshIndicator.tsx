@@ -7,7 +7,7 @@ import { formatLastSeen } from '../../lib/errorClassifier'
 import { Button } from './Button'
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
-// Must match animation duration (1s) defined in index.css for animate-spin-min
+// Must match Tailwind's animate-spin duration (1s)
 const MIN_SPIN_DURATION = 1000
 
 
@@ -89,7 +89,7 @@ export const RefreshIndicator = memo(function RefreshIndicator({
         aria-live="polite"
         aria-label="Updating data"
       >
-        <RefreshCw className={cn(iconSize, 'animate-spin-min')} aria-hidden="true" />
+        <RefreshCw className={cn(iconSize, 'animate-spin')} aria-hidden="true" />
         {showLabel && <span>{t('common.updating')}</span>}
       </span>
     )
@@ -220,7 +220,7 @@ export function RefreshButton({
           <RefreshCw
             className={`${sizeClasses} ${
               isVisuallySpinning
-                ? 'text-blue-400 animate-spin-min'
+                ? 'text-blue-400 animate-spin'
                 : isFailed
                 ? 'text-red-400'
                 : 'text-muted-foreground'
@@ -273,6 +273,6 @@ export const RefreshSpinner = memo(function RefreshSpinner({
   const sizeClasses = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'
 
   return (
-    <RefreshCw className={`${sizeClasses} text-blue-400 animate-spin-min ${className}`} />
+    <RefreshCw className={`${sizeClasses} text-blue-400 animate-spin ${className}`} />
   )
 })
