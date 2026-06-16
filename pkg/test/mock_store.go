@@ -887,4 +887,4 @@ func (m *MockStore) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]mo
 func (m *MockStore) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]models.Team, error) {
 	args := m.Called(ctx, userID)
 	return args.Get(0).([]models.Team), args.Error(1)
-}	
+}

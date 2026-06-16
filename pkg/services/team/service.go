@@ -26,7 +26,7 @@ type Service interface {
 	// Update(ctx context.Context, teamID uuid.UUID, req models.UpdateTeamRequest) (*models.Team, error)
 	Delete(ctx context.Context, teamID uuid.UUID, userID uuid.UUID) error
 	List(ctx context.Context, userID *uuid.UUID, limit, offset int) ([]models.Team, error)
-	AddMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error
+	// AddMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error
 	RemoveMember(ctx context.Context, teamID, userID, actorID uuid.UUID) error
 	UpdateMemberRole(ctx context.Context, teamID, userID, actorID uuid.UUID, role models.TeamRole) error
 	ListMembers(ctx context.Context, teamID uuid.UUID) ([]models.TeamMemberInfo, error)
@@ -147,16 +147,16 @@ func (s *service) List(ctx context.Context, userID *uuid.UUID, limit, offset int
 	return s.teams.ListTeams(ctx, userID, limit, offset)
 }
 
-func (s *service) AddMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
-	team, err := s.teams.GetTeam(ctx, teamID)
-	if err != nil {
-		return err
-	}
-	if team == nil {
-		return ErrNotFound
-	}
-	return s.teams.AddTeamMember(ctx, teamID, userID, role)
-}
+// func (s *service) AddMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
+// 	team, err := s.teams.GetTeam(ctx, teamID)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if team == nil {
+// 		return ErrNotFound
+// 	}
+// 	return s.teams.AddTeamMember(ctx, teamID, userID, role)
+// }
 
 func (s *service) RemoveMember(ctx context.Context, teamID, userID, actorID uuid.UUID) error {
 	tm, err := s.teams.GetTeam(ctx, teamID)
