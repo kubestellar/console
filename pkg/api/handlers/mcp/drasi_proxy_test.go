@@ -43,6 +43,12 @@ func TestProxyDrasi_Server(t *testing.T) {
 	})
 	defer func() { drasiProxyClient.Transport = oldTransport }()
 
+	// Auth middleware to inject test user ID for RBAC checks
+	env.App.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", testAdminUserID)
+		return c.Next()
+	})
+
 	env.App.All("/api/drasi/proxy/*", h.ProxyDrasi)
 
 	req := httptest.NewRequest("GET", "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server&foo=bar", nil)

@@ -15,10 +15,16 @@ import (
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/kubestellar/console/pkg/agent/httputil"
 	"github.com/kubestellar/console/pkg/agent/updater"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
+
+// Compile-time assertion that Server implements httputil.HandlerContext.
+// This ensures that extracted handler files can accept the Server pointer
+// via the HandlerContext interface without circular imports (#18334).
+var _ httputil.HandlerContext = (*Server)(nil)
 
 // healthCheckHTTPClient is reused across all backend health checks to enable
 // connection pooling and reduce per-request allocation overhead.
@@ -120,6 +126,13 @@ func (s *Server) setCORSHeaders(w http.ResponseWriter, r *http.Request, methods 
 	// or browsers block the response even when the origin is allowed.
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Max-Age", corsPreflightMaxAge)
+}
+
+// SetCORSHeaders is the exported wrapper for setCORSHeaders, required by
+// httputil.HandlerContext interface (#18334). This enables extracted handler
+// files to call the method via the interface without coupling to Server.
+func (s *Server) SetCORSHeaders(w http.ResponseWriter, r *http.Request, methods ...string) {
+	s.setCORSHeaders(w, r, methods...)
 }
 
 // corsMiddleware returns an http.Handler that sets baseline CORS headers on

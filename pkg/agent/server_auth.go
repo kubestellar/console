@@ -106,6 +106,13 @@ func (s *Server) validateToken(r *http.Request) bool {
 	return false
 }
 
+// ValidateToken is the exported wrapper for validateToken, required by
+// httputil.HandlerContext interface (#18334). This enables extracted handler
+// files to call the method via the interface without coupling to Server.
+func (s *Server) ValidateToken(r *http.Request) bool {
+	return s.validateToken(r)
+}
+
 // isRealWebSocketUpgrade returns true only when the request carries all
 // three headers that a browser sends for a genuine WebSocket handshake:
 //   - Upgrade: websocket

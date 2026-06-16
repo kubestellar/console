@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { AlertTriangle, Eye, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { AMBER_500, GREEN_500_BRIGHT, RED_500, SLATE_700 } from '../../lib/theme/chartColors'
 import type { ProjectHoverInfo } from './svg/ProjectNode'
@@ -558,6 +559,7 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
   onShowProject?: (project: PayloadProject) => void
   installedProjects?: Set<string>
 }) {
+  const { t } = useTranslation()
   const depNotes = getDependencyNotes(projects)
   const projectByName = useMemo(
     () => new Map(projects.map((project) => [project.name, project] as const)),
@@ -743,24 +745,24 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
 
       <div className="pt-2 border-t border-border">
         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-          {mode === 'phased' ? 'Safety Features' : 'Considerations'}
+          {mode === 'phased' ? t('missionControl.blueprintInfo.phasedSafetyFeatures') : t('missionControl.blueprintInfo.parallelConsiderations')}
         </h4>
         <div className="text-xs text-muted-foreground">
           {mode === 'phased' ? (
             <ul className="space-y-1 list-disc list-inside">
-              <li>Safe for production environments</li>
-              <li>Automatic pause on failure</li>
-              <li>Retry/skip individual projects</li>
-              <li>Dependencies validated per phase</li>
-              <li>Rollback plan generated for each phase</li>
+              <li>{t('missionControl.blueprintInfo.safeForProduction')}</li>
+              <li>{t('missionControl.blueprintInfo.automaticPauseOnFailure')}</li>
+              <li>{t('missionControl.blueprintInfo.retrySkipIndividual')}</li>
+              <li>{t('missionControl.blueprintInfo.dependenciesValidatedPerPhase')}</li>
+              <li>{t('missionControl.blueprintInfo.rollbackPlanGenerated')}</li>
             </ul>
           ) : (
             <ul className="space-y-1 list-disc list-inside">
-              <li>All missions launched in parallel</li>
-              <li>No dependency gating — order not guaranteed</li>
-              <li>Fastest possible deployment</li>
-              <li>Failures don't block other projects</li>
-              <li>May need manual intervention if deps fail</li>
+              <li>{t('missionControl.blueprintInfo.allMissionsParallel')}</li>
+              <li>{t('missionControl.blueprintInfo.noDependencyGating')}</li>
+              <li>{t('missionControl.blueprintInfo.fastestDeployment')}</li>
+              <li>{t('missionControl.blueprintInfo.failuresDontBlock')}</li>
+              <li>{t('missionControl.blueprintInfo.manualInterventionNeeded')}</li>
             </ul>
           )}
         </div>

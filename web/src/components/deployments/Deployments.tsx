@@ -126,7 +126,7 @@ function DeploymentsContent() {
         aria-label="Deployment health: all healthy"
       >
         <CheckCircle className="w-3 h-3" />
-        <span>All healthy</span>
+        <span>{t('deployments.allHealthy')}</span>
       </span>
     )
   }, [issueCount])

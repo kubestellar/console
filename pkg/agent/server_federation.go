@@ -29,6 +29,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -39,6 +40,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/kubestellar/console/pkg/agent/federation"
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 )
@@ -217,6 +219,9 @@ func (s *Server) requireBearerToken(w http.ResponseWriter, r *http.Request) bool
 // physical hub under two context aliases.
 func (s *Server) resolveFederationContexts(ctx context.Context, r *http.Request) ([]string, error) {
 	if single := r.URL.Query().Get("cluster"); single != "" {
+		if err := kube.ValidateKubeContext(single); err != nil {
+			return nil, fmt.Errorf("invalid cluster context: %w", err)
+		}
 		return []string{single}, nil
 	}
 	clusters, err := s.k8sClient.DeduplicatedClusters(ctx)
@@ -523,6 +528,10 @@ func (s *Server) handleFederationAction(w http.ResponseWriter, r *http.Request) 
 
 	if req.ActionID == "" || req.Provider == "" || req.HubContext == "" {
 		writeJSONError(w, http.StatusBadRequest, "actionId, provider, and hubContext are required")
+		return
+	}
+	if err := kube.ValidateKubeContext(req.HubContext); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid hubContext: "+err.Error())
 		return
 	}
 

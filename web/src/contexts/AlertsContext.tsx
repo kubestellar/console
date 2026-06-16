@@ -254,17 +254,14 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (!mcpData.isLoading) return
+    if (!mcpData.isLoading) {
+      setLoadingTimedOut(false)
+      return
+    }
     const timer = setTimeout(() => {
       setLoadingTimedOut(true)
     }, LOADING_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [mcpData.isLoading])
-
-  useEffect(() => {
-    if (!mcpData.isLoading) {
-      setLoadingTimedOut(false)
-    }
   }, [mcpData.isLoading])
 
   useEffect(() => () => {

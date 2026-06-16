@@ -21,7 +21,7 @@ func TestRequireUser(t *testing.T) {
 	}{
 		{
 			name:      "valid user ID",
-			userID:    "user-123",
+			userID:    "00000000-0000-0000-0000-000000000001",
 			wantError: false,
 		},
 		{
@@ -39,7 +39,11 @@ func TestRequireUser(t *testing.T) {
 			app := fiber.New()
 			app.Get("/test", func(c *fiber.Ctx) error {
 				if tt.userID != "" {
-					c.Locals("stellarUserID", tt.userID)
+					// resolveStellarUserID checks middleware.GetUserID which reads from "userID" Locals
+					parsedID, err := uuid.Parse(tt.userID)
+					if err == nil {
+						c.Locals("userID", parsedID)
+					}
 				}
 				userID, err := handler.requireUser(c)
 				if tt.wantError {

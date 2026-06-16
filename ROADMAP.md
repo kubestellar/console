@@ -156,49 +156,65 @@ We welcome community input on priorities:
 ## Strategic Health — June 2026
 
 > Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
-> **Last updated:** 2026-06-13 (06:07 AM EDT, pass 8 — early morning)
+> **Last updated:** 2026-06-13 (02:57 PM EDT, pass 12)
 
 ### Current Risk Register
 
 | Risk | Severity | Issue | Status |
 |------|----------|-------|--------|
-| Scanner merge loop: 20+ build breaks across June 12–13 (root cause unresolved) | 🔴 Critical | #18218 | Stable last 2h — gate still absent |
-| v0.4 Q3 2026 deadline at risk — community PR #18264 is first feature contribution; no llm-d work started | 🔴 Critical | — | Ongoing |
-| CNCF security audit Q2 action overdue — ROADMAP requires filing request; deadline passed | 🔴 Critical | #18207 | Requires @clubanderson action |
-| Community PR #18264 (@bmvinay7, 1285 additions) awaiting human review — only automated review so far | 🟠 High | #18305 | 1 auto-review, 0 human reviews |
-| Organic contributor drought — 20/20 recent merges are hive bot; 0% human ratio | 🟠 High | — | Ongoing |
-| ADOPTERS.md created but self-referential — no external adopters listed | 🟠 High | — | Ongoing |
-| Playwright Firefox nightly failing (#18304) — cross-browser test coverage at risk | 🟠 High | #18304 | Open, unresolved |
+| GitHub branch protection still absent: 10+ build breaks after "guardrails" PR; policy files cannot enforce merges | 🔴 Critical | #18355 | Requires @clubanderson to configure GitHub Settings → Branch protection |
+| CNCF security audit Q2 action overdue — SSRF (#18372) is 3rd security finding in 24h | 🔴 Critical | #18207 | Requires @clubanderson action |
+| Three community contributors prow-gated on same day: #18264, #18373, #18377 — review window closing | 🔴 Critical | #18385 | All three MERGEABLE; zero human reviews; 34h+ for #18264 |
+| v0.4 Q3 2026 deadline — 3 community feature PRs open; no llm-d/Drasi/kagent PRs yet | 🟠 High | — | Positive momentum but roadmap targets unstarted |
+| SSRF: IsBlockedIP missing IsMulticast (#18372) — fix PR #18374 open | 🟠 High | #18372 | Fix in flight |
+| Organic contributor drought: 0% human merge ratio (3 community PRs waiting to be first) | 🟠 High | — | Ongoing |
+| ADOPTERS.md self-referential — no external adopters listed | 🟠 High | — | Ongoing |
 | PR triage SLA absent — ai-needs-human PRs lack escalation path | 🟡 Medium | #18037 | Ongoing |
 | Tech-debt arch refactors: #17124, #17576, #17882, #17883 still open | 🟡 Medium | #17883 | Architect making progress |
 | Stellar subsystem — no GA milestone or alpha exit criteria | 🟡 Medium | #17757 | Tracked |
 | CNCF incubation tracker on `hold` | 🟡 Medium | #4072 | Blocked |
-| ~~29 build breaks (June 12) / nightly CI trifecta~~ | ~~🔴 Critical~~ | ~~#18299-18301~~ | ✅ Resolved |
-| ~~Coverage suite: 67 failures~~ | ~~🟠 High~~ | ~~#18226~~ | ✅ Fixed via #18270, #18290 |
+| ~~Go test failures #18367-18370~~ | ~~🟠 High~~ | ~~#18367~~ | ⚠️ Fixes #18378, #18380 open |
+| ~~Auth smoke test regression~~ | ~~🔴 Critical~~ | ~~#18354~~ | ✅ Fixed |
+| ~~CSP `unsafe-eval` default~~ | ~~🟠 High~~ | ~~#18326~~ | ✅ Fix (#18341) + docs (#18342) merged |
+| ~~Playwright Firefox nightly failing~~ | ~~🟠 High~~ | ~~#18304~~ | ✅ Fixed via #18315 |
+| ~~Nightly CI trifecta~~ | ~~🔴 Critical~~ | ~~#18299-18301~~ | ✅ Resolved |
+| ~~Coverage suite: 67 failures~~ | ~~🟠 High~~ | ~~#18226~~ | ✅ Fixed |
 | ~~Merge gate disabled~~ | ~~🔴 Critical~~ | ~~#17852~~ | ✅ Closed |
 | ~~DCO sign-off failures~~ | ~~🔴 Critical~~ | ~~#17966~~ | ✅ Closed |
-| ~~Coverage suite 415 failures~~ | ~~🟠 High~~ | ~~#17856~~ | ✅ Closed |
+
+### Community Momentum — Positive Signal 🌱
+
+**Three external contributors opened PRs on 2026-06-13** — the largest single-day community contribution event in recent project history:
+
+| PR | Contributor | Type | Size | Open Since | Human Reviews |
+|----|-------------|------|------|-----------|---------------|
+| #18264 | @bmvinay7 | feat: semantic search | +1285/-2 (XXL) | 34h+ | 0 |
+| #18373 | @AdeshDeshmukh | test: missions unit tests | +255/-0 (M) | 2h | 0 |
+| #18377 | @ashnaaseth2325-oss | feat: search/filter/pagination | +563/-68 (L) | 1h | 0 |
+
+All three PRs are MERGEABLE with no conflicts. Prow blocks bot LGTM — human collaborator `/lgtm` is required. Without prompt engagement, all three contributors risk disengaging before their first merge.
 
 ### v0.4 Delivery Prerequisites
 
-Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), the following must be resolved:
+Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), ordered by urgency:
 
-1. **Required status checks on `main`** (#18218) — 20+ build breaks from June 12–13 confirm pre-merge compilation gate is missing. Until enabled, all feature PRs risk introducing breaks and blocking community contributors.
-2. **v0.4 feature kickoff** — Q3 starts July 1 (~18 days). First community feature PR (#18264, semantic search) is open and needs timely review to signal welcoming culture and unblock momentum.
-3. **Human reviewer assignment** (#18305) — Community PR #18264 has only automated Copilot review. A human maintainer review comment is needed within 24h.
-4. **External adopter recruitment** — ADOPTERS.md lists only KubeStellar itself; recruit ≥3 external organizations before CNCF application.
-5. **CNCF security audit filing** (#18207) — Q2 2026 deadline passed; file the audit request at `github.com/cncf/toc/issues` promptly.
+1. **Enable GitHub branch protection on `main`** (#18355) — [Configure here](https://github.com/kubestellar/console/settings/branch_protection_rules). Require status checks: `build`, `lint`, `go-test`. Policy files in `.github/` are advisory and cannot block merges.
+2. **LGTM three community PRs** (#18385) — `/lgtm` on #18373 (lowest risk: unit tests), #18377 (search/filter), #18264 (semantic search). Three contributors waiting simultaneously is an unprecedented opportunity.
+3. **File CNCF security audit** (#18207) — Three security findings in 24h (CSP, ValidateKubeContext, SSRF) reinforce urgency. File at `github.com/cncf/toc/issues`.
+4. **v0.4 feature kickoff** — Q3 starts July 1 (~18 days). Designate a feature captain; llm-d monitoring is Tier 1 per the scoping doc.
+5. **External adopter recruitment** — ADOPTERS.md needs ≥3 external organizations before CNCF application.
 
 ### Adoption Readiness
 
 | Signal | Target | Current |
 |--------|--------|---------|
-| Main branch build stability | Green ≥14 consecutive days | ⚠️ 20+ breaks June 12–13; stable last ~2h as of 06:07 AM EDT (#18218) |
+| Main branch build stability | Green ≥14 consecutive days | 🔴 10+ breaks after "guardrails" — enforcement absent (#18355); currently 0 open |
 | External adopters in ADOPTERS.md | ≥3 confirmed orgs | ❌ 0 external (KubeStellar self-listed only) |
-| Human contributor ratio | ≥10% of merged PRs | ❌ 0% — 20/20 recent merges are hive bot; maintainer PR #18097 closed by automation |
-| v0.4 feature work started | ≥1 feature PR open | ⚠️ #18264 (community, semantic search) open — no llm-d/Drasi/kagent PRs yet |
-| Community PR review SLA | Human review within 48h | ❌ #18264 open 12h — auto-review only, 0 human reviews (#18305) |
-| PR triage SLA | Defined + enforced | ❌ Undefined |
-| Cross-browser test coverage | Playwright Chrome + Firefox nightly green | ❌ Firefox nightly failing (#18304) |
+| Human contributor ratio | ≥10% of merged PRs | ❌ 0% merges — 3 community PRs open but prow-gated |
+| Community contributors active | ≥2 distinct contributors/month | ⚠️ 3 active today (unprecedented) — needs timely LGTM to retain all three |
+| Community PR merge time | ≤7 days for first-time contributors | ❌ #18264 open 34h+ with 0 human reviews; all three prow-gated (#18385) |
+| v0.4 feature work started | ≥1 feature PR merged | ⚠️ 3 community PRs open (missions/search) — no llm-d/Drasi/kagent PRs yet |
+| Security posture | No active sec-check findings | ❌ SSRF IsMulticast (#18372, fix in flight) + audit unfiled (#18207) |
+| CNCF security audit | Filed | ❌ Q2 deadline passed; not filed (#18207) |
 | CNCF incubation application | Filed | ⏸ On hold (#4072) |
 
