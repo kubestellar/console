@@ -859,17 +859,32 @@ func (m *MockStore) ListStellarAuditLog(_ context.Context, _ string, _ int) ([]s
 
 func (m *MockStore) Close() error { return nil }
 
-func (m *MockStore) CreateTeam(ctx context.Context, team *models.Team, memberIDs []uuid.UUID) error {
-	args := m.Called(ctx, team, memberIDs)
+func (m *MockStore) DeleteTeam(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
 	return args.Error(0)
 }
 
-func (m *MockStore) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
+func (m *MockStore) ListTeams(ctx context.Context, userID *uuid.UUID, limit, offset int) ([]models.Team, error) {
+	args := m.Called(ctx, userID, limit, offset)
+	return args.Get(0).([]models.Team), args.Error(1)
+}
+
+func (m *MockStore) RemoveTeamMember(ctx context.Context, teamID, userID uuid.UUID) error {
+	args := m.Called(ctx, teamID, userID)
+	return args.Error(0)
+}
+
+func (m *MockStore) UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
 	args := m.Called(ctx, teamID, userID, role)
 	return args.Error(0)
 }
 
-func (m *MockStore) GetTeam(ctx context.Context, id uuid.UUID) (*models.Team, error) {
-	args := m.Called(ctx, id)
-	return args.Get(0).(*models.Team), args.Error(1)
+func (m *MockStore) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]models.TeamMemberInfo, error) {
+	args := m.Called(ctx, teamID)
+	return args.Get(0).([]models.TeamMemberInfo), args.Error(1)
 }
+
+func (m *MockStore) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]models.Team, error) {
+	args := m.Called(ctx, userID)
+	return args.Get(0).([]models.Team), args.Error(1)
+}	

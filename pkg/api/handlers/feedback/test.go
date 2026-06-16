@@ -406,3 +406,11 @@ func (f *feedbackStoreStub) CreateTeam(ctx context.Context, team *models.Team, m
 func (f *feedbackStoreStub) DeleteTeam(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
+
+func (f *feedbackStoreStub) GetTeamWithMembers(ctx context.Context, id uuid.UUID) (*models.TeamWithMembers, error) {
+	return nil, nil
+}
+
+func (f *feedbackStoreStub) UpdateTeam(ctx context.Context, team *models.Team) error {
+	return nil
+}
