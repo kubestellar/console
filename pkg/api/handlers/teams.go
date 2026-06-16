@@ -229,3 +229,27 @@ func (h *TeamHandler) ListAllTeams(c *fiber.Ctx) error {
 	}
 	return c.JSON(teams)
 }
+// Add the handler implementation
+func (h *TeamHandler) UpdateTeamMemberRole(c *fiber.Ctx) error {
+    teamID, err := uuid.Parse(c.Params("id"))
+    if err != nil { return fiber.NewError(fiber.StatusBadRequest, "Invalid team ID") }
+
+    memberID, err := uuid.Parse(c.Params("userId"))
+    if err != nil { return fiber.NewError(fiber.StatusBadRequest, "Invalid user ID") }
+
+    var req struct {
+        Role models.TeamRole `json:"role"`
+    }
+    if err := c.BodyParser(&req); err != nil {
+        return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+    }
+
+    actorID := middleware.GetUserID(c)
+    if err := h.svc.UpdateMemberRole(c.UserContext(), teamID, memberID, actorID, req.Role); err != nil {
+        if err == team.ErrNotFound { return fiber.NewError(fiber.StatusNotFound, "Team not found") }
+        if err == team.ErrNoPermission { return fiber.NewError(fiber.StatusForbidden, "Permission denied") }
+        return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+    }
+
+    return c.SendStatus(fiber.StatusNoContent)
+}

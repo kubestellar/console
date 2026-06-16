@@ -26,14 +26,21 @@ func (s *SQLiteStore) CreateTeam(ctx context.Context, team *models.Team, memberI
 		}
 
 		for _, memberID := range memberIDs {
-			membershipID := uuid.New()
-			_, err := tx.ExecContext(ctx,
-				`INSERT INTO team_members (id, team_id, user_id, role, created_at) VALUES (?, ?, ?, ?, ?)`,
-				membershipID.String(), team.ID.String(), memberID.String(), string(models.TeamRoleMember), now)
-			if err != nil {
-				return err
-			}
-		}
+        membershipID := uuid.New()
+        
+        // FIX: Assign Admin role if the member is the creator
+        role := models.TeamRoleMember
+        if memberID == team.CreatedBy {
+            role = models.TeamRoleAdmin
+        }
+
+        _, err := tx.ExecContext(ctx,
+            `INSERT INTO team_members (id, team_id, user_id, role, created_at) VALUES (?, ?, ?, ?, ?)`,
+            membershipID.String(), team.ID.String(), memberID.String(), string(role), now)
+        if err != nil {
+            return err
+        }
+    }
 
 		team.MemberCount = len(memberIDs)
 		return nil

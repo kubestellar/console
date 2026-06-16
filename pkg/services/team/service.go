@@ -23,7 +23,7 @@ var (
 type Service interface {
 	Create(ctx context.Context, userID uuid.UUID, req models.CreateTeamRequest) (*models.Team, error)
 	Get(ctx context.Context, teamID uuid.UUID) (*models.TeamWithMembers, error)
-	Update(ctx context.Context, teamID uuid.UUID, req models.UpdateTeamRequest) (*models.Team, error)
+	// Update(ctx context.Context, teamID uuid.UUID, req models.UpdateTeamRequest) (*models.Team, error)
 	Delete(ctx context.Context, teamID uuid.UUID, userID uuid.UUID) error
 	List(ctx context.Context, userID *uuid.UUID, limit, offset int) ([]models.Team, error)
 	AddMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error
@@ -31,6 +31,8 @@ type Service interface {
 	UpdateMemberRole(ctx context.Context, teamID, userID, actorID uuid.UUID, role models.TeamRole) error
 	ListMembers(ctx context.Context, teamID uuid.UUID) ([]models.TeamMemberInfo, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]models.Team, error)
+	Update(ctx context.Context, teamID uuid.UUID, actorID uuid.UUID, req models.UpdateTeamRequest) (*models.Team, error)
+    AddMember(ctx context.Context, teamID, userID, actorID uuid.UUID, role models.TeamRole) error
 }
 
 type service struct {
@@ -54,17 +56,22 @@ func (s *service) Create(ctx context.Context, userID uuid.UUID, req models.Creat
 		CreatedBy:   userID,
 	}
 
-	memberIDs := make([]uuid.UUID, 0, len(req.MemberIDs)+1)
-	memberIDs = append(memberIDs, userID)
-	for _, idStr := range req.MemberIDs {
-		uid, err := uuid.Parse(idStr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid member ID %q: %w", idStr, err)
-		}
-		if uid != userID {
-			memberIDs = append(memberIDs, uid)
-		}
-	}
+	uniqueMembers := make(map[uuid.UUID]bool)
+    uniqueMembers[userID] = true // Explicitly add the creator
+
+    for _, idStr := range req.MemberIDs {
+        uid, err := uuid.Parse(idStr)
+        if err != nil {
+            return nil, fmt.Errorf("invalid member ID %q: %w", idStr, err)
+        }
+        uniqueMembers[uid] = true
+    }
+
+    // Convert back to slice
+    memberIDs := make([]uuid.UUID, 0, len(uniqueMembers))
+    for uid := range uniqueMembers {
+        memberIDs = append(memberIDs, uid)
+    }
 
 	if err := s.teams.CreateTeam(ctx, team, memberIDs); err != nil {
 		return nil, err
@@ -85,27 +92,27 @@ func (s *service) Get(ctx context.Context, teamID uuid.UUID) (*models.TeamWithMe
 	return team, nil
 }
 
-func (s *service) Update(ctx context.Context, teamID uuid.UUID, req models.UpdateTeamRequest) (*models.Team, error) {
-	team, err := s.teams.GetTeam(ctx, teamID)
-	if err != nil {
-		return nil, err
-	}
-	if team == nil {
-		return nil, ErrNotFound
-	}
+// func (s *service) Update(ctx context.Context, teamID uuid.UUID, req models.UpdateTeamRequest) (*models.Team, error) {
+// 	team, err := s.teams.GetTeam(ctx, teamID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if team == nil {
+// 		return nil, ErrNotFound
+// 	}
 
-	if req.Name != nil {
-		team.Name = *req.Name
-	}
-	if req.Description != nil {
-		team.Description = *req.Description
-	}
+// 	if req.Name != nil {
+// 		team.Name = *req.Name
+// 	}
+// 	if req.Description != nil {
+// 		team.Description = *req.Description
+// 	}
 
-	if err := s.teams.UpdateTeam(ctx, team); err != nil {
-		return nil, err
-	}
-	return team, nil
-}
+// 	if err := s.teams.UpdateTeam(ctx, team); err != nil {
+// 		return nil, err
+// 	}
+// 	return team, nil
+// }
 
 func (s *service) Delete(ctx context.Context, teamID uuid.UUID, userID uuid.UUID) error {
 	team, err := s.teams.GetTeam(ctx, teamID)
@@ -205,4 +212,45 @@ func (s *service) ListMembers(ctx context.Context, teamID uuid.UUID) ([]models.T
 
 func (s *service) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]models.Team, error) {
 	return s.teams.GetUserTeams(ctx, userID)
+}
+func (s *service) isTeamAdmin(ctx context.Context, team *models.Team, actorID uuid.UUID) (bool, error) {
+    if team.CreatedBy == actorID {
+        return true, nil
+    }
+    members, err := s.teams.ListTeamMembers(ctx, team.ID)
+    if err != nil {
+        return false, err
+    }
+    for _, m := range members {
+        if m.UserID == actorID && m.Role == models.TeamRoleAdmin {
+            return true, nil
+        }
+    }
+    return false, nil
+}
+
+
+func (s *service) Update(ctx context.Context, teamID uuid.UUID, actorID uuid.UUID, req models.UpdateTeamRequest) (*models.Team, error) {
+    team, err := s.teams.GetTeam(ctx, teamID)
+    if err != nil { return nil, err }
+    if team == nil { return nil, ErrNotFound }
+
+    isAdmin, err := s.isTeamAdmin(ctx, team, actorID)
+    if err != nil { return nil, err }
+    if !isAdmin { return nil, ErrNoPermission }
+
+    // ... proceed with update ...
+}
+
+// 4. Patch the AddMember method
+func (s *service) AddMember(ctx context.Context, teamID, userID, actorID uuid.UUID, role models.TeamRole) error {
+    team, err := s.teams.GetTeam(ctx, teamID)
+    if err != nil { return err }
+    if team == nil { return ErrNotFound }
+
+    isAdmin, err := s.isTeamAdmin(ctx, team, actorID)
+    if err != nil { return err }
+    if !isAdmin { return ErrNoPermission }
+
+    return s.teams.AddTeamMember(ctx, teamID, userID, role)
 }

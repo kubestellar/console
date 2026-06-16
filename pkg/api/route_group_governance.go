@@ -28,7 +28,7 @@ func (g *governanceRouteGroup) Register(routes *routeSetupContext) {
 
 	teamSvc := team.New(g.store, g.store)
 	teams := handlers.NewTeamHandler(teamSvc)
-	api.Get("/teams", teams.ListAllTeams)
+	api.Get("/teams", middleware.RequireAdmin, teams.ListAllTeams)
 	api.Post("/teams", teams.CreateTeam)
 	api.Get("/teams/mine", teams.GetUserTeams)
 	api.Get("/teams/:id", teams.GetTeam)
@@ -37,6 +37,8 @@ func (g *governanceRouteGroup) Register(routes *routeSetupContext) {
 	api.Get("/teams/:id/members", teams.ListTeamMembers)
 	api.Post("/teams/:id/members", teams.AddTeamMember)
 	api.Delete("/teams/:id/members/:userId", teams.RemoveTeamMember)
+	api.Put("/teams/:id/members/:userId/role", teams.UpdateTeamMemberRole)
+	
 
 	rbac := handlers.NewRBACHandler(g.store, g.k8sClient)
 	api.Get("/users", rbac.ListConsoleUsers)

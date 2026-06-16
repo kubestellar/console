@@ -54,11 +54,6 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
   const [showDropdown, setShowDropdown] = useState(false)
 
   // Populate Team subjects from live team data
-  useEffect(() => {
-    if (subjectKind === 'Team' && teams.length > 0) {
-      COMMON_SUBJECTS.Team = teams.map(t => t.name)
-    }
-  }, [subjectKind, teams])
 
   // Filter out subjects that already have access
   const existingSubjectNames = new Set(
@@ -162,7 +157,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
             <select
               value={subjectKind}
               onChange={(e) => {
-                setSubjectKind(e.target.value as 'User' | 'Group' | 'ServiceAccount')
+                setSubjectKind(e.target.value as 'User' | 'Group' | 'Team' | 'ServiceAccount')
                 setSubjectName('') // Clear selection when type changes
               }}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
