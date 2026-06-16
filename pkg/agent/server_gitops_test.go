@@ -11,58 +11,9 @@ import (
 	"os/exec"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 )
-
-// Mock configuration variables
-var (
-	mockStdout   string
-	mockStderr   string
-	mockExitCode int
-)
-
-// fakeExecCommand mimics exec.Command but calls a helper test function
-func fakeExecCommand(command string, args ...string) *exec.Cmd {
-	cs := []string{"-test.run=TestHelperProcess", "--", command}
-	cs = append(cs, args...)
-	cmd := exec.Command(os.Args[0], cs...)
-	cmd.Env = []string{
-		"GO_WANT_HELPER_PROCESS=1",
-		"MOCK_STDOUT=" + mockStdout,
-		"MOCK_STDERR=" + mockStderr,
-		"MOCK_EXIT_CODE=" + strconv.Itoa(mockExitCode),
-		// Prevent coverage warning from polluting stderr
-		"GOCOVERDIR=" + os.TempDir(),
-	}
-	return cmd
-}
-
-// fakeExecCommandContext mimics exec.CommandContext for testing
-func fakeExecCommandContext(_ context.Context, command string, args ...string) *exec.Cmd {
-	return fakeExecCommand(command, args...)
-}
-
-// TestHelperProcess is the function executed by the fake command
-func TestHelperProcess(t *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
-		return
-	}
-
-	// Write mock stdout
-	fmt.Fprint(os.Stdout, os.Getenv("MOCK_STDOUT"))
-
-	// Write mock stderr
-	fmt.Fprint(os.Stderr, os.Getenv("MOCK_STDERR"))
-
-	// Exit with mock code
-	exitCode := 0
-	if code := os.Getenv("MOCK_EXIT_CODE"); code != "" {
-		fmt.Sscanf(code, "%d", &exitCode)
-	}
-	os.Exit(exitCode)
-}
 
 func TestValidateGitopsRepoURL(t *testing.T) {
 	originalLookup := gitopsLookupIPAddr
@@ -161,7 +112,7 @@ func TestGitopsCloneRepoRejectsBlockedResolvedIP(t *testing.T) {
 	execCalled := false
 	execCommandContext = func(ctx context.Context, command string, args ...string) *exec.Cmd {
 		execCalled = true
-		return fakeExecCommandContext(ctx, command, args...)
+		return fakeExecCommand(command, args...)
 	}
 	gitopsLookupIPAddr = func(_ context.Context, host string) ([]net.IPAddr, error) {
 		if host != "github.com" {
@@ -364,7 +315,7 @@ func TestGitopsHandlers(t *testing.T) {
 	// 1. Setup mock execCommand
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
-	execCommandContext = fakeExecCommandContext
+	execCommandContext = fakeExecCommand
 
 	originalLookup := gitopsLookupIPAddr
 	defer func() { gitopsLookupIPAddr = originalLookup }()
