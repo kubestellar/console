@@ -467,6 +467,10 @@ func (c *Client) send(req Request) error {
 	c.writeMu.Lock()
 	safego.Go(func() {
 		defer c.writeMu.Unlock()
+		if c.stdin == nil {
+			ch <- writeResult{err: fmt.Errorf("stdin is nil (connection unavailable)")}
+			return
+		}
 		_, werr := c.stdin.Write(data)
 		ch <- writeResult{err: werr}
 	})
