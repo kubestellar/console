@@ -147,16 +147,6 @@ func (s *service) List(ctx context.Context, userID *uuid.UUID, limit, offset int
 	return s.teams.ListTeams(ctx, userID, limit, offset)
 }
 
-// func (s *service) AddMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
-// 	team, err := s.teams.GetTeam(ctx, teamID)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if team == nil {
-// 		return ErrNotFound
-// 	}
-// 	return s.teams.AddTeamMember(ctx, teamID, userID, role)
-// }
 
 func (s *service) RemoveMember(ctx context.Context, teamID, userID, actorID uuid.UUID) error {
 	tm, err := s.teams.GetTeam(ctx, teamID)
@@ -221,7 +211,6 @@ func (s *service) isTeamAdmin(ctx context.Context, team *models.Team, actorID uu
 
 
 
-// 4. Patch the AddMember method
 func (s *service) AddMember(ctx context.Context, teamID, userID, actorID uuid.UUID, role models.TeamRole) error {
     team, err := s.teams.GetTeam(ctx, teamID)
     if err != nil { return err }

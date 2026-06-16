@@ -522,6 +522,9 @@ func (h *Handler) buildState(ctx context.Context, userID string) (*OperationalSt
 	if err != nil {
 		return nil, err
 	}
+	if state == nil {
+    	return nil, fmt.Errorf("state is nil") // or handle appropriately
+	}
 	state.UnreadAlerts = unread
 	return state, nil
 }
