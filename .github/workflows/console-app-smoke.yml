@@ -164,3 +164,47 @@ jobs:
           go test -timeout 60s -v -run \
             'TestNewGitHubApp|TestExpectedApp|TestIsConsoleApp|TestRequiresApp|TestClassifyIssue' \
             ./pkg/api/handlers/...
+
+      - name: Create issue on failure
+        if: failure()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'console-app-classifier-failure',
+              per_page: 1,
+            });
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `🔁 Still failing — [run ${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n**Time:** ${new Date().toISOString()}`,
+              });
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Rewards classifier tests failing in Console App Smoke',
+              body: [
+                '## Rewards Classifier Contract Failure',
+                '',
+                `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                `**Time:** ${new Date().toISOString()}`,
+                '',
+                'The `classifier-contract` job (`go test ./pkg/api/handlers/...`) failed in the Console App Smoke workflow.',
+                '',
+                '### Likely causes',
+                '- Compilation error in `pkg/api/handlers/` tests (undefined symbol, missing import)',
+                '- Test assertion failure in classifier or attribution logic',
+                '- Dependency change breaking the rewards classification contract',
+                '',
+                '### Effect',
+                'While this is broken, **rewards classifier regressions may go undetected** before they reach the leaderboard.',
+              ].join('\n'),
+              labels: ['console-app-classifier-failure', 'ci'],
+            });
