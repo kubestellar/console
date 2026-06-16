@@ -21,7 +21,8 @@ var (
 	sseCacheOnce sync.Once
 	// sseCacheEvictDone is closed to stop the background evictor goroutine
 	// on server shutdown or in tests, preventing goroutine leaks (#6956).
-	sseCacheEvictDone = make(chan struct{})
+	sseCacheEvictDone   = make(chan struct{})
+	sseCacheEvictDoneMu sync.RWMutex
 	// #7045 — singleflight group coalesces concurrent cold-cache fetches for
 	// the same cache key into a single Kubernetes API call.
 	SSEFetchGroup singleflight.Group
@@ -41,8 +42,11 @@ func startSSECacheEvictor() {
 			ticker := time.NewTicker(sseCacheEvictInterval)
 			defer ticker.Stop()
 			for {
+				sseCacheEvictDoneMu.RLock()
+				done := sseCacheEvictDone
+				sseCacheEvictDoneMu.RUnlock()
 				select {
-				case <-sseCacheEvictDone:
+				case <-done:
 					return
 				case <-ticker.C:
 					now := time.Now()
@@ -70,11 +74,14 @@ func ClearSSECache() {
 
 // Safe to call multiple times. Intended for server shutdown and tests (#6956).
 func StopSSECacheEvictor() {
+	sseCacheEvictDoneMu.RLock()
+	done := sseCacheEvictDone
+	sseCacheEvictDoneMu.RUnlock()
 	select {
-	case <-sseCacheEvictDone:
+	case <-done:
 		// Already closed
 	default:
-		close(sseCacheEvictDone)
+		close(done)
 	}
 }
 
