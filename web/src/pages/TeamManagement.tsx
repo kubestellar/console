@@ -7,7 +7,7 @@ import type { TeamRole } from '../types/teams'
 export function TeamManagementPage() {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const { teams, isLoading, createTeam, deleteTeam } = useTeams()
-  const { team, isLoading: detailLoading, addMember, removeMember, refetch } = useTeamDetail(selectedTeamId)
+  const { team, addMember, removeMember } = useTeamDetail(selectedTeamId)
 
   const handleCreate = async (name: string, description: string) => {
     await createTeam({ name, description })
@@ -20,7 +20,7 @@ export function TeamManagementPage() {
     }
   }
 
-  const handleChangeRole = async (userId: string, role: TeamRole) => {
+  const handleChangeRole = async (_userId: string, _role: TeamRole) => {
   }
 
   if (selectedTeamId && team) {
