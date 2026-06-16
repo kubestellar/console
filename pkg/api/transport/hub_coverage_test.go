@@ -92,9 +92,15 @@ func TestSSECacheGet_ConcurrentSafe(t *testing.T) {
 
 func TestStopSSECacheEvictor_DoubleCallSafe(t *testing.T) {
 	// Reset the channel for this test
+	sseCacheEvictDoneMu.Lock()
 	origDone := sseCacheEvictDone
 	sseCacheEvictDone = make(chan struct{})
-	defer func() { sseCacheEvictDone = origDone }()
+	sseCacheEvictDoneMu.Unlock()
+	defer func() {
+		sseCacheEvictDoneMu.Lock()
+		sseCacheEvictDone = origDone
+		sseCacheEvictDoneMu.Unlock()
+	}()
 
 	// First call should close
 	StopSSECacheEvictor()
