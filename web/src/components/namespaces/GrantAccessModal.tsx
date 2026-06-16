@@ -25,7 +25,7 @@ const COMMON_SUBJECTS = {
     'platform-team',
     'sre-team',
   ],
-  Team: [],
+  Team: [] as string[],
   ServiceAccount: [
     'default',
     'deployer',
@@ -67,10 +67,13 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
       .map(e => e.subjectName)
   )
 
-  const subjectSource = subjectKind === 'Team' ? COMMON_SUBJECTS.Team : COMMON_SUBJECTS[subjectKind]
+  const subjectSource = subjectKind === 'Team' 
+    ? teams.map(t => t.name) 
+    : COMMON_SUBJECTS[subjectKind];
+
   const availableSubjects = (subjectSource || []).filter(
     name => !existingSubjectNames.has(name)
-  )
+  );
 
   const handleGrant = async () => {
     if (!subjectName) return

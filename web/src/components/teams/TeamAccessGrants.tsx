@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Shield, Loader2, Plus, Trash2 } from 'lucide-react'
+import { Shield, Loader2, Plus } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { BaseModal } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
@@ -18,7 +18,6 @@ interface AccessGrant {
 
 interface TeamAccessGrantsProps {
   teamName: string
-  teamId: string
   grants: AccessGrant[]
   onGrantChanged: () => void
 }
@@ -30,7 +29,7 @@ const ROLE_OPTIONS = [
   { value: 'view', labelKey: 'namespaces.roleView' },
 ]
 
-export function TeamAccessGrants({ teamName, teamId, grants, onGrantChanged }: TeamAccessGrantsProps) {
+export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAccessGrantsProps) {
   const { t } = useTranslation()
   const [showGrant, setShowGrant] = useState(false)
   const [granting, setGranting] = useState(false)
@@ -38,7 +37,7 @@ export function TeamAccessGrants({ teamName, teamId, grants, onGrantChanged }: T
 
   const { deduplicatedClusters: clusters } = useClusters()
   const safeClusters = clusters || []
-  const { isAllClustersSelected } = useGlobalFilters()
+  const { } = useGlobalFilters()
 
   const [selectedCluster, setSelectedCluster] = useState('')
   const [scope, setScope] = useState<'namespace' | 'cluster'>('namespace')
