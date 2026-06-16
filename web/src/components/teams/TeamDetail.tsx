@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, Pencil, Trash2, Shield } from 'lucide-react'
+import { ArrowLeft, Trash2, Shield } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { ConfirmDialog } from '../../lib/modals'
 import { TeamMemberManager } from './TeamMemberManager'
@@ -18,7 +18,7 @@ interface TeamDetailProps {
   onChangeRole: (userId: string, role: TeamRole) => void
 }
 
-export function TeamDetail({ team, onBack, onUpdateTeam, onDeleteTeam, onAddMember, onRemoveMember, onChangeRole }: TeamDetailProps) {
+export function TeamDetail({ team, onBack, onUpdateTeam: _onUpdateTeam, onDeleteTeam, onAddMember, onRemoveMember, onChangeRole }: TeamDetailProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -62,7 +62,6 @@ export function TeamDetail({ team, onBack, onUpdateTeam, onDeleteTeam, onAddMemb
         <div className="rounded-lg bg-secondary/20 p-4">
           <TeamAccessGrants
             teamName={team.name}
-            teamId={team.id}
             grants={[
               { cluster: 'prod-east', namespace: 'default', role: 'admin', isClusterScoped: false },
               { cluster: 'staging', role: 'view', isClusterScoped: true },

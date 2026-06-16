@@ -23,10 +23,10 @@ interface TeamAccessGrantsProps {
 }
 
 const ROLE_OPTIONS = [
-  { value: 'cluster-admin', labelKey: 'namespaces.roleClusterAdmin' },
-  { value: 'admin', labelKey: 'namespaces.roleAdmin' },
-  { value: 'edit', labelKey: 'namespaces.roleEdit' },
-  { value: 'view', labelKey: 'namespaces.roleView' },
+  { value: 'cluster-admin', labelKey: 'namespaces.roleClusterAdmin' as const },
+  { value: 'admin', labelKey: 'namespaces.roleAdmin' as const },
+  { value: 'edit', labelKey: 'namespaces.roleEdit' as const },
+  { value: 'view', labelKey: 'namespaces.roleView' as const },
 ]
 
 export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAccessGrantsProps) {
@@ -118,7 +118,7 @@ export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAcces
         <h3 className="text-sm font-medium text-foreground">
           {t('teams.accessGrants')}
         </h3>
-        <Button variant="ghost" size="sm" icon={Plus} onClick={() => setShowGrant(true)}>
+        <Button variant="ghost" size="sm" icon={<Plus className="w-3 h-3" />} onClick={() => setShowGrant(true)}>
           {t('teams.grantAccess')}
         </Button>
       </div>
