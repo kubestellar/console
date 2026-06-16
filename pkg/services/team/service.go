@@ -152,16 +152,16 @@ func (s *service) AddMember(ctx context.Context, teamID, userID uuid.UUID, role 
 }
 
 func (s *service) RemoveMember(ctx context.Context, teamID, userID, actorID uuid.UUID) error {
-	team, err := s.teams.GetTeam(ctx, teamID)
+	tm, err := s.teams.GetTeam(ctx, teamID)
 	if err != nil {
 		return err
 	}
-	if team == nil {
+	if tm == nil {
 		return ErrNotFound
 	}
 
 	// SECURITY FIX: Validate permissions before removing a member
-	if team.CreatedBy != actorID && userID != actorID {
+	if tm.CreatedBy != actorID && userID != actorID {
 		members, err := s.teams.ListTeamMembers(ctx, teamID)
 		if err != nil {
 			return err
