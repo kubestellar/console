@@ -387,6 +387,9 @@ func TestGitopsHandlers(t *testing.T) {
 	})
 
 	t.Run("handleDetectDrift_DriftDetected", func(t *testing.T) {
+		if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+			t.Skip("skipping: requires live cluster (set KC_INTEGRATION_TESTS=1)")
+		}
 		// Mock git clone (1st call) and kubectl diff (2nd call)
 		originalMockStdout := mockStdout
 		originalMockExitCode := mockExitCode
