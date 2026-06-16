@@ -411,6 +411,10 @@ func (f *feedbackStoreStub) GetTeamWithMembers(ctx context.Context, id uuid.UUID
 	return nil, nil
 }
 
-func (f *feedbackStoreStub) UpdateTeam(ctx context.Context, team *models.Team) error {
+func (s *feedbackStoreStub) GetTeam(ctx context.Context, teamID uuid.UUID) (*models.Team, error) {
 	return nil, nil
+}
+
+func (s *feedbackStoreStub) UpdateTeam(ctx context.Context, team *models.Team) error {
+	return nil
 }

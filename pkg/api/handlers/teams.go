@@ -90,7 +90,8 @@ func (h *TeamHandler) UpdateTeam(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	updated, err := h.svc.Update(c.UserContext(), teamID, req)
+	actorID := middleware.GetUserID(c)
+	updated, err := h.svc.Update(c.UserContext(), teamID, actorID, req)
 	if err != nil {
 		if err == team.ErrNotFound {
 			return fiber.NewError(fiber.StatusNotFound, "Team not found")
@@ -165,7 +166,8 @@ func (h *TeamHandler) AddTeamMember(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid user ID")
 	}
 
-	if err := h.svc.AddMember(c.UserContext(), teamID, userID, req.Role); err != nil {
+	actorID := middleware.GetUserID(c)
+	if err := h.svc.AddMember(c.UserContext(), teamID, userID, actorID, req.Role); err != nil {
 		if err == team.ErrNotFound {
 			return fiber.NewError(fiber.StatusNotFound, "Team not found")
 		}
