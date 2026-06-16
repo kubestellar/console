@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
@@ -134,5 +135,51 @@ func TestRespondClusterResources(t *testing.T) {
 		require.NoError(t, err)
 		pods := result["pods"].([]interface{})
 		assert.Len(t, pods, 0)
+	})
+}
+
+func TestListClusterResources(t *testing.T) {
+	t.Run("returns empty slice when cluster specified and fetchFn returns nil", func(t *testing.T) {
+		ctx := context.Background()
+		client := &k8s.MultiClusterClient{}
+		
+		fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
+			return nil, nil
+		}
+		
+		items, errTracker, err := listClusterResources(ctx, client, "test-cluster", fetchFn)
+		require.NoError(t, err)
+		assert.Nil(t, errTracker)
+		assert.NotNil(t, items)
+		assert.Len(t, items, 0)
+	})
+
+	t.Run("returns items from single cluster", func(t *testing.T) {
+		ctx := context.Background()
+		client := &k8s.MultiClusterClient{}
+		
+		expectedItems := []string{"item1", "item2", "item3"}
+		fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
+			return expectedItems, nil
+		}
+		
+		items, errTracker, err := listClusterResources(ctx, client, "test-cluster", fetchFn)
+		require.NoError(t, err)
+		assert.Nil(t, errTracker)
+		assert.Equal(t, expectedItems, items)
+	})
+
+	t.Run("returns error when fetchFn fails for single cluster", func(t *testing.T) {
+		ctx := context.Background()
+		client := &k8s.MultiClusterClient{}
+		
+		fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
+			return nil, assert.AnError
+		}
+		
+		items, errTracker, err := listClusterResources(ctx, client, "test-cluster", fetchFn)
+		assert.Error(t, err)
+		assert.Nil(t, errTracker)
+		assert.Nil(t, items)
 	})
 }
