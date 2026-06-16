@@ -66,15 +66,16 @@ func (h *TeamHandler) GetTeam(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid team ID")
 	}
 
-	team, err := h.svc.Get(c.UserContext(), teamID)
+	teamResp, err := h.svc.Get(c.UserContext(), teamID)
 	if err != nil {
+        // Now 'team' correctly refers to the imported package
 		if err == team.ErrNotFound {
 			return fiber.NewError(fiber.StatusNotFound, "Team not found")
 		}
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(team)
+	return c.JSON(teamResp)
 }
 
 // UpdateTeam updates a team's mutable fields
