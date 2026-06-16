@@ -85,6 +85,6 @@ describe('DeployModeInfoPanel', () => {
     )
     
     expect(screen.getByText('YOLO Mode')).toBeDefined()
-    expect(screen.getByText('Considerations')).toBeDefined()
+    expect(screen.getByText('missionControl.blueprintInfo.parallelConsiderations')).toBeDefined()
   })
 })
