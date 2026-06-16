@@ -56,6 +56,8 @@ func setupTestEnv(t *testing.T) *testEnv {
 	manager.SetSettingsPath(settingsPath)
 	manager.SetKeyPath(keyPath)
 
+	mockStore := new(test.MockStore)
+
 	// Ensure we start with a clean state for this test run relative to the file.
 	_ = manager.Load()
 
@@ -97,8 +99,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	})
 
 	// Initialize a MockStore with a pre-configured admin user so RBAC-protected
-	// handler tests pass without extra setup.
-	mockStore := new(test.MockStore)
+	// handler tests pass without extra setup
 	mockStore.On("GetUser", testAdminUserID).Return(&models.User{
 		ID:   testAdminUserID,
 		Role: "admin",
@@ -204,11 +205,4 @@ func addClusterToRawConfig(client *k8s.MultiClusterClient, cluster string) {
 	cfg.Clusters[cluster] = &api.Cluster{Server: "https://" + cluster + ":6443"}
 	cfg.Contexts[cluster] = &api.Context{Cluster: cluster, AuthInfo: "test-user"}
 	client.SetRawConfig(cfg)
-}
-func (m *MockStore) GetTeam(ctx context.Context, teamID uuid.UUID) (*models.Team, error) {
-	args := m.Called(ctx, teamID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.Team), args.Error(1)
 }

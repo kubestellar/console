@@ -28,7 +28,7 @@ func (g *governanceRouteGroup) Register(routes *routeSetupContext) {
 
 	teamSvc := team.New(g.store, g.store)
 	teams := handlers.NewTeamHandler(teamSvc)
-	api.Get("/teams", middleware.RequireAdmin, teams.ListAllTeams)
+	api.Get("/teams", teams.ListAllTeams)
 	api.Post("/teams", teams.CreateTeam)
 	api.Get("/teams/mine", teams.GetUserTeams)
 	api.Get("/teams/:id", teams.GetTeam)

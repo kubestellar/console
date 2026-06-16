@@ -402,8 +402,8 @@ func (f *feedbackStoreStub) CreateTeam(ctx context.Context, team *models.Team, m
 	return nil
 }
 
-func (f *feedbackStoreStub) GetTeamWithMembers(ctx context.Context, teamID uuid.UUID) (*models.Team, []models.TeamMemberInfo, error) {
-	return nil, nil, nil
+func (f *feedbackStoreStub) GetTeamWithMembers(ctx context.Context, teamID uuid.UUID) (*models.TeamWithMembers, error) {
+	return nil, nil
 }
 
 func (f *feedbackStoreStub) UpdateTeam(ctx context.Context, team *models.Team) error {
