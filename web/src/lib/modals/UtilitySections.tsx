@@ -34,6 +34,8 @@ export function CollapsibleSection({
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between py-2 text-sm font-medium text-foreground hover:text-purple-400 transition-colors"
+        aria-expanded={isOpen}
+        aria-label={title}
       >
         <span className="flex items-center gap-2">
           {isOpen ? (
