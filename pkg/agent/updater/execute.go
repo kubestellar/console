@@ -7,8 +7,24 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"time"
 )
+
+// semverTagRE validates that a GitHub release tag is a well-formed semver
+// string (with or without the leading "v"). This guards against git flag
+// injection via a crafted tag_name in the GitHub Releases API response:
+// a tag starting with "--" would otherwise be interpreted by git as a flag
+// rather than a refspec (CWE-20).
+var semverTagRE = regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
+
+// validateTagName returns an error if tag does not look like a semver string.
+func validateTagName(tag string) error {
+	if !semverTagRE.MatchString(tag) {
+		return fmt.Errorf("release tag %q does not match expected semver pattern (v?X.Y.Z)", tag)
+	}
+	return nil
+}
 
 func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	uc.mu.Lock()
@@ -281,6 +297,14 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 	uc.mu.Unlock()
 
 	if repoPath == "" {
+		return
+	}
+
+	// Validate the tag name before passing it to git to prevent git flag injection
+	// via a crafted tag_name in the GitHub Releases API response (CWE-20, #18488).
+	if err := validateTagName(release.TagName); err != nil {
+		slog.Error("[AutoUpdate] invalid release tag name", "tag", release.TagName, "error", err)
+		uc.recordError(fmt.Sprintf("invalid release tag: %v", err))
 		return
 	}
 
