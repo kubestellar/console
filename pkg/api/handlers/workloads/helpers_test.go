@@ -1,11 +1,14 @@
 package workloads
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsDemoMode(t *testing.T) {
@@ -46,18 +49,14 @@ func TestIsDemoMode(t *testing.T) {
 				return c.SendStatus(200)
 			})
 
-			req := fiber.AcquireRequest()
-			req.Header.SetMethod(fiber.MethodGet)
-			req.SetRequestURI("/test")
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
 			if tt.headerVal != "" {
 				req.Header.Set("X-Demo-Mode", tt.headerVal)
 			}
 
-			resp := fiber.AcquireResponse()
-			defer fiber.ReleaseRequest(req)
-			defer fiber.ReleaseResponse(resp)
-
-			_ = app.Test(req)
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			resp.Body.Close()
 
 			assert.Equal(t, tt.wantResult, gotResult)
 		})
