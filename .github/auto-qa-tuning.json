@@ -336,8 +336,8 @@
       "[nightly:iNn] iNn Compliance failed — N-N-N",
       "[nightly:error-resilience] Error Resilience failed — N-N-N"
     ],
-    "total_issues_7d": 75,
-    "repeat_pattern_count": 23,
-    "last_analyzed": "2026-06-15T04:31:56Z"
+    "total_issues_7d": 71,
+    "repeat_pattern_count": 19,
+    "last_analyzed": "2026-06-16T04:32:28Z"
   }
 }
