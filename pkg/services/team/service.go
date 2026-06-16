@@ -152,22 +152,33 @@ func (s *service) AddMember(ctx context.Context, teamID, userID uuid.UUID, role 
 }
 
 func (s *service) RemoveMember(ctx context.Context, teamID, userID, actorID uuid.UUID) error {
-	if team.CreatedBy != actorID && userID != actorID { // Allow creator or self-leave
-    members, err := s.teams.ListTeamMembers(ctx, teamID)
-    if err != nil {
-        return err
-    }
-    isAdmin := false
-    for _, m := range members {
-        if m.UserID == actorID && m.Role == models.TeamRoleAdmin {
-            isAdmin = true
-            break
-        }
-    }
-    if !isAdmin {
-        return ErrNoPermission
-    	}
+	team, err := s.teams.GetTeam(ctx, teamID)
+	if err != nil {
+		return err
 	}
+	if team == nil {
+		return ErrNotFound
+	}
+
+	// SECURITY FIX: Validate permissions before removing a member
+	if team.CreatedBy != actorID && userID != actorID { 
+		members, err := s.teams.ListTeamMembers(ctx, teamID)
+		if err != nil {
+			return err
+		}
+		isAdmin := false
+		for _, m := range members {
+			if m.UserID == actorID && m.Role == models.TeamRoleAdmin {
+				isAdmin = true
+				break
+			}
+		}
+		if !isAdmin {
+			return ErrNoPermission // Ensure this error is defined in your package
+		}
+	}
+
+	return s.teams.RemoveTeamMember(ctx, teamID, userID)
 }
 
 func (s *service) UpdateMemberRole(ctx context.Context, teamID, userID, actorID uuid.UUID, role models.TeamRole) error {
