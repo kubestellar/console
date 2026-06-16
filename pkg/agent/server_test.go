@@ -256,6 +256,9 @@ func TestServer_HandleClustersHTTP(t *testing.T) {
 }
 
 func TestServer_HandleRenameContextHTTP(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping: requires live cluster (set KC_INTEGRATION_TESTS=1)")
+	}
 	// Mock executing kubectl
 	// We need to swap execCommand package-level variable in agent package
 	// But we are in agent package (same package test), so we can access it directly IF it's exported or same package
