@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 import { getDemoMode } from './useDemoMode'
-import type { Team, TeamWithMembers, TeamMemberInfo, CreateTeamRequest, UpdateTeamRequest, TeamRole } from '../types/teams'
+import type { Team, TeamWithMembers, CreateTeamRequest, UpdateTeamRequest, TeamRole } from '../types/teams'
 
 const DEMO_TEAMS: TeamWithMembers[] = [
   {

@@ -118,7 +118,7 @@ export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAcces
         <h3 className="text-sm font-medium text-foreground">
           {t('teams.accessGrants')}
         </h3>
-        <Button variant="ghost" size="sm" icon={Plus} onClick={() => setShowGrant(true)}>
+        <Button variant="ghost" size="sm" icon={<Plus />} onClick={() => setShowGrant(true)}>
           {t('teams.grantAccess')}
         </Button>
       </div>
@@ -212,7 +212,7 @@ export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAcces
                   onChange={e => setRole(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white"
                 >
-                  {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{t(r.labelKey)}</option>)}
+                  {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{t(r.labelKey as any)}</option>)}
                 </select>
               </div>
             </div>
