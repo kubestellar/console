@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	routeSetupTestJWTSecret = "route-setup-test-secret-with-32-bytes" // #nosec G101 -- test fixture only
+	routeSetupTestJWTSecret = "route-setup-jwt-test-fixture" // #nosec G101 -- test fixture only
 	routeSetupTestTimeoutMs = 5000
 )
 
@@ -113,7 +113,6 @@ func TestSetupAuthRoutes_RegistersExpectedRoutesAndMiddleware(t *testing.T) {
 	}
 
 	for _, tt := range expected {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			route, ok := registered[tt.method+" "+tt.path]
 			require.Truef(t, ok, "expected route %s %s to be registered", tt.method, tt.path)
@@ -180,7 +179,6 @@ func TestSetupAuthRoutes_RegistersExpectedRoutesAndMiddleware(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.path, nil)
 			for key, value := range tt.headers {
@@ -231,7 +229,6 @@ func TestAPICoreRouteGroup_RegistersProtectedRoutes(t *testing.T) {
 	}
 
 	for _, tt := range expected {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			_, ok := registered[tt.method+" "+tt.path]
 			assert.Truef(t, ok, "expected route %s %s to be registered", tt.method, tt.path)
@@ -261,7 +258,6 @@ func TestAPICoreRouteGroup_RegistersProtectedRoutes(t *testing.T) {
 	}
 
 	for _, tt := range unauthenticated {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.path, nil)
 			for key, value := range tt.headers {
