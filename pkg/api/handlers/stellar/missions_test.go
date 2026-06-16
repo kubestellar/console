@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/valyala/fasthttp"
 )
 
 func Test_parseMissionPayload(t *testing.T) {
@@ -186,7 +187,7 @@ func Test_parseMissionPayload(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Set("Content-Type", "application/json")
 
-			c := app.AcquireCtx(&fiber.Ctx{})
+			c := app.AcquireCtx(&fasthttp.RequestCtx{})
 			defer app.ReleaseCtx(c)
 			c.Request().SetBody(jsonBody)
 			c.Request().Header.SetContentType("application/json")
@@ -223,7 +224,7 @@ func Test_parseMissionPayload(t *testing.T) {
 
 func Test_parseMissionPayload_InvalidJSON(t *testing.T) {
 	app := fiber.New()
-	c := app.AcquireCtx(&fiber.Ctx{})
+	c := app.AcquireCtx(&fasthttp.RequestCtx{})
 	defer app.ReleaseCtx(c)
 
 	c.Request().SetBody([]byte("invalid json"))

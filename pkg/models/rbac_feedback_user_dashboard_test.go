@@ -227,7 +227,10 @@ func TestTargetRepoConstants(t *testing.T) {
 // user.go tests
 // ────────────────────────────────────────────────────────────────────
 
-func TestGetOnboardingQuestions(t *testing.T) {
+// TestGetOnboardingQuestions_RBAC tests GetOnboardingQuestions from the RBAC
+// package perspective. TestGetOnboardingQuestions in models_test.go provides
+// the canonical coverage; this variant is kept for its distinct assertions.
+func TestGetOnboardingQuestions_RBAC(t *testing.T) {
 	questions := GetOnboardingQuestions()
 	if len(questions) == 0 {
 		t.Fatal("expected non-empty questions list")
