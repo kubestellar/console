@@ -2,10 +2,16 @@ package stellar
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 func TestWorkerConstants(t *testing.T) {
@@ -203,4 +209,54 @@ func TestHandlerFullStore(t *testing.T) {
 		_, ok := handler.fullStore()
 		assert.False(t, ok)
 	})
+}
+
+func TestFireDigestForUser_CreatesDigestNotificationAndDedupes(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "stellar-digest.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlStore.Close() })
+
+	userID := uuid.New()
+	require.NoError(t, sqlStore.CreateUser(context.Background(), &models.User{
+		ID:          userID,
+		GitHubLogin: "stellar-digest-user",
+		Role:        models.UserRoleAdmin,
+	}))
+
+	now := time.Now().UTC()
+	for _, solve := range []store.StellarSolve{
+		{ID: "solve-resolved", EventID: "evt-1", UserID: userID.String(), Status: "resolved", StartedAt: now.Add(-2 * time.Hour)},
+		{ID: "solve-escalated", EventID: "evt-2", UserID: userID.String(), Status: "escalated", StartedAt: now.Add(-90 * time.Minute)},
+		{ID: "solve-exhausted", EventID: "evt-3", UserID: userID.String(), Status: "exhausted", StartedAt: now.Add(-30 * time.Minute)},
+	} {
+		solve := solve
+		require.NoError(t, sqlStore.CreateSolve(context.Background(), &solve))
+	}
+
+	handler := NewHandler(sqlStore, nil)
+	full, ok := handler.fullStore()
+	require.True(t, ok)
+
+	handler.fireDigestForUser(context.Background(), full, userID.String(), now)
+
+	notifications, err := sqlStore.ListStellarNotifications(context.Background(), userID.String(), 10, false)
+	require.NoError(t, err)
+	require.Len(t, notifications, 1)
+	assert.Equal(t, "digest", notifications[0].Type)
+	assert.Equal(t, "Daily recap", notifications[0].Title)
+	assert.Contains(t, notifications[0].Body, "handled 3 issue(s)")
+	assert.Contains(t, notifications[0].Body, "1 still need your input")
+	assert.Contains(t, notifications[0].Body, "1 paused at budget")
+
+	dedupKey := "digest:" + userID.String() + ":" + now.Format("2006-01-02")
+	exists, err := sqlStore.GetMemoryDedupeKey(context.Background(), userID.String(), digestMemCategory, dedupKey)
+	require.NoError(t, err)
+	assert.True(t, exists)
+
+	handler.fireDigestForUser(context.Background(), full, userID.String(), now)
+
+	notifications, err = sqlStore.ListStellarNotifications(context.Background(), userID.String(), 10, false)
+	require.NoError(t, err)
+	assert.Len(t, notifications, 1)
 }

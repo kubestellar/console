@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -91,6 +92,49 @@ func (m *mockedStellarStore) UpsertProviderConfig(ctx context.Context, cfg *stor
 	return args.Error(0)
 }
 
+func (m *mockedStellarStore) DeleteProviderConfig(ctx context.Context, id, userID string) error {
+	if !m.hasExpectation("DeleteProviderConfig") {
+		return m.SQLiteStore.DeleteProviderConfig(ctx, id, userID)
+	}
+	args := m.Called(id, userID)
+	return args.Error(0)
+}
+
+func (m *mockedStellarStore) SetUserDefaultProvider(ctx context.Context, userID, providerID string) error {
+	if !m.hasExpectation("SetUserDefaultProvider") {
+		return m.SQLiteStore.SetUserDefaultProvider(ctx, userID, providerID)
+	}
+	args := m.Called(userID, providerID)
+	return args.Error(0)
+}
+
+func (m *mockedStellarStore) MarkStellarNotificationRead(ctx context.Context, userID, notificationID string) error {
+	if !m.hasExpectation("MarkStellarNotificationRead") {
+		return m.SQLiteStore.MarkStellarNotificationRead(ctx, userID, notificationID)
+	}
+	args := m.Called(userID, notificationID)
+	return args.Error(0)
+}
+
+func (m *mockedStellarStore) GetStellarNotification(ctx context.Context, userID, notificationID string) (*store.StellarNotification, error) {
+	if !m.hasExpectation("GetStellarNotification") {
+		return m.SQLiteStore.GetStellarNotification(ctx, userID, notificationID)
+	}
+	args := m.Called(userID, notificationID)
+	if item := args.Get(0); item != nil {
+		return item.(*store.StellarNotification), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *mockedStellarStore) UpdateStellarNotification(ctx context.Context, notification *store.StellarNotification) error {
+	if !m.hasExpectation("UpdateStellarNotification") {
+		return m.SQLiteStore.UpdateStellarNotification(ctx, notification)
+	}
+	args := m.Called(notification)
+	return args.Error(0)
+}
+
 func newMockedStellarHandlerApp(t *testing.T) (*fiber.App, *mockedStellarStore, string) {
 	t.Helper()
 	mockStore := newMockedStellarStore(t)
@@ -107,6 +151,10 @@ func newMockedStellarHandlerApp(t *testing.T) (*fiber.App, *mockedStellarStore, 
 	app.Patch("/api/stellar/tasks/:id/status", h.UpdateTaskStatus)
 	app.Post("/api/stellar/memory/search", h.SearchMemory)
 	app.Post("/api/stellar/providers", h.CreateProvider)
+	app.Delete("/api/stellar/providers/:id", h.DeleteProvider)
+	app.Post("/api/stellar/providers/:id/default", h.SetDefaultProvider)
+	app.Post("/api/stellar/notifications/:id/read", h.MarkNotificationRead)
+	app.Post("/api/stellar/notifications/:id/resolve", h.ResolveNotification)
 
 	return app, mockStore, userID.String()
 }
@@ -228,5 +276,157 @@ func TestStellarCreateProvider_UsesMockedUpsert(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&created))
 	assert.Equal(t, "ollama", created["provider"])
 	assert.Equal(t, "http://127.0.0.1:11434", created["baseUrl"])
+	mockStore.AssertExpectations(t)
+}
+
+func TestStellarCreateProvider_InvalidBaseURLReturnsBadRequest(t *testing.T) {
+	app, mockStore, _ := newMockedStellarHandlerApp(t)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/providers", bytes.NewReader([]byte(`{"provider":"openai","baseUrl":"http://localhost:8080"}`)))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	mockStore.AssertNotCalled(t, "UpsertProviderConfig", mock.Anything)
+}
+
+func TestStellarDeleteProvider_StoreErrorReturnsInternalServerError(t *testing.T) {
+	app, mockStore, userID := newMockedStellarHandlerApp(t)
+
+	mockStore.On("DeleteProviderConfig", "provider-1", userID).Return(errors.New("boom")).Once()
+
+	req, err := http.NewRequest(http.MethodDelete, "/api/stellar/providers/provider-1", nil)
+	require.NoError(t, err)
+
+	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	mockStore.AssertExpectations(t)
+}
+
+func TestStellarSetDefaultProvider_Succeeds(t *testing.T) {
+	app, mockStore, userID := newMockedStellarHandlerApp(t)
+
+	mockStore.On("SetUserDefaultProvider", userID, "provider-1").Return(nil).Once()
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/providers/provider-1/default", nil)
+	require.NoError(t, err)
+
+	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+
+	mockStore.AssertExpectations(t)
+}
+
+func TestStellarMarkNotificationRead_RequiresAuthenticatedUser(t *testing.T) {
+	app := fiber.New()
+	h := NewHandler(newMockedStellarStore(t), nil)
+	app.Post("/api/stellar/notifications/:id/read", h.MarkNotificationRead)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/notif-1/read", nil)
+	require.NoError(t, err)
+
+	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestStellarMarkNotificationRead_StoreErrorReturnsInternalServerError(t *testing.T) {
+	app, mockStore, userID := newMockedStellarHandlerApp(t)
+
+	mockStore.On("MarkStellarNotificationRead", userID, "notif-1").Return(errors.New("boom")).Once()
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/notif-1/read", nil)
+	require.NoError(t, err)
+
+	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	mockStore.AssertExpectations(t)
+}
+
+func TestStellarResolveNotification_InvalidJSONReturnsBadRequest(t *testing.T) {
+	app, mockStore, _ := newMockedStellarHandlerApp(t)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/notif-1/resolve", bytes.NewReader([]byte(`{"resolutionNote":`)))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	mockStore.AssertNotCalled(t, "GetStellarNotification", mock.Anything, mock.Anything)
+	mockStore.AssertNotCalled(t, "UpdateStellarNotification", mock.Anything)
+}
+
+func TestStellarResolveNotification_NotFoundReturns404(t *testing.T) {
+	app, mockStore, userID := newMockedStellarHandlerApp(t)
+
+	mockStore.On("GetStellarNotification", userID, "notif-404").Return((*store.StellarNotification)(nil), nil).Once()
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/notif-404/resolve", bytes.NewReader([]byte(`{"resolutionNote":"done"}`)))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	mockStore.AssertExpectations(t)
+}
+
+func TestStellarResolveNotification_UpdatesResolvedFields(t *testing.T) {
+	app, mockStore, userID := newMockedStellarHandlerApp(t)
+	createdAt := time.Now().UTC().Add(-2 * time.Hour)
+	existing := &store.StellarNotification{
+		ID:        "notif-1",
+		UserID:    userID,
+		Title:     "CrashLoopBackOff",
+		Body:      "pod crashed repeatedly",
+		DedupeKey: "ev:Pod:api-7c9d",
+		CreatedAt: createdAt,
+		Status:    "open",
+	}
+
+	mockStore.On("GetStellarNotification", userID, "notif-1").Return(existing, nil).Once()
+	mockStore.On("UpdateStellarNotification", mock.MatchedBy(func(notification *store.StellarNotification) bool {
+		return notification.ID == "notif-1" &&
+			notification.Status == stellarNotificationStatusResolved &&
+			notification.ResolutionNote == "restarted deployment" &&
+			notification.Read &&
+			notification.ReadAt != nil &&
+			notification.BatchTimestamp != nil &&
+			notification.AffectedResource == "Pod/api-7c9d" &&
+			notification.ErrorMessage == "pod crashed repeatedly"
+	})).Return(nil).Once()
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/notif-1/resolve", bytes.NewReader([]byte(`{"resolutionNote":"  restarted deployment  "}`)))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var payload map[string]any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	assert.Equal(t, "resolved", payload["status"])
+	assert.Equal(t, "restarted deployment", payload["resolutionNote"])
+	assert.Equal(t, true, payload["read"])
+
 	mockStore.AssertExpectations(t)
 }
