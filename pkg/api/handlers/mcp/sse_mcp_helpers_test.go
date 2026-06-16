@@ -15,6 +15,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	// sseTestFastWorkDuration is a short work duration that finishes well before any deadline.
+	sseTestFastWorkDuration = 10 * time.Millisecond
+	// sseTestGenerousDeadline is a deadline comfortably longer than sseTestFastWorkDuration.
+	sseTestGenerousDeadline = 200 * time.Millisecond
+	// sseTestSlowWorkDuration simulates a goroutine that is slower than the tight deadline.
+	sseTestSlowWorkDuration = 500 * time.Millisecond
+	// sseTestTightDeadline fires before sseTestSlowWorkDuration to trigger a timeout.
+	sseTestTightDeadline = 50 * time.Millisecond
+	// sseTestZeroGoroutineDeadline is used when there are no goroutines to wait for.
+	sseTestZeroGoroutineDeadline = 100 * time.Millisecond
+	// sseTestFiberTimeoutMS is the Fiber app.Test timeout in milliseconds.
+	sseTestFiberTimeoutMS = 5000
+)
+
 func TestSseReplaceAll(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -252,22 +267,22 @@ func TestWaitWithDeadlineSSE(t *testing.T) {
 		{
 			name:         "all goroutines complete before deadline",
 			goroutines:   3,
-			workDuration: 10 * time.Millisecond,
-			deadline:     200 * time.Millisecond,
+			workDuration: sseTestFastWorkDuration,
+			deadline:     sseTestGenerousDeadline,
 			wantTimeout:  false,
 		},
 		{
 			name:         "deadline reached before goroutines finish",
 			goroutines:   3,
-			workDuration: 500 * time.Millisecond,
-			deadline:     50 * time.Millisecond,
+			workDuration: sseTestSlowWorkDuration,
+			deadline:     sseTestTightDeadline,
 			wantTimeout:  true,
 		},
 		{
 			name:         "zero goroutines completes immediately",
 			goroutines:   0,
 			workDuration: 0,
-			deadline:     100 * time.Millisecond,
+			deadline:     sseTestZeroGoroutineDeadline,
 			wantTimeout:  false,
 		},
 	}
@@ -329,7 +344,7 @@ func TestStreamDemoSSE(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/sse", nil)
-			resp, err := app.Test(req, 5000)
+			resp, err := app.Test(req, sseTestFiberTimeoutMS)
 			require.NoError(t, err)
 			defer resp.Body.Close()
 

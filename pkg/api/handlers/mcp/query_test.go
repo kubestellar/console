@@ -13,6 +13,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	// queryTestShortTimeout is a brief per-cluster timeout used to test deadline enforcement.
+	queryTestShortTimeout = 50 * time.Millisecond
+	// queryTestLongTimeout is a generous per-cluster timeout for happy-path tests.
+	queryTestLongTimeout = 5 * time.Second
+	// queryTestSafetyMargin is the upper bound used to assert overall test duration
+	// when enforcing the per-cluster timeout.
+	queryTestSafetyMargin = 2 * time.Second
+)
+
 func TestParseClusterParam(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -244,13 +254,13 @@ func TestQueryAllClustersWithTimeout(t *testing.T) {
 		}
 
 		start := time.Now()
-		results, errTracker := queryAllClustersWithTimeout(ctx, clusters, 50*time.Millisecond, queryFn)
+		results, errTracker := queryAllClustersWithTimeout(ctx, clusters, queryTestShortTimeout, queryFn)
 		elapsed := time.Since(start)
 
 		<-started // ensure the goroutine actually ran
 		assert.Empty(t, results)
 		assert.Len(t, errTracker.errors, 1, "slow cluster should be tracked as an error")
-		assert.Less(t, elapsed, 2*time.Second, "should finish well before overall deadline")
+		assert.Less(t, elapsed, queryTestSafetyMargin, "should finish well before overall deadline")
 	})
 
 	t.Run("collects results within timeout", func(t *testing.T) {
@@ -264,7 +274,7 @@ func TestQueryAllClustersWithTimeout(t *testing.T) {
 			return []string{clusterName}, nil
 		}
 
-		results, errTracker := queryAllClustersWithTimeout(ctx, clusters, 5*time.Second, queryFn)
+		results, errTracker := queryAllClustersWithTimeout(ctx, clusters, queryTestLongTimeout, queryFn)
 		assert.Len(t, results, 2)
 		assert.Empty(t, errTracker.errors)
 	})
@@ -281,7 +291,7 @@ func TestQueryAllClustersWithTimeout(t *testing.T) {
 			return []string{"item"}, nil
 		}
 
-		results, errTracker := queryAllClustersWithTimeout(ctx, clusters, 5*time.Second, queryFn)
+		results, errTracker := queryAllClustersWithTimeout(ctx, clusters, queryTestLongTimeout, queryFn)
 		require.Len(t, results, len(clusters))
 		assert.Empty(t, errTracker.errors)
 	})
