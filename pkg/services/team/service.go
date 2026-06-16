@@ -161,7 +161,7 @@ func (s *service) RemoveMember(ctx context.Context, teamID, userID, actorID uuid
 	}
 
 	// SECURITY FIX: Validate permissions before removing a member
-	if team.CreatedBy != actorID && userID != actorID { 
+	if team.CreatedBy != actorID && userID != actorID {
 		members, err := s.teams.ListTeamMembers(ctx, teamID)
 		if err != nil {
 			return err
@@ -174,7 +174,7 @@ func (s *service) RemoveMember(ctx context.Context, teamID, userID, actorID uuid
 			}
 		}
 		if !isAdmin {
-			return ErrNoPermission // Ensure this error is defined in your package
+			return ErrNoPermission
 		}
 	}
 
