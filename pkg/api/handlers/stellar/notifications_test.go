@@ -99,7 +99,7 @@ func Test_deriveNotificationWorkload(t *testing.T) {
 	}{
 		{
 			name:       "standard event key with ev prefix",
-			dedupeKey:  "ev:Pod:api-7c9d",
+			dedupeKey:  "ev:prod:Pod:api-7c9d",
 			wantResult: "api-7c9d",
 		},
 		{
@@ -109,7 +109,7 @@ func Test_deriveNotificationWorkload(t *testing.T) {
 		},
 		{
 			name:       "deployment key",
-			dedupeKey:  "ev:Deployment:frontend",
+			dedupeKey:  "ev:prod:Deployment:frontend",
 			wantResult: "frontend",
 		},
 		{
@@ -157,13 +157,13 @@ func Test_deriveStellarNotificationResource(t *testing.T) {
 	}{
 		{
 			name:         "standard event key with ev prefix",
-			dedupeKey:    "ev:Pod:api-7c9d",
+			dedupeKey:    "ev:prod:Pod:api-7c9d",
 			wantResult:   "Pod/api-7c9d",
 			wantContains: "",
 		},
 		{
 			name:         "deployment key",
-			dedupeKey:    "ev:Deployment:frontend",
+			dedupeKey:    "ev:prod:Deployment:frontend",
 			wantResult:   "Deployment/frontend",
 			wantContains: "",
 		},
@@ -197,7 +197,7 @@ func Test_deriveStellarNotificationResource(t *testing.T) {
 		},
 		{
 			name:         "name only when kind is empty",
-			dedupeKey:    "ev::api-pod",
+			dedupeKey:    "ev:prod::api-pod",
 			wantResult:   "api-pod",
 			wantContains: "",
 		},

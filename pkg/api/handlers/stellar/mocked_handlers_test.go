@@ -409,7 +409,7 @@ func TestStellarResolveNotification_UpdatesResolvedFields(t *testing.T) {
 			notification.Read &&
 			notification.ReadAt != nil &&
 			notification.BatchTimestamp != nil &&
-			notification.AffectedResource == "Pod/api-7c9d" &&
+			notification.AffectedResource == "CrashLoopBackOff" &&
 			notification.ErrorMessage == "pod crashed repeatedly"
 	})).Return(nil).Once()
 

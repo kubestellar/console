@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -387,6 +388,14 @@ func Test_inferSeverity(t *testing.T) {
 	}
 }
 
+func TestNewHandler_IgnoresTypedNilK8sClient(t *testing.T) {
+	var nilClient *k8s.MultiClusterClient
+
+	handler := NewHandler(nil, nilClient)
+
+	assert.Nil(t, handler.k8sClient)
+}
+
 func Test_isCriticalReason(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -562,10 +571,10 @@ func Test_buildQuickAskResponse(t *testing.T) {
 			"warning":  5,
 			"info":     10,
 		},
-		PendingActionIDs:  []string{"a1", "a2"},
-		ActiveMissionIDs:  []string{"m1"},
-		UnreadAlerts:      7,
-		ClustersWatching:  []string{"prod", "staging"},
+		PendingActionIDs: []string{"a1", "a2"},
+		ActiveMissionIDs: []string{"m1"},
+		UnreadAlerts:     7,
+		ClustersWatching: []string{"prod", "staging"},
 	}
 
 	tests := []struct {

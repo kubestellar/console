@@ -355,8 +355,10 @@ func stellarSSEAudienceFromUserID(userID string) (string, bool, bool) {
 func NewHandler(s Store, k8sClient *k8s.MultiClusterClient, opts ...HandlerOption) *Handler {
 	h := &Handler{
 		store:            s,
-		k8sClient:        k8sClient,
 		providerRegistry: providers.NewRegistry(),
+	}
+	if k8sClient != nil {
+		h.k8sClient = k8sClient
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -523,7 +525,7 @@ func (h *Handler) buildState(ctx context.Context, userID string) (*OperationalSt
 		return nil, err
 	}
 	if state == nil {
-    	return nil, fmt.Errorf("state is nil") // or handle appropriately
+		return nil, fmt.Errorf("state is nil") // or handle appropriately
 	}
 	state.UnreadAlerts = unread
 	return state, nil
@@ -539,8 +541,8 @@ func (h *Handler) buildOperationalState(ctx context.Context, userID, focusCluste
 		PendingActionIDs: []string{},
 	}
 	if h.k8sClient == nil {
-        return nil, nil 
-    }
+		return nil, nil
+	}
 	if h.k8sClient != nil {
 		clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
 		if err != nil {
