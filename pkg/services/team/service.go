@@ -231,15 +231,24 @@ func (s *service) isTeamAdmin(ctx context.Context, team *models.Team, actorID uu
 
 
 func (s *service) Update(ctx context.Context, teamID uuid.UUID, actorID uuid.UUID, req models.UpdateTeamRequest) (*models.Team, error) {
-    team, err := s.teams.GetTeam(ctx, teamID)
-    if err != nil { return nil, err }
-    if team == nil { return nil, ErrNotFound }
+   team, err := s.teams.GetTeam(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+	if team == nil {
+		return nil, ErrNotFound
+	}
 
-    isAdmin, err := s.isTeamAdmin(ctx, team, actorID)
-    if err != nil { return nil, err }
-    if !isAdmin { return nil, ErrNoPermission }
+	isAdmin, err := s.isTeamAdmin(ctx, team, actorID)
+	if err != nil {
+		return nil, err
+	}
+	if !isAdmin {
+		return nil, ErrNoPermission
+	}
 
-    // ... proceed with update ...
+	// Fixes the missing return by executing the store update
+	return s.teams.UpdateTeam(ctx, teamID, req)
 }
 
 // 4. Patch the AddMember method

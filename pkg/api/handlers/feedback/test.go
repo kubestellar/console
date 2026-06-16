@@ -412,5 +412,5 @@ func (f *feedbackStoreStub) GetTeamWithMembers(ctx context.Context, id uuid.UUID
 }
 
 func (f *feedbackStoreStub) UpdateTeam(ctx context.Context, team *models.Team) error {
-	return nil
+	return nil, nil
 }
