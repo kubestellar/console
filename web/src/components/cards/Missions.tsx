@@ -727,7 +727,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
                             key={i}
                             className="text-2xs font-mono text-muted-foreground leading-relaxed truncate flex items-start gap-1.5"
                           >
-                            <span className={cn('inline-block w-1.5 h-1.5 rounded-full mt-[5px] shrink-0', clusterInfo.colors.bg, clusterInfo.colors.border, 'border')} />
+                            <span className={cn('inline-block w-1.5 h-1.5 rounded-full mt-1 shrink-0', clusterInfo.colors.bg, clusterInfo.colors.border, 'border')} />
                             {line}
                           </div>
                         ))}
@@ -768,7 +768,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
             <div className="mt-1.5 space-y-0.5">
               {mission.warnings.map((w, i) => (
                 <div key={i} className="text-2xs text-yellow-500/80 flex items-start gap-1">
-                  <AlertTriangle className="w-2.5 h-2.5 mt-[2px] shrink-0" />
+                  <AlertTriangle className="w-2.5 h-2.5 mt-0.5 shrink-0" />
                   <span>{w}</span>
                 </div>
               ))}

@@ -23,7 +23,7 @@ const SOURCE_ROOTS = [
 
 // Current baseline for arbitrary pixel-based spacing utilities.
 // This budget MUST only shrink over time.
-const EXPECTED_ARBITRARY_SPACING_COUNT = 12
+const EXPECTED_ARBITRARY_SPACING_COUNT = 9
 
 const MIN_EXPECTED_SOURCE_FILES = 100
 const MAX_SNIPPET_LENGTH = 140

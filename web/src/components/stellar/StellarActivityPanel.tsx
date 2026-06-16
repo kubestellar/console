@@ -90,7 +90,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
           Stellar log
         </span>
         <span
-          className="rounded-full border border-[var(--s-brand)] bg-[var(--s-brand-dim)] px-[5px] font-mono text-[10px] text-[var(--s-brand)]"
+          className="rounded-full border border-[var(--s-brand)] bg-[var(--s-brand-dim)] px-1 font-mono text-[10px] text-[var(--s-brand)]"
         >
           {activity.length}
         </span>
