@@ -1,10 +1,13 @@
 package mcp
 
 import (
+	"context"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -135,5 +138,99 @@ func TestParseMultipleParams(t *testing.T) {
 		resp, err := app.Test(req, -1)
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	})
+}
+
+func TestQueryAllClusters(t *testing.T) {
+	t.Run("returns empty slice when no clusters", func(t *testing.T) {
+		ctx := context.Background()
+		clusters := []k8s.ClusterInfo{}
+		
+		fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
+			return []string{"item"}, nil
+		}
+		
+		items, errTracker := queryAllClusters(ctx, clusters, fetchFn)
+		assert.NotNil(t, items)
+		assert.Len(t, items, 0)
+		assert.NotNil(t, errTracker)
+	})
+
+	t.Run("collects items from multiple clusters", func(t *testing.T) {
+		ctx := context.Background()
+		clusters := []k8s.ClusterInfo{
+			{Name: "cluster-1"},
+			{Name: "cluster-2"},
+		}
+		
+		fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
+			return []string{clusterName + "-item"}, nil
+		}
+		
+		items, errTracker := queryAllClusters(ctx, clusters, fetchFn)
+		assert.Len(t, items, 2)
+		assert.Contains(t, items, "cluster-1-item")
+		assert.Contains(t, items, "cluster-2-item")
+		assert.NotNil(t, errTracker)
+	})
+
+	t.Run("tracks errors from failing clusters", func(t *testing.T) {
+		ctx := context.Background()
+		clusters := []k8s.ClusterInfo{
+			{Name: "good-cluster"},
+			{Name: "bad-cluster"},
+		}
+		
+		fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
+			if clusterName == "bad-cluster" {
+				return nil, assert.AnError
+			}
+			return []string{clusterName + "-item"}, nil
+		}
+		
+		items, errTracker := queryAllClusters(ctx, clusters, fetchFn)
+		assert.Len(t, items, 1)
+		assert.Contains(t, items, "good-cluster-item")
+		assert.NotNil(t, errTracker)
+	})
+}
+
+func TestQueryAllClustersWithTimeout(t *testing.T) {
+	t.Run("uses custom timeout for each cluster", func(t *testing.T) {
+		ctx := context.Background()
+		clusters := []k8s.ClusterInfo{
+			{Name: "cluster-1"},
+		}
+		customTimeout := 5 * time.Second
+		
+		fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
+			deadline, ok := ctx.Deadline()
+			assert.True(t, ok, "context should have deadline")
+			remaining := time.Until(deadline)
+			assert.True(t, remaining > 0 && remaining <= customTimeout, 
+				"timeout should be within custom timeout range")
+			return []string{"item"}, nil
+		}
+		
+		items, errTracker := queryAllClustersWithTimeout(ctx, clusters, customTimeout, fetchFn)
+		assert.Len(t, items, 1)
+		assert.NotNil(t, errTracker)
+	})
+
+	t.Run("handles multiple clusters concurrently", func(t *testing.T) {
+		ctx := context.Background()
+		clusters := []k8s.ClusterInfo{
+			{Name: "cluster-1"},
+			{Name: "cluster-2"},
+			{Name: "cluster-3"},
+		}
+		
+		fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
+			return []string{clusterName}, nil
+		}
+		
+		items, errTracker := queryAllClustersWithTimeout(ctx, clusters, 10*time.Second, fetchFn)
+		assert.Len(t, items, 3)
+		assert.NotNil(t, errTracker)
 	})
 }
