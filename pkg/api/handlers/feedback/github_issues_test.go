@@ -85,7 +85,9 @@ func TestHandleIssueEvent_LabeledAction_InvalidLabelName(t *testing.T) {
 	assert.NoError(t, err, "labeled action without label name should be ignored")
 }
 
-func TestHandleDeploymentStatus_MissingDeploymentStatus(t *testing.T) {
+// TestHandleDeploymentStatus_EmptyPayload tests that an empty payload is handled gracefully.
+// The more comprehensive deployment-status tests live in github_helpers_test.go.
+func TestHandleDeploymentStatus_EmptyPayload(t *testing.T) {
 	handler := &FeedbackHandler{store: &test.MockStore{}}
 	payload := map[string]interface{}{}
 	err := handler.handleDeploymentStatus(context.Background(), payload)
@@ -131,7 +133,7 @@ func TestHandleDeploymentStatus_MissingDeploymentRef(t *testing.T) {
 func TestFindFeatureRequest_NotFound(t *testing.T) {
 	mockStore := &test.MockStore{}
 	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).Return(nil, nil)
-	
+
 	handler := &FeedbackHandler{store: mockStore}
 	request := handler.findFeatureRequest(context.Background(), 123)
 	assert.Nil(t, request, "should return nil when request not found")
@@ -140,7 +142,7 @@ func TestFindFeatureRequest_NotFound(t *testing.T) {
 func TestFindFeatureRequest_StoreError(t *testing.T) {
 	mockStore := &test.MockStore{}
 	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).Return(nil, errors.New("database error"))
-	
+
 	handler := &FeedbackHandler{store: mockStore}
 	request := handler.findFeatureRequest(context.Background(), 123)
 	assert.Nil(t, request, "should return nil when store returns error")
@@ -154,7 +156,7 @@ func TestFindFeatureRequest_Success(t *testing.T) {
 		GitHubIssueNumber: intPtr(123),
 	}
 	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).Return(expectedRequest, nil)
-	
+
 	handler := &FeedbackHandler{store: mockStore}
 	request := handler.findFeatureRequest(context.Background(), 123)
 	assert.NotNil(t, request, "should return request when found")
