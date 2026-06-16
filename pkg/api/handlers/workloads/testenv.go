@@ -203,3 +203,7 @@ func addClusterToRawConfig(client *k8s.MultiClusterClient, cluster string) {
 	cfg.Contexts[cluster] = &api.Context{Cluster: cluster, AuthInfo: "test-user"}
 	client.SetRawConfig(cfg)
 }
+
+func (m *MockStore) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
+	return nil
+}
