@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -127,6 +128,9 @@ func TestValidateHelmChartHost(t *testing.T) {
 }
 
 func TestServer_HandleHelmRollback(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping: requires live cluster (set KC_INTEGRATION_TESTS=1)")
+	}
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
 	execCommandContext = fakeExecCommandContext
@@ -187,6 +191,9 @@ func TestServer_HandleHelmRollback(t *testing.T) {
 }
 
 func TestServer_HandleHelmUninstall(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping: requires live cluster (set KC_INTEGRATION_TESTS=1)")
+	}
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
 	execCommandContext = fakeExecCommandContext
@@ -227,6 +234,9 @@ func TestServer_HandleHelmUninstall(t *testing.T) {
 }
 
 func TestServer_HandleHelmUpgrade(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping: requires live cluster (set KC_INTEGRATION_TESTS=1)")
+	}
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
 	execCommandContext = fakeExecCommandContext
