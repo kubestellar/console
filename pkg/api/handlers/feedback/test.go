@@ -396,3 +396,47 @@ func TestResolveGitHubAPIBase(t *testing.T) {
 		})
 	}
 }
+
+// Add these to satisfy the store.Store interface for feedbackStoreStub
+func (f *feedbackStoreStub) CreateTeam(ctx context.Context, team *models.Team, memberIDs []uuid.UUID) error {
+	return nil
+}
+
+func (f *feedbackStoreStub) GetTeamWithMembers(ctx context.Context, teamID uuid.UUID) (*models.TeamWithMembers, error) {
+	return nil, nil
+}
+
+func (f *feedbackStoreStub) UpdateTeam(ctx context.Context, team *models.Team) error {
+	return nil
+}
+
+func (f *feedbackStoreStub) DeleteTeam(ctx context.Context, teamID uuid.UUID) error {
+	return nil
+}
+
+func (f *feedbackStoreStub) ListTeams(ctx context.Context, userID *uuid.UUID, limit, offset int) ([]models.Team, error) {
+	return nil, nil
+}
+
+func (f *feedbackStoreStub) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]models.Team, error) {
+	return nil, nil
+}
+
+func (f *feedbackStoreStub) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
+	return nil
+}
+
+func (f *feedbackStoreStub) RemoveTeamMember(ctx context.Context, teamID, userID uuid.UUID) error {
+	return nil
+}
+
+func (f *feedbackStoreStub) UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
+	return nil
+}
+
+func (f *feedbackStoreStub) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]models.TeamMemberInfo, error) {
+	return nil, nil
+}
+func (f *feedbackStoreStub) GetTeam(ctx context.Context, teamID uuid.UUID) (*models.Team, error) {
+	return nil, nil
+}

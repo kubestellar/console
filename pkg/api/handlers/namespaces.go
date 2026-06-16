@@ -71,6 +71,9 @@ func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 	if cluster == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
 	}
+	if err := validateK8sName("cluster", cluster); err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), nsDefaultTimeout)
 	defer cancel()
@@ -109,6 +112,12 @@ func (h *NamespaceHandler) GetNamespaceAccess(c *fiber.Ctx) error {
 	name := c.Params("name")
 	if cluster == "" || name == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster and namespace name are required")
+	}
+	if err := validateK8sName("cluster", cluster); err != nil {
+		return err
+	}
+	if err := validateK8sName("namespace", name); err != nil {
+		return err
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), nsDefaultTimeout)

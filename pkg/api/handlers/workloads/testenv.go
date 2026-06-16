@@ -56,6 +56,8 @@ func setupTestEnv(t *testing.T) *testEnv {
 	manager.SetSettingsPath(settingsPath)
 	manager.SetKeyPath(keyPath)
 
+	mockStore := new(test.MockStore)
+
 	// Ensure we start with a clean state for this test run relative to the file.
 	_ = manager.Load()
 
@@ -97,12 +99,13 @@ func setupTestEnv(t *testing.T) *testEnv {
 	})
 
 	// Initialize a MockStore with a pre-configured admin user so RBAC-protected
-	// handler tests pass without extra setup.
-	mockStore := new(test.MockStore)
+	// handler tests pass without extra setup
 	mockStore.On("GetUser", testAdminUserID).Return(&models.User{
 		ID:   testAdminUserID,
 		Role: "admin",
 	}, nil).Maybe()
+
+	mockStore.On("AddTeamMember", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 
 	// Cluster-group CRUD handlers persist definitions to the store (#7013).
 	// Register permissive mocks so TestClusterGroupsCRUD doesn't panic when

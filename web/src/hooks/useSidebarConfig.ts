@@ -104,6 +104,7 @@ const DEFAULT_SECONDARY_NAV: SidebarItem[] = [
   { id: 'marketplace', name: 'Marketplace', icon: NAVIGATION_ICONS['marketplace'], href: ROUTES.MARKETPLACE, type: 'link', order: 0 },
   { id: 'history', name: 'Card History', icon: NAVIGATION_ICONS['history'], href: ROUTES.HISTORY, type: 'link', order: 1 },
   { id: 'namespaces', name: 'Namespaces', icon: NAVIGATION_ICONS['namespaces'], href: ROUTES.NAMESPACES, type: 'link', order: 2 },
+  { id: 'teams', name: 'Teams', icon: NAVIGATION_ICONS['teams'], href: ROUTES.TEAMS, type: 'link', order: 2.5 },
   { id: 'users', name: 'User Management', icon: NAVIGATION_ICONS['users'], href: ROUTES.USERS, type: 'link', order: 3 },
   { id: 'settings', name: 'Settings', icon: NAVIGATION_ICONS['settings'], href: ROUTES.SETTINGS, type: 'link', order: 4 },
 ]

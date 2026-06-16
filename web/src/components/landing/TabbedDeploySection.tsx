@@ -151,7 +151,7 @@ export function TabbedDeploySection({
               <div className="flex items-start gap-3">
                 <Lock className={`w-4 h-4 ${accent.text} mt-0.5 shrink-0`} />
                 <div>
-                  <p className="text-sm font-medium text-slate-200">TLS</p>
+                  <p className="text-sm font-medium text-foreground">TLS</p>
                   <p className="text-xs text-slate-400 mt-0.5">
                     Add a TLS certificate to your ingress for HTTPS. Required for secure WebSocket connections to the kc-agent.
                   </p>
@@ -160,7 +160,7 @@ export function TabbedDeploySection({
               <div className="flex items-start gap-3">
                 <KeyRound className={`w-4 h-4 ${accent.text} mt-0.5 shrink-0`} />
                 <div>
-                  <p className="text-sm font-medium text-slate-200">OAuth</p>
+                  <p className="text-sm font-medium text-foreground">OAuth</p>
                   <p className="text-xs text-slate-400 mt-0.5">
                     Configure GitHub OAuth for multi-user authentication. Set{' '}
                     <code className={`${accent.text300_80} bg-slate-800 px-1 rounded`}>GITHUB_CLIENT_ID</code> and{' '}
@@ -171,7 +171,7 @@ export function TabbedDeploySection({
               <div className="flex items-start gap-3">
                 <Wifi className={`w-4 h-4 ${accent.text} mt-0.5 shrink-0`} />
                 <div>
-                  <p className="text-sm font-medium text-slate-200">CORS</p>
+                  <p className="text-sm font-medium text-foreground">CORS</p>
                   <p className="text-xs text-slate-400 mt-0.5">
                     Set{' '}
                     <code className={`${accent.text300_80} bg-slate-800 px-1 rounded`}>KC_ALLOWED_ORIGINS</code> on the kc-agent to your console&apos;s URL so cross-origin requests work from the browser.

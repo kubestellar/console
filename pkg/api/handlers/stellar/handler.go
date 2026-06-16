@@ -522,6 +522,9 @@ func (h *Handler) buildState(ctx context.Context, userID string) (*OperationalSt
 	if err != nil {
 		return nil, err
 	}
+	if state == nil {
+    	return nil, fmt.Errorf("state is nil") // or handle appropriately
+	}
 	state.UnreadAlerts = unread
 	return state, nil
 }
@@ -535,6 +538,9 @@ func (h *Handler) buildOperationalState(ctx context.Context, userID, focusCluste
 		ActiveMissionIDs: []string{},
 		PendingActionIDs: []string{},
 	}
+	if h.k8sClient == nil {
+        return nil, nil 
+    }
 	if h.k8sClient != nil {
 		clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
 		if err != nil {

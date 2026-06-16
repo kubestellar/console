@@ -51,6 +51,7 @@ export const NAVIGATION_ICONS: Record<string, string> = {
   'history': 'History',
   'namespaces': 'Folder',
   'users': 'Users',
+  'teams': 'Users',
   'settings': 'Settings',
 }
 
