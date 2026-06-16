@@ -179,7 +179,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
               <div className="text-xs text-muted-foreground">{t('layout.navbar.learn.tourDescription')}</div>
             </div>
             {!hasCompletedTour && (
-              <span className="ml-auto text-[10px] font-medium bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">{t('layout.navbar.learn.new')}</span>
+              <span className="ml-auto text-xs font-medium bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">{t('layout.navbar.learn.new')}</span>
             )}
           </button>
 
@@ -187,7 +187,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
 
           {/* Video Tutorials */}
           <div className="px-4 pt-3 pb-1">
-            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               <Video className="w-3 h-3" />
               {t('layout.navbar.learn.videoTutorials')}
             </div>
@@ -249,7 +249,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
               <div className="border-t border-border" />
               <div className="px-4 pt-3 pb-1">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <Newspaper className="w-3 h-3" />
                     {t('layout.navbar.learn.latestBlogPosts')}
                   </div>
@@ -257,7 +257,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
                     href={blogChannelUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[10px] text-primary hover:underline"
+                    className="text-xs text-primary hover:underline"
                   >
                     {t('layout.navbar.learn.viewAll')}
                   </a>
@@ -297,7 +297,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
 
           {/* Resources */}
           <div className="px-4 pt-3 pb-1">
-            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               <BookOpen className="w-3 h-3" />
               {t('layout.navbar.learn.resources')}
             </div>

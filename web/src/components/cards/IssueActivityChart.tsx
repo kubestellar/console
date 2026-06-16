@@ -419,7 +419,7 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
           const dateLabel = `<span style="color:${CHART_TOOLTIP_LABEL_COLOR};font-weight:600">${dow}, ${fullDate}</span>`
           const lines = params.map(
             p =>
-              `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:${TOOLTIP_INLINE_GAP_PX}px;"></span>${p.seriesName}: <b>${p.value}</b>`
+              `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:${TOOLTIP_INLINE_GAP_PX}px;"></span>${p.seriesName}: <b>${p.value}</b>`
           )
           return `${dateLabel}<br/>${lines.join('<br/>')}`
         },
@@ -550,7 +550,7 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
             </Button>
           ))}
           {visibleStats.isCustomRange && (
-            <span className="text-[10px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">
+            <span className="text-xs text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">
               Custom
             </span>
           )}
@@ -570,7 +570,7 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
 
       {/* Summary stats — @container responsive grid */}
       {visibleStats.isCustomRange && visibleStats.startDate && visibleStats.endDate && (
-        <div className="text-[10px] text-muted-foreground text-center">
+        <div className="text-xs text-muted-foreground text-center">
           {t('issueActivityChart.showingRange', 'Showing {{start}} to {{end}}', {
             start: visibleStats.startDate,
             end: visibleStats.endDate,
@@ -580,19 +580,19 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-3">
         <div className="rounded-md bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-center">
           <div className="text-lg font-semibold text-blue-400">{visibleStats.totalOpened}</div>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
+          <div className="text-xs text-muted-foreground uppercase tracking-wide">
             {t('issueActivityChart.opened', 'Opened')}
           </div>
         </div>
         <div className="rounded-md bg-green-500/10 border border-green-500/20 px-3 py-2 text-center">
           <div className="text-lg font-semibold text-green-400">{visibleStats.totalClosed}</div>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
+          <div className="text-xs text-muted-foreground uppercase tracking-wide">
             {t('issueActivityChart.closed', 'Closed')}
           </div>
         </div>
         <div className="rounded-md bg-orange-500/10 border border-orange-500/20 px-3 py-2 text-center">
           <div className="text-lg font-semibold text-orange-400">{visibleStats.totalPRsMerged}</div>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center justify-center gap-1">
+          <div className="text-xs text-muted-foreground uppercase tracking-wide flex items-center justify-center gap-1">
             <GitPullRequest className="h-3 w-3" />
             {t('issueActivityChart.merged', 'Merged')}
           </div>
