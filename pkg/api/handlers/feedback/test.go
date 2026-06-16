@@ -400,3 +400,6 @@ func TestResolveGitHubAPIBase(t *testing.T) {
 func (f *feedbackStoreStub) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
 	return nil
 }
+func (f *feedbackStoreStub) CreateTeam(ctx context.Context, team *models.Team, memberIDs []uuid.UUID) error {
+	return nil
+}

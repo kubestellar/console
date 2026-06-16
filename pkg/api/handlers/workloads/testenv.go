@@ -1,6 +1,7 @@
 package workloads
 
 import (
+	"context"
 	"net/http"
 	"path/filepath"
 	"testing"
@@ -104,6 +105,15 @@ func setupTestEnv(t *testing.T) *testEnv {
 		Role: "admin",
 	}, nil).Maybe()
 
+	// Initialize a MockStore with a pre-configured admin user so RBAC-protected
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", testAdminUserID).Return(&models.User{
+		ID:   testAdminUserID,
+		Role: "admin",
+	}, nil).Maybe()
+
+	mockStore.On("AddTeamMember", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+
 	// Cluster-group CRUD handlers persist definitions to the store (#7013).
 	// Register permissive mocks so TestClusterGroupsCRUD doesn't panic when
 	// the handler calls Save/Delete/List. Individual tests can override with
@@ -202,8 +212,4 @@ func addClusterToRawConfig(client *k8s.MultiClusterClient, cluster string) {
 	cfg.Clusters[cluster] = &api.Cluster{Server: "https://" + cluster + ":6443"}
 	cfg.Contexts[cluster] = &api.Context{Cluster: cluster, AuthInfo: "test-user"}
 	client.SetRawConfig(cfg)
-}
-
-func (m *MockStore) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
-	return nil
 }
