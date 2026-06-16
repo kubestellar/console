@@ -6,18 +6,19 @@ import { CLUSTER_PROGRESS_AUTO_DISMISS_MS } from '../../../hooks/useClusterProgr
 import { friendlyErrorMessage } from '../../../lib/clusterErrors'
 import type { VClusterActionFeedback } from '../../../hooks/useLocalClusterTools'
 
+type TranslateVClusterFeedback = (key: string, options: { name: string; namespace: string }) => string
+
 function getVClusterActionMessage(feedback: VClusterActionFeedback, t: TFunction): string {
   const keyBase = `settings.localClusters.vclusterFeedback.${feedback.action}.${feedback.state}`
+  const translate = t as TranslateVClusterFeedback
 
   if (feedback.state === 'error') {
     return feedback.message
       ? friendlyErrorMessage(feedback.message)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      : String(t(`${keyBase}Fallback` as any, { name: feedback.name, namespace: feedback.namespace }))
+      : String(translate(`${keyBase}Fallback`, { name: feedback.name, namespace: feedback.namespace }))
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return String(t(keyBase as any, { name: feedback.name, namespace: feedback.namespace }))
+  return String(translate(keyBase, { name: feedback.name, namespace: feedback.namespace }))
 }
 
 /** Inline feedback banner for vCluster create/connect/disconnect/delete operations. */

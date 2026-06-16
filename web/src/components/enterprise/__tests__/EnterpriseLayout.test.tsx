@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { CardSuggestion } from '../../dashboard/shared/cardCatalog'
 
 const mockDashboardContext = {
   openAddCardModal: vi.fn(),
@@ -45,13 +46,18 @@ vi.mock('../../dashboard/FloatingDashboardActions', () => ({
     <button onClick={onOpenCustomizer}>Open studio</button>
   ),
 }))
+type DashboardCustomizerMockProps = {
+  existingCardTypes?: string[]
+  onAddCards: (cards: CardSuggestion[]) => void
+  isOpen: boolean
+}
 vi.mock('../../dashboard/customizer/DashboardCustomizer', () => ({
-  DashboardCustomizer: ({ existingCardTypes, onAddCards, isOpen }: any) => (
+  DashboardCustomizer: ({ existingCardTypes, onAddCards, isOpen }: DashboardCustomizerMockProps) => (
     <div>
       <div data-testid="customizer-open">{String(isOpen)}</div>
-      <div data-testid="existing-cards">{existingCardTypes.join(',')}</div>
+      <div data-testid="existing-cards">{(existingCardTypes ?? []).join(',')}</div>
       <button
-        onClick={() => onAddCards([{ type: 'latency-card', title: 'Latency Card', config: { threshold: 95 } }])}
+        onClick={() => onAddCards([{ type: 'latency-card', title: 'Latency Card', description: '', visualization: 'status', config: { threshold: 95 } }])}
       >
         Add cards
       </button>

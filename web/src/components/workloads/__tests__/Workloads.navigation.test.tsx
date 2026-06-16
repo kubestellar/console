@@ -1,9 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import type { ClusterInfo, Deployment, DeploymentIssue, PodIssue } from '../../../hooks/mcp/types'
 
 const mockNavigate = vi.fn()
 const tSpy = vi.fn((key: string, fallback?: string) => fallback || key)
+const mockUseGlobalFilters = vi.hoisted(() => vi.fn())
+
+type MockGlobalFilters = {
+  selectedClusters: string[]
+  isAllClustersSelected: boolean
+  customFilter: string
+  filterByCluster: <T extends { cluster?: string }>(items: T[]) => T[]
+}
+
+const identityClusterFilter: MockGlobalFilters['filterByCluster'] = <T extends { cluster?: string }>(items: T[]) => items
+
+function createGlobalFiltersMock(overrides: Partial<Omit<MockGlobalFilters, 'filterByCluster'>> = {}): MockGlobalFilters {
+  return {
+    selectedClusters: [],
+    isAllClustersSelected: true,
+    customFilter: '',
+    filterByCluster: identityClusterFilter,
+    ...overrides,
+  }
+}
+
+function createCluster(overrides: Partial<ClusterInfo> = {}): ClusterInfo {
+  return { name: 'demo-cluster', context: 'demo-cluster', ...overrides }
+}
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
@@ -27,10 +52,10 @@ vi.mock('../../../lib/demoMode', () => ({
   setDemoToken: vi.fn(),
 }))
 
-let mockPodIssues: any[] = []
-let mockDeploymentIssues: any[] = []
-let mockDeployments: any[] = []
-let mockClusters: any[] = []
+let mockPodIssues: PodIssue[] = []
+let mockDeploymentIssues: DeploymentIssue[] = []
+let mockDeployments: Deployment[] = []
+let mockClusters: ClusterInfo[] = []
 let mockIsLoading = false
 let mockAgentStatus: 'connected' | 'disconnected' = 'connected'
 let mockIsDemoMode = true
@@ -66,15 +91,8 @@ vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters, isLoading: mockIsLoading, lastUpdated: null, refetch: vi.fn() }),
 }))
 
-import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
-
 vi.mock('../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: vi.fn(() => ({
-    selectedClusters: [],
-    isAllClustersSelected: true,
-    customFilter: '',
-    filterByCluster: (items: any[]) => items,
-  })),
+  useGlobalFilters: () => mockUseGlobalFilters(),
 }))
 
 vi.mock('../../../hooks/useLocalAgent', () => ({
@@ -157,18 +175,13 @@ describe('Workloads Add Workload button', () => {
     mockPodIssues = []
     mockDeploymentIssues = []
     mockDeployments = []
-    mockClusters = []
+    mockClusters = [createCluster()]
     mockIsLoading = false
     mockAgentStatus = 'connected'
     mockIsDemoMode = true
     showToastSpy.mockClear()
     kubectlExecSpy.mockClear()
-    vi.mocked(useGlobalFilters).mockReturnValue({
-      selectedClusters: [],
-      isAllClustersSelected: true,
-      customFilter: '',
-      filterByCluster: (items: any[]) => items,
-    } as any)
+    mockUseGlobalFilters.mockReturnValue(createGlobalFiltersMock())
   })
 
   it('renders the add workload button using the translated label', () => {

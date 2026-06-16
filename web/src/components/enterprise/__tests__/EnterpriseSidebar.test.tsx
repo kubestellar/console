@@ -1,15 +1,17 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SidebarShellProps } from '../../layout/SidebarShell'
 
 const mockOpenAddCardModal = vi.fn()
+type SidebarShellMockProps = Pick<SidebarShellProps, 'navSections' | 'branding' | 'onAddCard' | 'onAddMore'>
 
 vi.mock('../../layout/SidebarShell', () => ({
-  SidebarShell: ({ navSections, branding, onAddCard, onAddMore }: any) => (
+  SidebarShell: ({ navSections, branding, onAddCard, onAddMore }: SidebarShellMockProps) => (
     <div>
-      <h1>{branding.title}</h1>
-      <p>{branding.subtitle}</p>
-      {navSections.flatMap((section: any) => section.items).map((item: any) => (
+      <h1>{branding?.title}</h1>
+      <p>{branding?.subtitle}</p>
+      {navSections.flatMap((section) => section.items).map((item) => (
         <a key={item.id} href={item.href}>{item.label}</a>
       ))}
       <button onClick={onAddCard}>Add card</button>

@@ -5,7 +5,8 @@ import { PayloadGrid } from '../PayloadGrid'
 import { ClusterReadinessCard } from '../ClusterReadinessCard'
 import { FixerDefinitionPanel } from '../FixerDefinitionPanel'
 import { ProjectDetailPanel } from '../fixer-definition-panel/ProjectDetailPanel'
-import type { PayloadProject } from '../types'
+import type { ClusterAssignment, PayloadProject } from '../types'
+import type { Mission } from '../../../hooks/useMissions'
 
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => ({
@@ -43,6 +44,26 @@ const mockProject: PayloadProject = {
   priority: 'required',
   dependencies: ['prometheus'],
   maturity: 'graduated',
+}
+
+const mockAssignment: ClusterAssignment = {
+  clusterName: 'eks-prod',
+  clusterContext: 'eks-prod',
+  provider: 'eks',
+  projectNames: ['falco'],
+  readiness: { overallScore: 85, cpuHeadroomPercent: 75, memHeadroomPercent: 75, storageHeadroomPercent: 100 },
+  warnings: [],
+}
+
+const mockPlanningMission: Mission = {
+  id: 'planning-mission-1',
+  title: 'Planning mission',
+  description: 'Cluster planning',
+  type: 'custom',
+  status: 'running',
+  messages: [],
+  createdAt: new Date('2026-01-01T00:00:00Z'),
+  updatedAt: new Date('2026-01-01T00:00:00Z'),
 }
 
 describe('PayloadCard', () => {
@@ -218,12 +239,7 @@ describe('ClusterReadinessCard', () => {
         cluster={mockCluster as unknown as typeof mockCluster}
         onToggleProject={vi.fn()}
         availableProjects={['falco']}
-        assignment={{
-          clusterName: 'eks-prod',
-          projectNames: ['falco'],
-          readiness: { overallScore: 85, cpuHeadroomPercent: 75, memHeadroomPercent: 75, storageHeadroomPercent: 100 },
-          warnings: []
-        } as unknown as any}
+        assignment={mockAssignment}
       />
     )
     
@@ -239,12 +255,7 @@ describe('ClusterReadinessCard', () => {
         cluster={mockCluster as unknown as typeof mockCluster}
         onToggleProject={onToggle}
         availableProjects={['falco']}
-        assignment={{
-          clusterName: 'eks-prod',
-          projectNames: [],
-          readiness: { overallScore: 85 },
-          warnings: []
-        } as unknown as any}
+        assignment={{ ...mockAssignment, projectNames: [] }}
       />
     )
     
@@ -392,7 +403,7 @@ describe('FixerDefinitionPanel', () => {
         onRemoveProject={vi.fn()}
         onUpdatePriority={vi.fn()}
         aiStreaming={true}
-        planningMission={{ status: 'running', messages: [] } as unknown as any}
+        planningMission={mockPlanningMission}
       />
     )
     

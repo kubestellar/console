@@ -1,6 +1,54 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import type { ClusterInfo, Deployment, DeploymentIssue, PodIssue } from '../../../hooks/mcp/types'
+
+const mockUseGlobalFilters = vi.hoisted(() => vi.fn())
+
+type MockGlobalFilters = {
+    selectedClusters: string[]
+    isAllClustersSelected: boolean
+    customFilter: string
+    filterByCluster: <T extends { cluster?: string }>(items: T[]) => T[]
+}
+
+const identityClusterFilter: MockGlobalFilters['filterByCluster'] = <T extends { cluster?: string }>(items: T[]) => items
+
+function createGlobalFiltersMock(overrides: Partial<Omit<MockGlobalFilters, 'filterByCluster'>> = {}): MockGlobalFilters {
+    return {
+        selectedClusters: [],
+        isAllClustersSelected: true,
+        customFilter: '',
+        filterByCluster: identityClusterFilter,
+        ...overrides,
+    }
+}
+
+function createCluster(overrides: Partial<ClusterInfo> = {}): ClusterInfo {
+    return { name: 'demo-cluster', context: 'demo-cluster', ...overrides }
+}
+
+function createDeployment(overrides: Partial<Deployment> = {}): Deployment {
+    return {
+        name: 'demo-deploy',
+        namespace: 'default',
+        status: 'running',
+        replicas: 1,
+        readyReplicas: 1,
+        updatedReplicas: 1,
+        availableReplicas: 1,
+        progress: 100,
+        ...overrides,
+    }
+}
+
+function createPodIssue(overrides: Partial<PodIssue> = {}): PodIssue {
+    return { name: 'demo-pod', namespace: 'default', status: 'Running', issues: [], restarts: 0, ...overrides }
+}
+
+function createDeploymentIssue(overrides: Partial<DeploymentIssue> = {}): DeploymentIssue {
+    return { name: 'demo-deploy', namespace: 'default', replicas: 1, readyReplicas: 1, ...overrides }
+}
 
 // Mock modules
 vi.mock('../../../lib/demoMode', () => ({
@@ -41,10 +89,10 @@ vi.mock('../../../lib/dashboards/DashboardPage', () => ({
     ),
 }))
 
-let mockPodIssues: any[] = []
-let mockDeploymentIssues: any[] = []
-let mockDeployments: any[] = []
-let mockClusters: any[] = []
+let mockPodIssues: PodIssue[] = []
+let mockDeploymentIssues: DeploymentIssue[] = []
+let mockDeployments: Deployment[] = []
+let mockClusters: ClusterInfo[] = []
 let mockIsLoading = false
 let mockAgentStatus: 'connected' | 'disconnected' = 'connected'
 let mockIsDemoMode = true
@@ -56,15 +104,8 @@ vi.mock('../../../hooks/useMCP', () => ({
     useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters, isLoading: mockIsLoading, lastUpdated: null, refetch: vi.fn() }),
 }))
 
-import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
-
 vi.mock('../../../hooks/useGlobalFilters', () => ({
-    useGlobalFilters: vi.fn(() => ({
-        selectedClusters: [],
-        isAllClustersSelected: true,
-        customFilter: '',
-        filterByCluster: (items: any[]) => items,
-    })),
+    useGlobalFilters: () => mockUseGlobalFilters(),
 }))
 
 vi.mock('../../../hooks/useLocalAgent', () => ({
@@ -171,18 +212,13 @@ describe('Workloads Component', () => {
         mockPodIssues = []
         mockDeploymentIssues = []
         mockDeployments = []
-        mockClusters = []
+        mockClusters = [createCluster()]
         mockIsLoading = false
         mockAgentStatus = 'connected'
         mockIsDemoMode = true
         showToastSpy.mockClear()
         kubectlExecSpy.mockClear()
-        vi.mocked(useGlobalFilters).mockReturnValue({
-            selectedClusters: [],
-            isAllClustersSelected: true,
-            customFilter: '',
-            filterByCluster: (items: any[]) => items,
-        } as any)
+        mockUseGlobalFilters.mockReturnValue(createGlobalFiltersMock())
     })
 
     it('renders without crashing', () => {
@@ -192,14 +228,9 @@ describe('Workloads Component', () => {
     describe('deployment actions', () => {
         beforeEach(() => {
             // Force individual deployment view by mocking useGlobalFilters with a filter
-            vi.mocked(useGlobalFilters).mockReturnValue({
-                selectedClusters: [],
-                isAllClustersSelected: true,
-                customFilter: 'my-deploy',
-                filterByCluster: (items: any[]) => items,
-            } as any)
+            mockUseGlobalFilters.mockReturnValue(createGlobalFiltersMock({ customFilter: 'my-deploy' }))
 
-            mockDeployments = [{ name: 'my-deploy', namespace: 'default', cluster: 'ctx/prod', status: 'running', replicas: 3, readyReplicas: 3 }]
+            mockDeployments = [createDeployment({ name: 'my-deploy', cluster: 'ctx/prod', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3 })]
         })
 
         it('renders action buttons when showing deployments', () => {
@@ -279,30 +310,25 @@ describe('Workloads Component', () => {
 
     describe('status color rendering', () => {
         beforeEach(() => {
-            vi.mocked(useGlobalFilters).mockReturnValue({
-                selectedClusters: [],
-                isAllClustersSelected: true,
-                customFilter: 'deploy',
-                filterByCluster: (items: any[]) => items,
-            } as any)
+            mockUseGlobalFilters.mockReturnValue(createGlobalFiltersMock({ customFilter: 'deploy' }))
         })
 
         it('uses red border for failed deployment', () => {
-            mockDeployments = [{ name: 'fail-deploy', namespace: 'default', cluster: 'ctx/prod', status: 'failed', replicas: 3, readyReplicas: 1 }]
+            mockDeployments = [createDeployment({ name: 'fail-deploy', cluster: 'ctx/prod', status: 'failed', replicas: 3, readyReplicas: 1, updatedReplicas: 2, availableReplicas: 1, progress: 33 })]
             renderWorkloads()
             const card = screen.getByText('fail-deploy').closest('.glass')
             expect(card?.className).toContain('border-l-red-500')
         })
 
         it('uses yellow border for deploying', () => {
-            mockDeployments = [{ name: 'prog-deploy', namespace: 'default', cluster: 'ctx/prod', status: 'deploying', replicas: 3, readyReplicas: 2 }]
+            mockDeployments = [createDeployment({ name: 'prog-deploy', cluster: 'ctx/prod', status: 'deploying', replicas: 3, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 67 })]
             renderWorkloads()
             const card = screen.getByText('prog-deploy').closest('.glass')
             expect(card?.className).toContain('border-l-yellow-500')
         })
 
         it('uses green border for healthy', () => {
-            mockDeployments = [{ name: 'ok-deploy', namespace: 'default', cluster: 'ctx/prod', status: 'running', replicas: 3, readyReplicas: 3 }]
+            mockDeployments = [createDeployment({ name: 'ok-deploy', cluster: 'ctx/prod', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3 })]
             renderWorkloads()
             const card = screen.getByText('ok-deploy').closest('.glass')
             expect(card?.className).toContain('border-l-green-500')
@@ -312,18 +338,13 @@ describe('Workloads Component', () => {
     describe('namespace-grouped view', () => {
         beforeEach(() => {
             // No custom filter and all clusters selected = namespace grouping
-            vi.mocked(useGlobalFilters).mockReturnValue({
-                selectedClusters: [],
-                isAllClustersSelected: true,
-                customFilter: '',
-                filterByCluster: (items: any[]) => items,
-            } as any)
+            mockUseGlobalFilters.mockReturnValue(createGlobalFiltersMock())
         })
 
         it('renders namespace cards when no filter is active', () => {
             mockDeployments = [
-                { name: 'web-frontend', namespace: 'production', cluster: 'ctx/prod', status: 'running', replicas: 3, readyReplicas: 3 },
-                { name: 'api-backend', namespace: 'production', cluster: 'ctx/prod', status: 'running', replicas: 2, readyReplicas: 2 },
+                createDeployment({ name: 'web-frontend', namespace: 'production', cluster: 'ctx/prod', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3 }),
+                createDeployment({ name: 'api-backend', namespace: 'production', cluster: 'ctx/prod', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2 }),
             ]
             
             renderWorkloads()
@@ -336,9 +357,9 @@ describe('Workloads Component', () => {
 
         it('shows deployment count in namespace card', () => {
             mockDeployments = [
-                { name: 'svc1', namespace: 'dev', cluster: 'ctx/dev', status: 'running', replicas: 1, readyReplicas: 1 },
-                { name: 'svc2', namespace: 'dev', cluster: 'ctx/dev', status: 'running', replicas: 1, readyReplicas: 1 },
-                { name: 'svc3', namespace: 'dev', cluster: 'ctx/dev', status: 'running', replicas: 1, readyReplicas: 1 },
+                createDeployment({ name: 'svc1', namespace: 'dev', cluster: 'ctx/dev' }),
+                createDeployment({ name: 'svc2', namespace: 'dev', cluster: 'ctx/dev' }),
+                createDeployment({ name: 'svc3', namespace: 'dev', cluster: 'ctx/dev' }),
             ]
             
             renderWorkloads()
@@ -350,10 +371,10 @@ describe('Workloads Component', () => {
         })
 
         it('shows pod issues in namespace card', () => {
-            mockDeployments = [{ name: 'app', namespace: 'staging', cluster: 'ctx/staging', status: 'running', replicas: 2, readyReplicas: 2 }]
+            mockDeployments = [createDeployment({ name: 'app', namespace: 'staging', cluster: 'ctx/staging', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2 })]
             mockPodIssues = [
-                { name: 'pod-1', namespace: 'staging', cluster: 'ctx/staging', reason: 'CrashLoopBackOff' },
-                { name: 'pod-2', namespace: 'staging', cluster: 'ctx/staging', reason: 'ImagePullBackOff' },
+                createPodIssue({ name: 'pod-1', namespace: 'staging', cluster: 'ctx/staging', reason: 'CrashLoopBackOff' }),
+                createPodIssue({ name: 'pod-2', namespace: 'staging', cluster: 'ctx/staging', reason: 'ImagePullBackOff' }),
             ]
             
             renderWorkloads()
@@ -363,9 +384,9 @@ describe('Workloads Component', () => {
         })
 
         it('shows deployment issues in namespace card', () => {
-            mockDeployments = [{ name: 'app', namespace: 'qa', cluster: 'ctx/qa', status: 'running', replicas: 1, readyReplicas: 1 }]
+            mockDeployments = [createDeployment({ name: 'app', namespace: 'qa', cluster: 'ctx/qa' })]
             mockDeploymentIssues = [
-                { name: 'broken-deploy', namespace: 'qa', cluster: 'ctx/qa', reason: 'ProgressDeadlineExceeded' },
+                createDeploymentIssue({ name: 'broken-deploy', namespace: 'qa', cluster: 'ctx/qa', reason: 'ProgressDeadlineExceeded' }),
             ]
             
             renderWorkloads()
