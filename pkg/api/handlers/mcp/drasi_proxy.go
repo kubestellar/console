@@ -44,6 +44,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/ssrf"
 )
 
 // Constants used by the Drasi proxy.
@@ -66,23 +67,7 @@ const (
 	drasiAllowedHostsEnv = "KC_DRASI_SERVER_ALLOWED_HOSTS"
 )
 
-var (
-	// drasiCGNATNet is RFC 6598 Carrier-Grade NAT space.
-	_, drasiCGNATNet, _ = net.ParseCIDR("100.64.0.0/10")
-	// drasiCloudMetadataNet is the cloud metadata endpoint range.
-	_, drasiCloudMetadataNet, _ = net.ParseCIDR("169.254.169.254/32")
-	// drasiIETFProtocolNet is RFC 6890 IETF protocol assignments.
-	_, drasiIETFProtocolNet, _ = net.ParseCIDR("192.0.0.0/24")
-)
 
-// isDrasiBlockedIP returns true if the IP is in a non-public range that the
-// Drasi proxy must never connect to, including when the hostname itself is
-// explicitly allowlisted.
-func isDrasiBlockedIP(ip net.IP) bool {
-	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() ||
-		drasiCGNATNet.Contains(ip) || drasiCloudMetadataNet.Contains(ip) || drasiIETFProtocolNet.Contains(ip)
-}
 
 func normalizeDrasiHost(host string) string {
 	host = strings.TrimSpace(host)
@@ -138,7 +123,7 @@ var drasiProxyClient = &http.Client{
 				return nil, fmt.Errorf("no IPs resolved for host %s", host)
 			}
 			for _, ip := range ips {
-				if isDrasiBlockedIP(ip.IP) {
+				if ssrf.IsBlockedIP(ip.IP) {
 					return nil, fmt.Errorf("blocked: non-public IP %s for host %s", ip.IP, host)
 				}
 			}
@@ -263,7 +248,7 @@ func (h *MCPHandlers) proxyDrasiServer(c *fiber.Ctx, upstreamPath string, upstre
 		if host == "0.0.0.0" || host == "::" || isLocalhostDrasiHost(host) {
 			return fiber.NewError(fiber.StatusForbidden, "url host is not allowed")
 		}
-		if ip := net.ParseIP(host); ip != nil && isDrasiBlockedIP(ip) {
+		if ip := net.ParseIP(host); ip != nil && ssrf.IsBlockedIP(ip) {
 			return fiber.NewError(fiber.StatusForbidden, "url host is not allowed")
 		}
 	}
