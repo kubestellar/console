@@ -12,12 +12,20 @@ import (
 	teststore "github.com/kubestellar/console/pkg/test"
 )
 
+const (
+	testJWTSecret = "test-jwt-secret"
+
+	authRouteHandlersWithLimiterAndProxy = 3 // limiter + tracker injection + auth handler proxy
+	manifestRouteHandlersWithLimiter     = 2 // limiter + manifest handler
+	protectedRouteHandlersWithAuthGuards = 5 // limiter + tracker/body guard + csrf + jwt + handler
+)
+
 func newAuthRouteTestServer() (*Server, *routeSetupContext) {
 	app := fiber.New(fiber.Config{ErrorHandler: customErrorHandler})
 	server := &Server{
 		app:        app,
 		store:      &teststore.MockStore{},
-		config:     Config{AuthConfig: AuthConfig{JWTSecret: "test-jwt-secret"}},
+		config:     Config{AuthConfig: AuthConfig{JWTSecret: testJWTSecret}},
 		auth:       newAuthRuntime(),
 		background: newBackgroundServices(),
 		lifecycle:  newServerLifecycle(nil),
@@ -48,13 +56,13 @@ func TestSetupAuthRoutes_RegistersExpectedEndpoints(t *testing.T) {
 		path        string
 		minHandlers int
 	}{
-		{name: "GitHub login route", method: http.MethodGet, path: "/auth/github", minHandlers: 3},
-		{name: "GitHub callback route", method: http.MethodGet, path: "/auth/github/callback", minHandlers: 3},
-		{name: "Manifest setup route", method: http.MethodGet, path: "/auth/manifest/setup", minHandlers: 2},
-		{name: "Manifest callback route", method: http.MethodGet, path: "/auth/manifest/callback", minHandlers: 2},
-		{name: "Refresh token route", method: http.MethodPost, path: "/auth/refresh", minHandlers: 5},
-		{name: "Logout route", method: http.MethodPost, path: "/auth/logout", minHandlers: 5},
-		{name: "Feedback request route", method: http.MethodPost, path: "/api/feedback/requests", minHandlers: 5},
+		{name: "GitHub login route", method: http.MethodGet, path: "/auth/github", minHandlers: authRouteHandlersWithLimiterAndProxy},
+		{name: "GitHub callback route", method: http.MethodGet, path: "/auth/github/callback", minHandlers: authRouteHandlersWithLimiterAndProxy},
+		{name: "Manifest setup route", method: http.MethodGet, path: "/auth/manifest/setup", minHandlers: manifestRouteHandlersWithLimiter},
+		{name: "Manifest callback route", method: http.MethodGet, path: "/auth/manifest/callback", minHandlers: manifestRouteHandlersWithLimiter},
+		{name: "Refresh token route", method: http.MethodPost, path: "/auth/refresh", minHandlers: protectedRouteHandlersWithAuthGuards},
+		{name: "Logout route", method: http.MethodPost, path: "/auth/logout", minHandlers: protectedRouteHandlersWithAuthGuards},
+		{name: "Feedback request route", method: http.MethodPost, path: "/api/feedback/requests", minHandlers: protectedRouteHandlersWithAuthGuards},
 	}
 
 	for _, tt := range tests {
