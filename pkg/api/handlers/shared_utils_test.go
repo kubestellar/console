@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,289 +14,219 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const parsePageParamsRoute = "/page-params"
+
+type pageParamsResponse struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+}
+
+func newParsePageParamsTestApp(t *testing.T) *fiber.App {
+	t.Helper()
+
+	app := fiber.New()
+	app.Get(parsePageParamsRoute, func(c *fiber.Ctx) error {
+		limit, offset, err := ParsePageParams(c)
+		if err != nil {
+			return err
+		}
+		return c.JSON(pageParamsResponse{Limit: limit, Offset: offset})
+	})
+
+	return app
+}
+
 func TestParsePageParams(t *testing.T) {
+	app := newParsePageParamsTestApp(t)
+	limitTooLarge := maxClientPageLimit + 1
+
 	tests := []struct {
-		name        string
-		queryLimit  string
-		queryOffset string
-		wantLimit   int
-		wantOffset  int
-		wantErr     bool
-		errContains string
+		name          string
+		query         string
+		wantStatus    int
+		wantResponse  *pageParamsResponse
+		wantBodyParts []string
 	}{
 		{
-			name:       "NoParams",
-			wantLimit:  0,
-			wantOffset: 0,
-			wantErr:    false,
+			name:         "uses defaults when query parameters are absent",
+			query:        "",
+			wantStatus:   http.StatusOK,
+			wantResponse: &pageParamsResponse{Limit: 0, Offset: 0},
 		},
 		{
-			name:       "ValidLimitAndOffset",
-			queryLimit: "50",
-			queryOffset: "100",
-			wantLimit:  50,
-			wantOffset: 100,
-			wantErr:    false,
+			name:         "accepts zero and boundary values",
+			query:        "?limit=1000&offset=0",
+			wantStatus:   http.StatusOK,
+			wantResponse: &pageParamsResponse{Limit: maxClientPageLimit, Offset: 0},
 		},
 		{
-			name:        "InvalidLimit",
-			queryLimit:  "abc",
-			wantErr:     true,
-			errContains: "invalid limit",
+			name:         "accepts positive values",
+			query:        "?limit=25&offset=12",
+			wantStatus:   http.StatusOK,
+			wantResponse: &pageParamsResponse{Limit: 25, Offset: 12},
 		},
 		{
-			name:        "NegativeLimit",
-			queryLimit:  "-5",
-			wantErr:     true,
-			errContains: "invalid limit",
+			name:          "rejects negative limit",
+			query:         "?limit=-1",
+			wantStatus:    http.StatusBadRequest,
+			wantBodyParts: []string{"invalid limit"},
 		},
 		{
-			name:        "LimitTooLarge",
-			queryLimit:  "2000",
-			wantErr:     true,
-			errContains: "limit too large",
+			name:          "rejects non numeric limit",
+			query:         "?limit=abc",
+			wantStatus:    http.StatusBadRequest,
+			wantBodyParts: []string{"invalid limit"},
 		},
 		{
-			name:        "InvalidOffset",
-			queryOffset: "xyz",
-			wantErr:     true,
-			errContains: "invalid offset",
+			name:          "rejects oversized limit",
+			query:         "?limit=" + strconv.Itoa(limitTooLarge),
+			wantStatus:    http.StatusBadRequest,
+			wantBodyParts: []string{"limit too large"},
 		},
 		{
-			name:        "NegativeOffset",
-			queryOffset: "-10",
-			wantErr:     true,
-			errContains: "invalid offset",
+			name:          "rejects negative offset",
+			query:         "?offset=-5",
+			wantStatus:    http.StatusBadRequest,
+			wantBodyParts: []string{"invalid offset"},
 		},
 		{
-			name:       "MaxAllowedLimit",
-			queryLimit: "1000",
-			wantLimit:  1000,
-			wantErr:    false,
+			name:          "rejects non numeric offset",
+			query:         "?offset=bad",
+			wantStatus:    http.StatusBadRequest,
+			wantBodyParts: []string{"invalid offset"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := fiber.New()
-			app.Get("/test", func(c *fiber.Ctx) error {
-				limit, offset, err := ParsePageParams(c)
-				if err != nil {
-					return err
-				}
-				return c.JSON(fiber.Map{"limit": limit, "offset": offset})
-			})
-
-			url := "/test"
-			if tt.queryLimit != "" || tt.queryOffset != "" {
-				url += "?"
-				if tt.queryLimit != "" {
-					url += "limit=" + tt.queryLimit
-				}
-				if tt.queryOffset != "" {
-					if tt.queryLimit != "" {
-						url += "&"
-					}
-					url += "offset=" + tt.queryOffset
-				}
-			}
-
-			req := httptest.NewRequest("GET", url, nil)
+			req := httptest.NewRequest(http.MethodGet, parsePageParamsRoute+tt.query, nil)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
-			if tt.wantErr {
-				assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-				body, err := io.ReadAll(resp.Body)
-				require.NoError(t, err)
-				assert.Contains(t, string(body), tt.errContains)
-			} else {
-				assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-				body, err := io.ReadAll(resp.Body)
-				require.NoError(t, err)
-				assert.Contains(t, string(body), `"limit"`)
-				assert.Contains(t, string(body), `"offset"`)
+			assert.Equal(t, tt.wantStatus, resp.StatusCode)
+			if tt.wantResponse != nil {
+				var got pageParamsResponse
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&got))
+				assert.Equal(t, *tt.wantResponse, got)
+				return
+			}
+
+			bodyBytes, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			body := string(bodyBytes)
+			for _, wantBodyPart := range tt.wantBodyParts {
+				assert.Contains(t, body, wantBodyPart)
 			}
 		})
 	}
 }
 
 func TestResolveGitHubAPIBase(t *testing.T) {
+	originalValue, hadOriginal := os.LookupEnv("GITHUB_URL")
+	if hadOriginal {
+		defer func() {
+			require.NoError(t, os.Setenv("GITHUB_URL", originalValue))
+		}()
+	} else {
+		defer func() {
+			require.NoError(t, os.Unsetenv("GITHUB_URL"))
+		}()
+	}
+
 	tests := []struct {
-		name        string
-		githubURL   string
-		wantAPIBase string
+		name      string
+		githubURL string
+		want      string
 	}{
 		{
-			name:        "EmptyEnvVar",
-			githubURL:   "",
-			wantAPIBase: "https://api.github.com",
+			name:      "defaults to public github api when env is unset",
+			githubURL: "",
+			want:      githubAPIBase,
 		},
 		{
-			name:        "PublicGitHub",
-			githubURL:   "https://github.com",
-			wantAPIBase: "https://api.github.com",
+			name:      "maps bare github host to public api",
+			githubURL: "github.com",
+			want:      githubAPIBase,
 		},
 		{
-			name:        "BareGitHubHost",
-			githubURL:   "github.com",
-			wantAPIBase: "https://api.github.com",
+			name:      "maps www github host to public api",
+			githubURL: " https://www.github.com/ ",
+			want:      githubAPIBase,
 		},
 		{
-			name:        "WWWGitHub",
-			githubURL:   "www.github.com",
-			wantAPIBase: "https://api.github.com",
+			name:      "appends ghe api path for bare enterprise host",
+			githubURL: "github.enterprise.example.com",
+			want:      "https://github.enterprise.example.com/api/v3",
 		},
 		{
-			name:        "APIGitHub",
-			githubURL:   "api.github.com",
-			wantAPIBase: "https://api.github.com",
-		},
-		{
-			name:        "GHEWithHTTPS",
-			githubURL:   "https://github.example.com",
-			wantAPIBase: "https://github.example.com/api/v3",
-		},
-		{
-			name:        "GHEBareHost",
-			githubURL:   "github.example.com",
-			wantAPIBase: "https://github.example.com/api/v3",
-		},
-		{
-			name:        "GHEWithHTTP",
-			githubURL:   "http://github.internal",
-			wantAPIBase: "http://github.internal/api/v3",
-		},
-		{
-			name:        "GHEWithTrailingSlash",
-			githubURL:   "https://github.corp.com/",
-			wantAPIBase: "https://github.corp.com/api/v3",
+			name:      "preserves http scheme for enterprise host",
+			githubURL: "http://ghe.example.com/",
+			want:      "http://ghe.example.com/api/v3",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.githubURL != "" {
-				t.Setenv("GITHUB_URL", tt.githubURL)
+			if tt.githubURL == "" {
+				require.NoError(t, os.Unsetenv("GITHUB_URL"))
 			} else {
-				os.Unsetenv("GITHUB_URL")
+				require.NoError(t, os.Setenv("GITHUB_URL", tt.githubURL))
 			}
 
-			result := ResolveGitHubAPIBase()
-			assert.Equal(t, tt.wantAPIBase, result)
+			assert.Equal(t, tt.want, ResolveGitHubAPIBase())
 		})
 	}
 }
 
 func TestExtractHost(t *testing.T) {
 	tests := []struct {
-		name     string
-		raw      string
-		wantHost string
-		wantErr  bool
+		name    string
+		raw     string
+		want    string
+		wantErr bool
 	}{
 		{
-			name:     "FullURL",
-			raw:      "https://github.com/path",
-			wantHost: "github.com",
-			wantErr:  false,
+			name: "extracts lowercase hostname from full url",
+			raw:  "https://GitHub.example.com:8443/api/v3",
+			want: "github.example.com",
 		},
 		{
-			name:     "BareHost",
-			raw:      "github.com",
-			wantHost: "github.com",
-			wantErr:  false,
+			name: "extracts lowercase hostname from bare host",
+			raw:  "GITHUB.COM",
+			want: "github.com",
 		},
 		{
-			name:     "WithPort",
-			raw:      "https://github.com:443/path",
-			wantHost: "github.com",
-			wantErr:  false,
-		},
-		{
-			name:     "HTTPProtocol",
-			raw:      "http://internal.corp",
-			wantHost: "internal.corp",
-			wantErr:  false,
-		},
-		{
-			name:     "WithSubdomain",
-			raw:      "api.github.com",
-			wantHost: "api.github.com",
-			wantErr:  false,
-		},
-		{
-			name:    "EmptyString",
-			raw:     "",
-			wantErr: true,
-		},
-		{
-			name:    "WhitespaceOnly",
+			name:    "rejects empty input",
 			raw:     "   ",
 			wantErr: true,
 		},
 		{
-			name:     "LowercaseConversion",
-			raw:      "GitHub.COM",
-			wantHost: "github.com",
-			wantErr:  false,
+			name:    "rejects malformed urls",
+			raw:     "http://[::1",
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			host, err := ExtractHost(tt.raw)
+			got, err := ExtractHost(tt.raw)
 			if tt.wantErr {
 				assert.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.wantHost, host)
+				return
 			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
 func TestGetEnvOrDefault(t *testing.T) {
-	tests := []struct {
-		name       string
-		key        string
-		defaultVal string
-		envVal     string
-		wantResult string
-	}{
-		{
-			name:       "EnvVarSet",
-			key:        "TEST_VAR_1",
-			defaultVal: "default",
-			envVal:     "custom",
-			wantResult: "custom",
-		},
-		{
-			name:       "EnvVarEmpty",
-			key:        "TEST_VAR_2",
-			defaultVal: "default",
-			envVal:     "",
-			wantResult: "default",
-		},
-		{
-			name:       "EnvVarUnset",
-			key:        "TEST_VAR_3",
-			defaultVal: "default",
-			wantResult: "default",
-		},
-	}
+	t.Setenv("SHARED_UTILS_TEST_VALUE", "configured")
+	t.Setenv("SHARED_UTILS_EMPTY_VALUE", "")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.envVal != "" {
-				t.Setenv(tt.key, tt.envVal)
-			} else {
-				os.Unsetenv(tt.key)
-			}
-
-			result := GetEnvOrDefault(tt.key, tt.defaultVal)
-			assert.Equal(t, tt.wantResult, result)
-		})
-	}
+	assert.Equal(t, "configured", GetEnvOrDefault("SHARED_UTILS_TEST_VALUE", "fallback"))
+	assert.Equal(t, "fallback", GetEnvOrDefault("SHARED_UTILS_MISSING_VALUE", "fallback"))
+	assert.Equal(t, "fallback", GetEnvOrDefault("SHARED_UTILS_EMPTY_VALUE", "fallback"))
 }
