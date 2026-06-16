@@ -15,6 +15,7 @@ vi.mock('react-i18next', () => ({
 
 describe('RefreshIndicator & RefreshButton', () => {
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -83,10 +84,6 @@ describe('RefreshIndicator & RefreshButton', () => {
 
   // 6️⃣ MIN_SPIN_DURATION behavior (CRITICAL — REQUIRED)
   describe('MIN_SPIN_DURATION behavior', () => {
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
     it('continues spinning for MIN_SPIN_DURATION even if refresh completes early', async () => {
       vi.useFakeTimers()
 
