@@ -743,7 +743,7 @@ func (o *Observer) fetchResourceState(ctx context.Context, w store.StellarWatch)
 				sb.WriteString(fmt.Sprintf("ready: %v\n", n.Status == "Ready"))
 				sb.WriteString(fmt.Sprintf("schedulable: %v\n", !n.Unschedulable))
 				for _, cond := range n.Conditions {
-					if cond.Type == "Ready" || cond.Status == "True" {
+					if cond.Type == "Ready" || cond.Status != "True" || strings.HasSuffix(cond.Type, "Pressure") {
 						sb.WriteString(fmt.Sprintf("condition %s: %s\n", cond.Type, cond.Status))
 					}
 				}
