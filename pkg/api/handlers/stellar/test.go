@@ -91,6 +91,9 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 	app.Get("/api/stellar/observations", h.ListObservations)
 	app.Get("/api/stellar/stream", h.Stream)
 	app.Post("/api/stellar/events", h.IngestEvent)
+	app.Get("/api/stellar/tasks", h.ListTasks)
+	app.Post("/api/stellar/tasks", h.CreateTask)
+	app.Patch("/api/stellar/tasks/:id/status", h.UpdateTaskStatus)
 
 	return app, sqlStore
 }
