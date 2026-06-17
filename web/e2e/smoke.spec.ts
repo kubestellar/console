@@ -157,11 +157,9 @@ test.describe('Smoke Tests', () => {
       // Navigate to a non-home route
       await page.goto('/settings')
       
-      // Firefox-specific: Wait for /settings route before asserting page content.
-      // In Firefox, there's a race where ProtectedRoute hasn't finished auth init yet,
-      // causing a redirect to home. Using waitForURL() ensures the route is fully loaded
-      // before we assert on page content. (#18304, #18396)
-      await page.waitForURL('**/settings', { timeout: 10000 })
+      // Use regex-based URL assertion for cross-browser compatibility.
+      // Glob-based waitForURL('**/settings') fails on Firefox/WebKit. (#18588)
+      await expect(page).toHaveURL(/\/settings/, { timeout: 10000 })
       await expect(page.locator('h1:has-text("Settings")')).toBeVisible({ timeout: 10000 })
 
       // Click the logo button (has aria-label "Go to home dashboard").
