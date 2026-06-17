@@ -113,6 +113,10 @@ vi.mock('../../../../hooks/useLocalAgent', () => ({
   useLocalAgent: () => ({ isConnected: mockAgentConnected }),
 }))
 
+vi.mock('../../../../hooks/useBackendHealth', () => ({
+  useBackendHealth: () => ({ status: 'connected', inCluster: false }),
+}))
+
 vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({
     drillToNamespace: mockDrillToNamespace,
@@ -153,6 +157,21 @@ vi.mock('../../../cards/console-missions/shared', () => ({
     dismissPrompt: vi.fn(),
   }),
   ApiKeyPromptModal: () => null,
+}))
+
+vi.mock('../PodDrillDown.tabs', () => ({
+  usePodTabs: () => ({
+    TABS: [
+      { id: 'overview', label: 'drilldown.tabs.overview', icon: () => null },
+      { id: 'logs', label: 'drilldown.tabs.logs', icon: () => null },
+      { id: 'events', label: 'drilldown.tabs.events', icon: () => null },
+      { id: 'yaml', label: 'drilldown.tabs.yaml', icon: () => null },
+      { id: 'describe', label: 'drilldown.tabs.describe', icon: () => null },
+      { id: 'exec', label: 'drilldown.tabs.exec', icon: () => null },
+      { id: 'related', label: 'drilldown.tabs.related', icon: () => null },
+    ],
+  }),
+  useContainerNames: () => ['container-1'],
 }))
 
 // Additional mocks needed to fully mock AsyncData hook with state changes

@@ -121,7 +121,8 @@ describe('Deployments', () => {
 
     renderDeployments()
 
-    expect(screen.getByText('All healthy')).toBeTruthy()
+    // Component uses t('deployments.allHealthy') — mock returns the key
+    expect(screen.getByText('deployments.allHealthy')).toBeTruthy()
     expect(screen.getByTestId('stat-healthy').textContent).toBe('1')
     expect(screen.getByTestId('stat-critical').textContent).toBe('0')
     expect(screen.queryByText('2 critical issues')).toBeNull()
