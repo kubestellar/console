@@ -13,10 +13,14 @@ import (
 // RevokeToken persists a revoked token JTI with its expiration time.
 // INSERT OR IGNORE ensures re-revoking a token cannot silently extend
 // its expiry — the first revocation is authoritative (#7731).
+//
+// expiresAt is normalised to UTC before storage so that the string
+// representation written by the SQLite driver is directly comparable with
+// the UTC timestamp used in CleanupExpiredTokens (#18560).
 func (s *SQLiteStore) RevokeToken(ctx context.Context, jti string, expiresAt time.Time) error {
 	_, err := s.db.ExecContext(ctx,
 		`INSERT OR IGNORE INTO revoked_tokens (jti, expires_at) VALUES (?, ?)`,
-		jti, expiresAt,
+		jti, expiresAt.UTC(),
 	)
 	return err
 }
@@ -48,8 +52,12 @@ func (s *SQLiteStore) CleanupExpiredTokens(ctx context.Context) (int64, error) {
 // StoreOAuthState persists an OAuth state token with the given time-to-live.
 // The state is a single-use CSRF token; ConsumeOAuthState must be called once
 // to validate and delete it on the callback.
+//
+// Both created_at and expires_at are stored as UTC so that string comparisons
+// in CleanupExpiredOAuthStates work correctly regardless of the server's local
+// timezone (#18560).
 func (s *SQLiteStore) StoreOAuthState(ctx context.Context, state string, ttl time.Duration) error {
-	now := time.Now()
+	now := time.Now().UTC()
 	expiresAt := now.Add(ttl)
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO oauth_states (state, created_at, expires_at) VALUES (?, ?, ?)`,

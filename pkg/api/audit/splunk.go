@@ -51,10 +51,10 @@ const splunkSource = "kubestellar-console"
 
 // splunkSourcetype advertises the payload shape so Splunk can apply the right
 // field extractions.
-const splunkSourcetype = "kubestellar:audit"
+const splunkSourcetype = "_json"
 
 // NewSplunkDestination builds a SplunkDestination. Both url and token are
-// required; an optional *http.Client may be supplied (primarily for tests) —
+// required for a functional adapter. An optional *http.Client may be supplied —
 // when nil a default client with splunkTimeout is created.
 //
 // When either url or token is empty the adapter is considered unconfigured and
@@ -70,7 +70,7 @@ func NewSplunkDestination(url, token string, client *http.Client) (*SplunkDestin
 	// SSRF protection: reject URLs that resolve to private/internal IPs (#17533).
 	// Skip validation when caller provides a custom client (tests with localhost).
 	if client == nil {
-		if err := destinationURLValidator(url); err != nil {
+		if err := auditURLValidator(url); err != nil {
 			return nil, fmt.Errorf("splunk destination: %w", err)
 		}
 		client = &http.Client{Timeout: splunkTimeout}
