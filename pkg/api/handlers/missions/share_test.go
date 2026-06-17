@@ -225,14 +225,12 @@ func TestShareToSlack(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			// Build a mock Slack server that returns the configured status.
 			var slackMock *httptest.Server
 			if !tc.skipSlackSetup {
-				slackStatus := tc.slackStatus
 				slackMock = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-					w.WriteHeader(slackStatus)
+					w.WriteHeader(tc.slackStatus)
 				}))
 				defer slackMock.Close()
 			}
