@@ -8,6 +8,14 @@ import (
 	"testing"
 )
 
+func defaultIfZero[T comparable](value, fallback T) T {
+	var zero T
+	if value == zero {
+		return fallback
+	}
+	return value
+}
+
 // TestValidation_SaveAll_ValidatesAPIKeyFormat tests that SaveAll accepts valid API key formats
 func TestValidation_SaveAll_ValidatesAPIKeyFormat(t *testing.T) {
 	sm := newTestManager(t)
@@ -70,6 +78,7 @@ func TestValidation_SaveAll_ValidatesAPIKeyFormat(t *testing.T) {
 // TestValidation_SaveAll_EmptySettings tests that SaveAll handles empty/default settings
 func TestValidation_SaveAll_EmptySettings(t *testing.T) {
 	sm := newTestManager(t)
+	defaults := DefaultAllSettings()
 
 	all := &AllSettings{
 		AIMode:              "",
@@ -90,17 +99,18 @@ func TestValidation_SaveAll_EmptySettings(t *testing.T) {
 	}
 
 	// Empty fields should get defaults
-	if loaded.AIMode != "medium" {
-		t.Errorf("aiMode = %q, want default %q", loaded.AIMode, "medium")
+	if loaded.AIMode != defaults.AIMode {
+		t.Errorf("aiMode = %q, want default %q", loaded.AIMode, defaults.AIMode)
 	}
-	if loaded.Theme != "kubestellar" {
-		t.Errorf("theme = %q, want default %q", loaded.Theme, "kubestellar")
+	if loaded.Theme != defaults.Theme {
+		t.Errorf("theme = %q, want default %q", loaded.Theme, defaults.Theme)
 	}
 }
 
 // TestValidation_SaveAll_PredictionThresholds tests prediction threshold validation
 func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 	sm := newTestManager(t)
+	defaults := DefaultAllSettings()
 
 	testCases := []struct {
 		name       string
@@ -153,9 +163,14 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// Zero values should get defaults on load
-				if loaded.Predictions.Thresholds.HighRestartCount == 0 {
-					t.Error("HighRestartCount should have default, got 0")
+				expected := PredictionThresholds{
+					HighRestartCount:  defaultIfZero(tc.thresholds.HighRestartCount, defaults.Predictions.Thresholds.HighRestartCount),
+					CPUPressure:       defaultIfZero(tc.thresholds.CPUPressure, defaults.Predictions.Thresholds.CPUPressure),
+					MemoryPressure:    defaultIfZero(tc.thresholds.MemoryPressure, defaults.Predictions.Thresholds.MemoryPressure),
+					GPUMemoryPressure: defaultIfZero(tc.thresholds.GPUMemoryPressure, defaults.Predictions.Thresholds.GPUMemoryPressure),
+				}
+				if loaded.Predictions.Thresholds != expected {
+					t.Errorf("predictions.thresholds = %+v, want %+v", loaded.Predictions.Thresholds, expected)
 				}
 			}
 		})
@@ -165,6 +180,7 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 // TestValidation_SaveAll_TokenUsageSettings tests token usage settings validation
 func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 	sm := newTestManager(t)
+	defaults := DefaultAllSettings()
 
 	testCases := []struct {
 		name       string
@@ -219,9 +235,14 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// Zero thresholds should get defaults
-				if loaded.TokenUsage.WarningThreshold == 0 {
-					t.Error("WarningThreshold should have default, got 0")
+				expected := TokenUsageSettings{
+					Limit:             tc.tokenUsage.Limit,
+					WarningThreshold:  defaultIfZero(tc.tokenUsage.WarningThreshold, defaults.TokenUsage.WarningThreshold),
+					CriticalThreshold: defaultIfZero(tc.tokenUsage.CriticalThreshold, defaults.TokenUsage.CriticalThreshold),
+					StopThreshold:     defaultIfZero(tc.tokenUsage.StopThreshold, defaults.TokenUsage.StopThreshold),
+				}
+				if loaded.TokenUsage != expected {
+					t.Errorf("tokenUsage = %+v, want %+v", loaded.TokenUsage, expected)
 				}
 			}
 		})
