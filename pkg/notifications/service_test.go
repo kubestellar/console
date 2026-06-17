@@ -42,6 +42,8 @@ func TestService_Registration(t *testing.T) {
 	})
 
 	t.Run("Webhook", func(t *testing.T) {
+		allowLoopbackWebhookHostsForTest(t)
+
 		s.RegisterWebhookNotifier("id1", "http://localhost")
 		require.Contains(t, s.snapshot(), "webhook:id1")
 	})
@@ -221,6 +223,8 @@ func TestService_TestNotifier(t *testing.T) {
 	})
 
 	t.Run("Webhook", func(t *testing.T) {
+		allowLoopbackWebhookHostsForTest(t)
+
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		}))

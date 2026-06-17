@@ -13,6 +13,8 @@ import (
 )
 
 func TestWebhookNotifier_Send(t *testing.T) {
+	allowLoopbackWebhookHostsForTest(t)
+
 	var captured webhookPayload
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
@@ -44,6 +46,8 @@ func TestWebhookNotifier_Send(t *testing.T) {
 }
 
 func TestWebhookNotifier_NewError(t *testing.T) {
+	allowLoopbackWebhookHostsForTest(t)
+
 	t.Run("empty URL", func(t *testing.T) {
 		_, err := NewWebhookNotifier("")
 		require.Error(t, err)
@@ -91,6 +95,8 @@ func TestWebhookNotifier_HostAllowlist(t *testing.T) {
 }
 
 func TestWebhookNotifier_NonSuccessStatus(t *testing.T) {
+	allowLoopbackWebhookHostsForTest(t)
+
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
