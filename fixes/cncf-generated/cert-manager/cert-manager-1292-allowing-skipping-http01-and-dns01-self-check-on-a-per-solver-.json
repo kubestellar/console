@@ -1,0 +1,76 @@
+{
+  "version": "kc-mission-v1",
+  "name": "cert-manager-1292-allowing-skipping-http01-and-dns01-self-check-on-a-per-solver-",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "cert-manager: Allowing skipping HTTP01 and DNS01 self-check on a per-solver basis",
+    "description": "Allowing skipping HTTP01 and DNS01 self-check on a per-solver basis. Requested by 87+ users.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current cert-manager deployment",
+        "description": "Verify your cert-manager version and configuration:\n```bash\nkubectl get pods -n cert-manager -l app.kubernetes.io/name=cert-manager\nhelm list -n cert-manager 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working cert-manager installation."
+      },
+      {
+        "title": "Review cert-manager configuration",
+        "description": "Inspect the relevant cert-manager configuration:\n```bash\nkubectl get all -n cert-manager -l app.kubernetes.io/name=cert-manager\nkubectl get configmap -n cert-manager -l app.kubernetes.io/part-of=cert-manager\n```\nKinda intercects with #863, in nat nets cant successfully self validate acme rules, because of local k8s providers, which  refuses to create hairpin nat\n\nNice env variable or cmd-flag for skip local self check and leave it up to the user\n\n**Describe"
+      },
+      {
+        "title": "Apply the fix for Allowing skipping HTTP01 and DNS01 self-check on a…",
+        "description": "This has been discussed before and we've avoided allowing it as we need *some* way to ensure that the challenge has propagated.\n\nFor DNS01, options like `--dns01-recursive-nameservers` and `--dns01-recursive-nameservers-only` help users that have DNS restricted environments that use DNS01.\n\nI\n```yaml\ncurl -I https://myhost.domain.com\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n cert-manager -l app.kubernetes.io/name=cert-manager\nkubectl get events -n cert-manager --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Allowing skipping HTTP01 and DNS01 self-check on a…\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "This has been discussed before and we've avoided allowing it as we need *some* way to ensure that the challenge has propagated.\n\nFor DNS01, options like `--dns01-recursive-nameservers` and `--dns01-recursive-nameservers-only` help users that have DNS restricted environments that use DNS01.",
+      "codeSnippets": [
+        "curl -I https://myhost.domain.com",
+        "curl -I https://myhost.domain.com --haproxy-protocol",
+        "> curl -I https://myhost.domain.com\n>"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "cert-manager",
+      "graduated",
+      "security",
+      "feature"
+    ],
+    "cncfProjects": [
+      "cert-manager"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/cert-manager/cert-manager/issues/1292",
+      "repo": "https://github.com/cert-manager/cert-manager"
+    },
+    "reactions": 87,
+    "comments": 121,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with cert-manager installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-17T07:52:23.557Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
