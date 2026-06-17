@@ -119,20 +119,14 @@ test.describe('Sidebar Navigation', () => {
       // Navigate away first — clicking the home link while already on "/"
       // would not exercise any real routing behavior.
       await page.goto('/clusters')
-      
-      // Firefox-specific: Wait for /clusters route before asserting URL/content.
-      // In Firefox, there's a race where the auth context hasn't finished init,
-      // causing navigation issues. Use waitForURL() to ensure the route has loaded. (#18304, #18396)
-      await page.waitForURL('**/clusters', { timeout: SIDEBAR_TIMEOUT_MS })
-      await expect(page.getByTestId('dashboard-title')).toContainText('My Clusters', { timeout: SIDEBAR_TIMEOUT_MS })
+      await page.waitForLoadState('domcontentloaded')
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
+      await expectDashboardNavigation(page, '/clusters', 'My Clusters')
 
       const dashboardLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/"], [data-testid="sidebar"] a[href="/"]').first()
       await expect(dashboardLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
-      
-      // Click and wait for navigation
       await dashboardLink.click({ force: true })
-      await page.waitForURL('**/', { timeout: SIDEBAR_TIMEOUT_MS })
+      await page.waitForLoadState('domcontentloaded')
 
       await expectDashboardNavigation(page, '/', 'Dashboard')
     })
@@ -142,10 +136,8 @@ test.describe('Sidebar Navigation', () => {
 
       const clustersLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/clusters"], [data-testid="sidebar"] a[href="/clusters"]').first()
       await expect(clustersLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
-      await Promise.all([
-        page.waitForURL('**/clusters', { timeout: SIDEBAR_TIMEOUT_MS }),
-        clustersLink.click({ force: true }),
-      ])
+      await clustersLink.click({ force: true })
+      await page.waitForLoadState('domcontentloaded')
 
       await expectDashboardNavigation(page, '/clusters', 'My Clusters')
     })
@@ -155,10 +147,8 @@ test.describe('Sidebar Navigation', () => {
 
       const deployLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/deploy"], [data-testid="sidebar"] a[href="/deploy"]').first()
       await expect(deployLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
-      await Promise.all([
-        page.waitForURL('**/deploy', { timeout: SIDEBAR_TIMEOUT_MS }),
-        deployLink.click({ force: true }),
-      ])
+      await deployLink.click({ force: true })
+      await page.waitForLoadState('domcontentloaded')
 
       await expectDashboardNavigation(page, '/deploy', 'Deploy')
     })
