@@ -10,7 +10,7 @@ import (
 )
 
 func TestOAuthCredentials_RoundTrip(t *testing.T) {
-	t.Setenv("CREDENTIAL_ENCRYPTION_KEY", "test-key-32-bytes-for-aes256!!")
+	t.Setenv("CREDENTIAL_ENCRYPTION_KEY", "test-key-for-unit-tests-0123456789ab")
 	
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	s, err := NewSQLiteStore(dbPath)
@@ -34,7 +34,7 @@ func TestOAuthCredentials_RoundTrip(t *testing.T) {
 }
 
 func TestOAuthCredentials_Upsert(t *testing.T) {
-	t.Setenv("CREDENTIAL_ENCRYPTION_KEY", "test-key-32-bytes-for-aes256!!")
+	t.Setenv("CREDENTIAL_ENCRYPTION_KEY", "test-key-for-unit-tests-0123456789ab")
 	
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	s, err := NewSQLiteStore(dbPath)

@@ -78,7 +78,7 @@ func TestSQLiteAuthRoundTrip(t *testing.T) {
 
 		removed, err := store.CleanupExpiredTokens(ctx)
 		require.NoError(t, err)
-		require.EqualValues(t, 1, removed)
+		require.Equal(t, int64(1), removed)
 
 		for _, tc := range tests {
 			t.Run(fmt.Sprintf("post-cleanup/%s", tc.name), func(t *testing.T) {
