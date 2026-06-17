@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"io"
 	"net/http/httptest"
 	"testing"
 
