@@ -53,6 +53,23 @@ func TestNewKagentiClientFromEnv(t *testing.T) {
 		assert.Empty(t, client.DirectAgentURL())
 		assert.Equal(t, defaultClientTimeout, client.httpClient.Timeout)
 	})
+
+	t.Run("returns nil when no url available", func(t *testing.T) {
+		// Clear all kagenti env vars so auto-detection is attempted.
+		// Detection will fail because no kagenti service is reachable in the
+		// test environment — the function must return nil in that case.
+		t.Setenv("KAGENTI_AGENT_URL", "")
+		t.Setenv("KAGENTI_AGENT_NAME", "")
+		t.Setenv("KAGENTI_AGENT_NAMESPACE", "")
+		t.Setenv("KAGENTI_CONTROLLER_URL", "")
+		t.Setenv("KAGENTI_NAMESPACE", "unreachable-ns")
+		t.Setenv("KAGENTI_SERVICE_NAME", "unreachable-svc")
+		t.Setenv("KAGENTI_SERVICE_PORT", "9999")
+		t.Setenv("KAGENTI_SERVICE_PROTOCOL", "http")
+
+		client := NewKagentiClientFromEnv()
+		assert.Nil(t, client)
+	})
 }
 
 func TestStatusWithContext_Controller(t *testing.T) {
@@ -72,6 +89,36 @@ func TestStatusWithContext_Controller(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, ok)
 	assert.Equal(t, []string{"/health", "/healthz"}, requests)
+}
+
+func TestStatusWithContext_Controller_AllFail(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	client := NewKagentiClient(server.URL)
+	ok, err := client.StatusWithContext(context.Background())
+	assert.Error(t, err)
+	assert.False(t, ok)
+	assert.Contains(t, err.Error(), "health check failed")
+}
+
+func TestStatusWithContext_DirectAgent_AllFail(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	client := &KagentiClient{
+		directAgentURL: strings.TrimRight(server.URL, "/"),
+		httpClient:     &http.Client{Timeout: defaultClientTimeout},
+	}
+
+	ok, err := client.StatusWithContext(context.Background())
+	assert.Error(t, err)
+	assert.False(t, ok)
+	assert.Contains(t, err.Error(), "health check failed")
 }
 
 func TestStatusWithContext_DirectAgent(t *testing.T) {
@@ -126,6 +173,34 @@ func TestListAgentsWithContext_Controller(t *testing.T) {
 	assert.Equal(t, []string{"/api/v1/agents", "/api/agents"}, requests)
 }
 
+func TestListAgentsWithContext_Controller_AllFail(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("server error"))
+	}))
+	defer server.Close()
+
+	client := NewKagentiClient(server.URL)
+	agents, err := client.ListAgentsWithContext(context.Background())
+	assert.Error(t, err)
+	assert.Nil(t, agents)
+}
+
+func TestListAgentsWithContext_Controller_DecodeError(t *testing.T) {
+	// All agent list paths return 200 with invalid JSON — decode fails on every attempt.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`not valid json at all`))
+	}))
+	defer server.Close()
+
+	client := NewKagentiClient(server.URL)
+	agents, err := client.ListAgentsWithContext(context.Background())
+	assert.Error(t, err)
+	assert.Nil(t, agents)
+	assert.Contains(t, err.Error(), "failed to decode agent list")
+}
+
 func TestListAgentsWithContext_DirectAgentUsesCardName(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/.well-known/agent-card.json" {
@@ -174,9 +249,10 @@ func TestListAgentsWithContext_DirectAgentFallsBackToDefaultName(t *testing.T) {
 
 func TestDecodeAgentList(t *testing.T) {
 	tests := []struct {
-		name string
-		body string
-		want []AgentInfo
+		name    string
+		body    string
+		want    []AgentInfo
+		wantErr bool
 	}{
 		{
 			name: "wrapped items",
@@ -188,13 +264,23 @@ func TestDecodeAgentList(t *testing.T) {
 			body: `[{"name":"direct","namespace":"team-b"}]`,
 			want: []AgentInfo{{Name: "direct", Namespace: "team-b"}},
 		},
+		{
+			name:    "invalid JSON returns error",
+			body:    `not json at all`,
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := decodeAgentList(strings.NewReader(tt.body))
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, got)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
 		})
 	}
 }
@@ -318,7 +404,13 @@ func TestDiscover(t *testing.T) {
 
 	t.Run("escapes namespace and agent name", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "/api/a2a/team%2Fa/agent%20one/.well-known/agent.json", r.URL.Path)
+			// r.URL.RawPath preserves percent-encoding (e.g. %2F for "/");
+			// fall back to r.URL.Path only if RawPath is not set.
+			rawPath := r.URL.RawPath
+			if rawPath == "" {
+				rawPath = r.URL.Path
+			}
+			assert.Equal(t, "/api/a2a/team%2Fa/agent%20one/.well-known/agent.json", rawPath)
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"name":"agent one","description":"demo"}`))
 		}))
@@ -501,4 +593,35 @@ func TestInvoke(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, body)
 	})
+
+	t.Run("controller mode nil httpClient", func(t *testing.T) {
+		// Exercises the fallback path that creates a default http.Client when httpClient is nil.
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("data: ok\n\n"))
+		}))
+		defer server.Close()
+
+		client := &KagentiClient{
+			baseURL:    server.URL,
+			httpClient: nil, // intentionally nil to exercise the default-client branch
+		}
+		body, err := client.Invoke(context.Background(), "ns", "agent", "test", "", nil)
+		require.NoError(t, err)
+		require.NotNil(t, body)
+		body.Close()
+	})
+}
+
+func TestDiscover_TransportError(t *testing.T) {
+	// Close the server immediately so the HTTP request fails at the transport layer.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	serverURL := server.URL
+	server.Close()
+
+	client := NewKagentiClient(serverURL)
+	card, err := client.Discover("ns", "agent")
+	assert.Error(t, err)
+	assert.Nil(t, card)
+	assert.Contains(t, err.Error(), "failed to discover agent")
 }
