@@ -129,6 +129,13 @@ func validateSlackWebhookURL(rawURL string) error {
 	if !strings.HasPrefix(parsed.Path, validSlackWebhookPathPrefix) {
 		return fmt.Errorf("webhook URL path must begin with %s", validSlackWebhookPathPrefix)
 	}
+	if strings.Contains(parsed.Path, "//") ||
+		strings.Contains(parsed.Path, "/../") ||
+		strings.HasSuffix(parsed.Path, "/..") ||
+		strings.Contains(parsed.Path, "/./") ||
+		strings.HasSuffix(parsed.Path, "/.") {
+		return fmt.Errorf("webhook URL path must not contain traversal or empty segments")
+	}
 	return nil
 }
 

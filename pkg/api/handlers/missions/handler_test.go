@@ -764,7 +764,7 @@ func TestValidateKBBrowsePath(t *testing.T) {
 // rather than semantic. Any URL parser quirk (userinfo, port, fragment,
 // case-folding) could sneak past. The fixed version uses net/url.Parse and
 // compares parsed.Hostname() to the literal allowlist entry.
-func TestValidateSlackWebhookURL(t *testing.T) {
+func TestValidateSlackWebhookURL_LegacyMatrix(t *testing.T) {
 	cases := []struct {
 		name    string
 		url     string

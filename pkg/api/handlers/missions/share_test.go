@@ -1,165 +1,291 @@
 package missions
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidateSlackWebhookURL_Valid(t *testing.T) {
-	validURL := "https://hooks.slack.com/services/T00/B00/XXX"
-	err := validateSlackWebhookURL(validURL)
-	assert.NoError(t, err)
-}
-
-func TestValidateSlackWebhookURL_Invalid(t *testing.T) {
-	tests := []struct {
-		name string
-		url  string
-		msg  string
-	}{
-		{name: "http instead of https", url: "http://hooks.slack.com/services/T00/B00/XXX", msg: "must use https"},
-		{name: "javascript protocol", url: "javascript:alert(1)", msg: "must use https"},
-		{name: "file protocol", url: "file:///etc/passwd", msg: "must use https"},
-		{name: "SSRF internal IP", url: "https://192.168.1.1/services/T", msg: "host must be hooks.slack.com"},
-		{name: "SSRF localhost", url: "https://localhost/services/T", msg: "host must be hooks.slack.com"},
-		{name: "wrong domain", url: "https://evil.com/services/T00/B00/XXX", msg: "host must be hooks.slack.com"},
-		{name: "subdomain confusion", url: "https://hooks.slack.com.evil.com/services/T", msg: "host must be hooks.slack.com"},
-		{name: "empty string", url: "", msg: "webhook URL is required"},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateSlackWebhookURL(tt.url)
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), tt.msg)
-		})
-	}
-}
-
 func TestResolveAllowedShareRepos(t *testing.T) {
-	const envVar = "KC_ALLOWED_SHARE_REPOS"
+	tests := []struct {
+		name     string
+		envValue *string
+		expected []string
+	}{
+		{
+			name:     "env unset",
+			envValue: nil,
+			expected: []string{"kubestellar/console-kb"},
+		},
+		{
+			name:     "env empty",
+			envValue: ptr(""),
+			expected: []string{"kubestellar/console-kb"},
+		},
+		{
+			name:     "multiple repos",
+			envValue: ptr("myorg/my-missions,anotherorg/repo"),
+			expected: []string{"kubestellar/console-kb", "myorg/my-missions", "anotherorg/repo"},
+		},
+		{
+			name:     "whitespace and empty entries",
+			envValue: ptr("  myorg/my-missions , , anotherorg/repo  ,  "),
+			expected: []string{"kubestellar/console-kb", "myorg/my-missions", "anotherorg/repo"},
+		},
+	}
 
-	t.Run("env unset includes default repos", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Unsetenv(envVar)
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.envValue == nil {
+				require.NoError(t, os.Unsetenv(allowedShareRepoEnvVar))
+			} else {
+				t.Setenv(allowedShareRepoEnvVar, *tc.envValue)
+			}
+
+			assert.Equal(t, tc.expected, resolveAllowedShareRepos())
 		})
-		os.Unsetenv(envVar)
-
-		repos := resolveAllowedShareRepos()
-		assert.NotEmpty(t, repos, "allowlist must not be empty")
-		assert.Contains(t, repos, "kubestellar/console-kb")
-	})
-
-	t.Run("env with additional repos", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Unsetenv(envVar)
-		})
-		require.NoError(t, os.Setenv(envVar, "org1/repo1,org2/repo2"))
-
-		repos := resolveAllowedShareRepos()
-		assert.Contains(t, repos, "kubestellar/console-kb")
-		assert.Contains(t, repos, "org1/repo1")
-		assert.Contains(t, repos, "org2/repo2")
-		assert.GreaterOrEqual(t, len(repos), 3)
-	})
-
-	t.Run("env values are trimmed", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Unsetenv(envVar)
-		})
-		require.NoError(t, os.Setenv(envVar, " org1/repo1 , org2/repo2 "))
-
-		repos := resolveAllowedShareRepos()
-		assert.Contains(t, repos, "kubestellar/console-kb")
-		assert.Contains(t, repos, "org1/repo1")
-		assert.Contains(t, repos, "org2/repo2")
-	})
-
-	t.Run("env with empty entries are ignored", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Unsetenv(envVar)
-		})
-		require.NoError(t, os.Setenv(envVar, "org1/repo1,,org2/repo2"))
-
-		repos := resolveAllowedShareRepos()
-		assert.Contains(t, repos, "kubestellar/console-kb")
-		assert.Contains(t, repos, "org1/repo1")
-		assert.Contains(t, repos, "org2/repo2")
-	})
-}
-
-func TestIsRepoAllowedForShareWithList(t *testing.T) {
-	allowlist := []string{"kubestellar/console-kb", "org1/repo1"}
-
-	t.Run("repo in list", func(t *testing.T) {
-		assert.True(t, isRepoAllowedForShareWithList("kubestellar/console-kb", allowlist))
-	})
-
-	t.Run("case insensitive match", func(t *testing.T) {
-		assert.True(t, isRepoAllowedForShareWithList("KubeStellar/Console-KB", allowlist))
-	})
-
-	t.Run("repo not in list", func(t *testing.T) {
-		assert.False(t, isRepoAllowedForShareWithList("evil/repo", allowlist))
-	})
-
-	t.Run("empty list", func(t *testing.T) {
-		assert.False(t, isRepoAllowedForShareWithList("kubestellar/console-kb", []string{}))
-	})
-
-	t.Run("nil list", func(t *testing.T) {
-		assert.False(t, isRepoAllowedForShareWithList("kubestellar/console-kb", nil))
-	})
+	}
 }
 
 func TestIsRepoAllowedForShare(t *testing.T) {
-	const envVar = "KC_ALLOWED_SHARE_REPOS"
+	t.Setenv(allowedShareRepoEnvVar, "MyOrg/Repo-One")
 
-	t.Run("exact match", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Unsetenv(envVar)
-		})
-		os.Unsetenv(envVar)
-
-		assert.True(t, isRepoAllowedForShare("kubestellar/console-kb"))
-	})
-
-	t.Run("uppercase variant", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Unsetenv(envVar)
-		})
-		os.Unsetenv(envVar)
-
-		assert.True(t, isRepoAllowedForShare("KUBESTELLAR/CONSOLE-KB"))
-	})
-
-	t.Run("not in list", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Unsetenv(envVar)
-		})
-		os.Unsetenv(envVar)
-
-		assert.False(t, isRepoAllowedForShare("evil/repo"))
-	})
-
-	t.Run("empty string", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Unsetenv(envVar)
-		})
-		os.Unsetenv(envVar)
-
-		assert.False(t, isRepoAllowedForShare(""))
-	})
-
-	t.Run("path traversal attempt", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Unsetenv(envVar)
-		})
-		os.Unsetenv(envVar)
-
-		assert.False(t, isRepoAllowedForShare("layer5io/../admin/repo"))
-	})
+	assert.True(t, isRepoAllowedForShare("kubestellar/console-kb"))
+	assert.True(t, isRepoAllowedForShare("myorg/repo-one"))
+	assert.False(t, isRepoAllowedForShare("myorg/repo-two"))
 }
+
+func TestIsRepoAllowedForShareWithList(t *testing.T) {
+	tests := []struct {
+		name    string
+		repo    string
+		allowed []string
+		want    bool
+	}{
+		{
+			name:    "exact match",
+			repo:    "kubestellar/console-kb",
+			allowed: []string{"kubestellar/console-kb", "myorg/repo-one"},
+			want:    true,
+		},
+		{
+			name:    "case insensitive match",
+			repo:    "KUBESTELLAR/Console-KB",
+			allowed: []string{"kubestellar/console-kb"},
+			want:    true,
+		},
+		{
+			name:    "not in list",
+			repo:    "attacker/repo",
+			allowed: []string{"kubestellar/console-kb"},
+			want:    false,
+		},
+		{
+			name:    "empty list",
+			repo:    "kubestellar/console-kb",
+			allowed: []string{},
+			want:    false,
+		},
+		{
+			name:    "prefix mismatch",
+			repo:    "kubestellar/console-kb-extra",
+			allowed: []string{"kubestellar/console-kb"},
+			want:    false,
+		},
+		{
+			name:    "suffix mismatch",
+			repo:    "myorg/console-kb",
+			allowed: []string{"kubestellar/console-kb"},
+			want:    false,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isRepoAllowedForShareWithList(tc.repo, tc.allowed))
+		})
+	}
+}
+
+func TestValidateSlackWebhookURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		url     string
+		wantErr bool
+	}{
+		{name: "valid slack webhook", url: "https://hooks.slack.com/services/T000/B000/XXXX", wantErr: false},
+		{name: "prefix attack host", url: "https://hooks.slack.com.evil.com/services/T000/B000/XXXX", wantErr: true},
+		{name: "scheme downgrade", url: "http://hooks.slack.com/services/T000/B000/XXXX", wantErr: true},
+		{name: "port injection", url: "https://hooks.slack.com:8080/services/T000/B000/XXXX", wantErr: true},
+		{name: "userinfo smuggling", url: "******hooks.slack.com/services/T000/B000/XXXX", wantErr: true},
+		{name: "path escape", url: "https://hooks.slack.com/services/../T000/B000/XXXX", wantErr: true},
+		{name: "double slash path", url: "https://hooks.slack.com/services//T000/B000/XXXX", wantErr: true},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateSlackWebhookURL(tc.url)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestShareToSlack(t *testing.T) {
+	var webhookCalls atomic.Int32
+	slackMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		webhookCalls.Add(1)
+		if strings.Contains(r.URL.Path, "/fail") {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer slackMock.Close()
+
+	tests := []struct {
+		name           string
+		payload        string
+		expectedStatus int
+		expectedCalls  int32
+	}{
+		{
+			name:           "success",
+			payload:        `{"webhookUrl":"https://hooks.slack.com/services/T0/B0/ok","text":"hello"}`,
+			expectedStatus: http.StatusOK,
+			expectedCalls:  1,
+		},
+		{
+			name:           "non-200 from webhook",
+			payload:        `{"webhookUrl":"https://hooks.slack.com/services/fail/T0/B0","text":"hello"}`,
+			expectedStatus: http.StatusBadGateway,
+			expectedCalls:  1,
+		},
+		{
+			name:           "oversized text",
+			payload:        fmt.Sprintf(`{"webhookUrl":"https://hooks.slack.com/services/T0/B0/ok","text":"%s"}`, strings.Repeat("x", slackMaxTextBytes+1)),
+			expectedStatus: http.StatusBadRequest,
+			expectedCalls:  0,
+		},
+		{
+			name:           "empty text",
+			payload:        `{"webhookUrl":"https://hooks.slack.com/services/T0/B0/ok","text":""}`,
+			expectedStatus: http.StatusBadRequest,
+			expectedCalls:  0,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			app, handler := setupMissionsTest()
+			handler.httpClient = &http.Client{Transport: &mockTransport{handler: func(req *http.Request) (*http.Response, error) {
+				req.URL.Scheme = "http"
+				req.URL.Host = strings.TrimPrefix(slackMock.URL, "http://")
+				return http.DefaultTransport.RoundTrip(req)
+			}}}
+
+			webhookCalls.Store(0)
+			req, err := http.NewRequest(http.MethodPost, "/api/missions/share/slack", strings.NewReader(tc.payload))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err := app.Test(req, 5000)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			assert.Equal(t, tc.expectedCalls, webhookCalls.Load())
+		})
+	}
+}
+
+func TestShareToGitHub(t *testing.T) {
+	tests := []struct {
+		name           string
+		payload        string
+		withToken      bool
+		expectedStatus int
+		setupMock      bool
+	}{
+		{
+			name:           "allowlist rejection",
+			payload:        `{"repo":"attacker/private","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`,
+			withToken:      true,
+			expectedStatus: http.StatusBadRequest,
+			setupMock:      false,
+		},
+		{
+			name:           "missing token",
+			payload:        `{"repo":"kubestellar/console-kb","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`,
+			withToken:      false,
+			expectedStatus: http.StatusUnauthorized,
+			setupMock:      false,
+		},
+		{
+			name:           "success flow",
+			payload:        `{"repo":"kubestellar/console-kb","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`,
+			withToken:      true,
+			expectedStatus: http.StatusOK,
+			setupMock:      true,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			app, handler := setupMissionsTest()
+			if tc.setupMock {
+				ghMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					switch {
+					case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/repos/kubestellar/console-kb/forks"):
+						json.NewEncoder(w).Encode(map[string]interface{}{"full_name": "testuser/console-kb", "parent": map[string]interface{}{"default_branch": "main"}})
+					case r.Method == http.MethodGet && r.URL.Path == "/repos/kubestellar/console-kb":
+						json.NewEncoder(w).Encode(map[string]interface{}{"default_branch": "main"})
+					case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/repos/testuser/console-kb/git/ref/heads/main"):
+						json.NewEncoder(w).Encode(map[string]interface{}{"object": map[string]interface{}{"sha": "abc123"}})
+					case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/repos/testuser/console-kb/git/refs"):
+						w.WriteHeader(http.StatusCreated)
+						json.NewEncoder(w).Encode(map[string]interface{}{"ref": "refs/heads/mission-test"})
+					case r.Method == http.MethodPut && strings.Contains(r.URL.Path, "/repos/testuser/console-kb/contents/missions/test.yaml"):
+						w.WriteHeader(http.StatusCreated)
+						json.NewEncoder(w).Encode(map[string]interface{}{"content": map[string]interface{}{"sha": "deadbeef"}})
+					case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/repos/kubestellar/console-kb/pulls"):
+						w.WriteHeader(http.StatusCreated)
+						json.NewEncoder(w).Encode(map[string]interface{}{"html_url": "https://github.com/kubestellar/console-kb/pull/1"})
+					default:
+						w.WriteHeader(http.StatusNotFound)
+					}
+				}))
+				defer ghMock.Close()
+				handler.githubAPIURL = ghMock.URL
+			}
+
+			req, err := http.NewRequest(http.MethodPost, "/api/missions/share/github", strings.NewReader(tc.payload))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			if tc.withToken {
+				req.Header.Set("X-GitHub-Token", "ghp_test")
+			}
+
+			resp, err := app.Test(req, 5000)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+		})
+	}
+}
+
+func ptr(v string) *string { return &v }
