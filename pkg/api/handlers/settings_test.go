@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// settingsFiberTestTimeout is the Fiber app.Test timeout in milliseconds.
 const settingsFiberTestTimeout = 5000
 
 func TestGetSettings(t *testing.T) {
