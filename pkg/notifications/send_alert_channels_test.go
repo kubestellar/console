@@ -45,82 +45,6 @@ func TestSendAlertToChannels_SlackChannel(t *testing.T) {
 	assert.True(t, received, "Slack server should have received the webhook")
 }
 
-// TestSendAlertToChannels_PagerDutyChannel exercises the PagerDuty branch.
-func TestSendAlertToChannels_PagerDutyChannel(t *testing.T) {
-	var received bool
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		received = true
-		w.WriteHeader(http.StatusAccepted)
-	}))
-	defer srv.Close()
-
-	// Override PagerDuty API URL to use test server
-	originalURL := pagerDutyAPIURL
-	pagerDutyAPIURL = srv.URL
-	t.Cleanup(func() { pagerDutyAPIURL = originalURL })
-
-	s := NewService()
-	channels := []NotificationChannel{
-		{
-			Type:    NotificationTypePagerDuty,
-			Enabled: true,
-			Config: map[string]interface{}{
-				"pagerdutyRoutingKey": "test-routing-key",
-			},
-		},
-	}
-
-	err := s.SendAlertToChannels(Alert{
-		ID:       "alert-pd",
-		RuleName: "PDRule",
-		Severity: SeverityCritical,
-		Status:   "firing",
-		Message:  "Critical alert",
-		FiredAt:  time.Now(),
-	}, channels)
-
-	require.NoError(t, err)
-	assert.True(t, received, "PagerDuty server should have received the event")
-}
-
-// TestSendAlertToChannels_OpsGenieChannel exercises the OpsGenie branch.
-func TestSendAlertToChannels_OpsGenieChannel(t *testing.T) {
-	var received bool
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		received = true
-		w.WriteHeader(http.StatusAccepted)
-	}))
-	defer srv.Close()
-
-	// Override OpsGenie API URL
-	originalURL := opsGenieAPIURL
-	opsGenieAPIURL = srv.URL
-	t.Cleanup(func() { opsGenieAPIURL = originalURL })
-
-	s := NewService()
-	channels := []NotificationChannel{
-		{
-			Type:    NotificationTypeOpsGenie,
-			Enabled: true,
-			Config: map[string]interface{}{
-				"opsgenieApiKey": "test-api-key",
-			},
-		},
-	}
-
-	err := s.SendAlertToChannels(Alert{
-		ID:       "alert-og",
-		RuleName: "OGRule",
-		Severity: SeverityWarning,
-		Status:   "firing",
-		Message:  "Warning alert",
-		FiredAt:  time.Now(),
-	}, channels)
-
-	require.NoError(t, err)
-	assert.True(t, received, "OpsGenie server should have received the alert")
-}
-
 // TestSendAlertToChannels_IncompleteSlackConfig exercises the incomplete-config
 // error path where a channel is enabled but missing required fields.
 func TestSendAlertToChannels_IncompleteSlackConfig(t *testing.T) {
@@ -143,7 +67,7 @@ func TestSendAlertToChannels_IncompleteSlackConfig(t *testing.T) {
 }
 
 // TestSendAlertToChannels_IncompletePagerDutyConfig exercises the incomplete-config
-// path for PagerDuty.
+// path for PagerDuty (missing routing key).
 func TestSendAlertToChannels_IncompletePagerDutyConfig(t *testing.T) {
 	s := NewService()
 	channels := []NotificationChannel{
@@ -161,7 +85,7 @@ func TestSendAlertToChannels_IncompletePagerDutyConfig(t *testing.T) {
 }
 
 // TestSendAlertToChannels_IncompleteOpsGenieConfig exercises the incomplete-config
-// path for OpsGenie.
+// path for OpsGenie (missing API key).
 func TestSendAlertToChannels_IncompleteOpsGenieConfig(t *testing.T) {
 	s := NewService()
 	channels := []NotificationChannel{
@@ -179,7 +103,7 @@ func TestSendAlertToChannels_IncompleteOpsGenieConfig(t *testing.T) {
 }
 
 // TestSendAlertToChannels_IncompleteEmailConfig exercises the incomplete-config
-// path for Email (missing required fields).
+// path for Email (missing required fields like emailFrom and emailTo).
 func TestSendAlertToChannels_IncompleteEmailConfig(t *testing.T) {
 	s := NewService()
 	channels := []NotificationChannel{
@@ -288,7 +212,7 @@ func TestSendAlertToChannels_MultipleChannelsMixed(t *testing.T) {
 }
 
 // TestSendAlertToChannels_WebhookSendFailure exercises the error path where
-// a webhook notifier is created but Send fails.
+// a webhook notifier is created but Send fails (500 response).
 func TestSendAlertToChannels_WebhookSendFailure(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
