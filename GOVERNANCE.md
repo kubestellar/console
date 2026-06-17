@@ -1,108 +1,133 @@
 # KubeStellar Console Project Governance
 
-KubeStellar Console is a sub-project of [KubeStellar](https://github.com/kubestellar/kubestellar) and follows the same governance model. This document describes how the Console project is run.
+KubeStellar Console is a sub-project of [KubeStellar](https://github.com/kubestellar/kubestellar). This document describes how the Console project makes decisions, delegates responsibilities, and maintains a healthy community as it prepares for CNCF Sandbox and incubation reviews.
 
-- [Values](#values)
-- [Maintainers](#maintainers)
-- [Code of Conduct Enforcement](#code-of-conduct)
-- [Security Response Team](#security-response-team)
-- [Voting](#voting)
-- [Modifying this Charter](#modifying-this-charter)
+## Governance Goals
 
-## Values
+The project is governed to keep technical direction, community stewardship, and operational responsibility transparent.
 
-The KubeStellar Console project and its leadership embrace the following values:
+We prioritize:
 
- * *Openness*: Communication and decision-making happens in the open and is
-   discoverable for future reference. As much as possible, all discussions and
-   work take place in public forums and open repositories.
- * *Fairness*: All stakeholders have the opportunity to provide feedback and
-   submit contributions, which will be considered on their merits.
- * *Community over Product or Company*: Sustaining and growing our community
-   takes priority over shipping code or sponsors' organizational goals. Each
-   contributor participates in the project as an individual.
- * *Inclusivity*: We innovate through different perspectives and skill sets,
-   which can only be accomplished in a welcoming and respectful environment.
- * *Participation*: Responsibilities within the project are earned through
-   participation, and there is a clear path up the contributor ladder into
-   leadership positions.
+- **Openness** — discussion, design, and roadmap work happen in public wherever possible.
+- **Fairness** — contributors are evaluated on the quality of their work and collaboration.
+- **Community over any single vendor** — maintainers act in the interest of the project and its users.
+- **Inclusion** — the project follows the [Code of Conduct](CODE_OF_CONDUCT.md) and aims to create a welcoming environment.
+- **Merit with accountability** — additional responsibility is earned through sustained contribution and trusted stewardship.
 
-## Maintainers
+## Project Scope
 
-KubeStellar Console Maintainers have write access to the [project GitHub repository](https://github.com/kubestellar/console).
-They can merge their own patches or patches from others. The current maintainers
-can be found as top-level approvers in [OWNERS](OWNERS). Maintainers collectively
-manage the project's resources and contributors.
+KubeStellar Console covers the source, documentation, release process, website-hosted console experience, and related community workflows in the [`kubestellar/console`](https://github.com/kubestellar/console) repository.
 
-This privilege is granted with some expectation of responsibility: maintainers
-are people who care about the KubeStellar Console project and want to help it grow and
-improve. A maintainer is not just someone who can make changes, but someone who
-has demonstrated their ability to collaborate with the team, get the most
-knowledgeable people to review code and docs, contribute high-quality code, and
-follow through to fix issues (in code or tests).
+## Roles
+
+### Contributors
+
+Anyone who reports issues, proposes improvements, reviews code, improves documentation, or submits pull requests is a contributor.
+
+### Reviewers
+
+Reviewers are trusted contributors who regularly provide technical or documentation feedback. Reviewers help maintain code quality, validate architectural direction, and mentor new contributors.
+
+### Maintainers
+
+Maintainers are the project stewards for KubeStellar Console. They are responsible for:
+
+- reviewing and merging pull requests,
+- curating the roadmap and release priorities,
+- triaging issues and community escalations,
+- protecting security-sensitive and conduct-sensitive workflows,
+- keeping documentation, governance, and operational practices current.
+
+The current maintainer roster is recorded in:
+
+- [OWNERS](OWNERS) for repository approval rights, and
+- [MAINTAINERS.md](MAINTAINERS.md) for public maintainer names and affiliations.
+
+### Security Response Team
+
+The maintainers appoint a Security Response Team to coordinate confidential reports and disclosure. The team may consist of the maintainers themselves. Its operating policy is defined in [SECURITY.md](SECURITY.md).
+
+## Decision-Making Process
+
+### Day-to-Day Decisions
+
+KubeStellar Console uses **lazy consensus** for routine decisions. A change may proceed when it is proposed publicly, receives appropriate review, and no maintainer raises a blocking concern within a reasonable review window.
+
+Examples include:
+
+- routine bug fixes,
+- documentation updates,
+- refactors that do not materially change project direction,
+- issue triage and release housekeeping.
+
+### Escalated Decisions
+
+A maintainer should call for explicit consensus when a proposal affects project direction, compatibility, governance, release policy, security posture, or community process.
+
+Examples include:
+
+- adopting or removing major dependencies,
+- changing contributor or release policy,
+- altering governance or maintainer expectations,
+- making roadmap commitments tied to CNCF milestones.
+
+### Voting
+
+When consensus is unclear, maintainers may hold a vote on the public developer mailing list or, for sensitive matters, the private maintainer list.
+
+- **Simple majority of maintainers** is required for routine formal votes.
+- **Two-thirds majority of maintainers** is required to remove a maintainer or amend this governance document.
+
+## Maintainer Expectations
+
+Maintainers are expected to:
+
+- act in the best interests of the project and its community,
+- review code and documentation constructively and promptly,
+- keep the main branch healthy and release processes reliable,
+- handle conflicts, security reports, and conduct matters responsibly,
+- help the project maintain CNCF-ready governance and community evidence.
+
+Maintainers may merge their own changes when normal review expectations are satisfied, but they should seek review from another maintainer for substantial or policy-sensitive changes.
 
 ## Becoming a Maintainer
 
-To become a Maintainer you need to demonstrate the following:
+A prospective maintainer should demonstrate:
 
-  * commitment to the project:
-    * participate in discussions, contributions, code and documentation reviews
-      for 3 months or more,
-    * perform reviews for 5 non-trivial pull requests,
-    * contribute 5 non-trivial pull requests and have them merged,
-  * ability to write quality code and/or documentation,
-  * ability to collaborate with the team,
-  * understanding of how the team works (policies, processes for testing and code review, etc),
-  * understanding of the project's code base and coding and documentation style.
+- sustained contributions for at least three months,
+- at least five non-trivial pull requests merged,
+- at least five non-trivial pull request reviews,
+- strong collaboration and communication habits,
+- familiarity with project architecture, testing expectations, and documentation standards.
 
-A new Maintainer must be proposed by an existing maintainer by sending a message to the
-[developer mailing list](https://groups.google.com/g/kubestellar-dev). A simple majority
-vote of existing Maintainers approves the application.
+A new maintainer is proposed by an existing maintainer on the [developer mailing list](https://groups.google.com/g/kubestellar-dev). Appointment requires a simple majority vote of current maintainers.
 
-### Removing a Maintainer
+## Maintainer Inactivity or Removal
 
-Maintainers may resign at any time if they feel that they will not be able to
-continue fulfilling their project duties.
+Maintainers may resign at any time.
 
-Maintainers may also be removed after being inactive, failure to fulfill their
-Maintainer responsibilities, violating the Code of Conduct, or other reasons.
-Inactivity is defined as a period of very low or no activity in the project for
-a year or more, with no definite schedule to return to full Maintainer activity.
+A maintainer may be considered inactive after roughly one year of minimal or no project activity without a communicated return plan. Maintainers may also be removed for failure to fulfill responsibilities, Code of Conduct violations, or other serious cause. Removal requires a two-thirds vote of the remaining maintainers.
 
-A Maintainer may be removed at any time by a 2/3 vote of the remaining maintainers.
+## Community Meetings and Records
 
-## Meetings
+KubeStellar Console participates in the broader KubeStellar community process.
 
-Time zones permitting, Maintainers are expected to participate in the public
-community call meeting. Maintainers will also have closed meetings in order to
-discuss security reports or Code of Conduct violations.
+- Community discussion happens through [docs/COMMUNITY.md](docs/COMMUNITY.md).
+- Public agenda items may be proposed on Slack, GitHub, or the mailing list.
+- Sensitive conduct and security matters may be handled in private maintainer channels.
 
-## Code of Conduct
+Where possible, decisions and rationale should be recorded in issues, pull requests, mailing-list threads, roadmap updates, or public meeting notes.
 
-[Code of Conduct](CODE_OF_CONDUCT.md)
-violations by community members will be discussed and resolved
-on the [private Maintainer mailing list](https://groups.google.com/u/1/g/kubestellar-dev-private).
+## Code of Conduct Enforcement
 
-## Security Response Team
+All participants are expected to follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
-The Maintainers will appoint a Security Response Team to handle security reports.
-This committee may simply consist of the Maintainer Council themselves. The Security
-Response Team is responsible for handling all reports of security holes and breaches
-according to the [security policy](SECURITY.md).
+Conduct reports for the project may be sent to the [private KubeStellar maintainers list](mailto:kubestellar-dev-private@googlegroups.com). Maintainers will review reports promptly and coordinate with CNCF processes when required.
 
-## Voting
+## Security Coordination
 
-While most business in KubeStellar Console is conducted by "lazy consensus", periodically
-the Maintainers may need to vote on specific actions or changes.
-A vote can be taken on [the developer mailing list](https://groups.google.com/g/kubestellar-dev) or
-[the private Maintainer mailing list](https://groups.google.com/u/1/g/kubestellar-dev-private)
-for security or conduct matters.
+Security reports must follow [SECURITY.md](SECURITY.md). Public issues should not be used for undisclosed vulnerabilities.
 
-Most votes require a simple majority of all Maintainers to succeed. Maintainers
-can be removed by a 2/3 majority vote of all Maintainers, and changes to this
-Governance require a 2/3 vote of all Maintainers.
+## Amendments
 
-## Modifying this Charter
-
-Changes to this Governance and its supporting documents may be approved by a
-2/3 vote of the Maintainers.
+Changes to this governance document require a two-thirds vote of maintainers.

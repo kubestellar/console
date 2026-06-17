@@ -1,40 +1,76 @@
-<!--security-start-->
+# Security Policy
+
+KubeStellar Console takes security reports seriously. This document describes how to report a vulnerability, what information to include, and how the project coordinates response and disclosure.
+
+## Supported Scope
+
+This policy applies to the KubeStellar Console codebase, release artifacts, hosted console experience, and project-managed integrations in the [`kubestellar/console`](https://github.com/kubestellar/console) repository.
+
+## Reporting a Vulnerability
+
+Please **do not file public GitHub issues** for suspected vulnerabilities.
+
+Use one of these channels instead:
+
+- **Primary:** [kubestellar-security-announce@googlegroups.com](mailto:kubestellar-security-announce@googlegroups.com)
+- **Announcements:** [kubestellar-security-announce Google Group](https://groups.google.com/u/1/g/kubestellar-security-announce)
+
+When reporting, include as much of the following as possible:
+
+- affected component, feature, or endpoint,
+- reproduction steps or proof of concept,
+- expected impact and attack prerequisites,
+- affected versions, deployment mode, or environment,
+- any proposed mitigation or patch, if available.
+
+If you are unsure whether something is a security issue, contact the security list first and the maintainers will help triage it.
+
+## When to Use This Process
+
+Use the private security process when:
+
+- you believe you found a vulnerability in KubeStellar Console,
+- you are unsure whether a bug has security impact,
+- a dependency vulnerability may materially affect KubeStellar Console users.
+
+Do not use this process for:
+
+- general support requests,
+- feature requests,
+- non-security bugs,
+- configuration help without a vulnerability component.
+
+## Response Targets
+
+The KubeStellar security response team aims to:
+
+- acknowledge reports within **3 working days**, and
+- keep reporters informed as triage, fix development, and disclosure planning proceed.
+
+Confidential report details are shared only with the people needed to investigate and remediate the issue.
+
+## Disclosure Process
+
+The security response team coordinates disclosure timing with the reporter.
+
+Our preferred process is:
+
+1. validate the report,
+2. identify mitigation or a fix,
+3. prepare a coordinated disclosure,
+4. publish the fix and advisory as soon as practical.
+
+Disclosure timing can range from immediate disclosure for already-public issues to a short coordination window when a fix must be prepared and validated first. For straightforward vulnerabilities with a clear mitigation, the project targets disclosure within about one week of the initial report.
+
+## Related Security Documentation
+
+Additional security material lives in this repository:
+
+- [GOVERNANCE.md](GOVERNANCE.md) — security response ownership and maintainer authority
+- [SECURITY_CONTACTS](SECURITY_CONTACTS) — project security contacts
+- [docs/INCIDENT-RESPONSE.md](docs/INCIDENT-RESPONSE.md) — incident-handling guidance
+- [docs/security/HARDCODED_URLS.md](docs/security/HARDCODED_URLS.md) — credentials and hardcoded URL policy
+
 ## Security Announcements
 
-Join the [kubestellar-security-announce](https://groups.google.com/u/1/g/kubestellar-security-announce) group for emails about security and major API announcements.
-
-## Report a Vulnerability
-
-We're extremely grateful for security researchers and users that report vulnerabilities to the KubeStellar Open Source Community. All reports are thoroughly investigated by a set of community volunteers.
-
-You can also email the private [kubestellar-security-announce@googlegroups.com](mailto:kubestellar-security-announce@googlegroups.com) list with the security details and the details expected for [all KubeStellar Console bug reports](https://github.com/kubestellar/console/issues/new).
-
-### When Should I Report a Vulnerability?
-
-- You think you discovered a potential security vulnerability in KubeStellar Console
-- You are unsure how a vulnerability affects KubeStellar Console
-- You think you discovered a vulnerability in another project that KubeStellar Console depends on
-    - For projects with their own vulnerability reporting and disclosure process, please report it directly there
-
-### When Should I NOT Report a Vulnerability?
-
-- You need help tuning KubeStellar Console components for security
-- You need help applying security related updates
-- Your issue is not security related
-
-## Security Vulnerability Response
-
-Each report is acknowledged and analyzed by the maintainers of KubeStellar within 3 working days.
-
-Any vulnerability information shared with Security Response Committee stays within the KubeStellar project and will not be disseminated to other projects unless it is necessary to get the issue fixed.
-
-As the security issue moves from triage, to identified fix, to release planning we will keep the reporter updated.
-
-## Public Disclosure Timing
-
-A public disclosure date is negotiated by the KubeStellar Security Response Committee and the bug submitter. We prefer to fully disclose the bug as soon as possible once a user mitigation is available. It is reasonable to delay disclosure when the bug or the fix is not yet fully understood, the solution is not well-tested, or for vendor coordination. The timeframe for disclosure is from immediate (especially if it's already publicly known) to a few weeks. For a vulnerability with a straightforward mitigation, we expect report date to disclosure date to be on the order of 7 days. The KubeStellar maintainers hold the final say when setting a disclosure date.
-
-## Hardcoded URLs and Credentials Policy
-
-For documentation on intentionally hardcoded URLs and the credentials handling policy, see [docs/security/HARDCODED_URLS.md](docs/security/HARDCODED_URLS.md).
-<!--security-end-->
+Join the [kubestellar-security-announce](https://groups.google.com/u/1/g/kubestellar-security-announce) group for security advisories and major security-related project announcements.
