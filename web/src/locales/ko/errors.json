@@ -1,0 +1,47 @@
+{
+  "types": {
+    "timeout": "연결 시간 초과",
+    "auth": "인증 오류",
+    "network": "네트워크 오류",
+    "certificate": "인증서 오류",
+    "unknown": "알 수 없는 오류"
+  },
+  "suggestions": {
+    "timeout": "VPN 연결 또는 네트워크 연결을 확인하세요",
+    "auth": "클러스터에 다시 인증하세요",
+    "network": "네트워크 연결 및 방화벽 설정을 확인하세요",
+    "certificate": "인증서 유효성 또는 신뢰 설정을 확인하세요",
+    "unknown": "클러스터 연결 및 구성을 확인하세요"
+  },
+  "messages": {
+    "unknownError": "알 수 없는 오류",
+    "connectionFailed": "연결 실패",
+    "loadFailed": "데이터 로드 실패",
+    "saveFailed": "변경 사항 저장 실패",
+    "deleteFailed": "삭제 실패",
+    "refreshFailed": "새로 고침 실패",
+    "noPermission": "이 작업에 대한 권한이 없습니다",
+    "sessionExpired": "세션이 만료되었습니다. 다시 로그인하세요.",
+    "clusterUnreachable": "클러스터가 오프라인 상태입니다"
+  },
+  "validation": {
+    "required": "이 필드는 필수입니다",
+    "invalidFormat": "잘못된 형식",
+    "minLength": "최소 {{count}}자 이상이어야 합니다",
+    "minLength_one": "최소 {{count}}자 이상이어야 합니다",
+    "minLength_other": "최소 {{count}}자 이상이어야 합니다",
+    "maxLength": "{{count}}자를 초과할 수 없습니다",
+    "maxLength_one": "{{count}}자를 초과할 수 없습니다",
+    "maxLength_other": "{{count}}자를 초과할 수 없습니다",
+    "invalidEmail": "잘못된 이메일 주소",
+    "invalidUrl": "잘못된 URL",
+    "nameTaken": "이미 사용 중인 이름입니다"
+  },
+  "recovery": {
+    "tryAgain": "다시 시도",
+    "contactAdmin": "관리자에게 문의하세요",
+    "checkConnection": "네트워크 연결을 확인하세요",
+    "refreshPage": "페이지를 새로 고침하세요",
+    "logInAgain": "다시 로그인하세요"
+  }
+}

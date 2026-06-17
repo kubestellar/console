@@ -31,6 +31,10 @@ import commonJA from '../locales/ja/common.json'
 import cardsJA from '../locales/ja/cards.json'
 import statusJA from '../locales/ja/status.json'
 import errorsJA from '../locales/ja/errors.json'
+import commonKO from '../locales/ko/common.json'
+import cardsKO from '../locales/ko/cards.json'
+import statusKO from '../locales/ko/status.json'
+import errorsKO from '../locales/ko/errors.json'
 import commonPT from '../locales/pt/common.json'
 import cardsPT from '../locales/pt/cards.json'
 import statusPT from '../locales/pt/status.json'
@@ -73,6 +77,12 @@ export const resources = {
     status: statusJA,
     errors: errorsJA,
   },
+  ko: {
+    common: commonKO,
+    cards: cardsKO,
+    status: statusKO,
+    errors: errorsKO,
+  },
   zh: {
     common: commonZH,
     cards: cardsZH,
@@ -112,6 +122,7 @@ export const languages = [
   { code: 'fr', name: 'Français', flag: '🇫🇷' },
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
   { code: 'ja', name: '日本語', flag: '🇯🇵' },
+  { code: 'ko', name: '한국어', flag: '🇰🇷' },
   { code: 'zh', name: '中文 (简体)', flag: '🇨🇳' },
   { code: 'it', name: 'Italiano', flag: '🇮🇹' },
   { code: 'pt', name: 'Português', flag: '🇧🇷' },
@@ -136,7 +147,7 @@ configuredI18n.init({
   defaultNS,
   ns: namespaces,
   fallbackLng: 'en',
-  supportedLngs: ['en', 'es', 'fr', 'de', 'ja', 'zh', 'it', 'pt', 'hi', 'zh-TW'],
+  supportedLngs: ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'it', 'pt', 'hi', 'zh-TW'],
   nonExplicitSupportedLngs: true,
 
   interpolation: {

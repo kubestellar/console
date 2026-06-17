@@ -58,6 +58,11 @@ describe('i18n', () => {
       expect(resources.hi).toBeDefined()
     })
 
+    it('supports Korean locale', () => {
+      expect(resources.ko).toBeDefined()
+      expect(resources.ko.common).toBeDefined()
+    })
+
     it('all locales have the same namespace structure as English', () => {
       const enKeys = Object.keys(resources.en).sort()
       for (const [lang, langResources] of Object.entries(resources)) {
