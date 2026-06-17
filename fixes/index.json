@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-17T07:42:10.418Z",
-  "count": 1608,
+  "generatedAt": "2026-06-17T08:08:32.486Z",
+  "count": 1609,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -59744,6 +59744,48 @@
       "type": "feature",
       "installMethods": [],
       "maturity": "sandbox",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/spiffe/spiffe-313-support-for-sidecar-less-service-meshes.json",
+      "title": "spiffe: Support for sidecar-less service meshes",
+      "description": "Support for sidecar-less service meshes. Requested by 9+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "spiffe",
+        "graduated",
+        "security",
+        "feature"
+      ],
+      "cncfProjects": [
+        "spiffe"
+      ],
+      "targetResourceKinds": [
+        "Deployment",
+        "Node",
+        "Service"
+      ],
+      "difficulty": "expert",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "graduated",
       "qualityScore": 100,
       "qualityPass": true,
       "qualityBreakdown": {
