@@ -15,6 +15,8 @@ import (
 )
 
 func TestSplunkDestination_Send(t *testing.T) {
+	allowLoopbackDestinations(t)
+
 	events := []PipelineEvent{
 		{
 			ID:        "evt-1",
@@ -63,6 +65,8 @@ func TestSplunkDestination_Send(t *testing.T) {
 }
 
 func TestSplunkDestination_SendError(t *testing.T) {
+	allowLoopbackDestinations(t)
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
