@@ -252,8 +252,9 @@ export function HelmReleaseDrillDown({ data }: Props) {
       }
     } catch {
       setReleaseHistory([])
+    } finally {
+      setHistoryLoading(false)
     }
-    setHistoryLoading(false)
   }
 
   // Fetch release resources (manifest)
