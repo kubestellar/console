@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/valyala/fasthttp"
 
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -53,6 +54,23 @@ func requestTaskHandler(t *testing.T, app *fiber.App, method, path, body string)
 		_ = resp.Body.Close()
 	})
 	return resp
+}
+
+func requestTaskHandlerRawPath(t *testing.T, app *fiber.App, method, rawPath, body string) (int, []byte) {
+	t.Helper()
+
+	var ctx fasthttp.RequestCtx
+	ctx.Request.Header.SetMethod(method)
+	ctx.Request.SetRequestURI(rawPath)
+	if body != "" {
+		ctx.Request.Header.SetContentType("application/json")
+		ctx.Request.SetBodyString(body)
+	}
+
+	app.Handler()(&ctx)
+	status := ctx.Response.StatusCode()
+	assert.NotZero(t, status)
+	return status, append([]byte(nil), ctx.Response.Body()...)
 }
 
 func requireNoStoredTasks(t *testing.T, mockStore *mockedStellarStore, userID string) {
@@ -140,13 +158,13 @@ func TestCreateTask(t *testing.T) {
 	dueAt := time.Date(2026, time.June, 17, 23, 45, 0, 0, time.UTC)
 
 	tests := []struct {
-		name            string
-		body            string
-		setupMock       func(t *testing.T, mockStore *mockedStellarStore, userID string)
-		wantStatus      int
-		wantError       string
-		assertCreated   func(t *testing.T, created store.StellarTask)
-		assertNoStored  bool
+		name           string
+		body           string
+		setupMock      func(t *testing.T, mockStore *mockedStellarStore, userID string)
+		wantStatus     int
+		wantError      string
+		assertCreated  func(t *testing.T, created store.StellarTask)
+		assertNoStored bool
 	}{
 		{
 			name: "success with minimal fields",
@@ -331,10 +349,10 @@ func TestUpdateTaskStatus(t *testing.T) {
 	t.Parallel()
 
 	type response struct {
-		ID     string             `json:"id"`
-		Status string             `json:"status"`
+		ID     string              `json:"id"`
+		Status string              `json:"status"`
 		Items  []store.StellarTask `json:"items"`
-		Error  string             `json:"error"`
+		Error  string              `json:"error"`
 	}
 
 	successCases := []struct {
@@ -375,6 +393,7 @@ func TestUpdateTaskStatus(t *testing.T) {
 		name       string
 		path       string
 		body       string
+		rawPath    bool
 		setupMock  func(mockStore *mockedStellarStore, userID string)
 		wantStatus int
 		wantError  string
@@ -388,8 +407,9 @@ func TestUpdateTaskStatus(t *testing.T) {
 		},
 		{
 			name:       "whitespace task ID returns bad request",
-			path:       "/api/stellar/tasks/%20%20/status",
+			path:       "/api/stellar/tasks/   /status",
 			body:       `{"status":"open"}`,
+			rawPath:    true,
 			wantStatus: http.StatusBadRequest,
 			wantError:  "id is required",
 		},
@@ -421,11 +441,16 @@ func TestUpdateTaskStatus(t *testing.T) {
 				tt.setupMock(mockStore, userID)
 			}
 
-			resp := requestTaskHandler(t, app, http.MethodPatch, tt.path, tt.body)
-			require.Equal(t, tt.wantStatus, resp.StatusCode)
-
 			var payload response
-			require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+			if tt.rawPath {
+				status, body := requestTaskHandlerRawPath(t, app, http.MethodPatch, tt.path, tt.body)
+				require.Equal(t, tt.wantStatus, status)
+				require.NoError(t, json.Unmarshal(body, &payload))
+			} else {
+				resp := requestTaskHandler(t, app, http.MethodPatch, tt.path, tt.body)
+				require.Equal(t, tt.wantStatus, resp.StatusCode)
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+			}
 			assert.Equal(t, tt.wantError, payload.Error)
 			mockStore.AssertExpectations(t)
 		})
