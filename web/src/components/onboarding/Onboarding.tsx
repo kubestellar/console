@@ -273,25 +273,24 @@ export function Onboarding() {
             <div className="grid gap-3">
               {currentQuestion.options.map((option) => {
                 const label = tOption(currentQuestion.key, option)
+                const isSelected = answers[currentQuestion.key] === option
+
                 return (
-                  <button
+                  <Button
                     key={option}
+                    variant="ghost"
                     onClick={() => handleSelect(option)}
-                    className={`w-full p-4 rounded-xl text-left transition-all duration-200 ${
-                      answers[currentQuestion.key] === option
-                        ? 'bg-purple-500/20 border-2 border-purple-500 text-foreground'
-                        : 'bg-secondary/50 border-2 border-transparent hover:bg-secondary hover:border-purple-500/30 text-muted-foreground'
+                    className={`h-auto w-full justify-between rounded-xl border-2 p-4 text-left transition-all duration-200 ${
+                      isSelected
+                        ? 'border-purple-500 bg-purple-500/20 text-foreground hover:bg-purple-500/20'
+                        : 'border-transparent bg-secondary/50 text-muted-foreground hover:border-purple-500/30 hover:bg-secondary'
                     }`}
                     aria-label={t('onboarding.selectOption', { option: label })}
-                    aria-pressed={answers[currentQuestion.key] === option}
+                    aria-pressed={isSelected}
+                    iconRight={isSelected ? <Check className="w-5 h-5 text-purple-400" aria-hidden="true" /> : undefined}
                   >
-                    <div className="flex items-center justify-between">
-                      <span>{label}</span>
-                      {answers[currentQuestion.key] === option && (
-                        <Check className="w-5 h-5 text-purple-400" />
-                      )}
-                    </div>
-                  </button>
+                    <span>{label}</span>
+                  </Button>
                 )
               })}
             </div>

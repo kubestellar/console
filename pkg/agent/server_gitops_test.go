@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -315,7 +314,7 @@ func TestGitopsHandlers(t *testing.T) {
 	// 1. Setup mock execCommand
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
-	execCommandContext = fakeExecCommand
+	execCommandContext = fakeExecCommandContext
 
 	originalLookup := gitopsLookupIPAddr
 	defer func() { gitopsLookupIPAddr = originalLookup }()

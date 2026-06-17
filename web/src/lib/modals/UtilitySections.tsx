@@ -31,26 +31,29 @@ export function CollapsibleSection({
 
   return (
     <div className={className}>
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
+        fullWidth
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between py-2 text-sm font-medium text-foreground hover:text-purple-400 transition-colors"
+        className="justify-between px-0 py-2 text-sm font-medium text-foreground hover:text-purple-400"
         aria-expanded={isOpen}
         aria-label={title}
+        iconRight={badge !== undefined ? (
+          <span className="rounded bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
+            {badge}
+          </span>
+        ) : undefined}
       >
         <span className="flex items-center gap-2">
           {isOpen ? (
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
           ) : (
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           )}
           {title}
         </span>
-        {badge !== undefined && (
-          <span className="px-2 py-0.5 rounded bg-secondary text-xs text-muted-foreground">
-            {badge}
-          </span>
-        )}
-      </button>
+      </Button>
       {isOpen && (
         <div className="pl-6 pb-2">
           {children}
