@@ -36,9 +36,15 @@ web/
 │   │   └── theme-settings.spec.ts
 │   └── compliance/                   ← compliance / audit specs
 ├── docs/
-│   └── TEST_AUTHORING_GUIDE.md       ← you are here
+│   ├── TEST_AUTHORING_GUIDE.md       ← you are here
+│   └── MCP_BRIDGE.md                 ← shipped MCP bridge overview
 └── playwright.config.ts
 ```
+
+The console's MCP bridge is already shipped and testable today. When writing
+tests for cluster data flows, prefer mocking the live `/api/mcp/*` routes
+described in `web/docs/MCP_BRIDGE.md` instead of treating MCP integration as a
+future-only surface.
 
 **Naming rules**
 
