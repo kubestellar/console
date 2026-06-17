@@ -15,6 +15,8 @@ import (
 )
 
 func TestElasticDestination_Send(t *testing.T) {
+	allowLoopbackDestinations(t)
+
 	events := []PipelineEvent{
 		{
 			ID:        "evt-1",
