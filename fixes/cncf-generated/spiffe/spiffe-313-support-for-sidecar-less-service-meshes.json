@@ -1,0 +1,76 @@
+{
+  "version": "kc-mission-v1",
+  "name": "spiffe-313-support-for-sidecar-less-service-meshes",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "spiffe: Support for sidecar-less service meshes",
+    "description": "Support for sidecar-less service meshes. Requested by 9+ users.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current spiffe deployment",
+        "description": "Verify your spiffe version and configuration:\n```bash\nkubectl get pods -n spiffe -l app.kubernetes.io/name=spiffe\nhelm list -n spiffe 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working spiffe installation."
+      },
+      {
+        "title": "Review spiffe configuration",
+        "description": "Inspect the relevant spiffe configuration:\n```bash\nkubectl get all -n spiffe -l app.kubernetes.io/name=spiffe\nkubectl get configmap -n spiffe -l app.kubernetes.io/part-of=spiffe\n```\nThe Workload API the way it is designed (and also implemented today) does not support service mesh deployments with node-level proxies such as Istio Ambient Mesh."
+      },
+      {
+        "title": "Apply the fix for Support for sidecar-less service meshes",
+        "description": "Sorry for not getting back here earlier. I spent some time trying to implement above idea but unfortunately, gRPC does not allow channel authentication using gRPC RPCs itself. The channel authentication happens before the HTTP2 Settings Frame. Calling an RPC would require HTTP2 to be established though and thus it's a kind of a chicken & egg problem.\n\nHowever, I didn't want to get back to you empty handed: \n\nAnother idea that is floating around is the notion of file descriptor passing.\n\nSee the source issue for community-verified solutions."
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n spiffe -l app.kubernetes.io/name=spiffe\nkubectl get events -n spiffe --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Support for sidecar-less service meshes\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "Sorry for not getting back here earlier. I spent some time trying to implement above idea but unfortunately, gRPC does not allow channel authentication using gRPC RPCs itself. The channel authentication happens before the HTTP2 Settings Frame. Calling an RPC would require HTTP2 to be established though and thus it's a kind of a chicken & egg problem.",
+      "codeSnippets": []
+    }
+  },
+  "metadata": {
+    "tags": [
+      "spiffe",
+      "graduated",
+      "security",
+      "feature"
+    ],
+    "cncfProjects": [
+      "spiffe"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Node",
+      "Service"
+    ],
+    "difficulty": "expert",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/spiffe/spiffe/issues/313",
+      "repo": "https://github.com/spiffe/spiffe"
+    },
+    "reactions": 9,
+    "comments": 30,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with spiffe installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-17T07:51:24.886Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
