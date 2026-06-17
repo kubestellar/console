@@ -114,9 +114,7 @@ test.describe('Smoke Tests', () => {
         // element before interaction.
         await page.waitForLoadState('networkidle').catch(() => {})
         
-        // Use native el.click() for cross-browser stability — Playwright's
-        // synthetic clicks can miss React event handlers on webkit/firefox
-        // when the sidebar is re-rendering from hook updates.
+        // Use native el.click() for maximum cross-browser compatibility
         await link.evaluate((el) => (el as HTMLElement).click())
         
         await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, `nav to ${expectedPath}`)
@@ -159,12 +157,12 @@ test.describe('Smoke Tests', () => {
       // Navigate to a non-home route
       await page.goto('/settings')
       
-      // Firefox-specific: Wait for Settings page to actually render before asserting URL.
+      // Firefox-specific: Wait for /settings route before asserting page content.
       // In Firefox, there's a race where ProtectedRoute hasn't finished auth init yet,
-      // causing a redirect to home. Waiting for Settings-specific content ensures the
-      // page loaded correctly. (#18304)
+      // causing a redirect to home. Using waitForURL() ensures the route is fully loaded
+      // before we assert on page content. (#18304, #18396)
+      await page.waitForURL('**/settings', { timeout: 10000 })
       await expect(page.locator('h1:has-text("Settings")')).toBeVisible({ timeout: 10000 })
-      expect(page.url()).toContain('/settings')
 
       // Click the logo button (has aria-label "Go to home dashboard").
       // The navbar renders two such buttons — the logo and the wordmark —
