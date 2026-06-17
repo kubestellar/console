@@ -13,19 +13,30 @@ import (
 var encryptionKey []byte
 
 func init() {
+	encryptionKey = loadEncryptionKeyFromEnv()
+}
+
+func loadEncryptionKeyFromEnv() []byte {
 	raw := os.Getenv("STELLAR_ENCRYPTION_KEY")
 	if raw == "" {
-		return
+		return nil
 	}
 	key, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil || len(key) != 32 {
 		panic("STELLAR_ENCRYPTION_KEY must be a base64-encoded 32-byte key")
 	}
-	encryptionKey = key
+	return key
+}
+
+func ensureEncryptionKey() []byte {
+	if len(encryptionKey) == 0 {
+		encryptionKey = loadEncryptionKeyFromEnv()
+	}
+	return encryptionKey
 }
 
 func EncryptAPIKey(plaintext string) ([]byte, error) {
-	if len(encryptionKey) == 0 {
+	if len(ensureEncryptionKey()) == 0 {
 		return nil, errors.New("STELLAR_ENCRYPTION_KEY is required but not set")
 	}
 	block, err := aes.NewCipher(encryptionKey)
@@ -44,7 +55,7 @@ func EncryptAPIKey(plaintext string) ([]byte, error) {
 }
 
 func DecryptAPIKey(ciphertext []byte) (string, error) {
-	if len(encryptionKey) == 0 {
+	if len(ensureEncryptionKey()) == 0 {
 		return "", errors.New("STELLAR_ENCRYPTION_KEY is required but not set")
 	}
 	block, err := aes.NewCipher(encryptionKey)
