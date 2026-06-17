@@ -69,18 +69,36 @@
     "last_report_date": "2026-06-14"
   },
   "cncf_insights": {
-    "last_scan_date": "2026-06-10",
+    "last_scan_date": "2026-06-17",
     "suggested_checks": [
       {
-        "pattern": "navigation_ux",
+        "pattern": "loading_ux",
         "count": 5,
-        "added": "2026-06-10",
+        "added": "2026-06-17",
+        "priority": "medium"
+      },
+      {
+        "pattern": "navigation_ux",
+        "count": 15,
+        "added": "2026-06-17",
+        "priority": "medium"
+      },
+      {
+        "pattern": "data_viz",
+        "count": 5,
+        "added": "2026-06-17",
         "priority": "medium"
       },
       {
         "pattern": "form_ux",
-        "count": 19,
-        "added": "2026-06-10",
+        "count": 25,
+        "added": "2026-06-17",
+        "priority": "medium"
+      },
+      {
+        "pattern": "realtime_ux",
+        "count": 16,
+        "added": "2026-06-17",
         "priority": "medium"
       }
     ]
