@@ -47,6 +47,9 @@ func setupProviderTestApp(t *testing.T, withUser bool) (*fiber.App, *mockedStell
 	app.Post("/api/stellar/providers/:id/default", h.SetDefaultProvider)
 	app.Post("/api/stellar/providers/:id/test", h.TestProvider)
 
+	if !withUser {
+		return app, mockStore, ""
+	}
 	return app, mockStore, userID.String()
 }
 
@@ -477,6 +480,8 @@ func TestStellarProviderCRUD_HTTPFlow(t *testing.T) {
 	var openAIConfig store.StellarProviderConfig
 	require.NoError(t, json.NewDecoder(createOpenAIResp.Body).Decode(&openAIConfig))
 	require.NotEmpty(t, openAIConfig.ID)
+	// CreateProvider always masks the raw request field, even when the caller
+	// omits apiKey. Stored configs with no encrypted key later list an empty mask.
 	assert.Equal(t, "****", openAIConfig.APIKeyMask)
 
 	createOllamaReq, err := http.NewRequest(
@@ -617,15 +622,19 @@ func TestStellarTestProvider_Handler(t *testing.T) {
 			name:   "ollama health failure returns safe error",
 			setEnv: "127.0.0.0/8,::1/128",
 			seed: func(t *testing.T, providerStore *mockedStellarStore, userID string) string {
-				listener, err := net.Listen("tcp", "127.0.0.1:0")
-				require.NoError(t, err)
-				baseURL := "http://" + listener.Addr().String()
-				require.NoError(t, listener.Close())
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					hijacker, ok := w.(http.Hijacker)
+					require.True(t, ok)
+					conn, _, err := hijacker.Hijack()
+					require.NoError(t, err)
+					_ = conn.Close()
+				}))
+				t.Cleanup(server.Close)
 				return upsertProviderConfigForTest(t, providerStore, &store.StellarProviderConfig{
 					UserID:      userID,
 					Provider:    "ollama",
 					DisplayName: "Unhealthy Ollama",
-					BaseURL:     baseURL,
+					BaseURL:     server.URL,
 					APIKeyEnc:   []byte{},
 					IsActive:    true,
 				})
