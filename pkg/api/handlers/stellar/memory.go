@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/store"
 )
 
 func (h *Handler) ListMemory(c *fiber.Ctx) error {
@@ -61,6 +63,9 @@ func (h *Handler) DeleteMemory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
 	}
 	if err := h.store.DeleteStellarMemoryEntry(c.UserContext(), userID, entryID); err != nil {
+		if err == store.ErrNotFound {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "memory entry not found"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete memory entry"})
 	}
 	return c.SendStatus(fiber.StatusNoContent)
