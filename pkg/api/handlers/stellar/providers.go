@@ -35,7 +35,9 @@ func (h *Handler) ListProviders(c *fiber.Ctx) error {
 				}
 			}
 		}
-		userItems = items
+		if items != nil {
+			userItems = items
+		}
 	}
 	return c.JSON(fiber.Map{"global": global, "user": userItems})
 }

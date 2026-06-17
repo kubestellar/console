@@ -24,6 +24,13 @@ func init() {
 	encryptionKey = key
 }
 
+// SetEncryptionKey replaces the package-level AES key used by EncryptAPIKey and
+// DecryptAPIKey. It is intended only for use in tests; production code should
+// configure the key via the STELLAR_ENCRYPTION_KEY environment variable.
+func SetEncryptionKey(key []byte) {
+	encryptionKey = key
+}
+
 func EncryptAPIKey(plaintext string) ([]byte, error) {
 	if len(encryptionKey) == 0 {
 		return nil, errors.New("STELLAR_ENCRYPTION_KEY is required but not set")
