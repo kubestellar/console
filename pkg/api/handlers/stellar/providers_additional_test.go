@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -129,7 +128,7 @@ func TestLoadStellarOllamaAllowedCIDRs(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, cidrs, 2)
 
-	os.Unsetenv(stellarOllamaAllowedCIDRsEnv)
+	t.Setenv(stellarOllamaAllowedCIDRsEnv, "")
 	defaults, err := loadStellarOllamaAllowedCIDRs()
 	require.NoError(t, err)
 	assert.Len(t, defaults, 2)
