@@ -15,9 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fiberTestTimeout is the maximum time (ms) Fiber's app.Test waits for a response.
-const fiberTestTimeout = 5000
-
 // setupDashboardTest creates a Fiber app with a DashboardHandler backed by a MockStore.
 // A middleware injects the given userID into Fiber locals so middleware.GetUserID works.
 func setupDashboardTest(userID uuid.UUID) (*fiber.App, *test.MockStore, *DashboardHandler) {
@@ -276,4 +273,3 @@ func TestImportDashboard_ExceedsUserLimit(t *testing.T) {
 	assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
 	mockStore.AssertExpectations(t)
 }
-

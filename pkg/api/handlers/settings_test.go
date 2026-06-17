@@ -18,8 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// settingsFiberTestTimeout is the Fiber app.Test timeout in milliseconds.
-const settingsFiberTestTimeout = 5000
+// fiberTestTimeout is the Fiber app.Test timeout in milliseconds.
+const fiberTestTimeout = 5000
 
 func TestGetSettings(t *testing.T) {
 	env := setupTestEnv(t)
@@ -217,7 +217,7 @@ func TestSettings_NonAdmin_Forbidden(t *testing.T) {
 		env.App.Get("/api/settings", handler.GetSettings)
 
 		req := httptest.NewRequest("GET", "/api/settings", nil)
-		resp, err := env.App.Test(req, settingsFiberTestTimeout)
+		resp, err := env.App.Test(req, fiberTestTimeout)
 		require.NoError(t, err)
 		assert.Equal(t, 403, resp.StatusCode)
 	})
@@ -230,7 +230,7 @@ func TestSettings_NonAdmin_Forbidden(t *testing.T) {
 		data, _ := json.Marshal(payload)
 		req := httptest.NewRequest("PUT", "/api/settings", bytes.NewReader(data))
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := env.App.Test(req, settingsFiberTestTimeout)
+		resp, err := env.App.Test(req, fiberTestTimeout)
 		require.NoError(t, err)
 		assert.Equal(t, 403, resp.StatusCode)
 	})
@@ -240,7 +240,7 @@ func TestSettings_NonAdmin_Forbidden(t *testing.T) {
 		env.App.Post("/api/settings/export", handler.ExportSettings)
 
 		req := httptest.NewRequest("POST", "/api/settings/export", nil)
-		resp, err := env.App.Test(req, settingsFiberTestTimeout)
+		resp, err := env.App.Test(req, fiberTestTimeout)
 		require.NoError(t, err)
 		assert.Equal(t, 403, resp.StatusCode)
 	})
@@ -252,7 +252,7 @@ func TestSettings_NonAdmin_Forbidden(t *testing.T) {
 		req := httptest.NewRequest("POST", "/api/settings/import",
 			bytes.NewReader([]byte(`{"theme":"light"}`)))
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := env.App.Test(req, settingsFiberTestTimeout)
+		resp, err := env.App.Test(req, fiberTestTimeout)
 		require.NoError(t, err)
 		assert.Equal(t, 403, resp.StatusCode)
 	})
