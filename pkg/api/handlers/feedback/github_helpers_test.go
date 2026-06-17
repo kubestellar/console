@@ -20,12 +20,12 @@ func TestFindFeatureRequest_Success(t *testing.T) {
 	issueNumber := 42
 
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), issueNumber).
+	mockStore.On("GetFeatureRequestByIssueNumber", issueNumber).
 		Return(&models.FeatureRequest{
-			ID:          requestID,
-			UserID:      userID,
-			IssueNumber: issueNumber,
-			Title:       "Test Request",
+			ID:                requestID,
+			UserID:            userID,
+			GitHubIssueNumber: &issueNumber,
+			Title:             "Test Request",
 		}, nil)
 
 	handler := &FeedbackHandler{store: mockStore}
@@ -33,13 +33,13 @@ func TestFindFeatureRequest_Success(t *testing.T) {
 
 	require.NotNil(t, result, "should find feature request")
 	assert.Equal(t, requestID, result.ID)
-	assert.Equal(t, issueNumber, result.IssueNumber)
+	assert.Equal(t, issueNumber, *result.GitHubIssueNumber)
 	mockStore.AssertExpectations(t)
 }
 
 func TestFindFeatureRequest_NotFound(t *testing.T) {
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 999).
+	mockStore.On("GetFeatureRequestByIssueNumber", 999).
 		Return(nil, nil)
 
 	handler := &FeedbackHandler{store: mockStore}
@@ -51,7 +51,7 @@ func TestFindFeatureRequest_NotFound(t *testing.T) {
 
 func TestFindFeatureRequest_StoreError(t *testing.T) {
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).
 		Return(nil, errors.New("database connection failed"))
 
 	handler := &FeedbackHandler{store: mockStore}
@@ -124,7 +124,7 @@ func TestCreateNotification_Success(t *testing.T) {
 
 	mockStore := &test.MockStore{}
 	// Mock the CreateNotification call with any Notification struct
-	mockStore.On("CreateNotification", context.Background(), test.MatchAny()).
+	mockStore.On("CreateNotification", test.MatchAny()).
 		Return(nil)
 
 	handler := &FeedbackHandler{store: mockStore}
@@ -145,7 +145,7 @@ func TestCreateNotification_StoreError_DoesNotPanic(t *testing.T) {
 	userID := uuid.New()
 
 	mockStore := &test.MockStore{}
-	mockStore.On("CreateNotification", context.Background(), test.MatchAny()).
+	mockStore.On("CreateNotification", test.MatchAny()).
 		Return(errors.New("database write failed"))
 
 	handler := &FeedbackHandler{store: mockStore}
@@ -249,7 +249,7 @@ func TestHandleDeploymentStatus_InvalidPRNumber(t *testing.T) {
 
 func TestHandleDeploymentStatus_FeatureRequestNotFound(t *testing.T) {
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByPRNumber", context.Background(), 999).
+	mockStore.On("GetFeatureRequestByPRNumber", 999).
 		Return(nil, nil)
 
 	handler := &FeedbackHandler{store: mockStore}
@@ -270,7 +270,7 @@ func TestHandleDeploymentStatus_FeatureRequestNotFound(t *testing.T) {
 
 func TestHandleDeploymentStatus_FeatureRequestStoreError(t *testing.T) {
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByPRNumber", context.Background(), 456).
+	mockStore.On("GetFeatureRequestByPRNumber", 456).
 		Return(nil, errors.New("database query failed"))
 
 	handler := &FeedbackHandler{store: mockStore}
@@ -296,14 +296,14 @@ func TestHandleDeploymentStatus_UpdatePreviewError(t *testing.T) {
 	targetURL := "https://deploy-preview-789.netlify.app"
 
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByPRNumber", context.Background(), prNumber).
+	mockStore.On("GetFeatureRequestByPRNumber", prNumber).
 		Return(&models.FeatureRequest{
 			ID:       requestID,
 			UserID:   userID,
-			PRNumber: prNumber,
+			PRNumber: &prNumber,
 			Title:    "Test Feature",
 		}, nil)
-	mockStore.On("UpdateFeatureRequestPreview", context.Background(), requestID, targetURL).
+	mockStore.On("UpdateFeatureRequestPreview", requestID, targetURL).
 		Return(errors.New("update failed"))
 
 	handler := &FeedbackHandler{store: mockStore}

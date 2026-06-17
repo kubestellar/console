@@ -29,6 +29,15 @@ func TestRunAsyncGitHubOp_SemaphoreLimit(t *testing.T) {
 	// The dropped operation should not have run
 	// Note: This is a best-effort test - timing issues may cause flakiness
 	assert.Equal(t, 0, completedCount, "dropped operation should not execute")
+
+	// Wait for all goroutines to release their semaphore slots before the next
+	// test runs, otherwise the semaphore appears full and operations get dropped.
+	for i := 0; i < maxConcurrentGitHubOps; i++ {
+		githubOpSem <- struct{}{} // blocks until a goroutine releases one slot
+	}
+	for i := 0; i < maxConcurrentGitHubOps; i++ {
+		<-githubOpSem // restore semaphore to empty state
+	}
 }
 
 func TestRunAsyncGitHubOp_ContextTimeout(t *testing.T) {
@@ -73,9 +82,11 @@ func TestRunAsyncGitHubOp_MultipleOperations(t *testing.T) {
 	}
 
 	// Wait for all operations to complete
+	count := 0
 	for i := 0; i < numOps; i++ {
 		<-completed
+		count++
 	}
 
-	assert.Equal(t, numOps, len(completed), "all operations should complete")
+	assert.Equal(t, numOps, count, "all operations should complete")
 }

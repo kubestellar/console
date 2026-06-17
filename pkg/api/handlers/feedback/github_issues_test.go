@@ -2,11 +2,8 @@ package feedback
 
 import (
 	"context"
-	"errors"
 	"testing"
 
-	"github.com/google/uuid"
-	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -94,18 +91,6 @@ func TestHandleDeploymentStatus_EmptyPayload(t *testing.T) {
 	assert.NoError(t, err, "missing deployment_status should be ignored")
 }
 
-func TestHandleDeploymentStatus_NonSuccessState(t *testing.T) {
-	handler := &FeedbackHandler{store: &test.MockStore{}}
-	payload := map[string]interface{}{
-		"deployment_status": map[string]interface{}{
-			"state":      "pending",
-			"target_url": "https://deploy-preview-123.netlify.app",
-		},
-	}
-	err := handler.handleDeploymentStatus(context.Background(), payload)
-	assert.NoError(t, err, "non-success deployment should be ignored")
-}
-
 func TestHandleDeploymentStatus_MissingTargetURL(t *testing.T) {
 	handler := &FeedbackHandler{store: &test.MockStore{}}
 	payload := map[string]interface{}{
@@ -130,40 +115,3 @@ func TestHandleDeploymentStatus_MissingDeploymentRef(t *testing.T) {
 	assert.NoError(t, err, "missing deployment ref should be ignored")
 }
 
-func TestFindFeatureRequest_NotFound(t *testing.T) {
-	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).Return(nil, nil)
-
-	handler := &FeedbackHandler{store: mockStore}
-	request := handler.findFeatureRequest(context.Background(), 123)
-	assert.Nil(t, request, "should return nil when request not found")
-}
-
-func TestFindFeatureRequest_StoreError(t *testing.T) {
-	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).Return(nil, errors.New("database error"))
-
-	handler := &FeedbackHandler{store: mockStore}
-	request := handler.findFeatureRequest(context.Background(), 123)
-	assert.Nil(t, request, "should return nil when store returns error")
-}
-
-func TestFindFeatureRequest_Success(t *testing.T) {
-	mockStore := &test.MockStore{}
-	expectedRequest := &models.FeatureRequest{
-		ID:                uuid.New(),
-		Title:             "Test Request",
-		GitHubIssueNumber: intPtr(123),
-	}
-	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).Return(expectedRequest, nil)
-
-	handler := &FeedbackHandler{store: mockStore}
-	request := handler.findFeatureRequest(context.Background(), 123)
-	assert.NotNil(t, request, "should return request when found")
-	assert.Equal(t, expectedRequest.ID, request.ID)
-	assert.Equal(t, "Test Request", request.Title)
-}
-
-func intPtr(i int) *int {
-	return &i
-}

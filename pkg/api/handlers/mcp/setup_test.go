@@ -92,11 +92,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	// Initialize MockStore
 	mockStore := new(test.MockStore)
-	mockStore.On("GetUserByID", mock.Anything, testAdminUserID).Return(&models.User{
-		ID:   testAdminUserID,
-		Role: "admin",
-	}, nil)
-	mockStore.On("GetUser", mock.Anything, mock.AnythingOfType("uuid.UUID")).Return(&models.User{
+	mockStore.On("GetUser", mock.AnythingOfType("uuid.UUID")).Return(&models.User{
 		ID:   testAdminUserID,
 		Role: "admin",
 	}, nil)

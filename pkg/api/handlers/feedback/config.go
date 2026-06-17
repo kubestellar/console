@@ -2,6 +2,7 @@ package feedback
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -207,6 +208,11 @@ const maxIssuePages = 5
 // issuesPerPage is the number of issues requested per GitHub API call.
 const issuesPerPage = 50
 
+// tokenProvider abstracts GitHub token generation for testability.
+type tokenProvider interface {
+	Token(ctx context.Context) (string, error)
+}
+
 // FeedbackHandler handles feature requests and feedback
 type FeedbackHandler struct {
 	store         store.Store
@@ -220,7 +226,7 @@ type FeedbackHandler struct {
 	// rewards classifier can distinguish console submissions from
 	// github.com submissions (anti-gaming). Nil means App auth is not
 	// configured and the handler falls back to the PAT in githubToken.
-	appTokenProvider *GitHubAppTokenProvider
+	appTokenProvider tokenProvider
 	// attributionProxyURL is the Netlify Function URL that acts as the
 	// central App-attribution proxy. When set and a per-user client
 	// credential is present, issue creation is proxied here first so
