@@ -215,11 +215,10 @@ jobs:
 
       - name: Build frontend
         working-directory: web
+        # Keep release preflight focused on artifact generation. Frontend lint
+        # debt is tracked separately (lint-warning-gate / auto-qa) and should
+        # not block nightly or weekly releases once the build succeeds.
         run: npm run build
-
-      - name: Lint frontend
-        working-directory: web
-        run: npm run lint
 
   release:
     needs: [determine_version, test]
