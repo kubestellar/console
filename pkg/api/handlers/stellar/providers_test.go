@@ -24,10 +24,13 @@ type providerListResponse struct {
 	User   []store.StellarProviderConfig `json:"user"`
 }
 
-func newProviderHandlerTestApp(t *testing.T, withUser bool) (*fiber.App, *mockedStellarStore, string) {
+func setupProviderTestApp(t *testing.T, withUser bool) (*fiber.App, *mockedStellarStore, string) {
 	t.Helper()
 	mockStore := newMockedStellarStore(t)
-	userID := uuid.New()
+	userID := uuid.Nil
+	if withUser {
+		userID = uuid.New()
+	}
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
@@ -384,7 +387,7 @@ func Test_validateStellarProviderBaseURL(t *testing.T) {
 }
 
 func TestStellarProviderHandlers_Unauthorized(t *testing.T) {
-	app, _, _ := newProviderHandlerTestApp(t, false)
+	app, _, _ := setupProviderTestApp(t, false)
 
 	tests := []struct {
 		name   string
@@ -416,7 +419,7 @@ func TestStellarProviderHandlers_Unauthorized(t *testing.T) {
 }
 
 func TestStellarCreateProvider_HTTPValidationErrors(t *testing.T) {
-	app, _, _ := newProviderHandlerTestApp(t, true)
+	app, _, _ := setupProviderTestApp(t, true)
 
 	tests := []struct {
 		name       string
@@ -459,7 +462,7 @@ func TestStellarCreateProvider_HTTPValidationErrors(t *testing.T) {
 func TestStellarProviderCRUD_HTTPFlow(t *testing.T) {
 	t.Setenv(stellarOllamaAllowedCIDRsEnv, "127.0.0.0/8,::1/128")
 
-	app, providerStore, _ := newProviderHandlerTestApp(t, true)
+	app, providerStore, _ := setupProviderTestApp(t, true)
 
 	requestBody := bytes.NewBufferString(`{"provider":"openai","displayName":"Primary OpenAI","model":"gpt-4o"}`)
 	createOpenAIReq, err := http.NewRequest(http.MethodPost, "/api/stellar/providers", requestBody)
@@ -614,12 +617,10 @@ func TestStellarTestProvider_Handler(t *testing.T) {
 			name:   "ollama health failure returns safe error",
 			setEnv: "127.0.0.0/8,::1/128",
 			seed: func(t *testing.T, providerStore *mockedStellarStore, userID string) string {
-				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					assert.Equal(t, "/api/tags", r.URL.Path)
-					w.WriteHeader(http.StatusOK)
-				}))
-				baseURL := server.URL
-				server.Close()
+				listener, err := net.Listen("tcp", "127.0.0.1:0")
+				require.NoError(t, err)
+				baseURL := "http://" + listener.Addr().String()
+				require.NoError(t, listener.Close())
 				return upsertProviderConfigForTest(t, providerStore, &store.StellarProviderConfig{
 					UserID:      userID,
 					Provider:    "ollama",
@@ -683,7 +684,7 @@ func TestStellarTestProvider_Handler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(stellarOllamaAllowedCIDRsEnv, tt.setEnv)
-			app, providerStore, userID := newProviderHandlerTestApp(t, true)
+			app, providerStore, userID := setupProviderTestApp(t, true)
 			id := tt.seed(t, providerStore, userID)
 
 			req, err := http.NewRequest(http.MethodPost, "/api/stellar/providers/"+id+"/test", nil)
