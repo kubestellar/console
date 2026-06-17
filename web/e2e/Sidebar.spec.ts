@@ -120,11 +120,12 @@ test.describe('Sidebar Navigation', () => {
       // would not exercise any real routing behavior.
       await page.goto('/clusters')
       
-      // Firefox-specific: Wait for page content to render before interacting.
+      // Firefox-specific: Wait for /clusters route before asserting URL/content.
       // In Firefox, there's a race where the auth context hasn't finished init,
-      // causing navigation issues. Wait for the page header to confirm render. (#18304)
+      // causing navigation issues. Use waitForURL() to ensure the route has loaded. (#18304, #18396)
+      await page.waitForURL('**/clusters', { timeout: SIDEBAR_TIMEOUT_MS })
+      await expect(page.getByTestId('dashboard-title')).toContainText('My Clusters', { timeout: SIDEBAR_TIMEOUT_MS })
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
-      await expectDashboardNavigation(page, '/clusters', 'My Clusters')
 
       const dashboardLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/"], [data-testid="sidebar"] a[href="/"]').first()
       await expect(dashboardLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
