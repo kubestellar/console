@@ -113,6 +113,10 @@ vi.mock('../../../../hooks/useLocalAgent', () => ({
   useLocalAgent: () => ({ isConnected: mockAgentConnected }),
 }))
 
+vi.mock('../../../../hooks/useBackendHealth', () => ({
+  useBackendHealth: () => ({ status: 'connected', inCluster: false }),
+}))
+
 vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({
     drillToNamespace: mockDrillToNamespace,
@@ -153,6 +157,21 @@ vi.mock('../../../cards/console-missions/shared', () => ({
     dismissPrompt: vi.fn(),
   }),
   ApiKeyPromptModal: () => null,
+}))
+
+vi.mock('../PodDrillDown.tabs', () => ({
+  usePodTabs: () => ({
+    TABS: [
+      { id: 'overview', label: 'drilldown.tabs.overview' },
+      { id: 'logs', label: 'drilldown.tabs.logs' },
+      { id: 'events', label: 'drilldown.tabs.events' },
+      { id: 'yaml', label: 'drilldown.tabs.yaml' },
+      { id: 'describe', label: 'drilldown.tabs.describe' },
+      { id: 'exec', label: 'drilldown.tabs.exec' },
+      { id: 'related', label: 'drilldown.tabs.related' },
+    ],
+  }),
+  useContainerNames: () => ['container-1'],
 }))
 
 // Additional mocks needed to fully mock AsyncData hook with state changes
