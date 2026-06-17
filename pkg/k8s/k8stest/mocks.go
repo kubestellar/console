@@ -169,6 +169,7 @@ func BuildGVRMap() map[schema.GroupVersionResource]string {
 		{Group: "", Version: "v1", Resource: "persistentvolumeclaims"}:                                      "PersistentVolumeClaimList",
 		{Group: "", Version: "v1", Resource: "namespaces"}:                                                  "NamespaceList",
 		{Group: "", Version: "v1", Resource: "nodes"}:                                                       "NodeList",
+		{Group: "", Version: "v1", Resource: "events"}:                                                      "EventList",
 		{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"}:                                  "IngressList",
 		{Group: "networking.k8s.io", Version: "v1", Resource: "networkpolicies"}:                            "NetworkPolicyList",
 		{Group: "autoscaling", Version: "v2", Resource: "horizontalpodautoscalers"}:                         "HorizontalPodAutoscalerList",
