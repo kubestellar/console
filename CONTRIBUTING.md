@@ -12,6 +12,24 @@ This project uses both human and AI-assisted development. All PRs — regardless
 
 > **Note for AI coding agents:** If you're an AI agent (Claude Code, Copilot, etc.), see [CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md) for agent-specific development conventions and patterns.
 
+## Hacktoberfest 2026
+
+KubeStellar Console is preparing early for Hacktoberfest 2026 so new contributors can find clear, well-scoped issues before October. Start with issues labeled `hacktoberfest`, `good first issue`, or `help wanted`, then read [docs/community/HACKTOBERFEST_2026.md](docs/community/HACKTOBERFEST_2026.md) for the event-specific checklist.
+
+### Maintainer labeling guide
+
+We use GitHub's standard `good first issue` label for newcomer-friendly tasks (sometimes written as `good-first-issue` in automation or planning notes). Pair it with `hacktoberfest` when the issue is a good fit for the event and can be reviewed quickly during October.
+
+Apply `good first issue` only when an issue:
+
+- has a narrow scope and explicit acceptance criteria
+- points contributors to the files, components, or commands they are expected to touch
+- can be validated with a clear test, screenshot, or reproduction path
+- does not require production credentials, cluster-admin access, or deep knowledge of the agent/runtime internals
+- is likely to fit in a first contribution-sized PR rather than a multi-phase refactor
+
+If an issue is slightly larger but still appropriate for outside help, use `help wanted` without `good first issue`.
+
 ## New CNCF Project Cards
 
 New monitoring cards for CNCF projects (Karmada, Falco, KEDA, etc.) belong in [**kubestellar/console-marketplace**](https://github.com/kubestellar/console-marketplace), **not** in this repo. The marketplace loads cards on-demand so they don't bloat the core bundle for users who don't need them.
