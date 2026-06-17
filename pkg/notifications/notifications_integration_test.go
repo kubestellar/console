@@ -14,6 +14,8 @@ import (
 // TestNotifications_Integration_Dispatch E2E verifies issue #4.3:
 // Notification dispatch end-to-end (handler -> service -> provider).
 func TestNotifications_Integration_Dispatch(t *testing.T) {
+	allowLoopbackWebhookHostsForTest(t)
+
 	// 1. Setup a fake provider (Webhook receiver)
 	receivedAlerts := make(chan map[string]interface{}, 1)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

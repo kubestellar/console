@@ -12,7 +12,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func allowLoopbackWebhookHostsForTest(t *testing.T) {
+	t.Helper()
+	t.Setenv("KC_WEBHOOK_ALLOWED_HOSTS", "127.0.0.1,127.0.0.2,127.1.2.3,localhost,localhost.localdomain,::1,::ffff:127.0.0.1")
+}
+
 func TestWebhookNotifier_Send(t *testing.T) {
+	allowLoopbackWebhookHostsForTest(t)
+
 	var captured webhookPayload
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
@@ -61,6 +68,8 @@ func TestWebhookNotifier_NewError(t *testing.T) {
 	})
 
 	t.Run("loopback plaintext http allowed", func(t *testing.T) {
+		allowLoopbackWebhookHostsForTest(t)
+
 		for _, webhookURL := range []string{
 			"http://localhost:8080",
 			"http://localhost.localdomain:8080",
@@ -91,6 +100,8 @@ func TestWebhookNotifier_HostAllowlist(t *testing.T) {
 }
 
 func TestWebhookNotifier_NonSuccessStatus(t *testing.T) {
+	allowLoopbackWebhookHostsForTest(t)
+
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
