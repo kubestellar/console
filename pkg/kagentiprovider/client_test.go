@@ -3,6 +3,7 @@ package kagentiprovider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -102,6 +103,83 @@ func TestStatusWithContext_DirectAgent(t *testing.T) {
 	}, requests)
 }
 
+func TestStatusWithContext_DirectAgent_AllFail(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	client := &KagentiClient{
+		directAgentURL: strings.TrimRight(server.URL, "/"),
+		httpClient:     &http.Client{Timeout: defaultClientTimeout},
+	}
+
+	ok, err := client.StatusWithContext(context.Background())
+	assert.Error(t, err)
+	assert.False(t, ok)
+	assert.Contains(t, err.Error(), server.URL)
+}
+
+func TestListAgentsWithContext_DecodeError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Return 200 but with JSON that is neither an object-with-items nor an array.
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`"just a string"`))
+	}))
+	defer server.Close()
+
+	client := NewKagentiClient(server.URL)
+	agents, err := client.ListAgentsWithContext(context.Background())
+	assert.Error(t, err)
+	assert.Nil(t, agents)
+	assert.Contains(t, err.Error(), "unsupported")
+}
+
+func TestListAgentsWithContext_TransportError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	url := server.URL
+	server.Close() // immediately unreachable
+
+	client := NewKagentiClient(url)
+	agents, err := client.ListAgentsWithContext(context.Background())
+	assert.Error(t, err)
+	assert.Nil(t, agents)
+}
+
+func TestStatusWithContext_TransportError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	url := server.URL
+	server.Close() // immediately unreachable
+
+	client := NewKagentiClient(url)
+	ok, err := client.StatusWithContext(context.Background())
+	assert.Error(t, err)
+	assert.False(t, ok)
+}
+
+// errReader is a test helper that simulates a failing io.Reader for error path testing.
+type errReader struct{}
+
+func (errReader) Read([]byte) (int, error) { return 0, fmt.Errorf("read failed") }
+
+func TestDecodeAgentList_ReaderError(t *testing.T) {
+	_, err := decodeAgentList(errReader{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "read failed")
+}
+
+func TestDiscover_TransportError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	url := server.URL
+	server.Close() // immediately unreachable
+
+	client := NewKagentiClient(url)
+	card, err := client.Discover("ns", "agent")
+	assert.Error(t, err)
+	assert.Nil(t, card)
+	assert.Contains(t, err.Error(), "failed to discover")
+}
+
 func TestListAgentsWithContext_Controller(t *testing.T) {
 	var requests []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -197,6 +275,46 @@ func TestDecodeAgentList(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestDecodeAgentList_InvalidJSON(t *testing.T) {
+	_, err := decodeAgentList(strings.NewReader("{not-valid-json"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported")
+}
+
+func TestListAgentsWithContext_AllPathsFail(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("server error"))
+	}))
+	defer server.Close()
+
+	client := NewKagentiClient(server.URL)
+	agents, err := client.ListAgentsWithContext(context.Background())
+	assert.Error(t, err)
+	assert.Nil(t, agents)
+	assert.Contains(t, err.Error(), "500")
+}
+
+// TestInvoke_Controller_NilHTTPClient verifies that the nil-httpClient defensive
+// branch inside Invoke creates a default client and still succeeds.
+func TestInvoke_Controller_NilHTTPClient(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("data: hello\n\n"))
+	}))
+	defer server.Close()
+
+	// Deliberately leave httpClient nil to exercise the defensive branch.
+	client := &KagentiClient{
+		baseURL:    server.URL,
+		httpClient: nil,
+	}
+	body, err := client.Invoke(context.Background(), "ns", "agent", "msg", "", nil)
+	require.NoError(t, err)
+	require.NotNil(t, body)
+	body.Close()
 }
 
 func TestBuildDetectCandidatesFromEnv(t *testing.T) {
@@ -318,7 +436,7 @@ func TestDiscover(t *testing.T) {
 
 	t.Run("escapes namespace and agent name", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "/api/a2a/team%2Fa/agent%20one/.well-known/agent.json", r.URL.Path)
+			assert.Equal(t, "/api/a2a/team%2Fa/agent%20one/.well-known/agent.json", r.URL.EscapedPath())
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"name":"agent one","description":"demo"}`))
 		}))
