@@ -1,0 +1,96 @@
+name: Adopter Submission
+description: Share how you or your organization uses KubeStellar Console
+title: "adopter: "
+labels:
+  - community
+  - outreach
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping build community evidence for KubeStellar Console.
+
+        Use this form if you want to self-nominate for the First Adopter Program or need maintainer help adding your entry to `ADOPTERS.md`.
+
+  - type: input
+    id: organization
+    attributes:
+      label: Organization or individual name
+      description: The name that should appear in ADOPTERS.md.
+      placeholder: Example Corp
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Adoption tier
+      description: Which tier best matches your current usage?
+      options:
+        - Production
+        - Development
+        - Evaluation
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Short description
+      description: One sentence about your team, project, or environment.
+      placeholder: Platform engineering team operating multi-cluster Kubernetes environments.
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: How are you using KubeStellar Console?
+      description: Tell us what the console helps you do.
+      placeholder: We use the console to...
+    validations:
+      required: true
+
+  - type: input
+    id: link
+    attributes:
+      label: Public link
+      description: Share a website, repo, or write `internal/private` if you cannot share one yet.
+      placeholder: https://example.com
+    validations:
+      required: true
+
+  - type: dropdown
+    id: publication
+    attributes:
+      label: Can maintainers list this publicly in ADOPTERS.md?
+      options:
+        - Yes, this can be added publicly
+        - Not yet, please contact me first
+    validations:
+      required: true
+
+  - type: textarea
+    id: contact
+    attributes:
+      label: Preferred follow-up
+      description: Share how maintainers should follow up if needed.
+      placeholder: GitHub username, email, or "comment here"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Optional details for a future blog post, case study, or maintainer follow-up.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Submission checklist
+      options:
+        - label: I confirm this submission may be used to prepare an ADOPTERS.md entry.
+          required: true
