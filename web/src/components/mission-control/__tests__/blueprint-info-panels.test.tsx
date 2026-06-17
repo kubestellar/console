@@ -76,7 +76,8 @@ describe('DeployModeInfoPanel', () => {
     
     expect(screen.getByText('Phased Rollout')).toBeDefined()
     expect(screen.getByText('Core Infrastructure')).toBeDefined() // Auto-generated phase
-    expect(screen.getByText('missionControl.blueprintInfo.timeEstimate')).toBeDefined()
+    // Component renders "Time Estimate" as a literal string, not an i18n key
+    expect(screen.getByText('Time Estimate')).toBeDefined()
   })
 
   it('renders YOLO mode details', () => {
