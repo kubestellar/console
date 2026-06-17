@@ -34,6 +34,8 @@ To add a topic to an upcoming community call:
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for how to submit issues, pull requests, and become a maintainer.
 
+If you want to contribute a new marketplace card or card plugin, start with the [Card Development Guide](community/CARD_DEVELOPMENT_GUIDE.md).
+
 ## Governance
 
 See [GOVERNANCE.md](../GOVERNANCE.md) for the project's decision-making process, maintainer roles, and voting procedures.

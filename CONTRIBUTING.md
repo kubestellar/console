@@ -18,6 +18,8 @@ New monitoring cards for CNCF projects (Karmada, Falco, KEDA, etc.) belong in [*
 
 PRs that add new card components to `web/src/components/cards/` will be redirected to console-marketplace.
 
+If you want to build a marketplace card, start with the [Card Development Guide](docs/community/CARD_DEVELOPMENT_GUIDE.md). For starter tasks, check [console-marketplace good first issues](https://github.com/kubestellar/console-marketplace/issues?q=is%3Aopen+label%3A%22good+first+issue%22).
+
 ## Repo Inventory Files
 
 The repo-root [`INVENTORY.md`](INVENTORY.md) tracks the component, route, modal, and drill-down inventory that the Auto-QA workflow cross-checks against the source tree.
