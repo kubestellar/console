@@ -36,10 +36,11 @@ vi.mock('../../constants/network', () => ({
 }))
 
 vi.mock('../../../components/ui/Button', () => ({
-  Button: ({ children, onClick, icon, title, ...props }: Record<string, unknown>) => (
+  Button: ({ children, onClick, icon, iconRight, title, ...props }: Record<string, unknown>) => (
     <button onClick={onClick as () => void} title={title as string} {...props}>
       {icon as React.ReactNode}
       {children as React.ReactNode}
+      {iconRight as React.ReactNode}
     </button>
   ),
 }))
