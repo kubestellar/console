@@ -155,6 +155,8 @@
     "uuid": "^14.0.0",
     "axios": "^1.16.0",
     "esbuild": "^0.28.1",
-    "@opentelemetry/core": "^2.8.0"
+    "@opentelemetry/core": "^2.8.0",
+    "@babel/core": "^7.29.6",
+    "js-yaml": "^4.2.0"
   }
 }
