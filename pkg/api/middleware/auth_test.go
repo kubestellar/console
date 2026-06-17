@@ -973,9 +973,12 @@ func TestParseJWT_InvalidClaims(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, token)
 
-	// The token is parsed but claims won't match UserClaims type
-	_, ok := token.Claims.(*UserClaims)
-	assert.False(t, ok, "claims should not be UserClaims type")
+	// ParseJWT always uses ParseWithClaims(&UserClaims{}), so the type assertion
+	// is always *UserClaims; instead verify that the UserClaims fields are zero-value.
+	claims, ok := token.Claims.(*UserClaims)
+	assert.True(t, ok, "claims should always be *UserClaims because ParseJWT uses ParseWithClaims")
+	assert.Equal(t, uuid.Nil, claims.UserID, "UserID should be zero-value")
+	assert.Empty(t, claims.GitHubLogin, "GitHubLogin should be empty")
 }
 
 func TestJWTAuth_UserValidation(t *testing.T) {
