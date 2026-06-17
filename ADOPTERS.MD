@@ -1,18 +1,5 @@
-# Adopters
+# Adopters (deprecated)
 
-Listed below are organizations that have adopted, or benefitted from, KubeStellar Console in one way or another. We are delighted to welcome them to the KubeStellar community. If you are using KubeStellar Console in your organization, or benefitting from the KubeStellar Marketplace, Installer Missions, or Solution Missions, we would love to add you to the list below. You can open a pull request against this file directly.
+> ⚠️ **This file has been superseded.** All adopter entries have been migrated to **[ADOPTERS.md](./ADOPTERS.md)** (lowercase). Please open pull requests against `ADOPTERS.md` going forward.
 
-
-| Organization  | Description | Maturity Level | Further Information |
-| ------------- | ------------- | --- | --- |
-| Open Cluster Management | Guided install mission for OCM via KubeStellar Console | Sandbox | [OCM Install Mission](https://console.kubestellar.io/missions/install-open-cluster-management) |
-| Notary Project | Guided install mission for Ratify with automated pre-flight checks, Gatekeeper and Ratify deployment via helmfile, signed/unsigned image validation, troubleshooting, and rollback support | Incubating | [Notary Project/Ratify](https://github.com/notaryproject/ratify) |
-| OpenCost | Guided install mission for OpenCost via KubeStellar Console, endorsed in [opencost/opencost#3649](https://github.com/opencost/opencost/issues/3649) | Sandbox | [OpenCost](https://opencost.io) · [Install Mission](https://console.kubestellar.io/missions/install-opencost) |
-| KitOps | Guided install mission for KitOps via KubeStellar Console, endorsed in [kitops-ml/kitops#1115](https://github.com/kitops-ml/kitops/issues/1115) | Sandbox | [KitOps](https://kitops.ml) · [Install Mission](https://console.kubestellar.io/missions/install-kitops) |
-| Cadence | Guided install mission for Cadence Workflow via KubeStellar Console for the non-CNCF open source Cadence project, with engagement tracked in [cadence-workflow/cadence#7830](https://github.com/cadence-workflow/cadence/issues/7830) | N/A | [Cadence](https://cadenceworkflow.io) · [Install Mission](https://console.kubestellar.io/missions/install-cadence-workflow) |
-| Easegress | Guided install mission for Easegress via KubeStellar Console, with engagement tracked in [easegress-io/easegress#1510](https://github.com/easegress-io/easegress/issues/1510) | Sandbox | [Easegress](https://github.com/easegress-io/easegress) · [Install Mission](https://console.kubestellar.io/missions/install-easegress) |
-| Microcks | Guided install mission for Microcks via KubeStellar Console, with install recipe contributed to the Microcks community repo ([microcks/community#125](https://github.com/microcks/community/pull/125)) and engagement tracked in [microcks/microcks#1997](https://github.com/microcks/microcks/issues/1997) | Sandbox | [Microcks](https://microcks.io) · [Install Mission](https://console.kubestellar.io/missions/install-microcks) |
-| kcp | Guided install mission for kcp via KubeStellar Console, with engagement from kcp maintainers in [kcp-dev/kcp#3923](https://github.com/kcp-dev/kcp/issues/3923) | Sandbox | [kcp](https://kcp.io) · [Install Mission](https://console.kubestellar.io/missions/install-kcp) |
-| kube-vip | Guided install mission for kube-vip via KubeStellar Console, with upstream collaboration tracked in [kube-vip/kube-vip#1472](https://github.com/kube-vip/kube-vip/issues/1472) | Sandbox | [kube-vip](https://kube-vip.io) · [Install Mission](https://console.kubestellar.io/missions/install-kube-vip) |
-| Submariner | Guided install mission for Submariner via KubeStellar Console using the current `subctl` workflow (deploy-broker, join, verify, cross-cluster connectivity), endorsed in [submariner-io/submariner#3907](https://github.com/submariner-io/submariner/issues/3907) | Sandbox | [Submariner](https://submariner.io) · [Install Mission](https://console.kubestellar.io/missions/install-submariner) |
-| Kmesh | Guided install mission for Kmesh via KubeStellar Console, with engagement tracked in [kmesh-net/kmesh#1609](https://github.com/kmesh-net/kmesh/issues/1609) | Sandbox | [Kmesh](https://kmesh.net) · [Install Mission](https://console.kubestellar.io/missions/install-kmesh) |
+See [ADOPTERS.md](./ADOPTERS.md) for the current adopter list (13 entries).
