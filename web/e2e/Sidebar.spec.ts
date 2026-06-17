@@ -124,7 +124,7 @@ test.describe('Sidebar Navigation', () => {
       await expect(clustersLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
       await Promise.all([
         page.waitForURL('**/clusters', { timeout: SIDEBAR_TIMEOUT_MS }),
-        clustersLink.click({ force: true }),
+        clustersLink.click(),
       ])
       await expectDashboardNavigation(page, '/clusters', 'My Clusters')
 

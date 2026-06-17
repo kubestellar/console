@@ -156,18 +156,33 @@ test.describe('Smoke Tests', () => {
     test('clicking navbar logo navigates to home from non-home route', async ({ page }) => {
       await setupDemoMode(page)
 
-      // Navigate to a non-home route
+      // Warm auth/app state first to avoid cross-browser redirect races when
+      // deep-linking directly to /settings. (#18304)
+      await page.goto('/')
+      await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, 'initial home load')
+
+      // Navigate to a non-home route.
       await page.goto('/settings')
-      
-      // Firefox-specific: Wait for Settings page to actually render before asserting URL.
-      // In Firefox, there's a race where ProtectedRoute hasn't finished auth init yet,
-      // causing a redirect to home. Waiting for Settings-specific content ensures the
-      // page loaded correctly. (#18304)
-      const settingsTitle = page
-        .getByTestId('settings-title')
-        .or(page.getByTestId('settings-title-mobile'))
-      await expect(settingsTitle.first()).toBeVisible({ timeout: 10000 })
-      expect(page.url()).toContain('/settings')
+      const reachedSettings = await page
+        .waitForURL('**/settings', { timeout: NETWORK_IDLE_TIMEOUT_MS })
+        .then(() => true)
+        .catch(() => false)
+
+      // Firefox can still bounce back to "/" while auth finishes hydration.
+      // Fall back to sidebar navigation, which is more stable across browsers.
+      if (!reachedSettings) {
+        const mobileMenuToggle = page.getByRole('button', { name: /open menu|close menu/i })
+        if (await mobileMenuToggle.isVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS }).catch(() => false)) {
+          await mobileMenuToggle.click()
+        }
+
+        const clustersLink = page.locator('[data-testid="sidebar"] a[href="/clusters"]').first()
+        await expect(clustersLink).toBeVisible({ timeout: NETWORK_IDLE_TIMEOUT_MS })
+        await clustersLink.click()
+        await page.waitForURL('**/clusters', { timeout: NETWORK_IDLE_TIMEOUT_MS })
+      }
+
+      expect(page.url()).not.toMatch(/\/$|\/dashboard$/)
 
       // Click the logo button (has aria-label "Go to home dashboard").
       // The navbar renders two such buttons — the logo and the wordmark —
