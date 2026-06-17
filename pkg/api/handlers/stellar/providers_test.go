@@ -27,15 +27,15 @@ type providerListResponse struct {
 func setupProviderTestApp(t *testing.T, withUser bool) (*fiber.App, *mockedStellarStore, string) {
 	t.Helper()
 	mockStore := newMockedStellarStore(t)
-	userID := uuid.Nil
+	requestUserID := uuid.Nil
 	if withUser {
-		userID = uuid.New()
+		requestUserID = uuid.New()
 	}
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
 		if withUser {
-			c.Locals("userID", userID)
+			c.Locals("userID", requestUserID)
 		}
 		return c.Next()
 	})
@@ -50,7 +50,7 @@ func setupProviderTestApp(t *testing.T, withUser bool) (*fiber.App, *mockedStell
 	if !withUser {
 		return app, mockStore, ""
 	}
-	return app, mockStore, userID.String()
+	return app, mockStore, requestUserID.String()
 }
 
 func decodeProviderListResponse(t *testing.T, resp *http.Response) providerListResponse {
@@ -480,8 +480,8 @@ func TestStellarProviderCRUD_HTTPFlow(t *testing.T) {
 	var openAIConfig store.StellarProviderConfig
 	require.NoError(t, json.NewDecoder(createOpenAIResp.Body).Decode(&openAIConfig))
 	require.NotEmpty(t, openAIConfig.ID)
-	// CreateProvider always masks the raw request field, even when the caller
-	// omits apiKey. Stored configs with no encrypted key later list an empty mask.
+	// CreateProvider returns a masked API key response (****) even when apiKey is
+	// omitted, while listed configs with no encrypted key show an empty mask.
 	assert.Equal(t, "****", openAIConfig.APIKeyMask)
 
 	createOllamaReq, err := http.NewRequest(
@@ -623,6 +623,8 @@ func TestStellarTestProvider_Handler(t *testing.T) {
 			setEnv: "127.0.0.0/8,::1/128",
 			seed: func(t *testing.T, providerStore *mockedStellarStore, userID string) string {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					// Force the client to observe a transport error instead of an
+					// HTTP status so TestProvider exercises its safe error path.
 					hijacker, ok := w.(http.Hijacker)
 					require.True(t, ok)
 					conn, _, err := hijacker.Hijack()
