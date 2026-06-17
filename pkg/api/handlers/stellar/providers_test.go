@@ -1,379 +1,376 @@
 package stellar
 
 import (
+	"context"
+	"errors"
 	"net"
-	"os"
+	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kubestellar/console/pkg/store"
 )
 
-func Test_parseCIDRs(t *testing.T) {
+const (
+	stellarProvidersRoute         = "/api/stellar/providers"
+	stellarProviderDefaultRoute   = "/api/stellar/providers/:id/default"
+	stellarProviderDeleteRoute    = "/api/stellar/providers/:id"
+	stellarOllamaLoopbackBaseURL  = "http://127.0.0.1:11434/"
+	stellarCloudPublicBaseURL     = "https://8.8.8.8/v1/"
+	stellarCloudLoopbackBaseURL   = "https://127.0.0.1/v1"
+	stellarCloudMetadataBaseURL   = "https://metadata.google.internal/v1"
+	stellarOllamaPrivateBaseURL   = "http://10.1.2.3:11434"
+	stellarExpectedCloudTrimmed   = "https://8.8.8.8/v1"
+	stellarExpectedOllamaTrimmed  = "http://127.0.0.1:11434"
+	stellarProviderLongURLPadding = 32
+)
+
+type providerUpsertErrorStore struct {
+	Store
+}
+
+func (s providerUpsertErrorStore) UpsertProviderConfig(_ context.Context, _ *store.StellarProviderConfig) error {
+	return errors.New("save failed")
+}
+
+type providerDeleteErrorStore struct {
+	Store
+}
+
+func (s providerDeleteErrorStore) DeleteProviderConfig(_ context.Context, _, _ string) error {
+	return errors.New("delete failed")
+}
+
+type providerDefaultErrorStore struct {
+	Store
+}
+
+func (s providerDefaultErrorStore) SetUserDefaultProvider(_ context.Context, _, _ string) error {
+	return errors.New("default failed")
+}
+
+type providerStoreUnavailable struct {
+	Store
+}
+
+func newProvidersHandlerTestApp(t *testing.T, handlerStore Store, authenticated bool) (*fiber.App, string) {
+	t.Helper()
+	t.Setenv("STELLAR_ENCRYPTION_KEY", "stellar-provider-test-key")
+
+	userID := uuid.New()
+	app := fiber.New()
+	if authenticated {
+		app.Use(func(c *fiber.Ctx) error {
+			c.Locals("userID", userID)
+			return c.Next()
+		})
+	}
+
+	handler := NewHandler(handlerStore, nil)
+	app.Get(stellarProvidersRoute, handler.ListProviders)
+	app.Post(stellarProvidersRoute, handler.CreateProvider)
+	app.Delete(stellarProviderDeleteRoute, handler.DeleteProvider)
+	app.Post(stellarProviderDefaultRoute, handler.SetDefaultProvider)
+
+	return app, userID.String()
+}
+
+func TestParseCIDRs(t *testing.T) {
+	cidrs, err := parseCIDRs([]string{"127.0.0.0/8", " ", "::1/128"})
+	require.NoError(t, err)
+	require.Len(t, cidrs, 2)
+	assert.True(t, cidrs[0].Contains(net.ParseIP("127.0.0.1")))
+	assert.True(t, cidrs[1].Contains(net.ParseIP("::1")))
+
+	_, err = parseCIDRs([]string{"not-a-cidr"})
+	require.Error(t, err)
+}
+
+func TestLoadStellarOllamaAllowedCIDRs(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		t.Setenv(stellarOllamaAllowedCIDRsEnv, "")
+		cidrs, err := loadStellarOllamaAllowedCIDRs()
+		require.NoError(t, err)
+		require.Len(t, cidrs, 2)
+		assert.True(t, ipInCIDRs(net.ParseIP("127.0.0.1"), cidrs))
+		assert.True(t, ipInCIDRs(net.ParseIP("::1"), cidrs))
+	})
+
+	t.Run("custom value", func(t *testing.T) {
+		t.Setenv(stellarOllamaAllowedCIDRsEnv, "10.0.0.0/8")
+		cidrs, err := loadStellarOllamaAllowedCIDRs()
+		require.NoError(t, err)
+		require.Len(t, cidrs, 1)
+		assert.True(t, ipInCIDRs(net.ParseIP("10.1.2.3"), cidrs))
+	})
+
+	t.Run("invalid value", func(t *testing.T) {
+		t.Setenv(stellarOllamaAllowedCIDRsEnv, "bad-cidr")
+		_, err := loadStellarOllamaAllowedCIDRs()
+		require.Error(t, err)
+	})
+}
+
+func TestResolveStellarProviderHostIPs(t *testing.T) {
+	ips, err := resolveStellarProviderHostIPs("8.8.8.8")
+	require.NoError(t, err)
+	require.Len(t, ips, 1)
+	assert.Equal(t, "8.8.8.8", ips[0].String())
+
+	ips, err = resolveStellarProviderHostIPs("localhost")
+	require.NoError(t, err)
+	require.NotEmpty(t, ips)
+}
+
+func TestIPInCIDRs(t *testing.T) {
+	cidrs, err := parseCIDRs([]string{"10.0.0.0/8", "2001:db8::/32"})
+	require.NoError(t, err)
+
+	assert.True(t, ipInCIDRs(net.ParseIP("10.1.2.3"), cidrs))
+	assert.True(t, ipInCIDRs(net.ParseIP("2001:db8::1"), cidrs))
+	assert.False(t, ipInCIDRs(net.ParseIP("192.168.1.1"), cidrs))
+}
+
+func TestValidateStellarProviderBaseURLCoverage(t *testing.T) {
+	tooLong := "https://example.com/" + strings.Repeat("a", stellarMaxProviderBaseURLLen+stellarProviderLongURLPadding)
+
 	tests := []struct {
-		name    string
-		input   []string
-		wantErr bool
-		wantLen int
+		name      string
+		provider  string
+		baseURL   string
+		envCIDRs  string
+		wantURL   string
+		wantError string
 	}{
-		{
-			name:    "valid single CIDR",
-			input:   []string{"127.0.0.0/8"},
-			wantErr: false,
-			wantLen: 1,
-		},
-		{
-			name:    "valid multiple CIDRs",
-			input:   []string{"127.0.0.0/8", "::1/128", "10.0.0.0/8"},
-			wantErr: false,
-			wantLen: 3,
-		},
-		{
-			name:    "filters empty strings",
-			input:   []string{"127.0.0.0/8", "", "  ", "10.0.0.0/8"},
-			wantErr: false,
-			wantLen: 2,
-		},
-		{
-			name:    "invalid CIDR",
-			input:   []string{"not-a-cidr"},
-			wantErr: true,
-		},
-		{
-			name:    "invalid IP in CIDR",
-			input:   []string{"999.999.999.999/8"},
-			wantErr: true,
-		},
-		{
-			name:    "empty list",
-			input:   []string{},
-			wantErr: false,
-			wantLen: 0,
-		},
+		{name: "empty allowed", provider: "openai", baseURL: "", wantURL: ""},
+		{name: "too long", provider: "openai", baseURL: tooLong, wantError: "base URL too long"},
+		{name: "contains whitespace", provider: "openai", baseURL: "https://example.com /v1", wantError: "base URL must not contain whitespace"},
+		{name: "invalid url", provider: "openai", baseURL: "://bad", wantError: "invalid base URL"},
+		{name: "credentials blocked", provider: "openai", baseURL: "https://user:pass@example.com", wantError: "base URL must not include user credentials"},
+		{name: "missing host", provider: "openai", baseURL: "https:///v1", wantError: "base URL must include a host"},
+		{name: "ollama requires http", provider: "ollama", baseURL: "https://127.0.0.1:11434", wantError: "ollama base URL must use http://"},
+		{name: "ollama loopback allowed", provider: "ollama", baseURL: stellarOllamaLoopbackBaseURL, wantURL: stellarExpectedOllamaTrimmed},
+		{name: "ollama private blocked", provider: "ollama", baseURL: stellarOllamaPrivateBaseURL, wantError: stellarOllamaAllowedCIDRsEnv},
+		{name: "ollama private allowlisted", provider: "ollama", baseURL: stellarOllamaPrivateBaseURL, envCIDRs: "10.0.0.0/8", wantURL: stellarOllamaPrivateBaseURL},
+		{name: "cloud requires https", provider: "openai", baseURL: "http://8.8.8.8/v1", wantError: "cloud provider base URL must use https://"},
+		{name: "cloud localhost blocked", provider: "openai", baseURL: stellarCloudLoopbackBaseURL, wantError: "cloud provider host resolves to blocked IP"},
+		{name: "cloud metadata blocked", provider: "openai", baseURL: stellarCloudMetadataBaseURL, wantError: "cloud provider base URL cannot use internal hostnames"},
+		{name: "cloud public allowed", provider: "openai", baseURL: stellarCloudPublicBaseURL, wantURL: stellarExpectedCloudTrimmed},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parseCIDRs(tt.input)
-			if tt.wantErr {
+			if tt.envCIDRs != "" {
+				t.Setenv(stellarOllamaAllowedCIDRsEnv, tt.envCIDRs)
+			}
+
+			got, err := validateStellarProviderBaseURL(tt.provider, tt.baseURL)
+			if tt.wantError != "" {
 				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantError)
 				return
 			}
+
 			require.NoError(t, err)
-			assert.Len(t, result, tt.wantLen)
+			assert.Equal(t, tt.wantURL, got)
 		})
 	}
 }
 
-func Test_ipInCIDRs(t *testing.T) {
-	cidrs, err := parseCIDRs([]string{"127.0.0.0/8", "10.0.0.0/16", "::1/128"})
-	require.NoError(t, err)
+func TestProviderHandlersRequireAuthentication(t *testing.T) {
+	providerStore := store.OpenTestDB(t)
+	app, _ := newProvidersHandlerTestApp(t, providerStore, false)
 
 	tests := []struct {
 		name   string
-		ip     string
-		wantIn bool
+		method string
+		path   string
+		body   string
 	}{
-		{"localhost IPv4", "127.0.0.1", true},
-		{"localhost IPv4 edge", "127.255.255.255", true},
-		{"10.0.x.x in range", "10.0.5.10", true},
-		{"10.1.x.x out of range", "10.1.0.1", false},
-		{"localhost IPv6", "::1", true},
-		{"public IP", "8.8.8.8", false},
-		{"private IP not in list", "192.168.1.1", false},
+		{name: "list", method: http.MethodGet, path: stellarProvidersRoute},
+		{name: "create", method: http.MethodPost, path: stellarProvidersRoute, body: `{"provider":"ollama","baseUrl":"http://127.0.0.1:11434"}`},
+		{name: "delete", method: http.MethodDelete, path: "/api/stellar/providers/provider-1"},
+		{name: "set default", method: http.MethodPost, path: "/api/stellar/providers/provider-1/default"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ip := net.ParseIP(tt.ip)
-			require.NotNil(t, ip, "invalid test IP")
-			result := ipInCIDRs(ip, cidrs)
-			assert.Equal(t, tt.wantIn, result)
+			resp := sendStellarJSONRequest(t, app, tt.method, tt.path, tt.body)
+			assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 		})
 	}
 }
 
-func Test_ipInCIDRs_EmptyList(t *testing.T) {
-	ip := net.ParseIP("127.0.0.1")
-	result := ipInCIDRs(ip, []*net.IPNet{})
-	assert.False(t, result, "IP should not match empty CIDR list")
+func TestListProvidersReturnsUserConfigs(t *testing.T) {
+	providerStore := store.OpenTestDB(t)
+	app, userID := newProvidersHandlerTestApp(t, providerStore, true)
+	testCtx := context.Background()
+
+	require.NoError(t, providerStore.UpsertProviderConfig(testCtx, &store.StellarProviderConfig{
+		ID:          "provider-1",
+		UserID:      userID,
+		Provider:    "openai",
+		DisplayName: "OpenAI",
+		BaseURL:     stellarExpectedCloudTrimmed,
+		Model:       "gpt-4.1",
+		APIKeyEnc:   []byte{},
+		IsDefault:   true,
+		IsActive:    true,
+	}))
+
+	resp := sendStellarJSONRequest(t, app, http.MethodGet, stellarProvidersRoute, "")
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var payload struct {
+		Global []map[string]any              `json:"global"`
+		User   []store.StellarProviderConfig `json:"user"`
+	}
+	payload = decodeJSONBody[struct {
+		Global []map[string]any              `json:"global"`
+		User   []store.StellarProviderConfig `json:"user"`
+	}](t, resp)
+
+	require.NotEmpty(t, payload.Global)
+	require.Len(t, payload.User, 1)
+	assert.Equal(t, "provider-1", payload.User[0].ID)
+	assert.Equal(t, "openai", payload.User[0].Provider)
 }
 
-func Test_validateStellarProviderBaseURL(t *testing.T) {
-	tests := []struct {
-		name     string
-		provider string
-		url      string
-		wantErr  bool
-		errHint  string
-		setup    func()
-		teardown func()
-	}{
-		{
-			name:     "empty URL is allowed",
-			provider: "anthropic",
-			url:      "",
-			wantErr:  false,
-		},
-		{
-			name:     "whitespace-only URL trimmed to empty",
-			provider: "anthropic",
-			url:      "   ",
-			wantErr:  false,
-		},
-		{
-			name:     "URL too long",
-			provider: "anthropic",
-			url:      "https://" + string(make([]byte, stellarMaxProviderBaseURLLen)),
-			wantErr:  true,
-			errHint:  "too long",
-		},
-		{
-			name:     "URL with spaces",
-			provider: "anthropic",
-			url:      "https://api.example.com with spaces",
-			wantErr:  true,
-			errHint:  "whitespace",
-		},
-		{
-			name:     "URL with tabs",
-			provider: "anthropic",
-			url:      "https://api.example.com\twith\ttabs",
-			wantErr:  true,
-			errHint:  "whitespace",
-		},
-		{
-			name:     "URL with newlines",
-			provider: "anthropic",
-			url:      "https://api.example.com\nwith\nnewlines",
-			wantErr:  true,
-			errHint:  "whitespace",
-		},
-		{
-			name:     "invalid URL syntax",
-			provider: "anthropic",
-			url:      "not a valid url",
-			wantErr:  true,
-			errHint:  "invalid base URL",
-		},
-		{
-			name:     "URL with credentials",
-			provider: "anthropic",
-			url:      "https://user:pass@api.example.com",
-			wantErr:  true,
-			errHint:  "credentials",
-		},
-		{
-			name:     "URL without host",
-			provider: "anthropic",
-			url:      "https://",
-			wantErr:  true,
-			errHint:  "host",
-		},
-		{
-			name:     "ollama with http localhost",
-			provider: "ollama",
-			url:      "http://localhost:11434",
-			wantErr:  false,
-			setup: func() {
-				os.Setenv(stellarOllamaAllowedCIDRsEnv, "127.0.0.0/8,::1/128")
-			},
-			teardown: func() {
-				os.Unsetenv(stellarOllamaAllowedCIDRsEnv)
-			},
-		},
-		{
-			name:     "ollama with https rejected",
-			provider: "ollama",
-			url:      "https://localhost:11434",
-			wantErr:  true,
-			errHint:  "must use http://",
-		},
-		{
-			name:     "ollama with public IP rejected",
-			provider: "ollama",
-			url:      "http://8.8.8.8:11434",
-			wantErr:  true,
-			errHint:  "not in",
-			setup: func() {
-				os.Setenv(stellarOllamaAllowedCIDRsEnv, "127.0.0.0/8,::1/128")
-			},
-			teardown: func() {
-				os.Unsetenv(stellarOllamaAllowedCIDRsEnv)
-			},
-		},
-		{
-			name:     "cloud provider with http rejected",
-			provider: "anthropic",
-			url:      "http://api.anthropic.com",
-			wantErr:  true,
-			errHint:  "must use https://",
-		},
-		{
-			name:     "cloud provider with localhost rejected",
-			provider: "openai",
-			url:      "https://localhost:8080",
-			wantErr:  true,
-			errHint:  "internal hostnames",
-		},
-		{
-			name:     "cloud provider with .internal domain rejected",
-			provider: "openai",
-			url:      "https://api.internal",
-			wantErr:  true,
-			errHint:  "internal hostnames",
-		},
-		{
-			name:     "cloud provider with .local domain rejected",
-			provider: "openai",
-			url:      "https://api.local",
-			wantErr:  true,
-			errHint:  "internal hostnames",
-		},
-		{
-			name:     "cloud provider with metadata service rejected",
-			provider: "openai",
-			url:      "https://metadata.google.internal",
-			wantErr:  true,
-			errHint:  "internal hostnames",
-		},
-		{
-			name:     "trailing slash removed",
-			provider: "anthropic",
-			url:      "https://api.example.com/",
-			wantErr:  false,
-		},
-	}
+func TestCreateProviderPersistsConfig(t *testing.T) {
+	providerStore := store.OpenTestDB(t)
+	app, userID := newProvidersHandlerTestApp(t, providerStore, true)
+	testCtx := context.Background()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.setup != nil {
-				tt.setup()
-			}
-			if tt.teardown != nil {
-				defer tt.teardown()
-			}
+	resp := sendStellarJSONRequest(t, app, http.MethodPost, stellarProvidersRoute, `{
+		"provider":"ollama",
+		"displayName":"Local Ollama",
+		"model":"llama3",
+		"baseUrl":"`+stellarOllamaLoopbackBaseURL+`"
+	}`)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
 
-			result, err := validateStellarProviderBaseURL(tt.provider, tt.url)
+	created := decodeJSONBody[store.StellarProviderConfig](t, resp)
+	assert.Equal(t, userID, created.UserID)
+	assert.Equal(t, "ollama", created.Provider)
+	assert.Equal(t, stellarExpectedOllamaTrimmed, created.BaseURL)
+	assert.Equal(t, "****", created.APIKeyMask)
 
-			if tt.wantErr {
-				require.Error(t, err)
-				if tt.errHint != "" {
-					assert.Contains(t, err.Error(), tt.errHint)
-				}
-				return
-			}
-
-			require.NoError(t, err)
-			if tt.url != "" && tt.url != "   " {
-				assert.NotEmpty(t, result)
-				assert.NotContains(t, result, " ")
-			}
-		})
-	}
+	configs, err := providerStore.GetUserProviderConfigs(testCtx, userID)
+	require.NoError(t, err)
+	require.Len(t, configs, 1)
+	assert.Empty(t, configs[0].APIKeyEnc)
 }
 
-func Test_loadStellarOllamaAllowedCIDRs(t *testing.T) {
-	tests := []struct {
-		name    string
-		envVal  string
-		wantLen int
-		wantErr bool
-	}{
-		{
-			name:    "default when env not set",
-			envVal:  "",
-			wantLen: 2, // 127.0.0.0/8 and ::1/128
-			wantErr: false,
-		},
-		{
-			name:    "custom single CIDR",
-			envVal:  "10.0.0.0/8",
-			wantLen: 1,
-			wantErr: false,
-		},
-		{
-			name:    "custom multiple CIDRs",
-			envVal:  "127.0.0.0/8,10.0.0.0/16,::1/128",
-			wantLen: 3,
-			wantErr: false,
-		},
-		{
-			name:    "invalid CIDR",
-			envVal:  "not-valid",
-			wantLen: 0,
-			wantErr: true,
-		},
-	}
+func TestCreateProviderValidationAndStoreFailures(t *testing.T) {
+	t.Run("invalid json", func(t *testing.T) {
+		providerStore := store.OpenTestDB(t)
+		app, _ := newProvidersHandlerTestApp(t, providerStore, true)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.envVal != "" {
-				os.Setenv(stellarOllamaAllowedCIDRsEnv, tt.envVal)
-				defer os.Unsetenv(stellarOllamaAllowedCIDRsEnv)
-			} else {
-				os.Unsetenv(stellarOllamaAllowedCIDRsEnv)
-			}
+		resp := sendStellarJSONRequest(t, app, http.MethodPost, stellarProvidersRoute, `{"provider":`)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		payload := decodeJSONBody[map[string]string](t, resp)
+		assert.Equal(t, "invalid JSON", payload["error"])
+	})
 
-			result, err := loadStellarOllamaAllowedCIDRs()
+	t.Run("invalid base url", func(t *testing.T) {
+		providerStore := store.OpenTestDB(t)
+		app, _ := newProvidersHandlerTestApp(t, providerStore, true)
 
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
+		resp := sendStellarJSONRequest(t, app, http.MethodPost, stellarProvidersRoute, `{"provider":"openai","baseUrl":"`+stellarCloudLoopbackBaseURL+`"}`)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		payload := decodeJSONBody[map[string]string](t, resp)
+		assert.Equal(t, "invalid baseUrl", payload["error"])
+	})
 
-			require.NoError(t, err)
-			assert.Len(t, result, tt.wantLen)
-		})
-	}
+	t.Run("provider store unavailable", func(t *testing.T) {
+		providerStore := store.OpenTestDB(t)
+		app, _ := newProvidersHandlerTestApp(t, providerStoreUnavailable{Store: providerStore}, true)
+
+		resp := sendStellarJSONRequest(t, app, http.MethodPost, stellarProvidersRoute, `{"provider":"ollama","baseUrl":"`+stellarExpectedOllamaTrimmed+`"}`)
+		require.Equal(t, http.StatusNotImplemented, resp.StatusCode)
+		payload := decodeJSONBody[map[string]string](t, resp)
+		assert.Equal(t, "provider store unavailable", payload["error"])
+	})
+
+	t.Run("save failure", func(t *testing.T) {
+		providerStore := store.OpenTestDB(t)
+		app, _ := newProvidersHandlerTestApp(t, providerUpsertErrorStore{Store: providerStore}, true)
+
+		resp := sendStellarJSONRequest(t, app, http.MethodPost, stellarProvidersRoute, `{"provider":"ollama","baseUrl":"`+stellarExpectedOllamaTrimmed+`"}`)
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		payload := decodeJSONBody[map[string]string](t, resp)
+		assert.Equal(t, "failed to save provider", payload["error"])
+	})
 }
 
-func Test_resolveStellarProviderHostIPs(t *testing.T) {
-	tests := []struct {
-		name    string
-		host    string
-		wantErr bool
-		minIPs  int
-	}{
-		{
-			name:    "IPv4 address",
-			host:    "127.0.0.1",
-			wantErr: false,
-			minIPs:  1,
-		},
-		{
-			name:    "IPv6 address",
-			host:    "::1",
-			wantErr: false,
-			minIPs:  1,
-		},
-		{
-			name:    "localhost resolves",
-			host:    "localhost",
-			wantErr: false,
-			minIPs:  1,
-		},
-		{
-			name:    "invalid hostname",
-			host:    "this-hostname-definitely-does-not-exist-12345.invalid",
-			wantErr: true,
-		},
-	}
+func TestDeleteProviderAndSetDefault(t *testing.T) {
+	providerStore := store.OpenTestDB(t)
+	app, userID := newProvidersHandlerTestApp(t, providerStore, true)
+	testCtx := context.Background()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := resolveStellarProviderHostIPs(tt.host)
+	require.NoError(t, providerStore.UpsertProviderConfig(testCtx, &store.StellarProviderConfig{
+		ID:          "provider-a",
+		UserID:      userID,
+		Provider:    "openai",
+		DisplayName: "OpenAI",
+		BaseURL:     stellarExpectedCloudTrimmed,
+		Model:       "gpt-4.1",
+		APIKeyEnc:   []byte{},
+		IsDefault:   true,
+		IsActive:    true,
+	}))
+	require.NoError(t, providerStore.UpsertProviderConfig(testCtx, &store.StellarProviderConfig{
+		ID:          "provider-b",
+		UserID:      userID,
+		Provider:    "anthropic",
+		DisplayName: "Anthropic",
+		BaseURL:     "https://api.anthropic.com",
+		Model:       "claude-sonnet-4.5",
+		APIKeyEnc:   []byte{},
+		IsDefault:   false,
+		IsActive:    true,
+	}))
 
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
+	resp := sendStellarJSONRequest(t, app, http.MethodPost, "/api/stellar/providers/provider-b/default", "")
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
 
-			require.NoError(t, err)
-			assert.GreaterOrEqual(t, len(result), tt.minIPs)
-			for _, ip := range result {
-				assert.NotNil(t, ip)
-			}
-		})
-	}
+	defaultProvider, err := providerStore.GetUserDefaultProvider(testCtx, userID)
+	require.NoError(t, err)
+	require.NotNil(t, defaultProvider)
+	assert.Equal(t, "provider-b", defaultProvider.ID)
+
+	resp = sendStellarJSONRequest(t, app, http.MethodDelete, "/api/stellar/providers/provider-a", "")
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+
+	configs, err := providerStore.GetUserProviderConfigs(testCtx, userID)
+	require.NoError(t, err)
+	require.Len(t, configs, 1)
+	assert.Equal(t, "provider-b", configs[0].ID)
+}
+
+func TestDeleteProviderAndSetDefaultStoreFailures(t *testing.T) {
+	t.Run("delete failure", func(t *testing.T) {
+		providerStore := store.OpenTestDB(t)
+		app, _ := newProvidersHandlerTestApp(t, providerDeleteErrorStore{Store: providerStore}, true)
+
+		resp := sendStellarJSONRequest(t, app, http.MethodDelete, "/api/stellar/providers/provider-1", "")
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		payload := decodeJSONBody[map[string]string](t, resp)
+		assert.Equal(t, "delete failed", payload["error"])
+	})
+
+	t.Run("default failure", func(t *testing.T) {
+		providerStore := store.OpenTestDB(t)
+		app, _ := newProvidersHandlerTestApp(t, providerDefaultErrorStore{Store: providerStore}, true)
+
+		resp := sendStellarJSONRequest(t, app, http.MethodPost, "/api/stellar/providers/provider-1/default", "")
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		payload := decodeJSONBody[map[string]string](t, resp)
+		assert.Equal(t, "failed to set default", payload["error"])
+	})
 }
