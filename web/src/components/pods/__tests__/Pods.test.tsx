@@ -205,7 +205,7 @@ describe('Pods Component', () => {
   it('renders the action buttons (Restart, Logs, Delete)', () => {
     renderPods()
     expect(screen.getByLabelText('common.restart')).toBeTruthy()
-    expect(screen.getByLabelText('View logs')).toBeTruthy()
+    expect(screen.getByLabelText('common.logs')).toBeTruthy()
     expect(screen.getByLabelText('common.delete')).toBeTruthy()
   })
 
@@ -228,10 +228,9 @@ describe('Pods Component', () => {
 
   it('calls drillToPod when Logs is clicked', () => {
     renderPods()
-    const logsBtn = screen.getByLabelText('View logs')
+    const logsBtn = screen.getByLabelText('common.logs')
     fireEvent.click(logsBtn)
     // Check if drillToPod was called with tab: 'logs'
-    // Note: we added tab: 'logs' to the drillToPod call in implementation
     expect(drillToPodSpy).toHaveBeenCalledWith('ctx/prod', 'default', 'my-pod', { tab: 'logs' })
   })
 
