@@ -453,3 +453,117 @@ func TestAppendFormattedWarningEvents_TruncatesLongMessages(t *testing.T) {
 		t.Fatalf("full message should not appear after truncation")
 	}
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// listScopedClusters — direct unit tests
+// ────────────────────────────────────────────────────────────────────────────
+
+func TestListScopedClusters_BothProvidersNil(t *testing.T) {
+	t.Helper()
+
+	got := listScopedClusters(context.Background(), nil, nil)
+	if got != nil {
+		t.Fatalf("expected nil when both providers are nil, got %v", got)
+	}
+}
+
+func TestListScopedClusters_BridgeReturnsError(t *testing.T) {
+	t.Helper()
+
+	// An uninitialized Bridge (not nil, but will fail ListClusters) and nil k8sClient
+	// → falls through to k8sClient path, which is also nil → returns nil.
+	bridge := &mcp.Bridge{} // zero-value bridge will return error on ListClusters
+	got := listScopedClusters(context.Background(), bridge, nil)
+	if got != nil {
+		t.Fatalf("expected nil when bridge fails and k8sClient is nil, got %v", got)
+	}
+}
+
+func TestListScopedClusters_K8sClientReturnsError(t *testing.T) {
+	t.Helper()
+
+	// nil bridge + uninitialized k8sClient → falls through → returns nil.
+	k8sClient := &k8s.MultiClusterClient{} // zero-value client will return error on DeduplicatedClusters
+	got := listScopedClusters(context.Background(), nil, k8sClient)
+	if got != nil {
+		t.Fatalf("expected nil when bridge is nil and k8sClient fails, got %v", got)
+	}
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// resolveScopedClusters — table-driven edge cases
+// ────────────────────────────────────────────────────────────────────────────
+
+func TestResolveScopedClusters_TableDriven(t *testing.T) {
+	tests := []struct {
+		name string
+		ctx  map[string]string
+		want []string
+	}{
+		{
+			name: "nil request",
+			ctx:  nil,
+			want: nil,
+		},
+		{
+			name: "empty context map",
+			ctx:  map[string]string{},
+			want: nil,
+		},
+		{
+			name: "single cluster",
+			ctx:  map[string]string{"cluster": "prod"},
+			want: []string{"prod"},
+		},
+		{
+			name: "comma-separated in clusters key",
+			ctx:  map[string]string{"clusters": "alpha, beta, gamma"},
+			want: []string{"alpha", "beta", "gamma"},
+		},
+		{
+			name: "deduplicates across keys",
+			ctx: map[string]string{
+				"cluster":  "east",
+				"clusters": "east, west",
+			},
+			want: []string{"east", "west"},
+		},
+		{
+			name: "sorts alphabetically",
+			ctx:  map[string]string{"clusters": "z-cluster, a-cluster, m-cluster"},
+			want: []string{"a-cluster", "m-cluster", "z-cluster"},
+		},
+		{
+			name: "whitespace-only values are ignored",
+			ctx: map[string]string{
+				"clusterContext": "  ",
+				"cluster":        "",
+				"clusters":       " , ,",
+			},
+			want: nil,
+		},
+		{
+			name: "clusterContext key is recognized",
+			ctx:  map[string]string{"clusterContext": "hub"},
+			want: []string{"hub"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var req *ai.ChatRequest
+			if tt.ctx != nil {
+				req = &ai.ChatRequest{Context: tt.ctx}
+			}
+			got := resolveScopedClusters(req)
+			if len(got) != len(tt.want) {
+				t.Fatalf("want %v got %v", tt.want, got)
+			}
+			for i := range tt.want {
+				if got[i] != tt.want[i] {
+					t.Fatalf("want %v got %v", tt.want, got)
+				}
+			}
+		})
+	}
+}
