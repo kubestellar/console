@@ -389,11 +389,13 @@ func Test_resolveStellarProviderHostIPs(t *testing.T) {
 	}
 }
 
-// mockProviderStore is a pure testify mock that satisfies the Store interface
-// by embedding it (the embedded nil value is never called for unimplemented methods
-// since the handlers use narrow type assertions for the provider-specific methods).
+// mockProviderStore is a testify mock that satisfies the Store interface
+// by embedding it. The embedded Store field is intentionally nil — only the
+// five methods explicitly implemented below are ever called, because the
+// handlers use narrow type assertions for the provider-specific sub-interfaces
+// rather than calling Store methods directly.
 type mockProviderStore struct {
-	Store
+	Store       // embedded nil interface; satisfies compile-time interface requirement
 	mock.Mock
 }
 
@@ -489,8 +491,10 @@ func TestListProviders(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Reset the encryption key after each sub-test to avoid cross-test pollution.
-			t.Cleanup(func() { providers.SetEncryptionKey(nil) })
+			// Save the current encryption key and restore it after the sub-test to
+			// prevent cross-test pollution without assuming the pre-test value is nil.
+			originalKey := providers.GetEncryptionKey()
+			t.Cleanup(func() { providers.SetEncryptionKey(originalKey) })
 
 			mockStore := new(mockProviderStore)
 			userUUID := uuid.New()

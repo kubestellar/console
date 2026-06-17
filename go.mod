@@ -11,11 +11,11 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/joho/godotenv v1.5.1
-	github.com/mattn/go-sqlite3 v1.14.45
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.68.1
 	github.com/stretchr/testify v1.11.1
+	github.com/valyala/fasthttp v1.58.0
 	go.uber.org/goleak v1.3.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.21.0
@@ -63,7 +63,6 @@ require (
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/tinylib/msgp v1.2.5 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasthttp v1.58.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect

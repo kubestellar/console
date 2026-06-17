@@ -31,6 +31,12 @@ func SetEncryptionKey(key []byte) {
 	encryptionKey = key
 }
 
+// GetEncryptionKey returns the current package-level AES key.
+// It is intended only for use in tests to save and restore the key.
+func GetEncryptionKey() []byte {
+	return encryptionKey
+}
+
 func EncryptAPIKey(plaintext string) ([]byte, error) {
 	if len(encryptionKey) == 0 {
 		return nil, errors.New("STELLAR_ENCRYPTION_KEY is required but not set")
