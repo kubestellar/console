@@ -42,6 +42,10 @@ vi.mock('../shared', () => ({ MIN_REFRESH_INDICATOR_MS: 0, getEffectiveInterval:
 vi.mock('../pollingManager', () => ({ subscribePolling: (...args: unknown[]) => mockSubscribePolling(...args) }))
 vi.mock('../../../lib/constants/network', async (i) => ({ ...(await i() as Record<string, unknown>), MCP_HOOK_TIMEOUT_MS: 5_000 }))
 vi.mock('../../../lib/constants', async (i) => ({ ...(await i() as Record<string, unknown>), STORAGE_KEY_TOKEN: 'token' }))
+vi.mock('../../../lib/authToken', () => ({
+  getStoredAuthToken: vi.fn().mockResolvedValue('test-token'),
+  getStoredAuthTokenSync: vi.fn().mockReturnValue('test-token'),
+}))
 
 import { useBuildpackImages } from '../buildpacks'
 
