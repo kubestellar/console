@@ -7,7 +7,12 @@ import (
 
 	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/k8stest"
 	"github.com/kubestellar/console/pkg/mcp"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func TestResolveScopedClusters_DeduplicatesAndSorts(t *testing.T) {
@@ -148,190 +153,21 @@ func TestSetClusterContextProviders(t *testing.T) {
 	providerClusterContextState.mu.RUnlock()
 }
 
-func TestBuildLiveClusterContext(t *testing.T) {
-	tests := []struct {
-		name           string
-		req            *ai.ChatRequest
-		bridge         *mcp.Bridge
-		k8sClient      *k8s.MultiClusterClient
-		wantEmpty      bool
-		wantContains   []string
-		wantNotContain []string
-	}{
-		{
-			name:      "nil context returns empty string",
-			req:       nil,
-			bridge:    nil,
-			k8sClient: nil,
-			wantEmpty: true,
-		},
-		{
-			name:      "nil request returns empty string",
-			req:       nil,
-			bridge:    &mcp.Bridge{},
-			k8sClient: nil,
-			wantEmpty: true,
-		},
-		{
-			name:      "no providers configured returns empty string",
-			req:       &ai.ChatRequest{Prompt: "test"},
-			bridge:    nil,
-			k8sClient: nil,
-			wantEmpty: true,
-		},
-		{
-			name: "scoped clusters from context are used",
-			req: &ai.ChatRequest{
-				Prompt: "test",
-				Context: map[string]string{
-					"cluster": "prod-west",
-				},
-			},
-			bridge:    &mcp.Bridge{},
-			k8sClient: nil,
-			wantContains: []string{
-				"LIVE KUBERNETES CONTEXT",
-				"<cluster-data>",
-				"Cluster: prod-west",
-				"</cluster-data>",
-			},
-		},
-		{
-			name: "scoped namespace is included when present",
-			req: &ai.ChatRequest{
-				Prompt: "test",
-				Context: map[string]string{
-					"cluster":   "prod",
-					"namespace": "kube-system",
-				},
-			},
-			bridge:    &mcp.Bridge{},
-			k8sClient: nil,
-			wantContains: []string{
-				"Scoped namespace: kube-system",
-				"Cluster: prod",
-			},
-		},
-		{
-			name: "multiple clusters from context are processed",
-			req: &ai.ChatRequest{
-				Prompt: "test",
-				Context: map[string]string{
-					"clusters": "alpha, beta, gamma",
-				},
-			},
-			bridge:    &mcp.Bridge{},
-			k8sClient: nil,
-			wantContains: []string{
-				"Cluster: alpha",
-				"Cluster: beta",
-				"Cluster: gamma",
-			},
-		},
-		{
-			name: "truncates clusters beyond limit",
-			req: &ai.ChatRequest{
-				Prompt: "test",
-				Context: map[string]string{
-					"clusters": "c1, c2, c3, c4, c5, c6, c7, c8",
-				},
-			},
-			bridge:    &mcp.Bridge{},
-			k8sClient: nil,
-			wantContains: []string{
-				"Cluster: c1",
-				"Cluster: c5",
-				"Additional clusters omitted from context: 3",
-			},
-			wantNotContain: []string{
-				"Cluster: c6",
-				"Cluster: c7",
-				"Cluster: c8",
-			},
-		},
-		{
-			name: "health section is appended for each cluster",
-			req: &ai.ChatRequest{
-				Prompt: "test",
-				Context: map[string]string{
-					"cluster": "test-cluster",
-				},
-			},
-			bridge:    &mcp.Bridge{},
-			k8sClient: nil,
-			wantContains: []string{
-				"Cluster: test-cluster",
-				"Health:",
-			},
-		},
-		{
-			name: "pod issues section is appended for each cluster",
-			req: &ai.ChatRequest{
-				Prompt: "test",
-				Context: map[string]string{
-					"cluster": "test-cluster",
-				},
-			},
-			bridge:    &mcp.Bridge{},
-			k8sClient: nil,
-			wantContains: []string{
-				"Cluster: test-cluster",
-				"Pod issues:",
-			},
-		},
-		{
-			name: "warning events section is appended for each cluster",
-			req: &ai.ChatRequest{
-				Prompt: "test",
-				Context: map[string]string{
-					"cluster": "test-cluster",
-				},
-			},
-			bridge:    &mcp.Bridge{},
-			k8sClient: nil,
-			wantContains: []string{
-				"Cluster: test-cluster",
-				"Recent warning events:",
-			},
-		},
+func newTestMultiClusterClient(t *testing.T) *k8s.MultiClusterClient {
+	t.Helper()
+
+	k8sClient, err := k8s.NewMultiClusterClient("")
+	if err != nil {
+		t.Fatalf("NewMultiClusterClient returned error: %v", err)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Set up provider state
-			providerClusterContextState.mu.Lock()
-			providerClusterContextState.bridge = tt.bridge
-			providerClusterContextState.k8sClient = tt.k8sClient
-			providerClusterContextState.mu.Unlock()
-
-			got := buildLiveClusterContext(context.Background(), tt.req)
-
-			if tt.wantEmpty {
-				if got != "" {
-					t.Errorf("expected empty string, got %q", got)
-				}
-				return
-			}
-
-			for _, want := range tt.wantContains {
-				if !strings.Contains(got, want) {
-					t.Errorf("expected output to contain %q, got:\n%s", want, got)
-				}
-			}
-
-			for _, notWant := range tt.wantNotContain {
-				if strings.Contains(got, notWant) {
-					t.Errorf("expected output to NOT contain %q, got:\n%s", notWant, got)
-				}
-			}
-		})
-	}
+	k8sClient.SetInClusterConfig(nil)
+	return k8sClient
 }
 
 func TestBuildLiveClusterContext_NilRequest(t *testing.T) {
 	t.Helper()
 
-	got := buildLiveClusterContext(context.Background(), nil)
+	got := buildLiveClusterContext(nil, nil)
 	if got != "" {
 		t.Fatalf("expected empty string for nil request, got %q", got)
 	}
@@ -347,7 +183,7 @@ func TestBuildLiveClusterContext_NoProvidersConfigured(t *testing.T) {
 	providerClusterContextState.mu.Unlock()
 
 	req := &ai.ChatRequest{Prompt: "test"}
-	got := buildLiveClusterContext(context.Background(), req)
+	got := buildLiveClusterContext(nil, req)
 	if got != "" {
 		t.Fatalf("expected empty string when no providers configured, got %q", got)
 	}
@@ -364,6 +200,80 @@ func TestAppendClusterHealth_BothProvidersUnavailable(t *testing.T) {
 	}
 }
 
+func TestListScopedClusters_UsesDeduplicatedK8sClusters(t *testing.T) {
+	t.Helper()
+
+	k8sClient := newTestMultiClusterClient(t)
+
+	k8sClient.SetRawConfig(&api.Config{
+		CurrentContext: "west",
+		Contexts: map[string]*api.Context{
+			"west":     {Cluster: "west-cluster", AuthInfo: "west-user"},
+			"verbose":  {Cluster: "verbose-cluster", AuthInfo: "west-user"},
+			"east":     {Cluster: "east-cluster", AuthInfo: "east-user"},
+			"ignored":  {Cluster: "ignored-cluster", AuthInfo: "ignored-user"},
+			"noserver": {Cluster: "noserver-cluster", AuthInfo: "ignored-user"},
+		},
+		Clusters: map[string]*api.Cluster{
+			"west-cluster":     {Server: "https://shared.example.test"},
+			"verbose-cluster":  {Server: "https://shared.example.test"},
+			"east-cluster":     {Server: "https://east.example.test"},
+			"ignored-cluster":  {Server: ""},
+			"noserver-cluster": {},
+		},
+		AuthInfos: map[string]*api.AuthInfo{
+			"west-user":    {Token: "west-token"},
+			"east-user":    {Token: "east-token"},
+			"ignored-user": {Token: "ignored-token"},
+		},
+	})
+
+	got := listScopedClusters(context.Background(), &mcp.Bridge{}, k8sClient)
+	want := []string{"east", "ignored", "noserver", "west"}
+	if len(got) != len(want) {
+		t.Fatalf("unexpected cluster count: got %d want %d (%v)", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("unexpected clusters: got %v want %v", got, want)
+		}
+	}
+	if strings.Contains(strings.Join(got, ","), "verbose") {
+		t.Fatalf("expected deduplicated clusters to exclude verbose duplicate: %v", got)
+	}
+}
+
+func TestAppendClusterHealth_UsesK8sClientHealth(t *testing.T) {
+	t.Helper()
+
+	k8sClient := newTestMultiClusterClient(t)
+
+	healthyNode := k8stest.NewHealthyNode("node-a", 4, 8)
+	unreadyNode := k8stest.NewHealthyNode("node-b", 2, 4)
+	unreadyNode.Status.Conditions = []corev1.NodeCondition{
+		{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+	}
+
+	runningPod := k8stest.NewRunningPod("api", "default")
+	boundPVC := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "data", Namespace: "default"},
+		Status:     corev1.PersistentVolumeClaimStatus{Phase: corev1.ClaimBound},
+	}
+
+	k8sClient.SetClient("west", fake.NewSimpleClientset(healthyNode, unreadyNode, runningPod, boundPVC))
+
+	var sb strings.Builder
+	appendClusterHealth(&sb, context.Background(), nil, k8sClient, "west")
+	got := sb.String()
+
+	if !strings.Contains(got, "Health: healthy=true reachable=true nodes=2 readyNodes=1 pods=1 cpuCores=6") {
+		t.Fatalf("expected formatted health summary, got %q", got)
+	}
+	if !strings.Contains(got, "Health issues: 1/2 nodes not ready") {
+		t.Fatalf("expected node readiness issue, got %q", got)
+	}
+}
+
 func TestAppendPodIssues_BothProvidersUnavailable(t *testing.T) {
 	t.Helper()
 
@@ -372,6 +282,42 @@ func TestAppendPodIssues_BothProvidersUnavailable(t *testing.T) {
 	got := sb.String()
 	if !strings.Contains(got, "Pod issues: unavailable") {
 		t.Fatalf("expected unavailable pod issues, got %q", got)
+	}
+}
+
+func TestAppendPodIssues_UsesK8sClientIssues(t *testing.T) {
+	t.Helper()
+
+	k8sClient := newTestMultiClusterClient(t)
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "api",
+			Namespace: "default",
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+			ContainerStatuses: []corev1.ContainerStatus{{
+				Ready:        false,
+				RestartCount: 7,
+				State: corev1.ContainerState{
+					Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"},
+				},
+			}},
+		},
+	}
+
+	k8sClient.SetClient("west", k8stest.NewFakeClientWithPods(pod))
+
+	var sb strings.Builder
+	appendPodIssues(&sb, context.Background(), nil, k8sClient, "west", "default")
+	got := sb.String()
+
+	if !strings.Contains(got, "Pod issues:\n- default/api status=CrashLoopBackOff restarts=7") {
+		t.Fatalf("expected pod issue summary, got %q", got)
+	}
+	if !strings.Contains(got, "reason=CrashLoopBackOff issues=CrashLoopBackOff; High restarts (7)") {
+		t.Fatalf("expected issue details from k8s client, got %q", got)
 	}
 }
 
@@ -386,6 +332,37 @@ func TestAppendWarningEvents_BothProvidersUnavailable(t *testing.T) {
 	}
 }
 
+func TestAppendWarningEvents_UsesK8sClientEvents(t *testing.T) {
+	t.Helper()
+
+	k8sClient := newTestMultiClusterClient(t)
+
+	event := &corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "api.123",
+			Namespace: "default",
+		},
+		Type:    "Warning",
+		Reason:  "FailedScheduling",
+		Message: "Insufficient cpu",
+		InvolvedObject: corev1.ObjectReference{
+			Kind: "Pod",
+			Name: "api",
+		},
+		Count: 3,
+	}
+
+	k8sClient.SetClient("west", fake.NewSimpleClientset(event))
+
+	var sb strings.Builder
+	appendWarningEvents(&sb, context.Background(), nil, k8sClient, "west", "default")
+	got := sb.String()
+
+	if !strings.Contains(got, "Recent warning events:\n- FailedScheduling default/Pod/api x3: Insufficient cpu") {
+		t.Fatalf("expected warning event summary, got %q", got)
+	}
+}
+
 func TestAppendFormattedBridgePodIssues_NoneDetected(t *testing.T) {
 	t.Helper()
 
@@ -394,6 +371,39 @@ func TestAppendFormattedBridgePodIssues_NoneDetected(t *testing.T) {
 	got := sb.String()
 	if !strings.Contains(got, "Pod issues: none detected") {
 		t.Fatalf("expected none detected, got %q", got)
+	}
+}
+
+func TestAppendFormattedBridgePodIssues_TruncatesAndFormats(t *testing.T) {
+	t.Helper()
+
+	issues := make([]mcp.PodIssue, 0, providerClusterContextIssueLimit+2)
+	for i := 0; i < providerClusterContextIssueLimit+2; i++ {
+		issues = append(issues, mcp.PodIssue{
+			Namespace: "default",
+			Name:      "bridge-pod-" + string(rune('a'+i)),
+			Status:    "Pending",
+			Reason:    "Unschedulable",
+			Restarts:  i,
+			Issues:    []string{"not ready", "blocked"},
+		})
+	}
+
+	var sb strings.Builder
+	appendFormattedBridgePodIssues(&sb, issues)
+	got := sb.String()
+
+	if !strings.HasPrefix(got, "Pod issues:\n") {
+		t.Fatalf("unexpected header: %q", got)
+	}
+	if strings.Count(got, "\n- ") != providerClusterContextIssueLimit {
+		t.Fatalf("expected %d formatted issues, got %q", providerClusterContextIssueLimit, got)
+	}
+	if !strings.Contains(got, "reason=Unschedulable issues=not ready; blocked") {
+		t.Fatalf("expected formatted bridge issue details, got %q", got)
+	}
+	if strings.Contains(got, "bridge-pod-j") {
+		t.Fatalf("expected output truncated to %d items, got %q", providerClusterContextIssueLimit, got)
 	}
 }
 
