@@ -94,7 +94,7 @@ func TestHandleDeploymentStatus_EmptyPayload(t *testing.T) {
 	assert.NoError(t, err, "missing deployment_status should be ignored")
 }
 
-func TestHandleDeploymentStatus_NonSuccessState(t *testing.T) {
+func TestHandleDeploymentStatus_NonSuccessStatePending(t *testing.T) {
 	handler := &FeedbackHandler{store: &test.MockStore{}}
 	payload := map[string]interface{}{
 		"deployment_status": map[string]interface{}{
@@ -130,7 +130,7 @@ func TestHandleDeploymentStatus_MissingDeploymentRef(t *testing.T) {
 	assert.NoError(t, err, "missing deployment ref should be ignored")
 }
 
-func TestFindFeatureRequest_NotFound(t *testing.T) {
+func TestFindFeatureRequest_NotFoundBasic(t *testing.T) {
 	mockStore := &test.MockStore{}
 	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).Return(nil, nil)
 
@@ -139,7 +139,7 @@ func TestFindFeatureRequest_NotFound(t *testing.T) {
 	assert.Nil(t, request, "should return nil when request not found")
 }
 
-func TestFindFeatureRequest_StoreError(t *testing.T) {
+func TestFindFeatureRequest_StoreErrorBasic(t *testing.T) {
 	mockStore := &test.MockStore{}
 	mockStore.On("GetFeatureRequestByIssueNumber", context.Background(), 123).Return(nil, errors.New("database error"))
 
@@ -148,7 +148,7 @@ func TestFindFeatureRequest_StoreError(t *testing.T) {
 	assert.Nil(t, request, "should return nil when store returns error")
 }
 
-func TestFindFeatureRequest_Success(t *testing.T) {
+func TestFindFeatureRequest_SuccessBasic(t *testing.T) {
 	mockStore := &test.MockStore{}
 	expectedRequest := &models.FeatureRequest{
 		ID:                uuid.New(),

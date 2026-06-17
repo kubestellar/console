@@ -138,7 +138,7 @@ func TestRespondClusterResources(t *testing.T) {
 	})
 }
 
-func TestListClusterResources(t *testing.T) {
+func TestListClusterResourcesHelpers(t *testing.T) {
 	t.Run("returns empty slice when cluster specified and fetchFn returns nil", func(t *testing.T) {
 		ctx := context.Background()
 		client := &k8s.MultiClusterClient{}
