@@ -1,0 +1,40 @@
+name: Pre-Merge Build Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pre-merge-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-gate:
+    name: build-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Go build
+        run: go build ./...
+
+      - name: Frontend install
+        working-directory: web
+        run: npm ci
+
+      - name: Frontend build
+        working-directory: web
+        run: npm run build
+
+      - name: Frontend lint
+        working-directory: web
+        run: npm run lint
