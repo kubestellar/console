@@ -2114,7 +2114,7 @@
     "showing": "Showing",
     "noMatchingApplications": "No applications match the current filters",
     "clickToView": "Click to view {{name}} details",
-    "syncNow": "今すぐ同期"
+    "syncNow": "지금 동기화"
   },
   "argoCDHealth": {
     "healthy": "Healthy",
