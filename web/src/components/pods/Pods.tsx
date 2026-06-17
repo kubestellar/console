@@ -20,6 +20,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useToast } from '../ui/Toast'
 import { ConfirmDialog } from '../../lib/modals/ConfirmDialog'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
+import { Button } from '../ui/Button'
 
 /** Target pod metadata for the delete confirmation dialog */
 interface PendingDeleteTarget {
@@ -325,41 +326,41 @@ export function Pods() {
 
                   <div className="flex items-center gap-1">
                     <PortalTooltip content={backendActionUnavailable ? backendUnavailableMessage : t('common.restart', 'Restart')}>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={(e) => issue.cluster && handleRestartPod(e, issue.cluster, issue.namespace, issue.name)}
                         disabled={backendActionUnavailable}
-                        className={backendActionUnavailable
-                          ? 'p-1.5 rounded-md text-muted-foreground opacity-50 cursor-not-allowed'
-                          : 'p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md text-muted-foreground hover:text-blue-400 transition-colors'}
+                        className="p-1.5 rounded-md text-muted-foreground hover:bg-black/5 hover:text-blue-400 dark:hover:bg-white/10"
                         aria-label={t('common.restart', 'Restart')}
                         title={backendActionUnavailable ? backendUnavailableMessage : t('common.restart', 'Restart')}
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </button>
+                        icon={<RefreshCw className="w-4 h-4" aria-hidden="true" />}
+                      />
                     </PortalTooltip>
 
                     <PortalTooltip content={t('common.logs', 'Logs')}>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={(e) => issue.cluster && handleShowLogs(e, issue.cluster, issue.namespace, issue.name)}
-                        className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md text-muted-foreground hover:text-purple-400 transition-colors"
-                        aria-label="View logs"
-                      >
-                        <Terminal className="w-4 h-4" />
-                      </button>
+                        className="p-1.5 rounded-md text-muted-foreground hover:bg-black/5 hover:text-purple-400 dark:hover:bg-white/10"
+                        aria-label={t('common.logs', 'Logs')}
+                        title={t('common.logs', 'Logs')}
+                        icon={<Terminal className="w-4 h-4" aria-hidden="true" />}
+                      />
                     </PortalTooltip>
 
                     <PortalTooltip content={backendActionUnavailable ? backendUnavailableMessage : t('common.delete', 'Delete')}>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={(e) => issue.cluster && handleDeletePod(e, issue.cluster, issue.namespace, issue.name)}
                         disabled={backendActionUnavailable}
-                        className={backendActionUnavailable
-                          ? 'p-1.5 rounded-md text-muted-foreground opacity-50 cursor-not-allowed'
-                          : 'p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md text-muted-foreground hover:text-red-400 transition-colors'}
+                        className="p-1.5 rounded-md text-muted-foreground hover:bg-black/5 hover:text-red-400 dark:hover:bg-white/10"
                         aria-label={t('common.delete', 'Delete')}
                         title={backendActionUnavailable ? backendUnavailableMessage : t('common.delete', 'Delete')}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        icon={<Trash2 className="w-4 h-4" aria-hidden="true" />}
+                      />
                     </PortalTooltip>
                   </div>
 
