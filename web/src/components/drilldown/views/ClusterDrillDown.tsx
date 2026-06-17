@@ -1,63 +1,38 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
-import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, XCircle } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaces, useNamespaceStats, useDeployments, useServices, useEvents, useClusters, type ClusterInfo } from '../../../hooks/useMCP'
 import { useCachedPVCs } from '../../../hooks/useCachedData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
-import { NamespaceResources } from '../../clusters/components'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../lib/cn'
 import { LOADING_TIMEOUT_MS } from '../../../lib/constants/network'
-
-// Resource tree lens/view options
-type TreeLens = 'all' | 'issues' | 'nodes' | 'workloads' | 'storage' | 'network'
+import { ClusterDrillDownEventsTab } from './ClusterDrillDownEventsTab'
+import { ClusterDrillDownResourceTree, type TreeLens } from './ClusterDrillDownResourceTree'
 type ClusterTab = 'events' | 'resources'
-
-/** Scroll delay (ms) to let the DOM update after switching tabs */
 const SCROLL_AFTER_TAB_SWITCH_MS = 100
-
 interface Props {
   data: Record<string, unknown>
 }
-
 export function ClusterDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const clusterName = (data.cluster as string) || ''
   const { deduplicatedClusters } = useClusters()
   const { drillToNamespace, drillToPod, drillToGPUNode, drillToEvents, drillToNode } = useDrillDownActions()
-  const clusterInfo = useMemo(
-    () => deduplicatedClusters.find((cluster: ClusterInfo) => cluster.name === clusterName || cluster.aliases?.includes(clusterName)),
-    [clusterName, deduplicatedClusters],
-  )
+  const clusterInfo = useMemo(() => deduplicatedClusters.find((cluster: ClusterInfo) => cluster.name === clusterName || cluster.aliases?.includes(clusterName)), [clusterName, deduplicatedClusters])
   const effectiveClusterName = clusterInfo?.name || clusterName
   const clusterDisplayName = clusterInfo?.name || clusterName
-
-  // Tree view state
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['cluster', 'nodes', 'namespaces']))
   const [searchFilter, setSearchFilter] = useState('')
   const [activeLens, setActiveLens] = useState<TreeLens>('all')
   const [activeTab, setActiveTab] = useState<ClusterTab>('events')
   const resourceTreeRef = useRef<HTMLDivElement>(null)
   const resourceTreeScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (resourceTreeScrollTimeoutRef.current) {
-        clearTimeout(resourceTreeScrollTimeoutRef.current)
-      }
-    }
+  useEffect(() => () => {
+    if (resourceTreeScrollTimeoutRef.current) clearTimeout(resourceTreeScrollTimeoutRef.current)
   }, [])
-
-  /**
-   * Navigate to the Resource Tree tab with a given lens active.
-   *
-   * Scrolls the tab container (not an inner branch) into view so the user
-   * sees the lens buttons and the filtered branch together — keeping this
-   * flow consistent with clicking a lens button directly inside the tab.
-   */
   const navigateToResourceTree = useCallback((lens: TreeLens) => {
     setActiveTab('resources')
     setActiveLens(lens)
@@ -71,23 +46,18 @@ export function ClusterDrillDown({ data }: Props) {
     if (resourceTreeScrollTimeoutRef.current) {
       clearTimeout(resourceTreeScrollTimeoutRef.current)
     }
-    // Allow DOM to update before scrolling
     resourceTreeScrollTimeoutRef.current = setTimeout(() => {
       resourceTreeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       resourceTreeScrollTimeoutRef.current = null
     }, SCROLL_AFTER_TAB_SWITCH_MS)
   }, [])
-
-  // Safeguard timeout to prevent infinite loading - show content after 5 seconds max
   const [loadingTimedOut, setLoadingTimedOut] = useState(false)
   useEffect(() => {
-    setLoadingTimedOut(false) // Reset on cluster change
+    setLoadingTimedOut(false)
     const timer = setTimeout(() => setLoadingTimedOut(true), LOADING_TIMEOUT_MS)
     return () => clearTimeout(timer)
   }, [effectiveClusterName])
-
   const { health, isLoading: healthLoading } = useClusterHealth(effectiveClusterName)
-  // Only show loading spinner if health is loading AND we haven't timed out
   const isLoading = healthLoading && !loadingTimedOut
   const { issues: podIssues } = usePodIssues(effectiveClusterName)
   const { issues: deploymentIssues } = useDeploymentIssues(effectiveClusterName)
@@ -99,21 +69,12 @@ export function ClusterDrillDown({ data }: Props) {
   const { services: allServices } = useServices(effectiveClusterName)
   const { pvcs: allPVCs } = useCachedPVCs(effectiveClusterName)
   const { events: clusterEvents, isLoading: eventsLoading } = useEvents(effectiveClusterName, undefined, 10)
-
-  // Toggle section expansion
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => {
-      const next = new Set(prev)
-      if (next.has(section)) {
-        next.delete(section)
-      } else {
-        next.add(section)
-      }
-      return next
-    })
-  }
-
-  // Filter data for this cluster - ALL useMemo hooks must be before any early returns
+  const toggleSection = (section: string) => setExpandedSections(prev => {
+    const next = new Set(prev)
+    if (next.has(section)) next.delete(section)
+    else next.add(section)
+    return next
+  })
   const clusterLookupNames = useMemo(() => {
     const names = new Set<string>()
     if (clusterName) names.add(clusterName)
@@ -123,26 +84,20 @@ export function ClusterDrillDown({ data }: Props) {
   }, [clusterInfo?.aliases, clusterName, effectiveClusterName])
   const clusterPrefix = useMemo(() => effectiveClusterName.split('/')[0], [effectiveClusterName])
   const normalizedSearchFilter = useMemo(() => searchFilter.trim().toLowerCase(), [searchFilter])
-
   const clusterGPUNodes = useMemo(() => {
     if (!effectiveClusterName) return []
     return (allGPUNodes || []).filter(node => clusterLookupNames.has(node.cluster) || node.cluster.includes(clusterPrefix))
   }, [allGPUNodes, clusterLookupNames, effectiveClusterName, clusterPrefix])
-
   const clusterDeploymentIssues = useMemo(() => {
     if (!effectiveClusterName) return []
     return (deploymentIssues || []).filter(issue => clusterLookupNames.has(issue.cluster || '') || issue.cluster?.includes(clusterPrefix))
   }, [clusterLookupNames, effectiveClusterName, clusterPrefix, deploymentIssues])
-
-  // Get unique namespaces from issues
   const namespaces = useMemo(() => {
-    const ns = new Set<string>()
-    podIssues.forEach(p => ns.add(p.namespace))
-    clusterDeploymentIssues.forEach(d => ns.add(d.namespace))
-    return Array.from(ns).sort()
+    const namespaceSet = new Set<string>()
+    podIssues.forEach(issue => namespaceSet.add(issue.namespace))
+    clusterDeploymentIssues.forEach(issue => namespaceSet.add(issue.namespace))
+    return Array.from(namespaceSet).sort()
   }, [podIssues, clusterDeploymentIssues])
-
-  // Group GPUs by type
   const gpuByType = useMemo(() => {
     const map: Record<string, { total: number; allocated: number; nodes: number }> = {}
     clusterGPUNodes.forEach(node => {
@@ -156,132 +111,100 @@ export function ClusterDrillDown({ data }: Props) {
     })
     return map
   }, [clusterGPUNodes])
-
-  // Filter resources based on search and lens
   const filteredNodes = useMemo(() => {
     let nodes = allNodes || []
     if (normalizedSearchFilter) {
-      nodes = nodes.filter(n => n.name.toLowerCase().includes(normalizedSearchFilter))
+      nodes = nodes.filter(node => node.name.toLowerCase().includes(normalizedSearchFilter))
     }
     if (activeLens === 'issues') {
-      nodes = nodes.filter(n => n.status !== 'Ready')
+      nodes = nodes.filter(node => node.status !== 'Ready')
     }
     if (activeLens === 'nodes' || activeLens === 'all') {
       return nodes
     }
     return activeLens === 'issues' ? nodes : []
   }, [activeLens, allNodes, normalizedSearchFilter])
-
   const filteredNamespaceStats = useMemo(() => {
-    const statsByName = new Map(namespaceStats.map(ns => [ns.name, ns]))
+    const statsByName = new Map(namespaceStats.map(namespace => [namespace.name, namespace]))
     const mergedNamespaceNames = Array.from(new Set([
-      ...namespaceStats.map(ns => ns.name),
+      ...namespaceStats.map(namespace => namespace.name),
       ...(allNamespaces || []),
     ]))
-
-    let namespaces = mergedNamespaceNames.map(name => statsByName.get(name) || {
+    let namespacesWithStats = mergedNamespaceNames.map(name => statsByName.get(name) || {
       name,
       podCount: 0,
       runningPods: 0,
       pendingPods: 0,
       failedPods: 0,
     })
-
     if (normalizedSearchFilter) {
-      namespaces = namespaces.filter(ns => ns.name.toLowerCase().includes(normalizedSearchFilter))
+      namespacesWithStats = namespacesWithStats.filter(namespace => namespace.name.toLowerCase().includes(normalizedSearchFilter))
     }
-
-    // Filter out system namespaces unless explicitly searching
-    // But keep them if that's all we have
     if (!normalizedSearchFilter) {
-      const nonSystemNs = namespaces.filter(ns => !ns.name.startsWith('kube-') && ns.name !== 'default')
-      if (nonSystemNs.length > 0) {
-        namespaces = nonSystemNs
+      const nonSystemNamespaces = namespacesWithStats.filter(namespace => !namespace.name.startsWith('kube-') && namespace.name !== 'default')
+      if (nonSystemNamespaces.length > 0) {
+        namespacesWithStats = nonSystemNamespaces
       }
     }
-
-    return namespaces
+    return namespacesWithStats
   }, [allNamespaces, namespaceStats, normalizedSearchFilter])
-
-  const filteredNamespaces = useMemo(
-    () => filteredNamespaceStats.map(ns => ns.name),
-    [filteredNamespaceStats],
-  )
-
   const filteredDeployments = useMemo(() => {
-    let deps = allDeployments || []
+    let deployments = allDeployments || []
     if (normalizedSearchFilter) {
-      deps = deps.filter(d => d.name.toLowerCase().includes(normalizedSearchFilter) || d.namespace.toLowerCase().includes(normalizedSearchFilter))
+      deployments = deployments.filter(deployment => deployment.name.toLowerCase().includes(normalizedSearchFilter) || deployment.namespace.toLowerCase().includes(normalizedSearchFilter))
     }
     if (activeLens === 'issues') {
-      deps = deps.filter(d => d.readyReplicas < d.replicas || d.status === 'failed')
+      deployments = deployments.filter(deployment => deployment.readyReplicas < deployment.replicas || deployment.status === 'failed')
     }
     if (activeLens === 'workloads' || activeLens === 'all' || activeLens === 'issues') {
-      return deps
+      return deployments
     }
     return []
   }, [activeLens, allDeployments, normalizedSearchFilter])
-
-  const unhealthyDeployments = useMemo(() => {
-    return filteredDeployments.filter(d => d.readyReplicas < d.replicas)
-  }, [filteredDeployments])
-
+  const unhealthyDeployments = useMemo(() => filteredDeployments.filter(deployment => deployment.readyReplicas < deployment.replicas), [filteredDeployments])
   const filteredServices = useMemo(() => {
-    let svcs = allServices || []
+    let services = allServices || []
     if (normalizedSearchFilter) {
-      svcs = svcs.filter(s => s.name.toLowerCase().includes(normalizedSearchFilter) || s.namespace.toLowerCase().includes(normalizedSearchFilter))
+      services = services.filter(service => service.name.toLowerCase().includes(normalizedSearchFilter) || service.namespace.toLowerCase().includes(normalizedSearchFilter))
     }
     if (activeLens === 'network' || activeLens === 'all') {
-      return svcs
+      return services
     }
     return []
   }, [activeLens, allServices, normalizedSearchFilter])
-
   const filteredPVCs = useMemo(() => {
     let pvcs = allPVCs || []
     if (normalizedSearchFilter) {
-      pvcs = pvcs.filter(p => p.name.toLowerCase().includes(normalizedSearchFilter) || p.namespace.toLowerCase().includes(normalizedSearchFilter))
+      pvcs = pvcs.filter(pvc => pvc.name.toLowerCase().includes(normalizedSearchFilter) || pvc.namespace.toLowerCase().includes(normalizedSearchFilter))
     }
     if (activeLens === 'issues') {
-      pvcs = pvcs.filter(p => p.status !== 'Bound')
+      pvcs = pvcs.filter(pvc => pvc.status !== 'Bound')
     }
     if (activeLens === 'storage' || activeLens === 'all' || activeLens === 'issues') {
       return pvcs
     }
     return []
   }, [activeLens, allPVCs, normalizedSearchFilter])
-
   const namespaceResources = useMemo(() => {
     const podIssueCounts: Record<string, number> = {}
     const deploymentIssueCounts: Record<string, number> = {}
-
     podIssues.forEach(issue => {
       podIssueCounts[issue.namespace] = (podIssueCounts[issue.namespace] || 0) + 1
     })
-
     clusterDeploymentIssues.forEach(issue => {
       deploymentIssueCounts[issue.namespace] = (deploymentIssueCounts[issue.namespace] || 0) + 1
     })
-
     return {
       podIssueCounts,
       deploymentIssueCounts,
     }
   }, [clusterDeploymentIssues, podIssues])
-
-  const hasVisibleResourceData =
-    filteredNodes.length > 0 ||
-    filteredNamespaces.length > 0 ||
-    filteredDeployments.length > 0 ||
-    filteredServices.length > 0 ||
-    filteredPVCs.length > 0
-
-  // Count issues for each category
+  const hasVisibleResourceData = filteredNodes.length > 0 || filteredNamespaceStats.length > 0 || filteredDeployments.length > 0 || filteredServices.length > 0 || filteredPVCs.length > 0
   const issueCounts = useMemo(() => {
-    const nodes = (allNodes || []).filter(n => n.status !== 'Ready').length
-    const deployments = (allDeployments || []).filter(d => d.readyReplicas < d.replicas).length
+    const nodes = (allNodes || []).filter(node => node.status !== 'Ready').length
+    const deployments = (allDeployments || []).filter(deployment => deployment.readyReplicas < deployment.replicas).length
     const pods = podIssues.length
-    const pvcs = (allPVCs || []).filter(p => p.status !== 'Bound').length
+    const pvcs = (allPVCs || []).filter(pvc => pvc.status !== 'Bound').length
     return {
       nodes,
       deployments,
@@ -290,20 +213,10 @@ export function ClusterDrillDown({ data }: Props) {
       total: nodes + deployments + pods + pvcs,
     }
   }, [allDeployments, allNodes, allPVCs, podIssues])
-
-  // Guard against missing cluster name (after ALL hooks)
-  if (!clusterName) {
-    return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground">
-        No cluster selected
-      </div>
-    )
-  }
-
+  if (!clusterName) return <div className="flex items-center justify-center h-64 text-muted-foreground">No cluster selected</div>
   if (isLoading) {
     return (
       <div className="space-y-6 animate-pulse">
-        {/* Skeleton: Overview Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="p-4 rounded-lg bg-card/50 border border-border">
@@ -313,13 +226,9 @@ export function ClusterDrillDown({ data }: Props) {
             </div>
           ))}
         </div>
-
-        {/* Skeleton: Quick Actions */}
         <div className="flex gap-2">
           <div className="h-9 w-28 bg-secondary rounded-lg" />
         </div>
-
-        {/* Skeleton: Issues Section */}
         <div>
           <div className="h-6 w-32 bg-secondary rounded mb-4" />
           <div className="space-y-2">
@@ -339,23 +248,18 @@ export function ClusterDrillDown({ data }: Props) {
       </div>
     )
   }
-
-  const totalGPUs = clusterGPUNodes.reduce((sum, n) => sum + (n.gpuCount || 0), 0)
-  const allocatedGPUs = clusterGPUNodes.reduce((sum, n) => sum + (n.gpuAllocated || 0), 0)
-
+  const totalGPUs = clusterGPUNodes.reduce((sum, node) => sum + (node.gpuCount || 0), 0)
+  const allocatedGPUs = clusterGPUNodes.reduce((sum, node) => sum + (node.gpuAllocated || 0), 0)
   return (
     <div className="space-y-6">
-      {/* Overview Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-lg bg-card/50 border border-border">
           <div className="flex items-center gap-2 mb-2">
-            {/* Derive health status from actual data: all nodes ready = healthy */}
             <StatusIndicator status={
               health?.reachable === false ? 'unreachable' :
-              // If we have node data, derive healthy from readyNodes vs nodeCount
-              (health?.nodeCount && health.nodeCount > 0)
-                ? (health.readyNodes === health.nodeCount ? 'healthy' : 'warning')
-                : (health?.healthy ? 'healthy' : 'error')
+                (health?.nodeCount && health.nodeCount > 0)
+                  ? (health.readyNodes === health.nodeCount ? 'healthy' : 'warning')
+                  : (health?.healthy ? 'healthy' : 'error')
             } />
             <span className="text-sm text-muted-foreground">{t('common.status')}</span>
           </div>
@@ -366,7 +270,6 @@ export function ClusterDrillDown({ data }: Props) {
                 : (health?.healthy ? t('common.healthy', 'Healthy') : t('common.unknown', 'Unknown'))}
           </div>
         </div>
-
         <button
           onClick={() => navigateToResourceTree('nodes')}
           className="p-4 rounded-lg bg-card/50 border border-border text-left hover:bg-card hover:border-primary/50 transition-colors cursor-pointer w-full"
@@ -375,7 +278,6 @@ export function ClusterDrillDown({ data }: Props) {
           <div className="text-2xl font-bold text-foreground">{health?.nodeCount || 0}</div>
           <div className="text-xs text-green-400">{health?.readyNodes || 0} ready</div>
         </button>
-
         <button
           onClick={() => navigateToResourceTree('workloads')}
           className="p-4 rounded-lg bg-card/50 border border-border text-left hover:bg-card hover:border-primary/50 transition-colors cursor-pointer w-full"
@@ -383,15 +285,12 @@ export function ClusterDrillDown({ data }: Props) {
           <div className="text-sm text-muted-foreground mb-2">{t('common.pods')}</div>
           <div className="text-2xl font-bold text-foreground">{health?.podCount || 0}</div>
         </button>
-
         <div className="p-4 rounded-lg bg-card/50 border border-border">
           <div className="text-sm text-muted-foreground mb-2">{t('common.gpus')}</div>
           <div className="text-2xl font-bold text-foreground">{totalGPUs}</div>
           <div className="text-xs text-yellow-400">{allocatedGPUs} allocated</div>
         </div>
       </div>
-
-      {/* GPU Type Breakdown */}
       {Object.keys(gpuByType).length > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-foreground mb-3">{t('common.gpuTypes')}</h3>
@@ -408,15 +307,11 @@ export function ClusterDrillDown({ data }: Props) {
           </div>
         </div>
       )}
-
-      {/* Issues Section */}
       {(podIssues.length > 0 || clusterDeploymentIssues.length > 0) && (
         <div>
           <h3 className="text-lg font-semibold text-foreground mb-4">
             Issues ({podIssues.length + clusterDeploymentIssues.length})
           </h3>
-
-          {/* Pod Issues */}
           {podIssues.length > 0 && (
             <div className="mb-4">
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Pod Issues</h4>
@@ -447,8 +342,6 @@ export function ClusterDrillDown({ data }: Props) {
               </div>
             </div>
           )}
-
-          {/* Deployment Issues */}
           {clusterDeploymentIssues.length > 0 && (
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Deployment Issues</h4>
@@ -481,24 +374,22 @@ export function ClusterDrillDown({ data }: Props) {
           )}
         </div>
       )}
-
-      {/* Namespaces with Issues */}
       {namespaces.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-foreground mb-4">Namespaces with Activity</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {namespaces.map(ns => {
-              const nsIssues = podIssues.filter(p => p.namespace === ns).length +
-                clusterDeploymentIssues.filter(d => d.namespace === ns).length
+            {namespaces.map(namespace => {
+              const namespaceIssues = podIssues.filter(issue => issue.namespace === namespace).length +
+                clusterDeploymentIssues.filter(issue => issue.namespace === namespace).length
               return (
                 <button
-                  key={ns}
-                  onClick={() => drillToNamespace(effectiveClusterName, ns)}
+                  key={namespace}
+                  onClick={() => drillToNamespace(effectiveClusterName, namespace)}
                   className="p-3 rounded-lg bg-card/50 border border-border text-left hover:bg-card hover:border-primary/50 transition-colors"
                 >
-                  <div className="font-medium text-foreground text-sm truncate">{ns}</div>
-                  {nsIssues > 0 && (
-                    <div className="text-xs text-red-400 mt-1">{nsIssues} issues</div>
+                  <div className="font-medium text-foreground text-sm truncate">{namespace}</div>
+                  {namespaceIssues > 0 && (
+                    <div className="text-xs text-red-400 mt-1">{namespaceIssues} issues</div>
                   )}
                 </button>
               )
@@ -506,13 +397,9 @@ export function ClusterDrillDown({ data }: Props) {
           </div>
         </div>
       )}
-
-      {/* GPU Nodes */}
       {clusterGPUNodes.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            GPU Nodes ({clusterGPUNodes.length})
-          </h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">GPU Nodes ({clusterGPUNodes.length})</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {clusterGPUNodes.map((node, i) => (
               <div
@@ -525,11 +412,7 @@ export function ClusterDrillDown({ data }: Props) {
                   <div className="text-xs text-muted-foreground">{node.gpuType}</div>
                 </div>
                 <div className="flex items-center gap-3 ml-4">
-                  <Gauge
-                    value={node.gpuAllocated}
-                    max={node.gpuCount}
-                    size="sm"
-                  />
+                  <Gauge value={node.gpuAllocated} max={node.gpuCount} size="sm" />
                   <div className="text-sm text-muted-foreground whitespace-nowrap">
                     {node.gpuAllocated}/{node.gpuCount} GPUs
                   </div>
@@ -539,8 +422,6 @@ export function ClusterDrillDown({ data }: Props) {
           </div>
         </div>
       )}
-
-      {/* Tabs for Events and Resources */}
       <div ref={resourceTreeRef} className="border-t border-border pt-4">
         <div className="border-b border-border mb-4">
           <div className="flex gap-0">
@@ -555,7 +436,7 @@ export function ClusterDrillDown({ data }: Props) {
                   'px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors',
                   activeTab === tab.id
                     ? 'text-primary border-primary'
-                    : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
+                    : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border',
                 )}
               >
                 {tab.label}
@@ -564,7 +445,7 @@ export function ClusterDrillDown({ data }: Props) {
                     'text-xs px-1.5 py-0.5 rounded-full',
                     activeTab === tab.id
                       ? 'bg-primary/20 text-primary'
-                      : tab.id === 'resources' ? 'bg-red-500/20 text-red-400' : 'bg-secondary text-muted-foreground'
+                      : tab.id === 'resources' ? 'bg-red-500/20 text-red-400' : 'bg-secondary text-muted-foreground',
                   )}>
                     {tab.count}
                   </span>
@@ -573,429 +454,31 @@ export function ClusterDrillDown({ data }: Props) {
             ))}
           </div>
         </div>
-
-        {/* Events Tab */}
-        {activeTab === 'events' && (
-          <div>
-            <div className="flex justify-end mb-3">
-              <button
-                onClick={() => drillToEvents(effectiveClusterName)}
-                className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
-              >
-                View All →
-              </button>
-            </div>
-            {eventsLoading ? (
-              <div className="space-y-2 animate-pulse">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="p-3 rounded-lg bg-card/30 border border-border">
-                    <div className="h-4 w-32 bg-secondary rounded mb-2" />
-                    <div className="h-3 w-full bg-secondary/50 rounded" />
-                  </div>
-                ))}
-              </div>
-            ) : clusterEvents.length === 0 ? (
-              <div className="p-4 rounded-lg bg-card/30 border border-border text-center text-muted-foreground text-sm">
-                No recent events
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {clusterEvents.slice(0, 10).map((event, i) => (
-                  <div
-                    key={i}
-                    className={`p-3 rounded-lg border-l-4 cursor-pointer hover:bg-card/50 transition-colors ${
-                      event.type === 'Warning'
-                        ? 'bg-yellow-500/10 border-l-yellow-500'
-                        : 'bg-card/30 border-l-green-500'
-                    }`}
-                    onClick={() => drillToEvents(effectiveClusterName)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <StatusIndicator status={event.type === 'Warning' ? 'warning' : 'healthy'} size="sm" />
-                        <span className="font-medium text-foreground text-sm">{event.reason}</span>
-                      </div>
-                      {event.count > 1 && (
-                        <span className="text-xs px-2 py-0.5 rounded bg-card text-muted-foreground">
-                          x{event.count}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1 truncate">
-                      {event.namespace}/{event.object}
-                    </div>
-                    <p className="text-xs text-foreground mt-1 line-clamp-1">{event.message}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Resources Tab */}
+        {activeTab === 'events' && <ClusterDrillDownEventsTab clusterEvents={clusterEvents} eventsLoading={eventsLoading} onViewAll={() => drillToEvents(effectiveClusterName)} />}
         {activeTab === 'resources' && (
-          <div className="space-y-4">
-            {/* Search and Filters */}
-            <div className="flex flex-col md:flex-row gap-3">
-              {/* Search */}
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  placeholder={t('common.searchResources')}
-                  className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
-                />
-              </div>
-
-              {/* Lens/View Buttons */}
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { id: 'all' as TreeLens, label: 'All', icon: Layers },
-                  { id: 'issues' as TreeLens, label: 'Issues', icon: AlertTriangle, count: issueCounts.total },
-                  { id: 'nodes' as TreeLens, label: 'Nodes', icon: Server, count: filteredNodes.length },
-                  { id: 'workloads' as TreeLens, label: 'Workloads', icon: Box, count: filteredNamespaceStats.length },
-                  { id: 'storage' as TreeLens, label: 'Storage', icon: HardDrive, count: filteredPVCs.length },
-                  { id: 'network' as TreeLens, label: 'Network', icon: Network, count: filteredServices.length },
-                ].map(lens => (
-                  <button
-                    key={lens.id}
-                    onClick={() => setActiveLens(lens.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${
-                      activeLens === lens.id
-                        ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                        : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <lens.icon className="w-3.5 h-3.5" />
-                    {lens.label}
-                    {lens.count !== undefined && lens.count > 0 && (
-                      <span className={`ml-1 px-1.5 py-0.5 rounded-full text-2xs ${
-                        lens.id === 'issues' ? 'bg-red-500/20 text-red-400' : 'bg-secondary text-muted-foreground'
-                      }`}>
-                        {lens.count}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tree Content */}
-            <div className="bg-card/30 rounded-lg border border-border p-4">
-              {/* Cluster Root */}
-              <div className="relative">
-                {/* Cluster Header */}
-                <div
-                  onClick={() => toggleSection('cluster')}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer"
-                >
-                  {expandedSections.has('cluster') ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                  <Server className="w-4 h-4 text-cyan-400" />
-                  <span className="font-medium text-foreground">{clusterDisplayName}</span>
-                  <StatusIndicator status={
-                    health?.reachable === false ? 'unreachable' :
-                    (health?.nodeCount && health.nodeCount > 0)
-                      ? (health.readyNodes === health.nodeCount ? 'healthy' : 'warning')
-                      : (health?.healthy ? 'healthy' : 'error')
-                  } />
-                </div>
-
-                {expandedSections.has('cluster') && (
-                  <div className="ml-6 border-l-2 border-cyan-500/30 pl-4 mt-2 space-y-2">
-                    {/* Nodes Branch */}
-                    {(activeLens === 'all' || activeLens === 'nodes' || activeLens === 'issues') && filteredNodes.length > 0 && (
-                      <div>
-                        <div
-                          onClick={() => toggleSection('nodes')}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer"
-                        >
-                          {expandedSections.has('nodes') ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          <Server className="w-4 h-4 text-blue-400" />
-                          <span className="text-sm font-medium text-foreground">{t('common.nodes')}</span>
-                          <span className="text-xs text-muted-foreground">({filteredNodes.length})</span>
-                          {issueCounts.nodes > 0 && (
-                            <StatusBadge color="red" size="xs" rounded="full" className="ml-1">
-                              {issueCounts.nodes} not ready
-                            </StatusBadge>
-                          )}
-                        </div>
-
-                        {expandedSections.has('nodes') && (
-                          <div className="ml-6 border-l-2 border-blue-500/30 pl-4 mt-1 space-y-1">
-                            {filteredNodes.slice(0, 20).map((node) => (
-                              <button
-                                key={node.name}
-                                onClick={() => drillToNode(effectiveClusterName, node.name, { status: node.status, roles: node.roles, unschedulable: node.unschedulable })}
-                                type="button"
-                                className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group w-full text-left bg-transparent border-none"
-                              >
-                                <div className={`w-2 h-2 rounded-full ${node.status === 'Ready' ? 'bg-green-400' : 'bg-red-400'}`} />
-                                <span className="text-sm text-foreground group-hover:text-primary transition-colors">{node.name}</span>
-                                <span className={`text-xs ${node.status === 'Ready' ? 'text-green-400' : 'text-red-400'}`}>
-                                  {node.status}
-                                </span>
-                                {node.roles?.length > 0 && (
-                                  <span className="text-xs text-muted-foreground">
-                                    [{(node.roles || []).join(', ')}]
-                                  </span>
-                                )}
-                                <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                              </button>
-                            ))}
-                            {filteredNodes.length > 20 && (
-                              <div className="text-xs text-muted-foreground p-2">
-                                +{filteredNodes.length - 20} more nodes...
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Namespaces Branch */}
-                    {(activeLens === 'all' || activeLens === 'workloads') && filteredNamespaces.length > 0 && (
-                      <div>
-                        <div
-                          onClick={() => toggleSection('namespaces')}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer"
-                        >
-                          {expandedSections.has('namespaces') ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          <Database className="w-4 h-4 text-purple-400" />
-                          <span className="text-sm font-medium text-foreground">Namespaces</span>
-                          <span className="text-xs text-muted-foreground">({filteredNamespaces.length})</span>
-                        </div>
-
-                        {expandedSections.has('namespaces') && (
-                          <div className="ml-6 border-l-2 border-purple-500/30 pl-4 mt-1 space-y-1">
-                            {filteredNamespaceStats.slice(0, 15).map((namespaceStat, i) => {
-                              const ns = namespaceStat.name
-                              const nsKey = `ns-${ns}`
-                              const nsPodIssues = namespaceResources.podIssueCounts[ns] || 0
-                              const nsDeploymentIssues = namespaceResources.deploymentIssueCounts[ns] || 0
-                              const totalIssues = nsPodIssues + nsDeploymentIssues
-
-
-                              return (
-                                <div key={i}>
-                                  <div
-                                    onClick={() => toggleSection(nsKey)}
-                                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer"
-                                  >
-                                    {expandedSections.has(nsKey) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                                    <span className="text-sm text-foreground">{ns}</span>
-                                    {namespaceStat.podCount > 0 && (
-                                      <span className="text-xs text-muted-foreground">
-                                        {namespaceStat.runningPods}/{namespaceStat.podCount} pods
-                                      </span>
-                                    )}
-                                    {namespaceStat.pendingPods > 0 && (
-                                      <StatusBadge color="yellow" size="xs" rounded="full" className="ml-1">
-                                        {namespaceStat.pendingPods} pending
-                                      </StatusBadge>
-                                    )}
-                                    {totalIssues > 0 && (
-                                      <StatusBadge color="red" size="xs" rounded="full" className="ml-1">
-                                        {totalIssues}
-                                      </StatusBadge>
-                                    )}
-                                  </div>
-
-                                  {expandedSections.has(nsKey) && (
-                                    <div className="ml-6 border-l-2 border-muted/30 pl-4 mt-1 space-y-2">
-                                      <NamespaceResources clusterName={effectiveClusterName} namespace={ns} />
-                                      <button
-                                        onClick={() => drillToNamespace(effectiveClusterName, ns)}
-                                        className="text-xs text-purple-400 hover:text-purple-300 p-1.5 transition-colors"
-                                      >
-                                        View all in {ns} →
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
-                            {filteredNamespaces.length > 15 && (
-                              <div className="text-xs text-muted-foreground p-2">
-                                +{filteredNamespaces.length - 15} more namespaces...
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Deployments with Issues (when issues lens active) */}
-                    {activeLens === 'issues' && issueCounts.deployments > 0 && (
-                      <div>
-                        <div
-                          onClick={() => toggleSection('deployment-issues')}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer"
-                        >
-                          {expandedSections.has('deployment-issues') ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          <AlertTriangle className="w-4 h-4 text-orange-400" />
-                          <span className="text-sm font-medium text-foreground">Deployment Issues</span>
-                          <StatusBadge color="orange" size="xs" rounded="full">
-                            {issueCounts.deployments}
-                          </StatusBadge>
-                        </div>
-
-                        {expandedSections.has('deployment-issues') && (
-                          <div className="ml-6 border-l-2 border-orange-500/30 pl-4 mt-1 space-y-1">
-                            {unhealthyDeployments.map((dep, i) => (
-                              <div
-                                key={i}
-                                onClick={() => drillToNamespace(effectiveClusterName, dep.namespace)}
-                                className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
-                              >
-                                <XCircle className="w-3 h-3 text-orange-400" />
-                                <span className="text-sm text-foreground">{dep.name}</span>
-                                <span className="text-xs text-muted-foreground">{dep.namespace}</span>
-                                <span className="text-xs text-orange-400">{dep.readyReplicas}/{dep.replicas}</span>
-                                <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Pod Issues (when issues lens active) */}
-                    {activeLens === 'issues' && issueCounts.pods > 0 && (
-                      <div>
-                        <div
-                          onClick={() => toggleSection('pod-issues')}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer"
-                        >
-                          {expandedSections.has('pod-issues') ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          <AlertTriangle className="w-4 h-4 text-red-400" />
-                          <span className="text-sm font-medium text-foreground">Pod Issues</span>
-                          <StatusBadge color="red" size="xs" rounded="full">
-                            {issueCounts.pods}
-                          </StatusBadge>
-                        </div>
-
-                        {expandedSections.has('pod-issues') && (
-                          <div className="ml-6 border-l-2 border-red-500/30 pl-4 mt-1 space-y-1">
-                            {podIssues.slice(0, 10).map((issue, i) => (
-                              <div
-                                key={i}
-                                onClick={() => drillToPod(effectiveClusterName, issue.namespace, issue.name, { ...issue })}
-                                className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
-                              >
-                                <XCircle className="w-3 h-3 text-red-400" />
-                                <span className="text-sm text-foreground">{issue.name}</span>
-                                <span className="text-xs text-muted-foreground">{issue.namespace}</span>
-                                <span className="text-xs text-red-400">{issue.status}</span>
-                                <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                              </div>
-                            ))}
-                            {podIssues.length > 10 && (
-                              <div className="text-xs text-muted-foreground p-2">
-                                +{podIssues.length - 10} more pod issues...
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Storage Resources */}
-                    {(activeLens === 'storage' || (activeLens === 'all' && filteredPVCs.length > 0)) && filteredPVCs.length > 0 && (
-                      <div>
-                        <div
-                          onClick={() => toggleSection('storage')}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer"
-                        >
-                          {expandedSections.has('storage') ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          <HardDrive className="w-4 h-4 text-green-400" />
-                          <span className="text-sm font-medium text-foreground">{t('common.pvcs')}</span>
-                          <span className="text-xs text-muted-foreground">({filteredPVCs.length})</span>
-                          {issueCounts.pvcs > 0 && (
-                            <StatusBadge color="yellow" size="xs" rounded="full" className="ml-1">
-                              {issueCounts.pvcs} pending
-                            </StatusBadge>
-                          )}
-                        </div>
-
-                        {expandedSections.has('storage') && (
-                          <div className="ml-6 border-l-2 border-green-500/30 pl-4 mt-1 space-y-1">
-                            {filteredPVCs.slice(0, 10).map((pvc, i) => (
-                              <div
-                                key={i}
-                                onClick={() => drillToNamespace(effectiveClusterName, pvc.namespace)}
-                                className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
-                              >
-                                <div className={`w-2 h-2 rounded-full ${pvc.status === 'Bound' ? 'bg-green-400' : 'bg-yellow-400'}`} />
-                                <span className="text-sm text-foreground">{pvc.name}</span>
-                                <span className="text-xs text-muted-foreground">{pvc.namespace}</span>
-                                <span className={`text-xs ${pvc.status === 'Bound' ? 'text-green-400' : 'text-yellow-400'}`}>
-                                  {pvc.status}
-                                </span>
-                                {pvc.capacity && <span className="text-xs text-muted-foreground">{pvc.capacity}</span>}
-                                <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                              </div>
-                            ))}
-                            {filteredPVCs.length > 10 && (
-                              <div className="text-xs text-muted-foreground p-2">
-                                +{filteredPVCs.length - 10} more PVCs...
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Network Resources */}
-                    {activeLens === 'network' && filteredServices.length > 0 && (
-                      <div>
-                        <div
-                          onClick={() => toggleSection('network')}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer"
-                        >
-                          {expandedSections.has('network') ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          <Network className="w-4 h-4 text-blue-400" />
-                          <span className="text-sm font-medium text-foreground">{t('common.services')}</span>
-                          <span className="text-xs text-muted-foreground">({filteredServices.length})</span>
-                        </div>
-
-                        {expandedSections.has('network') && (
-                          <div className="ml-6 border-l-2 border-blue-500/30 pl-4 mt-1 space-y-1">
-                            {filteredServices.slice(0, 15).map((svc, i) => (
-                              <div
-                                key={i}
-                                onClick={() => drillToNamespace(effectiveClusterName, svc.namespace)}
-                                className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
-                              >
-                                <Network className="w-3 h-3 text-blue-400" />
-                                <span className="text-sm text-foreground">{svc.name}</span>
-                                <span className="text-xs text-muted-foreground">{svc.namespace}</span>
-                                <StatusBadge color="blue" size="xs">{svc.type}</StatusBadge>
-                                <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                              </div>
-                            ))}
-                            {filteredServices.length > 15 && (
-                              <div className="text-xs text-muted-foreground p-2">
-                                +{filteredServices.length - 15} more services...
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Empty state for filters */}
-                    {!hasVisibleResourceData && (
-                      <div className="text-center text-muted-foreground text-sm py-4">
-                        No resources match the current filter
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <ClusterDrillDownResourceTree
+            activeLens={activeLens}
+            clusterDisplayName={clusterDisplayName}
+            effectiveClusterName={effectiveClusterName}
+            expandedSections={expandedSections}
+            filteredNamespaceStats={filteredNamespaceStats}
+            filteredNodes={filteredNodes}
+            filteredPVCs={filteredPVCs}
+            filteredServices={filteredServices}
+            hasVisibleResourceData={hasVisibleResourceData}
+            health={health}
+            issueCounts={issueCounts}
+            namespaceResources={namespaceResources}
+            onDrillToNamespace={drillToNamespace}
+            onDrillToNode={drillToNode}
+            onDrillToPod={drillToPod}
+            podIssues={podIssues}
+            searchFilter={searchFilter}
+            setActiveLens={setActiveLens}
+            setSearchFilter={setSearchFilter}
+            toggleSection={toggleSection}
+            unhealthyDeployments={unhealthyDeployments}
+          />
         )}
       </div>
     </div>
