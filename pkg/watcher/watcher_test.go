@@ -135,12 +135,7 @@ func TestEnsureTLSCert_GeneratesValidCertificate(t *testing.T) {
 		t.Fatalf("getwd: %v", err)
 	}
 
-	workDir := filepath.Join(cwd, "testdata", "ensuretls-workdir")
-	_ = os.RemoveAll(workDir)
-	if err := os.MkdirAll(workDir, 0o700); err != nil {
-		t.Fatalf("mkdir workdir: %v", err)
-	}
-	defer os.RemoveAll(workDir)
+	workDir := t.TempDir()
 
 	if err := os.Chdir(workDir); err != nil {
 		t.Fatalf("chdir to workdir: %v", err)
@@ -317,12 +312,7 @@ func TestRun_TLSMode(t *testing.T) {
 	}
 
 	// Create a work directory for TLS files
-	workDir := filepath.Join(cwd, "testdata", "run-tls-workdir")
-	_ = os.RemoveAll(workDir)
-	if err := os.MkdirAll(workDir, 0o700); err != nil {
-		t.Fatalf("mkdir workdir: %v", err)
-	}
-	defer os.RemoveAll(workDir)
+	workDir := t.TempDir()
 
 	// Change to work directory
 	if err := os.Chdir(workDir); err != nil {
@@ -425,12 +415,7 @@ func TestHandleConn_TLSConnection(t *testing.T) {
 		t.Fatalf("getwd: %v", err)
 	}
 
-	workDir := filepath.Join(cwd, "testdata", "handleconn-tls-workdir")
-	_ = os.RemoveAll(workDir)
-	if err := os.MkdirAll(workDir, 0o700); err != nil {
-		t.Fatalf("mkdir workdir: %v", err)
-	}
-	defer os.RemoveAll(workDir)
+	workDir := t.TempDir()
 
 	if err := os.Chdir(workDir); err != nil {
 		t.Fatalf("chdir to workdir: %v", err)

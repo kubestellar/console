@@ -67,7 +67,7 @@ func NewElasticDestination(url, index string, client *http.Client) (*ElasticDest
 	// SSRF protection: reject URLs that resolve to private/internal IPs (#17533).
 	// Skip validation when caller provides a custom client (tests with localhost).
 	if client == nil {
-		if err := destinationURLValidator(url); err != nil {
+		if err := auditURLValidator(url); err != nil {
 			return nil, fmt.Errorf("elastic destination: %w", err)
 		}
 		client = &http.Client{Timeout: elasticBulkTimeout}

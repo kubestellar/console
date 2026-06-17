@@ -27,10 +27,38 @@ vi.mock('../../../lib/demoMode', () => ({
   setDemoToken: vi.fn(),
 }))
 
-let mockPodIssues: any[] = []
-let mockDeploymentIssues: any[] = []
-let mockDeployments: any[] = []
-let mockClusters: any[] = []
+interface MockPodIssue {
+  name: string
+  namespace: string
+  cluster: string
+  reason: string
+}
+
+interface MockDeploymentIssue {
+  name: string
+  namespace: string
+  cluster: string
+  reason: string
+}
+
+interface MockDeployment {
+  name: string
+  namespace: string
+  cluster: string
+  status: string
+  replicas: number
+  readyReplicas: number
+}
+
+interface MockCluster {
+  name: string
+  [key: string]: unknown
+}
+
+let mockPodIssues: MockPodIssue[] = []
+let mockDeploymentIssues: MockDeploymentIssue[] = []
+let mockDeployments: MockDeployment[] = []
+let mockClusters: MockCluster[] = []
 let mockIsLoading = false
 let mockAgentStatus: 'connected' | 'disconnected' = 'connected'
 let mockIsDemoMode = true
@@ -73,7 +101,7 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
     selectedClusters: [],
     isAllClustersSelected: true,
     customFilter: '',
-    filterByCluster: (items: any[]) => items,
+    filterByCluster: <T,>(items: T[]) => items,
   })),
 }))
 
@@ -167,8 +195,8 @@ describe('Workloads Add Workload button', () => {
       selectedClusters: [],
       isAllClustersSelected: true,
       customFilter: '',
-      filterByCluster: (items: any[]) => items,
-    } as any)
+      filterByCluster: <T,>(items: T[]) => items,
+    })
   })
 
   it('renders the add workload button using the translated label', () => {
