@@ -18,6 +18,39 @@ New monitoring cards for CNCF projects (Karmada, Falco, KEDA, etc.) belong in [*
 
 PRs that add new card components to `web/src/components/cards/` will be redirected to console-marketplace.
 
+## Documentation Forkers: You're Welcome Here! 📚
+
+If you've forked [kubestellar/docs](https://github.com/kubestellar/docs) to write content, adapt documentation for your clusters, or build tutorials, we'd love to have you contribute to KubeStellar Console as well. Your documentation expertise translates directly to:
+
+- **Console-KB Missions** — write operational guides that help users master the console
+- **Contributor Documentation** — improve `CONTRIBUTING.md` and setup guides
+- **UI Translation & Localization** — help expand console translations (v0.4 goal)
+- **Cards & Dashboards** — document new monitoring cards and best practices
+
+**Getting started:**
+1. Read this `CONTRIBUTING.md` section on [Getting Started Locally](#getting-started-locally)
+2. Check out [console-kb](https://github.com/kubestellar/console-kb) for mission writing patterns
+3. Look for issues labeled `good-first-issue` or `documentation` in this repo
+4. Join [#kubestellar-dev on Slack](https://cloud-native.slack.com/archives/C097094RZ3M) to discuss your ideas
+
+## Marketplace Builders: Publish Your Work! 🎨
+
+If you've forked [kubestellar/console-marketplace](https://github.com/kubestellar/console-marketplace) to build custom dashboards, card presets, or themes for your clusters, your work deserves to be shared with the community.
+
+**Why submit your marketplace item:**
+- Share your creation with 1000+ console users
+- Get feedback and contributions from users of your item
+- Build your portfolio as a KubeStellar community creator
+- Help the community benefit from your innovation
+
+**Submitting a marketplace item:**
+1. Fork [kubestellar/console-marketplace](https://github.com/kubestellar/console-marketplace)
+2. Add your dashboard, card preset, or theme following the [marketplace structure](https://github.com/kubestellar/console-marketplace#submitting-a-new-item)
+3. Open a PR describing what you've built and who it's for
+4. Share a screenshot or demo link in the PR
+
+**Got questions?** Ask on [#kubestellar-dev](https://cloud-native.slack.com/archives/C097094RZ3M) or open an issue in the marketplace repo.
+
 ## Repo Inventory Files
 
 The repo-root [`INVENTORY.md`](INVENTORY.md) tracks the component, route, modal, and drill-down inventory that the Auto-QA workflow cross-checks against the source tree.
