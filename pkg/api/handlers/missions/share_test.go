@@ -1,9 +1,14 @@
 package missions
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -162,4 +167,109 @@ func TestIsRepoAllowedForShare(t *testing.T) {
 
 		assert.False(t, isRepoAllowedForShare("layer5io/../admin/repo"))
 	})
+}
+
+// TestShareToSlack exercises the ShareToSlack HTTP handler end-to-end using a
+// Fiber test app and an httptest.Server standing in for the Slack webhook
+// endpoint. The mockTransport defined in handler_test.go rewrites the outbound
+// request host so it reaches the fake server even though the URL passes the
+// validateSlackWebhookURL check (which enforces hooks.slack.com).
+func TestShareToSlack(t *testing.T) {
+	// slackStatus is the HTTP status the mock Slack server will return.
+	// Tests that need a non-200 response set this before sending the request.
+	cases := []struct {
+		name           string
+		body           string
+		slackStatus    int
+		wantHTTP       int
+		wantSuccess    bool
+		skipSlackSetup bool // true when the mock server is not reached
+	}{
+		{
+			name:        "success",
+			body:        `{"webhookUrl":"https://hooks.slack.com/services/T0/B0/xxx","text":"Hello!"}`,
+			slackStatus: http.StatusOK,
+			wantHTTP:    http.StatusOK,
+			wantSuccess: true,
+		},
+		{
+			name:           "invalid body",
+			body:           `not-json`,
+			wantHTTP:       http.StatusBadRequest,
+			skipSlackSetup: true,
+		},
+		{
+			name:           "empty text",
+			body:           `{"webhookUrl":"https://hooks.slack.com/services/T0/B0/xxx","text":""}`,
+			wantHTTP:       http.StatusBadRequest,
+			skipSlackSetup: true,
+		},
+		{
+			name:           "text exceeds max size",
+			body:           `{"webhookUrl":"https://hooks.slack.com/services/T0/B0/xxx","text":"` + strings.Repeat("x", slackMaxTextBytes+1) + `"}`,
+			wantHTTP:       http.StatusBadRequest,
+			skipSlackSetup: true,
+		},
+		{
+			name:           "invalid webhook URL non-Slack host",
+			body:           `{"webhookUrl":"https://evil.com/services/T0/B0/xxx","text":"Hello!"}`,
+			wantHTTP:       http.StatusBadRequest,
+			skipSlackSetup: true,
+		},
+		{
+			name:        "slack returns non-200",
+			body:        `{"webhookUrl":"https://hooks.slack.com/services/T0/B0/xxx","text":"Hello!"}`,
+			slackStatus: http.StatusInternalServerError,
+			wantHTTP:    http.StatusBadGateway,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			// Build a mock Slack server that returns the configured status.
+			var slackMock *httptest.Server
+			if !tc.skipSlackSetup {
+				slackStatus := tc.slackStatus
+				slackMock = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(slackStatus)
+				}))
+				defer slackMock.Close()
+			}
+
+			app := fiber.New()
+			handler := NewMissionsHandler()
+
+			if slackMock != nil {
+				// Redirect outbound requests that pass URL validation to the
+				// local mock server so we don't need a real Slack endpoint.
+				mockHost := strings.TrimPrefix(slackMock.URL, "http://")
+				handler.httpClient = &http.Client{
+					Transport: &mockTransport{
+						handler: func(req *http.Request) (*http.Response, error) {
+							req.URL.Scheme = "http"
+							req.URL.Host = mockHost
+							return http.DefaultTransport.RoundTrip(req)
+						},
+					},
+				}
+			}
+
+			handler.RegisterRoutes(app.Group("/api/missions"))
+
+			req, err := http.NewRequest(http.MethodPost, "/api/missions/share/slack", strings.NewReader(tc.body))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err := app.Test(req, 5000)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantHTTP, resp.StatusCode)
+
+			if tc.wantSuccess {
+				var body map[string]interface{}
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+				assert.Equal(t, true, body["success"])
+			}
+		})
+	}
 }
