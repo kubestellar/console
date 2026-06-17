@@ -15,49 +15,32 @@ func TestEmbeddedHiddenMissionEntry(t *testing.T) {
 		entry    string
 		expected bool
 	}{
-		{
-			name:     "hidden - dot prefix",
-			entry:    ".hidden",
-			expected: true,
-		},
-		{
-			name:     "hidden - .git directory",
-			entry:    ".git",
-			expected: true,
-		},
-		{
-			name:     "hidden - index.json",
-			entry:    "index.json",
-			expected: true,
-		},
-		{
-			name:     "hidden - search-state.json",
-			entry:    "search-state.json",
-			expected: true,
-		},
-		{
-			name:     "visible - regular file",
-			entry:    "mission.yaml",
-			expected: false,
-		},
-		{
-			name:     "visible - subdirectory",
-			entry:    "fixes",
-			expected: false,
-		},
-		{
-			name:     "visible - empty string",
-			entry:    "",
-			expected: false,
-		},
+		{name: "hidden - dot prefix", entry: ".hidden", expected: true},
+		{name: "hidden - .git directory", entry: ".git", expected: true},
+		{name: "hidden - .config", entry: ".config", expected: true},
+		{name: "hidden - double dot", entry: "..something", expected: true},
+		{name: "hidden - index.json", entry: "index.json", expected: true},
+		{name: "hidden - search-state.json", entry: "search-state.json", expected: true},
+		{name: "visible - regular file", entry: "mission.yaml", expected: false},
+		{name: "visible - subdirectory", entry: "fixes", expected: false},
+		{name: "visible - with extension", entry: "README.md", expected: false},
+		{name: "visible - empty string", entry: "", expected: false},
+		{name: "visible - index as suffix", entry: "not-index.json", expected: false},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			result := embeddedHiddenMissionEntry(tt.entry)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestEmbeddedHiddenMissionEntry_Deterministic(t *testing.T) {
+	v1 := embeddedHiddenMissionEntry(".secret")
+	v2 := embeddedHiddenMissionEntry(".secret")
+	assert.Equal(t, v1, v2, "pure function must be deterministic")
 }
 
 func TestEmbeddedMissionFile(t *testing.T) {
@@ -114,7 +97,6 @@ func TestEmbeddedBrowse(t *testing.T) {
 			expectedCode: 200,
 			checkEntries: func(t *testing.T, entries []fiber.Map) {
 				require.NotEmpty(t, entries, "root should have entries")
-				// Should not include hidden files like .git or index.json
 				for _, entry := range entries {
 					name := entry["name"].(string)
 					assert.False(t, embeddedHiddenMissionEntry(name), "should not include hidden entry: %s", name)
@@ -139,11 +121,11 @@ func TestEmbeddedBrowse(t *testing.T) {
 				assert.Equal(t, tt.expectedCode, result.StatusCode)
 				assert.Equal(t, "application/json", result.ContentType)
 				assert.Equal(t, cacheStatusEmbedded, result.CacheStatus)
-				
+
 				var entries []fiber.Map
 				err := json.Unmarshal(result.Body, &entries)
 				require.NoError(t, err)
-				
+
 				if tt.checkEntries != nil {
 					tt.checkEntries(t, entries)
 				}
@@ -158,8 +140,7 @@ func TestEmbeddedBrowse(t *testing.T) {
 func TestEmbeddedBrowse_SingleFile(t *testing.T) {
 	handler := NewMissionsHandler()
 	result, found := handler.embeddedBrowse("fixes/index.json")
-	
-	// index.json is a hidden file, should not be returned
+
 	assert.False(t, found)
 	assert.Nil(t, result)
 }
