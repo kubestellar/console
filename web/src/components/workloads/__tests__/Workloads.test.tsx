@@ -41,10 +41,38 @@ vi.mock('../../../lib/dashboards/DashboardPage', () => ({
     ),
 }))
 
-let mockPodIssues: any[] = []
-let mockDeploymentIssues: any[] = []
-let mockDeployments: any[] = []
-let mockClusters: any[] = []
+interface MockPodIssue {
+    name: string
+    namespace: string
+    cluster: string
+    reason: string
+}
+
+interface MockDeploymentIssue {
+    name: string
+    namespace: string
+    cluster: string
+    reason: string
+}
+
+interface MockDeployment {
+    name: string
+    namespace: string
+    cluster: string
+    status: string
+    replicas: number
+    readyReplicas: number
+}
+
+interface MockCluster {
+    name: string
+    [key: string]: unknown
+}
+
+let mockPodIssues: MockPodIssue[] = []
+let mockDeploymentIssues: MockDeploymentIssue[] = []
+let mockDeployments: MockDeployment[] = []
+let mockClusters: MockCluster[] = []
 let mockIsLoading = false
 let mockAgentStatus: 'connected' | 'disconnected' = 'connected'
 let mockIsDemoMode = true
@@ -63,7 +91,7 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
         selectedClusters: [],
         isAllClustersSelected: true,
         customFilter: '',
-        filterByCluster: (items: any[]) => items,
+        filterByCluster: <T,>(items: T[]) => items,
     })),
 }))
 
@@ -181,8 +209,8 @@ describe('Workloads Component', () => {
             selectedClusters: [],
             isAllClustersSelected: true,
             customFilter: '',
-            filterByCluster: (items: any[]) => items,
-        } as any)
+            filterByCluster: <T,>(items: T[]) => items,
+        })
     })
 
     it('renders without crashing', () => {
@@ -196,8 +224,8 @@ describe('Workloads Component', () => {
                 selectedClusters: [],
                 isAllClustersSelected: true,
                 customFilter: 'my-deploy',
-                filterByCluster: (items: any[]) => items,
-            } as any)
+                filterByCluster: <T,>(items: T[]) => items,
+            })
 
             mockDeployments = [{ name: 'my-deploy', namespace: 'default', cluster: 'ctx/prod', status: 'running', replicas: 3, readyReplicas: 3 }]
         })
@@ -283,8 +311,8 @@ describe('Workloads Component', () => {
                 selectedClusters: [],
                 isAllClustersSelected: true,
                 customFilter: 'deploy',
-                filterByCluster: (items: any[]) => items,
-            } as any)
+                filterByCluster: <T,>(items: T[]) => items,
+            })
         })
 
         it('uses red border for failed deployment', () => {
@@ -316,8 +344,8 @@ describe('Workloads Component', () => {
                 selectedClusters: [],
                 isAllClustersSelected: true,
                 customFilter: '',
-                filterByCluster: (items: any[]) => items,
-            } as any)
+                filterByCluster: <T,>(items: T[]) => items,
+            })
         })
 
         it('renders namespace cards when no filter is active', () => {
