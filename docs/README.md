@@ -48,6 +48,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [SUPPORT.md](SUPPORT.md) | Defines support expectations, maintenance policy, and support channels. |
 | [deploy.md](deploy.md) | Full `deploy.sh` reference with flags, environment variables, and examples. |
 | [integrations/argocd.md](integrations/argocd.md) | Integration guide for running the console with Argo CD workflows. |
+| [integrations/FLUX.md](integrations/FLUX.md) | Integration guide for running the console with Flux GitOps workflows. |
 | [integrations/kagenti-tool-integration.md](integrations/kagenti-tool-integration.md) | Explains Kagenti tool integration and cluster context injection. |
 | [kagenti-deployment-guide.md](kagenti-deployment-guide.md) | Deployment guide for Kagenti controller and agent topologies. |
 | [kagenti-tools.md](kagenti-tools.md) | Overview of Kagenti tool integration and supported tooling. |
