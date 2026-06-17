@@ -19,7 +19,7 @@ export function useClusterDrillDownState({
   activeLens,
   searchFilter,
 }: UseClusterDrillDownStateProps) {
-  // Safeguard timeout to prevent infinite loading - show content after LOADING_TIMEOUT_MS max
+  // Safeguard timeout — show content after LOADING_TIMEOUT_MS (5 s) to prevent infinite loading
   const [loadingTimedOut, setLoadingTimedOut] = useState(false)
   useEffect(() => {
     setLoadingTimedOut(false) // Reset on cluster change

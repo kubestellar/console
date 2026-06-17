@@ -49,7 +49,8 @@ export function ClusterDrillDown({ data }: Props) {
 
   /**
    * Navigate to the Resource Tree tab with a given lens active.
-   * Scrolls the tab container into view after the DOM updates.
+   * Uses a short delay (SCROLL_AFTER_TAB_SWITCH_MS) before scrolling to allow
+   * React to flush the tab switch DOM update before measuring scroll position.
    */
   const navigateToResourceTree = useCallback((lens: TreeLens) => {
     setActiveTab('resources')
