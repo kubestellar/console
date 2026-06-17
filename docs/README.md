@@ -63,7 +63,9 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | --- | --- |
 | [README.md](README.md) | This index for the `docs/` tree and its primary entry points. |
 | [ACCESSIBILITY-AUDIT.md](ACCESSIBILITY-AUDIT.md) | Accessibility audit findings and recommendations for the console UI. |
-| [ADOPTION-METRICS.md](ADOPTION-METRICS.md) | Tracks adoption metrics and evidence used for CNCF incubation due diligence. |
+| [adoption-metrics.md](adoption-metrics.md) | CNCF Sandbox readiness snapshot with adoption evidence, checklist status, and metric collection methods. |
+| [cncf-incubation-preparation.md](cncf-incubation-preparation.md) | Q4 2026 plan for preparing a CNCF incubation application package. |
+| [cncf-ecosystem-engagement.md](cncf-ecosystem-engagement.md) | Ecosystem outreach and validation plan tied to the 313-card milestone. |
 | [COMMUNITY.md](COMMUNITY.md) | Community channels, engagement guidance, and project participation information. |
 | [HOMEBREW.md](HOMEBREW.md) | Explains Homebrew support status for the console and kc-agent. |
 | [RELEASING.md](RELEASING.md) | Release-process reference for maintainers packaging and publishing releases. |
