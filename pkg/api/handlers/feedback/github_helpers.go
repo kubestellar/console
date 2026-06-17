@@ -123,6 +123,7 @@ func isLabelPermissionError(err error) bool {
 func isInsufficientIssuePermissionError(respBody string) bool {
 	msg := strings.ToLower(respBody)
 	return strings.Contains(msg, "resource not accessible by personal access token") ||
+		strings.Contains(msg, "resource not accessible by integration") ||
 		(strings.Contains(msg, "insufficient") && strings.Contains(msg, "permission"))
 }
 

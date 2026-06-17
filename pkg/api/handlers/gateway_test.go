@@ -10,7 +10,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
-	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -265,47 +264,47 @@ func TestGetGatewayAPIStatus(t *testing.T) {
 // This exercises error paths that are hard to trigger with fake clients.
 func TestListGatewaysMock(t *testing.T) {
 	env := setupTestEnv(t)
-	env.App.Get("/api/gateway/gateways", func(c *fiber.Ctx) error {
-		return fiber.NewError(fiber.StatusInternalServerError, "handler not initialized")
-	})
 
-	t.Run("HealthyClusters error propagates as 500", func(t *testing.T) {
+	t.Run("ListGatewaysForCluster error propagates as 500", func(t *testing.T) {
+		app := fiber.New()
 		mock := &mockGatewayClient{
-			healthyClustersFunc: func(ctx context.Context) ([]k8s.ClusterInfo, []k8s.ClusterInfo, error) {
-				return nil, nil, errors.New("cluster discovery failed")
+			listGatewaysForClusterFunc: func(ctx context.Context, contextName, namespace string) ([]v1alpha1.Gateway, error) {
+				return nil, errors.New("cluster-specific list failed")
 			},
 		}
 		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
-		env.App.Get("/api/gateway/gateways", handler.ListGateways)
+		app.Get("/api/gateway/gateways", handler.ListGateways)
 
-		req, _ := http.NewRequest("GET", "/api/gateway/gateways", nil)
-		resp, err := env.App.Test(req, 5000)
+		req, _ := http.NewRequest("GET", "/api/gateway/gateways?cluster=test-cluster", nil)
+		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
 	})
 
 	t.Run("ListGateways error propagates", func(t *testing.T) {
+		app := fiber.New()
 		mock := &mockGatewayClient{
 			listGatewaysFunc: func(ctx context.Context) (*v1alpha1.GatewayList, error) {
 				return nil, errors.New("gateway list failed")
 			},
 		}
 		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
-		env.App.Get("/api/gateway/gateways", handler.ListGateways)
+		app.Get("/api/gateway/gateways", handler.ListGateways)
 
 		req, _ := http.NewRequest("GET", "/api/gateway/gateways", nil)
-		resp, err := env.App.Test(req, 5000)
+		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
 	})
 
 	t.Run("Empty result set returns 200", func(t *testing.T) {
+		app := fiber.New()
 		mock := &mockGatewayClient{}
 		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
-		env.App.Get("/api/gateway/gateways", handler.ListGateways)
+		app.Get("/api/gateway/gateways", handler.ListGateways)
 
 		req, _ := http.NewRequest("GET", "/api/gateway/gateways", nil)
-		resp, err := env.App.Test(req, 5000)
+		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 
@@ -320,36 +319,35 @@ func TestListGatewaysMock(t *testing.T) {
 // TestListHTTPRoutesMock exercises mock-based error injection for HTTPRoutes.
 func TestListHTTPRoutesMock(t *testing.T) {
 	env := setupTestEnv(t)
-	env.App.Get("/api/gateway/httproutes", func(c *fiber.Ctx) error {
-		return fiber.NewError(fiber.StatusInternalServerError, "handler not initialized")
-	})
 
 	t.Run("ListHTTPRoutes error propagates", func(t *testing.T) {
+		app := fiber.New()
 		mock := &mockGatewayClient{
 			listHTTPRoutesFunc: func(ctx context.Context) (*v1alpha1.HTTPRouteList, error) {
 				return nil, errors.New("httproute list failed")
 			},
 		}
 		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
-		env.App.Get("/api/gateway/httproutes", handler.ListHTTPRoutes)
+		app.Get("/api/gateway/httproutes", handler.ListHTTPRoutes)
 
 		req, _ := http.NewRequest("GET", "/api/gateway/httproutes", nil)
-		resp, err := env.App.Test(req, 5000)
+		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
 	})
 
 	t.Run("Cluster-specific query error", func(t *testing.T) {
+		app := fiber.New()
 		mock := &mockGatewayClient{
 			listHTTPRoutesForClusterFunc: func(ctx context.Context, contextName, namespace string) ([]v1alpha1.HTTPRoute, error) {
 				return nil, errors.New("cluster-specific error")
 			},
 		}
 		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
-		env.App.Get("/api/gateway/httproutes", handler.ListHTTPRoutes)
+		app.Get("/api/gateway/httproutes", handler.ListHTTPRoutes)
 
 		req, _ := http.NewRequest("GET", "/api/gateway/httproutes?cluster=test-cluster", nil)
-		resp, err := env.App.Test(req, 5000)
+		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
 	})

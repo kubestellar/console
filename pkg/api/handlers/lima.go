@@ -29,7 +29,11 @@ type LimaHandlers struct {
 // NewLimaHandlers creates a new Lima handlers instance.
 // Accepts *k8s.MultiClusterClient (or any limaClient implementation).
 func NewLimaHandlers(k8sClient *k8s.MultiClusterClient) *LimaHandlers {
-	return &LimaHandlers{k8sClient: k8sClient}
+	h := &LimaHandlers{}
+	if k8sClient != nil {
+		h.k8sClient = k8sClient
+	}
+	return h
 }
 
 // LimaInstanceSummary represents a Lima instance returned by GET /api/lima.

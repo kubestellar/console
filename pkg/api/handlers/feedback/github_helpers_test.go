@@ -76,6 +76,7 @@ func TestResolveIssueAuthToken_AppTokenAvailable(t *testing.T) {
 }
 
 func TestResolveIssueAuthToken_AppTokenError_FallbackToPAT(t *testing.T) {
+	resetFeedbackSettings(t)
 	mockProvider := &mockTokenProvider{token: "", err: errors.New("app not configured")}
 	handler := &FeedbackHandler{
 		githubToken:      "fallback-pat",
@@ -88,6 +89,7 @@ func TestResolveIssueAuthToken_AppTokenError_FallbackToPAT(t *testing.T) {
 }
 
 func TestResolveIssueAuthToken_NoAppProvider_UsesPAT(t *testing.T) {
+	resetFeedbackSettings(t)
 	handler := &FeedbackHandler{
 		githubToken:      "my-personal-token",
 		appTokenProvider: nil,
@@ -98,6 +100,7 @@ func TestResolveIssueAuthToken_NoAppProvider_UsesPAT(t *testing.T) {
 }
 
 func TestResolveIssueAuthToken_EmptyPAT_ReturnsEmpty(t *testing.T) {
+	resetFeedbackSettings(t)
 	handler := &FeedbackHandler{
 		githubToken:      "",
 		appTokenProvider: nil,

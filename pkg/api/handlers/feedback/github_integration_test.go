@@ -20,6 +20,7 @@ import (
 // --- postGitHubIssue tests ---
 
 func TestPostGitHubIssue_Success(t *testing.T) {
+	resetFeedbackSettings(t)
 	handler := &FeedbackHandler{
 		githubToken: "test-token",
 		repoOwner:   "kubestellar",
@@ -589,6 +590,7 @@ func TestHandleIssueEvent_ClosedAction_DispatchesToHandleIssueClosed(t *testing.
 // --- getLatestBotComment tests ---
 
 func TestGetLatestBotComment_NoToken(t *testing.T) {
+	resetFeedbackSettings(t)
 	handler := &FeedbackHandler{githubToken: ""}
 	result := handler.getLatestBotComment(context.Background(), 123, "console")
 	assert.Empty(t, result, "should return empty when no token configured")

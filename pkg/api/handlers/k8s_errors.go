@@ -25,7 +25,11 @@ var SanitizedErrorMessages = map[string]string{
 func HandleK8sError(c *fiber.Ctx, err error) error {
 	if errors.Is(err, k8s.ErrNoClusterConfigured) {
 		slog.Info("[MCP] no cluster configured")
-		return ErrNoClusterAccess(c)
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"clusterStatus": "no_cluster",
+			"errorType":     "no_cluster",
+			"errorMessage":  "No cluster configured — configure a cluster before using this feature",
+		})
 	}
 
 	errType := k8s.ClassifyError(err.Error())

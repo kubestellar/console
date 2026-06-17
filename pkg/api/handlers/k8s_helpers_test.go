@@ -48,11 +48,7 @@ func TestHandleK8sErrorHelper(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := fiber.New()
 			app.Get("/test", func(c *fiber.Ctx) error {
-				err := handleK8sError(c, tt.err)
-				if err != nil {
-					return err
-				}
-				return c.SendStatus(fiber.StatusOK)
+				return handleK8sError(c, tt.err)
 			})
 
 			req := httptest.NewRequest("GET", "/test", nil)

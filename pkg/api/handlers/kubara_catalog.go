@@ -69,7 +69,7 @@ func validateCatalogRepo(repo string) error {
 	}
 
 	// Validate format: must be owner/name with alphanumeric, hyphen, underscore
-	repoRegex := regexp.MustCompile(`^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$`)
+	repoRegex := regexp.MustCompile(`^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$`)
 	if !repoRegex.MatchString(repo) {
 		return fmt.Errorf("catalog repo format must be owner/name with alphanumeric, hyphen, underscore, or dot characters")
 	}
