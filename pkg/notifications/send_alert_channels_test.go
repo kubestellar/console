@@ -170,7 +170,7 @@ func TestSendAlertToChannels_EmailEmptyRecipients(t *testing.T) {
 
 // TestSendAlertToChannels_MultipleChannelsMixed exercises multiple channels where
 // some succeed and some have incomplete config.
-func TestSendAlertToChannels_MultipleChannelsMixed(t *testing.T) {
+func TestSendAlertToChannels_MultipleChannelsMixedResults(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
