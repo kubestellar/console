@@ -94,6 +94,8 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 	app.Get("/api/stellar/memory", h.ListMemory)
 	app.Post("/api/stellar/memory/search", h.SearchMemory)
 	app.Delete("/api/stellar/memory/:id", h.DeleteMemory)
+	app.Get("/api/stellar/executions", h.ListExecutions)
+	app.Get("/api/stellar/executions/:id", h.GetExecution)
 
 	return app, sqlStore
 }
