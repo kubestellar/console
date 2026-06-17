@@ -78,7 +78,7 @@ export function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
   try {
     return JSON.parse(raw) as T
   } catch (err) {
-    console.warn(`[useDeployMissions] Failed to parse ${context}, using default`, err)
+    console.error(`[useDeployMissions] Failed to parse ${context}, using default`, err)
     return fallback
   }
 }
