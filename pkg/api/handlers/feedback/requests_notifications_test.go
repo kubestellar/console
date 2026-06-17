@@ -7,7 +7,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,11 +29,9 @@ func TestGetNotifications_Unauthorized(t *testing.T) {
 
 func TestGetNotifications_DefaultLimit(t *testing.T) {
 	userID := uuid.New()
-	
-	mockStore := &test.MockStore{}
-	mockStore.On("GetUserNotifications", userID, 50).Return([]models.Notification{}, nil)
-	
-	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
+	stub := &feedbackStoreStub{MockStore: &test.MockStore{}}
+
+	app, handler := setupFeedbackTest(t, userID, "", stub)
 	app.Get("/api/feedback/notifications", handler.GetNotifications)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications", nil)
@@ -43,18 +40,17 @@ func TestGetNotifications_DefaultLimit(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	mockStore.AssertCalled(t, "GetUserNotifications", userID, 50)
+	assert.Equal(t, userID, stub.lastNotificationsUserID)
+	assert.Equal(t, 50, stub.lastNotificationsLimit)
 }
 
 func TestGetNotifications_CustomLimit(t *testing.T) {
 	userID := uuid.New()
-	
-	mockStore := &test.MockStore{}
-	mockStore.On("GetUserNotifications", userID, 25).Return([]models.Notification{}, nil)
-	
-	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
+	stub := &feedbackStoreStub{MockStore: &test.MockStore{}}
+
+	app, handler := setupFeedbackTest(t, userID, "", stub)
 	app.Get("/api/feedback/notifications", handler.GetNotifications)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications?limit=25", nil)
@@ -63,18 +59,16 @@ func TestGetNotifications_CustomLimit(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	mockStore.AssertCalled(t, "GetUserNotifications", userID, 25)
+	assert.Equal(t, 25, stub.lastNotificationsLimit)
 }
 
 func TestGetNotifications_LimitCappedAt100(t *testing.T) {
 	userID := uuid.New()
-	
-	mockStore := &test.MockStore{}
-	mockStore.On("GetUserNotifications", userID, 100).Return([]models.Notification{}, nil)
-	
-	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
+	stub := &feedbackStoreStub{MockStore: &test.MockStore{}}
+
+	app, handler := setupFeedbackTest(t, userID, "", stub)
 	app.Get("/api/feedback/notifications", handler.GetNotifications)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications?limit=200", nil)
@@ -83,18 +77,16 @@ func TestGetNotifications_LimitCappedAt100(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	mockStore.AssertCalled(t, "GetUserNotifications", userID, 100)
+	assert.Equal(t, 100, stub.lastNotificationsLimit)
 }
 
 func TestGetNotifications_ZeroLimitUsesDefault(t *testing.T) {
 	userID := uuid.New()
-	
-	mockStore := &test.MockStore{}
-	mockStore.On("GetUserNotifications", userID, 50).Return([]models.Notification{}, nil)
-	
-	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
+	stub := &feedbackStoreStub{MockStore: &test.MockStore{}}
+
+	app, handler := setupFeedbackTest(t, userID, "", stub)
 	app.Get("/api/feedback/notifications", handler.GetNotifications)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications?limit=0", nil)
@@ -103,9 +95,9 @@ func TestGetNotifications_ZeroLimitUsesDefault(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	mockStore.AssertCalled(t, "GetUserNotifications", userID, 50)
+	assert.Equal(t, 50, stub.lastNotificationsLimit)
 }
 
 func TestGetUnreadCount_Unauthorized(t *testing.T) {
@@ -125,11 +117,12 @@ func TestGetUnreadCount_Unauthorized(t *testing.T) {
 
 func TestGetUnreadCount_StoreError(t *testing.T) {
 	userID := uuid.New()
-	
-	mockStore := &test.MockStore{}
-	mockStore.On("GetUnreadNotificationCount", userID).Return(0, errors.New("database error"))
-	
-	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
+	stub := &feedbackStoreStub{
+		MockStore: &test.MockStore{},
+		unreadErr: errors.New("database error"),
+	}
+
+	app, handler := setupFeedbackTest(t, userID, "", stub)
 	app.Get("/api/feedback/notifications/unread", handler.GetUnreadCount)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications/unread", nil)
@@ -138,7 +131,7 @@ func TestGetUnreadCount_StoreError(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 }
 
@@ -175,11 +168,12 @@ func TestMarkNotificationRead_InvalidID(t *testing.T) {
 func TestMarkNotificationRead_NotFound(t *testing.T) {
 	userID := uuid.New()
 	notificationID := uuid.New()
-	
-	mockStore := &test.MockStore{}
-	mockStore.On("MarkNotificationReadByUser", notificationID, userID).Return(errors.New("not found"))
-	
-	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
+	stub := &feedbackStoreStub{
+		MockStore:   &test.MockStore{},
+		markReadErr: errors.New("not found"),
+	}
+
+	app, handler := setupFeedbackTest(t, userID, "", stub)
 	app.Post("/api/feedback/notifications/:id/read", handler.MarkNotificationRead)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/notifications/"+notificationID.String()+"/read", nil)
@@ -188,7 +182,7 @@ func TestMarkNotificationRead_NotFound(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
@@ -209,11 +203,12 @@ func TestMarkAllNotificationsRead_Unauthorized(t *testing.T) {
 
 func TestMarkAllNotificationsRead_StoreError(t *testing.T) {
 	userID := uuid.New()
-	
-	mockStore := &test.MockStore{}
-	mockStore.On("MarkAllNotificationsRead", userID).Return(errors.New("database error"))
-	
-	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
+	stub := &feedbackStoreStub{
+		MockStore:      &test.MockStore{},
+		markAllReadErr: errors.New("database error"),
+	}
+
+	app, handler := setupFeedbackTest(t, userID, "", stub)
 	app.Post("/api/feedback/notifications/read-all", handler.MarkAllNotificationsRead)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/notifications/read-all", nil)
@@ -222,6 +217,6 @@ func TestMarkAllNotificationsRead_StoreError(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
+
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 }

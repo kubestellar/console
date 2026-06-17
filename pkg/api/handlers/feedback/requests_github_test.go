@@ -136,10 +136,10 @@ func TestNotifyUpstream_CallsCreateGitHubIssue(t *testing.T) {
 		RequestType: "feature",
 	}
 
-	issueNumber, issueURL, _, _, err := handler.notifyUpstream(context.Background(), request, user, "console", input, "")
+	issueNumber, issueWarning, _, _, err := handler.notifyUpstream(context.Background(), request, user, "console", input, "")
 	assert.NoError(t, err, "should successfully create GitHub issue")
 	assert.Equal(t, 456, issueNumber)
-	assert.Equal(t, "https://github.com/kubestellar/console/issues/456", issueURL)
+	assert.Empty(t, issueWarning, "no warning expected on successful creation")
 }
 
 func TestExtractClientAuth_FromCookie(t *testing.T) {
@@ -151,7 +151,7 @@ func TestExtractClientAuth_FromCookie(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/test", nil)
 	require.NoError(t, err)
-	req.Header.Set("Cookie", "kc-client-auth=cookie-token")
+	req.Header.Set("Cookie", ""+clientAuthCookieName+"=cookie-token")
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -189,7 +189,7 @@ func TestExtractClientAuth_CookiePrecedence(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/test", nil)
 	require.NoError(t, err)
-	req.Header.Set("Cookie", "kc-client-auth=cookie-token")
+	req.Header.Set("Cookie", ""+clientAuthCookieName+"=cookie-token")
 	req.Header.Set("X-KC-Client-Auth", "header-token")
 
 	resp, err := app.Test(req, fiberTestTimeout)

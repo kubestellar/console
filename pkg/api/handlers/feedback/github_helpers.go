@@ -2,6 +2,7 @@ package feedback
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os/exec"
@@ -117,12 +118,22 @@ func isLabelPermissionError(err error) bool {
 		return false
 	}
 	msg := err.Error()
-	return strings.Contains(msg, "403") && strings.Contains(msg, "label")
+	// Legacy: raw HTTP error text includes the 403 status code and "label"
+	if strings.Contains(msg, "403") && strings.Contains(strings.ToLower(msg), "label") {
+		return true
+	}
+	// GitHub API wraps 403 responses as errGitHubInsufficientPermissions;
+	// when the body names the "Label" resource, it's a label-specific denial.
+	if errors.Is(err, errGitHubInsufficientPermissions) && strings.Contains(strings.ToLower(msg), "label") {
+		return true
+	}
+	return false
 }
 
 func isInsufficientIssuePermissionError(respBody string) bool {
 	msg := strings.ToLower(respBody)
 	return strings.Contains(msg, "resource not accessible by personal access token") ||
+		strings.Contains(msg, "resource not accessible by integration") ||
 		(strings.Contains(msg, "insufficient") && strings.Contains(msg, "permission"))
 }
 

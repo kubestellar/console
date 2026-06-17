@@ -2,6 +2,7 @@ package feedback
 
 import (
 	"context"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,8 +27,13 @@ func TestRunAsyncGitHubOp_SemaphoreLimit(t *testing.T) {
 	// Release all blocking operations
 	close(done)
 
+	// Wait for all blocking goroutines to complete and release their semaphore
+	// slots before returning, so subsequent tests are not starved.
+	for len(githubOpSem) > 0 {
+		runtime.Gosched()
+	}
+
 	// The dropped operation should not have run
-	// Note: This is a best-effort test - timing issues may cause flakiness
 	assert.Equal(t, 0, completedCount, "dropped operation should not execute")
 }
 
@@ -77,5 +83,6 @@ func TestRunAsyncGitHubOp_MultipleOperations(t *testing.T) {
 		<-completed
 	}
 
-	assert.Equal(t, numOps, len(completed), "all operations should complete")
+	// All numOps items were received, so the channel is now empty
+	assert.Equal(t, 0, len(completed), "all operations should have completed")
 }

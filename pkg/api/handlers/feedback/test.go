@@ -28,6 +28,8 @@ type feedbackStoreStub struct {
 	notificationsErr error
 	unreadCount      int
 	unreadErr        error
+	markReadErr      error
+	markAllReadErr   error
 
 	lastNotificationsUserID uuid.UUID
 	lastNotificationsLimit  int
@@ -49,6 +51,14 @@ func (s *feedbackStoreStub) GetUnreadNotificationCount(_ context.Context, userID
 		return 0, s.unreadErr
 	}
 	return s.unreadCount, nil
+}
+
+func (s *feedbackStoreStub) MarkNotificationReadByUser(_ context.Context, id uuid.UUID, userID uuid.UUID) error {
+	return s.markReadErr
+}
+
+func (s *feedbackStoreStub) MarkAllNotificationsRead(_ context.Context, userID uuid.UUID) error {
+	return s.markAllReadErr
 }
 
 func setupFeedbackTest(t *testing.T, userID uuid.UUID, githubLogin string, store *feedbackStoreStub) (*fiber.App, *FeedbackHandler) {

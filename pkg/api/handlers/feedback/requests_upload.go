@@ -113,6 +113,9 @@ func (h *FeedbackHandler) uploadScreenshotToGitHub(repoOwner, repoName, requestI
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
+	if h.httpClient == nil {
+		return "", fmt.Errorf("HTTP client not configured")
+	}
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
 		return "", err

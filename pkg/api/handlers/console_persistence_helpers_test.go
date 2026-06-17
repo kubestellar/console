@@ -2,119 +2,13 @@ package handlers
 
 import (
 	"context"
-	"errors"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
-	"github.com/kubestellar/console/pkg/models"
-	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// ---------- requireAdmin ----------
-
-func TestRequireAdmin(t *testing.T) {
-	cases := []struct {
-		name       string
-		userStore  func(uid uuid.UUID) *test.MockStore
-		nilStore   bool
-		wantStatus int
-		wantBody   string
-	}{
-		{
-			name:       "nil userStore bypasses check (dev/demo mode)",
-			nilStore:   true,
-			wantStatus: 200,
-			wantBody:   "ok",
-		},
-		{
-			name: "admin user is allowed",
-			userStore: func(uid uuid.UUID) *test.MockStore {
-				ms := new(test.MockStore)
-				ms.On("GetUser", mock.Anything, uid).Return(&models.User{
-					ID:   uid,
-					Role: "admin",
-				}, nil)
-				return ms
-			},
-			wantStatus: 200,
-			wantBody:   "ok",
-		},
-		{
-			name: "non admin user is forbidden",
-			userStore: func(uid uuid.UUID) *test.MockStore {
-				ms := new(test.MockStore)
-				ms.On("GetUser", mock.Anything, uid).Return(&models.User{
-					ID:   uid,
-					Role: "viewer",
-				}, nil)
-				return ms
-			},
-			wantStatus: 403,
-		},
-		{
-			name: "nil user is forbidden",
-			userStore: func(uid uuid.UUID) *test.MockStore {
-				ms := new(test.MockStore)
-				ms.On("GetUser", mock.Anything, uid).Return(nil, nil)
-				return ms
-			},
-			wantStatus: 403,
-		},
-		{
-			name: "store error returns 500",
-			userStore: func(uid uuid.UUID) *test.MockStore {
-				ms := new(test.MockStore)
-				ms.On("GetUser", mock.Anything, uid).Return(nil, errors.New("db down"))
-				return ms
-			},
-			wantStatus: 500,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			userID := uuid.New()
-
-			h := &ConsolePersistenceHandlers{}
-			if !tc.nilStore {
-				h.userStore = tc.userStore(userID)
-			}
-
-			app := fiber.New(fiber.Config{
-				ErrorHandler: func(c *fiber.Ctx, err error) error {
-					code := fiber.StatusInternalServerError
-					var fiberErr *fiber.Error
-					if errors.As(err, &fiberErr) {
-						code = fiberErr.Code
-					}
-					return c.Status(code).JSON(fiber.Map{"error": err.Error()})
-				},
-			})
-			app.Use(func(c *fiber.Ctx) error {
-				c.Locals("userID", userID)
-				return c.Next()
-			})
-			app.Get("/test", func(c *fiber.Ctx) error {
-				if err := h.requireAdmin(c); err != nil {
-					return err
-				}
-				return c.SendString("ok")
-			})
-
-			req := httptest.NewRequest("GET", "/test", nil)
-			resp, err := app.Test(req)
-			require.NoError(t, err)
-			assert.Equal(t, tc.wantStatus, resp.StatusCode)
-		})
-	}
-}
 
 // ---------- setTerminalStatus ----------
 

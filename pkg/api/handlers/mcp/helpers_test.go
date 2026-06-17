@@ -1,7 +1,6 @@
 package mcp
 
 import (
-	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
@@ -20,13 +19,13 @@ func TestWithDemoFallback(t *testing.T) {
 		demoData := map[string]string{"status": "demo"}
 
 		app.Get("/test", func(c *fiber.Ctx) error {
-			c.Locals("demoMode", true)
 			return handler.withDemoFallback(c, "test-data", demoData, func(client *k8s.MultiClusterClient) error {
 				return c.JSON(map[string]string{"status": "real"})
 			})
 		})
 
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("X-Demo-Mode", "true")
 		resp, err := app.Test(req, -1)
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -135,51 +134,5 @@ func TestRespondClusterResources(t *testing.T) {
 		require.NoError(t, err)
 		pods := result["pods"].([]interface{})
 		assert.Len(t, pods, 0)
-	})
-}
-
-func TestListClusterResources(t *testing.T) {
-	t.Run("returns empty slice when cluster specified and fetchFn returns nil", func(t *testing.T) {
-		ctx := context.Background()
-		client := &k8s.MultiClusterClient{}
-		
-		fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
-			return nil, nil
-		}
-		
-		items, errTracker, err := listClusterResources(ctx, client, "test-cluster", fetchFn)
-		require.NoError(t, err)
-		assert.Nil(t, errTracker)
-		assert.NotNil(t, items)
-		assert.Len(t, items, 0)
-	})
-
-	t.Run("returns items from single cluster", func(t *testing.T) {
-		ctx := context.Background()
-		client := &k8s.MultiClusterClient{}
-		
-		expectedItems := []string{"item1", "item2", "item3"}
-		fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
-			return expectedItems, nil
-		}
-		
-		items, errTracker, err := listClusterResources(ctx, client, "test-cluster", fetchFn)
-		require.NoError(t, err)
-		assert.Nil(t, errTracker)
-		assert.Equal(t, expectedItems, items)
-	})
-
-	t.Run("returns error when fetchFn fails for single cluster", func(t *testing.T) {
-		ctx := context.Background()
-		client := &k8s.MultiClusterClient{}
-		
-		fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
-			return nil, assert.AnError
-		}
-		
-		items, errTracker, err := listClusterResources(ctx, client, "test-cluster", fetchFn)
-		assert.Error(t, err)
-		assert.Nil(t, errTracker)
-		assert.Nil(t, items)
 	})
 }

@@ -58,9 +58,11 @@ type WebhookHandlers struct {
 // NewWebhookHandlers creates a new webhook handlers instance.
 // Accepts *k8s.MultiClusterClient (or any webhookClient implementation).
 func NewWebhookHandlers(k8sClient *k8s.MultiClusterClient) *WebhookHandlers {
-	return &WebhookHandlers{
-		k8sClient: k8sClient,
+	var client webhookClient
+	if k8sClient != nil {
+		client = k8sClient
 	}
+	return &WebhookHandlers{k8sClient: client}
 }
 
 // WebhookSummary represents a webhook configuration as returned by the API

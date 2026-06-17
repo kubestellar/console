@@ -438,7 +438,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 	failedApiBlock := ""
 	if len(failedApiCalls) > 0 {
 		var apiLines strings.Builder
-		const maxFailedApiCalls = 30
+		const maxFailedApiCalls = 50
 		shown := len(failedApiCalls)
 		if shown > maxFailedApiCalls {
 			shown = maxFailedApiCalls
