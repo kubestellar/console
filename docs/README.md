@@ -68,4 +68,10 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [HOMEBREW.md](HOMEBREW.md) | Explains Homebrew support status for the console and kc-agent. |
 | [RELEASING.md](RELEASING.md) | Release-process reference for maintainers packaging and publishing releases. |
 | [cncf-insights/2026-05-27.md](cncf-insights/2026-05-27.md) | Snapshot report of CNCF landscape intelligence from 2026-05-27. |
+| [outreach/ai-native-story.md](outreach/ai-native-story.md) | Messaging draft for explaining the project's AI-assisted open source workflow. |
+| [outreach/card-development-guide.md](outreach/card-development-guide.md) | Quick-start guide for contributors adding or proposing new project cards. |
+| [outreach/hacktoberfest-2026.md](outreach/hacktoberfest-2026.md) | Plan for Hacktoberfest 2026 issue prep, maintainer response, and success metrics. |
+| [outreach/i18n-recruitment.md](outreach/i18n-recruitment.md) | Recruitment plan for translators and locale coverage growth. |
+| [outreach/redhat-openshift-promo.md](outreach/redhat-openshift-promo.md) | Outreach plan for Red Hat, OpenShift, and conference co-promotion. |
+| [outreach/security-community.md](outreach/security-community.md) | Security practitioner engagement plan for SPIFFE, TUF, and Trestle stories. |
 | [security/SELF-ASSESSMENT.md](security/SELF-ASSESSMENT.md) | Project security self-assessment and related review notes. |

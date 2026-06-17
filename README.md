@@ -47,6 +47,7 @@ If you want to work on the repo itself, start with these entry points:
 
 - [CLAUDE.md](CLAUDE.md) — canonical developer guide for repo structure, testing expectations, and agent rules
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow, issue/PR conventions, and inventory notes
+- [CONTRIBUTORS.md](CONTRIBUTORS.md) — contributor recognition, onboarding guidance, and community links
 - [docs/README.md](docs/README.md) — index of the documentation tree, grouped by audience
 
 ## kc-agent (bridge self-hosted console to your clusters)
