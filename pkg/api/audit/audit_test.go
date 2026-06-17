@@ -2,12 +2,18 @@ package audit
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // captureLog replaces the default slog logger with a JSON logger that writes
@@ -109,5 +115,109 @@ func TestLogUnauthorizedAttempt(t *testing.T) {
 
 	if entry["action"] != ActionUnauthorizedAttempt {
 		t.Errorf("action = %v, want %v", entry["action"], ActionUnauthorizedAttempt)
+	}
+}
+
+type auditStoreStub struct {
+	store.Store
+	userID string
+	action string
+	detail string
+	calls  int
+	err    error
+}
+
+func (s *auditStoreStub) InsertAuditLog(_ context.Context, userID, action, detail string) error {
+	s.calls++
+	s.userID = userID
+	s.action = action
+	s.detail = detail
+	return s.err
+}
+
+func TestLogPersistsAuditEntry(t *testing.T) {
+	originalStore := getStore()
+	defer SetStore(originalStore)
+
+	stub := &auditStoreStub{}
+	SetStore(stub)
+
+	app := fiber.New()
+	actorID := uuid.New()
+	app.Put("/api/settings", func(c *fiber.Ctx) error {
+		c.Locals("userID", actorID)
+		Log(c, ActionSaveSettings, "settings", "global", "saved", "ok")
+		return c.SendStatus(fiber.StatusOK)
+	})
+
+	req := httptest.NewRequest("PUT", "/api/settings", nil)
+	req.Header.Set("X-Forwarded-For", "203.0.113.10")
+	_, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+
+	if stub.calls != 1 {
+		t.Fatalf("InsertAuditLog calls = %d, want 1", stub.calls)
+	}
+	if stub.userID != actorID.String() {
+		t.Fatalf("userID = %q, want %q", stub.userID, actorID.String())
+	}
+	if stub.action != ActionSaveSettings {
+		t.Fatalf("action = %q, want %q", stub.action, ActionSaveSettings)
+	}
+
+	var detail map[string]string
+	if err := json.Unmarshal([]byte(stub.detail), &detail); err != nil {
+		t.Fatalf("json.Unmarshal(detail) error = %v", err)
+	}
+	if detail["target_type"] != "settings" {
+		t.Errorf("target_type = %q, want %q", detail["target_type"], "settings")
+	}
+	if detail["target_id"] != "global" {
+		t.Errorf("target_id = %q, want %q", detail["target_id"], "global")
+	}
+	if detail["path"] != "/api/settings" {
+		t.Errorf("path = %q, want %q", detail["path"], "/api/settings")
+	}
+	if detail["method"] != "PUT" {
+		t.Errorf("method = %q, want %q", detail["method"], "PUT")
+	}
+	if detail["details"] != "saved ok" {
+		t.Errorf("details = %q, want %q", detail["details"], "saved ok")
+	}
+}
+
+func TestLogStoreFailureLogsError(t *testing.T) {
+	originalStore := getStore()
+	defer SetStore(originalStore)
+
+	stub := &auditStoreStub{err: errors.New("insert failed")}
+	SetStore(stub)
+
+	app := fiber.New()
+	app.Post("/api/login", func(c *fiber.Ctx) error {
+		Log(c, ActionAuthFailed, "session", "current")
+		return c.SendStatus(fiber.StatusUnauthorized)
+	})
+
+	var buf bytes.Buffer
+	captureLog(&buf, func() {
+		req := httptest.NewRequest("POST", "/api/login", nil)
+		_, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("app.Test() error = %v", err)
+		}
+	})
+
+	if stub.calls != 1 {
+		t.Fatalf("InsertAuditLog calls = %d, want 1", stub.calls)
+	}
+	logText := buf.String()
+	if !strings.Contains(logText, "audit: failed to persist audit entry") {
+		t.Fatalf("log output %q does not contain persistence failure message", logText)
+	}
+	if !strings.Contains(logText, "\"level\":\"ERROR\"") {
+		t.Fatalf("log output %q does not contain error level", logText)
 	}
 }
