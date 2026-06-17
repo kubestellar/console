@@ -272,9 +272,6 @@ func TestListNotifications(t *testing.T) {
 func httptestRequest(t *testing.T, method, url string, body []byte) *http.Request {
 	t.Helper()
 	reader := bytes.NewReader(body)
-	if body == nil {
-		reader = bytes.NewReader([]byte{})
-	}
 	req, err := http.NewRequest(method, url, reader)
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
