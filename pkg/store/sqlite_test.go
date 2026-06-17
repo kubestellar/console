@@ -23,6 +23,7 @@ var ctx = context.Background() //nolint:gochecknoglobals // test-only convenienc
 // newTestStore creates a fresh SQLiteStore backed by a temp file for each test.
 func newTestStore(t *testing.T) *SQLiteStore {
 	t.Helper()
+	t.Setenv("JWT_SECRET", "test-jwt-secret-for-store-tests")
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	store, err := NewSQLiteStore(dbPath)
 	require.NoError(t, err)
