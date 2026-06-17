@@ -256,8 +256,4 @@ describe('KubectlProxy connection edge cases', () => {
     })
   })
 
-  // =========================================================================
-  // getServices / getPVCs: error and parse-error branches
-  // =========================================================================
-
 })

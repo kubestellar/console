@@ -204,8 +204,4 @@ describe('KubectlProxy workload and cluster resources', () => {
     })
   })
 
-  // =========================================================================
-  // getNodes — fallback when error message is missing (line 276)
-  // =========================================================================
-
 })
