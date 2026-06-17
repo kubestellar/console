@@ -162,13 +162,13 @@ vi.mock('../../../cards/console-missions/shared', () => ({
 vi.mock('../PodDrillDown.tabs', () => ({
   usePodTabs: () => ({
     TABS: [
-      { id: 'overview', label: 'drilldown.tabs.overview' },
-      { id: 'logs', label: 'drilldown.tabs.logs' },
-      { id: 'events', label: 'drilldown.tabs.events' },
-      { id: 'yaml', label: 'drilldown.tabs.yaml' },
-      { id: 'describe', label: 'drilldown.tabs.describe' },
-      { id: 'exec', label: 'drilldown.tabs.exec' },
-      { id: 'related', label: 'drilldown.tabs.related' },
+      { id: 'overview', label: 'drilldown.tabs.overview', icon: () => null },
+      { id: 'logs', label: 'drilldown.tabs.logs', icon: () => null },
+      { id: 'events', label: 'drilldown.tabs.events', icon: () => null },
+      { id: 'yaml', label: 'drilldown.tabs.yaml', icon: () => null },
+      { id: 'describe', label: 'drilldown.tabs.describe', icon: () => null },
+      { id: 'exec', label: 'drilldown.tabs.exec', icon: () => null },
+      { id: 'related', label: 'drilldown.tabs.related', icon: () => null },
     ],
   }),
   useContainerNames: () => ['container-1'],
