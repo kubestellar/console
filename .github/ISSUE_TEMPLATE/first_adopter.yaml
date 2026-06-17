@@ -1,0 +1,141 @@
+name: First Adopter Program Submission
+description: Join our First Adopter Program and get recognized for using KubeStellar Console
+title: "📖 First Adopter: "
+labels:
+  - kind/adopter
+  - area/community
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🎉 Welcome to the First Adopter Program!
+        
+        Thank you for considering to share your KubeStellar Console adoption story! 
+        
+        As a First Adopter, you'll:
+        - 🏆 Be featured in our ADOPTERS.md file
+        - 📢 Get highlighted in our community channels
+        - 🤝 Receive direct support from maintainers
+        - 🎁 Exclusive First Adopter badge and swag (when available)
+
+  - type: input
+    id: organization
+    attributes:
+      label: Organization Name
+      description: Name of your company, team, or project
+      placeholder: "Example Corp"
+    validations:
+      required: true
+
+  - type: input
+    id: website
+    attributes:
+      label: Website or Link
+      description: Link to your organization's website, GitHub, or relevant page
+      placeholder: "https://example.com"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Adoption Tier
+      description: What stage of adoption are you in?
+      options:
+        - "🥇 Production - Running in production environments"
+        - "🥈 Development - Using in development or staging"
+        - "🥉 Evaluation - Actively evaluating for future use"
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case Description
+      description: Tell us how you're using KubeStellar Console (2-3 sentences)
+      placeholder: |
+        Example: We use KubeStellar Console to manage our multi-cluster Kubernetes deployments across 50+ edge locations. It helps us monitor workload distribution and troubleshoot issues in real-time.
+    validations:
+      required: true
+
+  - type: textarea
+    id: cluster_info
+    attributes:
+      label: Deployment Details
+      description: Share relevant deployment details (optional but helpful!)
+      placeholder: |
+        - Number of clusters: 10
+        - Cluster types: EKS, GKE, on-prem
+        - Use cases: Edge computing, multi-region deployment
+        - Team size: 5 engineers
+    validations:
+      required: false
+
+  - type: dropdown
+    id: duration
+    attributes:
+      label: How long have you been using KubeStellar Console?
+      options:
+        - "Less than 1 month"
+        - "1-3 months"
+        - "3-6 months"
+        - "6+ months"
+    validations:
+      required: false
+
+  - type: textarea
+    id: testimonial
+    attributes:
+      label: Testimonial (Optional)
+      description: Would you like to share a quote about your experience?
+      placeholder: |
+        "KubeStellar Console transformed how we manage our multi-cluster environments..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: showcase
+    attributes:
+      label: Can we showcase your adoption?
+      description: May we feature you in blog posts, case studies, or social media?
+      options:
+        - "Yes - happy to be showcased!"
+        - "Maybe - contact me first"
+        - "No - just list in ADOPTERS.md"
+    validations:
+      required: false
+
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Person (Optional)
+      description: Name or GitHub handle for follow-up
+      placeholder: "@yourhandle or email@example.com"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Interested in contributing?
+      description: Check any that apply
+      options:
+        - label: I'd like to contribute feedback on features
+          required: false
+        - label: I'm interested in contributing code
+          required: false
+        - label: I'd like to speak at community meetings
+          required: false
+        - label: I can help with documentation
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        **Next Steps:**
+        1. Submit this issue
+        2. A maintainer will review and may reach out for more details
+        3. We'll add you to ADOPTERS.md via PR (or you can submit your own!)
+        4. Welcome to the KubeStellar Console community! 🎉
