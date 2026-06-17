@@ -372,12 +372,12 @@ metadata:
     expect(screen.getByText('drilldown.fields.cluster')).toBeInTheDocument()
 
     // Namespace navigation
-    const nsBtn = screen.getByRole('button', { name: /drilldown.fields.namespace/ })
+    const nsBtn = screen.getByRole('button', { name: /View namespace/ })
     await userEvent.click(nsBtn)
     expect(mockDrillToNamespace).toHaveBeenCalledWith('c1', 'ns1')
 
     // Cluster navigation
-    const clusterBtn = screen.getByRole('button', { name: /drilldown.fields.cluster/ })
+    const clusterBtn = screen.getByRole('button', { name: /View cluster/ })
     await userEvent.click(clusterBtn)
     expect(mockDrillToCluster).toHaveBeenCalledWith('c1')
   })
