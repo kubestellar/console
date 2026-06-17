@@ -8,11 +8,14 @@ This file lists organizations and individuals who are using KubeStellar Console 
 2. Add your organization to the table below
 3. Open a pull request with the title: `📖 docs: add <Organization> to ADOPTERS.md`
 
+> ⚠️ **Maintainer note**: When opening PRs that restructure this file, always preserve existing adopter entries. Do not replace the file with a blank template.
+
 ## Adopters List
 
 | Organization | Description | Use Case | Link |
 |---|---|---|---|
 | KubeStellar | Multi-cluster Kubernetes management | Console UI for managing KubeStellar deployments across edge and cloud clusters | [kubestellar.io](https://kubestellar.io) |
+| Drasi | Change data capture for cloud-native applications | Guided install mission for Drasi verified end-to-end by a Drasi maintainer, with engagement and fixes tracked in [drasi-project/drasi-platform#400](https://github.com/drasi-project/drasi-platform/issues/400) | [drasi.io](https://drasi.io) · [Install Mission](https://console.kubestellar.io/missions/install-drasi) |
 
 ## Adopter Tiers
 
