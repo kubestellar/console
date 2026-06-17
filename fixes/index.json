@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-17T08:08:32.486Z",
-  "count": 1609,
+  "generatedAt": "2026-06-17T08:09:00.734Z",
+  "count": 1610,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -6604,6 +6604,44 @@
       "targetResourceKinds": [
         "Secret"
       ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/cert-manager/cert-manager-1292-allowing-skipping-http01-and-dns01-self-check-on-a-per-solver-.json",
+      "title": "cert-manager: Allowing skipping HTTP01 and DNS01 self-check on a per-solver basis",
+      "description": "Allowing skipping HTTP01 and DNS01 self-check on a per-solver basis. Requested by 87+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "cert-manager",
+        "graduated",
+        "security",
+        "feature"
+      ],
+      "cncfProjects": [
+        "cert-manager"
+      ],
+      "targetResourceKinds": [],
       "difficulty": "intermediate",
       "issueTypes": [
         "feature"
