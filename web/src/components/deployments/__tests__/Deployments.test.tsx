@@ -121,7 +121,7 @@ describe('Deployments', () => {
 
     renderDeployments()
 
-    expect(screen.getByText('All healthy')).toBeTruthy()
+    expect(screen.getByText('All healthy')).toBeInTheDocument()
     expect(screen.getByTestId('stat-healthy').textContent).toBe('1')
     expect(screen.getByTestId('stat-critical').textContent).toBe('0')
     expect(screen.queryByText('2 critical issues')).toBeNull()
@@ -157,7 +157,7 @@ describe('Deployments', () => {
 
     renderDeployments()
 
-    expect(screen.getByText('2 critical issues')).toBeTruthy()
+    expect(screen.getByText('2 critical issues')).toBeInTheDocument()
     expect(screen.getByTestId('stat-critical').textContent).toBe('2')
     expect(screen.getByTestId('stat-healthy').textContent).toBe('1')
   })

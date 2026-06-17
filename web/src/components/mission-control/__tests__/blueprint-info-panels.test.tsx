@@ -12,13 +12,13 @@ import type { PayloadProject } from '../types'
 describe('GaugeRow', () => {
   it('renders progress bar with correct percentage', () => {
     render(<GaugeRow label="CPU" value={4} max={8} unit=" cores" />)
-    expect(screen.getByText('CPU')).toBeDefined()
-    expect(screen.getByText('4 / 8 cores (50%)')).toBeDefined()
+    expect(screen.getByText('CPU')).toBeInTheDocument()
+    expect(screen.getByText('4 / 8 cores (50%)')).toBeInTheDocument()
   })
 
   it('handles zero max gracefully', () => {
     render(<GaugeRow label="CPU" value={4} max={0} unit=" cores" />)
-    expect(screen.getByText('4 / 0 cores')).toBeDefined()
+    expect(screen.getByText('4 / 0 cores')).toBeInTheDocument()
   })
 })
 
@@ -69,9 +69,9 @@ describe('DeployModeInfoPanel', () => {
       />
     )
     
-    expect(screen.getByText('Phased Rollout')).toBeDefined()
-    expect(screen.getByText('Core Infrastructure')).toBeDefined() // Auto-generated phase
-    expect(screen.getByText('Time Estimate')).toBeDefined()
+    expect(screen.getByText('Phased Rollout')).toBeInTheDocument()
+    expect(screen.getByText('Core Infrastructure')).toBeInTheDocument() // Auto-generated phase
+    expect(screen.getByText('Time Estimate')).toBeInTheDocument()
   })
 
   it('renders YOLO mode details', () => {
@@ -84,7 +84,7 @@ describe('DeployModeInfoPanel', () => {
       />
     )
     
-    expect(screen.getByText('YOLO Mode')).toBeDefined()
-    expect(screen.getByText('Considerations')).toBeDefined()
+    expect(screen.getByText('YOLO Mode')).toBeInTheDocument()
+    expect(screen.getByText('Considerations')).toBeInTheDocument()
   })
 })
