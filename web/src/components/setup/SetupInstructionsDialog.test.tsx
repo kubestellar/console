@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import * as SetupInstructionsDialogModule from './SetupInstructionsDialog'
+import { SetupInstructionsDialog } from './SetupInstructionsDialog'
 
 describe('SetupInstructionsDialog Component', () => {
   it('exports SetupInstructionsDialog component', () => {
-    expect(SetupInstructionsDialogModule.SetupInstructionsDialog).toBeDefined()
-    expect(typeof SetupInstructionsDialogModule.SetupInstructionsDialog).toBe('function')
+    expect(SetupInstructionsDialog).toBeDefined()
+    expect(typeof SetupInstructionsDialog).toBe('function')
   })
 })
