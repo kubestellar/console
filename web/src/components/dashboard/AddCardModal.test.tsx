@@ -10,11 +10,11 @@ vi.mock('../cards/cardRegistry', () => ({
   registerDynamicCardType: vi.fn(),
 }))
 
-import * as AddCardModalModule from './AddCardModal'
+import { AddCardModal } from './AddCardModal'
 
 describe('AddCardModal Component', () => {
   it('exports AddCardModal component', () => {
-    expect(AddCardModalModule.AddCardModal).toBeDefined()
-    expect(typeof AddCardModalModule.AddCardModal).toBe('function')
+    expect(AddCardModal).toBeDefined()
+    expect(typeof AddCardModal).toBe('function')
   })
 })
