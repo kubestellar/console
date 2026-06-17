@@ -1,120 +1,142 @@
 import { test, expect } from '@playwright/test'
 import {
+  setupErrorCollector,
   setupDemoMode,
-  setupDemoAndNavigate,
   waitForNetworkIdleBestEffort,
   NETWORK_IDLE_TIMEOUT_MS,
+  MODAL_TIMEOUT_MS,
 } from './helpers/setup'
 
+/** Mobile viewport used by the mobile-specific smoke tests. */
+const MOBILE_VIEWPORT = { width: 393, height: 852 } as const
+
+/** Minimum body length we consider "real content" (catches blank pages). */
+const MIN_BODY_TEXT_LEN = 50
+/** Minimum body length after a full dashboard render. */
+const MIN_DASHBOARD_TEXT_LEN = 100
+/** Short timeout for optional UI probes (theme toggle, demo badge, etc.). */
+const OPTIONAL_PROBE_TIMEOUT_MS = 3_000
+
 /**
- * Smoke Tests
+ * Smoke Tests for KubeStellar Console
  *
- * Verifies that the most critical user flows work correctly:
- * - App loads and renders without crashing
- * - Navigation between key pages works
- * - Core UI elements are present and functional
- * - No console errors during normal usage
+ * These tests validate that critical routes load without console errors,
+ * navigation is consistent, and key user interactions work correctly.
  *
- * These tests are designed to be fast and reliable — they catch
- * regressions that would prevent basic usage of the console.
+ * Run with: npx playwright test e2e/smoke.spec.ts
+ *
+ * Note: `setupDemoMode` is imported from `./helpers/setup` — it uses
+ * `page.addInitScript` + mocks `/api/me` so smoke tests are self-contained
+ * and do not depend on the Go backend being reachable (see #9075, #9081).
  */
+
 test.describe('Smoke Tests', () => {
-  test.describe('App Loading', () => {
-    test('app loads and renders without crashing', async ({ page }) => {
-      await setupDemoMode(page)
+  test.describe('Route Loading', () => {
+    const routes = [
+      { path: '/', name: 'Home/Dashboard' },
+      { path: '/dashboard', name: 'Dashboard' },
+      { path: '/clusters', name: 'Clusters' },
+      { path: '/deploy', name: 'Deploy' },
+      { path: '/settings', name: 'Settings' },
+      { path: '/security', name: 'Security' },
+      { path: '/namespaces', name: 'Namespaces' },
+    ]
 
-      // Verify the app loaded successfully
-      await expect(page).toHaveURL(/.*/, { timeout: 15000 })
+    for (const { path, name } of routes) {
+      test(`${name} page (${path}) loads without console errors`, async ({ page }) => {
+        await setupDemoMode(page)
+        const { errors } = setupErrorCollector(page)
 
-      // App should have a body element (basic render check)
-      await expect(page.locator('body')).toBeVisible()
+        await page.goto(path)
+        await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, `route ${path}`)
 
-      // Should not show a blank white page
-      const bodyContent = await page.locator('body').textContent()
-      expect(bodyContent?.trim().length).toBeGreaterThan(0)
-    })
+        await expect(page.locator('body')).toBeVisible()
 
-    test('main navigation elements are present', async ({ page }) => {
-      await setupDemoMode(page)
-
-      // Check for key UI elements that should be present on load
-      // At least one of these should be visible
-      const navElement = page
-        .getByTestId('sidebar')
-        .or(page.getByTestId('navbar'))
-        .or(page.locator('nav'))
-        .first()
-
-      await expect(navElement).toBeVisible({ timeout: 15000 })
-    })
-
-    test('page title is set correctly', async ({ page }) => {
-      await setupDemoMode(page)
-
-      const title = await page.title()
-      // Title should not be empty or just 'localhost'
-      expect(title.length).toBeGreaterThan(0)
-    })
+        if (errors.length > 0) {
+          console.log(`Console errors on ${path}:`, errors)
+        }
+        expect(errors, `Unexpected console errors on ${path}`).toHaveLength(0)
+      })
+    }
   })
 
-  test.describe('Core Navigation', () => {
-    test('dashboard page loads', async ({ page }) => {
-      await setupDemoAndNavigate(page, '/')
-
-      // Should be on the dashboard or redirect to it
-      await expect(page).toHaveURL(/\/$|\/dashboard$/, { timeout: 15000 })
-    })
-
-    test('can navigate to all key routes without 404', async ({ page }) => {
-      const routes = [
-        { path: '/', name: 'Dashboard' },
-        { path: '/clusters', name: 'Clusters' },
-        { path: '/settings', name: 'Settings' },
-      ]
-
-      for (const route of routes) {
-        await setupDemoMode(page)
-        await page.goto(route.path)
-        await waitForNetworkIdleBestEffort(page)
-
-        // Should not show a 404 or error page
-        const bodyText = (await page.locator('body').textContent()) || ''
-        expect(bodyText).not.toMatch(/404|not found|error/i)
-      }
-    })
-
-    test('SPA routing works without full page reload', async ({ page }) => {
+  test.describe('Navigation Consistency', () => {
+    test('navbar links navigate correctly', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
       await waitForNetworkIdleBestEffort(page)
 
-      // Navigate to clusters via URL (SPA routing)
-      await page.goto('/clusters')
-      await waitForNetworkIdleBestEffort(page)
-
-      const url = page.url()
-      expect(url).toContain('/clusters')
-    })
-
-    test('all primary nav routes return expected paths', async ({ page }) => {
-      const routes = [
-        { href: '/', expectedPath: '/' },
+      const navLinks = [
         { href: '/clusters', expectedPath: '/clusters' },
+        { href: '/deploy', expectedPath: '/deploy' },
         { href: '/settings', expectedPath: '/settings' },
       ]
 
-      for (const route of routes) {
-        await setupDemoMode(page)
-        await page.goto(route.href)
-        await waitForNetworkIdleBestEffort(page)
+      // Scope to the sidebar (data-testid="sidebar") because the main <nav>
+      // navbar does not contain these route links — they live in the sidebar.
+      // Using a bare `nav` locator matched multiple <nav> elements (navbar +
+      // sidebar section navs) and violated strict mode. #9877
+      const sidebar = page.getByTestId('sidebar')
 
-        const url = new URL(page.url())
-        expect(url.pathname).toContain(expectedPath)
+      // On mobile viewports (<md) the sidebar is rendered off-canvas and must
+      // be opened via the hamburger button before its links are clickable.
+      // #9877
+      const hamburger = page
+        .locator('[data-testid="mobile-menu-toggle"]')
+        .or(page.locator('button[aria-label*="menu" i]'))
+        .first()
+      const viewportSize = page.viewportSize()
+      const MOBILE_SIDEBAR_MAX_WIDTH_PX = 768
+      const HAMBURGER_PROBE_TIMEOUT_MS = 2_000
+      if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
+        const hamburgerVisible = await hamburger
+          .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
+          .catch(() => false)
+        if (hamburgerVisible) {
+          // Use native el.click() for cross-browser stability
+          await hamburger.evaluate((el) => (el as HTMLElement).click())
+          // Wait for sidebar slide-in animation to complete
+          await expect(sidebar).toBeVisible({ timeout: 3000 })
+        }
+      }
+
+      for (const { href, expectedPath } of navLinks) {
+        // Use href-based locators for cross-browser reliability — text labels
+        // can differ (e.g. "My Clusters" vs "Clusters") and exact text
+        // matching is fragile across browsers. #10134
+        const link = sidebar.locator(`a[href="${href}"]`).first()
+        // Mobile-safari needs extra time after hamburger open for the sidebar
+        // slide-in animation to complete before links are hittable. (#nightly-playwright)
+        await expect(link).toBeVisible({ timeout: 15_000 })
+        
+        // Wait for network idle before clicking to avoid DOM detach during
+        // hook re-renders (common in webkit/firefox). This stabilizes the
+        // element before interaction.
+        await page.waitForLoadState('networkidle').catch(() => {})
+        
+        // Use native el.click() for maximum cross-browser compatibility
+        await link.evaluate((el) => (el as HTMLElement).click())
+        
+        await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, `nav to ${expectedPath}`)
+        expect(page.url()).toContain(expectedPath)
+        // Re-open mobile sidebar if navigation closed it.
+        if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
+          const stillVisible = await link
+            .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
+            .catch(() => false)
+          if (!stillVisible) {
+            const hamburgerVisible = await hamburger
+              .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
+              .catch(() => false)
+            if (hamburgerVisible) {
+              await hamburger.evaluate((el) => (el as HTMLElement).click())
+              await expect(sidebar).toBeVisible({ timeout: 3000 })
+            }
+          }
+        }
       }
     })
-  })
 
-  test.describe('Navigation Consistency', () => {
     test('sidebar navigation works', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
@@ -164,69 +186,131 @@ test.describe('Smoke Tests', () => {
       // Try to find add card button
       const addButton = page.getByTestId('add-card-button')
         .or(page.locator('button:has-text("Add Card")'))
-        .or(page.locator('button:has-text("Add")'))
-        .first()
+        .or(page.locator('[aria-label*="add"]'))
 
-      if (await addButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await addButton.click()
-        await waitForNetworkIdleBestEffort(page)
+      if (await addButton.first().isVisible({ timeout: MODAL_TIMEOUT_MS })) {
+        await addButton.first().click()
 
-        // Modal or panel should open
-        const modal = page.getByRole('dialog')
-          .or(page.locator('[data-testid*="modal"]'))
-          .or(page.locator('[data-testid*="panel"]'))
-          .first()
+        // Verify modal opened
+        const modal = page.locator('[role="dialog"]')
+        await expect(modal).toBeVisible({ timeout: MODAL_TIMEOUT_MS })
 
-        if (await modal.isVisible({ timeout: 3000 }).catch(() => false)) {
-          // Try to close it
-          const closeButton = page.locator('button[aria-label*="close" i], button[aria-label*="cancel" i]').first()
-          if (await closeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await closeButton.click()
-          } else {
-            await page.keyboard.press('Escape')
-          }
-        }
+        // Close with Escape
+        await page.keyboard.press('Escape')
+        await expect(modal).not.toBeVisible({ timeout: MODAL_TIMEOUT_MS })
       }
-      // Test passes if no errors thrown
     })
 
     test('settings page interactions work', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/settings')
+      await page.waitForLoadState('domcontentloaded')
       await waitForNetworkIdleBestEffort(page)
 
-      // Settings page should load without errors
-      const bodyContent = await page.locator('body').textContent()
-      expect(bodyContent?.length).toBeGreaterThan(0)
+      // Check for theme toggle — use a precise locator scoped to the navbar
+      // button (aria-label contains "theme") to avoid matching non-button
+      // elements in the ThemeSection dropdown.  Force-click because on
+      // webkit / firefox the Tooltip wrapper can report the button as "not
+      // stable" during CSS transitions (#nightly-playwright).
+      const THEME_POLL_TIMEOUT_MS = 10_000
+      const themeToggle = page.locator('nav button[aria-label*="theme" i]').first()
+        .or(page.getByTestId('theme-toggle'))
+        .or(page.locator('button:has-text("Theme")'))
+
+      if (await themeToggle.first().isVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS })) {
+        const htmlBefore = await page.locator('html').getAttribute('class')
+        
+        // Wait for network idle before clicking to avoid DOM detach
+        await page.waitForLoadState('networkidle').catch(() => {})
+        
+        // Use native el.click() for maximum cross-browser compatibility
+        await themeToggle.first().evaluate((el) => (el as HTMLElement).click())
+
+        await expect
+          .poll(async () => page.locator('html').getAttribute('class'), { timeout: THEME_POLL_TIMEOUT_MS })
+          .not.toBe(htmlBefore)
+      }
     })
   })
 
   test.describe('Error Handling', () => {
-    test('no unhandled JavaScript errors on dashboard load', async ({ page }) => {
-      const errors: string[] = []
-      page.on('pageerror', (err) => errors.push(err.message))
+    test('404 page shows error message', async ({ page }) => {
+      await setupDemoMode(page)
+      await page.goto('/this-page-does-not-exist-12345')
+      await waitForNetworkIdleBestEffort(page)
 
+      // Should show some error indication, not blank page
+      const pageContent = await page.textContent('body')
+      expect(pageContent?.length).toBeGreaterThan(MIN_BODY_TEXT_LEN)
+    })
+
+    test('page handles missing data gracefully', async ({ page }) => {
+      await setupDemoMode(page)
+      const { errors } = setupErrorCollector(page)
+
+      // Visit a data-heavy page
+      await page.goto('/clusters')
+      await waitForNetworkIdleBestEffort(page)
+
+      // Should not crash, should show loading or empty state
+      const pageContent = await page.textContent('body')
+      expect(pageContent?.length).toBeGreaterThan(MIN_BODY_TEXT_LEN)
+      expect(errors).toHaveLength(0)
+    })
+  })
+
+  test.describe('Mobile Viewport', () => {
+    test('dashboard loads without error on mobile', async ({ page }) => {
+      await page.setViewportSize(MOBILE_VIEWPORT)
+      await setupDemoMode(page)
+      const { errors } = setupErrorCollector(page)
+
+      await page.goto('/')
+      await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, 'mobile /')
+
+      // Check no error boundary rendered (React #185 crash)
+      const errorBoundary = page.locator('text=This page encountered an error')
+      await expect(errorBoundary).not.toBeVisible({ timeout: MODAL_TIMEOUT_MS })
+
+      // Page should have real content, not just an error
+      await expect(page.locator('body')).toBeVisible()
+      const bodyText = await page.textContent('body')
+      expect(bodyText?.length).toBeGreaterThan(MIN_DASHBOARD_TEXT_LEN)
+
+      if (errors.length > 0) {
+        console.log('Mobile console errors:', errors)
+      }
+      expect(errors, 'Unexpected console errors on mobile dashboard').toHaveLength(0)
+    })
+
+    test('clusters page loads without error on mobile', async ({ page }) => {
+      await page.setViewportSize(MOBILE_VIEWPORT)
+      await setupDemoMode(page)
+
+      await page.goto('/clusters')
+      await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, 'mobile /clusters')
+
+      const errorBoundary = page.locator('text=This page encountered an error')
+      await expect(errorBoundary).not.toBeVisible({ timeout: MODAL_TIMEOUT_MS })
+    })
+  })
+
+  test.describe('Demo Mode', () => {
+    test('demo mode indicator is visible', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/')
       await waitForNetworkIdleBestEffort(page)
 
-      // Filter out known non-critical errors
-      const criticalErrors = errors.filter((e) => {
-        const lower = e.toLowerCase()
-        return !lower.includes('resize observer') && !lower.includes('non-error promise rejection')
+      // Check for demo mode badge/indicator. The AgentStatusIndicator also
+      // renders a "Demo Mode" <span> that is hidden on <sm viewports (mobile)
+      // via `hidden sm:inline`; filter to visible matches so the first hit
+      // isn't a hidden element. #9877
+      const demoIndicator = page.locator(':visible').filter({
+        hasText: /demo/i,
       })
 
-      expect(criticalErrors).toHaveLength(0)
-    })
-
-    test('404 route shows appropriate fallback', async ({ page }) => {
-      await setupDemoMode(page)
-      await page.goto('/this-route-definitely-does-not-exist-12345')
-      await waitForNetworkIdleBestEffort(page)
-
-      // Should either redirect to home or show a 404 page, not crash
-      const bodyContent = await page.locator('body').textContent()
-      expect(bodyContent?.trim().length).toBeGreaterThan(0)
+      // Assert the demo indicator is visible — a missing indicator is a regression. #9524
+      await expect(demoIndicator.first()).toBeVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS })
     })
   })
 })
