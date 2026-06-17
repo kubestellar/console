@@ -117,13 +117,15 @@ test.describe('Sidebar Navigation', () => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
 
       // Navigate away first — clicking the home link while already on "/"
-      // would not exercise any real routing behavior.
-      await page.goto('/clusters')
-      
-      // Firefox-specific: Wait for page content to render before interacting.
-      // In Firefox, there's a race where the auth context hasn't finished init,
-      // causing navigation issues. Wait for the page header to confirm render. (#18304)
-      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
+      // would not exercise any real routing behavior. Use the sidebar link
+      // directly (instead of page.goto('/clusters')) to avoid auth-init races
+      // observed in Firefox/WebKit (#18304).
+      const clustersLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/clusters"], [data-testid="sidebar"] a[href="/clusters"]').first()
+      await expect(clustersLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
+      await Promise.all([
+        page.waitForURL('**/clusters', { timeout: SIDEBAR_TIMEOUT_MS }),
+        clustersLink.click({ force: true }),
+      ])
       await expectDashboardNavigation(page, '/clusters', 'My Clusters')
 
       const dashboardLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/"], [data-testid="sidebar"] a[href="/"]').first()

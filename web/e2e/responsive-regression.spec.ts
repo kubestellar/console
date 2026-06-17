@@ -176,10 +176,12 @@ test.describe('Responsive Breakpoint Tests', () => {
       test('navigation is accessible', async ({ page }) => {
         await page.goto('/')
         await page.waitForLoadState('domcontentloaded')
+        await expect(page.getByTestId('navbar-home-btn')).toBeVisible({ timeout: MOBILE_NAV_PROBE_TIMEOUT_MS })
 
         // At mobile/tablet, expect a hamburger or sidebar toggle
         if (viewport.width < MOBILE_NAV_MAX_WIDTH_PX) {
           const mobileNav = page.locator('[data-testid="mobile-menu-toggle"]')
+            .or(page.getByRole('button', { name: /open menu|close menu/i }))
             .or(page.locator('button[aria-label*="menu" i]'))
             .or(page.locator('[data-testid="sidebar-toggle"]'))
 

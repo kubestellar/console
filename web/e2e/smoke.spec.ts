@@ -163,7 +163,10 @@ test.describe('Smoke Tests', () => {
       // In Firefox, there's a race where ProtectedRoute hasn't finished auth init yet,
       // causing a redirect to home. Waiting for Settings-specific content ensures the
       // page loaded correctly. (#18304)
-      await expect(page.locator('h1:has-text("Settings")')).toBeVisible({ timeout: 10000 })
+      const settingsTitle = page
+        .getByTestId('settings-title')
+        .or(page.getByTestId('settings-title-mobile'))
+      await expect(settingsTitle.first()).toBeVisible({ timeout: 10000 })
       expect(page.url()).toContain('/settings')
 
       // Click the logo button (has aria-label "Go to home dashboard").
