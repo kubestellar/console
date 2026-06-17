@@ -27,13 +27,12 @@ import { useDashboardContext } from '../../hooks/useDashboardContext'
 import { useToast } from '../ui/Toast'
 import { prefetchCardChunks } from '../cards/cardRegistry'
 import { ROUTES } from '../../config/routes'
-import { getDefaultCardsForDashboard } from '../../config/dashboards'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { STORAGE_KEY_DASHBOARD_AUTO_REFRESH } from '../../lib/constants'
 import { loadDashboardCardsFromStorage, saveDashboardCardsToStorage } from '../../lib/dashboards/dashboardCardStorage'
 import { useMissions } from '../../hooks/useMissions'
 import type { Card, DashboardData } from './dashboardUtils'
-import { isLocalOnlyCard, mapVisualizationToCardType, getDefaultCardSize, getDemoCards } from './dashboardUtils'
+import { isLocalOnlyCard, getDemoCards } from './dashboardUtils'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { useDashboardUndoRedo } from '../../hooks/useUndoRedo'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
@@ -46,30 +45,28 @@ import { useCardGridNavigation } from '../../hooks/useCardGridNavigation'
 import { useModalState } from '../../lib/modals'
 import { setAutoRefreshPaused } from '../../lib/cache'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { STORAGE_KEY_MAIN_DASHBOARD_CARDS } from '../../lib/constants/storage'
-import { isClusterHealthy } from '../clusters/utils'
 import type { DashboardTemplate } from './templates'
+import {
+  AUTO_REFRESH_INTERVAL_MS,
+  DASHBOARD_STORAGE_KEY,
+  DEFAULT_DASHBOARD_CARDS,
+  buildDashboardExportFilename,
+  calculateClusterStats,
+  createCardsFromSuggestions,
+  createDashboardCard,
+  createRestoredCard,
+  createTemplateCards,
+  isExpectedDashboardLoadFailure,
+} from './DashboardHelpers'
+import type {
+  CachedDashboard,
+  DashboardCardSuggestion,
+  PendingDeploy,
+} from './DashboardTypes'
 
-const AUTO_REFRESH_INTERVAL_MS = 30_000
-
-interface CachedDashboard {
-  dashboard: DashboardData | null
-  cards: Card[]
-  timestamp: number
-}
-
-interface PendingDeploy {
-  workloadName: string
-  namespace: string
-  sourceCluster: string
-  targetClusters: string[]
-  groupName: string
-}
+export type { DashboardState } from './DashboardTypes'
 
 let dashboardCache: CachedDashboard | null = null
-
-const DASHBOARD_STORAGE_KEY = STORAGE_KEY_MAIN_DASHBOARD_CARDS
-const DEFAULT_DASHBOARD_CARDS: Card[] = getDefaultCardsForDashboard('main')
 
 export function useDashboardState() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(() => dashboardCache?.dashboard || null)
@@ -173,29 +170,7 @@ export function useDashboardState() {
     totalPods,
     totalNamespaces,
     totalNodes,
-  } = useMemo(() => {
-    return filteredClusters.reduce((stats, cluster) => {
-      stats.clusterCount += 1
-      if (isClusterHealthy(cluster)) {
-        stats.healthyClusters += 1
-        stats.healthyNodes += cluster.nodeCount || 0
-      } else {
-        stats.unhealthyClusters += 1
-      }
-      stats.totalPods += cluster.podCount || 0
-      stats.totalNamespaces += cluster.namespaces?.length || 0
-      stats.totalNodes += cluster.nodeCount || 0
-      return stats
-    }, {
-      clusterCount: 0,
-      healthyClusters: 0,
-      unhealthyClusters: 0,
-      healthyNodes: 0,
-      totalPods: 0,
-      totalNamespaces: 0,
-      totalNodes: 0,
-    })
-  }, [filteredClusters])
+  } = useMemo(() => calculateClusterStats(filteredClusters), [filteredClusters])
 
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
@@ -519,15 +494,7 @@ export function useDashboardState() {
     } catch (error: unknown) {
       const isExpectedFailure = error instanceof BackendUnavailableError ||
         error instanceof UnauthenticatedError ||
-        (error instanceof Error && (
-          error.message.includes('Request timeout') ||
-          error.message.includes('Failed to fetch') ||
-          error.message.includes('NetworkError') ||
-          error.message.includes('Load failed') ||
-          error.message.includes('HTTP request to an HTTPS server') ||
-          error.message.includes('API error:') ||
-          error.message.includes('Invalid JSON')
-        ))
+        isExpectedDashboardLoadFailure(error)
       if (!isExpectedFailure) {
         console.error('Failed to load dashboard:', error)
         if (!isBackground) {
@@ -569,14 +536,7 @@ export function useDashboardState() {
 
   useEffect(() => {
     if (pendingRestoreCard && !isLoading) {
-      const size = getDefaultCardSize(pendingRestoreCard.cardType)
-      const newCard: Card = {
-        id: `restored-${Date.now()}`,
-        card_type: pendingRestoreCard.cardType,
-        config: pendingRestoreCard.config || {},
-        position: { x: 0, y: 0, ...size },
-        title: pendingRestoreCard.cardTitle,
-      }
+      const newCard = createRestoredCard(pendingRestoreCard)
       recordCardAdded(
         newCard.id,
         newCard.card_type,
@@ -618,17 +578,7 @@ export function useDashboardState() {
     visualization: string
     config: Record<string, unknown>
   }>) => {
-    const newCards: Card[] = suggestions.map((suggestion, index) => {
-      const cardType = mapVisualizationToCardType(suggestion.visualization, suggestion.type)
-      const size = getDefaultCardSize(cardType)
-      return {
-        id: `new-${Date.now()}-${index}`,
-        card_type: cardType,
-        config: suggestion.config,
-        position: { x: 0, y: 0, ...size },
-        title: suggestion.title,
-      }
-    })
+    const newCards = createCardsFromSuggestions(suggestions as DashboardCardSuggestion[])
     newCards.forEach(card => {
       recordCardAdded(card.id, card.card_type, card.title, card.config, dashboard?.id, dashboard?.name)
       emitCardAdded(card.card_type, 'add_modal')
@@ -776,28 +726,14 @@ export function useDashboardState() {
         const remaining = prev.filter((_, index) => index !== existingIndex)
         return [existingCard, ...remaining]
       }
-      const size = getDefaultCardSize(cardType)
-      const newCard: Card = {
-        id: `rec-${Date.now()}`,
-        card_type: cardType,
-        config: config || {},
-        position: { x: 0, y: 0, ...size },
-        title,
-      }
+      const newCard = createDashboardCard(cardType, config || {}, title)
       recordCardAdded(newCard.id, cardType, title, config, dashboard?.id, dashboard?.name)
       return [newCard, ...prev]
     })
   }, [dashboard?.id, dashboard?.name, localCards, recordCardAdded, snapshot])
 
   const handleCreateCardFromAI = useCallback((cardType: string, config: Record<string, unknown>, title?: string) => {
-    const size = getDefaultCardSize(cardType)
-    const newCard: Card = {
-      id: `ai-${Date.now()}`,
-      card_type: cardType,
-      config: config || {},
-      position: { x: 0, y: 0, ...size },
-      title,
-    }
+    const newCard = createDashboardCard(cardType, config || {}, title, 'ai')
     recordCardAdded(newCard.id, cardType, title, config, dashboard?.id, dashboard?.name)
     snapshot(localCards)
     setLocalCards(prev => [newCard, ...prev])
@@ -806,13 +742,7 @@ export function useDashboardState() {
   }, [closeConfigureCard, dashboard?.id, dashboard?.name, localCards, recordCardAdded, snapshot])
 
   const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards: Card[] = template.cards.map((templateCard, index) => ({
-      id: `template-${Date.now()}-${index}`,
-      card_type: templateCard.card_type,
-      config: templateCard.config || {},
-      position: { x: 0, y: 0, w: templateCard.position?.w || 4, h: templateCard.position?.h || 2 },
-      title: templateCard.title,
-    }))
+    const newCards = createTemplateCards(template)
     newCards.forEach(card => {
       recordCardAdded(card.id, card.card_type, card.title, card.config, dashboard?.id, dashboard?.name)
     })
@@ -822,13 +752,7 @@ export function useDashboardState() {
   }, [dashboard?.id, dashboard?.name, localCards, recordCardAdded, showToast, snapshot, t])
 
   const handleAddSingleCard = useCallback((cardType: string) => {
-    const size = getDefaultCardSize(cardType)
-    const newCard: Card = {
-      id: `rec-${Date.now()}`,
-      card_type: cardType,
-      config: {},
-      position: { x: 0, y: 0, ...size },
-    }
+    const newCard = createDashboardCard(cardType, {})
     recordCardAdded(newCard.id, cardType, undefined, {}, dashboard?.id, dashboard?.name)
     emitCardAdded(cardType, 'smart_suggestion')
     snapshot(localCards)
@@ -906,7 +830,7 @@ export function useDashboardState() {
         const url = URL.createObjectURL(blob)
         const anchor = document.createElement('a')
         anchor.href = url
-        anchor.download = `${(dashboard.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
+        anchor.download = buildDashboardExportFilename(dashboard.name)
         anchor.click()
         safeRevokeObjectURL(url)
         showToast(t('dashboard.toast.exported', 'Dashboard exported'), 'success')
@@ -989,5 +913,3 @@ export function useDashboardState() {
     undo,
   }
 }
-
-export type DashboardState = ReturnType<typeof useDashboardState>

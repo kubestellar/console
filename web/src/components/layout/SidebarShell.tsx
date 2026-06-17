@@ -37,138 +37,39 @@ import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendation
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 import { useActiveUsers } from '../../hooks/useActiveUsers'
 import { useMissions } from '../../hooks/useMissions'
-import { DASHBOARD_CONFIGS } from '../../config/dashboards/index'
 import { emitSidebarNavigated, emitDashboardRenamed } from '../../lib/analytics'
 import { prefetchDashboard } from '../../lib/prefetchDashboard'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useUpgradeState } from '../../hooks/useUpgradeState'
-import { STORAGE_KEY_GROUND_CONTROL_DASHBOARDS } from '../../lib/constants/storage'
 import { NAVBAR_HEIGHT_PX, SIDEBAR_CONTROLS_LEFT_OFFSET_PX } from '../../lib/constants/ui'
-import { safeGetJSON } from '../../lib/utils/localStorage'
-import { getSidebarCardCount } from './sidebarCardCount'
 import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
 import { useEscapeLayer, useModalFocusTrap } from '../../lib/modals'
+import {
+  COLLAPSED_BADGE_BASE_CLASS,
+  PRIMARY_SECTION_INDEX,
+  SIDEBAR_AUTO_HIDE_MS,
+  SIDEBAR_MAX_WIDTH_PX,
+  SIDEBAR_MIN_WIDTH_PX,
+  SIDEBAR_RESIZE_HANDLE_OFFSET_PX,
+  SIDEBAR_RESIZE_HANDLE_TOP_PX,
+  SIDEBAR_RESIZE_HANDLE_WIDTH_PX,
+  SIDEBAR_RESIZE_STEP_PX,
+  getNavItemBadge,
+  isGroundControlItem,
+} from './SidebarConstants'
+import type {
+  NavSection,
+  SidebarNavItem,
+  SidebarShellProps,
+} from './SidebarTypes'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface NavSection {
-  id: string
-  label?: string
-  items: SidebarNavItem[]
-  collapsible?: boolean
-}
-
-export interface SidebarNavItem {
-  id: string
-  label: string
-  href: string
-  icon: string
-  badge?: string
-  badgeColor?: string
-  /** When true the item came from the user's sidebar config and supports
-   *  inline rename / removal.  Maps to `SidebarItem.isCustom`. */
-  isCustom?: boolean
-}
-
-export interface SidebarFeatures {
-  /** Show AI missions panel */
-  missions?: boolean
-  /** Show Console Studio "Add Card" button */
-  addCard?: boolean
-  /** Show "Add more dashboards" button */
-  addMore?: boolean
-  /** Show cluster status summary */
-  clusterStatus?: boolean
-  /** Show active users count */
-  activeUsers?: boolean
-  /** Show version check indicator */
-  versionCheck?: boolean
-  /** Enable drag-drop reorder of nav items */
-  dragReorder?: boolean
-  /** Enable sidebar resize */
-  resize?: boolean
-  /** Enable collapse/pin */
-  collapsePin?: boolean
-  /** Show snoozed cards panel */
-  snoozedCards?: boolean
-}
-
-export interface SidebarBranding {
-  title?: string
-  logo?: React.ReactNode
-  subtitle?: string
-}
-
-export interface SidebarShellProps {
-  /** Navigation sections to render */
-  navSections: NavSection[]
-  /** Optional features to enable */
-  features?: SidebarFeatures
-  /** Optional branding for white-label */
-  branding?: SidebarBranding
-  /** Storage key prefix for persistence */
-  storageKeyPrefix?: string
-  /** Optional footer content */
-  footer?: React.ReactNode
-  /** Called when "Add more" is clicked */
-  onAddMore?: () => void
-  /** Called when "Add Card" is clicked */
-  onAddCard?: () => void
-  /** Custom children rendered between nav and footer */
-  children?: React.ReactNode
-  /**
-   * Override the sidebar width instead of using the shared config width.
-   * Used by portal sidebars (e.g. Enterprise) that should not inherit a
-   * user-resized width from the main console sidebar.
-   */
-  widthOverride?: number
-}
-
-// ---------------------------------------------------------------------------
-// Internal helpers (same as original Sidebar.tsx)
-// ---------------------------------------------------------------------------
-
-const SIDEBAR_MIN_WIDTH_PX = 180
-const SIDEBAR_MAX_WIDTH_PX = 480
-const SIDEBAR_RESIZE_STEP_PX = 16
-const SIDEBAR_RESIZE_HANDLE_TOP_PX = 160
-const SIDEBAR_RESIZE_HANDLE_OFFSET_PX = 3
-const SIDEBAR_RESIZE_HANDLE_WIDTH_PX = 6
-
-/** Index of the primary (dashboard list) section — "Add more..." button renders after it */
-const PRIMARY_SECTION_INDEX = 0
-
-/** Map sidebar item href to dashboard config ID for card count display. */
-const HREF_TO_DASHBOARD_ID: Record<string, string> = {
-  [ROUTES.HOME]: 'main', [ROUTES.COMPUTE]: 'compute', [ROUTES.SECURITY]: 'security',
-  [ROUTES.GITOPS]: 'gitops', [ROUTES.STORAGE]: 'storage', [ROUTES.NETWORK]: 'network',
-  [ROUTES.EVENTS]: 'events', [ROUTES.ALERTS]: 'alerts', [ROUTES.WORKLOADS]: 'workloads', [ROUTES.OPERATORS]: 'operators',
-  [ROUTES.CLUSTERS]: 'clusters', [ROUTES.COMPLIANCE]: 'compliance', [ROUTES.COST]: 'cost',
-  [ROUTES.GPU_RESERVATIONS]: 'gpu', [ROUTES.NODES]: 'nodes', [ROUTES.DEPLOYMENTS]: 'deployments',
-  [ROUTES.PODS]: 'pods', [ROUTES.SERVICES]: 'services', [ROUTES.HELM]: 'helm',
-  [ROUTES.AI_ML]: 'ai-ml', [ROUTES.CI_CD]: 'ci-cd',
-  [ROUTES.LOGS]: 'logs', [ROUTES.DATA_COMPLIANCE]: 'data-compliance', [ROUTES.ARCADE]: 'arcade',
-  [ROUTES.DEPLOY]: 'deploy', [ROUTES.AI_AGENTS]: 'ai-agents',
-  [ROUTES.LLM_D_BENCHMARKS]: 'llm-d-benchmarks', [ROUTES.CLUSTER_ADMIN]: 'cluster-admin',
-  [ROUTES.INSIGHTS]: 'insights', [ROUTES.DRASI]: 'drasi',
-  [ROUTES.MULTI_TENANCY]: 'multi-tenancy', [ROUTES.ACMM]: 'acmm',
-}
-
-const CUSTOM_DASHBOARD_PREFIX = ROUTES.CUSTOM_DASHBOARD.replace(':id', '')
-
-function isGroundControlItem(href: string): boolean {
-  if (!href.startsWith(CUSTOM_DASHBOARD_PREFIX)) return false
-  const dashboardId = href.slice(CUSTOM_DASHBOARD_PREFIX.length)
-  const gcMapping = safeGetJSON<Record<string, unknown>>(STORAGE_KEY_GROUND_CONTROL_DASHBOARDS) ?? {}
-  return dashboardId in gcMapping
-}
-
-const SIDEBAR_AUTO_HIDE_MS = 2000
-const COLLAPSED_BADGE_MAX_COUNT = 99
-const COLLAPSED_BADGE_BASE_CLASS = 'absolute -top-1 -right-1 z-10 flex h-4 min-w-4 items-center justify-center rounded-full border border-background px-0.5 text-[10px] font-bold leading-none shadow-sm'
-const COLLAPSED_BADGE_DEFAULT_COLOR_CLASS = 'bg-primary text-primary-foreground'
+export type {
+  NavSection,
+  SidebarBranding,
+  SidebarFeatures,
+  SidebarNavItem,
+  SidebarShellProps,
+} from './SidebarTypes'
 
 // ---------------------------------------------------------------------------
 // Component
@@ -458,55 +359,6 @@ export function SidebarShell({
   const renderIcon = (iconName: string, className?: string) => {
     const IconComponent = iconRegistry[iconName] as React.ComponentType<{ className?: string }> | undefined
     return IconComponent ? <IconComponent className={className} /> : null
-  }
-
-  const getCompactBadgeLabel = (badgeValue: string) => {
-    const numericBadge = Number(badgeValue)
-
-    if (!Number.isFinite(numericBadge)) {
-      return badgeValue
-    }
-
-    return numericBadge > COLLAPSED_BADGE_MAX_COUNT
-      ? `${COLLAPSED_BADGE_MAX_COUNT}+`
-      : String(numericBadge)
-  }
-
-  const getNavItemBadge = (item: SidebarNavItem) => {
-    const dashboardId = HREF_TO_DASHBOARD_ID[item.href]
-    const count = dashboardId
-      ? getSidebarCardCount(DASHBOARD_CONFIGS[dashboardId])
-      : null
-    const rawBadge = item.badge ?? (count != null ? String(count) : null)
-    const trimmedBadge = rawBadge?.trim()
-
-    if (!trimmedBadge) {
-      return {
-        count,
-        compactLabel: null,
-        tooltipLabel: null,
-        colorClassName: item.badgeColor ?? COLLAPSED_BADGE_DEFAULT_COLOR_CLASS,
-      }
-    }
-
-    const numericBadge = Number(trimmedBadge)
-    const hasNumericBadge = Number.isFinite(numericBadge)
-
-    if (hasNumericBadge && numericBadge <= 0) {
-      return {
-        count,
-        compactLabel: null,
-        tooltipLabel: null,
-        colorClassName: item.badgeColor ?? COLLAPSED_BADGE_DEFAULT_COLOR_CLASS,
-      }
-    }
-
-    return {
-      count,
-      compactLabel: getCompactBadgeLabel(trimmedBadge),
-      tooltipLabel: trimmedBadge,
-      colorClassName: item.badgeColor ?? COLLAPSED_BADGE_DEFAULT_COLOR_CLASS,
-    }
   }
 
   /* Disable drag-reorder on mobile — draggable elements intercept touch
