@@ -9,6 +9,11 @@ import {
 } from '../BlueprintInfoPanels'
 import type { PayloadProject } from '../types'
 
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({ t: (key: string, fallback?: string) => fallback ?? key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
+
 describe('GaugeRow', () => {
   it('renders progress bar with correct percentage', () => {
     render(<GaugeRow label="CPU" value={4} max={8} unit=" cores" />)
@@ -71,7 +76,7 @@ describe('DeployModeInfoPanel', () => {
     
     expect(screen.getByText('Phased Rollout')).toBeDefined()
     expect(screen.getByText('Core Infrastructure')).toBeDefined() // Auto-generated phase
-    expect(screen.getByText('Time Estimate')).toBeDefined()
+    expect(screen.getByText('missionControl.blueprintInfo.timeEstimate')).toBeDefined()
   })
 
   it('renders YOLO mode details', () => {
@@ -85,6 +90,6 @@ describe('DeployModeInfoPanel', () => {
     )
     
     expect(screen.getByText('YOLO Mode')).toBeDefined()
-    expect(screen.getByText('Considerations')).toBeDefined()
+    expect(screen.getByText('missionControl.blueprintInfo.parallelConsiderations')).toBeDefined()
   })
 })
