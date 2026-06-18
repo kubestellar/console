@@ -1,7 +1,7 @@
 /**
  * Adopter Nudge — shown after a user has been using the console for 3+ days.
  *
- * Prompts engaged users to add their company/project to ADOPTERS.MD.
+ * Prompts engaged users to add their company/project to ADOPTERS.md.
  * Only shows for localhost users who have connected kc-agent at least
  * ADOPTER_NUDGE_DELAY_DAYS ago.
  */
@@ -24,7 +24,7 @@ import {
 import { isNetlifyDeployment } from '../../lib/demoMode'
 
 const ADOPTERS_EDIT_URL =
-  'https://github.com/kubestellar/console/edit/main/ADOPTERS.MD'
+  'https://github.com/kubestellar/console/edit/main/ADOPTERS.md'
 
 /** Number of days after first agent connection before showing the nudge */
 const ADOPTER_NUDGE_DELAY_DAYS = 3
