@@ -1,9 +1,68 @@
 name: Copilot DCO
 
 on:
-  pull_request:
+  # Safe here because the workflow never checks out or executes PR code; it only
+  # reads PR metadata and updates labels/statuses on Copilot-authored pull requests.
+  pull_request_target:
     types: [opened, synchronize, reopened]
+
+permissions: {}
 
 jobs:
   copilot-dco:
-    uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@main
+    permissions:
+      issues: write
+      pull-requests: write
+      statuses: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark Copilot PRs DCO-compliant
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const authorLogin = context.payload.pull_request.user?.login ?? '';
+            const normalizedAuthor = authorLogin.toLowerCase();
+            // Keep this list aligned with the Copilot PR identities observed in this repository.
+            const copilotAuthors = new Set([
+              'copilot',
+              'copilot-swe-agent[bot]',
+              'app/copilot-swe-agent',
+            ]);
+            const isCopilot = copilotAuthors.has(normalizedAuthor);
+
+            if (!isCopilot) {
+              core.info(`Skipping DCO override for non-Copilot author: ${authorLogin}`);
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+            const headSha = context.payload.pull_request.head.sha;
+
+            await github.rest.repos.createCommitStatus({
+              owner,
+              repo,
+              sha: headSha,
+              state: 'success',
+              context: 'dco',
+              description: 'DCO waived for Copilot-authored PR',
+              target_url: 'https://github.com/kubestellar/console/blob/main/CONTRIBUTING.md',
+            });
+
+            try {
+              await github.rest.issues.removeLabel({
+                owner,
+                repo,
+                issue_number: prNumber,
+                name: 'dco-signoff: no',
+              });
+            } catch (error) {
+              core.info(`No dco-signoff: no label to remove: ${error.message}`);
+            }
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: prNumber,
+              labels: ['dco-signoff: yes'],
+            });

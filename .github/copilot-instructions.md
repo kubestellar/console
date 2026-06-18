@@ -1,36 +1,31 @@
 # Copilot Instructions for KubeStellar Console
 
-## MANDATORY: Build and Lint Before Every Commit
+## MANDATORY: DCO Sign-Off Before Every Commit
 
-**YOU MUST RUN THESE COMMANDS BEFORE EVERY SINGLE COMMIT:**
+**EVERY COMMIT MUST INCLUDE A `Signed-off-by:` TRAILER.**
 
 ```bash
-cd web
-npm run build
-npm run lint
+git commit -s -m "✨ Short descriptive message"
 ```
 
-**IF BUILD FAILS → FIX IT → RUN AGAIN**
-**IF LINT FAILS → FIX IT → RUN AGAIN**
-**ONLY COMMIT AFTER BOTH PASS**
+**DO NOT USE `git commit -m` WITHOUT `-s`.**
+**DO NOT RUN `npm run build` OR `npm run lint` LOCALLY IN THIS REPOSITORY — CI VALIDATES BOTH ON THE PR.**
 
-DO NOT PUSH CODE THAT FAILS BUILD OR LINT. This is non-negotiable.
+DO NOT PUSH COMMITS THAT FAIL DCO. This is non-negotiable.
 
 ## Commit Workflow
 
 1. Make code changes
-2. `cd web && npm run build` - MUST PASS
-3. `cd web && npm run lint` - MUST PASS
-4. `git add .`
-5. `git commit -m "message"`
-6. Push
+2. Run targeted tests appropriate for your change
+3. `git add .`
+4. `git commit -s -m "message"`
+5. Push
 
 ## Project Structure
 
 - Frontend: React + TypeScript in `/web/`
 - Backend: Go in root directory
-- Build: `npm run build` in web directory
-- Lint: `npm run lint` in web directory
+- Build and lint: validated by CI on the PR
 
 ## Code Standards
 
@@ -57,7 +52,7 @@ Fixes #3400
 
 Do NOT omit this. Do NOT put it at the end. It MUST be the first line.
 
-- All commits must pass build and lint
+- CI must pass build and lint checks on the PR
 - Keep changes focused on the issue
 
 ---

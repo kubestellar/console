@@ -1,14 +1,41 @@
-name: Stale Issues
+name: Stale Issues and WIP PRs
 
 on:
   schedule:
     - cron: '0 0 * * *'  # Daily at midnight UTC
   workflow_dispatch:
 
-permissions:
-  issues: write
+permissions: {}
 
 jobs:
-  stale:
+  stale-issues:
+    permissions:
+      issues: write
     uses: kubestellar/infra/.github/workflows/reusable-stale.yml@main
     secrets: inherit
+  stale-wip-prs:
+    permissions:
+      issues: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close stale WIP pull requests
+        uses: actions/stale@28ca1036281a5e5922ead5184a1bbf96e5fc984e # v10.0.0
+        with:
+          days-before-issue-stale: -1
+          days-before-issue-close: -1
+          # actions/stale treats days-before-pr-close as additional time after the PR becomes stale.
+          # Total idle window: 7 days (5 days to stale + 2 more days before close).
+          days-before-pr-stale: 5
+          days-before-pr-close: 2
+          stale-pr-label: lifecycle/stale
+          close-pr-label: lifecycle/rotten
+          only-pr-labels: do-not-merge/work-in-progress
+          exempt-pr-labels: security,lifecycle/frozen
+          exempt-all-pr-assignees: true
+          stale-pr-message: >-
+            This pull request is still labeled `do-not-merge/work-in-progress` and has not had activity for 5 days.
+            Closing stale WIP PRs keeps the review queue focused. Comment or reopen when the work is ready to continue.
+          close-pr-message: >-
+            Closing this stale WIP pull request after 2 additional days without activity.
+            Reopen it when the work is ready for review.
