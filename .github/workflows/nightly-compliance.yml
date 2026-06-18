@@ -159,7 +159,7 @@ jobs:
           npx playwright test \
             --config e2e/compliance/compliance.config.ts \
             ${{ matrix.spec }} \
-            --project=chromium 2>&1 | tee /tmp/test-output.txt
+            --project=chromium 2>&1 | tee ${{ runner.temp }}/test-output.txt
           echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
 
       - name: Upload artifacts
@@ -176,14 +176,14 @@ jobs:
       - name: Save result
         if: always()
         run: |
-          mkdir -p /tmp/results
+          mkdir -p ${{ runner.temp }}/results
           if [ "${{ steps.test.outcome }}" = "failure" ]; then
-            echo "FAIL" > /tmp/results/${{ matrix.suite }}.status
+            echo "FAIL" > ${{ runner.temp }}/results/${{ matrix.suite }}.status
           else
-            echo "PASS" > /tmp/results/${{ matrix.suite }}.status
+            echo "PASS" > ${{ runner.temp }}/results/${{ matrix.suite }}.status
           fi
           if [ -f "e2e/test-results/${{ matrix.summary }}" ]; then
-            cp "e2e/test-results/${{ matrix.summary }}" /tmp/results/${{ matrix.suite }}-summary.md
+            cp "e2e/test-results/${{ matrix.summary }}" ${{ runner.temp }}/results/${{ matrix.suite }}-summary.md
           fi
 
       - name: Upload result status
@@ -191,7 +191,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: result-${{ matrix.suite }}
-          path: /tmp/results/
+          path: ${{ runner.temp }}/results/
           retention-days: 1
 
   # ── Performance Suites ───────────────────────────────────────────────
@@ -273,7 +273,7 @@ jobs:
           npx playwright test \
             --config ${{ matrix.config }} \
             ${{ matrix.spec }} \
-            --project=chromium 2>&1 | tee /tmp/test-output.txt
+            --project=chromium 2>&1 | tee ${{ runner.temp }}/test-output.txt
           echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
 
       - name: Run TTFI baseline comparison
@@ -294,18 +294,18 @@ jobs:
       - name: Save result
         if: always()
         run: |
-          mkdir -p /tmp/results
+          mkdir -p ${{ runner.temp }}/results
           if [ "${{ steps.test.outcome }}" = "failure" ]; then
-            echo "FAIL" > /tmp/results/${{ matrix.suite }}.status
+            echo "FAIL" > ${{ runner.temp }}/results/${{ matrix.suite }}.status
           else
-            echo "PASS" > /tmp/results/${{ matrix.suite }}.status
+            echo "PASS" > ${{ runner.temp }}/results/${{ matrix.suite }}.status
           fi
           if [ -f "e2e/test-results/${{ matrix.summary }}" ]; then
-            cp "e2e/test-results/${{ matrix.summary }}" /tmp/results/${{ matrix.suite }}-summary.md
+            cp "e2e/test-results/${{ matrix.summary }}" ${{ runner.temp }}/results/${{ matrix.suite }}-summary.md
           fi
           # Include TTFI regression report if present
           if [ -f "e2e/test-results/ttfi-regression.md" ]; then
-            cp "e2e/test-results/ttfi-regression.md" /tmp/results/ttfi-regression.md
+            cp "e2e/test-results/ttfi-regression.md" ${{ runner.temp }}/results/ttfi-regression.md
           fi
 
       - name: Upload result status
@@ -313,7 +313,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: result-${{ matrix.suite }}
-          path: /tmp/results/
+          path: ${{ runner.temp }}/results/
           retention-days: 1
 
   # ── Report & Issue Creation ──────────────────────────────────────────
@@ -337,7 +337,7 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: result-*
-          path: /tmp/all-results
+          path: ${{ runner.temp }}/all-results
           merge-multiple: true
 
       - name: Aggregate results
@@ -348,7 +348,7 @@ jobs:
           PASSED=""
 
           for suite in "${SUITES[@]}"; do
-            status_file="/tmp/all-results/${suite}.status"
+            status_file="${{ runner.temp }}/all-results/${suite}.status"
             if [ -f "$status_file" ]; then
               status=$(cat "$status_file")
               if [ "$status" = "FAIL" ]; then
@@ -578,7 +578,7 @@ jobs:
               // Read summary
               let summary = '_No summary available_';
               try {
-                const p = `/tmp/all-results/${suite}-summary.md`;
+                const p = `${{ runner.temp }}/all-results/${suite}-summary.md`;
                 if (fs.existsSync(p)) summary = fs.readFileSync(p, 'utf8').slice(0, 4000);
               } catch {}
 
@@ -586,7 +586,7 @@ jobs:
               let regression = '';
               if (suite === 'ttfi') {
                 try {
-                  const p = '/tmp/all-results/ttfi-regression.md';
+                  const p = '${{ runner.temp }}/all-results/ttfi-regression.md';
                   if (fs.existsSync(p)) regression = '\n\n### Regression Report\n\n' + fs.readFileSync(p, 'utf8').slice(0, 2000);
                 } catch {}
               }
