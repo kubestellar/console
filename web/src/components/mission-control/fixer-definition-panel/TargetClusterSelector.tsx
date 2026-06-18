@@ -87,7 +87,7 @@ export function TargetClusterSelector({ selected, onChange }: TargetClusterSelec
       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
         Target Clusters
       </label>
-      <p className="text-xs text-muted-foreground/60 mt-0.5 mb-1">
+      <p className="text-xs text-muted-foreground mt-0.5 mb-1">
         {isAllSelected
           ? 'All clusters — AI will analyze your full fleet'
           : `${selected.length} cluster${selected.length === 1 ? '' : 's'} selected — AI analysis scoped to these`}
@@ -101,7 +101,7 @@ export function TargetClusterSelector({ selected, onChange }: TargetClusterSelec
           <button
             ref={triggerRef}
             type="button"
-            className="flex w-full items-center justify-between gap-2 rounded-md text-left text-sm text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="flex w-full items-center justify-between gap-2 rounded-md text-left text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             onClick={toggleDropdown}
             onKeyDown={handleTriggerKeyDown}
             aria-controls={dropdownId}
@@ -141,7 +141,7 @@ export function TargetClusterSelector({ selected, onChange }: TargetClusterSelec
             })}
             <button
               type="button"
-              className="text-[10px] text-muted-foreground/50 hover:text-foreground"
+              className="text-[10px] text-muted-foreground hover:text-foreground"
               onClick={() => onChange([])}
             >
               Clear
