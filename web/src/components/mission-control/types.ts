@@ -204,3 +204,12 @@ export interface BlueprintLayout {
   dependencyEdges: DependencyEdge[]
   viewBox: { width: number; height: number }
 }
+
+// ---------------------------------------------------------------------------
+// Info panel discriminated union — shared by FlightPlanBlueprint and subcomponents
+// ---------------------------------------------------------------------------
+
+export type InfoPanelData =
+  | { kind: 'project'; info: import('./svg/ProjectNode').ProjectHoverInfo }
+  | { kind: 'cluster'; info: import('./svg/ClusterZone').ClusterHoverInfo }
+  | { kind: 'deployMode'; mode: 'phased' | 'yolo'; phases: MissionControlState['phases'] }
