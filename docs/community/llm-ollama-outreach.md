@@ -5,7 +5,7 @@
 ## LLM-d + vLLM Community (Issue #18746)
 
 ### Context
-The console ships 9 LLM-d guided missions and a vLLM operator card. The AI inference community (vLLM 35k★, LLM-d growing) needs multi-cluster GPU scheduling observability — exactly what the console provides.
+The console ships LLM-d guided missions and an LLM-d inference dashboard card (`llm_d_inference`). The AI inference community (vLLM 35k★, LLM-d growing) needs multi-cluster GPU scheduling observability — exactly what the console provides.
 
 ### Existing Console Assets
 - **LLM-d Stack Discovery** (`useStackDiscovery` hook) — detects LLM-d deployments
@@ -40,7 +40,7 @@ Ollama (80k+ ★) is the most popular local LLM runtime. Users deploying Ollama 
 - Model management (pull, serve, version)
 
 ### Console Integration
-The Stellar provider system already supports Ollama (`providers.NewOllama(baseURL)`). The console validates Ollama connections are localhost-only (SSRF prevention via `stellarOllamaAllowedCIDRsEnv`).
+The Stellar provider system already supports Ollama (`providers.NewOllama(baseURL)`). The console restricts Ollama connections to loopback by default for SSRF prevention, with an allowlist configurable via the `STELLAR_OLLAMA_ALLOWED_CIDRS` environment variable.
 
 ### Guided Missions for console-kb
 
