@@ -183,15 +183,19 @@ export function SidebarNavGroups({
     onEditingChange?.(true)
   }
 
+  const cancelRename = () => {
+    setEditingItemId(null)
+    setEditingName('')
+    onEditingChange?.(false)
+  }
+
   const handleSaveRename = (itemId: string) => {
     const trimmed = editingName.trim()
     if (trimmed) {
       updateItem(itemId, { name: trimmed })
       emitDashboardRenamed()
     }
-    setEditingItemId(null)
-    setEditingName('')
-    onEditingChange?.(false)
+    cancelRename()
   }
 
   // ---- Drag handlers ----
@@ -323,11 +327,7 @@ export function SidebarNavGroups({
                 onBlur={() => handleSaveRename(item.id)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSaveRename(item.id)
-                  if (e.key === 'Escape') {
-                    setEditingItemId(null)
-                    setEditingName('')
-                    onEditingChange?.(false)
-                  }
+                  if (e.key === 'Escape') cancelRename()
                 }}
                 autoFocus
                 className="w-[150px] md:w-full md:flex-1 shrink bg-transparent border-b border-purple-500 outline-hidden text-foreground text-sm min-w-0"
