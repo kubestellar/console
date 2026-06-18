@@ -1,0 +1,97 @@
+{
+  "id": "orbit-tls-expiry-check",
+  "name": "Nightly TLS Certificate Expiry Check",
+  "description": "Proactively scan all clusters for TLS certificates expiring within the next 30 days and create alerts for any findings. Prevents certificate expiry incidents before they impact production.",
+  "category": "orbit",
+  "tags": ["security", "certificates", "tls", "proactive", "orbit"],
+  "schedule": "0 2 * * *",
+  "scope": "all-clusters",
+  "steps": [
+    {
+      "id": "discover-tls-resources",
+      "name": "Discover TLS Resources",
+      "description": "Find all TLS secrets, ingress resources, and admission webhook configurations across all clusters",
+      "type": "discovery",
+      "action": {
+        "type": "kubectl",
+        "command": "get secrets,ingresses,validatingwebhookconfigurations,mutatingwebhookconfigurations --all-namespaces -o json"
+      },
+      "validation": {
+        "type": "json-path",
+        "path": "$.items",
+        "condition": "exists"
+      }
+    },
+    {
+      "id": "extract-certificates",
+      "name": "Extract Certificate Data",
+      "description": "Parse certificate data from Kubernetes secrets and webhook configurations",
+      "type": "analysis",
+      "action": {
+        "type": "script",
+        "language": "bash",
+        "script": "#!/bin/bash\nset -euo pipefail\n\n# Extract certificates from secrets with type kubernetes.io/tls\nkubectl get secrets --all-namespaces -o json | jq -r '\n  .items[] |\n  select(.type == \"kubernetes.io/tls\") |\n  {\n    namespace: .metadata.namespace,\n    name: .metadata.name,\n    cert: .data.\"tls.crt\"\n  } |\n  @base64d'\n"
+      }
+    },
+    {
+      "id": "check-expiry",
+      "name": "Check Certificate Expiry Dates",
+      "description": "Decode certificates and check expiry dates using openssl",
+      "type": "validation",
+      "action": {
+        "type": "script",
+        "language": "bash",
+        "script": "#!/bin/bash\nset -euo pipefail\n\nTHRESHOLD_DAYS=30\nEXPIRY_THRESHOLD=$(date -d \"+${THRESHOLD_DAYS} days\" +%s)\n\nfind_expiring_certs() {\n  local namespace=$1\n  local secret=$2\n  local cert_data=$3\n  \n  # Decode and check expiry\n  local expiry_date=$(echo \"$cert_data\" | base64 -d | openssl x509 -noout -enddate | cut -d= -f2)\n  local expiry_epoch=$(date -d \"$expiry_date\" +%s)\n  \n  if [ $expiry_epoch -lt $EXPIRY_THRESHOLD ]; then\n    local days_left=$(( ($expiry_epoch - $(date +%s)) / 86400 ))\n    echo \"ALERT: Certificate in $namespace/$secret expires in $days_left days (on $expiry_date)\"\n  fi\n}\n\n# Process all TLS secrets\nkubectl get secrets --all-namespaces -o json | jq -r '\n  .items[] |\n  select(.type == \"kubernetes.io/tls\") |\n  [.metadata.namespace, .metadata.name, .data.\"tls.crt\"] |\n  @tsv\n' | while IFS=$'\\t' read -r namespace name cert; do\n  find_expiring_certs \"$namespace\" \"$name\" \"$cert\"\ndone\n"
+      },
+      "validation": {
+        "type": "exit-code",
+        "expected": 0
+      }
+    },
+    {
+      "id": "create-alerts",
+      "name": "Create Alerts for Expiring Certificates",
+      "description": "For each certificate expiring within 30 days, create a console alert with remediation guidance",
+      "type": "alert",
+      "action": {
+        "type": "create-alert",
+        "severity": "warning",
+        "title": "TLS Certificate Expiring Soon",
+        "template": "Certificate {{namespace}}/{{secret}} expires in {{days_left}} days",
+        "remediation": "Rotate the certificate using cert-manager or manually update the secret. See documentation: https://console.kubestellar.io/docs/security/tls-rotation"
+      }
+    },
+    {
+      "id": "summary",
+      "name": "Mission Summary",
+      "description": "Generate a summary report of all findings across all clusters",
+      "type": "report",
+      "action": {
+        "type": "aggregate",
+        "output": {
+          "total_clusters_scanned": "{{cluster_count}}",
+          "total_certificates_checked": "{{cert_count}}",
+          "expiring_certificates": "{{expiring_cert_count}}",
+          "alerts_created": "{{alert_count}}"
+        }
+      }
+    }
+  ],
+  "alerts": {
+    "on_failure": true,
+    "on_success": false,
+    "on_findings": true
+  },
+  "retention": {
+    "keep_last_n_runs": 30,
+    "keep_for_days": 90
+  },
+  "metadata": {
+    "author": "KubeStellar Community",
+    "version": "1.0.0",
+    "created_at": "2026-06-18",
+    "updated_at": "2026-06-18",
+    "license": "Apache-2.0",
+    "documentation": "https://console.kubestellar.io/docs/orbit/tls-expiry-check"
+  }
+}
