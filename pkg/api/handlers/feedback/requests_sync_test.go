@@ -1,7 +1,6 @@
 package feedback
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -34,7 +33,6 @@ func TestCloseRequest_Unauthenticated(t *testing.T) {
 	stub := &feedbackStoreStub{MockStore: &test.MockStore{}}
 	app := fiber.New()
 	handler := NewFeedbackHandler(stub, FeedbackConfig{})
-	// No userID middleware — simulates unauthenticated request
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
 
 	req, _ := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+uuid.New().String()+"/close", nil)
@@ -103,7 +101,7 @@ func TestCloseRequest_Success_NoGitHub(t *testing.T) {
 
 func TestCloseRequest_GitHubID_NoLogin(t *testing.T) {
 	userID := uuid.New()
-	app, _, _ := setupRequestsSyncTest(t, userID, "") // no githubLogin
+	app, _, _ := setupRequestsSyncTest(t, userID, "")
 
 	req, _ := http.NewRequest(http.MethodPost, "/api/feedback/requests/gh-42/close", nil)
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -232,6 +230,19 @@ func TestReopenRequest_Success_NoGitHub(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestReopenRequest_GitHubID_NoLogin(t *testing.T) {
+	userID := uuid.New()
+	app, _, _ := setupRequestsSyncTest(t, userID, "")
+
+	body := `{"comment":"still broken"}`
+	req, _ := http.NewRequest(http.MethodPost, "/api/feedback/requests/gh-42/reopen", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
 // --- RequestUpdate tests ---
@@ -411,7 +422,8 @@ func TestSubmitFeedback_Success(t *testing.T) {
 
 	featureReq := &models.FeatureRequest{ID: requestID, UserID: userID, PRNumber: &prNum}
 	stub.MockStore.On("GetFeatureRequest", requestID).Return(featureReq, nil)
-	stub.MockStore.On("CreatePRFeedback", context.Background(), requestID, userID, models.FeedbackTypePositive).Return(nil)
+	// CreatePRFeedback on MockStore returns nil unconditionally (no m.Called)
+	// so no mock setup needed — just verify the endpoint returns 201
 
 	body := `{"feedback_type":"positive","comment":"looks good"}`
 	req, _ := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/feedback", strings.NewReader(body))
@@ -420,17 +432,4 @@ func TestSubmitFeedback_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
-}
-
-func TestReopenRequest_GitHubID_NoLogin(t *testing.T) {
-	userID := uuid.New()
-	app, _, _ := setupRequestsSyncTest(t, userID, "") // no githubLogin
-
-	body := `{"comment":"still broken"}`
-	req, _ := http.NewRequest(http.MethodPost, "/api/feedback/requests/gh-42/reopen", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req, fiberTestTimeout)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
