@@ -2,7 +2,7 @@
 
 > **Last updated**: June 2026  
 > **Total missions**: 389+ across 8 categories  
-> **Import any mission**: `console.kubestellar.io/kb`
+> **Import any mission**: `https://console.kubestellar.io/kb`
 
 The [KubeStellar Console KB](https://github.com/kubestellar/console-kb) is a community knowledge base of AI-powered missions for Kubernetes operations. Missions are interactive, step-by-step guided procedures that execute live `kubectl` commands with verification and rollback steps.
 
@@ -17,9 +17,7 @@ The [KubeStellar Console KB](https://github.com/kubestellar/console-kb) is a com
 | [Platform Install](#platform-install) | 64 | AI/ML platforms, agent runtimes, storage, gaming |
 | [LLM-d Inference](#llm-d-inference) | 9 | NVIDIA LLM-d guided deploy with P/D disaggregation |
 | [Operational Runbooks](#operational-runbooks) | 10 | etcd, Velero, cert rotation, disaster recovery |
-| [Security Fixes](#security-fixes) | 1+ | CVE guided remediations |
-| [Networking](#networking) | 1+ | Network policy, mesh configuration |
-| [Workloads](#workloads) | 1+ | Storage migration, workload operations |
+| [Security Fixes](#security-fixes) | 1+ | CVE guided remediations, network policy, workload operations |
 
 **Total: 389+ missions** covering the full Kubernetes ecosystem.
 
@@ -32,7 +30,7 @@ The [KubeStellar Console KB](https://github.com/kubestellar/console-kb) is a com
 **Observability**: Alertmanager, OpenTelemetry (collector, operator), Cortex, Thanos  
 **Networking**: Aeraki Mesh, APISIX, Calico, Cilium, CoreDNS, Contour  
 **GitOps**: Argo CD, Argo Events, Argo Rollouts, Argo Workflows, Atlantis  
-**Security**: Capsule, Cert-Manager, Confidential Containers, Copa  
+**Security**: Capsule, cert-manager, Confidential Containers, Copa  
 **Data**: Artifact Hub, CubFS, NATS  
 **Platforms**: Backstage, Carvel, CDK8s, Crossplane, Clusterpedia  
 **AI/ML**: Claude Desktop (MCP integration), Container2Wasm  
@@ -164,7 +162,7 @@ Orbit missions are **scheduled, recurring** operational routines (not one-time f
 
 **Direct URL import:**
 ```
-console.kubestellar.io/missions/<mission-name>
+https://console.kubestellar.io/missions/<mission-name>
 ```
 
 **Clone the full catalog:**
