@@ -25,14 +25,18 @@ vi.mock('../../../lib/utils/localStorage', () => ({
 
 const mockApiGet = vi.fn().mockResolvedValue({ data: [] })
 vi.mock('../../../lib/api', () => ({
-  api: {
-    get: (...args: unknown[]) => mockApiGet(...args),
-    post: vi.fn().mockResolvedValue({ data: {} }),
-    put: vi.fn().mockResolvedValue({ data: {} }),
-    delete: vi.fn().mockResolvedValue({ data: {} }),
-  },
   BackendUnavailableError: class extends Error {},
   UnauthenticatedError: class extends Error {},
+}))
+
+vi.mock('../../../lib/api/dashboard-api', () => ({
+  dashboardApi: {
+    listDashboards: () => mockApiGet('/api/dashboards'),
+    getDashboard: (id: string) => mockApiGet(`/api/dashboards/${id}`),
+    addDashboardCard: vi.fn().mockResolvedValue({ data: {} }),
+    updateDashboardCard: vi.fn().mockResolvedValue({ data: {} }),
+    deleteDashboardCard: vi.fn().mockResolvedValue(undefined),
+  },
 }))
 
 vi.mock('../../../lib/analytics', () => ({

@@ -2,21 +2,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  closestCenter,
-  pointerWithin,
-  rectIntersection,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type CollisionDetection,
   type DragEndEvent,
-  type DragOverEvent,
-  type DragStartEvent,
 } from '@dnd-kit/core'
-import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import { arrayMove } from '@dnd-kit/sortable'
 import { useTranslation } from 'react-i18next'
-import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
+import { BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
 import { safeRevokeObjectURL } from '../../lib/download'
 import { emitCardAdded, emitCardRemoved, emitCardDragged, emitCardConfigured } from '../../lib/analytics'
 import { useDashboards } from '../../hooks/useDashboards'
@@ -28,9 +18,6 @@ import { useToast } from '../ui/Toast'
 import { prefetchCardChunks } from '../cards/cardRegistry'
 import { ROUTES } from '../../config/routes'
 import { getDefaultCardsForDashboard } from '../../config/dashboards'
-import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
-import { STORAGE_KEY_DASHBOARD_AUTO_REFRESH } from '../../lib/constants'
-import { loadDashboardCardsFromStorage, saveDashboardCardsToStorage } from '../../lib/dashboards/dashboardCardStorage'
 import { useMissions } from '../../hooks/useMissions'
 import type { Card, DashboardData } from './dashboardUtils'
 import { isLocalOnlyCard, mapVisualizationToCardType, getDefaultCardSize, getDemoCards } from './dashboardUtils'
@@ -44,19 +31,19 @@ import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
 import { useCardGridNavigation } from '../../hooks/useCardGridNavigation'
 import { useModalState } from '../../lib/modals'
-import { setAutoRefreshPaused } from '../../lib/cache'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { STORAGE_KEY_MAIN_DASHBOARD_CARDS } from '../../lib/constants/storage'
 import { isClusterHealthy } from '../clusters/utils'
 import type { DashboardTemplate } from './templates'
-
-const AUTO_REFRESH_INTERVAL_MS = 30_000
-
-interface CachedDashboard {
-  dashboard: DashboardData | null
-  cards: Card[]
-  timestamp: number
-}
+import { dashboardApi } from '../../lib/api/dashboard-api'
+import { useDashboardCardState } from './DashboardCardState'
+import { useDashboardLayoutState } from './DashboardLayoutState'
+import {
+  getDashboardCache,
+  persistDashboardCards,
+  setDashboardCache,
+  useDashboardPersistence,
+} from './DashboardPersistence'
 
 interface PendingDeploy {
   workloadName: string
@@ -66,37 +53,39 @@ interface PendingDeploy {
   groupName: string
 }
 
-let dashboardCache: CachedDashboard | null = null
-
 const DASHBOARD_STORAGE_KEY = STORAGE_KEY_MAIN_DASHBOARD_CARDS
 const DEFAULT_DASHBOARD_CARDS: Card[] = getDefaultCardsForDashboard('main')
 
 export function useDashboardState() {
-  const [dashboard, setDashboard] = useState<DashboardData | null>(() => dashboardCache?.dashboard || null)
+  const [dashboard, setDashboard] = useState<DashboardData | null>(() => getDashboardCache()?.dashboard || null)
   const [isLoading, setIsLoading] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const isActiveDashboard = location.pathname === '/' || location.pathname === ''
   const [searchParams, setSearchParams] = useSearchParams()
-  const { isOpen: isConfigureCardOpen, open: openConfigureCard, close: closeConfigureCard } = useModalState()
-  const [selectedCard, setSelectedCard] = useState<Card | null>(null)
-  const [localCards, setLocalCards] = useState<Card[]>(() => {
-    if (dashboardCache?.cards?.length) return dashboardCache.cards
-    const restoredCards = loadDashboardCardsFromStorage<Card>(
-      DASHBOARD_STORAGE_KEY,
-      DEFAULT_DASHBOARD_CARDS,
-      { requirePosition: true, requireGridCoordinates: true },
-    )
-    if (restoredCards.length > 0) {
-      return restoredCards
-    }
-    return DEFAULT_DASHBOARD_CARDS
-  })
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [activeDragData, setActiveDragData] = useState<Record<string, unknown> | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null)
-  const [__dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
+  const {
+    addCardSearch,
+    closeConfigureCard,
+    isConfigureCardOpen,
+    insertAtIndex,
+    localCards,
+    openConfigureCard,
+    selectedCard,
+    setAddCardSearch,
+    setInsertAtIndex,
+    setLocalCards,
+    setSelectedCard,
+  } = useDashboardCardState(DASHBOARD_STORAGE_KEY, DEFAULT_DASHBOARD_CARDS)
+  const {
+    activeDragData,
+    activeId,
+    beginDrag,
+    collisionDetection,
+    isDragging,
+    resetDragState,
+    sensors,
+    updateDragOver,
+  } = useDashboardLayoutState()
   const { isOpen: isWidgetExportOpen, open: openWidgetExport, close: closeWidgetExport } = useModalState()
 
   const {
@@ -220,37 +209,7 @@ export function useDashboardState() {
 
   const getStatValue = getDashboardStatValue
 
-  const [autoRefresh, setAutoRefresh] = useState(() => {
-    const stored = safeGetItem(STORAGE_KEY_DASHBOARD_AUTO_REFRESH)
-    return stored !== null ? stored === 'true' : true
-  })
-  const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  useEffect(() => {
-    safeSetItem(STORAGE_KEY_DASHBOARD_AUTO_REFRESH, String(autoRefresh))
-    setAutoRefreshPaused(!autoRefresh)
-    return () => {
-      setAutoRefreshPaused(false)
-    }
-  }, [autoRefresh])
-
-  const isLoadingRef = useRef(isLoading)
-  isLoadingRef.current = isLoading
-
-  useEffect(() => {
-    if (!autoRefresh) return
-    autoRefreshIntervalRef.current = setInterval(() => {
-      if (!isLoadingRef.current) {
-        refetch()
-      }
-    }, AUTO_REFRESH_INTERVAL_MS)
-    return () => {
-      if (autoRefreshIntervalRef.current) {
-        clearInterval(autoRefreshIntervalRef.current)
-        autoRefreshIntervalRef.current = null
-      }
-    }
-  }, [autoRefresh, refetch])
+  const { autoRefresh, setAutoRefresh } = useDashboardPersistence(refetch, isLoading)
 
   const expandTriggersRef = useRef<Map<string, () => void>>(new Map())
   const handleExpandCard = (cardId: string) => {
@@ -265,76 +224,13 @@ export function useDashboardState() {
     expandTriggersRef.current.set(cardId, expand)
   }, [])
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 3,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  )
+  const handleDragStart = useCallback(beginDrag, [beginDrag])
 
-  const collisionDetection: CollisionDetection = useCallback((args) => {
-    const isWorkloadDrag = args.active.data.current?.type === 'workload'
-    if (isWorkloadDrag) {
-      const allCollisions = [
-        ...pointerWithin(args),
-        ...rectIntersection(args),
-      ]
-      const seen = new Set<string>()
-      const unique = allCollisions.filter(collision => {
-        const id = String(collision.id)
-        if (seen.has(id)) return false
-        seen.add(id)
-        return true
-      })
-      const targetCollision = unique.find(
-        collision => String(collision.id).startsWith('cluster-group-') || String(collision.id).startsWith('cluster-drop-')
-      )
-      if (targetCollision) return [targetCollision]
-      const cardTarget = unique.find(collision => String(collision.id) === 'cluster-groups-card')
-      if (cardTarget) return [cardTarget]
-      const dashboardCollision = unique.find(
-        collision => String(collision.id).startsWith('dashboard-drop-') || String(collision.id) === 'create-new-dashboard'
-      )
-      if (dashboardCollision) return [dashboardCollision]
-      return []
-    }
-    const centerCollisions = closestCenter(args)
-    const pointerCollisions = pointerWithin(args)
-    const dashboardDropTarget = pointerCollisions.find(
-      collision => String(collision.id).startsWith('dashboard-drop-') || String(collision.id) === 'create-new-dashboard'
-    )
-    if (dashboardDropTarget) return [dashboardDropTarget]
-    return centerCollisions
-  }, [])
-
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const id = event.active.id as string
-    const data = event.active.data.current as Record<string, unknown> | null
-    setActiveId(id)
-    setActiveDragData(data)
-    setIsDragging(true)
-  }, [])
-
-  const handleDragOver = useCallback((event: DragOverEvent) => {
-    const { over } = event
-    if (over && (String(over.id).startsWith('dashboard-drop-') || String(over.id) === 'create-new-dashboard')) {
-      const dashboardId = over.data?.current?.dashboardId
-      setDragOverDashboard(dashboardId || null)
-      return
-    }
-    setDragOverDashboard(null)
-  }, [])
+  const handleDragOver = useCallback(updateDragOver, [updateDragOver])
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event
-    setActiveId(null)
-    setActiveDragData(null)
-    setIsDragging(false)
-    setDragOverDashboard(null)
+    resetDragState()
 
     if (!over) return
 
@@ -408,14 +304,11 @@ export function useDashboardState() {
         return arrayMove(items, oldIndex, newIndex)
       })
     }
-  }, [createDashboard, localCards, moveCardToDashboard, showToast, snapshot, t])
+  }, [createDashboard, localCards, moveCardToDashboard, resetDragState, showToast, snapshot, t])
 
   const handleDragCancel = useCallback(() => {
-    setActiveId(null)
-    setActiveDragData(null)
-    setIsDragging(false)
-    setDragOverDashboard(null)
-  }, [])
+    resetDragState()
+  }, [resetDragState])
 
   const handleConfirmDeploy = useCallback(async () => {
     if (!pendingDeploy) return
@@ -492,10 +385,10 @@ export function useDashboardState() {
       setIsLoading(true)
     }
     try {
-      const { data: dashboardsData } = await api.get<DashboardData[]>('/api/dashboards')
+      const { data: dashboardsData } = await dashboardApi.listDashboards<DashboardData>()
       if (dashboardsData && dashboardsData.length > 0) {
         const defaultDashboard = dashboardsData.find(d => d.is_default) || dashboardsData[0]
-        const { data } = await api.get<DashboardData>(`/api/dashboards/${defaultDashboard.id}`)
+        const { data } = await dashboardApi.getDashboard<DashboardData>(defaultDashboard.id)
         const apiCards = (data.cards && data.cards.length > 0) ? data.cards : getDemoCards()
         setDashboard(data)
 
@@ -507,14 +400,14 @@ export function useDashboardState() {
           }
           return apiCards
         })
-        dashboardCache = { dashboard: data, cards: apiCards, timestamp: Date.now() }
+        setDashboardCache({ dashboard: data, cards: apiCards, timestamp: Date.now() })
       } else {
         if (isBackground) {
           return
         }
         const cards = getDemoCards()
         setLocalCards(cards)
-        dashboardCache = { dashboard: null, cards, timestamp: Date.now() }
+        setDashboardCache({ dashboard: null, cards, timestamp: Date.now() })
       }
     } catch (error: unknown) {
       const isExpectedFailure = error instanceof BackendUnavailableError ||
@@ -538,7 +431,7 @@ export function useDashboardState() {
         setLocalCards(prevCards => {
           if (prevCards.length > 0) return prevCards
           const cards = getDemoCards()
-          dashboardCache = { dashboard: null, cards, timestamp: Date.now() }
+          setDashboardCache({ dashboard: null, cards, timestamp: Date.now() })
           return cards
         })
       }
@@ -552,19 +445,14 @@ export function useDashboardState() {
     if (!isHomeDashboard) return
 
     const hasCachedOrLocalCards =
-      ((dashboardCache?.cards?.length ?? 0) > 0) || localCards.length > 0
+      ((getDashboardCache()?.cards?.length ?? 0) > 0) || localCards.length > 0
     const isWarmRefresh = hasCachedOrLocalCards
 
     loadDashboard(isWarmRefresh)
   }, [location.key, location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (localCards.length > 0) {
-      if (dashboardCache) {
-        dashboardCache = { ...dashboardCache, cards: localCards, timestamp: Date.now() }
-      }
-      saveDashboardCardsToStorage(DASHBOARD_STORAGE_KEY, localCards)
-    }
+    persistDashboardCards(DASHBOARD_STORAGE_KEY, localCards)
   }, [localCards])
 
   useEffect(() => {
@@ -599,7 +487,6 @@ export function useDashboardState() {
     }
   }, [pendingOpenAddCardModal, isLoading, openAddCardModal, setPendingOpenAddCardModal])
 
-  const [addCardSearch, setAddCardSearch] = useState('')
   useEffect(() => {
     if (location.pathname !== '/' && location.pathname !== '') return
     if (searchParams.get('addCard') === 'true') {
@@ -644,7 +531,7 @@ export function useDashboardState() {
     if (dashboard?.id) {
       for (const card of newCards) {
         try {
-          await api.post(`/api/dashboards/${dashboard.id}/cards`, card)
+          await dashboardApi.addDashboardCard(dashboard.id, card)
         } catch (error: unknown) {
           console.error('Failed to persist card:', error)
           showToast(t('dashboard.toast.persistFailed', 'Failed to persist card to backend'), 'error')
@@ -671,7 +558,7 @@ export function useDashboardState() {
 
     if (dashboard?.id) {
       try {
-        await api.delete(`/api/cards/${cardId}`)
+        await dashboardApi.deleteDashboardCard(cardId)
       } catch (error: unknown) {
         console.debug('Backend card deletion failed (card already removed from UI):', error)
       }
@@ -697,7 +584,7 @@ export function useDashboardState() {
       try {
         const card = localCards.find(item => item.id === cardId)
         if (card) {
-          await api.put(`/api/cards/${cardId}`, {
+          await dashboardApi.updateDashboardCard(cardId, {
             position: { ...(card.position || { w: 4, h: 2 }), w: newWidth },
           })
         }
@@ -722,7 +609,7 @@ export function useDashboardState() {
       try {
         const card = localCards.find(item => item.id === cardId)
         if (card) {
-          await api.put(`/api/cards/${cardId}`, {
+          await dashboardApi.updateDashboardCard(cardId, {
             position: { ...(card.position || { x: 0, y: 0, w: 4, h: 2 }), h: newHeight },
           })
         }
@@ -759,7 +646,7 @@ export function useDashboardState() {
 
     if (dashboard?.id && !isLocalOnlyCard(cardId)) {
       try {
-        await api.put(`/api/cards/${cardId}`, { config: newConfig, title: newTitle })
+        await dashboardApi.updateDashboardCard(cardId, { config: newConfig, title: newTitle })
       } catch (error: unknown) {
         console.error('Failed to update card configuration:', error)
         showToast(t('dashboard.toast.updateConfigFailed', 'Failed to update card configuration'), 'error')

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocalAgent } from './useLocalAgent'
 import { useAuth } from '../lib/auth'
-import { authFetch } from '../lib/api'
+import { persistenceApi } from '../lib/api/persistence-api'
 import { FETCH_DEFAULT_TIMEOUT_MS, POLL_INTERVAL_MS } from '../lib/constants/network'
 
 // =============================================================================
@@ -77,7 +77,7 @@ export function usePersistence() {
     }
 
     try {
-      const response = await authFetch('/api/persistence/config', {
+      const response = await persistenceApi.getPersistenceConfig({
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
@@ -97,7 +97,7 @@ export function usePersistence() {
     if (!isBackendAvailable || !hasRealToken) return
 
     try {
-      const response = await authFetch('/api/persistence/status', {
+      const response = await persistenceApi.getPersistenceStatus({
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
@@ -118,10 +118,7 @@ export function usePersistence() {
 
     try {
       const updatedConfig = { ...config, ...newConfig }
-      const response = await authFetch('/api/persistence/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedConfig),
+      const response = await persistenceApi.updatePersistenceConfig(updatedConfig, {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (response.ok) {
@@ -169,10 +166,7 @@ export function usePersistence() {
     }
 
     try {
-      const response = await authFetch('/api/persistence/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        body: JSON.stringify({ cluster }),
+      const response = await persistenceApi.testPersistenceConnection(cluster, {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (response.ok) {
@@ -191,10 +185,7 @@ export function usePersistence() {
 
     setSyncing(true)
     try {
-      const response = await authFetch('/api/persistence/sync', {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        credentials: 'include',
+      const response = await persistenceApi.syncPersistenceNow({
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (response.ok) {

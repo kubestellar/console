@@ -9,19 +9,16 @@
  *   - Enterprise compliance sidebar (EnterpriseSidebar.tsx)
  *   - Future white-label / partner portals
  */
-import { useState, useRef, useEffect, useCallback, Fragment } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
-  Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle,
-  WifiOff, GripVertical, X, User, Pin, PinOff, Satellite, Loader2,
-  ChevronDown,
+  Plus, ChevronLeft, ChevronRight, GripVertical, X, Pin, PinOff, Satellite,
 } from 'lucide-react'
 import { iconRegistry } from '../../lib/icons'
 import { cn } from '../../lib/cn'
 import { ROUTES } from '../../config/routes'
 import { Tooltip } from '../ui/Tooltip'
-import { SnoozedCards } from './SnoozedCards'
 import {
   useSidebarConfig,
   PROTECTED_SIDEBAR_IDS,
@@ -46,8 +43,10 @@ import { STORAGE_KEY_GROUND_CONTROL_DASHBOARDS } from '../../lib/constants/stora
 import { NAVBAR_HEIGHT_PX, SIDEBAR_CONTROLS_LEFT_OFFSET_PX } from '../../lib/constants/ui'
 import { safeGetJSON } from '../../lib/utils/localStorage'
 import { getSidebarCardCount } from './sidebarCardCount'
-import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
 import { useEscapeLayer, useModalFocusTrap } from '../../lib/modals'
+import { SidebarNav } from './SidebarNav'
+import { SidebarFooter } from './SidebarFooter'
+import { useSidebarCollapseLogic } from './SidebarCollapseLogic'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -136,9 +135,6 @@ const SIDEBAR_RESIZE_STEP_PX = 16
 const SIDEBAR_RESIZE_HANDLE_TOP_PX = 160
 const SIDEBAR_RESIZE_HANDLE_OFFSET_PX = 3
 const SIDEBAR_RESIZE_HANDLE_WIDTH_PX = 6
-
-/** Index of the primary (dashboard list) section — "Add more..." button renders after it */
-const PRIMARY_SECTION_INDEX = 0
 
 /** Map sidebar item href to dashboard config ID for card count display. */
 const HREF_TO_DASHBOARD_ID: Record<string, string> = {
@@ -359,6 +355,7 @@ export function SidebarShell({
   const handleApplySwap = (_swap: SnoozedSwap) => { navigate(ROUTES.HOME) }
   const handleApplyRecommendation = (_rec: SnoozedRecommendation) => { navigate(ROUTES.HOME) }
   const handleApplyMission = (_mission: SnoozedMission) => { navigate(ROUTES.HOME) }
+  const { isSectionOpen, toggleSection } = useSidebarCollapseLogic()
 
   // ---- Inline rename handlers ----
   const handleDoubleClick = (item: SidebarNavItem, e: React.MouseEvent) => {
@@ -656,53 +653,6 @@ export function SidebarShell({
     )
   }
 
-  /** Render a collapsible nav section with header */
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
-  const toggleSection = (id: string) => {
-    setCollapsedSections(prev => ({ ...prev, [id]: !prev[id] }))
-  }
-
-  const renderSection = (section: NavSection, index: number) => {
-    const isOpen = !collapsedSections[section.id]
-
-    return (
-      <div key={section.id}>
-        {/* Divider between sections (except before the first) */}
-        {index > 0 && <div className="my-6 border-t border-border/50" />}
-
-        {/* Collapsible section header */}
-        {section.label && !isCollapsed && (
-          <button
-            onClick={() => section.collapsible && toggleSection(section.id)}
-            className={cn(
-              'w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 hover:text-muted-foreground transition-colors',
-              section.collapsible && 'cursor-pointer',
-              !section.collapsible && 'cursor-default',
-            )}
-          >
-            <span className="flex-1 text-left">{section.label}</span>
-            {section.collapsible && (
-              isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />
-            )}
-          </button>
-        )}
-
-        {/* Section items */}
-        {(isOpen || !section.collapsible) && (
-          <nav
-            data-testid={`sidebar-${section.id}-nav`}
-            className="space-y-1"
-            onKeyDown={(event) => {
-              moveFocusByKey(event, { selector: 'a[data-testid="sidebar-item"]', orientation: 'vertical' })
-            }}
-          >
-            {section.items.map(item => renderNavItem(item, section.id))}
-          </nav>
-        )}
-      </div>
-    )
-  }
-
   // ---- Main render ----
   return (
     <>
@@ -755,40 +705,21 @@ export function SidebarShell({
           </div>
         )}
 
-        {/* Navigation sections with "Add more" button after the primary section */}
-        {navSections.map((section, index) => {
-          return (
-            <Fragment key={section.id}>
-              {renderSection(section, index)}
-
-              {/* "Add more" button — placed after the primary dashboard list */}
-              {index === PRIMARY_SECTION_INDEX && features.addMore && !isCollapsed && (
-                <button
-                  data-testid="sidebar-customize"
-                  onClick={() => onAddMore?.() ?? dashboardContext?.openAddCardModal('dashboards')}
-                  className="w-full flex items-center gap-3 px-3 py-1.5 mt-1 text-xs text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/30 rounded-lg transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>{t('sidebar.addMore', 'Add dashboard cards…')}</span>
-                </button>
-              )}
-            </Fragment>
-          )
-        })}
-
-        {/* Snoozed card swaps */}
-        {features.snoozedCards && !isCollapsed && (
-          <div data-tour="snoozed" className="min-w-0">
-            <SnoozedCards
-              onApplySwap={handleApplySwap}
-              onApplyRecommendation={handleApplyRecommendation}
-              onApplyMission={handleApplyMission}
-            />
-          </div>
-        )}
-
-        {/* Custom children */}
-        {children}
+        <SidebarNav
+          navSections={navSections}
+          features={features}
+          isCollapsed={isCollapsed}
+          isSectionOpen={isSectionOpen}
+          toggleSection={toggleSection}
+          renderNavItem={renderNavItem}
+          onOpenAddMoreFallback={() => dashboardContext?.openAddCardModal('dashboards')}
+          onAddMore={onAddMore}
+          onApplySwap={handleApplySwap}
+          onApplyRecommendation={handleApplyRecommendation}
+          onApplyMission={handleApplyMission}
+        >
+          {children}
+        </SidebarNav>
 
         {/* Add card button */}
         {features.addCard && !isCollapsed && (
@@ -804,114 +735,23 @@ export function SidebarShell({
           </div>
         )}
 
-        {/* Cluster status summary */}
-        {features.clusterStatus && !isCollapsed && (
-          <div data-testid="sidebar-cluster-status" className="mt-6 p-4 rounded-lg bg-secondary/30">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-              {t('labels.clusterStatus')}
-            </h4>
-            {deduplicatedClusters.length === 0 ? (
-              <p className="text-xs text-muted-foreground">{t('labels.noClusters')}</p>
-            ) : (
-            <div className="space-y-2">
-              {healthyClusters > 0 && (
-              <button
-                onClick={() => handleClusterStatusClick('healthy')}
-                className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
-              >
-                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" aria-hidden="true" />
-                  {t('labels.healthy')}
-                </span>
-                <span
-                  className="text-sm font-medium text-green-400"
-                  title={t('sidebar.healthyClusters', { count: healthyClusters })}
-                >{healthyClusters}</span>
-              </button>
-              )}
-              {unhealthyClusters > 0 && (
-              <button
-                onClick={() => handleClusterStatusClick('unhealthy')}
-                className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
-              >
-                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-400" aria-hidden="true" />
-                  {t('labels.unhealthy')}
-                </span>
-                <span
-                  className="text-sm font-medium text-red-400"
-                  title={t('sidebar.unhealthyClusters', { count: unhealthyClusters })}
-                >{unhealthyClusters}</span>
-              </button>
-              )}
-              {unreachableClusters > 0 && (
-              <button
-                onClick={() => handleClusterStatusClick('unreachable')}
-                className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
-              >
-                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <WifiOff className="w-3.5 h-3.5 text-yellow-400" aria-hidden="true" />
-                  {t('labels.offline')}
-                </span>
-                <span
-                  className="text-sm font-medium text-yellow-400"
-                  title={t('sidebar.unreachableClusters', { count: unreachableClusters })}
-                >{unreachableClusters}</span>
-              </button>
-              )}
-              {healthyClusters === 0 && unhealthyClusters === 0 && unreachableClusters === 0 && (
-                <span className="text-xs text-muted-foreground italic">{t('labels.noClusters', 'No clusters configured')}</span>
-              )}
-            </div>
-            )}
-          </div>
-        )}
-
-        {/* Viewer count + commit hash — separated from cluster status to prevent
-          * the commit SHA from visually merging with cluster counts (#11403). */}
-        {features.activeUsers && !isCollapsed && (
-          <div className="mt-auto pt-4 border-t border-border/30 flex flex-col items-center gap-1">
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1 px-2 text-muted-foreground/60">
-                <span className="sr-only">{t('sidebar.activeViewers', { count: viewerCount })}</span>
-                <User className={cn('w-3 h-3', viewersError && 'text-red-400')} aria-hidden="true" />
-                <span className="text-2xs tabular-nums" aria-hidden="true">
-                  {viewersError ? '!' : viewersLoading ? '…' : viewerCount}
-                </span>
-              </div>
-              <span className="text-2xs text-muted-foreground/40 font-mono" title={`Commit: ${__COMMIT_HASH__}`}>
-                <span className="sr-only">{`Commit: ${__COMMIT_HASH__}`}</span>
-                <span aria-hidden="true">#{__COMMIT_HASH__.substring(0, 7)}</span>
-              </span>
-            </div>
-            {/* Developer mode: warn when running an older commit, or show upgrade progress */}
-            {features.versionCheck && channel === 'developer' && hasUpdate && (
-              <div
-                className={cn(
-                  'flex items-center gap-1 text-2xs',
-                  isUpgrading ? 'text-cyan-400/80' : 'text-yellow-400/80',
-                )}
-                title={isUpgrading
-                  ? t('update.upgrading', 'Upgrading...')
-                  : `Behind main — latest: ${latestMainSHA?.substring(0, 7) ?? 'unknown'}`}
-              >
-                {isUpgrading ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <AlertTriangle className="w-3 h-3" />
-                )}
-                <span>
-                  {isUpgrading
-                    ? t('update.upgrading', 'Upgrading...')
-                    : t('sidebar.behindMain', 'Behind main')}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Custom footer */}
-        {footer}
+        <SidebarFooter
+          channel={channel}
+          features={features}
+          footer={footer}
+          hasUpdate={hasUpdate}
+          healthyClusters={healthyClusters}
+          isCollapsed={isCollapsed}
+          isUpgrading={isUpgrading}
+          latestMainSHA={latestMainSHA}
+          onClusterStatusClick={handleClusterStatusClick}
+          totalClusters={deduplicatedClusters.length}
+          unreachableClusters={unreachableClusters}
+          unhealthyClusters={unhealthyClusters}
+          viewerCount={viewerCount}
+          viewersError={viewersError}
+          viewersLoading={viewersLoading}
+        />
       </aside>
 
       {/* Collapse + Pin controls */}

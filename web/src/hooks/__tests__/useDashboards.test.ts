@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-vi.mock('../../lib/api', () => ({
-  api: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
+vi.mock('../../lib/api/dashboard-api', () => ({
+  dashboardApi: {
+    listDashboards: vi.fn(),
+    createDashboard: vi.fn(),
+    updateDashboard: vi.fn(),
+    deleteDashboard: vi.fn(),
+    moveCardToDashboard: vi.fn(),
+    getDashboard: vi.fn(),
+    exportDashboard: vi.fn(),
+    importDashboard: vi.fn(),
   },
 }))
 
@@ -18,20 +22,20 @@ vi.mock('../../lib/analytics', () => ({
 }))
 
 import { useDashboards } from '../useDashboards'
-import { api } from '../../lib/api'
+import { dashboardApi } from '../../lib/api/dashboard-api'
 import { emitDashboardCreated, emitDashboardDeleted } from '../../lib/analytics'
 
 describe('useDashboards', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [] })
   })
 
   it('loads dashboards on mount', async () => {
     const mockDashboards = [
       { id: 'd1', name: 'Dashboard 1', is_default: true },
     ]
-    vi.mocked(api.get).mockResolvedValue({ data: mockDashboards })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: mockDashboards })
 
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -40,16 +44,15 @@ describe('useDashboards', () => {
   })
 
   it('handles API failure gracefully (silent)', async () => {
-    vi.mocked(api.get).mockRejectedValue(new Error('Network error'))
+    vi.mocked(dashboardApi.listDashboards).mockRejectedValue(new Error('Network error'))
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.dashboards).toEqual([])
   })
 
   it('createDashboard adds to state and emits analytics', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: [] })
     const newDash = { id: 'd2', name: 'New Dashboard' }
-    vi.mocked(api.post).mockResolvedValue({ data: newDash })
+    vi.mocked(dashboardApi.createDashboard).mockResolvedValue({ data: newDash })
 
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -63,9 +66,9 @@ describe('useDashboards', () => {
 
   it('updateDashboard updates state', async () => {
     const initial = { id: 'd1', name: 'Original' }
-    vi.mocked(api.get).mockResolvedValue({ data: [initial] })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [initial] })
     const updated = { id: 'd1', name: 'Updated' }
-    vi.mocked(api.put).mockResolvedValue({ data: updated })
+    vi.mocked(dashboardApi.updateDashboard).mockResolvedValue({ data: updated })
 
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -77,8 +80,8 @@ describe('useDashboards', () => {
   })
 
   it('deleteDashboard removes from state and emits analytics', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: [{ id: 'd1', name: 'Test' }] })
-    vi.mocked(api.delete).mockResolvedValue({})
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [{ id: 'd1', name: 'Test' }] })
+    vi.mocked(dashboardApi.deleteDashboard).mockResolvedValue(undefined)
 
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -91,7 +94,7 @@ describe('useDashboards', () => {
   })
 
   it('getDashboardWithCards returns null on error', async () => {
-    vi.mocked(api.get).mockRejectedValue(new Error('fail'))
+    vi.mocked(dashboardApi.listDashboards).mockRejectedValue(new Error('fail'))
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
@@ -103,7 +106,7 @@ describe('useDashboards', () => {
   })
 
   it('getAllDashboardsWithCards returns empty on error', async () => {
-    vi.mocked(api.get).mockRejectedValue(new Error('fail'))
+    vi.mocked(dashboardApi.listDashboards).mockRejectedValue(new Error('fail'))
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
@@ -115,33 +118,30 @@ describe('useDashboards', () => {
   })
 
   it('handles null data from API', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: null })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: null })
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.dashboards).toEqual([])
   })
 
   it('moveCardToDashboard calls API with correct params', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: [] })
-    vi.mocked(api.post).mockResolvedValue({ data: { success: true } })
+    vi.mocked(dashboardApi.moveCardToDashboard).mockResolvedValue({ data: { success: true } })
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     await act(async () => {
       await result.current.moveCardToDashboard('card-1', 'target-dash')
     })
-    expect(api.post).toHaveBeenCalledWith('/api/cards/card-1/move', {
-      target_dashboard_id: 'target-dash',
-    })
+    expect(dashboardApi.moveCardToDashboard).toHaveBeenCalledWith('card-1', 'target-dash')
   })
 
   it('getDashboardWithCards returns dashboard data on success', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [] })
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const dashData = { id: 'd1', name: 'Test', cards: [{ id: 'c1', card_type: 'health' }] }
-    vi.mocked(api.get).mockResolvedValueOnce({ data: dashData })
+    vi.mocked(dashboardApi.getDashboard).mockResolvedValueOnce({ data: dashData })
 
     let dashboard: unknown = undefined
     await act(async () => {
@@ -151,7 +151,7 @@ describe('useDashboards', () => {
   })
 
   it('getAllDashboardsWithCards returns dashboards with their cards', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [] })
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
@@ -162,8 +162,8 @@ describe('useDashboards', () => {
     const d1Full = { id: 'd1', name: 'Dashboard 1', cards: [{ id: 'c1', card_type: 'health' }] }
     const d2Full = { id: 'd2', name: 'Dashboard 2', cards: [] }
 
-    vi.mocked(api.get)
-      .mockResolvedValueOnce({ data: dashList })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValueOnce({ data: dashList })
+    vi.mocked(dashboardApi.getDashboard)
       .mockResolvedValueOnce({ data: d1Full })
       .mockResolvedValueOnce({ data: d2Full })
 
@@ -175,11 +175,11 @@ describe('useDashboards', () => {
   })
 
   it('getAllDashboardsWithCards returns empty when dashboardList is empty', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [] })
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    vi.mocked(api.get).mockResolvedValueOnce({ data: [] })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValueOnce({ data: [] })
 
     let dashboards: unknown[] = []
     await act(async () => {
@@ -189,14 +189,13 @@ describe('useDashboards', () => {
   })
 
   it('getAllDashboardsWithCards falls back to dashboard when getDashboardWithCards fails', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [] })
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const dashList = [{ id: 'd1', name: 'Dash 1' }]
-    vi.mocked(api.get)
-      .mockResolvedValueOnce({ data: dashList })   // getAllDashboardsWithCards list fetch
-      .mockRejectedValueOnce(new Error('fail'))     // getDashboardWithCards for d1
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValueOnce({ data: dashList })
+    vi.mocked(dashboardApi.getDashboard).mockRejectedValueOnce(new Error('fail'))
 
     let dashboards: unknown[] = []
     await act(async () => {
@@ -207,13 +206,13 @@ describe('useDashboards', () => {
   })
 
   it('exportDashboard calls API and emits analytics', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [] })
     const { emitDashboardExported } = await import('../../lib/analytics')
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const exportData = { name: 'Exported', cards: [] }
-    vi.mocked(api.get).mockResolvedValueOnce({ data: exportData })
+    vi.mocked(dashboardApi.exportDashboard).mockResolvedValueOnce({ data: exportData })
 
     let exportResult: unknown
     await act(async () => {
@@ -224,10 +223,10 @@ describe('useDashboards', () => {
   })
 
   it('importDashboard adds to state and emits analytics', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [] })
     const { emitDashboardImported } = await import('../../lib/analytics')
     const newDash = { id: 'd-imported', name: 'Imported Dashboard' }
-    vi.mocked(api.post).mockResolvedValue({ data: newDash })
+    vi.mocked(dashboardApi.importDashboard).mockResolvedValue({ data: newDash })
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
@@ -240,8 +239,8 @@ describe('useDashboards', () => {
   })
 
   it('importDashboard handles null data response', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: [] })
-    vi.mocked(api.post).mockResolvedValue({ data: null })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [] })
+    vi.mocked(dashboardApi.importDashboard).mockResolvedValue({ data: null })
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
@@ -253,12 +252,12 @@ describe('useDashboards', () => {
   })
 
   it('loadDashboards can be called manually to refresh', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: [{ id: 'd1', name: 'Initial' }] })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [{ id: 'd1', name: 'Initial' }] })
     const { result } = renderHook(() => useDashboards())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.dashboards).toHaveLength(1)
 
-    vi.mocked(api.get).mockResolvedValue({ data: [{ id: 'd1', name: 'Initial' }, { id: 'd2', name: 'New' }] })
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue({ data: [{ id: 'd1', name: 'Initial' }, { id: 'd2', name: 'New' }] })
     await act(async () => {
       await result.current.loadDashboards()
     })

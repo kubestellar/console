@@ -404,7 +404,7 @@ describe('useNamespaces', () => {
     globalThis.fetch = vi.fn().mockImplementation(() => {
       callCount++
       if (callCount === 1) {
-        return Promise.resolve(new Response(JSON.stringify({ pods: [{ name: 'p', namespace: 'old-ns', status: 'Running', ready: '1/1', restarts: 0, age: '1d' }] }), { status: 200 }))
+        return Promise.resolve(new Response(JSON.stringify([{ name: 'old-ns' }]), { status: 200 }))
       }
       return new Promise(() => {}) // second call never resolves
     })

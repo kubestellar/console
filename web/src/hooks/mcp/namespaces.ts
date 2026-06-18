@@ -5,7 +5,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { getLocalAgentURL, agentFetch, clusterCacheRef } from './shared'
 import type { PodInfo, NamespaceStats } from './types'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
-import { authFetch } from '../../lib/api'
+import { clusterApi } from '../../lib/api/cluster-api'
 
 // Large clusters (100+ namespaces) can take 30s+ to list all namespaces.
 // Use a generous timeout to avoid aborting valid but slow requests.
@@ -149,7 +149,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
     // kc-agent is running (NO_LOCAL_AGENT=true). The backend uses its
     // pod service account to list namespaces directly.
     try {
-      const resp = await authFetch(`/api/namespaces?cluster=${encodeURIComponent(requestCluster)}`, {
+      const resp = await clusterApi.listClusterNamespaces(requestCluster, {
         signal: AbortSignal.timeout(NAMESPACE_FETCH_TIMEOUT_MS),
       })
       if (resp.ok) {
