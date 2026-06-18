@@ -13,11 +13,18 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 )
 
+type bridgeClient interface {
+	CallTool(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error)
+	Tools() []Tool
+	IsReady() bool
+	Stop() error
+}
+
 // Bridge manages MCP client connections and provides a unified interface
 type Bridge struct {
-	opsClient    *Client
-	deployClient *Client
-	gadgetClient *Client
+	opsClient    bridgeClient
+	deployClient bridgeClient
+	gadgetClient bridgeClient
 	mu           sync.RWMutex
 	config       BridgeConfig
 }
@@ -430,7 +437,6 @@ func (b *Bridge) GetWarningEvents(ctx context.Context, cluster, namespace string
 	if limit > 0 {
 		args["limit"] = limit
 	}
-
 	result, err := client.CallTool(ctx, "get_warning_events", args)
 	if err != nil {
 		return nil, err
