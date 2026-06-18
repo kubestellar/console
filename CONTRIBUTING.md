@@ -6,6 +6,31 @@ The best way to contribute is by opening an issue. Bug reports, feature requests
 
 The fastest way to file an issue or feature request is by navigating to [`/issue`](http://localhost:8080/issue) in your running console (requires GitHub OAuth). You can also use [GitHub Issues](https://github.com/kubestellar/console/issues) directly. Programmatic issue creation from the console additionally requires `FEEDBACK_GITHUB_TOKEN` in `.env` — see [README.md](README.md#github-oauth) for setup.
 
+## Finding Your First Issue
+
+New to KubeStellar? Look for issues tagged with **`good-first-issue`**. These are bounded, well-specified tasks perfect for first-time contributors:
+
+- **Documentation** — Write a guide, update an existing `*.md` file, or add a code example. Most require no product code changes.
+- **i18n strings** — Wrap a hardcoded English string in `t()` from `react-i18next` so it can be translated.
+- **Unit tests** — Add tests for a single function with a clear input/output contract.
+- **Color consistency** — Fix a component's colors identified by the Auto-QA scanner to use semantic Tailwind classes (e.g., `text-foreground` instead of hardcoded hex).
+- **Small refactors** — Extract a numeric literal into a named constant (e.g., `const RECONNECT_MS = 5000`).
+
+Find `good-first-issue` items on GitHub via the [Explore contributions](https://github.com/explore?q=label:good-first-issue) filter or directly in the [console issues](https://github.com/kubestellar/console/issues?q=label:good-first-issue).
+
+## Hacktoberfest 2026
+
+KubeStellar Console participates in [Hacktoberfest](https://hacktoberfest.io/) each October. The best way to get started:
+
+1. Look for issues tagged **`good-first-issue`** — they're curated for new contributors.
+2. Claim an issue by commenting "I'd like to work on this".
+3. Follow the [Submitting a Pull Request](#submitting-a-pull-request) section below.
+4. Your merged PR counts toward your Hacktoberfest contribution total.
+
+**Repository setup for Hacktoberfest discovery:**
+- The `hacktoberfest` topic is set on the repository, making it discoverable on [Hacktoberfest.io](https://hacktoberfest.io/).
+- Issues tagged `good-first-issue` appear on GitHub's contributor discovery surfaces (Explore, trending repos, aggregator sites).
+
 ## How Development Works
 
 This project uses both human and AI-assisted development. All PRs — regardless of origin — must pass the same quality gates before merge. See [docs/AI-QUALITY-ASSURANCE.md](docs/AI-QUALITY-ASSURANCE.md) for the full list of CI gates, quality checks, and our regression response model.
