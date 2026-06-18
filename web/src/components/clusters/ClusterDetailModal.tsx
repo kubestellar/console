@@ -1,51 +1,22 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useRef, useEffect } from 'react'
-import { X, CheckCircle, AlertTriangle, WifiOff, Pencil, Trash2, ChevronRight, ChevronDown, Layers, Server, Network, HardDrive, Box, FolderOpen, Loader2, Cpu, MemoryStick, Database, Wand2, Stethoscope, Wrench, Bot, ExternalLink } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
-import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaceStats, useDeployments, useClusters } from '../../hooks/useMCP'
+import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaceStats, useDeployments, useClusters, type ClusterInfo } from '../../hooks/useMCP'
 import { isClusterUnreachable, isClusterHealthy } from './utils'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { emitClusterAction } from '../../lib/analytics'
-import { Gauge } from '../charts/Gauge'
-import { NodeListItem } from './NodeListItem'
-import { NodeDetailPanel } from './NodeDetailPanel'
-import { NamespaceResources } from './components'
 import { CPUDetailModal, MemoryDetailModal, StorageDetailModal, GPUDetailModal } from './ResourceDetailModals'
-import { CloudProviderIcon, detectCloudProvider as detectCloudProviderShared, getProviderLabel, getConsoleUrl, CloudProvider as CloudProviderType } from '../ui/CloudProviderIcon'
 import { useTranslation } from 'react-i18next'
-import { StatusBadge } from '../ui/StatusBadge'
-import { Button } from '../ui/Button'
-import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
-import { ClusterStatusDetails } from './ClusterStatusDetails'
 import { formatMemoryPromptStat } from '../../lib/formatStats'
 import { buildDiagnosePrompt, buildRepairPrompt } from './diagnosePrompt'
-
-// Cloud provider types
-type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'unknown'
+import { ClusterDetailHeader } from './ClusterDetailModal.header'
+import { ClusterDetailStats } from './ClusterDetailModal.stats'
+import { ClusterDetailSections } from './ClusterDetailModal.sections'
 
 // Maximum time to wait for initial data before forcing modal to show content (10 seconds)
 // Prevents indefinite loading when cluster is slow or unreachable
 const MAX_INITIAL_LOADING_MS = 10_000
 const MAX_HEADER_ALIASES = 2
-
-function getProviderInfo(provider: CloudProvider): { color: string; bgColor: string } {
-  switch (provider) {
-    case 'eks': return { color: 'text-orange-400', bgColor: 'bg-orange-500/20' }
-    case 'gke': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
-    case 'aks': return { color: 'text-cyan-400', bgColor: 'bg-cyan-500/20' }
-    case 'openshift': return { color: 'text-red-400', bgColor: 'bg-red-500/20' }
-    case 'oci': return { color: 'text-red-500', bgColor: 'bg-red-500/20' }
-    case 'alibaba': return { color: 'text-orange-300', bgColor: 'bg-orange-500/20' }
-    case 'digitalocean': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
-    case 'rancher': return { color: 'text-green-400', bgColor: 'bg-green-500/20' }
-    case 'coreweave': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
-    case 'kind': return { color: 'text-blue-300', bgColor: 'bg-blue-500/20' }
-    case 'minikube': return { color: 'text-purple-400', bgColor: 'bg-purple-500/20' }
-    case 'k3s': return { color: 'text-green-300', bgColor: 'bg-green-500/20' }
-    default: return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
-  }
-}
 
 interface ClusterDetailModalProps {
   clusterName: string
@@ -65,14 +36,11 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   // Get cluster info early to check if unreachable
   const { deduplicatedClusters, clusters: rawClusters } = useClusters()
   const clusterInfo = (() => {
-    // Direct match in deduplicated clusters
-    let found = deduplicatedClusters.find(c => c.name === clusterName)
+    let found = deduplicatedClusters.find((c: ClusterInfo) => c.name === clusterName)
     if (found) return found
-    // Check if clusterName is an alias
-    found = deduplicatedClusters.find(c => c.aliases?.includes(clusterName))
+    found = deduplicatedClusters.find((c: ClusterInfo) => c.aliases?.includes(clusterName))
     if (found) return found
-    // Fallback to raw clusters
-    return rawClusters.find(c => c.name === clusterName)
+    return rawClusters.find((c: ClusterInfo) => c.name === clusterName)
   })()
   
   // Early bailout: if cluster is known unreachable, skip expensive data fetching
@@ -90,23 +58,20 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   const { startMission } = useMissions()
   
   // Force exit from loading state after MAX_INITIAL_LOADING_MS
-  // This prevents indefinite loading when cluster is slow or hooks timeout
   const [forceShowContent, setForceShowContent] = useState(false)
   useEffect(() => {
     const timeout = setTimeout(() => {
       setForceShowContent(true)
     }, MAX_INITIAL_LOADING_MS)
     return () => clearTimeout(timeout)
-  }, [clusterName]) // Reset timeout when cluster changes
+  }, [clusterName])
 
   // Build a map of raw cluster names to deduplicated primary names for GPU deduplication
   const clusterNameMap = (() => {
     const map: Record<string, string> = {}
-    deduplicatedClusters.forEach(c => {
-      map[c.name] = c.name // Primary maps to itself
-      c.aliases?.forEach(alias => {
-        map[alias] = c.name // Aliases map to primary
-      })
+    deduplicatedClusters.forEach((c: ClusterInfo) => {
+      map[c.name] = c.name
+      c.aliases?.forEach(alias => { map[alias] = c.name })
     })
     return map
   })()
@@ -117,7 +82,6 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
     gpuNodes.forEach(node => {
       const nodeKey = node.name
       if (!seenNodes.has(nodeKey)) {
-        // Map the cluster name to the primary name
         const mappedCluster = clusterNameMap[node.cluster] || node.cluster
         seenNodes.set(nodeKey, { ...node, cluster: mappedCluster })
       }
@@ -147,27 +111,22 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   const promptMemorySummary = formatMemoryPromptStat(health?.memoryGB)
   const totalClusterGpus = clusterGPUs.reduce((sum, node) => sum + node.gpuCount, 0)
 
-  // AI diagnose/repair handlers
+  // AI diagnose/repair/ask handlers
   const handleDiagnose = () => {
     emitClusterAction('diagnose', clusterName)
-
-    onClose() // Close modal so mission sidebar is visible
+    onClose()
     startMission({
       title: t('cluster.diagnoseMissionTitle', { cluster: clusterName.split('/').pop() }),
       description: t('cluster.diagnoseMissionDescription'),
       type: 'troubleshoot',
       cluster: clusterName,
       initialPrompt: buildDiagnosePrompt({
-        clusterName,
-        health,
-        promptMemorySummary,
-        totalGpuCount: totalClusterGpus,
-        podIssues,
+        clusterName, health, promptMemorySummary,
+        totalGpuCount: totalClusterGpus, podIssues,
         deploymentIssues: clusterDeploymentIssues,
       }),
       context: {
-        clusterName,
-        health,
+        clusterName, health,
         podIssuesCount: podIssues.length,
         deploymentIssuesCount: clusterDeploymentIssues.length }
     })
@@ -175,16 +134,14 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
 
   const handleRepair = () => {
     emitClusterAction('repair', clusterName)
-
-    onClose() // Close modal so mission sidebar is visible
+    onClose()
     startMission({
       title: t('cluster.repairMissionTitle', { cluster: clusterName.split('/').pop() }),
       description: t('cluster.repairMissionDescription'),
       type: 'repair',
       cluster: clusterName,
       initialPrompt: buildRepairPrompt({
-        clusterName,
-        podIssues,
+        clusterName, podIssues,
         deploymentIssues: clusterDeploymentIssues,
       }),
       context: {
@@ -194,13 +151,24 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
     })
   }
 
-  // Determine cluster status using the SAME shared helpers as the list view
-  // so that health badges are always consistent (#5487).
+  const handleAsk = () => {
+    emitClusterAction('ask', clusterName)
+    onClose()
+    startMission({
+      title: `Ask about ${clusterName.split('/').pop()}`,
+      description: 'Custom question about the cluster',
+      type: 'custom',
+      cluster: clusterName,
+      initialPrompt: `I have a question about Kubernetes cluster "${clusterName}". The cluster currently has ${health?.nodeCount || 0} nodes, ${health?.podCount || 0} pods, ${health?.cpuCores || 0} CPU cores, and ${promptMemorySummary} memory. How can I help you?`,
+      context: { clusterName, health }
+    })
+  }
+
+  // Determine cluster status
   const isUnreachable = clusterInfo ? isClusterUnreachable(clusterInfo) : false
   const isHealthy = clusterInfo ? isClusterHealthy(clusterInfo) : (!isLoading && health?.healthy !== false)
   
   // Effective loading state: override to false after timeout
-  // This ensures the modal shows partial data rather than hanging indefinitely
   const effectiveLoading = forceShowContent ? false : isLoading
   const aliasList = clusterInfo?.aliases || []
   const serverAddress = clusterInfo?.server || health?.apiServer
@@ -213,9 +181,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
     const map: Record<string, { total: number; allocated: number; nodes: typeof clusterGPUs }> = {}
     clusterGPUs.forEach(node => {
       const type = node.gpuType || 'Unknown'
-      if (!map[type]) {
-        map[type] = { total: 0, allocated: 0, nodes: [] }
-      }
+      if (!map[type]) { map[type] = { total: 0, allocated: 0, nodes: [] } }
       map[type].total += node.gpuCount
       map[type].allocated += node.gpuAllocated
       map[type].nodes.push(node)
@@ -224,638 +190,78 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   })()
 
   // Retain last non-empty GPU data so the section doesn't vanish during refetch (#8597).
-  // Only fall back to cached data while a refresh/load is in progress (transient empty).
-  // When a settled (non-loading, non-refreshing) fetch returns empty, respect it as
-  // authoritative — GPUs may have been removed from the cluster (#8601).
   const isGpuTransient = gpuLoading || gpuRefreshing
   const lastGpuDataRef = useRef<{ clusterGPUs: typeof clusterGPUs; gpuByType: typeof gpuByType }>({ clusterGPUs: [], gpuByType: {} })
   if (clusterGPUs.length > 0) {
     lastGpuDataRef.current = { clusterGPUs, gpuByType }
   } else if (!isGpuTransient) {
-    // Settled fetch returned empty — clear cached data so UI shows no GPUs
     lastGpuDataRef.current = { clusterGPUs: [], gpuByType: {} }
   }
   const stableClusterGPUs = clusterGPUs.length > 0 ? clusterGPUs : lastGpuDataRef.current.clusterGPUs
   const stableGpuByType = clusterGPUs.length > 0 ? gpuByType : lastGpuDataRef.current.gpuByType
 
-  // Show modal immediately with loading state for data - don't block on isLoading
   return (
     <BaseModal isOpen={true} onClose={onClose} size="xl" closeOnBackdrop={false}>
       <div className="p-6 h-[90vh] overflow-y-auto">
-        {/* Header with status icons */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            {isUnreachable ? (
-              <StatusBadge color="yellow" icon={<WifiOff className="w-4 h-4" />} className="px-2 py-1" />
-            ) : isHealthy ? (
-              <StatusBadge color="green" icon={<CheckCircle className="w-4 h-4" />} className="px-2 py-1" />
-            ) : (
-              <StatusBadge color="red" icon={<AlertTriangle className="w-4 h-4" />} className="px-2 py-1" />
-            )}
-            <div className="flex flex-col">
-              <h2 className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
-              {aliasList.length > 0 && (
-                <div className="text-xs text-muted-foreground mt-0.5" title={t('clusterDetail.alsoKnownAs', { aliases: (aliasList || []).join(', ') })}>
-                  {t('clusterDetail.akaLabel')} {headerAliasSummary}
-                </div>
-              )}
-              {serverAddress && (
-                <div
-                  className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"
-                  data-testid="cluster-detail-server-address"
-                  title={`${t('clusterDetail.serverAddress')}: ${serverAddress}`}
-                >
-                  <Server className="w-3 h-3 shrink-0" />
-                  <span className="truncate max-w-xs">{serverAddress}</span>
-                </div>
-              )}
-            </div>
-            {(() => {
-              // Use cached distribution if available, otherwise detect from name/server
-              // Prefer clusterInfo.server over health.apiServer since it's more reliably populated
-              const serverUrl = clusterInfo?.server || health?.apiServer
-              const detectedProvider = clusterInfo?.distribution as CloudProviderType ||
-                detectCloudProviderShared(clusterName, serverUrl, clusterInfo?.namespaces, clusterUser)
-              // Get console URL based on detected provider
-              const consoleUrl = getConsoleUrl(detectedProvider, clusterName, serverUrl)
-              const providerInfo = getProviderInfo(detectedProvider === 'kubernetes' ? 'unknown' : detectedProvider as CloudProvider)
-              const providerLabel = getProviderLabel(detectedProvider)
-              return (
-                <>
-                  {consoleUrl ? (
-                    <a
-                      href={sanitizeUrl(consoleUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium ${providerInfo.bgColor} ${providerInfo.color} hover:opacity-80 transition-opacity`}
-                      title={t('clusterDetail.openConsole', { provider: providerLabel })}
-                    >
-                      <CloudProviderIcon provider={detectedProvider} size={16} />
-                      {providerLabel}
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  ) : (
-                    <span
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium ${providerInfo.bgColor} ${providerInfo.color}`}
-                      title={providerLabel}
-                    >
-                      <CloudProviderIcon provider={detectedProvider} size={16} />
-                      {providerLabel}
-                    </span>
-                  )}
-                </>
-              )
-            })()}
-            {onRename && (
-              <button
-                onClick={() => onRename(clusterName)}
-                className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
-                title={t('clusterDetail.renameCluster')}
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-            )}
-            {/* Remove cluster button — only for unreachable clusters (#5901).
-                Only shown for kubeconfig-backed clusters where the `/kubeconfig/remove`
-                endpoint can actually delete the entry. */}
-            {onRemove && isUnreachable && (clusterInfo?.source === 'kubeconfig' || !clusterInfo?.source) && (
-              <button
-                onClick={() => onRemove(clusterName)}
-                className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
-                title={t('cluster.removeCluster')}
-                aria-label={t('cluster.removeCluster')}
-                data-testid="cluster-detail-remove-button"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <button aria-label={t('actions.close')} onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Error banner when cluster health fetch fails (issue 6772) */}
-        {healthError && (
-          <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50 flex items-center gap-2 text-sm text-red-400">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>{healthError}</span>
-          </div>
-        )}
-
-        {/* Status details — surfaces unreachable reason (#5925),
-            external reachability (#5926) and freshness (#5927). */}
-        {clusterInfo && (
-          <ClusterStatusDetails cluster={clusterInfo} className="mb-4" />
-        )}
-
-        {/* Remove offline cluster affordance (#5901) —
-            surfaces the `/kubeconfig/remove` endpoint (added in #5658) as a
-            discoverable primary action on the cluster detail modal. Only shown
-            when the cluster is unreachable AND is kubeconfig-backed AND the
-            parent provided a remove handler. */}
-        {onRemove && isUnreachable && (clusterInfo?.source === 'kubeconfig' || !clusterInfo?.source) && (
-          <div className="mb-6 flex items-start gap-3 p-4 rounded-lg bg-red-500/5 border border-red-500/20">
-            <WifiOff className="w-5 h-5 text-red-400 shrink-0 mt-0.5" aria-hidden="true" />
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-medium text-foreground mb-1">
-                {t('clusterDetail.offlineRemoveTitle')}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {t('clusterDetail.offlineRemoveDesc')}
-              </p>
-            </div>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => onRemove(clusterName)}
-              icon={<Trash2 className="w-3.5 h-3.5" />}
-              data-testid="cluster-detail-remove-cta"
-            >
-              {t('cluster.removeCluster')}
-            </Button>
-          </div>
-        )}
-
-        {/* AI Actions */}
-        <div className="mb-6 p-4 rounded-lg bg-linear-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Bot className="w-5 h-5 text-purple-400" />
-            <span className="text-sm font-medium text-foreground">{t('clusterDetail.aiAssistant')}</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleDiagnose}
-              disabled={isUnreachable}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={t('clusterDetail.diagnoseTitle')}
-            >
-              <Stethoscope className="w-3.5 h-3.5" />
-              {t('clusterDetail.diagnose')}
-            </button>
-            <button
-              onClick={handleRepair}
-              disabled={isUnreachable || (podIssues.length === 0 && clusterDeploymentIssues.length === 0)}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={podIssues.length === 0 && clusterDeploymentIssues.length === 0 ? t('clusterDetail.noIssuesToRepair') : t('clusterDetail.repairTitle')}
-            >
-              <Wrench className="w-3.5 h-3.5" />
-              {t('clusterDetail.repair')}
-              {(podIssues.length > 0 || clusterDeploymentIssues.length > 0) && (
-                <StatusBadge color="red" size="xs">
-                  {podIssues.length + clusterDeploymentIssues.length}
-                </StatusBadge>
-              )}
-            </button>
-            <Button
-              variant="accent"
-              size="sm"
-              onClick={() => {
-                emitClusterAction('ask', clusterName)
-                onClose() // Close modal so mission sidebar is visible
-                startMission({
-                  title: `Ask about ${clusterName.split('/').pop()}`,
-                  description: 'Custom question about the cluster',
-                  type: 'custom',
-                  cluster: clusterName,
-                  initialPrompt: `I have a question about Kubernetes cluster "${clusterName}". The cluster currently has ${health?.nodeCount || 0} nodes, ${health?.podCount || 0} pods, ${health?.cpuCores || 0} CPU cores, and ${promptMemorySummary} memory. How can I help you?`,
-                  context: { clusterName, health }
-                })
-              }}
-              disabled={isUnreachable}
-              icon={<Wand2 className="w-3.5 h-3.5" />}
-              title={t('clusterDetail.askTitle')}
-            >
-              {t('clusterDetail.ask')}
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats - Interactive Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <button
-            onClick={() => !isUnreachable && !effectiveLoading && setShowNodeDetails(!showNodeDetails)}
-            disabled={isUnreachable || effectiveLoading}
-            className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !effectiveLoading ? 'border-border hover:border-cyan-500/50 hover:bg-cyan-500/5 hover:shadow-lg hover:shadow-cyan-500/10 cursor-pointer' : 'border-border cursor-default'
-            } ${showNodeDetails ? 'border-cyan-500/50 bg-cyan-500/10 shadow-lg shadow-cyan-500/10' : ''}`}
-            title={!isUnreachable && !effectiveLoading ? t('clusterDetail.clickToViewNode') : undefined}
-          >
-            {effectiveLoading ? (
-              <>
-                <div className="h-8 w-12 bg-muted/30 rounded animate-pulse mb-1" />
-                <div className="text-sm text-muted-foreground">{t('common.nodes')}</div>
-                <div className="h-4 w-16 bg-muted/30 rounded animate-pulse mt-1" />
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-foreground">{!isUnreachable ? (health?.nodeCount || 0) : '-'}</div>
-                <div className="text-sm text-muted-foreground flex items-center gap-1">
-                  {t('clusterDetail.nodes')}
-                  {!isUnreachable && <ChevronDown className={`w-4 h-4 transition-transform text-cyan-400 ${showNodeDetails ? 'rotate-180' : 'group-hover:translate-y-0.5'}`} />}
-                </div>
-                <div className="text-xs text-green-400">{!isUnreachable ? `${health?.readyNodes || 0} ${t('clusterDetail.ready')}` : t('clusterDetail.offline')}</div>
-                {!isUnreachable && !showNodeDetails && (
-                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-cyan-400/70 transition-colors">{t('clusterDetail.clickToExpand')}</div>
-                )}
-              </>
-            )}
-          </button>
-          <button
-            onClick={() => !isUnreachable && !effectiveLoading && setShowPodsByNamespace(!showPodsByNamespace)}
-            disabled={isUnreachable || effectiveLoading}
-            className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !effectiveLoading ? 'border-border hover:border-blue-500/50 hover:bg-blue-500/5 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer' : 'border-border cursor-default'
-            } ${showPodsByNamespace ? 'border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/10' : ''}`}
-            title={!isUnreachable && !effectiveLoading ? t('clusterDetail.clickToViewWorkloads') : undefined}
-          >
-            <div className="text-sm text-muted-foreground flex items-center gap-1 mb-1">
-              {t('clusterDetail.workloads')}
-              {!isUnreachable && !effectiveLoading && <ChevronDown className={`w-4 h-4 transition-transform text-blue-400 ${showPodsByNamespace ? 'rotate-180' : 'group-hover:translate-y-0.5'}`} />}
-            </div>
-            {effectiveLoading ? (
-              <div className="space-y-1.5">
-                <div className="h-4 bg-muted/30 rounded animate-pulse" />
-                <div className="h-4 bg-muted/30 rounded animate-pulse" />
-                <div className="h-4 bg-muted/30 rounded animate-pulse" />
-              </div>
-            ) : (
-              <>
-                <div className="space-y-0.5 text-xs">
-                  {!isUnreachable ? (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('clusterDetail.namespaces')}</span>
-                        <span className="text-foreground font-medium">{namespaceStats.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('common.deployments')}</span>
-                        <span className="text-foreground font-medium">{clusterDeployments.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('common.pods')}</span>
-                        <span className="text-foreground font-medium">{health?.podCount || 0}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </div>
-                {!isUnreachable && !showPodsByNamespace && (
-                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-blue-400/70 transition-colors">{t('clusterDetail.clickToExpand')}</div>
-                )}
-              </>
-            )}
-          </button>
-          <button
-            onClick={() => !isUnreachable && !effectiveLoading && stableClusterGPUs.length > 0 && setShowGPUDetail(true)}
-            disabled={isUnreachable || effectiveLoading || stableClusterGPUs.length === 0}
-            className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !effectiveLoading && stableClusterGPUs.length > 0 ? 'border-border hover:border-yellow-500/50 hover:bg-yellow-500/5 hover:shadow-lg hover:shadow-yellow-500/10 cursor-pointer' : 'border-border cursor-default'
-            }`}
-            title={!isUnreachable && !effectiveLoading && stableClusterGPUs.length > 0 ? t('clusterDetail.clickToViewGPU') : undefined}
-          >
-            {effectiveLoading ? (
-              <>
-                <div className="h-8 w-12 bg-muted/30 rounded animate-pulse mb-1" />
-                <div className="text-sm text-muted-foreground">{t('common.gpus')}</div>
-                <div className="h-4 w-20 bg-muted/30 rounded animate-pulse mt-1" />
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-foreground">{!isUnreachable ? stableClusterGPUs.reduce((sum, n) => sum + n.gpuCount, 0) : '-'}</div>
-                <div className="text-sm text-muted-foreground">{t('common.gpus')}</div>
-                <div className="text-xs text-yellow-400">{!isUnreachable ? `${stableClusterGPUs.reduce((sum, n) => sum + n.gpuAllocated, 0)} ${t('clusterDetail.allocated')}` : ''}</div>
-                {!isUnreachable && stableClusterGPUs.length > 0 && (
-                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-yellow-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
-                )}
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Resource Metrics - Clickable cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <button
-            onClick={() => !isUnreachable && !effectiveLoading && setShowCPUDetail(true)}
-            disabled={isUnreachable || effectiveLoading}
-            className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !effectiveLoading ? 'border-border hover:border-blue-500/50 hover:bg-blue-500/5 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer' : 'border-border cursor-default'
-            }`}
-            title={!isUnreachable && !effectiveLoading ? t('clusterDetail.clickToViewCPU') : undefined}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Cpu className="w-4 h-4 text-blue-400" />
-              <span className="text-sm text-muted-foreground">{t('common.cpu')}</span>
-            </div>
-            {effectiveLoading ? (
-              <>
-                <div className="h-8 w-16 bg-muted/30 rounded animate-pulse mb-1" />
-                <div className="h-4 w-24 bg-muted/30 rounded animate-pulse" />
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-foreground">{!isUnreachable ? (health?.cpuCores || 0) : '-'}</div>
-                <div className="text-xs text-muted-foreground">{t('clusterDetail.coresAllocatable')}</div>
-                {!isUnreachable && (
-                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-blue-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
-                )}
-              </>
-            )}
-          </button>
-          <button
-            onClick={() => !isUnreachable && !effectiveLoading && setShowMemoryDetail(true)}
-            disabled={isUnreachable || effectiveLoading}
-            className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !effectiveLoading ? 'border-border hover:border-green-500/50 hover:bg-green-500/5 hover:shadow-lg hover:shadow-green-500/10 cursor-pointer' : 'border-border cursor-default'
-            }`}
-            title={!isUnreachable && !effectiveLoading ? t('clusterDetail.clickToViewMemory') : undefined}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <MemoryStick className="w-4 h-4 text-green-400" />
-              <span className="text-sm text-muted-foreground">{t('common.memory')}</span>
-            </div>
-            {effectiveLoading ? (
-              <>
-                <div className="h-8 w-20 bg-muted/30 rounded animate-pulse mb-1" />
-                <div className="h-4 w-16 bg-muted/30 rounded animate-pulse" />
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-foreground">
-                  {!isUnreachable ? (health?.memoryGB ? (health.memoryGB >= 1024 ? `${(health.memoryGB / 1024).toFixed(1)} TB` : `${Math.round(health.memoryGB)} GB`) : '0 GB') : '-'}
-                </div>
-                <div className="text-xs text-muted-foreground">{t('clusterDetail.allocatable')}</div>
-                {!isUnreachable && (
-                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-green-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
-                )}
-              </>
-            )}
-          </button>
-          <button
-            onClick={() => !isUnreachable && !effectiveLoading && setShowStorageDetail(true)}
-            disabled={isUnreachable || effectiveLoading}
-            className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !effectiveLoading ? 'border-border hover:border-purple-500/50 hover:bg-purple-500/5 hover:shadow-lg hover:shadow-purple-500/10 cursor-pointer' : 'border-border cursor-default'
-            }`}
-            title={!isUnreachable && !effectiveLoading ? t('clusterDetail.clickToViewStorage') : undefined}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Database className="w-4 h-4 text-purple-400" />
-              <span className="text-sm text-muted-foreground">{t('common.storage')}</span>
-            </div>
-            {effectiveLoading ? (
-              <>
-                <div className="h-8 w-20 bg-muted/30 rounded animate-pulse mb-1" />
-                <div className="h-4 w-16 bg-muted/30 rounded animate-pulse" />
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-foreground">
-                  {!isUnreachable ? (health?.storageGB ? (health.storageGB >= 1024 ? `${(health.storageGB / 1024).toFixed(1)} TB` : `${Math.round(health.storageGB)} GB`) : '0 GB') : '-'}
-                </div>
-                <div className="text-xs text-muted-foreground">{t('clusterDetail.ephemeral')}</div>
-                {!isUnreachable && (
-                  <div className="text-2xs text-muted-foreground/50 mt-2 group-hover:text-purple-400/70 transition-colors">{t('clusterDetail.clickForDetails')}</div>
-                )}
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Pods by Namespace - Expandable with drill-down */}
-        {!isUnreachable && showPodsByNamespace && namespaceStats.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-400" />
-              {t('clusterDetail.workloadsCount', { count: namespaceStats.length })}
-            </h3>
-            <div className="rounded-lg bg-card/50 border border-border overflow-hidden">
-              <div className="divide-y divide-border/30">
-                {(showAllNamespaces ? namespaceStats : namespaceStats.slice(0, 5)).map((ns) => {
-                  const isExpanded = expandedNamespace === ns.name
-                  return (
-                    <div key={ns.name} className="overflow-hidden">
-                      <button
-                        onClick={() => setExpandedNamespace(isExpanded ? null : ns.name)}
-                        className="w-full p-3 flex items-center justify-between hover:bg-card/30 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-2">
-                          {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-                          <StatusBadge color="blue" size="xs" icon={<FolderOpen className="w-3 h-3" />}>{t('clusterDetail.ns')}</StatusBadge>
-                          <span className="font-mono text-sm text-foreground">{ns.name}</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-muted-foreground">{t('clusterDetail.podsCount', { count: ns.podCount })}</span>
-                          {ns.runningPods > 0 && (
-                            <span className="text-green-400">{t('clusterDetail.runningPods', { count: ns.runningPods })}</span>
-                          )}
-                          {ns.pendingPods > 0 && (
-                            <span className="text-yellow-400">{t('clusterDetail.pendingPods', { count: ns.pendingPods })}</span>
-                          )}
-                          {ns.failedPods > 0 && (
-                            <span className="text-red-400">{t('clusterDetail.failedPods', { count: ns.failedPods })}</span>
-                          )}
-                        </div>
-                      </button>
-                      {/* Expanded namespace content - shows all resources with tree/list view */}
-                      {isExpanded && (
-                        <div className="bg-card/20 border-t border-border/20 px-4 py-2">
-                          <NamespaceResources
-                            clusterName={clusterName}
-                            namespace={ns.name}
-                            onClose={onClose}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-              {namespaceStats.length > 5 && (
-                <button
-                  onClick={() => setShowAllNamespaces(!showAllNamespaces)}
-                  className="w-full p-2 text-sm text-primary hover:bg-card/30 transition-colors border-t border-border/30"
-                >
-                  {showAllNamespaces ? t('clusterDetail.showLess') : t('clusterDetail.showAllNamespaces', { count: namespaceStats.length })}
-                </button>
-              )}
-            </div>
-            {nsLoading && (
-              <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                {t('clusterDetail.loadingNamespaceData')}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Issues Section */}
-        {(podIssues.length > 0 || clusterDeploymentIssues.length > 0) && (
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-400" />
-              {t('clusterDetail.issuesCount', { count: podIssues.length + clusterDeploymentIssues.length })}
-            </h3>
-            <div className="space-y-2">
-              {podIssues.slice(0, 5).map((issue, i) => (
-                <div
-                  key={`pod-${i}`}
-                  onClick={() => {
-                    drillToPod(clusterName, issue.namespace, issue.name, {
-                      status: issue.status,
-                      restarts: issue.restarts,
-                      issues: issue.issues,
-                      reason: issue.reason })
-                    onClose()
-                  }}
-                  className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <StatusBadge color="blue" size="xs" icon={<Box className="w-3 h-3" />} className="shrink-0">{t('clusterDetail.pod')}</StatusBadge>
-                      <span className="font-medium text-foreground truncate">{issue.name}</span>
-                      <span className="text-xs text-muted-foreground shrink-0">({issue.namespace})</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                      <StatusBadge color="red" size="xs">{issue.status}</StatusBadge>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                  {issue.restarts > 0 && (
-                    <div className="mt-1 text-xs text-muted-foreground pl-14">{t('clusterDetail.restarts', { count: issue.restarts })}</div>
-                  )}
-                </div>
-              ))}
-              {clusterDeploymentIssues.slice(0, 3).map((issue, i) => (
-                <div
-                  key={`dep-${i}`}
-                  onClick={() => {
-                    drillToDeployment(clusterName, issue.namespace, issue.name, {
-                      replicas: issue.replicas,
-                      readyReplicas: issue.readyReplicas,
-                      reason: issue.reason,
-                      message: issue.message })
-                    onClose()
-                  }}
-                  className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <StatusBadge color="purple" size="xs" icon={<Layers className="w-3 h-3" />} className="shrink-0">{t('clusterDetail.deploy')}</StatusBadge>
-                      <span className="font-medium text-foreground truncate">{issue.name}</span>
-                      <span className="text-xs text-muted-foreground shrink-0">({issue.namespace})</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                      <StatusBadge color="red" size="xs">
-                        {issue.readyReplicas}/{issue.replicas} ready
-                      </StatusBadge>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                  {issue.message && (
-                    <div className="mt-1 text-xs text-red-400 pl-16 truncate">{issue.message}</div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* GPU Section */}
-        {stableClusterGPUs.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <HardDrive className="w-4 h-4 text-purple-400" />
-              {t('clusterDetail.gpusByType')}
-            </h3>
-            <div className="space-y-4">
-              {Object.entries(stableGpuByType).map(([type, info]) => (
-                <div key={type} className="rounded-lg bg-card/50 border border-border overflow-hidden">
-                  <div className="p-3 border-b border-border/50 bg-purple-500/5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">{type}</span>
-                        <span className="text-xs text-muted-foreground">({t('clusterDetail.nodeCount', { count: info.nodes.length })})</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-24">
-                          <Gauge value={info.allocated} max={info.total} size="sm" unit="" />
-                        </div>
-                        <span className="text-sm text-muted-foreground">{info.allocated}/{info.total} {t('clusterDetail.allocated')}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="divide-y divide-border/30">
-                    {info.nodes.map((node, i) => (
-                      <div key={i} className="p-3 flex items-center justify-between hover:bg-card/30 transition-colors">
-                        <div className="flex items-center gap-2">
-                          <Network className="w-3.5 h-3.5 text-muted-foreground" />
-                          <span className="text-sm text-foreground">{node.name}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-16">
-                            <Gauge value={node.gpuAllocated} max={node.gpuCount} size="sm" unit="" />
-                          </div>
-                          <span className="text-xs text-muted-foreground w-12 text-right">
-                            {node.gpuAllocated}/{node.gpuCount}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Node Details */}
-        {!isUnreachable && showNodeDetails && clusterNodes.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <Server className="w-4 h-4 text-cyan-400" />
-              {t('clusterDetail.nodesCount', { count: clusterNodes.length })}
-            </h3>
-            <div className="space-y-2">
-              {clusterNodes.map((node) => {
-                const isExpanded = expandedNodes.has(node.name)
-                return (
-                  <div key={node.name}>
-                    <div className={`rounded-lg border overflow-hidden ${isExpanded ? 'border-cyan-500/30' : 'border-border/30'}`}>
-                      <NodeListItem
-                        node={node}
-                        isSelected={isExpanded}
-                        onClick={() => {
-                          setExpandedNodes(prev => {
-                            const next = new Set(prev)
-                            if (next.has(node.name)) next.delete(node.name)
-                            else next.add(node.name)
-                            return next
-                          })
-                        }}
-                      />
-                    </div>
-                    {/* Inline expanded details */}
-                    {isExpanded && (
-                      <NodeDetailPanel
-                        node={node}
-                        clusterName={clusterName}
-                        onClose={() => setExpandedNodes(prev => { const next = new Set(prev); next.delete(node.name); return next })}
-                      />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            {nodesLoading && (
-              <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                {t('clusterDetail.loadingNodeDetails')}
-              </div>
-            )}
-          </div>
-        )}
+        <ClusterDetailHeader
+          clusterName={clusterName}
+          clusterUser={clusterUser}
+          clusterInfo={clusterInfo}
+          health={health}
+          healthError={healthError}
+          isUnreachable={isUnreachable}
+          isHealthy={isHealthy}
+          aliasList={aliasList}
+          serverAddress={serverAddress}
+          headerAliasSummary={headerAliasSummary}
+          onClose={onClose}
+          onRename={onRename}
+          onRemove={onRemove}
+          handleDiagnose={handleDiagnose}
+          handleRepair={handleRepair}
+          handleAsk={handleAsk}
+          podIssues={podIssues}
+          clusterDeploymentIssues={clusterDeploymentIssues}
+        />
+        <ClusterDetailStats
+          isUnreachable={isUnreachable}
+          effectiveLoading={effectiveLoading}
+          health={health}
+          showNodeDetails={showNodeDetails}
+          setShowNodeDetails={setShowNodeDetails}
+          showPodsByNamespace={showPodsByNamespace}
+          setShowPodsByNamespace={setShowPodsByNamespace}
+          stableClusterGPUs={stableClusterGPUs}
+          setShowGPUDetail={setShowGPUDetail}
+          setShowCPUDetail={setShowCPUDetail}
+          setShowMemoryDetail={setShowMemoryDetail}
+          setShowStorageDetail={setShowStorageDetail}
+          namespaceStats={namespaceStats}
+          clusterDeployments={clusterDeployments}
+        />
+        <ClusterDetailSections
+          isUnreachable={isUnreachable}
+          showPodsByNamespace={showPodsByNamespace}
+          showAllNamespaces={showAllNamespaces}
+          setShowAllNamespaces={setShowAllNamespaces}
+          expandedNamespace={expandedNamespace}
+          setExpandedNamespace={setExpandedNamespace}
+          namespaceStats={namespaceStats}
+          nsLoading={nsLoading}
+          podIssues={podIssues}
+          clusterDeploymentIssues={clusterDeploymentIssues}
+          stableClusterGPUs={stableClusterGPUs}
+          stableGpuByType={stableGpuByType}
+          showNodeDetails={showNodeDetails}
+          clusterNodes={clusterNodes}
+          expandedNodes={expandedNodes}
+          setExpandedNodes={setExpandedNodes}
+          nodesLoading={nodesLoading}
+          clusterName={clusterName}
+          drillToPod={drillToPod}
+          drillToDeployment={drillToDeployment}
+          onClose={onClose}
+        />
       </div>
 
       {/* Resource Detail Modals */}
@@ -881,7 +287,6 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
           allocatableMemoryGB={health?.memoryGB || 0}
           requestedMemoryGB={health?.memoryRequestsGB || health?.memoryUsageGB || 0}
           nodes={clusterNodes.map(n => {
-            // Parse memory string like "16Gi" or "16384Mi"
             const memStr = n.memoryCapacity || '0'
             let memGB = 0
             if (memStr.endsWith('Gi')) {
@@ -891,10 +296,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
             } else if (memStr.endsWith('Ki')) {
               memGB = parseFloat(memStr.replace('Ki', '')) / (1024 * 1024)
             }
-            return {
-              name: n.name,
-              memoryCapacityGB: memGB,
-              memoryAllocatableGB: memGB }
+            return { name: n.name, memoryCapacityGB: memGB, memoryAllocatableGB: memGB }
           })}
           isLoading={nodesLoading}
           onClose={() => setShowMemoryDetail(false)}
@@ -907,7 +309,6 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
           totalStorageGB={health?.storageGB || 0}
           allocatableStorageGB={health?.storageGB || 0}
           nodes={clusterNodes.map(n => {
-            // Parse storage string like "100Gi" or "102400Mi"
             const storageStr = n.storageCapacity || '0'
             let storageGB = 0
             if (storageStr.endsWith('Gi')) {
@@ -917,9 +318,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
             } else if (storageStr.endsWith('Ti')) {
               storageGB = parseFloat(storageStr.replace('Ti', '')) * 1024
             }
-            return {
-              name: n.name,
-              ephemeralStorageGB: storageGB }
+            return { name: n.name, ephemeralStorageGB: storageGB }
           })}
           isLoading={nodesLoading}
           onClose={() => setShowStorageDetail(false)}
