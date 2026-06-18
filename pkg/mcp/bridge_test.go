@@ -1,1 +1,1 @@
-$(cat modified_bridge_test.go)
+$(cat /data/home/pkg_mcp_bridge_test_FIXED.go)
