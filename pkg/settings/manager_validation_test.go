@@ -89,12 +89,12 @@ func TestValidation_SaveAll_EmptySettings(t *testing.T) {
 		t.Fatalf("GetAll failed: %v", err)
 	}
 
-	// SaveAll preserves explicitly empty plaintext values.
-	if loaded.AIMode != "" {
-		t.Errorf("aiMode = %q, want empty string", loaded.AIMode)
+	// SaveAll applies defaults to empty plaintext values.
+	if loaded.AIMode != "medium" {
+		t.Errorf("aiMode = %q, want %q", loaded.AIMode, "medium")
 	}
-	if loaded.Theme != "" {
-		t.Errorf("theme = %q, want empty string", loaded.Theme)
+	if loaded.Theme != "kubestellar" {
+		t.Errorf("theme = %q, want %q", loaded.Theme, "kubestellar")
 	}
 }
 
@@ -105,11 +105,18 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 	testCases := []struct {
 		name       string
 		thresholds PredictionThresholds
+		want       PredictionThresholds
 		wantErr    bool
 	}{
 		{
 			name: "valid thresholds",
 			thresholds: PredictionThresholds{
+				HighRestartCount:  10,
+				CPUPressure:       80,
+				MemoryPressure:    85,
+				GPUMemoryPressure: 90,
+			},
+			want: PredictionThresholds{
 				HighRestartCount:  10,
 				CPUPressure:       80,
 				MemoryPressure:    85,
@@ -125,6 +132,12 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 				MemoryPressure:    0,
 				GPUMemoryPressure: 0,
 			},
+			want: PredictionThresholds{
+				HighRestartCount:  3,
+				CPUPressure:       80,
+				MemoryPressure:    85,
+				GPUMemoryPressure: 90,
+			},
 			wantErr: false,
 		},
 		{
@@ -132,6 +145,12 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 			thresholds: PredictionThresholds{
 				HighRestartCount: 15,
 				CPUPressure:      0, // Should get default
+			},
+			want: PredictionThresholds{
+				HighRestartCount:  15,
+				CPUPressure:       80,
+				MemoryPressure:    85,
+				GPUMemoryPressure: 90,
 			},
 			wantErr: false,
 		},
@@ -153,9 +172,9 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// SaveAll persists the provided threshold struct as-is.
-				if loaded.Predictions.Thresholds != tc.thresholds {
-					t.Errorf("thresholds = %+v, want %+v", loaded.Predictions.Thresholds, tc.thresholds)
+				// SaveAll applies defaults to zero-value threshold fields.
+				if loaded.Predictions.Thresholds != tc.want {
+					t.Errorf("thresholds = %+v, want %+v", loaded.Predictions.Thresholds, tc.want)
 				}
 			}
 		})
@@ -169,11 +188,18 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 	testCases := []struct {
 		name       string
 		tokenUsage TokenUsageSettings
+		want       TokenUsageSettings
 		wantErr    bool
 	}{
 		{
 			name: "valid token usage",
 			tokenUsage: TokenUsageSettings{
+				Limit:             1000000,
+				WarningThreshold:  0.7,
+				CriticalThreshold: 0.85,
+				StopThreshold:     0.95,
+			},
+			want: TokenUsageSettings{
 				Limit:             1000000,
 				WarningThreshold:  0.7,
 				CriticalThreshold: 0.85,
@@ -189,6 +215,12 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 				CriticalThreshold: 0,
 				StopThreshold:     0,
 			},
+			want: TokenUsageSettings{
+				Limit:             0,
+				WarningThreshold:  0.7,
+				CriticalThreshold: 0.9,
+				StopThreshold:     1.0,
+			},
 			wantErr: false,
 		},
 		{
@@ -198,6 +230,12 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 				WarningThreshold:  0,
 				CriticalThreshold: 0,
 				StopThreshold:     0,
+			},
+			want: TokenUsageSettings{
+				Limit:             500000,
+				WarningThreshold:  0.7,
+				CriticalThreshold: 0.9,
+				StopThreshold:     1.0,
 			},
 			wantErr: false,
 		},
@@ -219,9 +257,9 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// SaveAll persists the provided token usage settings as-is.
-				if loaded.TokenUsage != tc.tokenUsage {
-					t.Errorf("tokenUsage = %+v, want %+v", loaded.TokenUsage, tc.tokenUsage)
+				// SaveAll applies defaults to zero-value token usage thresholds.
+				if loaded.TokenUsage != tc.want {
+					t.Errorf("tokenUsage = %+v, want %+v", loaded.TokenUsage, tc.want)
 				}
 			}
 		})
