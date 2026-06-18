@@ -34,6 +34,10 @@ To add a topic to an upcoming community call:
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for how to submit issues, pull requests, and become a maintainer.
 
+## Outreach Resources
+
+- [KEDA Outreach — CNCF Graduated (8k★)](community/outreach/keda-cncf-graduated.md) — discussion draft, channel messaging, and blog outline for KEDA community engagement.
+
 ## Governance
 
 See [GOVERNANCE.md](../GOVERNANCE.md) for the project's decision-making process, maintainer roles, and voting procedures.

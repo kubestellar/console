@@ -68,4 +68,5 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [HOMEBREW.md](HOMEBREW.md) | Explains Homebrew support status for the console and kc-agent. |
 | [RELEASING.md](RELEASING.md) | Release-process reference for maintainers packaging and publishing releases. |
 | [cncf-insights/2026-05-27.md](cncf-insights/2026-05-27.md) | Snapshot report of CNCF landscape intelligence from 2026-05-27. |
+| [community/outreach/keda-cncf-graduated.md](community/outreach/keda-cncf-graduated.md) | Outreach kit for engaging the KEDA community around the `keda_status` card. |
 | [security/SELF-ASSESSMENT.md](security/SELF-ASSESSMENT.md) | Project security self-assessment and related review notes. |
