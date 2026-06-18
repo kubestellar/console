@@ -152,7 +152,7 @@ jobs:
             ' report_json.json 2>/dev/null || echo "Could not parse alerts")
           fi
           # Write to file to preserve newlines
-          echo "$SUMMARY" > /tmp/zap-summary.txt
+          echo "$SUMMARY" > ${{ runner.temp }}/zap-summary.txt
 
       - name: Create or Close ZAP Issue
         if: always() && inputs.skip_issue_creation != true
@@ -180,7 +180,7 @@ jobs:
               const fs = require('fs');
               let summary = '';
               try {
-                summary = fs.readFileSync('/tmp/zap-summary.txt', 'utf8');
+                summary = fs.readFileSync('${{ runner.temp }}/zap-summary.txt', 'utf8');
               } catch { summary = 'See workflow artifacts for details.'; }
 
               const body = [
@@ -320,7 +320,7 @@ jobs:
         if: always() && steps.nuclei-results.outputs.has_findings == 'true'
         run: |
           if [ -f nuclei-results.json ] && [ -s nuclei-results.json ]; then
-            jq -r '"- **[\(.info.severity)]** \(.info.name) — \(.\"matched-at\" // .host)"' nuclei-results.json > /tmp/nuclei-summary.txt 2>/dev/null || echo "Could not parse results" > /tmp/nuclei-summary.txt
+            jq -r '"- **[\(.info.severity)]** \(.info.name) — \(.\"matched-at\" // .host)"' nuclei-results.json > ${{ runner.temp }}/nuclei-summary.txt 2>/dev/null || echo "Could not parse results" > ${{ runner.temp }}/nuclei-summary.txt
           fi
 
       - name: Create or Close Nuclei Issue
@@ -349,7 +349,7 @@ jobs:
               const fs = require('fs');
               let summary = '';
               try {
-                summary = fs.readFileSync('/tmp/nuclei-summary.txt', 'utf8');
+                summary = fs.readFileSync('${{ runner.temp }}/nuclei-summary.txt', 'utf8');
               } catch { summary = 'See workflow artifacts for details.'; }
 
               const body = [
