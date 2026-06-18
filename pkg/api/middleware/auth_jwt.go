@@ -125,7 +125,7 @@ var widgetAgentAllowedPaths = map[string]struct{}{
 
 // JWTAuth creates JWT authentication middleware.
 // Token resolution order: Authorization header -> HttpOnly cookie -> _token query param (SSE only).
-// When agentToken is non-empty, an Authorization header carrying that exact value
+// When agentToken is non-empty, a resolved token value matching that exact value
 // with source=ubersicht-widget is accepted only on the exported widget
 // read endpoints, not on the rest of the authenticated API surface.
 func JWTAuth(secret string, agentToken ...string) fiber.Handler {
