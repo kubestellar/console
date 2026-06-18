@@ -1,10 +1,8 @@
 package stellar
 
 import (
-	"github.com/kubestellar/console/pkg/k8s"
 	"context"
 	"fmt"
-	"html"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -12,21 +10,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"encoding/json"
-
 	"github.com/kubestellar/console/pkg/stellar"
-	"github.com/kubestellar/console/pkg/stellar/scheduler"
 	"github.com/kubestellar/console/pkg/stellar/solver"
 	"github.com/kubestellar/console/pkg/store"
 )
-
-// safeAutoActions are the action types autoTriggerSolve may dispatch on its
-// own (Phase 3a, before falling through to the AI mission). The list matches
-// the legacy autoExecuteAction allowlist — RestartDeployment is the only
-// non-destructive action that's almost always safe to attempt.
-var safeAutoActions = map[string]bool{
-	"RestartDeployment": true,
-}
 
 // broadcastSolveProgress emits a structured phase update over SSE. The event
 // card uses it to render the live progress bar; the activity log uses the
@@ -319,129 +306,16 @@ func (h *Handler) autoTriggerSolve(ctx context.Context, event IncomingEvent, not
 	// On failure (or when the action isn't on the safe allowlist), we fall
 	// through to PHASE 3b (mission trigger) so the operator's connected AI
 	// agent can take a deeper look.
-	if eval != nil && eval.RecommendedAction != nil && safeAutoActions[eval.RecommendedAction.Type] && h.k8sClient != nil {
-		h.broadcastSolveProgress(notif.UserID, solve.ID, notif.ID, "solving",
-			fmt.Sprintf("Trying %s — Stellar's first-line fix.", eval.RecommendedAction.Type), 75)
-		h.logActivity(ctx, &store.StellarActivity{
-			Kind:      "solving",
-			EventID:   notif.ID,
-			SolveID:   solve.ID,
-			Cluster:   event.Cluster,
-			Namespace: event.Namespace,
-			Workload:  workload,
-			Title:     fmt.Sprintf("Trying %s on %s/%s", eval.RecommendedAction.Type, event.Namespace, workload),
-			Detail:    eval.RecommendedAction.Reasoning,
-			Severity:  "info",
-		})
-
-		params := map[string]any{
-			"namespace": event.Namespace,
-			"name":      workload,
-		}
-		paramsJSON, _ := json.Marshal(params)
-		now := time.Now().UTC()
-		action := &store.StellarAction{
-			UserID:      notif.UserID,
-			Description: fmt.Sprintf("Solve %s: %s on %s/%s", solve.ID[:8], eval.RecommendedAction.Type, event.Namespace, workload),
-			ActionType:  eval.RecommendedAction.Type,
-			Parameters:  string(paramsJSON),
-			Cluster:     event.Cluster,
-			Namespace:   event.Namespace,
-			Status:      "approved",
-			CreatedBy:   "stellar-solver",
-			ApprovedBy:  "stellar-solver",
-			ApprovedAt:  &now,
-		}
-		if err := h.store.CreateStellarAction(ctx, action); err != nil {
-			slog.Warn("[StellarSolver] failed to create action", "solveId", solve.ID, "error", err)
-		}
-		if err := h.store.UpdateStellarActionStatus(ctx, action.ID, "running", "", ""); err != nil {
-			slog.Warn("[StellarSolver] failed to update action status to running", "actionId", action.ID, "error", err)
-		}
-		outcome, dispatchErr := scheduler.Dispatch(ctx, h.k8sClient.(*k8s.MultiClusterClient), *action)
-		status := "completed"
-		if dispatchErr != nil {
-			status = "failed"
-			outcome = dispatchErr.Error()
-		}
-		if err := h.store.UpdateStellarActionStatus(ctx, action.ID, status, outcome, ""); err != nil {
-			slog.Warn("[StellarSolver] failed to update action status", "actionId", action.ID, "status", status, "error", err)
-		}
-
-		if dispatchErr == nil {
-			// Restart succeeded. Mark the solve resolved and broadcast green ✓
-			// so every card for this workload reflects the fix.
-			summary := fmt.Sprintf("Tried %s and it worked. %s", eval.RecommendedAction.Type, outcome)
-			if err := full.UpdateSolveStatus(ctx, solve.ID, "resolved", summary, "", ""); err != nil {
-				slog.Warn("[StellarSolver] failed to update solve status", "solveId", solve.ID, "error", err)
-			}
-			h.logActivity(ctx, &store.StellarActivity{
-				Kind:      "solve_resolved",
-				EventID:   notif.ID,
-				SolveID:   solve.ID,
-				Cluster:   event.Cluster,
-				Namespace: event.Namespace,
-				Workload:  workload,
-				Title:     fmt.Sprintf("Resolved: %s succeeded on %s/%s", eval.RecommendedAction.Type, event.Namespace, workload),
-				Detail:    summary,
-				Severity:  "info",
-			})
-			h.broadcastSolveProgress(notif.UserID, solve.ID, notif.ID, "resolved", summary, 100)
-			h.broadcastToClients(SSEEvent{Type: "solve_complete", Data: map[string]interface{}{
-				"userId":  notif.UserID,
-				"solveId": solve.ID,
-				"eventId": notif.ID,
-				"status":  "resolved",
-				"summary": summary,
-			}})
-			// Mission not triggered — first-line fix was sufficient.
-			return
-		}
-		// Restart attempt failed — fall through to the AI mission for a
-		// deeper diagnose+act loop. Log the failed attempt so the operator
-		// sees the journey.
-		h.logActivity(ctx, &store.StellarActivity{
-			Kind:      "auto_fix_failed",
-			EventID:   notif.ID,
-			SolveID:   solve.ID,
-			Cluster:   event.Cluster,
-			Namespace: event.Namespace,
-			Workload:  workload,
-			Title:     fmt.Sprintf("First-line fix failed for %s/%s", event.Namespace, workload),
-			Detail:    fmt.Sprintf("%s — escalating to AI mission. Error: %s", eval.RecommendedAction.Type, dispatchErr.Error()),
-			Severity:  "warning",
-		})
+	if h.trySafeAutoAction(ctx, full, notif, solve, event, workload, eval) {
+		// Mission not triggered — first-line fix was sufficient.
+		return
 	}
 
 	// PHASE 3b — AI MISSION.
 	// Broadcast the mission trigger. The frontend bridge consumes this and
 	// drives MissionContext.startMission with the user's connected agent +
 	// LLM — same machinery as the ConsoleIssuesCard "Repair" button.
-	safeEventCluster := renderUntrustedPromptData("k8s-event-cluster", event.Cluster)
-	safeEventNamespace := renderUntrustedPromptData("k8s-event-namespace", event.Namespace)
-	safeEventKind := renderUntrustedPromptData("k8s-event-kind", event.Kind)
-	safeEventName := renderUntrustedPromptData("k8s-event-name", event.Name)
-	safeEventReason := renderUntrustedPromptData("k8s-event-reason", event.Reason)
-	safeEventMessage := renderUntrustedPromptData("k8s-event-message", event.Message)
-	safeRootCauseHeadline := renderUntrustedPromptData("stellar-root-cause-headline", rootCauseHeadline)
-	missionPrompt := fmt.Sprintf(`I'm a Kubernetes operator and Stellar (your assistant peer) just flagged a critical event. Diagnose and fix it.
-
-Cluster: %s
-Namespace: %s
-Resource: %s/%s
-Reason: %s
-Message: %s
-Suspected root cause: %s
-
-Please:
-1. Pull the pod logs and 'describe' output for the affected resource.
-2. Identify the root cause from those signals.
-3. Apply the safest single action to fix it (rollout restart, scale, env/configmap edit, or rollback).
-4. Verify the fix landed by re-checking pod status after ~15 seconds.
-5. Report what you did, the outcome, and any follow-up I should know about.
-
-Don't ask me first — act. If you genuinely can't fix it safely, tell me what's blocking you.`,
-		safeEventCluster, safeEventNamespace, safeEventKind, safeEventName, safeEventReason, safeEventMessage, safeRootCauseHeadline)
+	missionPrompt := buildAutoMissionPrompt(event, rootCauseHeadline)
 
 	h.broadcastSolveProgress(notif.UserID, solve.ID, notif.ID, "solving",
 		"Applying fix via AI mission — using your connected agent.", 75)
@@ -656,28 +530,7 @@ func (h *Handler) StartSolve(c *fiber.Ctx) error {
 		})
 	}
 
-	safeNotifCluster := renderUntrustedPromptData("stellar-notification-cluster", notif.Cluster)
-	safeNotifNamespace := renderUntrustedPromptData("stellar-notification-namespace", notif.Namespace)
-	safeResourceName := renderUntrustedPromptData("stellar-notification-resource", resourceName)
-	safeNotifTitle := renderUntrustedPromptData("stellar-notification-title", notif.Title)
-	safeNotifBody := renderUntrustedPromptData("stellar-notification-body", notif.Body)
-	missionPrompt := fmt.Sprintf(`Diagnose and fix this Kubernetes issue end-to-end.
-
-Cluster: %s
-Namespace: %s
-Resource: %s
-Title: %s
-Notification: %s
-
-Please:
-1. Pull pod logs and 'describe' output.
-2. Identify root cause.
-3. Apply the safest single action to fix it.
-4. Verify the fix landed after ~15 seconds.
-5. Report what you did and the outcome.
-
-Don't ask me first — act. I trust you.`,
-		safeNotifCluster, safeNotifNamespace, safeResourceName, safeNotifTitle, safeNotifBody)
+	missionPrompt := buildManualMissionPrompt(notif, resourceName)
 
 	h.logActivity(ctx, &store.StellarActivity{
 		Kind:      "mission_triggered",
@@ -768,19 +621,4 @@ func deriveResourceNameFromNotification(n *store.StellarNotification) string {
 		return tail
 	}
 	return ""
-}
-
-const stellarMaxUntrustedFieldLen = 512
-
-func renderUntrustedPromptData(source, value string) string {
-	truncated := value
-	if len(truncated) > stellarMaxUntrustedFieldLen {
-		truncated = truncated[:stellarMaxUntrustedFieldLen] + "… [truncated]"
-		slog.Warn("truncated untrusted prompt field", "source", source, "originalLen", len(value))
-	}
-	return fmt.Sprintf(
-		"<cluster-data source=%q trust=\"untrusted\">%s</cluster-data>",
-		source,
-		html.EscapeString(truncated),
-	)
 }
