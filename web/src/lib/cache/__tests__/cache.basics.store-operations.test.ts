@@ -90,298 +90,6 @@ afterEach(() => {
 
 
 describe('cache module', () => {
-
-
-  // ── REFRESH_RATES ────────────────────────────────────────────────────────
-
-  describe('REFRESH_RATES', () => {
-    it('exports expected rate categories', async () => {
-      const { REFRESH_RATES } = await importFresh()
-      expect(REFRESH_RATES.realtime).toBe(15_000)
-      expect(REFRESH_RATES.pods).toBe(30_000)
-      expect(REFRESH_RATES.clusters).toBe(60_000)
-      expect(REFRESH_RATES.default).toBe(120_000)
-      expect(REFRESH_RATES.costs).toBe(600_000)
-    })
-
-    it('all rates are positive numbers', async () => {
-      const { REFRESH_RATES } = await importFresh()
-      for (const [key, value] of Object.entries(REFRESH_RATES)) {
-        expect(value, `${key} should be a positive number`).toBeGreaterThan(0)
-      }
-    })
-  })
-
-  // ── Auto-refresh pause ───────────────────────────────────────────────────
-
-  describe('auto-refresh pause', () => {
-    it('starts unpaused', async () => {
-      const { isAutoRefreshPaused } = await importFresh()
-      expect(isAutoRefreshPaused()).toBe(false)
-    })
-
-    it('can be paused and unpaused', async () => {
-      const { isAutoRefreshPaused, setAutoRefreshPaused } = await importFresh()
-      setAutoRefreshPaused(true)
-      expect(isAutoRefreshPaused()).toBe(true)
-      setAutoRefreshPaused(false)
-      expect(isAutoRefreshPaused()).toBe(false)
-    })
-
-    it('notifies subscribers on change', async () => {
-      const { setAutoRefreshPaused, subscribeAutoRefreshPaused } = await importFresh()
-      const listener = vi.fn()
-      const unsub = subscribeAutoRefreshPaused(listener)
-
-      setAutoRefreshPaused(true)
-      expect(listener).toHaveBeenCalledWith(true)
-
-      setAutoRefreshPaused(false)
-      expect(listener).toHaveBeenCalledWith(false)
-
-      unsub()
-      setAutoRefreshPaused(true)
-      // Should not be called again after unsubscribe
-      expect(listener).toHaveBeenCalledTimes(2)
-    })
-
-    it('does not notify when value does not change', async () => {
-      const { setAutoRefreshPaused, subscribeAutoRefreshPaused } = await importFresh()
-      const listener = vi.fn()
-      subscribeAutoRefreshPaused(listener)
-
-      setAutoRefreshPaused(false) // already false
-      expect(listener).not.toHaveBeenCalled()
-    })
-
-    it('supports multiple subscribers independently', async () => {
-      const { setAutoRefreshPaused, subscribeAutoRefreshPaused } = await importFresh()
-      const listenerA = vi.fn()
-      const listenerB = vi.fn()
-      const unsubA = subscribeAutoRefreshPaused(listenerA)
-      subscribeAutoRefreshPaused(listenerB)
-
-      setAutoRefreshPaused(true)
-      expect(listenerA).toHaveBeenCalledTimes(1)
-      expect(listenerB).toHaveBeenCalledTimes(1)
-
-      unsubA()
-      setAutoRefreshPaused(false)
-      // Only B should fire after A is unsubscribed
-      expect(listenerA).toHaveBeenCalledTimes(1)
-      expect(listenerB).toHaveBeenCalledTimes(2)
-    })
-
-    it('toggling pause twice returns to original state', async () => {
-      const { isAutoRefreshPaused, setAutoRefreshPaused } = await importFresh()
-      setAutoRefreshPaused(true)
-      setAutoRefreshPaused(false)
-      expect(isAutoRefreshPaused()).toBe(false)
-    })
-  })
-
-  // ── sessionStorage helpers ────────────────────────────────────────────────
-
-  describe('sessionStorage cache layer', () => {
-    it('ssWrite stores data with version and timestamp', async () => {
-      const key = 'kcc:test-key'
-      const data = { items: [1, 2, 3] }
-      const timestamp = Date.now()
-      sessionStorage.setItem(key, JSON.stringify({ d: data, t: timestamp, v: 4 }))
-
-      await importFresh()
-      const stored = JSON.parse(sessionStorage.getItem(key) || '{}')
-      expect(stored.d).toEqual(data)
-      expect(stored.t).toBe(timestamp)
-      expect(stored.v).toBe(4)
-    })
-
-    it('ssRead returns null for missing key', async () => {
-      await importFresh()
-      expect(sessionStorage.getItem('kcc:nonexistent')).toBeNull()
-    })
-
-    it('ssRead ignores entries with wrong cache version', async () => {
-      const key = 'kcc:stale'
-      sessionStorage.setItem(key, JSON.stringify({ d: { old: true }, t: Date.now(), v: 2 }))
-      await importFresh()
-      // The cache module should ignore this because v !== CACHE_VERSION (4)
-    })
-
-    it('ssRead handles invalid JSON gracefully', async () => {
-      sessionStorage.setItem('kcc:broken', '{not valid json!!!')
-      await expect(importFresh()).resolves.toBeDefined()
-    })
-
-    it('ssWrite handles QuotaExceededError gracefully', async () => {
-      const spy = vi.spyOn(sessionStorage, 'setItem').mockImplementation(() => {
-        throw new DOMException('QuotaExceededError', 'QuotaExceededError')
-      })
-
-      await expect(importFresh()).resolves.toBeDefined()
-      spy.mockRestore()
-    })
-
-    it('ssRead removes entries missing required fields (d, t, v)', async () => {
-      // Missing "d" field
-      sessionStorage.setItem('kcc:nodfield', JSON.stringify({ t: 1000, v: 4 }))
-      await importFresh()
-      // The module would call ssRead which removes this entry; verify it was removed
-      // by checking it no longer holds the malformed data after a read cycle
-      // (ssRead clears incompatible entries for future reads)
-    })
-
-    it('ssRead returns correct data when version matches', async () => {
-      const data = { name: 'test', count: 42 }
-      const timestamp = 1700000000000
-      seedSessionStorage('good-key', data, timestamp)
-
-      await importFresh()
-      // Verify the data is still in sessionStorage (valid entry persists)
-      const stored = JSON.parse(sessionStorage.getItem('kcc:good-key')!)
-      expect(stored.d).toEqual(data)
-      expect(stored.t).toBe(timestamp)
-    })
-
-    it('ssRead treats null-valued parsed objects as invalid', async () => {
-      // JSON.parse("null") returns null, which should be handled
-      sessionStorage.setItem('kcc:null-entry', 'null')
-      await expect(importFresh()).resolves.toBeDefined()
-    })
-
-    it('ssRead treats non-object parsed values as invalid', async () => {
-      // e.g. a stored number or string
-      sessionStorage.setItem('kcc:number-entry', '42')
-      sessionStorage.setItem('kcc:string-entry', '"hello"')
-      await expect(importFresh()).resolves.toBeDefined()
-    })
-  })
-
-  // ── initPreloadedMeta ──────────────────────────────────────────────────
-
-  describe('initPreloadedMeta', () => {
-    it('populates metadata map from worker data', async () => {
-      const { initPreloadedMeta } = await importFresh()
-      const meta = {
-        'pods': { consecutiveFailures: 2, lastError: 'timeout', lastSuccessfulRefresh: 1000 },
-        'clusters': { consecutiveFailures: 0, lastSuccessfulRefresh: 2000 },
-      }
-      expect(() => initPreloadedMeta(meta as Record<string, { consecutiveFailures: number; lastError?: string; lastSuccessfulRefresh?: number }>)).not.toThrow()
-    })
-
-    it('handles empty meta object', async () => {
-      const { initPreloadedMeta } = await importFresh()
-      expect(() => initPreloadedMeta({})).not.toThrow()
-    })
-
-    it('clears previous meta before repopulating', async () => {
-      const { initPreloadedMeta } = await importFresh()
-      // First call with some keys
-      initPreloadedMeta({
-        'old-key': { consecutiveFailures: 5, lastSuccessfulRefresh: 100 },
-      })
-      // Second call with different keys
-      initPreloadedMeta({
-        'new-key': { consecutiveFailures: 1, lastSuccessfulRefresh: 200 },
-      })
-      // The old key should not persist (initPreloadedMeta clears map first)
-      // We can't inspect the map directly, but the function should not throw
-    })
-  })
-
-  // ── isSQLiteWorkerActive ───────────────────────────────────────────────
-
-  describe('isSQLiteWorkerActive', () => {
-    it('returns false when worker is not initialized', async () => {
-      const { isSQLiteWorkerActive } = await importFresh()
-      expect(isSQLiteWorkerActive()).toBe(false)
-    })
-  })
-
-  // ── getEffectiveInterval backoff calculation ────────────────────────────
-
-  describe('getEffectiveInterval (backoff calculation)', () => {
-    /**
-     * getEffectiveInterval is not exported, so we test it indirectly by
-     * creating a CacheStore via the public API, triggering failures, and
-     * observing the state. However, we can also test the backoff formula
-     * directly by examining what the useCache hook would compute.
-     *
-     * Formula: interval = min(baseInterval * 2^min(failures,5), 600000)
-     */
-
-    it('0 failures returns base interval unchanged', async () => {
-      // With 0 consecutive failures, the effective interval equals the base.
-      // We verify by checking REFRESH_RATES values are used directly.
-      const { REFRESH_RATES } = await importFresh()
-      // The base interval for pods is 30000; with 0 failures it stays 30000
-      expect(REFRESH_RATES.pods).toBe(30_000)
-    })
-
-    it('1 failure doubles the interval (2^1 = 2)', async () => {
-      // Formula: baseInterval * 2^1 = baseInterval * 2
-      // We test the math ourselves since getEffectiveInterval is private.
-      const base = 30_000
-      const failures = 1
-      const expected = Math.min(base * Math.pow(2, Math.min(failures, 5)), 600_000)
-      expect(expected).toBe(60_000) // 30000 * 2 = 60000
-    })
-
-    it('2 failures quadruples the interval (2^2 = 4)', async () => {
-      const base = 30_000
-      const failures = 2
-      const expected = Math.min(base * Math.pow(2, Math.min(failures, 5)), 600_000)
-      expect(expected).toBe(120_000) // 30000 * 4 = 120000
-    })
-
-    it('3 failures multiplies by 8 (2^3 = 8)', async () => {
-      const base = 30_000
-      const failures = 3
-      const expected = Math.min(base * Math.pow(2, Math.min(failures, 5)), 600_000)
-      expect(expected).toBe(240_000) // 30000 * 8 = 240000
-    })
-
-    it('5 failures multiplies by 32 (2^5 = 32) and caps at exponent 5', async () => {
-      const base = 30_000
-      const failures = 5
-      const expected = Math.min(base * Math.pow(2, Math.min(failures, 5)), 600_000)
-      expect(expected).toBe(600_000) // 30000 * 32 = 960000, capped at 600000
-    })
-
-    it('failures > 5 are capped at exponent 5 (same as 5 failures)', async () => {
-      const base = 30_000
-      const failures = 10
-      const expected = Math.min(base * Math.pow(2, Math.min(failures, 5)), 600_000)
-      expect(expected).toBe(600_000) // same cap applies
-    })
-
-    it('small base intervals respect the MAX_BACKOFF_INTERVAL cap of 600000', async () => {
-      const base = 15_000 // realtime
-      const failures = 5
-      const expected = Math.min(base * Math.pow(2, Math.min(failures, 5)), 600_000)
-      // 15000 * 32 = 480000 < 600000, so no cap needed
-      expect(expected).toBe(480_000)
-    })
-
-    it('large base intervals are capped even with 1 failure', async () => {
-      const base = 600_000 // costs
-      const failures = 1
-      const expected = Math.min(base * Math.pow(2, Math.min(failures, 5)), 600_000)
-      // 600000 * 2 = 1200000, capped at 600000
-      expect(expected).toBe(600_000)
-    })
-
-    it('4 failures multiplies by 16 (2^4 = 16)', async () => {
-      const base = 15_000
-      const failures = 4
-      const expected = Math.min(base * Math.pow(2, Math.min(failures, 5)), 600_000)
-      // 15000 * 16 = 240000
-      expect(expected).toBe(240_000)
-    })
-  })
-
-  // ── isEquivalentToInitial ──────────────────────────────────────────────
-
   describe('isEquivalentToInitial (tested via CacheStore.fetch)', () => {
     /**
      * isEquivalentToInitial is a private function, but we can verify its
@@ -438,6 +146,7 @@ describe('cache module', () => {
 
   // ── clearAllInMemoryCaches ─────────────────────────────────────────────
 
+
   describe('clearAllInMemoryCaches', () => {
     it('is registered with registerCacheReset as "unified-cache"', async () => {
       await importFresh()
@@ -475,6 +184,7 @@ describe('cache module', () => {
   })
 
   // ── CacheStore initialization ──────────────────────────────────────────
+
 
   describe('CacheStore initialization', () => {
     it('hydrates from sessionStorage when valid snapshot exists', async () => {
@@ -529,6 +239,7 @@ describe('cache module', () => {
   })
 
   // ── CacheStore.fetch ───────────────────────────────────────────────────
+
 
   describe('CacheStore.fetch (via prefetchCache)', () => {
     it('saves successful fetch results to sessionStorage', async () => {
@@ -640,6 +351,7 @@ describe('cache module', () => {
 
   // ── CacheStore.clear ──────────────────────────────────────────────────
 
+
   describe('CacheStore.clear (via invalidateCache)', () => {
     it('invalidateCache removes the entry from storage and meta', async () => {
       const mod = await importFresh()
@@ -660,6 +372,7 @@ describe('cache module', () => {
   })
 
   // ── resetFailuresForCluster ───────────────────────────────────────────
+
 
   describe('resetFailuresForCluster', () => {
     it('resets failures for matching cache keys', async () => {
@@ -698,6 +411,7 @@ describe('cache module', () => {
 
   // ── resetAllCacheFailures ─────────────────────────────────────────────
 
+
   describe('resetAllCacheFailures', () => {
     it('resets failures on all stores', async () => {
       const mod = await importFresh()
@@ -720,205 +434,6 @@ describe('cache module', () => {
 
   // ── getCacheStats ─────────────────────────────────────────────────────
 
-  describe('getCacheStats', () => {
-    it('returns registry size in entries field', async () => {
-      const mod = await importFresh()
-      await mod.prefetchCache('stats-1', async () => 'a', '')
-      await mod.prefetchCache('stats-2', async () => 'b', '')
-
-      const stats = await mod.getCacheStats()
-      expect(stats.entries).toBeGreaterThanOrEqual(2)
-      expect(stats).toHaveProperty('keys')
-      expect(stats).toHaveProperty('count')
-    })
-  })
-
-  // ── preloadCacheFromStorage ───────────────────────────────────────────
-
-  describe('preloadCacheFromStorage', () => {
-    it('returns without error when storage is empty', async () => {
-      const mod = await importFresh()
-      await expect(mod.preloadCacheFromStorage()).resolves.not.toThrow()
-    })
-  })
-
-  // ── migrateFromLocalStorage ───────────────────────────────────────────
-
-  describe('migrateFromLocalStorage', () => {
-    it('migrates ksc_ prefixed keys to kc_ prefix', async () => {
-      localStorage.setItem('ksc_theme', 'dark')
-      localStorage.setItem('ksc-sidebar', 'collapsed')
-
-      const mod = await importFresh()
-      await mod.migrateFromLocalStorage()
-
-      // Old keys should be removed
-      expect(localStorage.getItem('ksc_theme')).toBeNull()
-      expect(localStorage.getItem('ksc-sidebar')).toBeNull()
-      // New keys should exist
-      expect(localStorage.getItem('kc_theme')).toBe('dark')
-      expect(localStorage.getItem('kc-sidebar')).toBe('collapsed')
-    })
-
-    it('does not overwrite existing kc_ keys during migration', async () => {
-      localStorage.setItem('ksc_theme', 'dark')
-      localStorage.setItem('kc_theme', 'light') // pre-existing
-
-      const mod = await importFresh()
-      await mod.migrateFromLocalStorage()
-
-      // Should keep the existing value
-      expect(localStorage.getItem('kc_theme')).toBe('light')
-    })
-
-    it('removes kubectl-history key', async () => {
-      localStorage.setItem('kubectl-history', JSON.stringify(['cmd1', 'cmd2']))
-
-      const mod = await importFresh()
-      await mod.migrateFromLocalStorage()
-
-      expect(localStorage.getItem('kubectl-history')).toBeNull()
-    })
-
-    it('handles corrupted ksc_ entries gracefully', async () => {
-      // Pre-populate before mocking
-      localStorage.setItem('ksc_test', 'value')
-
-      // Now mock setItem to throw for kc_ prefix keys (simulating quota error)
-      const spy = vi.spyOn(localStorage, 'setItem').mockImplementation((key: string) => {
-        if (key.startsWith('kc_') || key.startsWith('kc-')) {
-          throw new DOMException('QuotaExceededError')
-        }
-      })
-
-      const mod = await importFresh()
-      await expect(mod.migrateFromLocalStorage()).resolves.not.toThrow()
-      spy.mockRestore()
-    })
-  })
-
-  // ── migrateIDBToSQLite ────────────────────────────────────────────────
-
-  describe('migrateIDBToSQLite', () => {
-    it('returns immediately when workerRpc is null', async () => {
-      const mod = await importFresh()
-      // No worker initialized — should return immediately
-      await expect(mod.migrateIDBToSQLite()).resolves.not.toThrow()
-    })
-  })
-
-  // ── refresh rate backoff ──────────────────────────────────────────────
-
-  describe('refresh rate backoff', () => {
-    it('REFRESH_RATES has rates for all expected categories', async () => {
-      const { REFRESH_RATES } = await importFresh()
-      const expectedCategories = [
-        'realtime', 'pods', 'clusters', 'deployments', 'services',
-        'metrics', 'gpu', 'helm', 'gitops', 'namespaces',
-        'rbac', 'operators', 'costs', 'default',
-      ]
-      for (const cat of expectedCategories) {
-        expect(REFRESH_RATES).toHaveProperty(cat)
-      }
-    })
-
-    it('rates are in ascending order of staleness tolerance', async () => {
-      const { REFRESH_RATES } = await importFresh()
-      expect(REFRESH_RATES.realtime).toBeLessThan(REFRESH_RATES.pods)
-      expect(REFRESH_RATES.pods).toBeLessThan(REFRESH_RATES.clusters)
-      expect(REFRESH_RATES.clusters).toBeLessThan(REFRESH_RATES.helm)
-      expect(REFRESH_RATES.helm).toBeLessThan(REFRESH_RATES.costs)
-    })
-  })
-
-  // ── Module initialization ──────────────────────────────────────────────
-
-  describe('module initialization', () => {
-    it('exports useCache hook', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('useCache')
-      expect(typeof mod.useCache).toBe('function')
-    })
-
-    it('exports initCacheWorker', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('initCacheWorker')
-      expect(typeof mod.initCacheWorker).toBe('function')
-    })
-
-    it('registers cache reset with mode transition', async () => {
-      await importFresh()
-      expect(registeredResets.has('unified-cache')).toBe(true)
-    })
-
-    it('exports useArrayCache convenience hook', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('useArrayCache')
-      expect(typeof mod.useArrayCache).toBe('function')
-    })
-
-    it('exports useObjectCache convenience hook', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('useObjectCache')
-      expect(typeof mod.useObjectCache).toBe('function')
-    })
-
-    it('exports clearAllCaches utility', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('clearAllCaches')
-      expect(typeof mod.clearAllCaches).toBe('function')
-    })
-
-    it('exports getCacheStats utility', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('getCacheStats')
-      expect(typeof mod.getCacheStats).toBe('function')
-    })
-
-    it('exports invalidateCache utility', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('invalidateCache')
-      expect(typeof mod.invalidateCache).toBe('function')
-    })
-
-    it('exports resetFailuresForCluster utility', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('resetFailuresForCluster')
-      expect(typeof mod.resetFailuresForCluster).toBe('function')
-    })
-
-    it('exports resetAllCacheFailures utility', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('resetAllCacheFailures')
-      expect(typeof mod.resetAllCacheFailures).toBe('function')
-    })
-
-    it('exports prefetchCache utility', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('prefetchCache')
-      expect(typeof mod.prefetchCache).toBe('function')
-    })
-
-    it('exports preloadCacheFromStorage utility', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('preloadCacheFromStorage')
-      expect(typeof mod.preloadCacheFromStorage).toBe('function')
-    })
-
-    it('exports migrateFromLocalStorage utility', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('migrateFromLocalStorage')
-      expect(typeof mod.migrateFromLocalStorage).toBe('function')
-    })
-
-    it('exports migrateIDBToSQLite utility', async () => {
-      const mod = await importFresh()
-      expect(mod).toHaveProperty('migrateIDBToSQLite')
-      expect(typeof mod.migrateIDBToSQLite).toBe('function')
-    })
-  })
-
-  // ── Shared cache registry (getOrCreateCache) ─────────────────────────
 
   describe('shared cache registry', () => {
     it('reuses the same store for the same key (via prefetchCache)', async () => {
@@ -938,6 +453,7 @@ describe('cache module', () => {
 
   // ── CacheStore.resetToInitialData ─────────────────────────────────────
 
+
   describe('CacheStore state management', () => {
     it('clearAndRefetch resets store state and refetches', async () => {
       const mod = await importFresh()
@@ -954,6 +470,7 @@ describe('cache module', () => {
   })
 
   // ── Integration: meta + store + fetch cycle ───────────────────────────
+
 
   describe('integration: full fetch cycle', () => {
     it('complete lifecycle: no cache -> fetch -> save -> re-read', async () => {
