@@ -8,9 +8,7 @@ import { StatusIndicator } from '../../charts/StatusIndicator'
 import { NamespaceResources } from '../../clusters/components'
 import { useTranslation } from 'react-i18next'
 import type { ClusterHealth, NodeInfo, NamespaceStats, Deployment, Service, PVC, PodIssue } from '../../../hooks/useMCP'
-
-/** Lens/view options for the resource tree. Re-declared here to avoid a circular import. */
-type TreeLens = 'all' | 'issues' | 'nodes' | 'workloads' | 'storage' | 'network'
+import { type TreeLens } from './ClusterDrillDown.overview'
 
 interface IssueCounts {
   nodes: number
