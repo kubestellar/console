@@ -5,7 +5,6 @@
 import { WIDGET_CARDS, WIDGET_STATS, WIDGET_TEMPLATES } from '../widgetRegistry'
 import { generateWidgetStyles } from '../styleConverter'
 import { generateWidgetCommand } from '../codeGenerator.utils'
-import { generateMiniStatComponent } from './stats'
 
 // Generate Übersicht widget code for a template
 export function generateTemplateWidget(

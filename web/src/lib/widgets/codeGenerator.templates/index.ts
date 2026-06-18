@@ -4,5 +4,5 @@
 
 export { generateCardRenderFunction } from './cardRenderers'
 export { generateCardWidget } from './cards'
-export { generateStatWidget, generateMiniStatComponent } from './stats'
-export { generateTemplateWidget } from './templates'
+export { generateStatWidget } from './stats'
+export { generateTemplateWidget, generateMiniStatComponent } from './templates'
