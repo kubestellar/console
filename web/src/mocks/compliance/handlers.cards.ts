@@ -36,8 +36,6 @@ import {
   DEMO_30_DAY_MS,
 } from './handlers.fixtures'
 
-
-
 export function createCardsHandlers() {
   return [
   http.get('/api/cards/templates', async () => {
@@ -56,8 +54,6 @@ export function createCardsHandlers() {
     })
   }),
 
-  // Save card configuration (for sharing)
-
   http.post('/api/cards/save', async ({ request }) => {
     await delay(100)
     const body = (await request.json()) as { id: string; config: unknown }
@@ -70,8 +66,6 @@ export function createCardsHandlers() {
       shareUrl: `/shared/card/${shareId}`,
     })
   }),
-
-  // Get shared card
 
   http.get('/api/cards/shared/:shareId', async ({ params }) => {
     await delay(100)

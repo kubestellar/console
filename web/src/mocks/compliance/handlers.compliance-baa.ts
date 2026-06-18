@@ -1,7 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
 import {
-  pruneRegistry,
-  savedCards,
   DEMO_30_SEC_MS,
   DEMO_45_SEC_MS,
   DEMO_1_MIN_MS,
@@ -36,8 +34,6 @@ import {
   DEMO_30_DAY_MS,
 } from './handlers.fixtures'
 
-
-
 export function createComplianceBaaHandlers() {
   return [
   http.get('/api/compliance/baa/agreements', async () => {
@@ -69,6 +65,5 @@ export function createComplianceBaaHandlers() {
     })
   }),
 
-  // ── Segregation of Duties mock handlers (demo mode) ──────────────────
   ]
 }

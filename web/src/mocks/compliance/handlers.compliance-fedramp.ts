@@ -1,7 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
 import {
-  pruneRegistry,
-  savedCards,
   DEMO_30_SEC_MS,
   DEMO_45_SEC_MS,
   DEMO_1_MIN_MS,
@@ -35,8 +33,6 @@ import {
   DEMO_1_WEEK_MS,
   DEMO_30_DAY_MS,
 } from './handlers.fixtures'
-
-
 
 export function createComplianceFedrampHandlers() {
   return [
@@ -74,6 +70,5 @@ export function createComplianceFedrampHandlers() {
     })
   }),
 
-  // ── Identity & Access mock handlers (demo mode) ──────────────────
   ]
 }

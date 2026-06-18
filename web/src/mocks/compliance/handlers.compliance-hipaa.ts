@@ -1,7 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
 import {
-  pruneRegistry,
-  savedCards,
   DEMO_30_SEC_MS,
   DEMO_45_SEC_MS,
   DEMO_1_MIN_MS,
@@ -35,8 +33,6 @@ import {
   DEMO_1_WEEK_MS,
   DEMO_30_DAY_MS,
 } from './handlers.fixtures'
-
-
 
 export function createComplianceHipaaHandlers() {
   return [
@@ -101,6 +97,5 @@ export function createComplianceHipaaHandlers() {
     })
   }),
 
-  // GxP / 21 CFR Part 11 mock handlers (demo mode)
   ]
 }
