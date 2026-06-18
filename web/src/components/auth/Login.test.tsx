@@ -68,6 +68,14 @@ describe('Login Component', () => {
     expect(screen.getByText('KubeStellar')).toBeInTheDocument()
   })
 
+  it('references the Apache 2.0 license instead of terms of service', () => {
+    renderLogin()
+    expect(screen.getByText('login.apacheLicensePrefix')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'login.apacheLicenseLink' })).toBeInTheDocument()
+    expect(screen.queryByText('login.termsOfServicePrefix')).not.toBeInTheDocument()
+    expect(screen.queryByText('login.termsOfServiceLink')).not.toBeInTheDocument()
+  })
+
   describe('OAuth setup wizard (backendUp && !oauthConfigured)', () => {
     beforeEach(() => {
       oauthProbeResult = { backendUp: true, oauthConfigured: false }

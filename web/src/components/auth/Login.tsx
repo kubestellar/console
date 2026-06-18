@@ -19,8 +19,8 @@ import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
 // The Suspense fallback (spinner) shows while loading.
 const GlobeAnimation = safeLazy(() => import('../animations/globe'), 'GlobeAnimation')
 
-// Apache 2.0 license is the project's effective terms; link opens in a new tab (#8376).
-const TERMS_OF_SERVICE_URL = 'https://github.com/kubestellar/console/blob/main/LICENSE'
+// Apache 2.0 license text in the repository; opens in a new tab.
+const APACHE_LICENSE_URL = 'https://github.com/kubestellar/console/blob/main/LICENSE'
 
 // GitHub Developer Settings URL for creating OAuth Apps.
 const GITHUB_DEVELOPER_SETTINGS_URL = 'https://github.com/settings/developers'
@@ -585,14 +585,14 @@ export function Login() {
 
           {/* Footer */}
           <div className="text-center text-sm text-muted-foreground mt-8">
-            {t('login.termsOfServicePrefix')}{' '}
+            {t('login.apacheLicensePrefix')}{' '}
             <a
-              href={TERMS_OF_SERVICE_URL}
+              href={APACHE_LICENSE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-foreground transition-colors"
             >
-              {t('login.termsOfServiceLink')}
+              {t('login.apacheLicenseLink')}
             </a>
           </div>
         </div>

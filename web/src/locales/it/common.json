@@ -2834,8 +2834,8 @@
     "welcomeBack": "Welcome back",
     "signInDescription": "Sign in to manage your multi-cluster deployments",
     "continueWithGitHub": "Continue with GitHub",
-    "termsOfServicePrefix": "By signing in, you agree to our",
-    "termsOfServiceLink": "Terms of Service"
+    "apacheLicensePrefix": "KubeStellar Console is open source under the",
+    "apacheLicenseLink": "Apache 2.0 License"
   },
   "authCallback": {
     "signingIn": "Signing you in...",
