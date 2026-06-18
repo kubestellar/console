@@ -207,13 +207,13 @@ Would the maintainers be interested in reviewing these for potential inclusion i
 ## Anti-Spam Guidelines
 
 **Before ANY outreach action, verify**:
-1. ✅ No existing PR/issue on target repository from @clubanderson
+1. ✅ No existing PR/issue on target repository from KubeStellar maintainers
 2. ✅ Repository is active (commits within last 6 months)
 3. ✅ CONTRIBUTING.md allows community resource submissions
 4. ✅ Message is tailored to specific project (no copy-paste spam)
 5. ✅ Respect each community's preferred communication channels
 
-**One action per target, ever.** See [outreach-antispam.md](../hive/outreach-antispam.md) for full ruleset.
+**One action per target, ever.**
 
 ---
 
@@ -245,12 +245,10 @@ Document real-world mission usage: "How We Used Console Missions to Deploy Istio
 
 ## Links & Resources
 
-- **Mission Browser** (coming soon): console.kubestellar.io/missions
+- **Mission Browser** (coming soon): [console.kubestellar.io/missions](https://console.kubestellar.io/missions)
 - **Console-KB Repository**: https://github.com/kubestellar/console-kb
-- **AI Missions Documentation**: [ai-missions-setup.md](../console/ai-missions-setup.md)
-- **Mission Control Overview**: [mission-control-overview.md](../news/mission-control-overview.md)
 - **CNCF Landscape**: https://landscape.cncf.io
-- **KubeStellar Community**: [Join the community](./index.md)
+- **KubeStellar Community**: https://kubestellar.io/community
 
 ---
 
