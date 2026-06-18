@@ -1,4 +1,4 @@
-import { authFetch } from './api'
+import { authFetch } from './api/core'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
 const KAGENT_STATUS_ENDPOINT = '/api/kagent/status'

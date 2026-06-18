@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock authFetch
-vi.mock('../api', () => ({
+vi.mock('../api/core', () => ({
   authFetch: vi.fn(),
 }))
 
-import { authFetch } from '../api'
+import { authFetch } from '../api/core'
 
 const mockAuthFetch = vi.mocked(authFetch)
 
