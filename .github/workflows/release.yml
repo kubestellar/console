@@ -196,10 +196,11 @@ jobs:
         id: go_test
         run: |
           set +e
-          go test -v ./... 2>&1 | tee /tmp/go-test-output.txt
+          GO_TEST_OUTPUT="${GITHUB_WORKSPACE}/go-test-output.txt"
+          go test -v ./... 2>&1 | tee "${GO_TEST_OUTPUT}"
           TEST_EXIT=$?
           # Extract failing test names and packages for the failure issue
-          FAILED=$(grep -E '^--- FAIL:|^FAIL\t' /tmp/go-test-output.txt | head -20)
+          FAILED=$(grep -E '^--- FAIL:|^FAIL\t' "${GO_TEST_OUTPUT}" | head -20)
           if [ -n "$FAILED" ]; then
             # Multiline output via delimiter
             EOF_DELIM=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
