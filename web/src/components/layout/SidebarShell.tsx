@@ -1,7 +1,7 @@
 /**
  * SidebarShell — reusable sidebar infrastructure component.
  */
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useSidebarConfig, SIDEBAR_COLLAPSED_WIDTH_PX, SIDEBAR_DEFAULT_WIDTH_PX } from '../../hooks/useSidebarConfig'
@@ -47,6 +47,7 @@ export function SidebarShell({
   const { isFullScreen: isMissionFullScreen } = useMissions()
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const sidebarRef = useRef<HTMLElement | null>(null)
   const isMobileSidebarOpen = isMobile && config.isMobileOpen
   const isTopEscapeLayer = useEscapeLayer(isMobileSidebarOpen)
@@ -79,7 +80,7 @@ export function SidebarShell({
     isMobile,
     isMobileSidebarOpen,
     sidebarRef,
-    editingItemId: null,
+    editingItemId,
     isTopEscapeLayer,
     onCloseMobileSidebar: closeMobileSidebar,
   })
@@ -89,6 +90,7 @@ export function SidebarShell({
   }
 
   const handleMobileBackdropClose = () => {
+    if (editingItemId !== null) return
     closeMobileSidebar()
   }
 
@@ -162,6 +164,7 @@ export function SidebarShell({
           canDrag={features.dragReorder !== false && !isMobile}
           showAddMore={features.addMore}
           onAddMore={handleAddMore}
+          onEditingChange={setEditingItemId}
           primaryNav={config.primaryNav}
           secondaryNav={config.secondaryNav}
           removeItem={removeItem}
