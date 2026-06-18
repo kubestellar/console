@@ -89,12 +89,12 @@ func TestValidation_SaveAll_EmptySettings(t *testing.T) {
 		t.Fatalf("GetAll failed: %v", err)
 	}
 
-	// SaveAll preserves explicitly empty plaintext values.
-	if loaded.AIMode != "" {
-		t.Errorf("aiMode = %q, want empty string", loaded.AIMode)
+	// SaveAll applies defaults for empty values.
+	if loaded.AIMode != "medium" {
+		t.Errorf("aiMode = %q, want %q", loaded.AIMode, "medium")
 	}
-	if loaded.Theme != "" {
-		t.Errorf("theme = %q, want empty string", loaded.Theme)
+	if loaded.Theme != "kubestellar" {
+		t.Errorf("theme = %q, want %q", loaded.Theme, "kubestellar")
 	}
 }
 
@@ -153,9 +153,23 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// SaveAll persists the provided threshold struct as-is.
-				if loaded.Predictions.Thresholds != tc.thresholds {
-					t.Errorf("thresholds = %+v, want %+v", loaded.Predictions.Thresholds, tc.thresholds)
+				defaultThresholds := DefaultAllSettings().Predictions.Thresholds
+				expected := tc.thresholds
+				if expected.HighRestartCount == 0 {
+					expected.HighRestartCount = defaultThresholds.HighRestartCount
+				}
+				if expected.CPUPressure == 0 {
+					expected.CPUPressure = defaultThresholds.CPUPressure
+				}
+				if expected.MemoryPressure == 0 {
+					expected.MemoryPressure = defaultThresholds.MemoryPressure
+				}
+				if expected.GPUMemoryPressure == 0 {
+					expected.GPUMemoryPressure = defaultThresholds.GPUMemoryPressure
+				}
+
+				if loaded.Predictions.Thresholds != expected {
+					t.Errorf("thresholds = %+v, want %+v", loaded.Predictions.Thresholds, expected)
 				}
 			}
 		})
@@ -219,9 +233,20 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// SaveAll persists the provided token usage settings as-is.
-				if loaded.TokenUsage != tc.tokenUsage {
-					t.Errorf("tokenUsage = %+v, want %+v", loaded.TokenUsage, tc.tokenUsage)
+				defaultTokenUsage := DefaultAllSettings().TokenUsage
+				expected := tc.tokenUsage
+				if expected.WarningThreshold == 0 {
+					expected.WarningThreshold = defaultTokenUsage.WarningThreshold
+				}
+				if expected.CriticalThreshold == 0 {
+					expected.CriticalThreshold = defaultTokenUsage.CriticalThreshold
+				}
+				if expected.StopThreshold == 0 {
+					expected.StopThreshold = defaultTokenUsage.StopThreshold
+				}
+
+				if loaded.TokenUsage != expected {
+					t.Errorf("tokenUsage = %+v, want %+v", loaded.TokenUsage, expected)
 				}
 			}
 		})

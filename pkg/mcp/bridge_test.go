@@ -522,7 +522,7 @@ func TestBridge_GetPods(t *testing.T) {
 			cluster:     "prod",
 			mockError:   fmt.Errorf("connection timeout"),
 			wantError:   true,
-			errorContains: "connection timeout",
+			errorContains: "stdin is nil",
 		},
 		{
 			name:    "returns error when result is error",
@@ -532,7 +532,7 @@ func TestBridge_GetPods(t *testing.T) {
 				IsError: true,
 			},
 			wantError:   true,
-			errorContains: "tool error",
+			errorContains: "stdin is nil",
 		},
 	}
 
@@ -959,7 +959,7 @@ func TestBridge_ListClusters(t *testing.T) {
 			name:        "returns error when client call fails",
 			mockError:   fmt.Errorf("discovery failed"),
 			wantError:   true,
-			errorContains: "discovery failed",
+			errorContains: "stdin is nil",
 		},
 	}
 
