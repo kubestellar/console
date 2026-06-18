@@ -2833,9 +2833,7 @@
     "sessionTimedOut": "Your session has timed out. Please sign in again.",
     "welcomeBack": "Welcome back",
     "signInDescription": "Sign in to manage your multi-cluster deployments",
-    "continueWithGitHub": "Continue with GitHub",
-    "termsOfServicePrefix": "By signing in, you agree to our",
-    "termsOfServiceLink": "Terms of Service"
+    "continueWithGitHub": "Continue with GitHub"
   },
   "authCallback": {
     "signingIn": "Signing you in...",

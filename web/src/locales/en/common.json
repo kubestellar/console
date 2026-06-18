@@ -4483,9 +4483,7 @@
     "showManualSetup": "Or set up manually",
     "hideManualSetup": "Hide manual setup",
     "openGitHubSettings": "GitHub OAuth Settings",
-    "fullSetupGuide": "Full Setup Guide",
-    "termsOfServicePrefix": "By signing in, you agree to our",
-    "termsOfServiceLink": "Terms of Service"
+    "fullSetupGuide": "Full Setup Guide"
   },
   "authCallback": {
     "signingIn": "Signing you in...",
