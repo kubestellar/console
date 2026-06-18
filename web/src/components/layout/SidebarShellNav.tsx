@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react'
 import type React from 'react'
+import type { TFunction } from 'i18next'
 import { NavLink } from 'react-router-dom'
 import { ChevronDown, ChevronRight, GripVertical, Plus, Satellite, X } from 'lucide-react'
 import { iconRegistry } from '../../lib/icons'
@@ -28,7 +29,7 @@ interface SidebarShellNavProps {
   features: SidebarFeatures
   onAddMore?: () => void
   dashboardContext?: { openAddCardModal: (section?: string) => void } | null
-  t: (...args: any[]) => string
+  t: TFunction
   editingItemId: string | null
   editingName: string
   setEditingName: (name: string) => void

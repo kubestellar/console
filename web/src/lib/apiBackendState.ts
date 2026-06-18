@@ -1,5 +1,5 @@
-import { BACKEND_HEALTH_CHECK_TIMEOUT_MS, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_USER_CACHE } from './constants'
-import { clearStoredAuthToken, getStoredAuthTokenSync } from './authToken'
+import { BACKEND_HEALTH_CHECK_TIMEOUT_MS, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_USER_CACHE } from './constants'
+import { clearStoredAuthToken } from './authToken'
 import { emitSessionExpired } from './analytics'
 import { reportBackendAvailable, reportBackendUnavailable, shouldMarkBackendUnavailable } from './backendHealthEvents'
 import { reportAppError } from './errors/handleError'
@@ -97,12 +97,8 @@ function performSessionExpiry(): void {
   showSessionExpiredBanner()
   emitSessionExpired()
 
-  const expiredToken = getStoredAuthTokenSync()
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (expiredToken && expiredToken !== DEMO_TOKEN_VALUE) {
-      // keep cookie logout path even when token is present
-    }
     fetch(`${API_BASE}${AUTH_LOGOUT_ENDPOINT}`, {
       method: 'POST',
       headers,
@@ -137,7 +133,21 @@ function showSessionExpiredBanner(): void {
     color: #fbbf24; font-family: system-ui, sans-serif; font-size: 14px;
     animation: slideUp 0.3s ease-out;
   `
-  toast.innerHTML = '<span><strong>Session expired</strong> — Redirecting to sign in...</span>'
+  toast.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
+      <path d="M12 9v4"/><path d="M12 17h.01"/>
+    </svg>
+    <span><strong>Session expired</strong> — Redirecting to sign in...</span>
+  `
+  const STYLE_ID = 'session-banner-animation'
+  if (!document.getElementById(STYLE_ID)) {
+    const style = document.createElement('style')
+    style.id = STYLE_ID
+    style.textContent = '@keyframes slideUp { from { transform: translateX(-50%) translateY(100%); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }'
+    document.head.appendChild(style)
+  }
   document.body.appendChild(toast)
 }
 
@@ -275,7 +285,12 @@ export function extractRequestPath(input: RequestInfo | URL): string {
   const raw = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
   try {
     return new URL(raw, window.location.origin).pathname
-  } catch {
+  } catch (error: unknown) {
+    reportAppError(error, {
+      context: '[api] failed to normalize request path',
+      level: 'warn',
+      fallbackMessage: 'request path normalization failed',
+    })
     return raw
   }
 }

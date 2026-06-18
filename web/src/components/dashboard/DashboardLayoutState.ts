@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import type { TFunction } from 'i18next'
 import {
   closestCenter,
   pointerWithin,
@@ -28,7 +29,7 @@ interface DashboardLayoutStateParams {
   moveCardToDashboard: (cardId: string, dashboardId: string) => Promise<void>
   createDashboard: (name: string) => Promise<{ id: string; name?: string } | null>
   showToast: (message: string, type?: 'success' | 'error') => void
-  t: (...args: any[]) => string
+  t: TFunction
   deployWorkload: (params: {
     workloadName: string
     namespace: string

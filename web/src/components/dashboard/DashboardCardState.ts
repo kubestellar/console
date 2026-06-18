@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { TFunction } from 'i18next'
 import { api } from '../../lib/api'
 import { safeRevokeObjectURL } from '../../lib/download'
 import { emitCardAdded, emitCardConfigured, emitCardRemoved } from '../../lib/analytics'
@@ -16,7 +17,7 @@ interface DashboardCardStateParams {
   recordCardRemoved: (id: string, cardType: string, title: string | undefined, config: Record<string, unknown> | undefined, dashboardId?: string, dashboardName?: string) => void
   recordCardConfigured: (id: string, cardType: string, title: string | undefined, config: Record<string, unknown> | undefined, dashboardId?: string, dashboardName?: string) => void
   showToast: (message: string, type?: 'success' | 'error') => void
-  t: (...args: any[]) => string
+  t: TFunction
   closeConfigureCard: () => void
   openConfigureCard: () => void
   openAddCardModal: () => void
@@ -355,6 +356,5 @@ export function useDashboardCardState({
     handleRemoveCard,
     handleWidthChange,
     setAddCardSearch,
-    setInsertAtIndex,
   }
 }

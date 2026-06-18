@@ -23,8 +23,7 @@ export async function authFetch(input: RequestInfo | URL, init?: RequestInit): P
   const headers = new Headers(init?.headers)
 
   if (token && token !== DEMO_TOKEN_VALUE && !headers.has('Authorization')) {
-    const prefix = ['B', 'e', 'a', 'r', 'e', 'r'].join('')
-    headers.set('Authorization', `${prefix} ${token}`)
+    headers.set('Authorization', ['Bearer', token].join(' '))
   }
   if (!headers.has('X-Requested-With')) {
     headers.set('X-Requested-With', 'XMLHttpRequest')

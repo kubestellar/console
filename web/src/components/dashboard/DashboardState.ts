@@ -35,7 +35,6 @@ import { useModalState } from '../../lib/modals'
 import { setAutoRefreshPaused } from '../../lib/cache'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { STORAGE_KEY_MAIN_DASHBOARD_CARDS } from '../../lib/constants/storage'
-import type { DashboardTemplate } from './templates'
 import { useDashboardFilterState } from './DashboardFilterState'
 import { type PendingDeploy, useDashboardLayoutState } from './DashboardLayoutState'
 import { useDashboardCardState } from './DashboardCardState'
@@ -435,7 +434,7 @@ export function useDashboardState() {
     handleAddCards,
     handleAddRecommendedCard,
     handleAddSingleCard,
-    handleApplyTemplate: handleApplyTemplate as (template: DashboardTemplate) => void,
+    handleApplyTemplate,
     handleCardConfigured,
     handleCloseConfigureCard,
     handleCloseCustomizer,

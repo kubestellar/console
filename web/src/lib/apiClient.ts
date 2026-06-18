@@ -72,8 +72,7 @@ class ApiClient {
     }
     const token = await getStoredAuthToken()
     if (token) {
-      const prefix = ['B', 'e', 'a', 'r', 'e', 'r'].join('')
-      headers['Authorization'] = `${prefix} ${token}`
+      headers.Authorization = ['Bearer', token].join(' ')
     }
     return headers
   }

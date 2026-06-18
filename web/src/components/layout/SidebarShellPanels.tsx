@@ -1,4 +1,5 @@
 import type React from 'react'
+import type { TFunction } from 'i18next'
 import { AlertTriangle, CheckCircle2, Loader2, User, WifiOff, Plus } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SnoozedCards } from './SnoozedCards'
@@ -21,7 +22,7 @@ interface SidebarShellPanelsProps {
   onApplySwap: (swap: SnoozedSwap) => void
   onApplyRecommendation: (rec: SnoozedRecommendation) => void
   onApplyMission: (mission: SnoozedMission) => void
-  t: (...args: any[]) => string
+  t: TFunction
   viewerCount: number
   viewersError: boolean
   viewersLoading: boolean
@@ -134,9 +135,6 @@ export function SidebarShellPanels({
                 title={t('sidebar.unreachableClusters', { count: unreachableClusters })}
               >{unreachableClusters}</span>
             </button>
-            )}
-            {healthyClusters === 0 && unhealthyClusters === 0 && unreachableClusters === 0 && (
-              <span className="text-xs text-muted-foreground italic">{t('labels.noClusters', 'No clusters configured')}</span>
             )}
           </div>
           )}
