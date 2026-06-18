@@ -124,15 +124,20 @@ export default defineConfig(({ mode }) => ({
             ['cards-workloads', ['/src/components/cards/workload-detection/', '/src/components/cards/workload-monitor/']],
             ['cards-storage', ['/src/components/cards/vitess_status/', '/src/components/cards/minio_status/', '/src/components/cards/etcd_status/']],
             ['cards-messaging', ['/src/components/cards/kafka_status/', '/src/components/cards/rabbitmq_status/', '/src/components/cards/redis_status/']],
+            // Split large card bundles (games, demos, integrations)
+            ['cards-games', ['/src/components/cards/KubeChess', '/src/components/cards/KubeDoom', '/src/components/cards/KubeGalaga', '/src/components/cards/KubeKart', '/src/components/cards/KubePong', '/src/components/cards/KubeSnake', '/src/components/cards/KubeTetris']],
+            ['cards-demo', ['/src/components/cards/IframeEmbed', '/src/components/cards/YouTubeEmbed', '/src/components/cards/ClusterDropZone', '/src/components/cards/EnterpriseComplianceCards']],
             ['cards-misc', ['/src/components/cards/']],
             // Split drilldown views by type to reduce chunk size
             ['drilldown-k8s', ['/src/components/drilldown/views/PodLogs', '/src/components/drilldown/views/PodEvents', '/src/components/drilldown/views/PodTerminal', '/src/components/drilldown/views/NamespaceDetails']],
             ['drilldown-data', ['/src/components/drilldown/views/LogViewer', '/src/components/drilldown/views/MetricsViewer', '/src/components/drilldown/views/EventTimeline']],
-            ['drilldown', ['/src/components/drilldown/']],
+            ['drilldown-views', ['/src/components/drilldown/views/']],
+            ['drilldown-core', ['/src/components/drilldown/']],
             // Dashboard and layout split by concern
             ['dashboard-customizer', ['/src/components/dashboard/customizer/', '/src/components/dashboard/shared/cardCatalog']],
             ['dashboard-core', ['/src/components/dashboard/', '/src/lib/dashboards/', '/src/lib/unified/dashboard/']],
             ['layout-sidebar', ['/src/components/layout/Sidebar', '/src/components/layout/Navigation', '/src/components/layout/MobileMenu']],
+            ['layout-header', ['/src/components/layout/Header', '/src/components/layout/TopBar', '/src/components/layout/UserMenu']],
             ['layout-shell', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
             // Split contexts and providers into smaller groups
@@ -142,9 +147,10 @@ export default defineConfig(({ mode }) => ({
             ['hooks-data', ['/src/hooks/useCached', '/src/hooks/useCache', '/src/hooks/useCluster', '/src/hooks/useDashboard']],
             ['lib-cache', ['/src/lib/cache/']],
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
-            // Split app shell to reduce size
-            ['app-routes', ['/src/App.tsx']],
-            ['app-shell', ['/src/hooks/usePersistedSettings', '/src/hooks/useAppInit']],
+            // Split app shell to reduce size - further granularity for app-routes
+            ['app-routing', ['/src/App.tsx']],
+            ['app-providers', ['/src/main.tsx', '/src/hooks/usePersistedSettings']],
+            ['app-init', ['/src/hooks/useAppInit']],
             ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
           ] as const
           for (const [chunkName, needles] of sourceChunkRules) {
@@ -161,10 +167,14 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/@react-three/') || id.includes('/zustand/') || id.includes('/stats-gl/')) return 'three-react-vendor'
           if (id.includes('/three/build/three.module.js')) return 'three-core-vendor'
           if (id.includes('/three/')) return 'three-extras-vendor'
-          // Chart libraries
-          if (id.includes('/zrender/')) return 'zrender-vendor'
+          // Chart libraries (split echarts into smaller chunks)
+          if (id.includes('/zrender/lib/svg/')) return 'zrender-svg-vendor'
+          if (id.includes('/zrender/lib/canvas/')) return 'zrender-canvas-vendor'
+          if (id.includes('/zrender/')) return 'zrender-core-vendor'
           if (id.includes('/echarts-for-react/')) return 'echarts-react-vendor'
-          if (id.includes('/echarts/')) return 'echarts-vendor'
+          if (id.includes('/echarts/lib/chart/')) return 'echarts-charts-vendor'
+          if (id.includes('/echarts/lib/component/')) return 'echarts-components-vendor'
+          if (id.includes('/echarts/')) return 'echarts-core-vendor'
           if (id.includes('/framer-motion/')) return 'motion-vendor'
           // Terminal (split addons from core)
           if (id.includes('/@xterm/addon-')) return 'xterm-addon-vendor'
@@ -207,6 +217,19 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/dompurify/')) return 'sanitize-vendor'
           if (id.includes('/zod/')) return 'schema-vendor'
           if (id.includes('/@tanstack/react-virtual/')) return 'virtual-vendor'
+          // Date/time libraries (often large)
+          if (id.includes('/date-fns/')) return 'date-vendor'
+          if (id.includes('/dayjs/')) return 'date-vendor'
+          if (id.includes('/moment/')) return 'date-vendor'
+          // Form and validation libraries
+          if (id.includes('/react-hook-form/')) return 'forms-vendor'
+          if (id.includes('/yup/') || id.includes('/joi/')) return 'validation-vendor'
+          // Data manipulation
+          if (id.includes('/lodash/') || id.includes('/lodash-es/')) return 'utils-vendor'
+          if (id.includes('/ramda/')) return 'utils-vendor'
+          // HTTP clients
+          if (id.includes('/axios/')) return 'http-vendor'
+          if (id.includes('/ky/')) return 'http-vendor'
           return 'vendor'
         },
       },
