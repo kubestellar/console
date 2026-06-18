@@ -34,6 +34,10 @@ To add a topic to an upcoming community call:
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for how to submit issues, pull requests, and become a maintainer.
 
+## Outreach Briefs
+
+- [OPA / Gatekeeper Outreach Brief (CNCF Graduated)](community/outreach/opa-gatekeeper-cncf-graduated-2026-06.md)
+
 ## Governance
 
 See [GOVERNANCE.md](../GOVERNANCE.md) for the project's decision-making process, maintainer roles, and voting procedures.
