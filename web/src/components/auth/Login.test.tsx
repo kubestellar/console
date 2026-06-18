@@ -70,7 +70,8 @@ describe('Login Component', () => {
 
   it('does not render Terms of Service as a link', () => {
     renderLogin()
-    expect(screen.queryByRole('link', { name: 'login.termsOfServiceLink' })).not.toBeInTheDocument()
+    const legacyTermsHref = 'https://github.com/kubestellar/console/blob/main/LICENSE'
+    expect(document.querySelector(`a[href="${legacyTermsHref}"]`)).toBeNull()
   })
 
   describe('OAuth setup wizard (backendUp && !oauthConfigured)', () => {
