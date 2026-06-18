@@ -56,7 +56,7 @@ func (h *Handler) trySafeAutoAction(
 	now := time.Now().UTC()
 	action := &store.StellarAction{
 		UserID:      notif.UserID,
-		Description: fmt.Sprintf("Solve %s: %s on %s/%s", solve.ID[:8], eval.RecommendedAction.Type, event.Namespace, workload),
+		Description: fmt.Sprintf("Solve %s: %s on %s/%s", shortSolveID(solve.ID), eval.RecommendedAction.Type, event.Namespace, workload),
 		ActionType:  eval.RecommendedAction.Type,
 		Parameters:  string(paramsJSON),
 		Cluster:     event.Cluster,

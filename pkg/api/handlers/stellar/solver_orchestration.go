@@ -86,6 +86,13 @@ func formatBatchTimestamp(ts *time.Time) string {
 	return ts.UTC().Format(time.RFC3339)
 }
 
+func shortSolveID(id string) string {
+	if len(id) <= 8 {
+		return id
+	}
+	return id[:8]
+}
+
 func (h *Handler) isLatestEventBatch(ctx context.Context, notif *store.StellarNotification) (bool, *time.Time, error) {
 	latestBatchTimestamp, err := h.store.GetLatestEventBatchTimestamp(ctx)
 	if err != nil {
@@ -182,7 +189,7 @@ func (h *Handler) autoTriggerSolve(ctx context.Context, event IncomingEvent, not
 			Namespace: event.Namespace,
 			Workload:  workload,
 			Title:     fmt.Sprintf("Linked to active solve for %s/%s", event.Namespace, workload),
-			Detail:    fmt.Sprintf("Solve %s started %s ago is still running. Linking this event card so progress is shared.", recent.ID[:8], time.Since(recent.StartedAt).Round(time.Second)),
+			Detail:    fmt.Sprintf("Solve %s started %s ago is still running. Linking this event card so progress is shared.", shortSolveID(recent.ID), time.Since(recent.StartedAt).Round(time.Second)),
 			Severity:  "info",
 		})
 		return
