@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'fs'
+import { readFileSync, readdirSync, existsSync } from 'fs'
 import { join } from 'path'
 
 /**
@@ -11,6 +11,26 @@ import { join } from 'path'
 
 const hooksDir = join(__dirname, '..')
 const hooksRoot = join(__dirname, '..', '..')
+
+/**
+ * Read a hook file's content, expanding barrel re-exports to include subdirectory files.
+ * When a .ts file is a barrel (contains `export * from`), also read all .ts files
+ * in the matching subdirectory so pattern checks work after the split refactor.
+ */
+function readHookContent(file: string): string {
+  const filePath = join(hooksDir, file)
+  const content = readFileSync(filePath, 'utf-8')
+  // If it's a barrel re-export, also include the subdirectory files
+  if (content.includes("export * from './")) {
+    const subDir = join(hooksDir, file.replace(/\.ts$/, ''))
+    if (existsSync(subDir)) {
+      const subFiles = readdirSync(subDir).filter(f => f.endsWith('.ts'))
+      return content + subFiles.map(f => readFileSync(join(subDir, f), 'utf-8')).join('\n')
+    }
+  }
+  return content
+}
+
 
 describe('kagenti error logging level', () => {
   it('uses console.error (not console.warn) for fetch failures', () => {
@@ -32,7 +52,7 @@ describe('MCP hooks error propagation documentation', () => {
 
   for (const file of hookFiles) {
     it(`${file} documents error propagation via hook state`, () => {
-      const content = readFileSync(join(hooksDir, file), 'utf-8')
+      const content = readHookContent(file)
       // Each backend catch block should document that errors propagate via state
       const catchBlocks = content
         .split('\n')
