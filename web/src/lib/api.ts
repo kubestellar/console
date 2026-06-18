@@ -1,4 +1,3 @@
-export { handle401, handle429 } from './api/auth'
 export {
   checkBackendAvailability,
   checkOAuthConfigured,
