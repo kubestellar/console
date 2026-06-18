@@ -63,6 +63,12 @@ describe('Login Component', () => {
     ).toBeInTheDocument()
   })
 
+  it('does not render a terms of service footer', () => {
+    renderLogin()
+    expect(screen.queryByText('login.termsOfServicePrefix')).not.toBeInTheDocument()
+    expect(screen.queryByText('login.termsOfServiceLink')).not.toBeInTheDocument()
+  })
+
   it('renders the KubeStellar branding', () => {
     renderLogin()
     expect(screen.getByText('KubeStellar')).toBeInTheDocument()
