@@ -68,6 +68,11 @@ describe('Login Component', () => {
     expect(screen.getByText('KubeStellar')).toBeInTheDocument()
   })
 
+  it('does not render Terms of Service as a link', () => {
+    renderLogin()
+    expect(screen.queryByRole('link', { name: 'login.termsOfServiceLink' })).not.toBeInTheDocument()
+  })
+
   describe('OAuth setup wizard (backendUp && !oauthConfigured)', () => {
     beforeEach(() => {
       oauthProbeResult = { backendUp: true, oauthConfigured: false }
