@@ -37,3 +37,7 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for how to submit issues, pull request
 ## Governance
 
 See [GOVERNANCE.md](../GOVERNANCE.md) for the project's decision-making process, maintainer roles, and voting procedures.
+
+## Outreach
+
+- [Trivy + Kubescape Security Community Outreach Plan](community/outreach/trivy-kubescape-security-outreach.md)
