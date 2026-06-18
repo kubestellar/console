@@ -87,15 +87,16 @@ func (m *mockTeamStore) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]m
 	return args.Get(0).([]models.Team), args.Error(1)
 }
 
-// mockUserStore implements store.UserStore (minimal, unused by most tests)
-type mockUserStore struct {
-	mock.Mock
+// newTestService creates a service with a mock team store and nil user store
+// (the user store is not used by any current service methods).
+func newTestService() (Service, *mockTeamStore) {
+	teams := new(mockTeamStore)
+	svc := New(teams, nil)
+	return svc, teams
 }
 
 func TestCreate_Success(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	userID := uuid.New()
@@ -115,9 +116,7 @@ func TestCreate_Success(t *testing.T) {
 }
 
 func TestCreate_DeduplicatesMemberIDs(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	userID := uuid.New()
@@ -144,9 +143,7 @@ func TestCreate_DeduplicatesMemberIDs(t *testing.T) {
 }
 
 func TestCreate_EmptyName(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, _ := newTestService()
 	ctx := context.Background()
 
 	_, err := svc.Create(ctx, uuid.New(), models.CreateTeamRequest{Name: ""})
@@ -155,9 +152,7 @@ func TestCreate_EmptyName(t *testing.T) {
 }
 
 func TestCreate_InvalidMemberID(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, _ := newTestService()
 	ctx := context.Background()
 
 	req := models.CreateTeamRequest{
@@ -171,9 +166,7 @@ func TestCreate_InvalidMemberID(t *testing.T) {
 }
 
 func TestGet_Success(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	teamID := uuid.New()
@@ -190,9 +183,7 @@ func TestGet_Success(t *testing.T) {
 }
 
 func TestGet_NotFound(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	teamID := uuid.New()
@@ -204,9 +195,7 @@ func TestGet_NotFound(t *testing.T) {
 }
 
 func TestDelete_AsCreator(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	userID := uuid.New()
@@ -220,9 +209,7 @@ func TestDelete_AsCreator(t *testing.T) {
 }
 
 func TestDelete_AsAdmin(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	creatorID := uuid.New()
@@ -241,9 +228,7 @@ func TestDelete_AsAdmin(t *testing.T) {
 }
 
 func TestDelete_NoPermission(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	creatorID := uuid.New()
@@ -261,9 +246,7 @@ func TestDelete_NoPermission(t *testing.T) {
 }
 
 func TestDelete_NotFound(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	teamID := uuid.New()
@@ -275,9 +258,7 @@ func TestDelete_NotFound(t *testing.T) {
 }
 
 func TestRemoveMember_AsCreator(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	actorID := uuid.New()
@@ -293,9 +274,7 @@ func TestRemoveMember_AsCreator(t *testing.T) {
 }
 
 func TestRemoveMember_SelfRemove(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	memberID := uuid.New()
@@ -312,9 +291,7 @@ func TestRemoveMember_SelfRemove(t *testing.T) {
 }
 
 func TestRemoveMember_NoPermission(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	creatorID := uuid.New()
@@ -332,17 +309,35 @@ func TestRemoveMember_NoPermission(t *testing.T) {
 	teams.AssertExpectations(t)
 }
 
-func TestAddMember_AsAdmin(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+func TestAddMember_AsCreator(t *testing.T) {
+	svc, teams := newTestService()
 	ctx := context.Background()
 
+	creatorID := uuid.New()
+	newMemberID := uuid.New()
+	teamID := uuid.New()
+
+	teams.On("GetTeam", ctx, teamID).Return(&models.Team{ID: teamID, CreatedBy: creatorID}, nil)
+	teams.On("AddTeamMember", ctx, teamID, newMemberID, models.TeamRoleMember).Return(nil)
+
+	err := svc.AddMember(ctx, teamID, newMemberID, creatorID, models.TeamRoleMember)
+	require.NoError(t, err)
+	teams.AssertExpectations(t)
+}
+
+func TestAddMember_AsAdmin(t *testing.T) {
+	svc, teams := newTestService()
+	ctx := context.Background()
+
+	creatorID := uuid.New()
 	adminID := uuid.New()
 	newMemberID := uuid.New()
 	teamID := uuid.New()
 
-	teams.On("GetTeam", ctx, teamID).Return(&models.Team{ID: teamID, CreatedBy: adminID}, nil)
+	teams.On("GetTeam", ctx, teamID).Return(&models.Team{ID: teamID, CreatedBy: creatorID}, nil)
+	teams.On("ListTeamMembers", ctx, teamID).Return([]models.TeamMemberInfo{
+		{UserID: adminID, Role: models.TeamRoleAdmin},
+	}, nil)
 	teams.On("AddTeamMember", ctx, teamID, newMemberID, models.TeamRoleMember).Return(nil)
 
 	err := svc.AddMember(ctx, teamID, newMemberID, adminID, models.TeamRoleMember)
@@ -351,9 +346,7 @@ func TestAddMember_AsAdmin(t *testing.T) {
 }
 
 func TestAddMember_NoPermission(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	creatorID := uuid.New()
@@ -371,31 +364,27 @@ func TestAddMember_NoPermission(t *testing.T) {
 	teams.AssertExpectations(t)
 }
 
-func TestUpdate_AsAdmin(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+func TestUpdate_AsCreator(t *testing.T) {
+	svc, teams := newTestService()
 	ctx := context.Background()
 
-	adminID := uuid.New()
+	creatorID := uuid.New()
 	teamID := uuid.New()
 	newName := "new-name"
 	req := models.UpdateTeamRequest{Name: &newName}
 
-	existingTeam := &models.Team{ID: teamID, Name: "old-name", CreatedBy: adminID}
+	existingTeam := &models.Team{ID: teamID, Name: "old-name", CreatedBy: creatorID}
 	teams.On("GetTeam", ctx, teamID).Return(existingTeam, nil)
 	teams.On("UpdateTeam", ctx, mock.AnythingOfType("*models.Team")).Return(nil)
 
-	result, err := svc.Update(ctx, teamID, adminID, req)
+	result, err := svc.Update(ctx, teamID, creatorID, req)
 	require.NoError(t, err)
 	assert.Equal(t, "new-name", result.Name)
 	teams.AssertExpectations(t)
 }
 
 func TestUpdate_NoPermission(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	creatorID := uuid.New()
@@ -414,10 +403,26 @@ func TestUpdate_NoPermission(t *testing.T) {
 	teams.AssertExpectations(t)
 }
 
+func TestListMembers_Success(t *testing.T) {
+	svc, teams := newTestService()
+	ctx := context.Background()
+
+	teamID := uuid.New()
+	expected := []models.TeamMemberInfo{
+		{UserID: uuid.New(), Role: models.TeamRoleMember},
+		{UserID: uuid.New(), Role: models.TeamRoleAdmin},
+	}
+	teams.On("GetTeam", ctx, teamID).Return(&models.Team{ID: teamID}, nil)
+	teams.On("ListTeamMembers", ctx, teamID).Return(expected, nil)
+
+	result, err := svc.ListMembers(ctx, teamID)
+	require.NoError(t, err)
+	assert.Equal(t, expected, result)
+	teams.AssertExpectations(t)
+}
+
 func TestListMembers_NotFound(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	teamID := uuid.New()
@@ -429,9 +434,7 @@ func TestListMembers_NotFound(t *testing.T) {
 }
 
 func TestList_DelegatesToStore(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	userID := uuid.New()
@@ -445,9 +448,7 @@ func TestList_DelegatesToStore(t *testing.T) {
 }
 
 func TestGetUserTeams_DelegatesToStore(t *testing.T) {
-	teams := new(mockTeamStore)
-	users := new(mockUserStore)
-	svc := New(teams, users)
+	svc, teams := newTestService()
 	ctx := context.Background()
 
 	userID := uuid.New()
