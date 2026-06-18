@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Database, RefreshCw, Check, X, AlertCircle, Loader2 } from 'lucide-react'
 import { usePersistence, type PersistenceConfig, type ClusterHealth } from '../../../hooks/usePersistence'
 import { useClusters } from '../../../hooks/mcp/clusters'
+import { cn } from '@/lib/cn'
 
 interface ClusterInfo {
   name: string
@@ -136,9 +137,10 @@ export function PersistenceSection() {
           role="switch"
           aria-checked={localConfig.enabled}
           aria-label={t('settings.persistence.enablePersistence')}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            localConfig.enabled ? 'bg-purple-500' : 'bg-secondary'
-          }`}
+          className={cn(
+            'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+            localConfig.enabled ? 'bg-primary' : 'bg-secondary',
+          )}
         >
           <span
             className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-100 transition-transform ${
@@ -180,7 +182,7 @@ export function PersistenceSection() {
               </button>
             </div>
             {testResult && testResult.cluster === localConfig.primaryCluster && (
-              <p className={`text-xs mt-1 ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
+              <p className={cn('text-xs mt-1', testResult.success ? 'text-primary' : 'text-destructive')}>
                 {testResult.success ? t('settings.persistence.connectionSuccess') : t('settings.persistence.connectionFailed')}
               </p>
             )}
@@ -252,7 +254,7 @@ export function PersistenceSection() {
                 </button>
               </div>
               {testResult && testResult.cluster === localConfig.secondaryCluster && (
-                <p className={`text-xs mt-1 ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
+                <p className={cn('text-xs mt-1', testResult.success ? 'text-primary' : 'text-destructive')}>
                   {testResult.success ? t('settings.persistence.connectionSuccess') : t('settings.persistence.connectionFailed')}
                 </p>
               )}
