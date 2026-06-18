@@ -20,9 +20,10 @@ func TestBenchmarkCache_Get_EmptyCache(t *testing.T) {
 
 func TestBenchmarkCache_SetThenGet(t *testing.T) {
 	c := &benchmarkCache{ttl: time.Hour}
-	reports := []BenchmarkReport{
-		{Version: "0.2", Run: BenchmarkRun{UID: "exp-1/run-1/stage-1"}},
-	}
+	var r BenchmarkReport
+	r.Version = "0.2"
+	r.Run.UID = "exp-1/run-1/stage-1"
+	reports := []BenchmarkReport{r}
 	c.set(reports, "7d")
 
 	got, ok := c.get("7d")
@@ -64,12 +65,11 @@ func TestBenchmarkHandlers_GetReports_CacheHit(t *testing.T) {
 	handler := NewBenchmarkHandlers("fake-api-key", "fake-folder-id")
 
 	// Pre-populate cache
-	cachedReports := []BenchmarkReport{
-		{
-			Version: "0.2",
-			Run:     BenchmarkRun{UID: "cached-run", EID: "cached-exp"},
-		},
-	}
+	var r BenchmarkReport
+	r.Version = "0.2"
+	r.Run.UID = "cached-run"
+	r.Run.EID = "cached-exp"
+	cachedReports := []BenchmarkReport{r}
 	handler.cache.set(cachedReports, "0")
 
 	app.Get("/benchmarks", handler.GetReports)
@@ -93,9 +93,10 @@ func TestBenchmarkHandlers_GetReports_CacheHit_WithSince(t *testing.T) {
 	app := fiber.New()
 	handler := NewBenchmarkHandlers("fake-api-key", "fake-folder-id")
 
-	cachedReports := []BenchmarkReport{
-		{Version: "0.2", Run: BenchmarkRun{UID: "run-7d"}},
-	}
+	var r BenchmarkReport
+	r.Version = "0.2"
+	r.Run.UID = "run-7d"
+	cachedReports := []BenchmarkReport{r}
 	handler.cache.set(cachedReports, "7d")
 
 	app.Get("/benchmarks", handler.GetReports)
@@ -115,9 +116,10 @@ func TestBenchmarkHandlers_StreamReports_CacheHit(t *testing.T) {
 	app := fiber.New()
 	handler := NewBenchmarkHandlers("fake-api-key", "fake-folder-id")
 
-	cachedReports := []BenchmarkReport{
-		{Version: "0.2", Run: BenchmarkRun{UID: "stream-cached"}},
-	}
+	var r BenchmarkReport
+	r.Version = "0.2"
+	r.Run.UID = "stream-cached"
+	cachedReports := []BenchmarkReport{r}
 	handler.cache.set(cachedReports, "0")
 
 	app.Get("/benchmarks/stream", handler.StreamReports)
