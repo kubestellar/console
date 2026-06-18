@@ -337,15 +337,8 @@ spec:
 
 ---
 
-## Demo
-
-> 📹 **Watch a walkthrough**: [Orbit Recurring Missions — Demo Video](#) *(coming soon)*
-
----
-
 ## Related Topics
 
-- [AI Missions Setup](../ai-missions-setup/) — one-off AI missions
-- [AI Features](../ai-features/) — full AI capabilities overview
-- [Stellar Architecture](../../stellar/architecture/) — how the mission runtime works under the hood
-- [Notifications](../notifications/) — connect mission reports to alerting channels
+- [Stellar Architecture](../../stellar/architecture.md) — how the mission runtime works under the hood
+- [ADOPTERS.md](https://github.com/kubestellar/console/blob/main/ADOPTERS.md) — organizations using KubeStellar Console
+- [Community](https://kubestellar.io/community) — join the KubeStellar community
