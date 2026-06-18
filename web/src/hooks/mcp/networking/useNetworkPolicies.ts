@@ -1,0 +1,1 @@
+export { useNetworkPolicies } from './networkPoliciesCore'
