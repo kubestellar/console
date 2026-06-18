@@ -1,36 +1,25 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 /**
  * FlightPlanBlueprint — Phase 3: Master SVG blueprint.
  *
  * SVG blueprint on left, info panel on right. Hover on any node or cluster
  * populates the right panel with details. Overlays toggle resource views.
  *
- * Sub-modules:
- *  - BlueprintLayout.ts      — layout computation (computeLayout)
- *  - BlueprintReport.ts      — PDF/print export (exportFullReport)
- *  - BlueprintInfoPanels.tsx — ProjectInfoPanel, ClusterInfoPanel, DeployModeInfoPanel
+ * Sub-modules (refactored per #18875):
+ *  - BlueprintLayout.ts                 — layout computation (computeLayout)
+ *  - BlueprintReport.ts                 — PDF/print export (exportFullReport)
+ *  - BlueprintInfoPanels.tsx            — ProjectInfoPanel, ClusterInfoPanel, DeployModeInfoPanel
+ *  - FlightPlanBlueprintConstants.tsx   — constants and configurations
+ *  - FlightPlanBlueprintHooks.ts        — custom hooks for state management
+ *  - FlightPlanBlueprintHandlers.ts     — event handlers (hover, drag, resize, pan)
+ *  - FlightPlanBlueprintGlow.ts         — glow effect computation
  */
 
-import { useId, useMemo, useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react'
+import { useId, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Zap,
-  Network,
-  Shield,
-  Layout,
-  HardDrive,
   Info,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  PanelRightClose,
-  PanelRightOpen,
-  Pause,
-  Play,
-  Download,
-  Tags,
-  Loader2,
-  AlertTriangle } from 'lucide-react'
+  AlertTriangle,
+  Shield } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 
@@ -39,20 +28,17 @@ import { ClusterZone } from './svg/ClusterZone'
 import type { ClusterHoverInfo } from './svg/ClusterZone'
 import { ProjectNode } from './svg/ProjectNode'
 import type { ProjectHoverInfo } from './svg/ProjectNode'
-import { DependencyPath, DependencyLabel, computeEdgeMidpoint } from './svg/DependencyPath'
+import { DependencyPath } from './svg/DependencyPath'
 import { PhaseTimeline } from './svg/PhaseTimeline'
 import type {
   MissionControlState,
   OverlayMode } from './types'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { detectCloudProvider } from '../ui/CloudProviderIcon'
-import { fetchMissionContent } from '../../lib/missions/missionCache'
 // missionCache provides file-system caching; no lastUpdated timestamp needed — missions are loaded fresh on each open
 import type { MissionExport } from '../../lib/missions/types'
-import { MissionDetailView } from '../missions/MissionDetailView'
 import type { PayloadProject } from './types'
 
-import { computeLayout } from './BlueprintLayout'
 import { exportFullReport, shortenClusterName } from './BlueprintReport'
 import {
   ProjectInfoPanel,
@@ -60,14 +46,36 @@ import {
   DeployModeInfoPanel,
   generateDefaultPhases,
 } from './BlueprintInfoPanels'
-
-/** Resolve kbPath for a project — tries explicit kbPath, then convention-based lookup */
-function resolveKbPath(proj: PayloadProject): string | undefined {
-  if (proj.kbPath) return proj.kbPath
-  // Convention: fixes/cncf-install/install-{name}.json
-  const slug = proj.name.toLowerCase().replace(/\s+/g, '-')
-  return `fixes/cncf-install/install-${slug}.json`
-}
+import {
+  ZOOM_MIN,
+  ZOOM_MAX,
+  ZOOM_STEP,
+} from './FlightPlanBlueprintConstants'
+import {
+  useHealthyState,
+  useLayout,
+  useInfoPanel,
+  useZoom,
+  useAnimations,
+  useHoverState,
+  useDragDrop,
+  usePan,
+  useResize,
+} from './FlightPlanBlueprintHooks'
+import {
+  createProjectHoverHandler,
+  createClusterHoverHandler,
+  createInfoPanelHandlers,
+  createMissionPreviewHandler,
+  usePanListeners,
+  useResizeListeners,
+  useCleanupTimeout,
+  type InfoPanelData,
+} from './FlightPlanBlueprintHandlers'
+import { useGlowEdges, useGlowProjectKeys } from './FlightPlanBlueprintGlow'
+import { renderDependencyLabels } from './FlightPlanBlueprintLabels'
+import { FlightPlanToolbar, FlightPlanControls } from './FlightPlanBlueprintToolbar'
+import { FlightPlanBlueprintMissionPreview } from './FlightPlanBlueprintMissionPreview'
 
 interface FlightPlanBlueprintProps {
   state: MissionControlState
@@ -76,63 +84,6 @@ interface FlightPlanBlueprintProps {
   onMoveProject?: (projectName: string, fromCluster: string, toCluster: string) => void
   installedProjects?: Set<string>
 }
-
-// ---------------------------------------------------------------------------
-// Overlay buttons
-// ---------------------------------------------------------------------------
-
-const OVERLAYS: { key: OverlayMode; icon: React.ReactNode; label: string }[] = [
-  { key: 'architecture', icon: <Layout className="w-3.5 h-3.5" />, label: 'Architecture' },
-  { key: 'compute', icon: <Zap className="w-3.5 h-3.5" />, label: 'Compute' },
-  { key: 'storage', icon: <HardDrive className="w-3.5 h-3.5" />, label: 'Storage' },
-  { key: 'network', icon: <Network className="w-3.5 h-3.5" />, label: 'Network' },
-  { key: 'security', icon: <Shield className="w-3.5 h-3.5" />, label: 'Security' },
-]
-
-// ---------------------------------------------------------------------------
-// Info panel type
-// ---------------------------------------------------------------------------
-
-type InfoPanelData =
-  | { kind: 'project'; info: ProjectHoverInfo }
-  | { kind: 'cluster'; info: ClusterHoverInfo }
-  | { kind: 'deployMode'; mode: 'phased' | 'yolo'; phases: MissionControlState['phases'] }
-
-// ---------------------------------------------------------------------------
-// Panel resize constants
-// ---------------------------------------------------------------------------
-
-/** Minimum info-panel width (px) */
-const INFO_PANEL_MIN = 280
-/** Maximum info-panel width (px) */
-const INFO_PANEL_MAX = 600
-/** Default info-panel width (px) — 26rem */
-const INFO_PANEL_DEFAULT = 416
-/** localStorage key for persisted panel width */
-const INFO_PANEL_LS_KEY = 'mission-control-info-panel-width'
-
-// ---------------------------------------------------------------------------
-// Zoom constants
-// ---------------------------------------------------------------------------
-
-const ZOOM_MIN = 0.3
-const ZOOM_MAX = 3
-const ZOOM_STEP = 0.2
-
-// ---------------------------------------------------------------------------
-// Dependency-label layout constants
-// ---------------------------------------------------------------------------
-
-/** Minimum gap (SVG units) between two label slots to avoid overlap */
-const MIN_LABEL_GAP = 14
-/** Radius (SVG units) of a project node — used to push labels clear of nodes */
-const NODE_RADIUS = 18
-/** Vertical offset (SVG units) to place the label above the edge midpoint */
-const LABEL_OFFSET_Y = 12
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export function FlightPlanBlueprint({
   state,
@@ -144,323 +95,61 @@ export function FlightPlanBlueprint({
   const { t } = useTranslation()
   const { deduplicatedClusters: clusters, error: clustersError } = useClusters()
 
-  // Filter out explicitly unhealthy clusters and redistribute orphaned projects to healthy ones.
-  // Also scope to state.targetClusters when set — without this, assignments from
-  // clusters the user later removed from TARGET CLUSTERS still appear in the
-  // Flight Plan (e.g. user picks prow + waldorf in Define Mission but ks-docs-oci
-  // — left over from a prior session — still shows up as a third lane).
-  const healthyState = useMemo(() => {
-    const targetSet = new Set(state.targetClusters || [])
-    let assignments = targetSet.size === 0
-      ? state.assignments
-      : state.assignments.filter(a => targetSet.has(a.clusterName))
-    // Only build the unhealthy set from clusters that are explicitly marked unhealthy/unreachable.
-    // Clusters not present in the clusters list (e.g. not yet loaded) are left alone so that
-    // user-assigned projects are never silently dropped.
-    const unhealthyNames = clusters?.length
-      ? new Set(clusters.filter(c => c.healthy === false || c.reachable === false).map(c => c.name))
-      : new Set<string>()
+  // State management via extracted hooks
+  const healthyState = useHealthyState(state)
+  const layout = useLayout(healthyState)
+  const {
+    infoPanelWidth,
+    setInfoPanelWidth,
+    infoPanelCollapsed,
+    setInfoPanelCollapsed,
+    isOverInfoPanelRef,
+    hidePanelTimeoutRef,
+  } = useInfoPanel()
+  const { zoom, setZoom } = useZoom()
+  const { animationsEnabled, setAnimationsEnabled, labelsVisible, setLabelsVisible } = useAnimations()
+  const {
+    hoveredEdge,
+    setHoveredEdge,
+    hoveredProjectKey,
+    setHoveredProjectKey,
+    hoveredProjectName,
+    hoveredCluster,
+  } = useHoverState()
+  const { dragProject, setDragProject, dropTarget, setDropTarget } = useDragDrop()
 
-    // Only filter out explicitly unhealthy clusters
-    const hasUnhealthy = assignments.some(a => a.projectNames.length > 0 && unhealthyNames.has(a.clusterName))
-    if (hasUnhealthy) {
-      const orphanedProjects: string[] = []
-      const healthyAssignments = assignments.filter(a => {
-        if (!unhealthyNames.has(a.clusterName)) return true
-        orphanedProjects.push(...a.projectNames)
-        return false
-      }).map(a => ({ ...a, projectNames: [...a.projectNames] }))
-      if (orphanedProjects.length > 0 && healthyAssignments.length > 0) {
-        orphanedProjects.forEach((p, i) => {
-          const target = healthyAssignments[i % healthyAssignments.length]
-          if (!target.projectNames.includes(p)) {
-            target.projectNames.push(p)
-          }
-        })
-      }
-      assignments = healthyAssignments
-    }
-
-    // Allow projects on multiple clusters — composite keys handle positioning
-    return { ...state, assignments }
-  }, [state, clusters])
-
-  // #6731 — Memoize layout computation. Previously this ran on every render,
-  // and computeLayout traverses every assignment × project to produce node
-  // positions, dependency edges, and phase timelines — expensive enough to
-  // show up on the main-thread profiler during sidebar toggles and message
-  // streaming. `healthyState` is itself memoized, so this re-runs only when
-  // the underlying state.assignments / state.projects / clusters change.
-  const layout = useMemo(() => computeLayout(healthyState), [healthyState])
+  // Info panel state
   const [infoPanel, setInfoPanel] = useState<InfoPanelData | null>(null)
   const [stickyPanel, setStickyPanel] = useState<InfoPanelData | null>(
     () => ({ kind: 'deployMode' as const, mode: state.deployMode, phases: state.phases })
   )
-  const [dragProject, setDragProject] = useState<{ name: string; fromCluster: string } | null>(null)
-  const [dropTarget, setDropTarget] = useState<string | null>(null)
+
+  // Mission preview state
   const [previewMission, setPreviewMission] = useState<MissionExport | null>(null)
   const [previewRaw, setPreviewRaw] = useState(false)
   const [previewLoading, setPreviewLoading] = useState(false)
 
-  // Resizable info panel
-  const [infoPanelWidth, setInfoPanelWidth] = useState<number>(() => {
-    try {
-      const stored = localStorage.getItem(INFO_PANEL_LS_KEY)
-      if (stored) {
-        const parsed = Number(stored)
-        if (parsed >= INFO_PANEL_MIN && parsed <= INFO_PANEL_MAX) return parsed
-      }
-    } catch { /* ignore */ }
-    return INFO_PANEL_DEFAULT
-  })
-  const [infoPanelCollapsed, setInfoPanelCollapsed] = useState(false)
-
-  // Track if mouse is over the info panel to keep it visible while interacting
-  const isOverInfoPanelRef = useRef(false)
-  const hidePanelTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Zoom controls
-  const [zoom, setZoom] = useState(1)
-
-  // Animation toggle
-  const [animationsEnabled, setAnimationsEnabled] = useState(true)
-  // Line labels toggle
-  const [labelsVisible, setLabelsVisible] = useState(true)
-
-  // Hovered edge (from label hover) or hovered project (composite key: "cluster/project")
-  const [hoveredEdge, setHoveredEdge] = useState<{ from: string; to: string } | null>(null)
-  const [hoveredProjectKey, setHoveredProjectKey] = useState<string | null>(null)
-  const hoveredProjectName = hoveredProjectKey?.split('/')[1] ?? null
-  const hoveredCluster = hoveredProjectKey?.split('/')[0] ?? null
-
-  // Compute which edges should glow — cluster-scoped
-  const glowEdges = useMemo(() => {
-    const edges = new Set<string>()
-    if (hoveredEdge && layout) {
-      for (const edge of layout.dependencyEdges) {
-        if (edge.from === hoveredEdge.from && edge.to === hoveredEdge.to) {
-          const cluster = edge.fromPos?.clusterName ?? ''
-          edges.add(`${cluster}:${edge.from}-${edge.to}`)
-        }
-      }
-    }
-    if (hoveredProjectName && hoveredCluster && layout) {
-      for (const edge of layout.dependencyEdges) {
-        const edgeCluster = edge.fromPos?.clusterName ?? ''
-        const isConnected = edge.from === hoveredProjectName || edge.to === hoveredProjectName
-        if (!isConnected) continue
-        // Same-cluster edges: only glow if on the hovered cluster
-        // Cross-cluster edges: always glow if the hovered project is an endpoint
-        if (!edge.crossCluster && edgeCluster !== hoveredCluster) continue
-        edges.add(`${edgeCluster}:${edge.from}-${edge.to}`)
-      }
-    }
-    return edges
-  }, [hoveredEdge, hoveredProjectKey, hoveredProjectName, hoveredCluster, layout])
-
-  // Compute which project nodes should glow — composite keys for cluster scoping
-  const glowProjectKeys = useMemo(() => {
-    const keys = new Set<string>()
-    if (hoveredEdge && layout) {
-      for (const key of layout.projectPositions.keys()) {
-        const pName = key.split('/')[1]
-        if (pName === hoveredEdge.from || pName === hoveredEdge.to) keys.add(key)
-      }
-    }
-    if (hoveredProjectKey && hoveredProjectName && layout) {
-      // Always glow the hovered project itself
-      keys.add(hoveredProjectKey)
-      // Find connected project names — separate same-cluster vs cross-cluster
-      const sameClusterConnected = new Set<string>()
-      const crossClusterConnected = new Set<string>()
-      for (const edge of layout.dependencyEdges) {
-        const edgeCluster = edge.fromPos?.clusterName ?? ''
-        if (edge.from === hoveredProjectName) {
-          if (edge.crossCluster) crossClusterConnected.add(edge.to)
-          else if (edgeCluster === hoveredCluster) sameClusterConnected.add(edge.to)
-        }
-        if (edge.to === hoveredProjectName) {
-          if (edge.crossCluster) crossClusterConnected.add(edge.from)
-          else if (edgeCluster === hoveredCluster) sameClusterConnected.add(edge.from)
-        }
-      }
-      for (const key of layout.projectPositions.keys()) {
-        const [cluster, pName] = key.split('/')
-        // Same-cluster connections: glow on same cluster
-        if (cluster === hoveredCluster && sameClusterConnected.has(pName)) keys.add(key)
-        // Cross-cluster connections: glow on any cluster
-        if (crossClusterConnected.has(pName)) keys.add(key)
-      }
-    }
-    return keys
-  }, [hoveredEdge, hoveredProjectKey, hoveredProjectName, hoveredCluster, layout])
-
-  // Pan/drag when zoomed in
+  // Pan and resize refs and handlers
   const svgContainerRef = useRef<HTMLDivElement>(null)
-  const isPanningRef = useRef(false)
-  const panStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 })
+  const { handlePanStart, isPanningRef, panStartRef } = usePan(svgContainerRef, zoom)
+  const { handleResizeStart: createHandleResizeStart, isResizingRef, startXRef, startWidthRef } = useResize()
 
-  const handlePanStart = (e: ReactMouseEvent) => {
-    if (zoom <= 1) return
-    const container = svgContainerRef.current
-    if (!container) return
-    isPanningRef.current = true
-    panStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      scrollLeft: container.scrollLeft,
-      scrollTop: container.scrollTop }
-    document.body.style.cursor = 'grabbing'
-    document.body.style.userSelect = 'none'
-  }
+  // Event handlers
+  const handleProjectHover = createProjectHoverHandler(setInfoPanel, setStickyPanel, hidePanelTimeoutRef)
+  const handleClusterHover = createClusterHoverHandler(setInfoPanel, setStickyPanel, hidePanelTimeoutRef, dragProject)
+  const { handleInfoPanelEnter, handleInfoPanelLeave } = createInfoPanelHandlers(isOverInfoPanelRef, hidePanelTimeoutRef)
+  const handleShowMissionPreview = createMissionPreviewHandler(setPreviewMission, setPreviewLoading)
 
-  useEffect(() => {
-    const handlePanMove = (e: MouseEvent) => {
-      if (!isPanningRef.current) return
-      const container = svgContainerRef.current
-      if (!container) return
-      const dx = e.clientX - panStartRef.current.x
-      const dy = e.clientY - panStartRef.current.y
-      container.scrollLeft = panStartRef.current.scrollLeft - dx
-      container.scrollTop = panStartRef.current.scrollTop - dy
-    }
-    const handlePanEnd = () => {
-      if (!isPanningRef.current) return
-      isPanningRef.current = false
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-    window.addEventListener('mousemove', handlePanMove)
-    window.addEventListener('mouseup', handlePanEnd)
-    return () => {
-      window.removeEventListener('mousemove', handlePanMove)
-      window.removeEventListener('mouseup', handlePanEnd)
-    }
-  }, [])
+  // Effect hooks
+  usePanListeners(isPanningRef, panStartRef, svgContainerRef)
+  useResizeListeners(isResizingRef, startXRef, startWidthRef, setInfoPanelWidth)
+  useCleanupTimeout(hidePanelTimeoutRef)
 
-  const isResizingRef = useRef(false)
-  const startXRef = useRef(0)
-  const startWidthRef = useRef(INFO_PANEL_DEFAULT)
-
-  const handleResizeStart = (e: ReactMouseEvent) => {
-    e.preventDefault()
-    isResizingRef.current = true
-    startXRef.current = e.clientX
-    startWidthRef.current = infoPanelWidth
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-  }
-
-  useEffect(() => {
-    const handleMouseMove = (e: globalThis.MouseEvent) => {
-      if (!isResizingRef.current) return
-      // Panel is on the right, so dragging left (negative deltaX) should increase width
-      const deltaX = e.clientX - startXRef.current
-      const newWidth = Math.min(INFO_PANEL_MAX, Math.max(INFO_PANEL_MIN, startWidthRef.current - deltaX))
-      setInfoPanelWidth(newWidth)
-    }
-    const handleMouseUp = () => {
-      if (!isResizingRef.current) return
-      isResizingRef.current = false
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-      // Persist to localStorage
-      setInfoPanelWidth((w) => {
-        try { localStorage.setItem(INFO_PANEL_LS_KEY, String(w)) } catch { /* ignore */ }
-        return w
-      })
-    }
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [])
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (hidePanelTimeoutRef.current) {
-        clearTimeout(hidePanelTimeoutRef.current)
-      }
-    }
-  }, [])
+  // Glow effects
+  const glowEdges = useGlowEdges(hoveredEdge, hoveredProjectName, hoveredCluster, layout)
+  const glowProjectKeys = useGlowProjectKeys(hoveredEdge, hoveredProjectKey, hoveredProjectName, hoveredCluster, layout)
 
   const projectMap = new Map(state.projects.map((p) => [p.name, p]))
-
-  const handleProjectHover = (info: ProjectHoverInfo | null) => {
-    // Clear any pending hide timeout
-    if (hidePanelTimeoutRef.current) {
-      clearTimeout(hidePanelTimeoutRef.current)
-      hidePanelTimeoutRef.current = null
-    }
-
-    if (info) {
-      const data: InfoPanelData = { kind: 'project', info }
-      setInfoPanel(data)
-      setStickyPanel(data)
-    } else {
-      // Clear infoPanel to show sticky panel, allowing user to interact with sidebar
-      setInfoPanel(null)
-    }
-  }
-
-  const handleClusterHover = (info: ClusterHoverInfo | null) => {
-    if (dragProject) return
-
-    // Clear any pending hide timeout
-    if (hidePanelTimeoutRef.current) {
-      clearTimeout(hidePanelTimeoutRef.current)
-      hidePanelTimeoutRef.current = null
-    }
-
-    if (info) {
-      const data: InfoPanelData = { kind: 'cluster', info }
-      setInfoPanel(data)
-      setStickyPanel(data)
-    } else {
-      // Clear infoPanel to show sticky panel, allowing user to interact with sidebar
-      setInfoPanel(null)
-    }
-  }
-
-  /** Handlers for info panel hover to keep it visible while interacting */
-  const handleInfoPanelEnter = () => {
-    isOverInfoPanelRef.current = true
-    // Clear any pending hide timeout when entering the panel
-    if (hidePanelTimeoutRef.current) {
-      clearTimeout(hidePanelTimeoutRef.current)
-      hidePanelTimeoutRef.current = null
-    }
-  }
-
-  const handleInfoPanelLeave = () => {
-    isOverInfoPanelRef.current = false
-    // Panel remains sticky — only changes when hovering a different node
-  }
-
-  /** Open mission preview modal for a project (fetches from KB) */
-  const handleShowMissionPreview = (proj: PayloadProject) => {
-    const kbPath = resolveKbPath(proj)
-    const baseMission: MissionExport = {
-      version: 'kc-mission-v1',
-      title: `Install ${proj.displayName}`,
-      description: proj.reason ?? '',
-      type: 'deploy',
-      tags: [proj.category],
-      steps: [],
-      metadata: { source: kbPath ?? 'mission-control' } }
-    if (!kbPath) {
-      setPreviewMission(baseMission)
-      return
-    }
-    setPreviewLoading(true)
-    fetchMissionContent(baseMission)
-      .then(({ mission: m }) => setPreviewMission(m))
-      .catch(() => setPreviewMission(baseMission))
-      .finally(() => setPreviewLoading(false))
-  }
 
   // The visible panel: active hover wins, otherwise fall back to sticky (last hovered)
   const visiblePanel = infoPanel ?? stickyPanel
@@ -468,78 +157,19 @@ export function FlightPlanBlueprint({
   return (
     <div className="h-full min-h-0 flex flex-col">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-border">
-        <div>
-          <h2 className="text-lg font-bold">
-            Flight Plan{state.title ? `: ${state.title}` : ''}
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            {state.projects.length} projects across{' '}
-            {healthyState.assignments.filter((a) => a.projectNames.length > 0).length} clusters
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Overlay toggles */}
-          <div className="hidden md:flex items-center rounded-lg border border-border overflow-hidden">
-            {OVERLAYS.map((o) => (
-              <button
-                key={o.key}
-                onClick={() => onOverlayChange(o.key)}
-                className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors',
-                  state.overlay === o.key
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                )}
-                title={o.label}
-              >
-                {o.icon}
-                <span className="hidden lg:inline">{o.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Deploy mode toggle */}
-          <div className="flex items-center rounded-lg overflow-hidden">
-            <button
-              onClick={() => {
-                onDeployModeChange('phased')
-                const data: InfoPanelData = { kind: 'deployMode', mode: 'phased', phases: state.phases }
-                setStickyPanel(data)
-              }}
-              className={cn(
-                'px-3 py-1.5 text-xs font-medium transition-all duration-150 border',
-                'rounded-l-lg',
-                state.deployMode === 'phased'
-                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-inner'
-                  : 'bg-secondary/30 text-muted-foreground border-border hover:text-foreground hover:bg-secondary/50'
-              )}
-            >
-              phased
-            </button>
-            <button
-              onClick={() => {
-                onDeployModeChange('yolo')
-                const data: InfoPanelData = { kind: 'deployMode', mode: 'yolo', phases: state.phases }
-                setStickyPanel(data)
-              }}
-              className={cn(
-                'px-3 py-1.5 text-xs font-medium transition-all duration-150 border -ml-px',
-                'rounded-r-lg',
-                state.deployMode === 'yolo'
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-inner'
-                  : 'bg-secondary/30 text-muted-foreground border-border hover:text-foreground hover:bg-secondary/50'
-              )}
-            >
-              yolo
-            </button>
-          </div>
-
-          {/* Spacer — action buttons moved to footer */}
-          <div />
-        </div>
-      </div>
+      <FlightPlanToolbar
+        state={healthyState}
+        onOverlayChange={onOverlayChange}
+        onDeployModeChange={onDeployModeChange}
+        onPhaseChange={(phases) => {
+          const data: InfoPanelData = {
+            kind: 'deployMode',
+            mode: state.deployMode,
+            phases: phases as MissionControlState['phases'],
+          }
+          setStickyPanel(data)
+        }}
+      />
 
       {/* Error banner when cluster data fails to load (issue 6772) */}
       {clustersError && (
@@ -554,57 +184,17 @@ export function FlightPlanBlueprint({
         {/* SVG Blueprint */}
         <div className="flex-1 min-h-0 p-4 overflow-hidden relative">
           {/* Zoom & sidebar controls */}
-          <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-            <button
-              onClick={() => setZoom(z => Math.min(z + ZOOM_STEP, ZOOM_MAX))}
-              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              title="Zoom in"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setZoom(z => Math.max(z - ZOOM_STEP, ZOOM_MIN))}
-              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              title="Zoom out"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setZoom(1)}
-              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              title="Reset zoom"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setInfoPanelCollapsed(c => !c)}
-              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors ml-1"
-              title={infoPanelCollapsed ? 'Show info panel' : 'Hide info panel'}
-            >
-              {infoPanelCollapsed ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => setAnimationsEnabled(a => !a)}
-              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              title={animationsEnabled ? 'Pause animations' : 'Resume animations'}
-            >
-              {animationsEnabled ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => setLabelsVisible(v => !v)}
-              className={cn("p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors", !labelsVisible && "opacity-50")}
-              title={labelsVisible ? 'Hide line labels' : 'Show line labels'}
-            >
-              <Tags className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => exportFullReport(state, healthyState, installedProjects, layout, svgContainerRef)}
-              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              title="Export full report (Print to PDF)"
-            >
-              <Download className="w-4 h-4" />
-            </button>
-          </div>
+          <FlightPlanControls
+            zoom={zoom}
+            setZoom={setZoom}
+            infoPanelCollapsed={infoPanelCollapsed}
+            setInfoPanelCollapsed={setInfoPanelCollapsed}
+            animationsEnabled={animationsEnabled}
+            setAnimationsEnabled={setAnimationsEnabled}
+            labelsVisible={labelsVisible}
+            setLabelsVisible={setLabelsVisible}
+            onExport={() => exportFullReport(state, healthyState, installedProjects, layout, svgContainerRef)}
+          />
 
           {/* Empty state when no healthy clusters */}
           {layout.clusterRects.size === 0 ? (
@@ -738,55 +328,13 @@ export function FlightPlanBlueprint({
               })}
 
               {/* Dependency labels — top layer so they're never hidden behind lines */}
-              {labelsVisible && (() => {
-                const labelSlots: { x: number; y: number }[] = []
-                const nodeCenters = Array.from(layout.projectPositions.values())
-                return layout.dependencyEdges.map((edge) => {
-                  if (!edge.label) return null
-                  const from = edge.fromPos
-                  const to = edge.toPos
-                  if (!from || !to) return null
-                  if (from.cx <= 0 || from.cy <= 0 || to.cx <= 0 || to.cy <= 0) return null
-
-                  const { midX, midY: rawMidY } = computeEdgeMidpoint(from.cx, from.cy, to.cx, to.cy)
-                  let labelY = rawMidY - LABEL_OFFSET_Y
-                  // Push away from project nodes
-                  for (const node of nodeCenters) {
-                    const dx = Math.abs(midX - node.cx)
-                    const dy = Math.abs(labelY - node.cy)
-                    if (dx < 40 && dy < NODE_RADIUS + 8) {
-                      labelY = node.cy - NODE_RADIUS - LABEL_OFFSET_Y
-                    }
-                  }
-                  // Avoid overlapping other labels
-                  for (const slot of labelSlots) {
-                    const dxL = Math.abs(midX - slot.x)
-                    const dyL = Math.abs(labelY - slot.y)
-                    if (dxL < 60 && dyL < MIN_LABEL_GAP) {
-                      labelY = slot.y - MIN_LABEL_GAP
-                    }
-                  }
-                  labelSlots.push({ x: midX, y: labelY })
-                  const clusterEdgeKey = `${from.clusterName}:${edge.from}-${edge.to}`
-                  return (
-                    <DependencyLabel
-                      key={`label-${clusterEdgeKey}`}
-                      midX={midX}
-                      midY={labelY}
-                      label={edge.label}
-                      crossCluster={edge.crossCluster}
-                      fromName={edge.from}
-                      toName={edge.to}
-                      anchorX={midX}
-                      anchorY={rawMidY}
-                      onHover={setHoveredEdge}
-                      highlight={glowEdges.has(clusterEdgeKey)}
-                      dimmed={(glowEdges.size > 0 || glowProjectKeys.size > 0) && !glowEdges.has(clusterEdgeKey)}
-                      overlayDim={state.overlay !== 'architecture'}
-                    />
-                  )
-                })
-              })()}
+              {labelsVisible && renderDependencyLabels({
+                layout,
+                glowEdges,
+                glowProjectKeys,
+                overlayArchitecture: state.overlay === 'architecture',
+                onHover: setHoveredEdge,
+              })}
 
               {/* Phase timeline */}
               <PhaseTimeline
@@ -871,7 +419,7 @@ export function FlightPlanBlueprint({
           {/* Resize drag handle */}
           <div
             className="absolute top-0 left-0 w-[3px] h-full cursor-col-resize z-10 hover:bg-primary/40 active:bg-primary/60 transition-colors"
-            onMouseDown={handleResizeStart}
+            onMouseDown={(e) => createHandleResizeStart(e, infoPanelWidth)}
           />
           <AnimatePresence mode="wait">
             {visiblePanel ? (
@@ -912,43 +460,13 @@ export function FlightPlanBlueprint({
         </div>
       </div>
 
-      {/* Mission preview modal */}
-      {(previewMission || previewLoading) && (
-        <div
-          className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
-          onClick={(e) => { if (e.target === e.currentTarget) { setPreviewMission(null); setPreviewRaw(false) } }}
-          onKeyDown={(e) => {
-            if (e.defaultPrevented || e.key !== 'Escape') return
-            e.stopPropagation()
-            e.nativeEvent.stopImmediatePropagation()
-            setPreviewMission(null)
-            setPreviewRaw(false)
-          }}
-          role="dialog"
-          tabIndex={-1}
-          ref={(el) => el?.focus()}
-        >
-          <div className="w-full max-w-4xl max-h-[85vh] overflow-y-auto bg-card rounded-xl border border-border shadow-2xl">
-            {previewLoading ? (
-              <div className="flex items-center justify-center py-24 text-muted-foreground">
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Loading mission...
-              </div>
-            ) : previewMission ? (
-              <MissionDetailView
-                mission={previewMission}
-                rawContent={JSON.stringify(previewMission, null, 2)}
-                showRaw={previewRaw}
-                onToggleRaw={() => setPreviewRaw((p) => !p)}
-                onImport={() => { setPreviewMission(null); setPreviewRaw(false) }}
-                onBack={() => { setPreviewMission(null); setPreviewRaw(false) }}
-                importLabel="Close"
-                hideBackButton
-              />
-            ) : null}
-          </div>
-        </div>
-      )}
+      <FlightPlanBlueprintMissionPreview
+        previewMission={previewMission}
+        previewLoading={previewLoading}
+        previewRaw={previewRaw}
+        setPreviewMission={setPreviewMission}
+        setPreviewRaw={setPreviewRaw}
+      />
     </div>
   )
 }
