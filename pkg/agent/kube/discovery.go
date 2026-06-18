@@ -2,8 +2,6 @@ package kube
 
 import (
 	"bytes"
-	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -33,20 +31,14 @@ const (
 	vclusterDeleteTimeout  = 60 * time.Second  // Timeout for deleting a vCluster
 )
 
-// minikubeStatusTimeout bounds the `minikube status -p <name>` fan-out per
-// profile so a hung minikube doesn't stall the whole local-clusters listing.
-const minikubeStatusTimeout = 5 * time.Second
-
 var (
 	// execCommand is already declared in kubectl.go
-	lookPath                  = exec.LookPath
-	statFile                  = os.Stat
-	userHomeDir               = os.UserHomeDir
-	standardToolCandidates    = defaultStandardToolCandidates
-	k3dVersionRegexp          = regexp.MustCompile(`v([\d.]+)`)
-	minikubeProfileNameRegexp = regexp.MustCompile(`"Name":\s*"([^"]+)"`)
-	vclusterVersionRegexp     = regexp.MustCompile(`v?([\d.]+)`)
-	semverRegexp              = regexp.MustCompile(`v?([\d]+\.[\d]+\.[\d]+)`)
+	lookPath               = exec.LookPath
+	statFile               = os.Stat
+	userHomeDir            = os.UserHomeDir
+	standardToolCandidates = defaultStandardToolCandidates
+	vclusterVersionRegexp  = regexp.MustCompile(`v?([\d.]+)`)
+	semverRegexp           = regexp.MustCompile(`v?([\d]+\.[\d]+\.[\d]+)`)
 )
 
 // LocalClusterTool represents a detected local cluster tool
@@ -262,87 +254,6 @@ func (m *LocalClusterManager) DetectNamedTools(names []string) []LocalClusterToo
 	return tools
 }
 
-func (m *LocalClusterManager) detectKind() *LocalClusterTool {
-	path, err := findExecutablePath("kind")
-	if err != nil {
-		return nil
-	}
-
-	tool := &LocalClusterTool{
-		Name:      "kind",
-		Installed: true,
-		Path:      path,
-	}
-
-	// Get version
-	cmd := execCommand("kind", "version")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err == nil {
-		// Parse "kind v0.20.0 go1.21.0 darwin/arm64"
-		version := strings.TrimSpace(out.String())
-		if parts := strings.Fields(version); len(parts) >= 2 {
-			tool.Version = strings.TrimPrefix(parts[1], "v")
-		}
-	}
-
-	return tool
-}
-
-func (m *LocalClusterManager) detectK3d() *LocalClusterTool {
-	path, err := findExecutablePath("k3d")
-	if err != nil {
-		return nil
-	}
-
-	tool := &LocalClusterTool{
-		Name:      "k3d",
-		Installed: true,
-		Path:      path,
-	}
-
-	// Get version
-	cmd := execCommand("k3d", "version")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err == nil {
-		// Parse "k3d version v5.6.0\nk3s version v1.27.4-k3s1 (default)"
-		lines := strings.Split(out.String(), "\n")
-		if len(lines) > 0 {
-			if matches := k3dVersionRegexp.FindStringSubmatch(lines[0]); len(matches) > 1 {
-				tool.Version = matches[1]
-			}
-		}
-	}
-
-	return tool
-}
-
-func (m *LocalClusterManager) detectMinikube() *LocalClusterTool {
-	path, err := findExecutablePath("minikube")
-	if err != nil {
-		return nil
-	}
-
-	tool := &LocalClusterTool{
-		Name:      "minikube",
-		Installed: true,
-		Path:      path,
-	}
-
-	// Get version
-	cmd := execCommand("minikube", "version", "--short")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err == nil {
-		// Parse "v1.31.0"
-		version := strings.TrimSpace(out.String())
-		tool.Version = strings.TrimPrefix(version, "v")
-	}
-
-	return tool
-}
-
 // ListClusters returns all local clusters for all detected tools
 func (m *LocalClusterManager) ListClusters() []LocalCluster {
 	clusters := []LocalCluster{}
@@ -357,148 +268,6 @@ func (m *LocalClusterManager) ListClusters() []LocalCluster {
 	clusters = append(clusters, m.listMinikubeClusters()...)
 
 	return clusters
-}
-
-func (m *LocalClusterManager) listKindClusters() []LocalCluster {
-	clusters := []LocalCluster{}
-
-	cmd := execCommand("kind", "get", "clusters")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return clusters
-	}
-
-	for _, name := range strings.Split(strings.TrimSpace(out.String()), "\n") {
-		if name != "" {
-			clusters = append(clusters, LocalCluster{
-				Name:   name,
-				Tool:   "kind",
-				Status: "running", // kind clusters are always running if listed
-			})
-		}
-	}
-
-	return clusters
-}
-
-func (m *LocalClusterManager) listK3dClusters() []LocalCluster {
-	clusters := []LocalCluster{}
-
-	cmd := execCommand("k3d", "cluster", "list", "--no-headers")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return clusters
-	}
-
-	for _, line := range strings.Split(strings.TrimSpace(out.String()), "\n") {
-		if line == "" {
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) >= 1 {
-			clusters = append(clusters, LocalCluster{
-				Name:   fields[0],
-				Tool:   "k3d",
-				Status: "running",
-			})
-		}
-	}
-
-	return clusters
-}
-
-func (m *LocalClusterManager) listMinikubeClusters() []LocalCluster {
-	clusters := []LocalCluster{}
-
-	cmd := execCommand("minikube", "profile", "list", "-o", "json")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return clusters
-	}
-
-	// Extract profile names from the JSON output. `minikube profile list`
-	// uses a nested structure with a "valid" array; we only need the names,
-	// then we fan out one `minikube status` call per profile to get the
-	// real running state (#7984).
-	output := out.String()
-	if !strings.Contains(output, "valid") {
-		return clusters
-	}
-	matches := minikubeProfileNameRegexp.FindAllStringSubmatch(output, -1)
-	for _, match := range matches {
-		if len(match) <= 1 {
-			continue
-		}
-		name := match[1]
-		clusters = append(clusters, LocalCluster{
-			Name:   name,
-			Tool:   "minikube",
-			Status: minikubeProfileStatus(name),
-		})
-	}
-
-	return clusters
-}
-
-// minikubeProfileStatus returns a normalized status string ("running",
-// "stopped", "unknown") for a single minikube profile by shelling out to
-// `minikube status -p <name> -o json`. Previously this was hardcoded to
-// "unknown" (#7984) so operators could not tell from the UI whether a
-// profile was running.
-func minikubeProfileStatus(name string) string {
-	ctx, cancel := context.WithTimeout(context.Background(), minikubeStatusTimeout)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "minikube", "status", "-p", name, "-o", "json")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		// Exit code 1-7 means "not running" in some form; still parse the
-		// stdout if present because minikube writes JSON even on non-zero
-		// exits. Fall through to the parser below.
-		if out.Len() == 0 {
-			return "unknown"
-		}
-	}
-
-	// `minikube status -o json` emits either a single object or an array of
-	// objects (multi-node). Try array first, fall back to object.
-	raw := bytes.TrimSpace(out.Bytes())
-	if len(raw) == 0 {
-		return "unknown"
-	}
-	type statusEntry struct {
-		Host      string `json:"Host"`
-		Kubelet   string `json:"Kubelet"`
-		APIServer string `json:"APIServer"`
-	}
-	var entries []statusEntry
-	if raw[0] == '[' {
-		if err := json.Unmarshal(raw, &entries); err != nil {
-			return "unknown"
-		}
-	} else {
-		var single statusEntry
-		if err := json.Unmarshal(raw, &single); err != nil {
-			return "unknown"
-		}
-		entries = append(entries, single)
-	}
-	if len(entries) == 0 {
-		return "unknown"
-	}
-
-	// A profile is "running" only when every node reports Host=Running and
-	// either Kubelet=Running or APIServer=Running (workers don't run
-	// apiserver). Anything else collapses to "stopped".
-	for _, e := range entries {
-		if !strings.EqualFold(e.Host, "Running") {
-			return "stopped"
-		}
-	}
-	return "running"
 }
 
 // dns1123LabelRegexp matches valid DNS-1123 labels (RFC 1123 section 2.1).
@@ -550,36 +319,6 @@ func (m *LocalClusterManager) CreateCluster(tool, name string) error {
 	}
 }
 
-func (m *LocalClusterManager) createKindCluster(name string) error {
-	cmd := execCommand("kind", "create", "cluster", "--name", name)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("kind create failed: %s", stderr.String())
-	}
-	return nil
-}
-
-func (m *LocalClusterManager) createK3dCluster(name string) error {
-	cmd := execCommand("k3d", "cluster", "create", name)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("k3d create failed: %s", stderr.String())
-	}
-	return nil
-}
-
-func (m *LocalClusterManager) createMinikubeCluster(name string) error {
-	cmd := execCommand("minikube", "start", "--profile", name)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("minikube start failed: %s", stderr.String())
-	}
-	return nil
-}
-
 // StartCluster starts a stopped local cluster with phased progress broadcasting
 func (m *LocalClusterManager) StartCluster(tool, name string) error {
 	if err := validateClusterName(name); err != nil {
@@ -599,67 +338,6 @@ func (m *LocalClusterManager) StartCluster(tool, name string) error {
 	default:
 		return fmt.Errorf("unsupported tool: %s", tool)
 	}
-}
-
-func (m *LocalClusterManager) startKindCluster(name string) error {
-	containers, err := listKindContainers(name)
-	if err != nil {
-		return fmt.Errorf("failed to list kind cluster containers: %w", err)
-	}
-	if len(containers) == 0 {
-		return fmt.Errorf("no containers found for kind cluster %q", name)
-	}
-	for _, c := range containers {
-		cmd := execCommand("docker", "start", c)
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to start container %q: %s", c, stderr.String())
-		}
-	}
-	return nil
-}
-
-// listKindContainers returns all Docker container names that belong to the
-// given kind cluster, by querying the kind cluster label. This avoids the
-// previous fixed-loop limit of 10 worker nodes.
-func listKindContainers(name string) ([]string, error) {
-	labelFilter := fmt.Sprintf("label=io.x-k8s.kind.cluster=%s", name)
-	cmd := execCommand("docker", "ps", "-a", "--filter", labelFilter, "--format", "{{.Names}}")
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("docker ps failed: %s", stderr.String())
-	}
-	var names []string
-	for _, line := range strings.Split(strings.TrimSpace(stdout.String()), "\n") {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			names = append(names, line)
-		}
-	}
-	return names, nil
-}
-
-func (m *LocalClusterManager) startK3dCluster(name string) error {
-	cmd := execCommand("k3d", "cluster", "start", name)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("k3d start failed: %s", stderr.String())
-	}
-	return nil
-}
-
-func (m *LocalClusterManager) startMinikubeCluster(name string) error {
-	cmd := execCommand("minikube", "start", "--profile", name)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("minikube start failed: %s", stderr.String())
-	}
-	return nil
 }
 
 // StopCluster stops a running local cluster with phased progress broadcasting
@@ -683,45 +361,6 @@ func (m *LocalClusterManager) StopCluster(tool, name string) error {
 	}
 }
 
-func (m *LocalClusterManager) stopKindCluster(name string) error {
-	containers, err := listKindContainers(name)
-	if err != nil {
-		return fmt.Errorf("failed to list kind cluster containers: %w", err)
-	}
-	if len(containers) == 0 {
-		return fmt.Errorf("no containers found for kind cluster %q", name)
-	}
-	for _, c := range containers {
-		cmd := execCommand("docker", "stop", c)
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to stop container %q: %s", c, stderr.String())
-		}
-	}
-	return nil
-}
-
-func (m *LocalClusterManager) stopK3dCluster(name string) error {
-	cmd := execCommand("k3d", "cluster", "stop", name)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("k3d stop failed: %s", stderr.String())
-	}
-	return nil
-}
-
-func (m *LocalClusterManager) stopMinikubeCluster(name string) error {
-	cmd := execCommand("minikube", "stop", "--profile", name)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("minikube stop failed: %s", stderr.String())
-	}
-	return nil
-}
-
 // DeleteCluster deletes a local cluster with phased progress broadcasting
 func (m *LocalClusterManager) DeleteCluster(tool, name string) error {
 	if err := validateClusterName(name); err != nil {
@@ -743,34 +382,4 @@ func (m *LocalClusterManager) DeleteCluster(tool, name string) error {
 	default:
 		return fmt.Errorf("unsupported tool: %s", tool)
 	}
-}
-
-func (m *LocalClusterManager) deleteKindCluster(name string) error {
-	cmd := execCommand("kind", "delete", "cluster", "--name", name)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("kind delete failed: %s", stderr.String())
-	}
-	return nil
-}
-
-func (m *LocalClusterManager) deleteK3dCluster(name string) error {
-	cmd := execCommand("k3d", "cluster", "delete", name)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("k3d delete failed: %s", stderr.String())
-	}
-	return nil
-}
-
-func (m *LocalClusterManager) deleteMinikubeCluster(name string) error {
-	cmd := execCommand("minikube", "delete", "--profile", name)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("minikube delete failed: %s", stderr.String())
-	}
-	return nil
 }
