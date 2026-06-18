@@ -122,7 +122,8 @@ func TestListTeams_Success(t *testing.T) {
 		{ID: uuid.New(), Name: "platform"},
 		{ID: uuid.New(), Name: "security"},
 	}
-	svc.On("List", &testAdminUserID, 50, 0).Return(expected, nil)
+	// ParsePageParams returns (0, 0) when no limit/offset query params
+	svc.On("List", &testAdminUserID, 0, 0).Return(expected, nil)
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/teams", nil)
 	resp, err := app.Test(req, teamsTestTimeout)
@@ -139,7 +140,7 @@ func TestListTeams_ServiceError(t *testing.T) {
 	svc := new(mockTeamService)
 	app := newTeamsTestApp(t, svc)
 
-	svc.On("List", &testAdminUserID, 50, 0).Return(nil, assert.AnError)
+	svc.On("List", &testAdminUserID, 0, 0).Return(nil, assert.AnError)
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/teams", nil)
 	resp, err := app.Test(req, teamsTestTimeout)
@@ -402,8 +403,8 @@ func TestListAllTeams_Success(t *testing.T) {
 		{ID: uuid.New(), Name: "team-a"},
 		{ID: uuid.New(), Name: "team-b"},
 	}
-	// ListAllTeams passes nil for userID
-	svc.On("List", (*uuid.UUID)(nil), 50, 0).Return(teams, nil)
+	// ListAllTeams passes nil for userID, ParsePageParams returns (0,0)
+	svc.On("List", (*uuid.UUID)(nil), 0, 0).Return(teams, nil)
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/admin/teams", nil)
 	resp, err := app.Test(req, teamsTestTimeout)
