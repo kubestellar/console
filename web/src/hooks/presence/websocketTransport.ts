@@ -155,6 +155,9 @@ export function resetWebSocketState(): void {
   presenceStarted = false
   presenceReconnectAttempts = 0
   presenceIsStale = false
-  presenceStaleDetection?.stop()
+  // Null out before stop so getPresenceStaleDetection() creates a fresh instance
+  // on the next startPresenceConnection() call (null check at line 33 re-enters the factory).
+  const detection = presenceStaleDetection
   presenceStaleDetection = null
+  detection?.stop()
 }
