@@ -39,6 +39,10 @@ type Client struct {
 	done           chan struct{}
 	stopOnce       sync.Once
 	stdinCloseOnce sync.Once
+	
+	// callToolOverride, when non-nil, bypasses the stdin/stdout RPC path.
+	// Used by tests to inject mock responses.
+	callToolOverride func(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error)
 }
 
 // idKey converts a JSON-RPC request/response ID of any supported shape
@@ -319,6 +323,10 @@ func (c *Client) Tools() []Tool {
 
 // CallTool invokes a tool on the MCP server
 func (c *Client) CallTool(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error) {
+	if c.callToolOverride != nil {
+		return c.callToolOverride(ctx, name, args)
+	}
+	
 	if !c.ready.Load() {
 		return nil, fmt.Errorf("client not ready")
 	}
