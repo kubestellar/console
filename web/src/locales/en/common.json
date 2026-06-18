@@ -4485,7 +4485,9 @@
     "openGitHubSettings": "GitHub OAuth Settings",
     "fullSetupGuide": "Full Setup Guide",
     "termsOfServicePrefix": "By signing in, you agree to our",
-    "termsOfServiceLink": "Terms of Service"
+    "termsOfServiceLink": "Terms of Service",
+    "legalLinkSeparator": "and",
+    "privacyPolicyLink": "Privacy Policy"
   },
   "authCallback": {
     "signingIn": "Signing you in...",

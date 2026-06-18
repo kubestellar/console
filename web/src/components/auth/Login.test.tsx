@@ -24,7 +24,14 @@ vi.mock('../../lib/api', () => ({
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
+  useTranslation: () => ({
+    t: (key: string) => ({
+      'login.continueWithGitHub': 'Continue with GitHub',
+      'login.termsOfServiceLink': 'Terms of Service',
+      'login.privacyPolicyLink': 'Privacy Policy',
+    }[key] ?? key),
+    i18n: { language: 'en' },
+  }),
 }))
 
 import { Login } from './Login'
@@ -58,14 +65,29 @@ describe('Login Component', () => {
 
   it('renders the GitHub login button', () => {
     renderLogin()
-    expect(
-      screen.getByRole('button', { name: 'login.continueWithGitHub' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue with GitHub' })).toBeInTheDocument()
   })
 
   it('renders the KubeStellar branding', () => {
     renderLogin()
     expect(screen.getByText('KubeStellar')).toBeInTheDocument()
+  })
+
+  it('renders legal links that open in a new tab', () => {
+    renderLogin()
+
+    const termsLink = screen.getByRole('link', { name: 'Terms of Service' })
+    expect(termsLink).toHaveAttribute(
+      'href',
+      'https://github.com/kubestellar/console/blob/main/LICENSE',
+    )
+    expect(termsLink).toHaveAttribute('target', '_blank')
+    expect(termsLink).toHaveAttribute('rel', 'noopener noreferrer')
+
+    const privacyLink = screen.getByRole('link', { name: 'Privacy Policy' })
+    expect(privacyLink).toHaveAttribute('href', 'https://kubestellar.io/privacy')
+    expect(privacyLink).toHaveAttribute('target', '_blank')
+    expect(privacyLink).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
   describe('OAuth setup wizard (backendUp && !oauthConfigured)', () => {

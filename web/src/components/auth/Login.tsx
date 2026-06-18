@@ -21,6 +21,8 @@ const GlobeAnimation = safeLazy(() => import('../animations/globe'), 'GlobeAnima
 
 // Apache 2.0 license is the project's effective terms; link opens in a new tab (#8376).
 const TERMS_OF_SERVICE_URL = 'https://github.com/kubestellar/console/blob/main/LICENSE'
+const PRIVACY_POLICY_URL = 'https://kubestellar.io/privacy'
+const LEGAL_LINK_CLASSES = 'text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 
 // GitHub Developer Settings URL for creating OAuth Apps.
 const GITHUB_DEVELOPER_SETTINGS_URL = 'https://github.com/settings/developers'
@@ -590,9 +592,18 @@ export function Login() {
               href={TERMS_OF_SERVICE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-foreground transition-colors"
+              className={LEGAL_LINK_CLASSES}
             >
               {t('login.termsOfServiceLink')}
+            </a>
+            {' '}{t('login.legalLinkSeparator')}{' '}
+            <a
+              href={PRIVACY_POLICY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={LEGAL_LINK_CLASSES}
+            >
+              {t('login.privacyPolicyLink')}
             </a>
           </div>
         </div>
