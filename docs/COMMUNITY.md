@@ -36,7 +36,7 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for how to submit issues, pull request
 
 ## Outreach Resources
 
-- [KEDA Outreach — CNCF Graduated (8k★)](community/outreach/keda-cncf-graduated.md) — discussion draft, channel messaging, and blog outline for KEDA community engagement.
+- [KEDA Outreach — CNCF Graduated (8k★)](./community/outreach/keda-cncf-graduated.md) — discussion draft, channel messaging, and blog outline for KEDA community engagement.
 
 ## Governance
 
