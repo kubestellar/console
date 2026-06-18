@@ -44,12 +44,10 @@ With `kubestellar-mcp` v0.8 stable, the following registry submissions are pendi
 
 ### Submission checklist for `modelcontextprotocol/servers`
 
-```
-[ ] Verify kubestellar-ops MCP tool list is documented
-[ ] Verify kubestellar-deploy MCP tool list is documented
-[ ] Open issue on modelcontextprotocol/servers proposing community listing
-[ ] Once approved, open PR with server entry (name, description, install command, GitHub URL)
-```
+- [ ] Verify kubestellar-ops MCP tool list is documented
+- [ ] Verify kubestellar-deploy MCP tool list is documented
+- [ ] Open issue on modelcontextprotocol/servers proposing community listing
+- [ ] Once approved, open PR with server entry (name, description, install command, GitHub URL)
 
 ---
 
