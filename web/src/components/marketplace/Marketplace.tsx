@@ -4,10 +4,10 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
-  Store, Search, Download, Tag, RefreshCw, Loader2, AlertCircle, Package,
+  Store, Download,
   Check, Trash2, LayoutGrid, Puzzle, Palette, ExternalLink, Heart,
   HandHelping, ChevronDown, ChevronUp, Star, GraduationCap, Sparkles,
-  List, Grid3X3, SortAsc, SortDesc, Coins } from 'lucide-react'
+  Coins } from 'lucide-react'
 import { useMarketplace, useAuthorProfile, MarketplaceItem, MarketplaceItemType, CNCFStats } from '../../hooks/useMarketplace'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
@@ -19,14 +19,12 @@ import { suggestIconSync } from '../../lib/iconSuggester'
 import { useTranslation } from 'react-i18next'
 import type { CSSProperties } from 'react'
 import { validateExternalUrl } from '../../lib/validateExternalUrl'
+import { MarketplaceControls, type SortField, type SortOrder, type ViewMode } from './MarketplaceControls'
+import { MarketplaceContent } from './MarketplaceContent'
 
 // Inline style constants
 const MARKETPLACE_DIV_STYLE_1: CSSProperties = { gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }
 
-
-type ViewMode = 'grid' | 'list'
-type SortField = 'name' | 'author' | 'type' | 'difficulty'
-type SortOrder = 'asc' | 'desc'
 
 const VIEW_MODE_KEY = 'kc-marketplace-view-mode'
 const CONTRIBUTE_URL = 'https://github.com/kubestellar/console-marketplace'
@@ -568,13 +566,6 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
   )
 }
 
-const filterBtnClass = (active: boolean) =>
-  `flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
-    active
-      ? 'bg-primary/15 text-primary font-medium'
-      : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-  }`
-
 export function Marketplace() {
   const { t } = useTranslation()
   const {
@@ -721,240 +712,69 @@ export function Marketplace() {
         <CNCFProgressBanner stats={cncfStats} />
       )}
 
-      {/* Search and filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('common.searchMarketplace')}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-md focus:outline-hidden focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
-          />
-        </div>
+      <MarketplaceControls
+        isLoading={isLoading}
+        error={error}
+        itemCount={items.length}
+        searchPlaceholder={t('common.searchMarketplace')}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        selectedType={selectedType}
+        onSelectedTypeChange={setSelectedType}
+        showHelpWanted={showHelpWanted}
+        onShowHelpWantedChange={setShowHelpWanted}
+        typeCounts={typeCounts}
+        helpWantedCount={cncfStats.helpWanted}
+        allTags={allTags}
+        selectedTag={selectedTag}
+        onSelectedTagChange={setSelectedTag}
+        cncfCategories={cncfCategories}
+        sortField={sortField}
+        sortOrder={sortOrder}
+        onToggleSort={toggleSort}
+        viewMode={viewMode}
+        onViewModeChange={toggleViewMode}
+      />
 
-        {/* Type filter */}
-        <div className="flex items-center gap-1.5">
-          <button onClick={() => { setSelectedType(null); setShowHelpWanted(false) }} className={filterBtnClass(!selectedType && !showHelpWanted)}>
-            All
-            <span className="text-2xs ml-0.5 opacity-60">{typeCounts.all}</span>
-          </button>
-          {(Object.entries(TYPE_LABELS) as [MarketplaceItemType, typeof TYPE_LABELS[MarketplaceItemType]][]).map(([type, { label, icon: Icon }]) => (
-            <button
-              key={type}
-              onClick={() => { setSelectedType(selectedType === type ? null : type); setShowHelpWanted(false) }}
-              className={filterBtnClass(selectedType === type && !showHelpWanted)}
-            >
-              <Icon className="w-3 h-3" />
-              {label}
-              <span className="text-2xs ml-0.5 opacity-60">{typeCounts[type]}</span>
-            </button>
-          ))}
-
-          {cncfStats.helpWanted > 0 && (
-            <>
-              <div className="w-px h-5 bg-border mx-1" />
-              <button
-                onClick={() => {
-                  setShowHelpWanted(!showHelpWanted)
-                  if (!showHelpWanted) {
-                    setSelectedType('card-preset')
-                  } else {
-                    setSelectedType(null)
-                  }
-                }}
-                className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
-                  showHelpWanted
-                    ? 'bg-yellow-500/15 text-yellow-400 font-medium'
-                    : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <HandHelping className="w-3 h-3" />
-                Help Wanted
-                <span className={`text-2xs ml-0.5 ${showHelpWanted ? 'text-yellow-400/70' : 'text-muted-foreground/60'}`}>
-                  ({cncfStats.helpWanted})
-                </span>
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Tag filter */}
-        {!showHelpWanted && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {allTags.map(tag => (
-              <button
-                key={tag}
-                onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                className={filterBtnClass(selectedTag === tag)}
-              >
-                <Tag className="w-3 h-3" />
-                {tag}
-              </button>
+      <MarketplaceContent
+        isLoading={isLoading}
+        error={error}
+        items={items}
+        searchQuery={searchQuery}
+        selectedTag={selectedTag}
+        selectedType={selectedType}
+        refresh={refresh}
+        showHelpWanted={showHelpWanted}
+        groupedItems={groupedItems}
+        viewMode={viewMode}
+        sortedItems={sortedItems}
+        renderList={(contentItems) => (
+          <div className="space-y-1.5">
+            {contentItems.map(item => (
+              <MarketplaceRow
+                key={item.id}
+                item={item}
+                onInstall={handleInstall}
+                onRemove={handleRemove}
+                isInstalled={isInstalled(item.id)}
+              />
             ))}
           </div>
         )}
-
-        {/* Category filter (shown when help-wanted is active) */}
-        {showHelpWanted && cncfCategories.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {cncfCategories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedTag(selectedTag === cat ? null : cat)}
-                className={`flex items-center gap-1 px-2 py-1 text-2xs rounded transition-colors ${
-                  selectedTag === cat
-                    ? 'bg-yellow-500/15 text-yellow-400 font-medium'
-                    : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {cat}
-              </button>
+        renderGrid={(contentItems) => (
+          <div className="grid gap-4" style={MARKETPLACE_DIV_STYLE_1}>
+            {contentItems.map(item => (
+              <MarketplaceCard
+                key={item.id}
+                item={item}
+                onInstall={handleInstall}
+                onRemove={handleRemove}
+                isInstalled={isInstalled(item.id)}
+              />
             ))}
           </div>
         )}
-      </div>
-
-      {/* View controls */}
-      {!isLoading && !error && items.length > 0 && (
-        <div className="flex items-center justify-between">
-          {/* Sort */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-2xs text-muted-foreground mr-1">Sort:</span>
-            {(['name', 'type', 'author', ...(showHelpWanted ? ['difficulty' as SortField] : [])] as SortField[]).map(field => (
-              <button
-                key={field}
-                onClick={() => toggleSort(field)}
-                className={`flex items-center gap-0.5 px-2 py-1 text-2xs rounded transition-colors ${
-                  sortField === field
-                    ? 'bg-primary/15 text-primary font-medium'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {field.charAt(0).toUpperCase() + field.slice(1)}
-                {sortField === field && (
-                  sortOrder === 'asc' ? <SortAsc className="w-2.5 h-2.5" /> : <SortDesc className="w-2.5 h-2.5" />
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* View mode */}
-          <div className="flex items-center gap-0.5 bg-muted rounded-md p-0.5">
-            <button
-              onClick={() => toggleViewMode('grid')}
-              className={`p-1.5 rounded transition-colors ${viewMode === 'grid' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
-              title="Grid view"
-            >
-              <Grid3X3 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => toggleViewMode('list')}
-              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
-              title="List view"
-            >
-              <List className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Content */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : error ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <AlertCircle className="w-10 h-10 text-muted-foreground/50 mb-3" />
-          <p className="text-sm text-muted-foreground mb-1">Failed to load marketplace</p>
-          <p className="text-xs text-muted-foreground/70 mb-4">{error}</p>
-          <button
-            onClick={refresh}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Try again
-          </button>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Package className="w-10 h-10 text-muted-foreground/50 mb-3" />
-          <p className="text-sm text-muted-foreground mb-1">
-            {searchQuery || selectedTag || selectedType ? 'No matching items' : 'No community content yet'}
-          </p>
-          <p className="text-xs text-muted-foreground/70">
-            {searchQuery || selectedTag || selectedType
-              ? 'Try adjusting your search or filters'
-              : 'Community dashboards and presets will appear here'}
-          </p>
-        </div>
-      ) : showHelpWanted && groupedItems ? (
-        // Grouped view for help-wanted items
-        <div className="space-y-6">
-          {groupedItems
-            .filter(([cat]) => !selectedTag || cat === selectedTag)
-            .map(([category, categoryItems]) => (
-            <div key={category}>
-              <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{category}</h3>
-                <span className="text-2xs text-muted-foreground/60">{categoryItems.length} {categoryItems.length === 1 ? 'project' : 'projects'}</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-              {viewMode === 'list' ? (
-                <div className="space-y-1.5">
-                  {categoryItems.map(item => (
-                    <MarketplaceRow
-                      key={item.id}
-                      item={item}
-                      onInstall={handleInstall}
-                      onRemove={handleRemove}
-                      isInstalled={isInstalled(item.id)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid gap-4" style={MARKETPLACE_DIV_STYLE_1}>
-                  {categoryItems.map(item => (
-                    <MarketplaceCard
-                      key={item.id}
-                      item={item}
-                      onInstall={handleInstall}
-                      onRemove={handleRemove}
-                      isInstalled={isInstalled(item.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      ) : viewMode === 'list' ? (
-        <div className="space-y-1.5">
-          {sortedItems.map(item => (
-            <MarketplaceRow
-              key={item.id}
-              item={item}
-              onInstall={handleInstall}
-              onRemove={handleRemove}
-              isInstalled={isInstalled(item.id)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="grid gap-4" style={MARKETPLACE_DIV_STYLE_1}>
-          {sortedItems.map(item => (
-            <MarketplaceCard
-              key={item.id}
-              item={item}
-              onInstall={handleInstall}
-              onRemove={handleRemove}
-              isInstalled={isInstalled(item.id)}
-            />
-          ))}
-        </div>
-      )}
+      />
 
       {/* Contribute Footer */}
       <div className="flex items-center justify-between bg-card border border-border rounded-lg px-5 py-4">
