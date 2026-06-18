@@ -4,6 +4,8 @@
 
 > **Use a coding agent.** This repo is primarily developed with [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (Opus 4.5/4.6). It knows all codebase patterns (isDemoData, useCardLoadingState, locale strings, DCO). Manual PRs that miss required patterns will be sent back.
 
+> **PR hygiene:** CI rejects commits that are missing `Signed-off-by:` trailers. Draft/WIP PRs older than 14 days receive a `stale-wip` warning label and are auto-closed after 21 days.
+
 ### 📌 Fixes
 
 Fixes #<issue-number> (Use "Fixes", "Closes", or "Resolves" for automatic closing)
@@ -39,6 +41,7 @@ Please ensure the following before submitting your PR:
 - [ ] I have written unit tests for the changes (if applicable)
 - [ ] I have tested the changes locally and ensured they work as expected
 - [ ] All commits are signed with DCO (`git commit -s`)
+- [ ] Draft/WIP PRs are updated promptly or closed before the 21-day stale window
 
 ---
 
