@@ -54,11 +54,23 @@ This document outlines the planned direction for KubeStellar Console. It is a li
 
 This milestone crystallizes the near-term roadmap items into a cohesive theme: establishing KubeStellar Console as the canonical AI/ML workload visibility and operations layer for Kubernetes.
 
-### Core Scope
+**Launch date:** 2026-07-01 (Q3 2026 start)
+**Status as of 2026-06-18:** 13 days to launch, **0 open implementation PRs** for the three core features (`llm-d`, `Drasi`, `kagent/kagenti`)
+
+### Tiered Core Scope
+
+#### Tier 1 — Must ship in Q3 2026
 
 - **llm-d stack monitoring** — First-class support for llm-d inference serving: EPP routing, model endpoint health, autoscaler status, disaggregated serving topology
 - **Drasi reactive pipelines** — Real-time change-feed dashboard for Drasi continuous queries, sources, and reactions across deployment modes (drasi-server, drasi-platform, CRD-based)
+
+**Owner tracking:** Designate a feature captain for each Tier 1 workstream before 2026-07-01 and track captain assignment in the linked implementation issues.
+
+#### Tier 2 — Can slip to Q4 2026
+
 - **kagent/kagenti integration** — Full agent lifecycle management through MCP-compatible interfaces
+
+**Owner tracking:** Designate a Tier 2 captain so scope can continue in parallel without blocking Tier 1 delivery.
 
 ### Quality & Testing
 
@@ -77,6 +89,12 @@ This milestone crystallizes the near-term roadmap items into a cohesive theme: e
 - **Adopters program** — Populate ADOPTERS.md with confirmed production users; define maturity tiers (install-mission vs. production deployment)
 - **Contributor onboarding** — Establish PR triage SLA, define `ai-needs-human` escalation path, and publish contributor guide update; see `docs/plans/PR-TRIAGE-SLA.md`
 - **Adoption metrics** — Replace all `TBD` fields in `docs/adoption-metrics.md` with real measurements before any CNCF application
+
+### Delivery Cadence
+
+- **Weekly v0.4 feature cadence** — Review Tier 1/Tier 2 implementation PR count, captain assignment, and blocker status every week until the first release candidate
+- **Separate tracking from maintenance stream** — Track v0.4 feature PRs independently from scanner, coverage, and refactor work so maintenance throughput does not mask zero feature velocity
+- **Maintenance backlog review** — 30+ scanner/refactor PRs are now competing for reviewer attention; evaluate consolidation or batching opportunities each week to reduce crowding
 
 ### Tech Debt Unblocking Strategy
 
@@ -157,7 +175,7 @@ We welcome community input on priorities:
 ## Strategic Health — June 2026
 
 > Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
-> **Last updated:** 2026-06-16 (pass 13)
+> **Last updated:** 2026-06-18 (pass 14)
 
 ### Community Momentum — Positive Signals 🌱
 
@@ -179,10 +197,11 @@ This is the first time two XXL+ external PRs have landed in the same 24-hour win
 |------|----------|-------|--------|
 | GitHub branch protection still absent — policy files cannot block merges | 🔴 Critical | #18355 | Requires @clubanderson to configure Settings → Branch protection |
 | CNCF security audit Q2 action overdue — Q3 slot at risk | 🔴 Critical | #18207 | Requires @clubanderson action |
+| v0.4 feature velocity: July 1 launch is 13 days away and llm-d / Drasi / kagent still have zero implementation PRs | 🔴 Critical | #18031–#18033 | Designate captains and open first Tier 1 PR by July 1 |
 | Coverage suite 39% run failure rate — v0.3 "91%" claim unsupportable | 🟠 High | #18533 | New — triage required |
+| Scanner/refactor backlog crowding feature delivery — 30+ maintenance PRs compete with v0.4 review bandwidth | 🟠 High | — | Weekly consolidation review needed |
 | Stellar handler layer 1,780 lines zero test coverage — explicit Stellar GA gate | 🟠 High | #18535 | PR #18519 open (partial fix) |
 | @AdeshDeshmukh PR #18373 prow-gated — third community contributor waiting | 🟠 High | #18534 | Needs `/lgtm` |
-| v0.4 Q3 2026: no llm-d / Drasi / kagent implementation PRs yet — 15 days to Q3 | 🟠 High | #18031–#18033 | Needs feature captain |
 | Organic contributor drought — automation dominates merged PR ratio | 🟡 Medium | — | Improving: 2 community merges today |
 | ADOPTERS.md self-referential only — KubeStellar self-listed, no external adopters | 🟡 Medium | — | Structure in place; recruiting needed |
 | PR triage SLA absent — `ai-needs-human` PRs lack escalation path | 🟡 Medium | #18037 | Ongoing |
@@ -199,12 +218,26 @@ This is the first time two XXL+ external PRs have landed in the same 24-hour win
 
 Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), ordered by urgency:
 
-1. **Enable GitHub branch protection on `main`** (#18355) — [Configure here](https://github.com/kubestellar/console/settings/branch_protection_rules). Require status checks: `build`, `lint`, `go-test`. Policy files in `.github/` are advisory and cannot block merges.
-2. **Merge @AdeshDeshmukh PR #18373** (#18534) — `/lgtm` the final community PR from the June 13 wave. This completes a 3-contributor set and signals the community is welcome.
-3. **File CNCF security audit** (#18207) — Q2 deadline has passed; file at `github.com/cncf/toc/issues` now to secure Q3 slot.
-4. **Triage coverage suite 39% failure rate** (#18533) — The v0.3 "91% coverage" milestone claim requires a stable test infrastructure to be credible.
-5. **Enforce Stellar handler coverage gate** (#18535) — Add `pkg/api/handlers/stellar/` coverage floor to CI before Stellar GA is tagged.
-6. **v0.4 feature kickoff** — Q3 starts July 1 (~15 days). Designate a feature captain; llm-d monitoring (#18031) is Tier 1 per the scoping doc.
+1. **Designate v0.4 feature captains** (#18031–#18033) — Assign named captains for Tier 1 (`llm-d`, `Drasi`) and Tier 2 (`kagent/kagenti`) before 2026-07-01.
+2. **Open the first Tier 1 implementation PR by July 1** (#18031 or #18032) — Zero feature PRs with 13 days remaining is now the primary schedule blocker.
+3. **Start a weekly v0.4 feature review cadence** — Review feature PR count, captain status, and blockers separately from maintenance PRs so scanner/refactor throughput does not hide delivery slippage.
+4. **Enable GitHub branch protection on `main`** (#18355) — [Configure here](https://github.com/kubestellar/console/settings/branch_protection_rules). Require status checks: `build`, `lint`, `go-test`. Policy files in `.github/` are advisory and cannot block merges.
+5. **Merge @AdeshDeshmukh PR #18373** (#18534) — `/lgtm` the final community PR from the June 13 wave. This completes a 3-contributor set and signals the community is welcome.
+6. **File CNCF security audit** (#18207) — Q2 deadline has passed; file at `github.com/cncf/toc/issues` now to secure Q3 slot.
+7. **Triage coverage suite 39% failure rate** (#18533) — The v0.3 "91% coverage" milestone claim requires a stable test infrastructure to be credible.
+8. **Enforce Stellar handler coverage gate** (#18535) — Add `pkg/api/handlers/stellar/` coverage floor to CI before Stellar GA is tagged.
+
+### v0.4 Weekly Cadence
+
+- Publish a weekly snapshot of open Tier 1 and Tier 2 feature PRs, with issue links and named captains
+- Review maintenance PR volume separately from v0.4 feature delivery so both streams stay visible
+- Escalate if any weekly pass still shows zero Tier 1 implementation PRs after 2026-07-01
+
+### Maintenance Backlog Review
+
+- Current maintenance stream is dominated by 30+ scanner/refactor PRs and follow-up fixes
+- Review whether adjacent scanner/refactor work can be consolidated into fewer PRs to preserve reviewer bandwidth for v0.4 implementation
+- Keep coverage, scanner, and refactor progress moving, but do not count those PRs as evidence of v0.4 feature execution
 
 ### Adoption Readiness
 
@@ -215,7 +248,7 @@ Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), ordered 
 | External adopters in ADOPTERS.md | ≥3 confirmed orgs | ❌ 0 external (KubeStellar self-listed only) |
 | Human contributor ratio (recent 30d) | ≥10% of merged PRs | ⚠️ Improving — 2 community merges today (historic high) |
 | Community PR merge time | ≤7 days first-time contributors | ⚠️ #18373 open; #18264 took ~3 days with strong community pressure |
-| v0.4 feature work started | ≥1 feature PR for llm-d/Drasi/kagent | ❌ Not yet — Q3 starts July 1 |
+| v0.4 feature work started | ≥1 Tier 1 feature PR by 2026-07-01 | ❌ 0 PRs open; 13 days remain |
 | Stellar handler coverage | ≥80% on `pkg/api/handlers/stellar/` | ❌ 0% (1,780 lines — #18491, fix in flight #18519) |
 | CNCF security audit | Filed | ❌ Q2 deadline passed; not filed (#18207) |
 | CNCF incubation application | Filed | ⏸ On hold (#4072) |
