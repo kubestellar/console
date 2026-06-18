@@ -20,9 +20,9 @@ import (
 	"golang.org/x/sync/singleflight"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kubestellar/console/pkg/api/handlers/mcp"
+	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/k8s"
-	mcppkg "github.com/kubestellar/console/pkg/mcp"
+	"github.com/kubestellar/console/pkg/mcp"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -57,107 +57,6 @@ type GitOpsDrift struct {
 	GitVersion string `json:"gitVersion"` // Git commit/tag
 	Details    string `json:"details,omitempty"`
 	Severity   string `json:"severity"` // low, medium, high
-}
-
-// driftCacheTTL bounds how long a DetectDrift result stays in the shared
-// cache feeding ListDrifts. Long enough to be useful across a dashboard
-// render cycle, short enough that manual refreshes (#5952) actually see
-// fresh data rather than a stale repeat.
-const driftCacheTTL = 30 * time.Second
-
-// driftCacheEntry is a single cached drift-detection result keyed by
-// repo/path/cluster/namespace.
-type driftCacheEntry struct {
-	drifts   []GitOpsDrift
-	detected time.Time
-}
-
-// GitOpsHandlers handles GitOps-related API endpoints
-type GitOpsHandlers struct {
-	bridge    *mcppkg.Bridge
-	k8sClient *k8s.MultiClusterClient
-	// userStore is consulted by the shared requireEditorOrAdmin /
-	// requireViewerOrAbove helpers to enforce RBAC on GitOps endpoints
-	// (#6022). May be nil in dev/demo mode or in unit tests that don't
-	// exercise RBAC; in that case the check is a no-op to preserve existing
-	// test ergonomics.
-	userStore store.Store
-
-	// driftCache memoises recent drift results so ListDrifts can return
-	// something meaningful (#5950). Populated by DetectDrift.
-	driftCacheMu sync.RWMutex
-	driftCache   map[string]driftCacheEntry
-}
-
-// NewGitOpsHandlers creates a new GitOps handlers instance.
-//
-// userStore is used to enforce editor-or-admin on mutating GitOps endpoints
-// (sync, helm mutations, argocd sync) and viewer-or-above on drift detection
-// (#6022). Pass nil to skip role checks — this is intended for dev/demo mode
-// and unit tests that are not exercising RBAC.
-func NewGitOpsHandlers(bridge *mcppkg.Bridge, k8sClient *k8s.MultiClusterClient, userStore store.Store) *GitOpsHandlers {
-	return &GitOpsHandlers{
-		bridge:     bridge,
-		k8sClient:  k8sClient,
-		userStore:  userStore,
-		driftCache: make(map[string]driftCacheEntry),
-	}
-}
-
-// RBAC for GitOps endpoints is enforced via the shared helpers in
-// auth_helpers.go (requireEditorOrAdmin / requireViewerOrAbove). The earlier
-// admin-only helper was removed in #6022 when the policy was loosened to
-// editor-or-admin for mutations and viewer-or-above for drift detection.
-
-// rememberDrift stores a drift-detection result in the in-memory cache keyed
-// by repo URL / path / cluster / namespace. Safe for concurrent use.
-func (h *GitOpsHandlers) rememberDrift(req DetectDriftRequest, result *DetectDriftResponse) {
-	if result == nil {
-		return
-	}
-	key := fmt.Sprintf("%s|%s|%s|%s", req.RepoURL, req.Path, req.Cluster, req.Namespace)
-	drifts := make([]GitOpsDrift, 0, len(result.Resources))
-	if result.Drifted {
-		for _, r := range result.Resources {
-			drifts = append(drifts, GitOpsDrift{
-				Resource:  r.Name,
-				Namespace: r.Namespace,
-				Cluster:   req.Cluster,
-				Kind:      r.Kind,
-				DriftType: "modified",
-				Details:   fmt.Sprintf("%s: %s", r.Field, r.DiffOutput),
-				Severity:  "medium",
-			})
-		}
-	}
-	h.driftCacheMu.Lock()
-	defer h.driftCacheMu.Unlock()
-	h.driftCache[key] = driftCacheEntry{drifts: drifts, detected: time.Now()}
-}
-
-// snapshotDrifts returns all cached drifts matching the optional
-// cluster/namespace filter, dropping entries older than driftCacheTTL.
-func (h *GitOpsHandlers) snapshotDrifts(cluster, namespace string) []GitOpsDrift {
-	now := time.Now()
-	h.driftCacheMu.Lock()
-	defer h.driftCacheMu.Unlock()
-	out := make([]GitOpsDrift, 0)
-	for k, entry := range h.driftCache {
-		if now.Sub(entry.detected) > driftCacheTTL {
-			delete(h.driftCache, k)
-			continue
-		}
-		for _, d := range entry.drifts {
-			if cluster != "" && d.Cluster != cluster {
-				continue
-			}
-			if namespace != "" && d.Namespace != namespace {
-				continue
-			}
-			out = append(out, d)
-		}
-	}
-	return out
 }
 
 // DriftedResource represents a resource that has drifted from git
@@ -254,22 +153,6 @@ type Operator struct {
 	Channel     string `json:"channel,omitempty"`
 	Source      string `json:"source,omitempty"`
 	Cluster     string `json:"cluster,omitempty"`
-}
-
-// ListDrifts returns a list of detected drifts (for GET endpoint).
-//
-// #5950 — Previously this always returned an empty slice, so the UI drift
-// card never showed anything. We now expose drift results cached from recent
-// DetectDrift calls (see rememberDrift) filtered by the optional query
-// params. Entries older than driftCacheTTL are evicted on read.
-func (h *GitOpsHandlers) ListDrifts(c *fiber.Ctx) error {
-	cluster := c.Query("cluster")
-	namespace := c.Query("namespace")
-
-	drifts := h.snapshotDrifts(cluster, namespace)
-	return c.JSON(fiber.Map{
-		"drifts": drifts,
-	})
 }
 
 // ListHelmReleases returns all Helm releases across all namespaces
@@ -612,7 +495,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 			})
 		}
 
-		mcp.WaitWithDeadline(&wg, clusterCancel, mcp.MaxResponseDeadline)
+		handlers.WaitWithDeadline(&wg, clusterCancel, handlers.MaxResponseDeadline)
 		return c.JSON(fiber.Map{"kustomizations": allKustomizations})
 	}
 
