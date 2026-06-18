@@ -22,6 +22,8 @@ type Bridge struct {
 	config       BridgeConfig
 }
 
+// bridgeClient abstracts the subset of Client behavior the bridge needs so
+// tests can inject lightweight mocks without routing calls through Client.
 type bridgeClient interface {
 	CallTool(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error)
 	Tools() []Tool

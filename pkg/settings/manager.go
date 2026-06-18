@@ -651,6 +651,15 @@ func normalizeAllSettings(all *AllSettings) *AllSettings {
 	}
 
 	normalized := *all
+	if all.CustomThemes != nil {
+		normalized.CustomThemes = append(json.RawMessage(nil), all.CustomThemes...)
+	}
+	if all.APIKeys != nil {
+		normalized.APIKeys = make(map[string]APIKeyEntry, len(all.APIKeys))
+		for provider, entry := range all.APIKeys {
+			normalized.APIKeys[provider] = entry
+		}
+	}
 	if normalized.AIMode == "" {
 		normalized.AIMode = defaults.AIMode
 	}
@@ -694,7 +703,7 @@ func normalizeAllSettings(all *AllSettings) *AllSettings {
 		normalized.TokenUsage.StopThreshold = defaults.TokenUsage.StopThreshold
 	}
 	if normalized.APIKeys == nil {
-		normalized.APIKeys = defaults.APIKeys
+		normalized.APIKeys = make(map[string]APIKeyEntry)
 	}
 
 	return &normalized
