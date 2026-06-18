@@ -25,6 +25,7 @@ interface SidebarNavProps {
   canDrag: boolean
   showAddMore?: boolean
   onAddMore?: () => void
+  onEditingChange?: (itemId: string | null) => void
   primaryNav: SidebarNavItem[]
   secondaryNav: SidebarNavItem[]
   removeItem: (id: string) => void
@@ -38,6 +39,7 @@ export function SidebarNav({
   canDrag,
   showAddMore,
   onAddMore,
+  onEditingChange,
   primaryNav,
   secondaryNav,
   removeItem,
@@ -53,7 +55,7 @@ export function SidebarNav({
     setEditingName,
     handleDoubleClick,
     handleSaveRename,
-  } = useSidebarRename({ onUpdateItem: updateItem })
+  } = useSidebarRename({ onUpdateItem: updateItem, onEditingChange })
   const {
     draggedItem,
     dragOverItem,
