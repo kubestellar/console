@@ -77,6 +77,7 @@ This milestone crystallizes the near-term roadmap items into a cohesive theme: e
 - **Adopters program** — Populate ADOPTERS.md with confirmed production users; define maturity tiers (install-mission vs. production deployment)
 - **Contributor onboarding** — Establish PR triage SLA, define `ai-needs-human` escalation path, and publish contributor guide update; see `docs/plans/PR-TRIAGE-SLA.md`
 - **Adoption metrics** — Replace all `TBD` fields in `docs/adoption-metrics.md` with real measurements before any CNCF application
+- **Hacktoberfest 2026 readiness** — Tag ≥20 issues with `good-first-issue` before September 1, 2026; ensure repo has `hacktoberfest` topic; update card contribution guide
 
 ### Tech Debt Unblocking Strategy
 
@@ -157,21 +158,21 @@ We welcome community input on priorities:
 ## Strategic Health — June 2026
 
 > Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
-> **Last updated:** 2026-06-16 (pass 13)
+> **Last updated:** 2026-06-18 (pass 14)
 
 ### Community Momentum — Positive Signals 🌱
 
-Three external contributors opened substantial PRs on 2026-06-13. **Two merged on 2026-06-16:**
+Three external contributors opened substantial PRs on 2026-06-13. **All three merged:**
 
 | PR | Contributor | Type | Result |
 |----|-------------|------|--------|
 | #18264 | @bmvinay7 | feat: semantic search over 1,600-mission KB (XXL) | ✅ **Merged 2026-06-16** |
 | #18377 | @ashnaaseth2325-oss | feat: Events DrillDown search/filter/pagination (L) | ✅ **Merged 2026-06-16** |
-| #18373 | @AdeshDeshmukh | test: missions pure functions unit tests (M) | ⏳ Open — awaiting `/lgtm` |
+| #18373 | @AdeshDeshmukh | test: missions pure functions unit tests (M) | ✅ **Merged 2026-06-17** |
 
-This is the first time two XXL+ external PRs have landed in the same 24-hour window. @bmvinay7's semantic search contribution (`pkg/kb/rag/`) is the most architecturally significant community contribution to date — a production-quality in-process retrieval engine.
+This is the first time three external contributors have all landed PRs in the same 5-day window. @bmvinay7's semantic search contribution (`pkg/kb/rag/`) is the most architecturally significant community contribution to date — a production-quality in-process retrieval engine that reduces LLM token usage and enables air-gapped mission retrieval.
 
-**Action required:** Review and `/lgtm` PR #18373 (@AdeshDeshmukh) to complete the three-contributor set and reinforce the community flywheel. See [#18534](https://github.com/kubestellar/console/issues/18534).
+@AdeshDeshmukh has now merged 4+ PRs total (K8s name validation, SSRF unification, missions unit tests, and prior fixes). @ashnaaseth2325-oss has 3+ PRs merged. These contributors should be invited to add themselves to ADOPTERS.md as developer contributors.
 
 ### Current Risk Register
 
@@ -179,16 +180,18 @@ This is the first time two XXL+ external PRs have landed in the same 24-hour win
 |------|----------|-------|--------|
 | GitHub branch protection still absent — policy files cannot block merges | 🔴 Critical | #18355 | Requires @clubanderson to configure Settings → Branch protection |
 | CNCF security audit Q2 action overdue — Q3 slot at risk | 🔴 Critical | #18207 | Requires @clubanderson action |
-| Coverage suite 39% run failure rate — v0.3 "91%" claim unsupportable | 🟠 High | #18533 | New — triage required |
-| Stellar handler layer 1,780 lines zero test coverage — explicit Stellar GA gate | 🟠 High | #18535 | PR #18519 open (partial fix) |
-| @AdeshDeshmukh PR #18373 prow-gated — third community contributor waiting | 🟠 High | #18534 | Needs `/lgtm` |
-| v0.4 Q3 2026: no llm-d / Drasi / kagent implementation PRs yet — 15 days to Q3 | 🟠 High | #18031–#18033 | Needs feature captain |
-| Organic contributor drought — automation dominates merged PR ratio | 🟡 Medium | — | Improving: 2 community merges today |
-| ADOPTERS.md self-referential only — KubeStellar self-listed, no external adopters | 🟡 Medium | — | Structure in place; recruiting needed |
+| Coverage suite 39% run failure rate — v0.3 "91%" claim unsupportable | 🟠 High | #18533 | Open — triage required |
+| Stellar handler layer ~1,780 lines zero test coverage — explicit Stellar GA gate | 🟠 High | #18535 | Fix in flight |
+| v0.4 Q3 2026: no llm-d / Drasi / kagent implementation PRs — Q3 starts July 1 | 🟠 High | — | Needs feature captain |
+| `good-first-issue` label absent — 0 issues tagged; Hacktoberfest 2026 in ~4 months | 🟠 High | #18785, #18676 | Prep issues filed; no labels applied yet |
+| Organic contributor drought — automation still dominates merged PR ratio | 🟡 Medium | — | Improved: 3 community merges this week (historic high) |
+| ADOPTERS.md self-referential only — 3 active contributors not yet listed | 🟡 Medium | #18819 | Invite @bmvinay7, @AdeshDeshmukh, @ashnaaseth2325-oss |
 | PR triage SLA absent — `ai-needs-human` PRs lack escalation path | 🟡 Medium | #18037 | Ongoing |
 | Stellar subsystem — GA criteria partially defined; handler coverage gate now explicit | 🟡 Medium | #17757, #18535 | In progress |
 | CNCF incubation tracker on `hold` | 🟡 Medium | #4072 | Blocked pending audit + adopters |
-| ~~Three community PRs prow-gated on same day~~ | ~~🔴 Critical~~ | ~~#18385~~ | ✅ Two of three merged 2026-06-16 |
+| ~~@AdeshDeshmukh PR #18373 prow-gated~~ | ~~🟠 High~~ | ~~#18534~~ | ✅ Merged 2026-06-17 |
+| ~~SSRF: pkg/ssrf.IsBlockedIP missing IsMulticast; card_proxy duplicate~~ | ~~🟡 Medium~~ | ~~#18372~~ | ✅ Fixed 2026-06-16 |
+| ~~Three community PRs prow-gated on same day~~ | ~~🔴 Critical~~ | ~~#18385~~ | ✅ All three merged |
 | ~~Auth smoke test regression~~ | ~~🔴 Critical~~ | ~~#18354~~ | ✅ Fixed |
 | ~~CSP `unsafe-eval` default~~ | ~~🟠 High~~ | ~~#18326~~ | ✅ Fixed |
 | ~~Coverage suite: 67 failures~~ | ~~🟠 High~~ | ~~#18226~~ | ✅ Fixed (new issue: 39% run failure rate) |
@@ -200,11 +203,11 @@ This is the first time two XXL+ external PRs have landed in the same 24-hour win
 Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), ordered by urgency:
 
 1. **Enable GitHub branch protection on `main`** (#18355) — [Configure here](https://github.com/kubestellar/console/settings/branch_protection_rules). Require status checks: `build`, `lint`, `go-test`. Policy files in `.github/` are advisory and cannot block merges.
-2. **Merge @AdeshDeshmukh PR #18373** (#18534) — `/lgtm` the final community PR from the June 13 wave. This completes a 3-contributor set and signals the community is welcome.
-3. **File CNCF security audit** (#18207) — Q2 deadline has passed; file at `github.com/cncf/toc/issues` now to secure Q3 slot.
-4. **Triage coverage suite 39% failure rate** (#18533) — The v0.3 "91% coverage" milestone claim requires a stable test infrastructure to be credible.
-5. **Enforce Stellar handler coverage gate** (#18535) — Add `pkg/api/handlers/stellar/` coverage floor to CI before Stellar GA is tagged.
-6. **v0.4 feature kickoff** — Q3 starts July 1 (~15 days). Designate a feature captain; llm-d monitoring (#18031) is Tier 1 per the scoping doc.
+2. **File CNCF security audit** (#18207) — Q2 deadline has passed; file at `github.com/cncf/toc/issues` now to secure Q3 slot.
+3. **Triage coverage suite 39% failure rate** (#18533) — The v0.3 "91% coverage" milestone claim requires stable test infrastructure to be credible.
+4. **Enforce Stellar handler coverage gate** (#18535) — Add `pkg/api/handlers/stellar/` coverage floor to CI before Stellar GA is tagged.
+5. **v0.4 feature kickoff** — Q3 starts July 1 (~13 days). Designate a feature captain; llm-d monitoring is Tier 1 per the scoping doc.
+6. **Tag `good-first-issue` on ≥20 issues** (#18785) — Hacktoberfest 2026 is October. First-time contributor discovery depends on this label. Zero issues tagged today.
 
 ### Adoption Readiness
 
@@ -213,9 +216,10 @@ Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), ordered 
 | Main branch build stability | Green ≥14 consecutive days | ⚠️ Build fragile — branch protection not enforced (#18355) |
 | Coverage suite pass rate | >99% of runs | 🔴 61% (39/100 runs failing — #18533) |
 | External adopters in ADOPTERS.md | ≥3 confirmed orgs | ❌ 0 external (KubeStellar self-listed only) |
-| Human contributor ratio (recent 30d) | ≥10% of merged PRs | ⚠️ Improving — 2 community merges today (historic high) |
-| Community PR merge time | ≤7 days first-time contributors | ⚠️ #18373 open; #18264 took ~3 days with strong community pressure |
+| Human contributor ratio (recent 30d) | ≥10% of merged PRs | ⚠️ Improving — 3 community PRs merged in 5-day window (June 13–17) |
+| Community PR merge time | ≤7 days first-time contributors | ✅ All three June 13 wave PRs merged within 4 days |
 | v0.4 feature work started | ≥1 feature PR for llm-d/Drasi/kagent | ❌ Not yet — Q3 starts July 1 |
-| Stellar handler coverage | ≥80% on `pkg/api/handlers/stellar/` | ❌ 0% (1,780 lines — #18491, fix in flight #18519) |
+| `good-first-issue` label coverage | ≥20 issues tagged | ❌ 0 issues tagged |
+| Stellar handler coverage | ≥80% on `pkg/api/handlers/stellar/` | ❌ 0% (1,780 lines — #18535) |
 | CNCF security audit | Filed | ❌ Q2 deadline passed; not filed (#18207) |
 | CNCF incubation application | Filed | ⏸ On hold (#4072) |
