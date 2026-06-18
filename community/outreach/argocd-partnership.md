@@ -12,11 +12,11 @@ KubeStellar Console ships **4 first-class ArgoCD monitoring cards** plus ArgoCD 
 ## What We Have Built
 
 | Feature | Description | Availability |
-|---------|-------------|--------------||
-| ArgoCD Application monitoring card | Real-time sync status, health, and alerts across clusters | v0.2+ |
-| ArgoCD ApplicationSet card | ApplicationSet resource view with generator status | v0.3+ |
-| ArgoCD multi-cluster overview | Cross-cluster ArgoCD deployment health | v0.3+ |
-| ArgoCD security hardening | Fixed ApplicationSet security issue (responsible disclosure) | v0.3+ |
+|---------|-------------|--------------|
+| ArgoCD Applications card | Real-time Application sync status and health across clusters | v0.2+ |
+| ArgoCD ApplicationSets card | ApplicationSet resource view with generator status | v0.3+ |
+| ArgoCD Health card | ArgoCD controller health and component status per cluster | v0.3+ |
+| ArgoCD Sync Status card | Aggregated sync-status breakdown (donut chart + counts) | v0.3+ |
 | Guided ArgoCD install mission | AI-assisted ArgoCD install via console mission catalog | v0.3+ (console-marketplace) |
 
 ## Why Partner with Argo Project

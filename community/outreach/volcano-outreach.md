@@ -70,7 +70,7 @@ KubeStellar Console GPU monitoring cards (including Volcano integration) shipped
 
 2. **Integration Guide**
    - Platform: docs.kubestellar.io
-   - Content: Dedicated Volcano integration page (see `community/outreach/volcano-integration.md`)
+   - Content: Dedicated Volcano integration page (TODO: create `docs/integrations/volcano.md`)
    - Owner: Docs team
 
 3. **AI/ML Workload Use Case**
@@ -155,7 +155,7 @@ KubeStellar Console GPU monitoring cards (including Volcano integration) shipped
 
 1. **This week**: Post introduction in CNCF Slack `#volcano` with screenshots
 2. **Week 2**: Open GitHub issue in `volcano-sh/volcano`
-3. **Week 3**: Draft blog post (see `volcano-blog-draft.md`)
+3. **Week 3**: Draft blog post (TODO: create `volcano-blog-draft.md`)
 4. **Week 4**: Submit KubeCon NA 2026 CFP for co-talk
 
 ## Appendix: Sample CNCF Slack Post

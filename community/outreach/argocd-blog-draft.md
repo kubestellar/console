@@ -27,18 +27,17 @@ Monitoring for ApplicationSet resources — the recommended way to manage Applic
 - Generator status (Git, Cluster, List, Matrix)
 - Template health and Application count per set
 
-### 3. ArgoCD Multi-Cluster Overview
-Cross-cluster ArgoCD deployment status in one view:
+### 3. ArgoCD Health Card
+Cross-cluster ArgoCD deployment health in one view:
 - Which clusters have ArgoCD installed
-- ArgoCD controller health per cluster
+- ArgoCD controller health and component status per cluster
 - Application distribution across clusters
-- Notification controller and Dex status
 
-### 4. ArgoCD Sync Status Dashboard
-Dedicated sync status monitoring with time-series visualization:
-- Sync success/failure trends
-- Out-of-sync Application alerts
-- Automated remediation suggestions (console AI/ML agent integration)
+### 4. ArgoCD Sync Status Card
+Aggregated sync-status breakdown with donut chart and counts:
+- Sync status distribution (Synced / OutOfSync / Unknown)
+- Per-Application sync details
+- Quick identification of out-of-sync Applications
 
 ## How It Works
 
@@ -50,7 +49,7 @@ For demo mode (no cluster connection), the console uses synthetic ArgoCD data to
 
 ## Security Hardening
 
-As part of shipping the ArgoCD integration, we identified and fixed a security issue in ApplicationSet handling (related to unvalidated Git repo access). The fix is available in KubeStellar Console v0.3+ and has been responsibly disclosed to the Argo Project maintainers.
+As part of shipping the ArgoCD integration, we applied security hardening to ApplicationSet handling within the console. Details are available in the console's security advisories.
 
 ## Guided Install Mission
 
@@ -101,7 +100,7 @@ We're actively seeking feedback from the Argo community on this integration:
 
 - KubeStellar Console: https://github.com/kubestellar/console
 - Hosted demo: https://console.kubestellar.io
-- ArgoCD integration docs: [docs/content/community/partners/argocd.md](../../docs/docs/content/community/partners/argocd.md)
+- ArgoCD integration docs: [docs/integrations/argocd.md](../../docs/integrations/argocd.md)
 - ArgoCD install mission: [console-marketplace](https://github.com/kubestellar/console-marketplace)
 
 ---
