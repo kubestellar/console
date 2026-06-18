@@ -24,7 +24,15 @@ vi.mock('../../lib/api', () => ({
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
+  useTranslation: () => ({
+    t: (key: string) => ({
+      'login.apacheLicensePrefix': 'KubeStellar Console is open source under the',
+      'login.apacheLicenseLink': 'Apache 2.0 License',
+      'login.termsOfServicePrefix': 'By signing in, you agree to our',
+      'login.termsOfServiceLink': 'Terms of Service',
+    }[key] ?? key),
+    i18n: { language: 'en' },
+  }),
 }))
 
 import { Login } from './Login'
@@ -70,10 +78,10 @@ describe('Login Component', () => {
 
   it('references the Apache 2.0 license instead of terms of service', () => {
     renderLogin()
-    expect(screen.getByText('login.apacheLicensePrefix')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'login.apacheLicenseLink' })).toBeInTheDocument()
-    expect(screen.queryByText('login.termsOfServicePrefix')).not.toBeInTheDocument()
-    expect(screen.queryByText('login.termsOfServiceLink')).not.toBeInTheDocument()
+    expect(screen.getByText('KubeStellar Console is open source under the')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Apache 2.0 License' })).toBeInTheDocument()
+    expect(screen.queryByText('By signing in, you agree to our')).not.toBeInTheDocument()
+    expect(screen.queryByText('Terms of Service')).not.toBeInTheDocument()
   })
 
   describe('OAuth setup wizard (backendUp && !oauthConfigured)', () => {
