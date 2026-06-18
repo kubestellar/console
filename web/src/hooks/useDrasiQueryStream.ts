@@ -253,7 +253,7 @@ export function useDrasiQueryStream(args: Args): UseDrasiQueryStreamResult {
 
         es.onerror = async () => {
           // Close the current source and attempt a reconnect backoff loop.
-          try { es && es.close() } catch {}
+          try { if (es) es.close() } catch { /* EventSource.close may throw if already closed */ }
           sourceRef.current = null
           setConnected(false)
           setErrorOnce('SSE connection error')

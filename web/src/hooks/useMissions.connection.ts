@@ -76,7 +76,7 @@ export function createMissionConnectionApi(
       return Promise.resolve()
     }
 
-    return new Promise<void>(async (resolve, reject) => {
+    return new Promise<void>((resolve, reject) => { void (async () => {
       state.setAgentsLoading(true)
 
       const timeout = setTimeout(() => {
@@ -452,7 +452,7 @@ export function createMissionConnectionApi(
         clearTimeout(timeout)
         reject(error)
       }
-    })
+    })() })
   }
 
   return {

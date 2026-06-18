@@ -486,6 +486,7 @@ export function NamespaceManager() {
     if (!isAdmin) return
     if (!selectedNamespace) return
 
+    // eslint-disable-next-line no-restricted-globals -- ConfirmDialog migration tracked separately
     if (!confirm(`Revoke access for ${binding.subjectName}?`)) {
       return
     }
