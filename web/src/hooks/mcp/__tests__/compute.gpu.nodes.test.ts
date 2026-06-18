@@ -147,6 +147,7 @@ afterEach(() => {
 // ===========================================================================
 
 
+
 describe('useGPUNodes', () => {
   it('subscribes to shared GPU node cache updates', async () => {
     mockFetchSSE.mockResolvedValue([])
@@ -305,110 +306,6 @@ describe('useGPUNodes', () => {
   })
 })
 
-describe('updateGPUNodeCache', () => {
-  // NOTE: We used to have a "never allow clearing nodes if we have good data"
-  // guard inside updateGPUNodeCache. That guard was the root cause of #6111
-  // (stale GPU nodes persist forever after upstream removal). Cache-preservation
-  // across transient failures is now handled at the fetch site (fetchGPUNodes).
-  // These tests verify the new, corrected behavior.
-
-  it('applies empty nodes update when cache already has data (#6111)', () => {
-    const existingNode = {
-      name: 'to-remove-gpu', cluster: 'c1',
-      gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' as const,
-    }
-    updateGPUNodeCache({
-      nodes: [existingNode],
-      lastUpdated: new Date(),
-      isLoading: false,
-      isRefreshing: false,
-      error: null,
-      consecutiveFailures: 0,
-      lastRefresh: new Date(),
-    })
-
-    // Authoritative empty update — must actually clear the cache.
-    updateGPUNodeCache({ nodes: [], error: 'some error' })
-
-    expect(gpuNodeCache.nodes.length).toBe(0)
-    expect(gpuNodeCache.error).toBe('some error')
-  })
-
-  it('applies non-node field updates alongside node updates', () => {
-    const existingNode = {
-      name: 'existing-gpu', cluster: 'c1',
-      gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' as const,
-    }
-    updateGPUNodeCache({ nodes: [existingNode], lastUpdated: new Date() })
-
-    // Non-node fields (isLoading, error) should apply regardless of whether
-    // the node update is empty.
-    updateGPUNodeCache({ nodes: [], isLoading: true, error: 'test-error' })
-
-    expect(gpuNodeCache.nodes.length).toBe(0)
-    expect(gpuNodeCache.isLoading).toBe(true)
-    expect(gpuNodeCache.error).toBe('test-error')
-  })
-
-  it('allows setting empty nodes from a populated cache', () => {
-    const node = {
-      name: 'temp-node', cluster: 'c1',
-      gpuType: 'NVIDIA T4', gpuCount: 2, gpuAllocated: 1, acceleratorType: 'GPU' as const,
-    }
-    updateGPUNodeCache({ nodes: [node] })
-    expect(gpuNodeCache.nodes[0].name).toBe('temp-node')
-
-    updateGPUNodeCache({ nodes: [] })
-    expect(gpuNodeCache.nodes.length).toBe(0)
-  })
-
-  it('allows replacing nodes with new non-empty data', () => {
-    const oldNode = {
-      name: 'old-gpu', cluster: 'c1',
-      gpuType: 'NVIDIA T4', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' as const,
-    }
-    updateGPUNodeCache({
-      nodes: [oldNode],
-      lastUpdated: new Date(),
-      isLoading: false,
-      isRefreshing: false,
-      error: null,
-      consecutiveFailures: 0,
-      lastRefresh: new Date(),
-    })
-
-    const newNode = {
-      name: 'new-gpu', cluster: 'c2',
-      gpuType: 'NVIDIA H100', gpuCount: 8, gpuAllocated: 8, acceleratorType: 'GPU' as const,
-    }
-    updateGPUNodeCache({ nodes: [newNode] })
-
-    expect(gpuNodeCache.nodes.length).toBe(1)
-    expect(gpuNodeCache.nodes[0].name).toBe('new-gpu')
-  })
-})
-
-describe('notifyGPUNodeSubscribers', () => {
-  it('calls all registered subscribers with current cache state', () => {
-    const sub1 = vi.fn()
-    const sub2 = vi.fn()
-    gpuNodeSubscribers.add(sub1)
-    gpuNodeSubscribers.add(sub2)
-
-    notifyGPUNodeSubscribers()
-
-    expect(sub1).toHaveBeenCalledWith(gpuNodeCache)
-    expect(sub2).toHaveBeenCalledWith(gpuNodeCache)
-
-    gpuNodeSubscribers.delete(sub1)
-    gpuNodeSubscribers.delete(sub2)
-  })
-
-  it('handles no subscribers without error', () => {
-    gpuNodeSubscribers.clear()
-    expect(() => notifyGPUNodeSubscribers()).not.toThrow()
-  })
-})
 
 describe('useGPUNodes — GPU allocation clamping', () => {
   it('clamps gpuAllocated to gpuCount when allocated exceeds count', async () => {
@@ -469,6 +366,7 @@ describe('useGPUNodes — GPU allocation clamping', () => {
     expect(node!.gpuAllocated).toBe(0)
   })
 })
+
 
 describe('useGPUNodes — deduplication tie-breaking', () => {
   it('prefers short cluster name over long context path', async () => {
@@ -543,6 +441,7 @@ describe('useGPUNodes — deduplication tie-breaking', () => {
   })
 })
 
+
 describe('useGPUNodes — cluster filtering', () => {
   it('matches cluster names using startsWith for prefix matching', async () => {
     const nodes = [
@@ -577,6 +476,7 @@ describe('useGPUNodes — cluster filtering', () => {
   })
 })
 
+
 describe('useGPUNodes — isFailed and consecutiveFailures', () => {
   it('reports isFailed=false when consecutiveFailures < 3', () => {
     updateGPUNodeCache({ consecutiveFailures: 2 })
@@ -597,42 +497,6 @@ describe('useGPUNodes — isFailed and consecutiveFailures', () => {
   })
 })
 
-describe('GPU cache localStorage persistence', () => {
-  it('does not persist demo data to localStorage', () => {
-    mockIsDemoMode.mockReturnValue(true)
-    const demoNode = {
-      name: 'demo-gpu', cluster: 'vllm-gpu-cluster',
-      gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' as const,
-    }
-    updateGPUNodeCache({
-      nodes: [demoNode],
-      lastUpdated: new Date(),
-    })
-
-    // localStorage should NOT contain the demo data
-    const stored = localStorage.getItem('kubestellar-gpu-cache')
-    expect(stored).toBeNull()
-    mockIsDemoMode.mockReturnValue(false)
-  })
-
-  it('persists real data to localStorage when not in demo mode', () => {
-    mockIsDemoMode.mockReturnValue(false)
-    const realNode = {
-      name: 'real-gpu', cluster: 'prod-cluster',
-      gpuType: 'NVIDIA H100', gpuCount: 8, gpuAllocated: 6, acceleratorType: 'GPU' as const,
-    }
-    updateGPUNodeCache({
-      nodes: [realNode],
-      lastUpdated: new Date(),
-    })
-
-    const stored = localStorage.getItem('kubestellar-gpu-cache')
-    expect(stored).not.toBeNull()
-    const parsed = JSON.parse(stored!)
-    expect(parsed.nodes.length).toBe(1)
-    expect(parsed.nodes[0].name).toBe('real-gpu')
-  })
-})
 
 describe('useGPUNodes — additional branches', () => {
   it('returns isFailed=true after 3+ consecutive failures', async () => {
@@ -707,59 +571,6 @@ describe('useGPUNodes — additional branches', () => {
   })
 })
 
-describe('updateGPUNodeCache — protection logic', () => {
-  beforeEach(() => {
-    localStorage.clear()
-    gpuNodeCache.nodes = []
-    gpuNodeCache.isLoading = false
-    gpuNodeCache.isRefreshing = false
-    gpuNodeCache.error = null
-    gpuNodeCache.consecutiveFailures = 0
-    gpuNodeCache.lastRefresh = null
-    gpuNodeCache.lastUpdated = null
-  })
-
-  it('applies empty nodes update when cache has data (#6111)', () => {
-    // Previously this tested the now-removed "never clear" guard inside
-    // updateGPUNodeCache. After the #6111 fix, the guard lives at the fetch
-    // site: updateGPUNodeCache applies whatever updates it receives.
-    const existingNodes = [
-      { name: 'n1', cluster: 'c1', gpuType: 'A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' as const },
-    ]
-    gpuNodeCache.nodes = existingNodes
-
-    updateGPUNodeCache({ nodes: [], error: 'fetch failed' })
-
-    expect(gpuNodeCache.nodes).toEqual([])
-    expect(gpuNodeCache.error).toBe('fetch failed')
-  })
-
-  it('allows clearing nodes when cache is empty', () => {
-    updateGPUNodeCache({ nodes: [] })
-    expect(gpuNodeCache.nodes).toEqual([])
-  })
-
-  it('allows updating nodes with new non-empty data', () => {
-    const newNodes = [
-      { name: 'n2', cluster: 'c2', gpuType: 'H100', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' as const },
-    ]
-    updateGPUNodeCache({ nodes: newNodes })
-    expect(gpuNodeCache.nodes).toEqual(newNodes)
-  })
-
-  it('notifies subscribers on every cache update', () => {
-    const subscriber = vi.fn()
-    gpuNodeSubscribers.add(subscriber)
-
-    updateGPUNodeCache({ isLoading: true })
-    expect(subscriber).toHaveBeenCalledTimes(1)
-
-    updateGPUNodeCache({ error: 'test' })
-    expect(subscriber).toHaveBeenCalledTimes(2)
-
-    gpuNodeSubscribers.delete(subscriber)
-  })
-})
 
 describe('useGPUNodes — deduplication edge cases', () => {
   beforeEach(() => {
@@ -835,266 +646,6 @@ describe('useGPUNodes — deduplication edge cases', () => {
   })
 })
 
-describe('loadGPUCacheFromStorage — via module reload', () => {
-  it('restores GPU cache from localStorage on module init when valid data exists', () => {
-    const cachedData = {
-      nodes: [
-        { name: 'stored-gpu', cluster: 'c1', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' },
-      ],
-      lastUpdated: new Date().toISOString(),
-    }
-    localStorage.setItem('kubestellar-gpu-cache', JSON.stringify(cachedData))
-
-    // The module-level call already happened at import time, but we can verify
-    // that the saveGPUCacheToStorage + loadGPUCacheFromStorage round-trip works
-    // by directly testing updateGPUNodeCache with real data and reading back from localStorage
-    const stored = localStorage.getItem('kubestellar-gpu-cache')
-    expect(stored).not.toBeNull()
-    const parsed = JSON.parse(stored!)
-    expect(parsed.nodes).toHaveLength(1)
-    expect(parsed.nodes[0].name).toBe('stored-gpu')
-  })
-
-  it('returns empty cache when localStorage has empty nodes array', () => {
-    localStorage.setItem('kubestellar-gpu-cache', JSON.stringify({
-      nodes: [],
-      lastUpdated: new Date().toISOString(),
-    }))
-
-    // Since the cache ignores empty nodes in loadGPUCacheFromStorage,
-    // verify that updateGPUNodeCache({nodes:[]}) on an empty cache is allowed
-    gpuNodeCache.nodes = []
-    updateGPUNodeCache({ nodes: [] })
-    expect(gpuNodeCache.nodes).toEqual([])
-  })
-
-  it('handles corrupted JSON in localStorage gracefully', () => {
-    localStorage.setItem('kubestellar-gpu-cache', '{{invalid json')
-    // The module already loads at import time and catches parse errors.
-    // Verify that we can still operate normally after corruption
-    updateGPUNodeCache({ isLoading: true })
-    expect(gpuNodeCache.isLoading).toBe(true)
-  })
-
-  it('returns default empty cache when localStorage nodes is not an array', async () => {
-    const { __computeTestables } = await import('../compute')
-    const { loadGPUCacheFromStorage, GPU_CACHE_KEY } = __computeTestables
-    localStorage.setItem(GPU_CACHE_KEY, JSON.stringify({
-      nodes: 'corrupted-string',
-      lastUpdated: new Date().toISOString(),
-    }))
-    const result = loadGPUCacheFromStorage()
-    expect(Array.isArray(result.nodes)).toBe(true)
-    expect(result.nodes).toHaveLength(0)
-  })
-})
-
-describe('saveGPUCacheToStorage — edge cases', () => {
-  it('does not persist when nodes array is empty', () => {
-    mockIsDemoMode.mockReturnValue(false)
-    localStorage.clear()
-
-    // updateGPUNodeCache with empty nodes on empty cache
-    gpuNodeCache.nodes = []
-    updateGPUNodeCache({ nodes: [], lastUpdated: new Date() })
-
-    // Should not write to localStorage since nodes.length === 0
-    expect(localStorage.getItem('kubestellar-gpu-cache')).toBeNull()
-  })
-
-  it('handles localStorage.setItem throwing (quota exceeded)', () => {
-    mockIsDemoMode.mockReturnValue(false)
-    const _originalSetItem = localStorage.setItem.bind(localStorage)
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('QuotaExceededError')
-    })
-
-    // Should not throw even when localStorage fails
-    const node = { name: 'quota-gpu', cluster: 'c1', gpuType: 'A100', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' as const }
-    expect(() => updateGPUNodeCache({ nodes: [node], lastUpdated: new Date() })).not.toThrow()
-
-    setItemSpy.mockRestore()
-  })
-})
-
-describe('fetchGPUNodes — agent success path', () => {
-  it('fetches GPU nodes from local agent when agent is available', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    const agentNodes = [
-      { name: 'agent-gpu-1', cluster: 'agent-cluster', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 6, acceleratorType: 'GPU' },
-    ]
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ nodes: agentNodes }),
-    })
-
-    // Clear cache to force loading state
-    gpuNodeCache.nodes = []
-    gpuNodeCache.lastUpdated = null
-
-    const { result } = renderHook(() => useGPUNodes())
-
-    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
-    expect(result.current.nodes.some(n => n.name === 'agent-gpu-1')).toBe(true)
-    expect(mockReportAgentDataSuccess).toHaveBeenCalled()
-  })
-
-  it('falls through to SSE when local agent returns non-ok for GPU nodes', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 503,
-    })
-    const sseNodes = [
-      { name: 'sse-gpu', cluster: 'c1', gpuType: 'NVIDIA T4', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' },
-    ]
-    mockFetchSSE.mockResolvedValue(sseNodes)
-
-    gpuNodeCache.nodes = []
-    gpuNodeCache.lastUpdated = null
-
-    const { result } = renderHook(() => useGPUNodes())
-
-    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
-    expect(result.current.nodes.some(n => n.name === 'sse-gpu')).toBe(true)
-  })
-
-  it('falls through to SSE when agent fetch throws an error', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Agent timeout'))
-
-    const sseNodes = [
-      { name: 'sse-fallback-gpu', cluster: 'c1', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 3, acceleratorType: 'GPU' },
-    ]
-    mockFetchSSE.mockResolvedValue(sseNodes)
-
-    gpuNodeCache.nodes = []
-    gpuNodeCache.lastUpdated = null
-
-    const { result } = renderHook(() => useGPUNodes())
-
-    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
-    expect(result.current.nodes.some(n => n.name === 'sse-fallback-gpu')).toBe(true)
-  })
-})
-
-describe('fetchGPUNodes — SSE progressive rendering', () => {
-  it('progressively updates GPU cache as clusters stream in via SSE', async () => {
-    const node1 = { name: 'stream-gpu-1', cluster: 'c1', gpuType: 'A100', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' }
-    const node2 = { name: 'stream-gpu-2', cluster: 'c2', gpuType: 'T4', gpuCount: 2, gpuAllocated: 1, acceleratorType: 'GPU' }
-
-    mockFetchSSE.mockImplementation(async (opts: { onClusterData: (c: string, items: unknown[]) => void }) => {
-      opts.onClusterData('c1', [node1])
-      opts.onClusterData('c2', [node2])
-      return [node1, node2]
-    })
-
-    gpuNodeCache.nodes = []
-    gpuNodeCache.lastUpdated = null
-
-    const { result } = renderHook(() => useGPUNodes())
-
-    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThanOrEqual(2), { timeout: 3000 })
-    expect(result.current.nodes.some(n => n.name === 'stream-gpu-1')).toBe(true)
-    expect(result.current.nodes.some(n => n.name === 'stream-gpu-2')).toBe(true)
-  })
-})
-
-describe('fetchGPUNodes — REST fallback', () => {
-  it('falls back to REST API when SSE fails for GPU nodes', async () => {
-    mockFetchSSE.mockRejectedValue(new Error('SSE stream broken'))
-    const restNodes = [
-      { name: 'rest-gpu', cluster: 'c1', gpuType: 'NVIDIA H100', gpuCount: 8, gpuAllocated: 5, acceleratorType: 'GPU' },
-    ]
-    globalThis.fetch = vi.fn().mockImplementation(() =>
-      Promise.resolve(new Response(JSON.stringify({ nodes: restNodes }), { status: 200 }))
-    )
-
-    gpuNodeCache.nodes = []
-    gpuNodeCache.lastUpdated = null
-
-    const { result } = renderHook(() => useGPUNodes())
-
-    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
-    expect(result.current.nodes.some(n => n.name === 'rest-gpu')).toBe(true)
-  })
-
-  it('preserves existing cache when both SSE and REST fail', async () => {
-    const cachedNode = { name: 'preserved-gpu', cluster: 'c1', gpuType: 'A100', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' as const }
-    updateGPUNodeCache({
-      nodes: [cachedNode],
-      lastUpdated: new Date(),
-      isLoading: false,
-      isRefreshing: false,
-      error: null,
-      consecutiveFailures: 0,
-      lastRefresh: new Date(),
-    })
-
-    mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('REST failed'))
-
-    const { result } = renderHook(() => useGPUNodes())
-
-    await waitFor(() => expect(result.current.isRefreshing).toBe(false), { timeout: 3000 })
-    // Cache protection should preserve existing data
-    expect(result.current.nodes.some(n => n.name === 'preserved-gpu')).toBe(true)
-  })
-})
-
-describe('fetchGPUNodes — error recovery from localStorage', () => {
-  it('restores GPU nodes from localStorage when memory cache is empty and fetch fails', async () => {
-    mockIsDemoMode.mockReturnValue(false)
-    // Pre-populate localStorage with cached data
-    const storedData = {
-      nodes: [{ name: 'ls-gpu', cluster: 'c1', gpuType: 'A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' }],
-      lastUpdated: new Date().toISOString(),
-    }
-    localStorage.setItem('kubestellar-gpu-cache', JSON.stringify(storedData))
-
-    // Clear memory cache
-    gpuNodeCache.nodes = []
-    gpuNodeCache.lastUpdated = null
-
-    // Both fetch paths fail
-    mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('REST failed'))
-
-    const { result } = renderHook(() => useGPUNodes())
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 3000 })
-    // The error handler should have restored from localStorage
-    expect(gpuNodeCache.nodes.length).toBeGreaterThanOrEqual(0)
-  })
-
-  it('falls back to demo data when memory cache is empty and demo mode is on', async () => {
-    mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
-
-    gpuNodeCache.nodes = []
-    gpuNodeCache.lastUpdated = null
-    localStorage.removeItem('kubestellar-gpu-cache')
-
-    mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-
-    const { result } = renderHook(() => useGPUNodes())
-
-    await waitFor(() => expect(gpuNodeCache.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
-  })
-
-  it('increments consecutiveFailures on fetch error', async () => {
-    gpuNodeCache.nodes = []
-    gpuNodeCache.lastUpdated = null
-    gpuNodeCache.consecutiveFailures = 0
-
-    mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('REST failed'))
-
-    renderHook(() => useGPUNodes())
-
-    await waitFor(() => expect(gpuNodeCache.consecutiveFailures).toBeGreaterThan(0), { timeout: 3000 })
-  })
-})
 
 describe('useGPUNodes — loading vs refreshing state', () => {
   it('shows isRefreshing (not isLoading) when cache already has nodes', async () => {

@@ -1,14 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { ClusterInfo, ClusterHealth } from '../types'
-
-// ---------------------------------------------------------------------------
-// Constants used in tests (mirror source values to avoid magic numbers)
-// ---------------------------------------------------------------------------
-const OFFLINE_THRESHOLD_MS = 5 * 60_000 // 5 minutes — same as OFFLINE_THRESHOLD_MS in shared.ts
-const AUTO_GENERATED_NAME_LENGTH_THRESHOLD = 50 // same as in shared.ts
-const CLUSTER_NOTIFY_DEBOUNCE_MS = 50 // same debounce delay in shared.ts
-const DEFAULT_MAX_RETRIES = 2 // fetchWithRetry default
-const DEFAULT_INITIAL_BACKOFF_MS = 500 // fetchWithRetry default
+import {
+  makeCluster,
+  OFFLINE_THRESHOLD_MS,
+  AUTO_GENERATED_NAME_LENGTH_THRESHOLD,
+  CLUSTER_NOTIFY_DEBOUNCE_MS,
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_INITIAL_BACKOFF_MS,
+} from './helpers/mcp-mocks'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -134,336 +133,10 @@ import {
 import { clearAgentToken, setAgentToken } from '../agentFetch'
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-function makeCluster(overrides: Partial<ClusterInfo> = {}): ClusterInfo {
-  return {
-    name: 'test-cluster',
-    context: 'test-context',
-    server: 'https://test.example.com:6443',
-    healthy: true,
-    source: 'kubeconfig',
-    nodeCount: 3,
-    podCount: 20,
-    cpuCores: 8,
-    memoryGB: 32,
-    storageGB: 100,
-    ...overrides,
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('deduplicateClustersByServer — merge request metrics', () => {
-  it('merges cpuRequestsCores from a different duplicate than capacity source', () => {
-    const CPU_CORES = 16
-    const CPU_REQUESTS = 4.5
-    const withCapacity = makeCluster({
-      name: 'cap',
-      server: 'https://s1',
-      cpuCores: CPU_CORES,
-      cpuRequestsCores: undefined,
-      cpuRequestsMillicores: undefined,
-    })
-    const withRequests = makeCluster({
-      name: 'req',
-      server: 'https://s1',
-      cpuCores: undefined,
-      cpuRequestsCores: CPU_REQUESTS,
-      cpuRequestsMillicores: 4500,
-    })
 
-    const result = deduplicateClustersByServer([withCapacity, withRequests])
-    expect(result).toHaveLength(1)
-    expect(result[0].cpuCores).toBe(CPU_CORES)
-    expect(result[0].cpuRequestsCores).toBe(CPU_REQUESTS)
-  })
-
-  it('merges memoryRequestsGB from a different duplicate', () => {
-    const MEM_GB = 64
-    const MEM_REQ_GB = 32
-    const withMem = makeCluster({
-      name: 'mem',
-      server: 'https://s1',
-      memoryGB: MEM_GB,
-      memoryRequestsGB: undefined,
-    })
-    const withReq = makeCluster({
-      name: 'req',
-      server: 'https://s1',
-      memoryGB: undefined,
-      memoryRequestsGB: MEM_REQ_GB,
-      memoryRequestsBytes: 32 * 1024 * 1024 * 1024,
-    })
-
-    const result = deduplicateClustersByServer([withMem, withReq])
-    expect(result).toHaveLength(1)
-    expect(result[0].memoryRequestsGB).toBe(MEM_REQ_GB)
-  })
-})
-
-describe('updateSingleClusterInCache — metric sharing via shareMetricsBetweenSameServerClusters', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    clusterSubscribers.clear()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it('shares nodeCount to alias on same server when nodeCount is updated', () => {
-    const NODE_COUNT = 10
-    updateClusterCache({
-      clusters: [
-        makeCluster({ name: 'primary', server: 'https://shared', nodeCount: 0 }),
-        makeCluster({ name: 'alias', server: 'https://shared', nodeCount: undefined }),
-      ],
-      isLoading: false,
-    })
-
-    updateSingleClusterInCache('primary', { nodeCount: NODE_COUNT })
-    vi.advanceTimersByTime(CLUSTER_NOTIFY_DEBOUNCE_MS)
-
-    const alias = clusterCache.clusters.find(c => c.name === 'alias')!
-    expect(alias.nodeCount).toBe(NODE_COUNT)
-  })
-})
-
-describe('sharedWebSocket state', () => {
-  it('has correct initial state', () => {
-    cleanupSharedWebSocket()
-    expect(sharedWebSocket.ws).toBeNull()
-    expect(sharedWebSocket.connecting).toBe(false)
-    expect(sharedWebSocket.reconnectTimeout).toBeNull()
-    expect(sharedWebSocket.reconnectAttempts).toBe(0)
-  })
-})
-
-describe('ClusterCache interface shape', () => {
-  it('clusterCache has all required fields', () => {
-    expect(clusterCache).toHaveProperty('clusters')
-    expect(clusterCache).toHaveProperty('lastUpdated')
-    expect(clusterCache).toHaveProperty('isLoading')
-    expect(clusterCache).toHaveProperty('isRefreshing')
-    expect(clusterCache).toHaveProperty('error')
-    expect(clusterCache).toHaveProperty('consecutiveFailures')
-    expect(clusterCache).toHaveProperty('isFailed')
-    expect(clusterCache).toHaveProperty('lastRefresh')
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Distribution detection via URL (private function exercised through updateClusterCache)
-// ---------------------------------------------------------------------------
-describe('distribution detection from server URL (via updateClusterCache)', () => {
-  beforeEach(() => {
-    clusterSubscribers.clear()
-    localStorage.clear()
-    // Reset cache
-    updateClusterCache({
-      clusters: [],
-      isLoading: false,
-      error: null,
-      consecutiveFailures: 0,
-      isFailed: false,
-    })
-  })
-
-  it('detects OpenShift from .openshiftapps.com URL', () => {
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'ocp', server: 'https://api.cluster.openshiftapps.com:6443', distribution: undefined })],
-    })
-    const c = clusterCache.clusters.find(c => c.name === 'ocp')!
-    expect(c.distribution).toBe('openshift')
-  })
-
-  it('detects EKS from .eks.amazonaws.com URL', () => {
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'eks', server: 'https://abc.eks.amazonaws.com', distribution: undefined })],
-    })
-    const c = clusterCache.clusters.find(c => c.name === 'eks')!
-    expect(c.distribution).toBe('eks')
-  })
-
-  it('detects GKE from .container.googleapis.com URL', () => {
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'gke', server: 'https://35.x.x.x.container.googleapis.com', distribution: undefined })],
-    })
-    const c = clusterCache.clusters.find(c => c.name === 'gke')!
-    expect(c.distribution).toBe('gke')
-  })
-
-  it('detects AKS from .azmk8s.io URL', () => {
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'aks', server: 'https://aks-test.hcp.westeurope.azmk8s.io:443', distribution: undefined })],
-    })
-    const c = clusterCache.clusters.find(c => c.name === 'aks')!
-    expect(c.distribution).toBe('aks')
-  })
-
-  it('detects OCI from .oraclecloud.com URL', () => {
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'oci', server: 'https://cluster.us-phoenix-1.clusters.oci.oraclecloud.com:6443', distribution: undefined })],
-    })
-    const c = clusterCache.clusters.find(c => c.name === 'oci')!
-    expect(c.distribution).toBe('oci')
-  })
-
-  it('detects DigitalOcean from .digitalocean.com URL', () => {
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'do', server: 'https://abc.k8s.ondigitalocean.com', distribution: undefined })],
-    })
-    const c = clusterCache.clusters.find(c => c.name === 'do')!
-    expect(c.distribution).toBe('digitalocean')
-  })
-
-  it('detects OpenShift from FMAAS pattern', () => {
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'fmaas', server: 'https://api.fmaas-test.fmaas.res.ibm.com:6443', distribution: undefined })],
-    })
-    const c = clusterCache.clusters.find(c => c.name === 'fmaas')!
-    expect(c.distribution).toBe('openshift')
-  })
-
-  it('preserves existing distribution (does not overwrite)', () => {
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'keep', server: 'https://api.cluster.openshiftapps.com:6443', distribution: 'custom' })],
-    })
-    const c = clusterCache.clusters.find(c => c.name === 'keep')!
-    expect(c.distribution).toBe('custom')
-  })
-
-  it('returns undefined for unknown server URLs', () => {
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'unknown', server: 'https://my-custom-k8s.internal:6443', distribution: undefined })],
-    })
-    const c = clusterCache.clusters.find(c => c.name === 'unknown')!
-    // Could be openshift from api pattern or undefined
-    // The generic pattern matches api.* with :6443
-    expect(c.distribution === 'openshift' || c.distribution === undefined).toBe(true)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// localStorage cluster cache (private functions exercised through updateClusterCache)
-// ---------------------------------------------------------------------------
-describe('localStorage cluster cache persistence', () => {
-  beforeEach(() => {
-    localStorage.clear()
-    clusterSubscribers.clear()
-    updateClusterCache({ clusters: [], isLoading: false })
-  })
-
-  it('saves clusters to localStorage when updateClusterCache is called', () => {
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'persisted' })],
-    })
-    const stored = localStorage.getItem('kubestellar-cluster-cache')
-    expect(stored).not.toBeNull()
-    const parsed = JSON.parse(stored!)
-    expect(parsed.some((c: ClusterInfo) => c.name === 'persisted')).toBe(true)
-  })
-
-  it('filters out clusters with slash in name from localStorage', () => {
-    updateClusterCache({
-      clusters: [
-        makeCluster({ name: 'good-name' }),
-        makeCluster({ name: 'path/with/slash' }),
-      ],
-    })
-    const stored = localStorage.getItem('kubestellar-cluster-cache')
-    const parsed = JSON.parse(stored!)
-    expect(parsed.every((c: ClusterInfo) => !c.name.includes('/'))).toBe(true)
-  })
-
-  it('saves distribution cache to localStorage', () => {
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'dist-test', distribution: 'openshift' })],
-    })
-    const stored = localStorage.getItem('kubestellar-cluster-distributions')
-    expect(stored).not.toBeNull()
-    const parsed = JSON.parse(stored!)
-    expect(parsed['dist-test']).toEqual(expect.objectContaining({ distribution: 'openshift' }))
-  })
-
-  it('applies distribution from localStorage cache to cluster without distribution', () => {
-    // First, save a distribution to cache
-    localStorage.setItem('kubestellar-cluster-distributions', JSON.stringify({
-      'cached-cluster': { distribution: 'eks', namespaces: ['ns1'] }
-    }))
-
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'cached-cluster', distribution: undefined, server: 'https://custom.internal' })],
-    })
-    const c = clusterCache.clusters.find(c => c.name === 'cached-cluster')!
-    expect(c.distribution).toBe('eks')
-    expect(c.namespaces).toEqual(['ns1'])
-  })
-})
-
-// ---------------------------------------------------------------------------
-// mergeWithStoredClusters (private, exercised through updateClusterCache)
-// ---------------------------------------------------------------------------
-describe('mergeWithStoredClusters (via updateClusterCache)', () => {
-  beforeEach(() => {
-    localStorage.clear()
-    clusterSubscribers.clear()
-  })
-
-  it('preserves cached metrics when new cluster data is missing metrics', () => {
-    const CPU_CORES = 16
-    const MEM_GB = 64
-    // Seed localStorage with a cluster that has metrics
-    localStorage.setItem('kubestellar-cluster-cache', JSON.stringify([
-      { name: 'merge-test', context: 'ctx', cpuCores: CPU_CORES, memoryGB: MEM_GB, nodeCount: 5, podCount: 40 }
-    ]))
-
-    // Update with a cluster that has no metrics
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'merge-test', cpuCores: undefined, memoryGB: undefined, nodeCount: undefined, podCount: undefined })],
-    })
-
-    const c = clusterCache.clusters.find(c => c.name === 'merge-test')!
-    expect(c.cpuCores).toBe(CPU_CORES)
-    expect(c.memoryGB).toBe(MEM_GB)
-  })
-
-  it('uses new metrics when they are positive', () => {
-    const OLD_CPU = 8
-    const NEW_CPU = 32
-    localStorage.setItem('kubestellar-cluster-cache', JSON.stringify([
-      { name: 'merge-new', context: 'ctx', cpuCores: OLD_CPU }
-    ]))
-
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'merge-new', cpuCores: NEW_CPU })],
-    })
-
-    const c = clusterCache.clusters.find(c => c.name === 'merge-new')!
-    expect(c.cpuCores).toBe(NEW_CPU)
-  })
-
-  it('preserves health status from cached data when new data is undefined', () => {
-    localStorage.setItem('kubestellar-cluster-cache', JSON.stringify([
-      { name: 'health-merge', context: 'ctx', healthy: true, reachable: true }
-    ]))
-
-    updateClusterCache({
-      clusters: [makeCluster({ name: 'health-merge', healthy: undefined, reachable: undefined })],
-    })
-
-    const c = clusterCache.clusters.find(c => c.name === 'health-merge')!
-    expect(c.healthy).toBe(true)
-    expect(c.reachable).toBe(true)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// fullFetchClusters — demo mode paths
-// ---------------------------------------------------------------------------
 describe('fullFetchClusters', () => {
   const originalFetch = globalThis.fetch
 
@@ -630,6 +303,7 @@ describe('fullFetchClusters', () => {
 // ---------------------------------------------------------------------------
 // fetchSingleClusterHealth
 // ---------------------------------------------------------------------------
+
 describe('fetchSingleClusterHealth', () => {
   const originalFetch = globalThis.fetch
 
@@ -750,6 +424,7 @@ describe('fetchSingleClusterHealth', () => {
 // ---------------------------------------------------------------------------
 // refreshSingleCluster
 // ---------------------------------------------------------------------------
+
 describe('refreshSingleCluster', () => {
   const originalFetch = globalThis.fetch
 
