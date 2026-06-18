@@ -89,12 +89,31 @@ func TestValidation_SaveAll_EmptySettings(t *testing.T) {
 		t.Fatalf("GetAll failed: %v", err)
 	}
 
-	// SaveAll preserves explicitly empty plaintext values.
-	if loaded.AIMode != "" {
-		t.Errorf("aiMode = %q, want empty string", loaded.AIMode)
+	defaults := DefaultAllSettings()
+
+	if loaded.AIMode != defaults.AIMode {
+		t.Errorf("aiMode = %q, want %q", loaded.AIMode, defaults.AIMode)
 	}
-	if loaded.Theme != "" {
-		t.Errorf("theme = %q, want empty string", loaded.Theme)
+	if loaded.Theme != defaults.Theme {
+		t.Errorf("theme = %q, want %q", loaded.Theme, defaults.Theme)
+	}
+	if loaded.Widget.SelectedWidget != defaults.Widget.SelectedWidget {
+		t.Errorf("selectedWidget = %q, want %q", loaded.Widget.SelectedWidget, defaults.Widget.SelectedWidget)
+	}
+	if loaded.Predictions.Interval != defaults.Predictions.Interval {
+		t.Errorf("interval = %d, want %d", loaded.Predictions.Interval, defaults.Predictions.Interval)
+	}
+	if loaded.Predictions.MinConfidence != defaults.Predictions.MinConfidence {
+		t.Errorf("minConfidence = %d, want %d", loaded.Predictions.MinConfidence, defaults.Predictions.MinConfidence)
+	}
+	if loaded.Predictions.MaxPredictions != defaults.Predictions.MaxPredictions {
+		t.Errorf("maxPredictions = %d, want %d", loaded.Predictions.MaxPredictions, defaults.Predictions.MaxPredictions)
+	}
+	if loaded.TokenUsage.Limit != defaults.TokenUsage.Limit {
+		t.Errorf("limit = %d, want %d", loaded.TokenUsage.Limit, defaults.TokenUsage.Limit)
+	}
+	if loaded.APIKeys == nil {
+		t.Fatal("apiKeys = nil, want empty map")
 	}
 }
 
@@ -153,9 +172,23 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// SaveAll persists the provided threshold struct as-is.
-				if loaded.Predictions.Thresholds != tc.thresholds {
-					t.Errorf("thresholds = %+v, want %+v", loaded.Predictions.Thresholds, tc.thresholds)
+				wantThresholds := tc.thresholds
+				defaults := DefaultAllSettings()
+				if wantThresholds.HighRestartCount == 0 {
+					wantThresholds.HighRestartCount = defaults.Predictions.Thresholds.HighRestartCount
+				}
+				if wantThresholds.CPUPressure == 0 {
+					wantThresholds.CPUPressure = defaults.Predictions.Thresholds.CPUPressure
+				}
+				if wantThresholds.MemoryPressure == 0 {
+					wantThresholds.MemoryPressure = defaults.Predictions.Thresholds.MemoryPressure
+				}
+				if wantThresholds.GPUMemoryPressure == 0 {
+					wantThresholds.GPUMemoryPressure = defaults.Predictions.Thresholds.GPUMemoryPressure
+				}
+
+				if loaded.Predictions.Thresholds != wantThresholds {
+					t.Errorf("thresholds = %+v, want %+v", loaded.Predictions.Thresholds, wantThresholds)
 				}
 			}
 		})
@@ -219,9 +252,23 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// SaveAll persists the provided token usage settings as-is.
-				if loaded.TokenUsage != tc.tokenUsage {
-					t.Errorf("tokenUsage = %+v, want %+v", loaded.TokenUsage, tc.tokenUsage)
+				wantTokenUsage := tc.tokenUsage
+				defaults := DefaultAllSettings()
+				if wantTokenUsage.Limit == 0 {
+					wantTokenUsage.Limit = defaults.TokenUsage.Limit
+				}
+				if wantTokenUsage.WarningThreshold == 0 {
+					wantTokenUsage.WarningThreshold = defaults.TokenUsage.WarningThreshold
+				}
+				if wantTokenUsage.CriticalThreshold == 0 {
+					wantTokenUsage.CriticalThreshold = defaults.TokenUsage.CriticalThreshold
+				}
+				if wantTokenUsage.StopThreshold == 0 {
+					wantTokenUsage.StopThreshold = defaults.TokenUsage.StopThreshold
+				}
+
+				if loaded.TokenUsage != wantTokenUsage {
+					t.Errorf("tokenUsage = %+v, want %+v", loaded.TokenUsage, wantTokenUsage)
 				}
 			}
 		})

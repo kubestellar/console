@@ -377,24 +377,23 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 		sm.settings = DefaultSettings()
 	}
 
-	// Apply defaults for zero-value fields
-	applyDefaults(all)
+	normalized := normalizeAllSettings(all)
 
 	// Update plaintext settings
-	sm.settings.Settings.AIMode = all.AIMode
-	sm.settings.Settings.Predictions = all.Predictions
-	sm.settings.Settings.TokenUsage = all.TokenUsage
-	sm.settings.Settings.Theme = all.Theme
-	sm.settings.Settings.CustomThemes = all.CustomThemes
-	sm.settings.Settings.Accessibility = all.Accessibility
-	sm.settings.Settings.Profile = all.Profile
-	sm.settings.Settings.Widget = all.Widget
-	sm.settings.Settings.AutoUpdateEnabled = all.AutoUpdateEnabled
-	sm.settings.Settings.AutoUpdateChannel = all.AutoUpdateChannel
+	sm.settings.Settings.AIMode = normalized.AIMode
+	sm.settings.Settings.Predictions = normalized.Predictions
+	sm.settings.Settings.TokenUsage = normalized.TokenUsage
+	sm.settings.Settings.Theme = normalized.Theme
+	sm.settings.Settings.CustomThemes = normalized.CustomThemes
+	sm.settings.Settings.Accessibility = normalized.Accessibility
+	sm.settings.Settings.Profile = normalized.Profile
+	sm.settings.Settings.Widget = normalized.Widget
+	sm.settings.Settings.AutoUpdateEnabled = normalized.AutoUpdateEnabled
+	sm.settings.Settings.AutoUpdateChannel = normalized.AutoUpdateChannel
 
 	// Encrypt API keys (only if non-empty)
-	if len(all.APIKeys) > 0 {
-		data, err := json.Marshal(all.APIKeys)
+	if len(normalized.APIKeys) > 0 {
+		data, err := json.Marshal(normalized.APIKeys)
 		if err != nil {
 			return fmt.Errorf("failed to marshal API keys: %w", err)
 		}
@@ -411,23 +410,23 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 	sm.settings.Encrypted.GitHubToken = nil
 
 	// Encrypt GitHub token — skip if sourced from env var (don't persist ephemeral env tokens to disk)
-	if all.FeedbackGitHubToken != "" && all.FeedbackGitHubTokenSource != GitHubTokenSourceEnv {
-		enc, err := encrypt(sm.key, []byte(all.FeedbackGitHubToken))
+	if normalized.FeedbackGitHubToken != "" && normalized.FeedbackGitHubTokenSource != GitHubTokenSourceEnv {
+		enc, err := encrypt(sm.key, []byte(normalized.FeedbackGitHubToken))
 		if err != nil {
 			return fmt.Errorf("failed to encrypt feedback GitHub token: %w", err)
 		}
 		sm.settings.Encrypted.FeedbackGitHubToken = enc
-	} else if all.FeedbackGitHubTokenSource != GitHubTokenSourceEnv {
+	} else if normalized.FeedbackGitHubTokenSource != GitHubTokenSourceEnv {
 		sm.settings.Encrypted.FeedbackGitHubToken = nil
 	}
 
 	// Encrypt notification secrets (only if any field is set).
 	// Check ALL notification fields to prevent silently dropping valid config (#7369).
-	if all.Notifications.SlackWebhookURL != "" || all.Notifications.SlackChannel != "" ||
-		all.Notifications.EmailSMTPHost != "" || all.Notifications.EmailSMTPPort != 0 ||
-		all.Notifications.EmailFrom != "" || all.Notifications.EmailTo != "" ||
-		all.Notifications.EmailUsername != "" || all.Notifications.EmailPassword != "" {
-		data, err := json.Marshal(all.Notifications)
+	if normalized.Notifications.SlackWebhookURL != "" || normalized.Notifications.SlackChannel != "" ||
+		normalized.Notifications.EmailSMTPHost != "" || normalized.Notifications.EmailSMTPPort != 0 ||
+		normalized.Notifications.EmailFrom != "" || normalized.Notifications.EmailTo != "" ||
+		normalized.Notifications.EmailUsername != "" || normalized.Notifications.EmailPassword != "" {
+		data, err := json.Marshal(normalized.Notifications)
 		if err != nil {
 			return fmt.Errorf("failed to marshal notification secrets: %w", err)
 		}
@@ -645,46 +644,58 @@ func (m *SettingsManager) SetKeyPath(path string) {
 	m.keyPath = path
 }
 
-// applyDefaults fills in zero-value fields in AllSettings with sensible defaults
-func applyDefaults(all *AllSettings) {
+func normalizeAllSettings(all *AllSettings) *AllSettings {
+	defaults := DefaultAllSettings()
 	if all == nil {
-		return
+		return defaults
 	}
 
-	defaults := DefaultSettings()
+	normalized := *all
+	if normalized.AIMode == "" {
+		normalized.AIMode = defaults.AIMode
+	}
+	if normalized.Theme == "" {
+		normalized.Theme = defaults.Theme
+	}
+	if normalized.Widget.SelectedWidget == "" {
+		normalized.Widget.SelectedWidget = defaults.Widget.SelectedWidget
+	}
+	if normalized.Predictions.Interval == 0 {
+		normalized.Predictions.Interval = defaults.Predictions.Interval
+	}
+	if normalized.Predictions.MinConfidence == 0 {
+		normalized.Predictions.MinConfidence = defaults.Predictions.MinConfidence
+	}
+	if normalized.Predictions.MaxPredictions == 0 {
+		normalized.Predictions.MaxPredictions = defaults.Predictions.MaxPredictions
+	}
+	if normalized.Predictions.Thresholds.HighRestartCount == 0 {
+		normalized.Predictions.Thresholds.HighRestartCount = defaults.Predictions.Thresholds.HighRestartCount
+	}
+	if normalized.Predictions.Thresholds.CPUPressure == 0 {
+		normalized.Predictions.Thresholds.CPUPressure = defaults.Predictions.Thresholds.CPUPressure
+	}
+	if normalized.Predictions.Thresholds.MemoryPressure == 0 {
+		normalized.Predictions.Thresholds.MemoryPressure = defaults.Predictions.Thresholds.MemoryPressure
+	}
+	if normalized.Predictions.Thresholds.GPUMemoryPressure == 0 {
+		normalized.Predictions.Thresholds.GPUMemoryPressure = defaults.Predictions.Thresholds.GPUMemoryPressure
+	}
+	if normalized.TokenUsage.Limit == 0 {
+		normalized.TokenUsage.Limit = defaults.TokenUsage.Limit
+	}
+	if normalized.TokenUsage.WarningThreshold == 0 {
+		normalized.TokenUsage.WarningThreshold = defaults.TokenUsage.WarningThreshold
+	}
+	if normalized.TokenUsage.CriticalThreshold == 0 {
+		normalized.TokenUsage.CriticalThreshold = defaults.TokenUsage.CriticalThreshold
+	}
+	if normalized.TokenUsage.StopThreshold == 0 {
+		normalized.TokenUsage.StopThreshold = defaults.TokenUsage.StopThreshold
+	}
+	if normalized.APIKeys == nil {
+		normalized.APIKeys = defaults.APIKeys
+	}
 
-	// Apply defaults for prediction thresholds
-	if all.Predictions.Thresholds.HighRestartCount == 0 {
-		all.Predictions.Thresholds.HighRestartCount = defaults.Settings.Predictions.Thresholds.HighRestartCount
-	}
-	if all.Predictions.Thresholds.CPUPressure == 0 {
-		all.Predictions.Thresholds.CPUPressure = defaults.Settings.Predictions.Thresholds.CPUPressure
-	}
-	if all.Predictions.Thresholds.MemoryPressure == 0 {
-		all.Predictions.Thresholds.MemoryPressure = defaults.Settings.Predictions.Thresholds.MemoryPressure
-	}
-	if all.Predictions.Thresholds.GPUMemoryPressure == 0 {
-		all.Predictions.Thresholds.GPUMemoryPressure = defaults.Settings.Predictions.Thresholds.GPUMemoryPressure
-	}
-
-	// Apply defaults for token usage thresholds
-	if all.TokenUsage.WarningThreshold == 0 {
-		all.TokenUsage.WarningThreshold = defaults.Settings.TokenUsage.WarningThreshold
-	}
-	if all.TokenUsage.CriticalThreshold == 0 {
-		all.TokenUsage.CriticalThreshold = defaults.Settings.TokenUsage.CriticalThreshold
-	}
-	if all.TokenUsage.StopThreshold == 0 {
-		all.TokenUsage.StopThreshold = defaults.Settings.TokenUsage.StopThreshold
-	}
-
-	// Apply default for AIMode if empty
-	if all.AIMode == "" {
-		all.AIMode = defaults.Settings.AIMode
-	}
-
-	// Apply default for Theme if empty
-	if all.Theme == "" {
-		all.Theme = defaults.Settings.Theme
-	}
+	return &normalized
 }

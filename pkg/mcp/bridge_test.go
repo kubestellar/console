@@ -494,9 +494,9 @@ func TestBridge_GetPods(t *testing.T) {
 		errorContains string
 	}{
 		{
-			name:      "returns pods with all filters",
-			cluster:   "prod",
-			namespace: "default",
+			name:          "returns pods with all filters",
+			cluster:       "prod",
+			namespace:     "default",
 			labelSelector: "app=nginx",
 			mockResponse: &CallToolResult{
 				Content: []ContentItem{{
@@ -518,10 +518,10 @@ func TestBridge_GetPods(t *testing.T) {
 			wantPods: []PodInfo{{Name: "pod-2", Namespace: "kube-system", Status: "Pending", Ready: "0/1", Restarts: 5, Age: "1h"}},
 		},
 		{
-			name:        "returns error when client call fails",
-			cluster:     "prod",
-			mockError:   fmt.Errorf("connection timeout"),
-			wantError:   true,
+			name:          "returns error when client call fails",
+			cluster:       "prod",
+			mockError:     fmt.Errorf("connection timeout"),
+			wantError:     true,
 			errorContains: "connection timeout",
 		},
 		{
@@ -531,7 +531,7 @@ func TestBridge_GetPods(t *testing.T) {
 				Content: []ContentItem{{Type: "text", Text: "cluster not found"}},
 				IsError: true,
 			},
-			wantError:   true,
+			wantError:     true,
 			errorContains: "tool error",
 		},
 	}
@@ -555,7 +555,7 @@ func TestBridge_GetPods(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			pods, err := bridge.GetPods(context.Background(), tc.cluster, tc.namespace, tc.labelSelector)
 
@@ -612,8 +612,8 @@ func TestBridge_FindPodIssues(t *testing.T) {
 			wantIssues: []PodIssue{{Name: "image-pod", Namespace: "staging", Status: "ImagePullBackOff", Reason: "ErrImagePull", Issues: []string{"ImagePullBackOff"}, Restarts: 0}},
 		},
 		{
-			name:      "returns pod issues with OOMKilled",
-			cluster:   "prod",
+			name:    "returns pod issues with OOMKilled",
+			cluster: "prod",
 			mockResponse: &CallToolResult{
 				Content: []ContentItem{{
 					Type: "text",
@@ -623,11 +623,11 @@ func TestBridge_FindPodIssues(t *testing.T) {
 			wantIssues: []PodIssue{{Name: "oom-pod", Namespace: "default", Status: "OOMKilled", Reason: "OOMKilled", Issues: []string{"OOMKilled", "High restart count"}, Restarts: 25}},
 		},
 		{
-			name:        "returns error when client call fails",
-			cluster:     "prod",
-			namespace:   "default",
-			mockError:   fmt.Errorf("connection refused"),
-			wantError:   true,
+			name:          "returns error when client call fails",
+			cluster:       "prod",
+			namespace:     "default",
+			mockError:     fmt.Errorf("connection refused"),
+			wantError:     true,
 			errorContains: "connection refused",
 		},
 	}
@@ -648,7 +648,7 @@ func TestBridge_FindPodIssues(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			issues, err := bridge.FindPodIssues(context.Background(), tc.cluster, tc.namespace)
 
@@ -706,11 +706,11 @@ func TestBridge_GetEvents(t *testing.T) {
 			wantEvents: []Event{{Type: "Normal", Reason: "Created", Message: "Created container", Object: "pod/nginx", Namespace: "default", Count: 1}},
 		},
 		{
-			name:        "returns error when client call fails",
-			cluster:     "prod",
-			limit:       5,
-			mockError:   fmt.Errorf("timeout"),
-			wantError:   true,
+			name:          "returns error when client call fails",
+			cluster:       "prod",
+			limit:         5,
+			mockError:     fmt.Errorf("timeout"),
+			wantError:     true,
 			errorContains: "timeout",
 		},
 	}
@@ -734,7 +734,7 @@ func TestBridge_GetEvents(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			events, err := bridge.GetEvents(context.Background(), tc.cluster, tc.namespace, tc.limit)
 
@@ -792,10 +792,10 @@ func TestBridge_GetWarningEvents(t *testing.T) {
 			wantEvents: []Event{{Type: "Warning", Reason: "Evicted", Message: "Pod evicted", Object: "pod/old", Namespace: "default", Count: 1}},
 		},
 		{
-			name:        "returns error when client call fails",
-			cluster:     "prod",
-			mockError:   fmt.Errorf("network error"),
-			wantError:   true,
+			name:          "returns error when client call fails",
+			cluster:       "prod",
+			mockError:     fmt.Errorf("network error"),
+			wantError:     true,
 			errorContains: "network error",
 		},
 	}
@@ -819,7 +819,7 @@ func TestBridge_GetWarningEvents(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			events, err := bridge.GetWarningEvents(context.Background(), tc.cluster, tc.namespace, tc.limit)
 
@@ -884,10 +884,10 @@ func TestBridge_GetClusterHealth(t *testing.T) {
 			wantHealth: &ClusterHealth{Cluster: "staging", Healthy: false, Reachable: false, ErrorType: "connection", ErrorMessage: "connection refused"},
 		},
 		{
-			name:        "returns error when client call fails",
-			cluster:     "prod",
-			mockError:   fmt.Errorf("client error"),
-			wantError:   true,
+			name:          "returns error when client call fails",
+			cluster:       "prod",
+			mockError:     fmt.Errorf("client error"),
+			wantError:     true,
 			errorContains: "client error",
 		},
 	}
@@ -905,7 +905,7 @@ func TestBridge_GetClusterHealth(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			health, err := bridge.GetClusterHealth(context.Background(), tc.cluster)
 
@@ -956,9 +956,9 @@ func TestBridge_ListClusters(t *testing.T) {
 			wantClusters: []ClusterInfo{{Name: "local", Context: "docker-desktop", Healthy: true}},
 		},
 		{
-			name:        "returns error when client call fails",
-			mockError:   fmt.Errorf("discovery failed"),
-			wantError:   true,
+			name:          "returns error when client call fails",
+			mockError:     fmt.Errorf("discovery failed"),
+			wantError:     true,
 			errorContains: "discovery failed",
 		},
 	}
@@ -974,7 +974,7 @@ func TestBridge_ListClusters(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			clusters, err := bridge.ListClusters(context.Background())
 
