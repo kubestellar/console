@@ -318,17 +318,30 @@ func TestGetContextHelpers(t *testing.T) {
 	// Middleware that injects user data manually to test helpers
 	app.Use(func(c *fiber.Ctx) error {
 		uid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
+		claims := &UserClaims{
+			UserID:      uid,
+			GitHubLogin: "test-user",
+			Role:        models.UserRoleAdmin,
+		}
 		c.Locals("userID", uid)
 		c.Locals("githubLogin", "test-user")
+		c.Locals("userRole", models.UserRoleAdmin)
+		c.Locals("userClaims", claims)
 		return c.Next()
 	})
 
 	app.Get("/me", func(c *fiber.Ctx) error {
 		uid := GetUserID(c)
 		login := GetGitHubLogin(c)
+		role := GetUserRole(c)
+		claims := GetUserClaims(c)
+		require.NotNil(t, claims)
 		return c.JSON(fiber.Map{
-			"uid":   uid.String(),
-			"login": login,
+			"uid":          uid.String(),
+			"login":        login,
+			"role":         string(role),
+			"claimsUserID": claims.UserID.String(),
+			"claimsRole":   string(claims.Role),
 		})
 	})
 
@@ -338,9 +351,6 @@ func TestGetContextHelpers(t *testing.T) {
 		t.Fatalf("app.Test failed: %v", err)
 	}
 	assert.Equal(t, 200, resp.StatusCode)
-
-	// Validate body content
-	// (Implementation detail: we trust Fiber locals works, we are testing the Get* helpers)
 }
 
 func generateTestToken(secret string, expiry time.Time) (string, error) {
@@ -738,8 +748,12 @@ func TestGetContextHelpers_Empty(t *testing.T) {
 	app.Get("/empty", func(c *fiber.Ctx) error {
 		uid := GetUserID(c)
 		login := GetGitHubLogin(c)
+		role := GetUserRole(c)
+		claims := GetUserClaims(c)
 		assert.Equal(t, uuid.Nil, uid)
 		assert.Empty(t, login)
+		assert.Empty(t, role)
+		assert.Nil(t, claims)
 		return c.SendStatus(200)
 	})
 

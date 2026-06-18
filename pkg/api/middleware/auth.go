@@ -34,10 +34,6 @@ const (
 	// prevent unbounded memory growth (#4759). Set high enough that normal usage
 	// never hits it, but low enough to cap memory consumption.
 	revokedTokenCacheMaxSize = 10_000
-
-	// userValidationCacheTTL is how long a successful or failed user freshness
-	// lookup remains valid before the middleware hits the store again.
-	userValidationCacheTTL = 30 * time.Second
 )
 
 // UserClaims represents JWT claims for a user.
@@ -110,16 +106,6 @@ type revokedTokenCache struct {
 	cleanupCancel context.CancelFunc
 }
 
-type userActiveLookupStore interface {
-	GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
-}
-
-type userValidationCacheEntry struct {
-	role      models.UserRole
-	exists    bool
-	checkedAt time.Time
-}
-
 var (
 	revokedTokens = &revokedTokenCache{
 		tokens: make(map[string]time.Time),
@@ -127,10 +113,6 @@ var (
 	// initOnce ensures InitTokenRevocation is idempotent (#6586). Calling it a
 	// second time would otherwise spawn additional cleanupLoop goroutines.
 	initOnce sync.Once
-
-	userValidationStoreMu sync.RWMutex
-	userValidationStore   userActiveLookupStore
-	userValidationCache   sync.Map
 )
 
 // InitTokenRevocation wires the persistent store into the revocation layer.
@@ -172,29 +154,6 @@ func resetTokenRevocationForTest() {
 	revokedTokens.store = nil
 	revokedTokens.Unlock()
 	initOnce = sync.Once{}
-}
-
-// InitUserValidation enables per-request user freshness checks for authenticated
-// requests. The configured store is consulted on cache misses to ensure the user
-// still exists and still holds the role encoded in the JWT.
-func InitUserValidation(store userActiveLookupStore) {
-	userValidationStoreMu.Lock()
-	userValidationStore = store
-	userValidationCache = sync.Map{}
-	userValidationStoreMu.Unlock()
-}
-
-func getUserValidationStore() userActiveLookupStore {
-	userValidationStoreMu.RLock()
-	defer userValidationStoreMu.RUnlock()
-	return userValidationStore
-}
-
-func resetUserValidationForTest() {
-	userValidationStoreMu.Lock()
-	userValidationStore = nil
-	userValidationCache = sync.Map{}
-	userValidationStoreMu.Unlock()
 }
 
 func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {
@@ -341,63 +300,6 @@ func (c *revokedTokenCache) cleanup() {
 			slog.Info("[Auth] cleaned up expired revoked tokens", "count", n)
 		}
 	}
-}
-
-var (
-	errInvalidUserClaims    = errors.New("invalid user claims")
-	errUserInactive         = errors.New("user is no longer active")
-	errUserRoleChanged      = errors.New("user role changed")
-	errUserValidationFailed = errors.New("user validation failed")
-)
-
-// ValidateUserActive ensures the authenticated user still exists and still has
-// the role encoded in the JWT. A short-lived cache avoids repeated store hits
-// for hot paths while ensuring deletions and role changes take effect quickly.
-func ValidateUserActive(ctx context.Context, claims *UserClaims) error {
-	store := getUserValidationStore()
-	if store == nil {
-		return nil
-	}
-	if claims == nil || claims.UserID == uuid.Nil || claims.Role == "" {
-		return errInvalidUserClaims
-	}
-
-	cacheKey := claims.UserID.String()
-	if cached, ok := userValidationCache.Load(cacheKey); ok {
-		entry, ok := cached.(userValidationCacheEntry)
-		if ok {
-			if time.Since(entry.checkedAt) <= userValidationCacheTTL {
-				if !entry.exists {
-					return errUserInactive
-				}
-				if entry.role != claims.Role {
-					return errUserRoleChanged
-				}
-				return nil
-			}
-			userValidationCache.Delete(cacheKey)
-		}
-	}
-
-	user, err := store.GetUser(ctx, claims.UserID)
-	if err != nil {
-		return fmt.Errorf("%w: %w", errUserValidationFailed, err)
-	}
-
-	entry := userValidationCacheEntry{checkedAt: time.Now()}
-	if user == nil {
-		entry.exists = false
-		userValidationCache.Store(cacheKey, entry)
-		return errUserInactive
-	}
-
-	entry.exists = true
-	entry.role = user.Role
-	userValidationCache.Store(cacheKey, entry)
-	if user.Role != claims.Role {
-		return errUserRoleChanged
-	}
-	return nil
 }
 
 // RevokeToken adds a token to the revocation store. Exported for use by handlers.
@@ -714,24 +616,6 @@ func JWTAuth(secret string, agentToken ...string) fiber.Handler {
 
 		return c.Next()
 	}
-}
-
-// GetUserID extracts user ID from context
-func GetUserID(c *fiber.Ctx) uuid.UUID {
-	userID, ok := c.Locals("userID").(uuid.UUID)
-	if !ok {
-		return uuid.Nil
-	}
-	return userID
-}
-
-// GetGitHubLogin extracts GitHub login from context
-func GetGitHubLogin(c *fiber.Ctx) string {
-	login, ok := c.Locals("githubLogin").(string)
-	if !ok {
-		return ""
-	}
-	return login
 }
 
 // WebSocketUpgrade handles WebSocket upgrade
