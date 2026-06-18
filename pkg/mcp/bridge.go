@@ -13,11 +13,18 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 )
 
+type bridgeClient interface {
+	CallTool(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error)
+	Tools() []Tool
+	Stop() error
+	IsReady() bool
+}
+
 // Bridge manages MCP client connections and provides a unified interface
 type Bridge struct {
-	opsClient    *Client
-	deployClient *Client
-	gadgetClient *Client
+	opsClient    bridgeClient
+	deployClient bridgeClient
+	gadgetClient bridgeClient
 	mu           sync.RWMutex
 	config       BridgeConfig
 }
@@ -115,7 +122,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 	var wg sync.WaitGroup
 	errCh := make(chan error, 3)
 
-	startConfiguredClient := func(clientName, binaryPath, missingMessage, installHint, errPrefix string, assign func(*Client)) {
+	startConfiguredClient := func(clientName, binaryPath, missingMessage, installHint, errPrefix string, assign func(bridgeClient)) {
 		if binaryPath == "" {
 			return
 		}
@@ -146,7 +153,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 		"kubestellar-ops binary not found on PATH — MCP ops tools will be unavailable",
 		"brew install kubestellar/tap/kubestellar-ops",
 		"ops",
-		func(client *Client) {
+		func(client bridgeClient) {
 			b.mu.Lock()
 			defer b.mu.Unlock()
 			b.opsClient = client
@@ -158,7 +165,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 		"kubestellar-deploy binary not found on PATH — MCP deploy tools will be unavailable",
 		"brew install kubestellar/tap/kubestellar-deploy",
 		"deploy",
-		func(client *Client) {
+		func(client bridgeClient) {
 			b.mu.Lock()
 			defer b.mu.Unlock()
 			b.deployClient = client
@@ -170,7 +177,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 		"inspektor-gadget MCP binary not found on PATH — Gadget tools will be unavailable",
 		"",
 		"gadget",
-		func(client *Client) {
+		func(client bridgeClient) {
 			b.mu.Lock()
 			defer b.mu.Unlock()
 			b.gadgetClient = client
