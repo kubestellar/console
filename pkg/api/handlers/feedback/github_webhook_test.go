@@ -3,6 +3,7 @@ package feedback
 import (
 	"bytes"
 	"errors"
+	"io"
 	"net/http"
 	"testing"
 
@@ -125,10 +126,10 @@ func TestWebhook_ShortSignatureHeader_Returns401(t *testing.T) {
 }
 
 func TestWebhook_PREvent_BusinessLogic(t *testing.T) {
-	newRequest := func(id uuid.UUID, title string, issueNumber *int) *models.FeatureRequest {
+	newRequest := func(id, userID uuid.UUID, title string, issueNumber *int) *models.FeatureRequest {
 		return &models.FeatureRequest{
 			ID:                id,
-			UserID:            uuid.New(),
+			UserID:            userID,
 			Title:             title,
 			GitHubIssueNumber: issueNumber,
 		}
@@ -149,13 +150,14 @@ func TestWebhook_PREvent_BusinessLogic(t *testing.T) {
 					"pull_request": map[string]interface{}{
 						"number":   456,
 						"html_url": "https://github.com/owner/repo/pull/456",
-						"body":     "Console Request ID:** " + requestID.String(),
+						"body":     "**Console Request ID:** " + requestID.String(),
 					},
 				}
 			},
 			setupMocks: func(mockStore *test.MockStore) {
 				requestID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
-				request := newRequest(requestID, "UUID-linked request", nil)
+				userID := uuid.MustParse("aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaa1")
+				request := newRequest(requestID, userID, "UUID-linked request", nil)
 
 				mockStore.On("GetFeatureRequest", requestID).Return(request, nil).Once()
 				mockStore.On("UpdateFeatureRequestPR", requestID, 456, "https://github.com/owner/repo/pull/456").Return(nil).Once()
@@ -182,7 +184,8 @@ func TestWebhook_PREvent_BusinessLogic(t *testing.T) {
 			setupMocks: func(mockStore *test.MockStore) {
 				issueNumber := 19008
 				requestID := uuid.MustParse("22222222-2222-2222-2222-222222222222")
-				request := newRequest(requestID, "Issue-linked request", &issueNumber)
+				userID := uuid.MustParse("aaaaaaa2-aaaa-aaaa-aaaa-aaaaaaaaaaa2")
+				request := newRequest(requestID, userID, "Issue-linked request", &issueNumber)
 
 				mockStore.On("GetFeatureRequestsByIssueNumbers", []int{issueNumber}).Return([]*models.FeatureRequest{request}, nil).Once()
 				mockStore.On("UpdateFeatureRequestPR", requestID, 789, "https://github.com/owner/repo/pull/789").Return(nil).Once()
@@ -202,14 +205,15 @@ func TestWebhook_PREvent_BusinessLogic(t *testing.T) {
 					"pull_request": map[string]interface{}{
 						"number":   456,
 						"html_url": "https://github.com/owner/repo/pull/456",
-						"body":     "Console Request ID:** " + requestID.String(),
+						"body":     "**Console Request ID:** " + requestID.String(),
 						"merged":   true,
 					},
 				}
 			},
 			setupMocks: func(mockStore *test.MockStore) {
 				requestID := uuid.MustParse("33333333-3333-3333-3333-333333333333")
-				request := newRequest(requestID, "Merged request", nil)
+				userID := uuid.MustParse("aaaaaaa3-aaaa-aaaa-aaaa-aaaaaaaaaaa3")
+				request := newRequest(requestID, userID, "Merged request", nil)
 
 				mockStore.On("GetFeatureRequest", requestID).Return(request, nil).Once()
 				mockStore.On("UpdateFeatureRequestStatus", requestID, models.RequestStatusFixComplete).Return(nil).Once()
@@ -229,14 +233,15 @@ func TestWebhook_PREvent_BusinessLogic(t *testing.T) {
 					"pull_request": map[string]interface{}{
 						"number":   654,
 						"html_url": "https://github.com/owner/repo/pull/654",
-						"body":     "Console Request ID:** " + requestID.String(),
+						"body":     "**Console Request ID:** " + requestID.String(),
 						"merged":   false,
 					},
 				}
 			},
 			setupMocks: func(mockStore *test.MockStore) {
 				requestID := uuid.MustParse("44444444-4444-4444-4444-444444444444")
-				request := newRequest(requestID, "Closed request", nil)
+				userID := uuid.MustParse("aaaaaaa4-aaaa-aaaa-aaaa-aaaaaaaaaaa4")
+				request := newRequest(requestID, userID, "Closed request", nil)
 
 				mockStore.On("GetFeatureRequest", requestID).Return(request, nil).Once()
 				mockStore.On("CreateNotification", mock.Anything).Return(nil).Once()
@@ -276,13 +281,14 @@ func TestWebhook_PREvent_BusinessLogic(t *testing.T) {
 					"pull_request": map[string]interface{}{
 						"number":   321,
 						"html_url": "https://github.com/owner/repo/pull/321",
-						"body":     "Console Request ID:** " + requestID.String(),
+						"body":     "**Console Request ID:** " + requestID.String(),
 					},
 				}
 			},
 			setupMocks: func(mockStore *test.MockStore) {
 				requestID := uuid.MustParse("55555555-5555-5555-5555-555555555555")
-				request := newRequest(requestID, "Failing request", nil)
+				userID := uuid.MustParse("aaaaaaa5-aaaa-aaaa-aaaa-aaaaaaaaaaa5")
+				request := newRequest(requestID, userID, "Failing request", nil)
 
 				mockStore.On("GetFeatureRequest", requestID).Return(request, nil).Once()
 				mockStore.On("UpdateFeatureRequestPR", requestID, 321, "https://github.com/owner/repo/pull/321").
@@ -290,7 +296,9 @@ func TestWebhook_PREvent_BusinessLogic(t *testing.T) {
 			},
 			assertResp: func(t *testing.T, resp *http.Response, mockStore *test.MockStore) {
 				assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-				assert.Contains(t, readBody(t, resp), "failed to update PR info")
+				body, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Contains(t, string(body), "failed to update PR info")
 				mockStore.AssertNotCalled(t, "UpdateFeatureRequestStatus", mock.Anything, mock.Anything)
 				mockStore.AssertNotCalled(t, "CreateNotification", mock.Anything)
 			},
@@ -304,13 +312,14 @@ func TestWebhook_PREvent_BusinessLogic(t *testing.T) {
 					"pull_request": map[string]interface{}{
 						"number":   777,
 						"html_url": "https://github.com/owner/repo/pull/777",
-						"body":     "Console Request ID:** " + requestID.String(),
+						"body":     "**Console Request ID:** " + requestID.String(),
 					},
 				}
 			},
 			setupMocks: func(mockStore *test.MockStore) {
 				requestID := uuid.MustParse("66666666-6666-6666-6666-666666666666")
-				request := newRequest(requestID, "Synchronized request", nil)
+				userID := uuid.MustParse("aaaaaaa6-aaaa-aaaa-aaaa-aaaaaaaaaaa6")
+				request := newRequest(requestID, userID, "Synchronized request", nil)
 
 				mockStore.On("GetFeatureRequest", requestID).Return(request, nil).Once()
 				mockStore.On("UpdateFeatureRequestPR", requestID, 777, "https://github.com/owner/repo/pull/777").Return(nil).Once()
@@ -329,9 +338,7 @@ func TestWebhook_PREvent_BusinessLogic(t *testing.T) {
 			tt.setupMocks(mockStore)
 
 			resp := sendWebhook(t, app, "pull_request", requireMarshalJSON(t, tt.payload()))
-			if resp.StatusCode == http.StatusOK {
-				defer resp.Body.Close()
-			}
+			defer resp.Body.Close()
 
 			tt.assertResp(t, resp, mockStore)
 			mockStore.AssertExpectations(t)
