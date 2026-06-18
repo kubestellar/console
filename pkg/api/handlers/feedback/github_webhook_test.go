@@ -7,10 +7,23 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+func setupWebhookTestWithMockStore(t *testing.T) (*fiber.App, *test.MockStore) {
+	t.Helper()
+
+	app, handler := setupWebhookTest(t)
+	stubStore, ok := handler.store.(*feedbackStoreStub)
+	require.True(t, ok, "webhook tests should use feedbackStoreStub")
+
+	return app, stubStore.MockStore
+}
 
 // TestWebhook_NoSecretConfigured_Returns503 verifies that the webhook handler
 // rejects requests with 503 when GITHUB_WEBHOOK_SECRET is not configured.
@@ -109,6 +122,221 @@ func TestWebhook_ShortSignatureHeader_Returns401(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestWebhook_PREvent_BusinessLogic(t *testing.T) {
+	newRequest := func(id uuid.UUID, title string, issueNumber *int) *models.FeatureRequest {
+		return &models.FeatureRequest{
+			ID:                id,
+			UserID:            uuid.New(),
+			Title:             title,
+			GitHubIssueNumber: issueNumber,
+		}
+	}
+
+	tests := []struct {
+		name       string
+		payload    func() map[string]interface{}
+		setupMocks func(*test.MockStore)
+		assertResp func(*testing.T, *http.Response, *test.MockStore)
+	}{
+		{
+			name: "opened links embedded UUID and marks fix ready",
+			payload: func() map[string]interface{} {
+				requestID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+				return map[string]interface{}{
+					"action": "opened",
+					"pull_request": map[string]interface{}{
+						"number":   456,
+						"html_url": "https://github.com/owner/repo/pull/456",
+						"body":     "Console Request ID:** " + requestID.String(),
+					},
+				}
+			},
+			setupMocks: func(mockStore *test.MockStore) {
+				requestID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+				request := newRequest(requestID, "UUID-linked request", nil)
+
+				mockStore.On("GetFeatureRequest", requestID).Return(request, nil).Once()
+				mockStore.On("UpdateFeatureRequestPR", requestID, 456, "https://github.com/owner/repo/pull/456").Return(nil).Once()
+				mockStore.On("UpdateFeatureRequestStatus", requestID, models.RequestStatusFixReady).Return(nil).Once()
+				mockStore.On("CreateNotification", mock.Anything).Return(nil).Once()
+			},
+			assertResp: func(t *testing.T, resp *http.Response, mockStore *test.MockStore) {
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+				mockStore.AssertNotCalled(t, "GetFeatureRequestsByIssueNumbers", mock.Anything)
+			},
+		},
+		{
+			name: "opened links Fixes issue and marks fix ready",
+			payload: func() map[string]interface{} {
+				return map[string]interface{}{
+					"action": "opened",
+					"pull_request": map[string]interface{}{
+						"number":   789,
+						"html_url": "https://github.com/owner/repo/pull/789",
+						"body":     "Fixes #19008",
+					},
+				}
+			},
+			setupMocks: func(mockStore *test.MockStore) {
+				issueNumber := 19008
+				requestID := uuid.MustParse("22222222-2222-2222-2222-222222222222")
+				request := newRequest(requestID, "Issue-linked request", &issueNumber)
+
+				mockStore.On("GetFeatureRequestsByIssueNumbers", []int{issueNumber}).Return([]*models.FeatureRequest{request}, nil).Once()
+				mockStore.On("UpdateFeatureRequestPR", requestID, 789, "https://github.com/owner/repo/pull/789").Return(nil).Once()
+				mockStore.On("UpdateFeatureRequestStatus", requestID, models.RequestStatusFixReady).Return(nil).Once()
+				mockStore.On("CreateNotification", mock.Anything).Return(nil).Once()
+			},
+			assertResp: func(t *testing.T, resp *http.Response, _ *test.MockStore) {
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+			},
+		},
+		{
+			name: "closed merged marks fix complete",
+			payload: func() map[string]interface{} {
+				requestID := uuid.MustParse("33333333-3333-3333-3333-333333333333")
+				return map[string]interface{}{
+					"action": "closed",
+					"pull_request": map[string]interface{}{
+						"number":   456,
+						"html_url": "https://github.com/owner/repo/pull/456",
+						"body":     "Console Request ID:** " + requestID.String(),
+						"merged":   true,
+					},
+				}
+			},
+			setupMocks: func(mockStore *test.MockStore) {
+				requestID := uuid.MustParse("33333333-3333-3333-3333-333333333333")
+				request := newRequest(requestID, "Merged request", nil)
+
+				mockStore.On("GetFeatureRequest", requestID).Return(request, nil).Once()
+				mockStore.On("UpdateFeatureRequestStatus", requestID, models.RequestStatusFixComplete).Return(nil).Once()
+				mockStore.On("CreateNotification", mock.Anything).Return(nil).Once()
+			},
+			assertResp: func(t *testing.T, resp *http.Response, mockStore *test.MockStore) {
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+				mockStore.AssertNotCalled(t, "UpdateFeatureRequestPR", mock.Anything, mock.Anything, mock.Anything)
+			},
+		},
+		{
+			name: "closed unmerged skips status update",
+			payload: func() map[string]interface{} {
+				requestID := uuid.MustParse("44444444-4444-4444-4444-444444444444")
+				return map[string]interface{}{
+					"action": "closed",
+					"pull_request": map[string]interface{}{
+						"number":   654,
+						"html_url": "https://github.com/owner/repo/pull/654",
+						"body":     "Console Request ID:** " + requestID.String(),
+						"merged":   false,
+					},
+				}
+			},
+			setupMocks: func(mockStore *test.MockStore) {
+				requestID := uuid.MustParse("44444444-4444-4444-4444-444444444444")
+				request := newRequest(requestID, "Closed request", nil)
+
+				mockStore.On("GetFeatureRequest", requestID).Return(request, nil).Once()
+				mockStore.On("CreateNotification", mock.Anything).Return(nil).Once()
+			},
+			assertResp: func(t *testing.T, resp *http.Response, mockStore *test.MockStore) {
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+				mockStore.AssertNotCalled(t, "UpdateFeatureRequestStatus", mock.Anything, mock.Anything)
+			},
+		},
+		{
+			name: "unlinked PR without ai-generated label is ignored",
+			payload: func() map[string]interface{} {
+				return map[string]interface{}{
+					"action": "opened",
+					"pull_request": map[string]interface{}{
+						"number":   999,
+						"html_url": "https://github.com/owner/repo/pull/999",
+						"body":     "Regular PR body",
+						"labels":   []interface{}{},
+					},
+				}
+			},
+			setupMocks: func(_ *test.MockStore) {},
+			assertResp: func(t *testing.T, resp *http.Response, mockStore *test.MockStore) {
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+				mockStore.AssertNotCalled(t, "UpdateFeatureRequestPR", mock.Anything, mock.Anything, mock.Anything)
+				mockStore.AssertNotCalled(t, "UpdateFeatureRequestStatus", mock.Anything, mock.Anything)
+				mockStore.AssertNotCalled(t, "CreateNotification", mock.Anything)
+			},
+		},
+		{
+			name: "store failure returns 500 for retry",
+			payload: func() map[string]interface{} {
+				requestID := uuid.MustParse("55555555-5555-5555-5555-555555555555")
+				return map[string]interface{}{
+					"action": "opened",
+					"pull_request": map[string]interface{}{
+						"number":   321,
+						"html_url": "https://github.com/owner/repo/pull/321",
+						"body":     "Console Request ID:** " + requestID.String(),
+					},
+				}
+			},
+			setupMocks: func(mockStore *test.MockStore) {
+				requestID := uuid.MustParse("55555555-5555-5555-5555-555555555555")
+				request := newRequest(requestID, "Failing request", nil)
+
+				mockStore.On("GetFeatureRequest", requestID).Return(request, nil).Once()
+				mockStore.On("UpdateFeatureRequestPR", requestID, 321, "https://github.com/owner/repo/pull/321").
+					Return(errors.New("db write failed")).Once()
+			},
+			assertResp: func(t *testing.T, resp *http.Response, mockStore *test.MockStore) {
+				assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+				assert.Contains(t, readBody(t, resp), "failed to update PR info")
+				mockStore.AssertNotCalled(t, "UpdateFeatureRequestStatus", mock.Anything, mock.Anything)
+				mockStore.AssertNotCalled(t, "CreateNotification", mock.Anything)
+			},
+		},
+		{
+			name: "synchronize updates PR without opened notification",
+			payload: func() map[string]interface{} {
+				requestID := uuid.MustParse("66666666-6666-6666-6666-666666666666")
+				return map[string]interface{}{
+					"action": "synchronize",
+					"pull_request": map[string]interface{}{
+						"number":   777,
+						"html_url": "https://github.com/owner/repo/pull/777",
+						"body":     "Console Request ID:** " + requestID.String(),
+					},
+				}
+			},
+			setupMocks: func(mockStore *test.MockStore) {
+				requestID := uuid.MustParse("66666666-6666-6666-6666-666666666666")
+				request := newRequest(requestID, "Synchronized request", nil)
+
+				mockStore.On("GetFeatureRequest", requestID).Return(request, nil).Once()
+				mockStore.On("UpdateFeatureRequestPR", requestID, 777, "https://github.com/owner/repo/pull/777").Return(nil).Once()
+				mockStore.On("UpdateFeatureRequestStatus", requestID, models.RequestStatusFixReady).Return(nil).Once()
+			},
+			assertResp: func(t *testing.T, resp *http.Response, mockStore *test.MockStore) {
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+				mockStore.AssertNotCalled(t, "CreateNotification", mock.Anything)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app, mockStore := setupWebhookTestWithMockStore(t)
+			tt.setupMocks(mockStore)
+
+			resp := sendWebhook(t, app, "pull_request", requireMarshalJSON(t, tt.payload()))
+			if resp.StatusCode == http.StatusOK {
+				defer resp.Body.Close()
+			}
+
+			tt.assertResp(t, resp, mockStore)
+			mockStore.AssertExpectations(t)
+		})
+	}
 }
 
 // --- verifyWebhookSignature unit tests ---
