@@ -72,7 +72,7 @@ jobs:
           CURL_MAX_TIME=2      # seconds per curl attempt
           SLEEP_SECONDS=1      # seconds between attempts
           MAX_RESP_CHARS=200   # chars of last response to echo in error message
-          COOKIE_JAR=/tmp/auth-cookies.txt
+          COOKIE_JAR=${{ runner.temp }}/auth-cookies.txt
           TOKEN=""
           LAST_STATUS=""
           for i in $(seq 1 "$MAX_TRIES"); do
@@ -163,14 +163,14 @@ jobs:
             e2e/nightly/dashboard-health.spec.ts \
             e2e/nightly/mission-deeplink.spec.ts \
             -c e2e/nightly/nightly.config.ts \
-            --reporter=list,json 2>&1 | tee /tmp/test-output.txt
+            --reporter=list,json 2>&1 | tee ${{ runner.temp }}/test-output.txt
           TEST_EXIT=$?
           echo "exit_code=$TEST_EXIT" >> "$GITHUB_OUTPUT"
 
           # Extract the JSON report from test output
-          if grep -q '__NIGHTLY_REPORT_JSON__' /tmp/test-output.txt; then
-            sed -n '/__NIGHTLY_REPORT_JSON__/,/__NIGHTLY_REPORT_JSON_END__/p' /tmp/test-output.txt \
-              | grep -v '__NIGHTLY_REPORT_JSON' > /tmp/nightly-report.json
+          if grep -q '__NIGHTLY_REPORT_JSON__' ${{ runner.temp }}/test-output.txt; then
+            sed -n '/__NIGHTLY_REPORT_JSON__/,/__NIGHTLY_REPORT_JSON_END__/p' ${{ runner.temp }}/test-output.txt \
+              | grep -v '__NIGHTLY_REPORT_JSON' > ${{ runner.temp }}/nightly-report.json
             echo "has_report=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_report=false" >> "$GITHUB_OUTPUT"
@@ -214,7 +214,7 @@ jobs:
             // Parse the JSON report if available
             let report = null;
             try {
-              const raw = fs.readFileSync('/tmp/nightly-report.json', 'utf8');
+              const raw = fs.readFileSync('${{ runner.temp }}/nightly-report.json', 'utf8');
               report = JSON.parse(raw);
             } catch {
               core.warning('Could not parse nightly report JSON');
