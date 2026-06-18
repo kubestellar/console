@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -18,9 +19,8 @@ import (
 )
 
 func TestListClusterGroups_PrependsBuiltInGroup(t *testing.T) {
-	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(nil, env.Hub, env.Store)
-	env.App.Get("/api/cluster-groups", handler.ListClusterGroups)
+	app, _, handler := newClusterGroupHandlerTest(t, models.UserRoleAdmin)
+	app.Get("/api/cluster-groups", handler.ListClusterGroups)
 
 	setClusterGroupsForTest(t, ClusterGroup{
 		Name:     "team-a",
@@ -30,7 +30,7 @@ func TestListClusterGroups_PrependsBuiltInGroup(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/cluster-groups", nil)
-	resp, err := env.App.Test(req, -1)
+	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -40,6 +40,7 @@ func TestListClusterGroups_PrependsBuiltInGroup(t *testing.T) {
 	decodeJSONBody(t, resp, &payload)
 	require.Len(t, payload.Groups, 2)
 	assert.Equal(t, allHealthyClustersGroupName, payload.Groups[0].Name)
+	assert.Equal(t, "dynamic", payload.Groups[0].Kind)
 	assert.True(t, payload.Groups[0].BuiltIn)
 	assert.Empty(t, payload.Groups[0].Clusters)
 	assert.Equal(t, "team-a", payload.Groups[1].Name)
@@ -80,15 +81,14 @@ func TestCreateClusterGroup_Validation(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			env := setupTestEnv(t)
-			handler := NewWorkloadHandlers(nil, env.Hub, env.Store)
-			env.App.Post("/api/cluster-groups", handler.CreateClusterGroup)
+			app, _, handler := newClusterGroupHandlerTest(t, models.UserRoleAdmin)
+			app.Post("/api/cluster-groups", handler.CreateClusterGroup)
 			setClusterGroupsForTest(t)
 
 			req := httptest.NewRequest(http.MethodPost, "/api/cluster-groups", strings.NewReader(tt.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			resp, err := env.App.Test(req, -1)
+			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedCode, resp.StatusCode)
 
@@ -100,9 +100,7 @@ func TestCreateClusterGroup_Validation(t *testing.T) {
 }
 
 func TestCreateClusterGroup_PersistsGroup(t *testing.T) {
-	env := setupTestEnv(t)
-	mockStore := env.Store.(*test.MockStore)
-	mockStore.ExpectedCalls = filterExpectedCalls(mockStore.ExpectedCalls, "SaveClusterGroup")
+	app, mockStore, handler := newClusterGroupHandlerTest(t, models.UserRoleAdmin)
 
 	expected := ClusterGroup{
 		Name:     "team-a",
@@ -121,15 +119,14 @@ func TestCreateClusterGroup_PersistsGroup(t *testing.T) {
 		Return(nil).
 		Once()
 
-	handler := NewWorkloadHandlers(nil, env.Hub, env.Store)
-	env.App.Post("/api/cluster-groups", handler.CreateClusterGroup)
+	app.Post("/api/cluster-groups", handler.CreateClusterGroup)
 	setClusterGroupsForTest(t)
 
 	body := `{"name":"team-a","kind":"static","clusters":["c1","c2"],"color":"blue"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/cluster-groups", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := env.App.Test(req, -1)
+	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 
@@ -144,30 +141,21 @@ func TestCreateClusterGroup_PersistsGroup(t *testing.T) {
 }
 
 func TestCreateClusterGroup_RBAC(t *testing.T) {
-	env := setupTestEnv(t)
-	mockStore := env.Store.(*test.MockStore)
-	mockStore.ExpectedCalls = filterExpectedCalls(mockStore.ExpectedCalls, "GetUser")
-	mockStore.On("GetUser", testAdminUserID).Return(&models.User{
-		ID:   testAdminUserID,
-		Role: models.UserRoleViewer,
-	}, nil).Once()
+	app, _, handler := newClusterGroupHandlerTest(t, models.UserRoleViewer)
+	app.Post("/api/cluster-groups", handler.CreateClusterGroup)
 
-	handler := NewWorkloadHandlers(nil, env.Hub, env.Store)
-	env.App.Post("/api/cluster-groups", handler.CreateClusterGroup)
-
-	req := httptest.NewRequest(http.MethodPost, "/api/cluster-groups", strings.NewReader(`{"name":"team-a","kind":"static","clusters":["c1"]}`))
+	body := `{"name":"team-a","kind":"static","clusters":["c1"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/cluster-groups", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := env.App.Test(req, -1)
+	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	assert.Contains(t, readBody(t, resp), "Console admin access required")
 }
 
 func TestUpdateClusterGroup_UpdatesExistingGroup(t *testing.T) {
-	env := setupTestEnv(t)
-	mockStore := env.Store.(*test.MockStore)
-	mockStore.ExpectedCalls = filterExpectedCalls(mockStore.ExpectedCalls, "SaveClusterGroup")
+	app, mockStore, handler := newClusterGroupHandlerTest(t, models.UserRoleAdmin)
 
 	expected := ClusterGroup{
 		Name:     "team-a",
@@ -186,8 +174,7 @@ func TestUpdateClusterGroup_UpdatesExistingGroup(t *testing.T) {
 		Return(nil).
 		Once()
 
-	handler := NewWorkloadHandlers(nil, env.Hub, env.Store)
-	env.App.Put("/api/cluster-groups/:name", handler.UpdateClusterGroup)
+	app.Put("/api/cluster-groups/:name", handler.UpdateClusterGroup)
 	setClusterGroupsForTest(t, ClusterGroup{
 		Name:     "team-a",
 		Kind:     "static",
@@ -195,10 +182,11 @@ func TestUpdateClusterGroup_UpdatesExistingGroup(t *testing.T) {
 		Color:    "blue",
 	})
 
-	req := httptest.NewRequest(http.MethodPut, "/api/cluster-groups/team-a", strings.NewReader(`{"name":"ignored","kind":"static","clusters":["c2"],"color":"red"}`))
+	body := `{"name":"ignored","kind":"static","clusters":["c2"],"color":"red"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/cluster-groups/team-a", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := env.App.Test(req, -1)
+	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -213,14 +201,14 @@ func TestUpdateClusterGroup_UpdatesExistingGroup(t *testing.T) {
 }
 
 func TestUpdateClusterGroup_ProtectsBuiltInGroup(t *testing.T) {
-	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(nil, env.Hub, env.Store)
-	env.App.Put("/api/cluster-groups/:name", handler.UpdateClusterGroup)
+	app, _, handler := newClusterGroupHandlerTest(t, models.UserRoleAdmin)
+	app.Put("/api/cluster-groups/:name", handler.UpdateClusterGroup)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/cluster-groups/"+allHealthyClustersGroupName, strings.NewReader(`{"kind":"static","clusters":["c1"]}`))
+	body := `{"kind":"static","clusters":["c1"]}`
+	req := httptest.NewRequest(http.MethodPut, "/api/cluster-groups/"+allHealthyClustersGroupName, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := env.App.Test(req, -1)
+	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
@@ -230,17 +218,14 @@ func TestUpdateClusterGroup_ProtectsBuiltInGroup(t *testing.T) {
 }
 
 func TestDeleteClusterGroup_DeletesPersistedGroup(t *testing.T) {
-	env := setupTestEnv(t)
-	mockStore := env.Store.(*test.MockStore)
-	mockStore.ExpectedCalls = filterExpectedCalls(mockStore.ExpectedCalls, "DeleteClusterGroup")
+	app, mockStore, handler := newClusterGroupHandlerTest(t, models.UserRoleAdmin)
 	mockStore.On("DeleteClusterGroup", "team-a").Return(nil).Once()
 
-	handler := NewWorkloadHandlers(nil, env.Hub, env.Store)
-	env.App.Delete("/api/cluster-groups/:name", handler.DeleteClusterGroup)
+	app.Delete("/api/cluster-groups/:name", handler.DeleteClusterGroup)
 	setClusterGroupsForTest(t, ClusterGroup{Name: "team-a", Kind: "static"})
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/cluster-groups/team-a", nil)
-	resp, err := env.App.Test(req, -1)
+	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -257,12 +242,11 @@ func TestDeleteClusterGroup_DeletesPersistedGroup(t *testing.T) {
 }
 
 func TestDeleteClusterGroup_ProtectsBuiltInGroup(t *testing.T) {
-	env := setupTestEnv(t)
-	handler := NewWorkloadHandlers(nil, env.Hub, env.Store)
-	env.App.Delete("/api/cluster-groups/:name", handler.DeleteClusterGroup)
+	app, _, handler := newClusterGroupHandlerTest(t, models.UserRoleAdmin)
+	app.Delete("/api/cluster-groups/:name", handler.DeleteClusterGroup)
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/cluster-groups/"+allHealthyClustersGroupName, nil)
-	resp, err := env.App.Test(req, -1)
+	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
@@ -272,9 +256,7 @@ func TestDeleteClusterGroup_ProtectsBuiltInGroup(t *testing.T) {
 }
 
 func TestPersistClusterGroup_SavesToStore(t *testing.T) {
-	env := setupTestEnv(t)
-	mockStore := env.Store.(*test.MockStore)
-	mockStore.ExpectedCalls = filterExpectedCalls(mockStore.ExpectedCalls, "SaveClusterGroup")
+	mockStore := new(test.MockStore)
 
 	group := ClusterGroup{Name: "persisted", Kind: "static", Clusters: []string{"c1"}}
 	mockStore.
@@ -288,7 +270,7 @@ func TestPersistClusterGroup_SavesToStore(t *testing.T) {
 		Return(nil).
 		Once()
 
-	handler := NewWorkloadHandlers(nil, env.Hub, env.Store)
+	handler := NewWorkloadHandlers(nil, nil, mockStore)
 	handler.persistClusterGroup(context.Background(), group.Name, group)
 	mockStore.AssertExpectations(t)
 }
@@ -299,12 +281,10 @@ func TestPersistClusterGroup_NilStoreNoop(t *testing.T) {
 }
 
 func TestDeletePersistedClusterGroup_RemovesFromStore(t *testing.T) {
-	env := setupTestEnv(t)
-	mockStore := env.Store.(*test.MockStore)
-	mockStore.ExpectedCalls = filterExpectedCalls(mockStore.ExpectedCalls, "DeleteClusterGroup")
+	mockStore := new(test.MockStore)
 	mockStore.On("DeleteClusterGroup", "persisted").Return(nil).Once()
 
-	handler := NewWorkloadHandlers(nil, env.Hub, env.Store)
+	handler := NewWorkloadHandlers(nil, nil, mockStore)
 	handler.deletePersistedClusterGroup(context.Background(), "persisted")
 	mockStore.AssertExpectations(t)
 }
@@ -314,6 +294,8 @@ func TestDeletePersistedClusterGroup_NilStoreNoop(t *testing.T) {
 	handler.deletePersistedClusterGroup(context.Background(), "ignored")
 }
 
+// These tests intentionally avoid t.Parallel because clusterGroups is package-global
+// shared state in cluster_groups.go and each case resets it explicitly.
 func setClusterGroupsForTest(t testing.TB, groups ...ClusterGroup) {
 	t.Helper()
 	clusterGroupsMu.Lock()
@@ -329,7 +311,24 @@ func setClusterGroupsForTest(t testing.TB, groups ...ClusterGroup) {
 	})
 }
 
-func decodeJSONBody(t *testing.T, resp *http.Response, target interface{}) {
+func newClusterGroupHandlerTest(t testing.TB, role models.UserRole) (*fiber.App, *test.MockStore, *WorkloadHandlers) {
+	t.Helper()
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", testAdminUserID)
+		return c.Next()
+	})
+
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", testAdminUserID).Return(&models.User{
+		ID:   testAdminUserID,
+		Role: role,
+	}, nil).Maybe()
+
+	return app, mockStore, NewWorkloadHandlers(nil, nil, mockStore)
+}
+
+func decodeJSONBody(t *testing.T, resp *http.Response, target any) {
 	t.Helper()
 	body := readBody(t, resp)
 	require.NoError(t, json.Unmarshal([]byte(body), target))
