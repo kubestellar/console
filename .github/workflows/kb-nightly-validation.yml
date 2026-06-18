@@ -113,6 +113,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [ ! -f kb-gap-report.md ]; then
+            {
+              echo "# KB Nightly Validation Failure"
+              echo
+              echo "The workflow failed before generating \`kb-gap-report.md\`."
+              echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            } > kb-gap-report.md
+          fi
+
           TITLE="KB Validation: critical gaps detected $(date -u +%Y-%m-%d)"
 
           EXISTING=$(gh issue list \

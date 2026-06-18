@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test'
 import {
   setupDemoAndNavigate,
-  NETWORK_IDLE_TIMEOUT_MS,
 } from '../helpers/setup'
 import { assertNoLayoutOverflow } from '../helpers/ux-assertions'
 
@@ -15,6 +14,8 @@ import { assertNoLayoutOverflow } from '../helpers/ux-assertions'
 
 /** Minimum body text length to consider a page "not blank" */
 const MIN_BODY_TEXT_LENGTH = 10
+/** Maximum time to wait for route content before declaring blank render */
+const CONTENT_TIMEOUT_MS = 15_000
 
 const VIEWPORTS = [
   { name: 'mobile', width: 375, height: 812 },
@@ -40,11 +41,18 @@ for (const viewport of VIEWPORTS) {
       test('renders content (not blank)', async ({ page }) => {
         await setupDemoAndNavigate(page, route)
 
-        const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-        expect(
-          bodyText.length,
-          `Route "${route}" at ${viewport.name} rendered blank (${bodyText.length} chars)`,
-        ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+        await expect
+          .poll(
+            async () => {
+              const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
+              return bodyText.length
+            },
+            {
+              timeout: CONTENT_TIMEOUT_MS,
+              message: `Route "${route}" at ${viewport.name} rendered blank`,
+            },
+          )
+          .toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
       })
 
       test('screenshot for visual review', async ({ page }) => {

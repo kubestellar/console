@@ -1,7 +1,6 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import {
   setupDemoAndNavigate,
-  ELEMENT_VISIBLE_TIMEOUT_MS,
   NETWORK_IDLE_TIMEOUT_MS,
 } from '../helpers/setup'
 
@@ -18,6 +17,21 @@ const MIN_BODY_TEXT_LENGTH = 10
 
 /** Maximum time to wait for page content to appear */
 const CONTENT_TIMEOUT_MS = 15_000
+
+async function assertRouteHasContent(page: Page, routeLabel: string) {
+  await expect
+    .poll(
+      async () => {
+        const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
+        return bodyText.length
+      },
+      {
+        timeout: CONTENT_TIMEOUT_MS,
+        message: `Route "${routeLabel}" rendered a blank page`,
+      },
+    )
+    .toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+}
 
 /** Dashboard and feature routes */
 const DASHBOARD_ROUTES = [
@@ -84,11 +98,7 @@ test.describe('Deep Links — Dashboard Routes', () => {
       await setupDemoAndNavigate(page, route)
       await page.waitForLoadState('domcontentloaded')
 
-      const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-      expect(
-        bodyText.length,
-        `Route "${route}" rendered a blank page (body text length: ${bodyText.length})`,
-      ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+      await assertRouteHasContent(page, route)
 
       const crash = page.getByText(/something went wrong|application error|unhandled error/i)
       await expect(crash).not.toBeVisible()
@@ -105,11 +115,7 @@ test.describe('Deep Links — Landing Pages', () => {
       // so set up demo mode first to prevent redirect to /login.
       await setupDemoAndNavigate(page, route)
 
-      const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-      expect(
-        bodyText.length,
-        `Landing page "${route}" rendered a blank page`,
-      ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+      await assertRouteHasContent(page, route)
 
       const crash = page.getByText(/something went wrong|application error|unhandled error/i)
       await expect(crash).not.toBeVisible()
@@ -125,11 +131,7 @@ test.describe('Deep Links — Mission Deep Links', () => {
       // Mission landing pages need demo context to avoid auth redirects
       await setupDemoAndNavigate(page, route)
 
-      const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-      expect(
-        bodyText.length,
-        `Mission "${missionName}" rendered a blank page`,
-      ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+      await assertRouteHasContent(page, missionName)
 
       const crash = page.getByText(/something went wrong|application error|unhandled error/i)
       await expect(crash).not.toBeVisible()
@@ -141,8 +143,7 @@ test.describe('Deep Links — Query Params & Special Routes', () => {
   test('/?browse=missions renders missions content', async ({ page }) => {
     await setupDemoAndNavigate(page, '/?browse=missions')
 
-    const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-    expect(bodyText.length).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+    await assertRouteHasContent(page, '/?browse=missions')
 
     const crash = page.getByText(/something went wrong|application error/i)
     await expect(crash).not.toBeVisible()
@@ -151,8 +152,7 @@ test.describe('Deep Links — Query Params & Special Routes', () => {
   test('route with hash fragment does not crash', async ({ page }) => {
     await setupDemoAndNavigate(page, '/settings#appearance')
 
-    const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-    expect(bodyText.length).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+    await assertRouteHasContent(page, '/settings#appearance')
   })
 })
 
@@ -184,7 +184,6 @@ test.describe('Deep Links — Navigation Integrity', () => {
     expect(finalUrl).not.toContain('redirect')
 
     // Page should have content
-    const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-    expect(bodyText.length).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+    await assertRouteHasContent(page, '/missions')
   })
 })

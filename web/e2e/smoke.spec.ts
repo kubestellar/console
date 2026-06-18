@@ -16,6 +16,8 @@ const MIN_BODY_TEXT_LEN = 50
 const MIN_DASHBOARD_TEXT_LEN = 100
 /** Short timeout for optional UI probes (theme toggle, demo badge, etc.). */
 const OPTIONAL_PROBE_TIMEOUT_MS = 3_000
+/** Timeout for asserting settings route title visibility. */
+const SETTINGS_ROUTE_TIMEOUT_MS = 10_000
 
 /**
  * Smoke Tests for KubeStellar Console
@@ -159,8 +161,24 @@ test.describe('Smoke Tests', () => {
       
       // Use regex-based URL assertion for cross-browser compatibility.
       // Glob-based waitForURL('**/settings') fails on Firefox/WebKit. (#18588)
-      await expect(page).toHaveURL(/\/settings/, { timeout: 10000 })
-      await expect(page.locator('h1:has-text("Settings")')).toBeVisible({ timeout: 10000 })
+      await expect(page).toHaveURL(/\/settings/, { timeout: SETTINGS_ROUTE_TIMEOUT_MS })
+      const settingsTitleCandidates = page.locator(
+        '[data-testid="settings-title"], [data-testid="settings-title-mobile"]',
+      )
+      await expect
+        .poll(
+          async () =>
+            settingsTitleCandidates.evaluateAll((elements) =>
+              elements.some((element) => {
+                const htmlElement = element as HTMLElement
+                const style = window.getComputedStyle(htmlElement)
+                const rect = htmlElement.getBoundingClientRect()
+                return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0
+              }),
+            ),
+          { timeout: SETTINGS_ROUTE_TIMEOUT_MS },
+        )
+        .toBe(true)
 
       // Click the logo button (has aria-label "Go to home dashboard").
       // The navbar renders two such buttons — the logo and the wordmark —

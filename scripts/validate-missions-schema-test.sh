@@ -6,8 +6,8 @@ cd "$(dirname "$0")/.."
 SCHEMA_FILE="web/src/lib/missions/mission.schema.json"
 TESTDATA_ROOT="scripts/testdata/validate-missions"
 VALID_DIR="${TESTDATA_ROOT}/valid"
-INVALID_DIR="${TESTDATA_ROOT}/invalid-missing-version"
-EXPECTED_VERSION_ERROR="must have required property 'version'"
+INVALID_DIR="${TESTDATA_ROOT}/invalid-missing-steps"
+EXPECTED_SCHEMA_ERROR="'steps' array is empty or missing"
 
 assert_validation_passes() {
   local name="$1"
@@ -47,6 +47,6 @@ assert_validation_fails_with() {
 }
 
 assert_validation_passes "accepts minimal runtime-valid mission fixture" "$VALID_DIR"
-assert_validation_fails_with "rejects mission missing required version" "$INVALID_DIR" "$EXPECTED_VERSION_ERROR"
+assert_validation_fails_with "rejects mission missing required steps" "$INVALID_DIR" "$EXPECTED_SCHEMA_ERROR"
 
 echo "Mission schema validation path passed fixture coverage checks."
