@@ -13,5 +13,11 @@ permissions:
 
 jobs:
   greet:
-    uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@main
+    # Skip bot users — greeting actions fail (non-zero exit) for bot accounts.
+    # Fork guard prevents running on external fork PRs.
+    if: >
+      github.actor_type != 'Bot' &&
+      (github.event_name != 'pull_request_target' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@a160acca0bdce1ac6c649e006d680d5f6d53024e  # pinned SHA (was @main)
     secrets: inherit
