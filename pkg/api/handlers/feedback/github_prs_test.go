@@ -4,12 +4,24 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+// setupWebhookTestWithStore creates a test webhook app using a custom store stub.
+func setupWebhookTestWithStore(t *testing.T, store *feedbackStoreStub) (*fiber.App, *FeedbackHandler) {
+	t.Helper()
+	app := fiber.New()
+	handler := NewFeedbackHandler(store, FeedbackConfig{
+		WebhookSecret: testWebhookSecret,
+	})
+	app.Post("/webhook", handler.HandleGitHubWebhook)
+	return app, handler
+}
 
 // TestHandlePREvent_Opened_LinkedByUUID verifies that a PR webhook with action
 // "opened" and a body containing "Console Request ID:** <uuid>" updates the
@@ -61,8 +73,6 @@ func TestHandlePREvent_Opened_LinkedByIssueNumber(t *testing.T) {
 		GitHubIssueNumber: &issueNum,
 	}
 
-	// First lookup by UUID returns nothing (no UUID in body)
-	stubStore.MockStore.On("GetFeatureRequest", mock.AnythingOfType("uuid.UUID")).Return(nil, nil).Maybe()
 	stubStore.MockStore.On("GetFeatureRequestsByIssueNumbers", []int{42}).Return([]*models.FeatureRequest{featureReq}, nil)
 	stubStore.MockStore.On("UpdateFeatureRequestPR", requestID, 101, "https://github.com/org/repo/pull/101").Return(nil)
 	stubStore.MockStore.On("UpdateFeatureRequestStatus", requestID, models.RequestStatusFixReady).Return(nil)
@@ -117,7 +127,7 @@ func TestHandlePREvent_Closed_Merged(t *testing.T) {
 }
 
 // TestHandlePREvent_Closed_NotMerged verifies that a closed-but-not-merged PR
-// does not change the request status (only creates a notification).
+// does not update status to fix_complete.
 func TestHandlePREvent_Closed_NotMerged(t *testing.T) {
 	stubStore := &feedbackStoreStub{MockStore: &test.MockStore{}}
 	app, _ := setupWebhookTestWithStore(t, stubStore)
@@ -130,7 +140,6 @@ func TestHandlePREvent_Closed_NotMerged(t *testing.T) {
 	}
 
 	stubStore.MockStore.On("GetFeatureRequest", requestID).Return(featureReq, nil)
-	// UpdateFeatureRequestStatus should NOT be called for closed-without-merge
 
 	payload := requireMarshalJSON(t, map[string]interface{}{
 		"action": "closed",
@@ -155,8 +164,6 @@ func TestHandlePREvent_NoLinkedRequest_NoAILabel(t *testing.T) {
 	stubStore := &feedbackStoreStub{MockStore: &test.MockStore{}}
 	app, _ := setupWebhookTestWithStore(t, stubStore)
 
-	// No feature request exists for any lookup method
-	stubStore.MockStore.On("GetFeatureRequest", mock.AnythingOfType("uuid.UUID")).Return(nil, nil).Maybe()
 	stubStore.MockStore.On("GetFeatureRequestsByIssueNumbers", mock.Anything).Return(nil, nil).Maybe()
 
 	payload := requireMarshalJSON(t, map[string]interface{}{
@@ -173,7 +180,6 @@ func TestHandlePREvent_NoLinkedRequest_NoAILabel(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// No update calls should be made
 	stubStore.MockStore.AssertNotCalled(t, "UpdateFeatureRequestPR", mock.Anything, mock.Anything, mock.Anything)
 	stubStore.MockStore.AssertNotCalled(t, "UpdateFeatureRequestStatus", mock.Anything, mock.Anything)
 }
@@ -240,15 +246,4 @@ func TestHandlePREvent_Synchronize_UpdatesPR(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	stubStore.MockStore.AssertCalled(t, "UpdateFeatureRequestPR", requestID, 50, "https://github.com/org/repo/pull/50")
-}
-
-// setupWebhookTestWithStore creates a test webhook app using a custom store stub.
-func setupWebhookTestWithStore(t *testing.T, store *feedbackStoreStub) (*test.FiberApp, *FeedbackHandler) {
-	t.Helper()
-	app := test.NewFiberApp()
-	handler := NewFeedbackHandler(store, FeedbackConfig{
-		WebhookSecret: testWebhookSecret,
-	})
-	app.App.Post("/webhook", handler.HandleGitHubWebhook)
-	return app, handler
 }
