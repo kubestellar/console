@@ -344,7 +344,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
                       className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground shrink-0"
                       title="Copy command"
                     >
-                      {copiedCommand === command ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedCommand === command ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                 ))}

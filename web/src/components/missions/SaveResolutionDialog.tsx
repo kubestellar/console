@@ -582,13 +582,13 @@ export function SaveResolutionDialog({
         {aiError && (
           <div className="flex items-center justify-between gap-3 p-3 bg-yellow-500/10 border-b border-yellow-500/20">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-yellow-500" />
-              <span className="text-xs text-yellow-500">{aiError}</span>
+              <AlertCircle className="w-4 h-4 text-yellow-400" />
+              <span className="text-xs text-yellow-400">{aiError}</span>
             </div>
             <button
               onClick={generateSummary}
               disabled={isBusy}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 rounded transition-colors disabled:opacity-50"
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded transition-colors disabled:opacity-50"
             >
               <RefreshCw className="w-3 h-3" />
               {t('common.retry')}

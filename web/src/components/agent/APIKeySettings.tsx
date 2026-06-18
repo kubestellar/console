@@ -458,7 +458,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                           {key.configured ? (
                             <>
                               {key.valid === true ? (
-                                <span className="flex items-center gap-1 text-xs text-green-500">
+                                <span className="flex items-center gap-1 text-xs text-green-400">
                                   <Check className="w-3 h-3" />
                                   {t('agent.working')}
                                 </span>
@@ -628,7 +628,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                             </p>
                           )}
                           {baseURLSaved.has(key.provider) && (
-                            <p className="text-xs text-yellow-500 flex items-center gap-1">
+                            <p className="text-xs text-yellow-400 flex items-center gap-1">
                               <AlertCircle className="w-3 h-3" />
                               {t('agent.baseUrlRestartHint', 'Saved. Restart kc-agent for the change to take effect.')}
                             </p>

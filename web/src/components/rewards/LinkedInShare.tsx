@@ -64,7 +64,7 @@ export function LinkedInShareButton() {
             </p>
 
             <div className="flex items-center justify-center gap-2 mb-4 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-              <Coins className="w-4 h-4 text-yellow-500" />
+              <Coins className="w-4 h-4 text-yellow-400" />
               <span className="text-sm text-yellow-400 font-medium">+200 coins</span>
             </div>
 

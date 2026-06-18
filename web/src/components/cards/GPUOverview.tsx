@@ -278,9 +278,9 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
               strokeLinecap="round"
               strokeDasharray={`${gpuUtilization * 3.52} 352`}
               className={`${
-                gpuUtilization > 80 ? 'text-red-500' :
-                gpuUtilization > 50 ? 'text-yellow-500' :
-                'text-green-500'
+                gpuUtilization > 80 ? 'text-red-400' :
+                gpuUtilization > 50 ? 'text-yellow-400' :
+                'text-green-400'
               }`}
             />
           </svg>

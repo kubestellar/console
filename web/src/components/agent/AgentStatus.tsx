@@ -34,7 +34,7 @@ export function AgentStatus() {
           </p>
           <button
             onClick={setupDialog.open}
-            className="mt-2 text-sm text-yellow-500 hover:text-yellow-400 underline underline-offset-2 transition-colors"
+            className="mt-2 text-sm text-yellow-400 hover:text-yellow-400 underline underline-offset-2 transition-colors"
           >
             {t('agentStatus.howToConnect')}
           </button>

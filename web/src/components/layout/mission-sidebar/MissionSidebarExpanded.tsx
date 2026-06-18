@@ -128,7 +128,7 @@ export function MissionSidebarExpanded({
         {showSavedToast && (
           <div className="mx-3 mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-center gap-2 mb-2">
-              <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
               <p className="text-sm font-medium text-green-400">{t('layout.missionSidebar.missionImported')}</p>
               {toastCountdown > 0 && (
                 <span className="text-2xs text-green-400/70 ml-auto">{toastCountdown}s</span>

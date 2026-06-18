@@ -251,7 +251,7 @@ export function DeployConfirmDialog({
                               <span className="text-muted-foreground shrink-0">{dep.kind}</span>
                               <span className="text-foreground truncate flex-1">{dep.name}</span>
                               {dep.optional && (
-                                <span className="text-2xs text-yellow-500 shrink-0">{t('deploy.optional')}</span>
+                                <span className="text-2xs text-yellow-400 shrink-0">{t('deploy.optional')}</span>
                               )}
                             </div>
                           )

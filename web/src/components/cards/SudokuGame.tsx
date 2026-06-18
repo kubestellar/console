@@ -479,7 +479,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
           </span>
           {bestTimes[gameState.difficulty] && (
             <span className={`text-muted-foreground flex items-center ${isMaximized ? 'gap-1' : 'gap-0.5'}`}>
-              <Trophy className={`${isMaximized ? 'w-4 h-4' : 'w-2.5 h-2.5'} text-yellow-500`} />
+              <Trophy className={`${isMaximized ? 'w-4 h-4' : 'w-2.5 h-2.5'} text-yellow-400`} />
               {formatTime(bestTimes[gameState.difficulty]!)}
             </span>
           )}
@@ -513,7 +513,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
                     ${isSelected ? 'bg-purple-500/30 ring-2 ring-purple-500' : ''}
                     ${!isSelected && (isInSameRow || isInSameCol || isInSameBox) ? 'bg-purple-500/10' : ''}
                     ${cell.isOriginal ? 'text-foreground font-bold' : 'text-purple-400'}
-                    ${cell.isConflict ? 'text-red-500 bg-red-500/20' : ''}
+                    ${cell.isConflict ? 'text-red-400 bg-red-500/20' : ''}
                     ${!cell.isOriginal && !gameState.isComplete ? 'hover:bg-purple-500/20 cursor-pointer' : ''}
                     ${gameState.isComplete ? 'cursor-default' : ''}
                   `}
@@ -631,7 +631,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
                     <span className="font-medium">{DIFFICULTIES[difficulty].label}</span>
                     {bestTimes[difficulty] && (
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Trophy className="w-3 h-3 text-yellow-500" />
+                        <Trophy className="w-3 h-3 text-yellow-400" />
                         {formatTime(bestTimes[difficulty]!)}
                       </span>
                     )}
@@ -652,7 +652,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
           <div className="bg-background border border-purple-500/30 rounded-lg p-6 max-w-xs w-full mx-4 text-center">
             <div className="mb-4">
               <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <Trophy className="w-8 h-8 text-yellow-500" />
+                <Trophy className="w-8 h-8 text-yellow-400" />
               </div>
               <h3 className="text-lg font-bold mb-2">Congratulations!</h3>
               <p className="text-sm text-muted-foreground mb-1">
@@ -662,7 +662,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
                 {formatTime(gameState.timer)}
               </p>
               {bestTimes[gameState.difficulty] === gameState.timer && (
-                <p className="text-xs text-yellow-500 mt-2 flex items-center justify-center gap-1">
+                <p className="text-xs text-yellow-400 mt-2 flex items-center justify-center gap-1">
                   <Sparkles className="w-3 h-3" />
                   New Best Time!
                 </p>

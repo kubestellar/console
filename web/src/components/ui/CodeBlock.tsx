@@ -57,7 +57,7 @@ export function CodeBlock({ children, language = 'text', fontSize = 'sm' }: Code
           icon={copyStatus === 'copied' ? (
             <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
           ) : copyStatus === 'failed' ? (
-            <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
+            <AlertCircle className="w-4 h-4 text-red-400 dark:text-red-400" />
           ) : (
             <Copy className="w-4 h-4 text-muted-foreground" />
           )}

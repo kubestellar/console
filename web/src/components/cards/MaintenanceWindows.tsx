@@ -258,7 +258,7 @@ export function MaintenanceWindows() {
                 // focus-visible reveal it for keyboard/assistive tech.
                 className={
                   pendingDeleteId === w.id
-                    ? 'opacity-100 text-xs font-medium text-red-500 hover:text-red-400 px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/40 transition-opacity'
+                    ? 'opacity-100 text-xs font-medium text-red-400 hover:text-red-400 px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/40 transition-opacity'
                     : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-red-400 text-xs text-red-400 hover:text-red-300 px-1 rounded transition-opacity'
                 }
               >

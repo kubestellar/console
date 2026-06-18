@@ -59,7 +59,7 @@ function NamespaceMonitorChangesPanelComponent({
                     : change.type === 'deleted'
                       ? 'text-red-400'
                       : change.type === 'error'
-                        ? 'text-red-500'
+                        ? 'text-red-400'
                         : 'text-yellow-400'
                 }`}
               >

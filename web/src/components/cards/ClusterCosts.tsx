@@ -57,7 +57,7 @@ const PROVIDER_ICONS: Record<CloudProvider, { color: string; bg: string; short: 
   gcp: { color: 'text-blue-400', bg: 'bg-blue-500/20', short: 'GCP' },
   azure: { color: 'text-blue-400', bg: 'bg-blue-500/20', short: 'AZR' },
   oci: { color: 'text-red-400', bg: 'bg-red-500/20', short: 'OCI' },
-  openshift: { color: 'text-red-500', bg: 'bg-red-600/20', short: 'OCP' } }
+  openshift: { color: 'text-red-400', bg: 'bg-red-600/20', short: 'OCP' } }
 
 interface CloudPricing {
   name: string

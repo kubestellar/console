@@ -255,7 +255,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               }}
               className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary rounded-lg transition-colors"
             >
-              <Coins className="w-4 h-4 text-yellow-500" />
+              <Coins className="w-4 h-4 text-yellow-400" />
               <span className="text-muted-foreground">{t('profile.coins')}</span>
               <span
                 className="ml-auto text-yellow-400 font-medium"
@@ -427,7 +427,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               }}
               className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
-              <Lightbulb className="w-4 h-4 text-yellow-500" />
+              <Lightbulb className="w-4 h-4 text-yellow-400" />
               <span>{t('feedback.feedback')}</span>
               <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-900 text-yellow-400">{t('feedback.plusCoins')}</span>
             </button>

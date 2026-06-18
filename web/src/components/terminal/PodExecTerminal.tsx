@@ -354,9 +354,9 @@ export default function PodExecTerminal({
         {status === 'error' && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-950/80 z-10">
             <div className="flex flex-col items-center gap-3 text-center max-w-md">
-              <AlertCircle className="w-8 h-8 text-red-500" />
-              <div className="text-sm text-red-500 font-medium">{t('terminal.connectionError')}</div>
-              <div className="text-xs text-red-500/80">
+              <AlertCircle className="w-8 h-8 text-red-400" />
+              <div className="text-sm text-red-400 font-medium">{t('terminal.connectionError')}</div>
+              <div className="text-xs text-red-400/80">
                 {error || 'Could not connect to cluster exec endpoint. Please verify the backend is running and /ws/exec is reachable.'}
               </div>
               <button
@@ -430,7 +430,7 @@ function StatusIndicator({ status, reconnectAttempt, reconnectCountdown, isStale
   return (
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
       {Icon ? (
-        <Icon className="w-3 h-3 text-red-500" />
+        <Icon className="w-3 h-3 text-red-400" />
       ) : (
         <div className={`w-2 h-2 rounded-full ${color}`} />
       )}

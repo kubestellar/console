@@ -27,7 +27,7 @@ function getResourceIcon(kind: string) {
   if (k.includes('statefulset') || k.includes('daemonset') || k.includes('replicaset')) return <Layers className="w-4 h-4 text-blue-400" />
   if (k.includes('job') || k.includes('cronjob')) return <Settings className="w-4 h-4 text-yellow-400" />
   if (k.includes('webhook')) return <Network className="w-4 h-4 text-purple-400" />
-  return <FileText className="w-4 h-4 text-yellow-500" />
+  return <FileText className="w-4 h-4 text-yellow-400" />
 }
 
 // Format resource kind for display
@@ -367,7 +367,7 @@ export function SyncDialog({
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                  <AlertTriangle className="w-4 h-4 text-yellow-400" />
                   Drift Detected ({driftedResources.length} resources)
                 </h3>
                 <div className="space-y-2 max-h-[250px] overflow-y-auto">

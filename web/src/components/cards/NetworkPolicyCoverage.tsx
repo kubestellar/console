@@ -123,7 +123,7 @@ export function NetworkPolicyCoverage() {
       {/* Estimated coverage warning */}
       {isEstimated && (
         <div
-          className="flex items-center gap-1.5 text-xs text-yellow-500 bg-yellow-500/10 rounded px-2 py-1"
+          className="flex items-center gap-1.5 text-xs text-yellow-400 bg-yellow-500/10 rounded px-2 py-1"
           title={t('networkPolicyCoverage.estimatedTooltip')}
         >
           <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -143,7 +143,7 @@ export function NetworkPolicyCoverage() {
               strokeWidth="3"
               strokeDasharray={`${coveragePercent * 0.88} 88`}
               strokeLinecap="round"
-              className={coveragePercent > 70 ? 'text-green-500' : coveragePercent > 40 ? 'text-yellow-500' : 'text-red-500'}
+              className={coveragePercent > 70 ? 'text-green-400' : coveragePercent > 40 ? 'text-yellow-400' : 'text-red-400'}
               stroke="currentColor"
             />
           </svg>

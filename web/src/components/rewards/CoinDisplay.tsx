@@ -47,7 +47,7 @@ export function CoinDisplay({ size = 'md', showLabel = false, className = '' }: 
       <div
         className={`flex items-center gap-1.5 ${sizeClasses[size]} ${className} cursor-help`}
       >
-        <Coins className={`${iconSizes[size]} text-yellow-500`} />
+        <Coins className={`${iconSizes[size]} text-yellow-400`} />
         <span className="font-medium text-foreground">{totalCoins.toLocaleString()}</span>
         {showLabel && <span className="text-muted-foreground">coins</span>}
       </div>
@@ -69,7 +69,7 @@ export function CoinBadge({ className = '' }: { className?: string }) {
       <div
         className={`flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 cursor-help ${className}`}
       >
-        <Coins className="w-3.5 h-3.5 text-yellow-500" />
+        <Coins className="w-3.5 h-3.5 text-yellow-400" />
         <span className="text-xs font-medium text-yellow-400">{totalCoins.toLocaleString()}</span>
       </div>
     </Tooltip>

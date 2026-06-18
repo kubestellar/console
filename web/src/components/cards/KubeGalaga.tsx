@@ -505,7 +505,7 @@ export function KubeGalaga() {
               ))}
             </div>
             <div className="flex items-center gap-1">
-              <Trophy className="w-4 h-4 text-yellow-500" />
+              <Trophy className="w-4 h-4 text-yellow-400" />
               <span>{highScore}</span>
             </div>
           </div>

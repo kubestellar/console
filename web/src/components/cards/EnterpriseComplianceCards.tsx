@@ -509,7 +509,7 @@ export function SBOMManagerCard() {
         <div className="grid grid-cols-2 gap-2">
           <MiniStat label="Components" value={data.total_components ?? 0} />
           <MiniStat label="Vulnerable" value={data.vulnerable_components ?? 0} color="text-red-400" />
-          <MiniStat label="Critical" value={data.critical_count ?? 0} color="text-red-500" />
+          <MiniStat label="Critical" value={data.critical_count ?? 0} color="text-red-400" />
           <MiniStat label="Coverage" value={`${data.sbom_coverage ?? 0}%`} color="text-green-400" />
         </div>
       ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}

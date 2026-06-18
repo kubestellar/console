@@ -35,7 +35,7 @@ function getProviderInfo(provider: CloudProvider): { color: string; bgColor: str
     case 'gke': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
     case 'aks': return { color: 'text-cyan-400', bgColor: 'bg-cyan-500/20' }
     case 'openshift': return { color: 'text-red-400', bgColor: 'bg-red-500/20' }
-    case 'oci': return { color: 'text-red-500', bgColor: 'bg-red-500/20' }
+    case 'oci': return { color: 'text-red-400', bgColor: 'bg-red-500/20' }
     case 'alibaba': return { color: 'text-orange-300', bgColor: 'bg-orange-500/20' }
     case 'digitalocean': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
     case 'rancher': return { color: 'text-green-400', bgColor: 'bg-green-500/20' }

@@ -477,7 +477,7 @@ const StockRow = memo(function StockRow({
         {/* Price and change */}
         <div className="text-right shrink-0">
           <div className="font-semibold text-sm">${stock.price.toFixed(2)}</div>
-          <div className={`text-xs flex items-center justify-end gap-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+          <div className={`text-xs flex items-center justify-end gap-1 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
             {isPositive ? <TrendingUp className="w-3 h-3" aria-hidden="true" /> : <TrendingDown className="w-3 h-3" aria-hidden="true" />}
             <span>{isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%</span>
           </div>
@@ -730,7 +730,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
           <BarChart3 className="w-4 h-4 text-muted-foreground" />
           <div className="text-xs">
             <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center gap-1 ${marketStatus.isOpen ? 'text-green-500' : 'text-muted-foreground'}`}>
+              <span className={`inline-flex items-center gap-1 ${marketStatus.isOpen ? 'text-green-400' : 'text-muted-foreground'}`}>
                 <Clock className="w-3 h-3" />
                 {marketStatus.statusText}
               </span>
@@ -805,7 +805,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
                   </div>
                   <div className="text-xs text-muted-foreground">{result.region}</div>
                   {activeSymbols.includes(result.symbol) && (
-                    <span className="text-xs text-green-500 ml-2">{t('stockMarket.added')}</span>
+                    <span className="text-xs text-green-400 ml-2">{t('stockMarket.added')}</span>
                   )}
                 </button>
               ))}
@@ -819,17 +819,17 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3 p-2 bg-accent/30 rounded-lg text-xs">
         <div className="text-center">
           <div className="text-muted-foreground">{t('stockMarket.avgChange')}</div>
-          <div className={`font-semibold ${portfolioSummary.avgChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+          <div className={`font-semibold ${portfolioSummary.avgChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {portfolioSummary.avgChange >= 0 ? '+' : ''}{portfolioSummary.avgChange.toFixed(2)}%
           </div>
         </div>
         <div className="text-center border-l border-r border-border/30">
           <div className="text-muted-foreground">{t('stockMarket.gainers')}</div>
-          <div className="font-semibold text-green-500">{portfolioSummary.gainers}</div>
+          <div className="font-semibold text-green-400">{portfolioSummary.gainers}</div>
         </div>
         <div className="text-center">
           <div className="text-muted-foreground">{t('stockMarket.losers')}</div>
-          <div className="font-semibold text-red-500">{portfolioSummary.losers}</div>
+          <div className="font-semibold text-red-400">{portfolioSummary.losers}</div>
         </div>
       </div>
 
@@ -859,7 +859,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       <div className="flex flex-wrap items-center justify-between gap-y-2 mt-2 pt-2 border-t border-border/30">
         <div className="text-xs text-muted-foreground flex items-center gap-1">
           <span>{t('stockMarket.dataFrom', { source: dataSource })}</span>
-          {useLiveData && <span className="text-green-500">{t('stockMarket.liveLabel')}</span>}
+          {useLiveData && <span className="text-green-400">{t('stockMarket.liveLabel')}</span>}
           {!useLiveData && <span className="text-muted-foreground">{t('stockMarket.demoLabel')}</span>}
         </div>
 

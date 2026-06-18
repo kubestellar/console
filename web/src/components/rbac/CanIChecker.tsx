@@ -178,7 +178,6 @@ function CanICheckerContent() {
   } = form
 
   // Get selected cluster for namespace fetching
-  // clusters[0] is intentional: user picks from dropdown (line 256-274), this is the initial default
   const selectedCluster = cluster || clusters[0] || ''
   const { namespaces } = useNamespaces(selectedCluster)
 
@@ -196,7 +195,6 @@ function CanICheckerContent() {
   }
 
   const handleCheck = async () => {
-    // clusters[0] fallback is intentional: cluster is selected via dropdown, this handles initial state
     const targetCluster = cluster || clusters[0]
     if (!targetCluster) return
 
@@ -260,7 +258,6 @@ function CanICheckerContent() {
             {t('rbac.cluster')}
           </label>
           <div className="relative">
-            {/* clusters[0] is the initial dropdown selection — user can pick any cluster */}
             <select
               id="cluster-select"
               value={cluster || clusters[0] || ''}
@@ -548,13 +545,13 @@ function CanICheckerContent() {
             <div className="flex items-center gap-2">
               {result.allowed ? (
                 <>
-                  <Check className="w-5 h-5 text-green-500" />
-                  <span className="font-medium text-green-500">{t('rbac.allowed')}</span>
+                  <Check className="w-5 h-5 text-green-400" />
+                  <span className="font-medium text-green-400">{t('rbac.allowed')}</span>
                 </>
               ) : (
                 <>
-                  <X className="w-5 h-5 text-red-500" />
-                  <span className="font-medium text-red-500">{t('rbac.denied')}</span>
+                  <X className="w-5 h-5 text-red-400" />
+                  <span className="font-medium text-red-400">{t('rbac.denied')}</span>
                 </>
               )}
             </div>
@@ -578,8 +575,8 @@ function CanICheckerContent() {
         {error && (
           <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30" data-testid="can-i-error">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <span className="font-medium text-red-500">{t('common.error')}</span>
+              <AlertCircle className="w-5 h-5 text-red-400" />
+              <span className="font-medium text-red-400">{t('common.error')}</span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">{error}</p>
           </div>
@@ -589,8 +586,8 @@ function CanICheckerContent() {
         {clusters.length === 0 && (
           <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-500" />
-              <span className="font-medium text-yellow-500">{t('rbac.noClustersAvailable')}</span>
+              <AlertCircle className="w-5 h-5 text-yellow-400" />
+              <span className="font-medium text-yellow-400">{t('rbac.noClustersAvailable')}</span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {t('rbac.connectToCluster')}

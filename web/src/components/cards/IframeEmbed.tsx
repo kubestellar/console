@@ -393,7 +393,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
             {!isDemoMode && loadError && (
               <div className="absolute inset-0 flex items-center justify-center bg-background/90 z-10">
                 <div className="flex flex-col items-center gap-3 text-center p-4 max-w-xs">
-                  <AlertTriangle className="w-10 h-10 text-yellow-500" />
+                  <AlertTriangle className="w-10 h-10 text-yellow-400" />
                   <p className="text-sm text-foreground">{t('cards:iframeEmbed.unableToLoad')}</p>
                   <p className="text-xs text-muted-foreground">{loadError}</p>
                   <div className="flex gap-2">

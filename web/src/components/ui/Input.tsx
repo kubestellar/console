@@ -95,7 +95,7 @@ export function Input({
       </div>
 
       {errorMessage && (
-        <p id={errorId} className="mt-1 text-xs text-red-500" role="alert">
+        <p id={errorId} className="mt-1 text-xs text-red-400" role="alert">
           {errorMessage}
         </p>
       )}

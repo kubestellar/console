@@ -194,7 +194,7 @@ function DroppableCluster({ cluster, workload, onDeploy }: DroppableClusterProps
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <ClusterBadge cluster={cluster.cluster} size="sm" />
-          {isOver && <Check className="w-4 h-4 text-green-500" />}
+          {isOver && <Check className="w-4 h-4 text-green-400" />}
         </div>
 
         <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-muted-foreground">

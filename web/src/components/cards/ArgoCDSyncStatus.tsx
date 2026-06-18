@@ -152,7 +152,7 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
               strokeWidth="12"
               strokeLinecap="round"
               strokeDasharray={`${syncedPercent * 3.02} 302`}
-              className="text-green-500"
+              className="text-green-400"
             />
             {/* Out of sync segment */}
             <circle
@@ -165,7 +165,7 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
               strokeLinecap="round"
               strokeDasharray={`${outOfSyncPercent * 3.02} 302`}
               strokeDashoffset={`${-syncedPercent * 3.02}`}
-              className="text-yellow-500"
+              className="text-yellow-400"
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">

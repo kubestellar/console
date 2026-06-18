@@ -343,8 +343,8 @@ function KubeChessInternal() {
                 <Crown className={`w-12 h-12 mx-auto mb-2 ${
                   // Draws (stalemate/repetition) get the neutral yellow;
                   // checkmate is colored by who won (#7894).
-                  gameResult === 'stalemate' || gameResult === 'repetition' ? 'text-yellow-500' :
-                  (gameState.turn !== playerColor ? 'text-green-500' : 'text-red-500')
+                  gameResult === 'stalemate' || gameResult === 'repetition' ? 'text-yellow-400' :
+                  (gameState.turn !== playerColor ? 'text-green-400' : 'text-red-400')
                 }`} />
                 <p className="text-lg font-bold mb-3">
                   {gameResult === 'checkmate'

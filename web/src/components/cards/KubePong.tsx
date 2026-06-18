@@ -338,7 +338,7 @@ export function KubePong() {
             <span className="font-bold text-lg">{playerScore}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-yellow-500" />
+            <Trophy className="w-4 h-4 text-yellow-400" />
             <span>{wins} wins</span>
           </div>
           <div className="flex items-center gap-2">

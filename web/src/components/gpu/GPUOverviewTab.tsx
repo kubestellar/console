@@ -108,8 +108,8 @@ export function GPUOverviewTab({
                 <circle cx="64" cy="64" r="56" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round"
                   strokeDasharray={`${stats.utilizationPercent * 3.52} 352`}
                   className={cn(
-                    stats.utilizationPercent > UTILIZATION_HIGH_THRESHOLD ? 'text-red-500' :
-                    stats.utilizationPercent > UTILIZATION_MEDIUM_THRESHOLD ? 'text-yellow-500' : 'text-green-500'
+                    stats.utilizationPercent > UTILIZATION_HIGH_THRESHOLD ? 'text-red-400' :
+                    stats.utilizationPercent > UTILIZATION_MEDIUM_THRESHOLD ? 'text-yellow-400' : 'text-green-400'
                   )}
                 />
               </svg>

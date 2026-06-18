@@ -276,7 +276,7 @@ export function MobileBrowser() {
             <div className={`absolute left-0 right-0 z-10 px-2 pt-2 ${isIPad ? 'top-6' : 'top-8'}`}>
               <div className="flex items-center gap-1 bg-gray-100 dark:bg-secondary rounded-lg px-3 py-2">
                 {activeTab.url && (
-                  <Lock className="w-3 h-3 text-green-500 shrink-0" />
+                  <Lock className="w-3 h-3 text-green-400 shrink-0" />
                 )}
                 <input
                   type="text"
@@ -472,7 +472,7 @@ export function MobileBrowser() {
                         </div>
                         <button
                           onClick={() => setBookmarks(prev => prev.filter((_, j) => j !== i))}
-                          className="text-red-500 p-1"
+                          className="text-red-400 p-1"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -516,7 +516,7 @@ export function MobileBrowser() {
                 disabled={!activeTab.url}
                 title={t(isBookmarked ? 'mobileBrowser.bookmarked' : 'mobileBrowser.addBookmark')}
                 aria-label={t(isBookmarked ? 'mobileBrowser.bookmarked' : 'mobileBrowser.addBookmark')}
-                className={`p-2 ${!activeTab.url ? 'text-gray-300 dark:text-gray-700' : isBookmarked ? 'text-yellow-500' : 'text-blue-500'}`}
+                className={`p-2 ${!activeTab.url ? 'text-gray-300 dark:text-gray-700' : isBookmarked ? 'text-yellow-400' : 'text-blue-500'}`}
               >
                 <Star className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
               </button>

@@ -562,7 +562,7 @@ export function KubeKart() {
               <span className="font-mono">{formatTime(raceTime)}</span>
             </div>
             {bestTime < Infinity && (
-              <div className="flex items-center gap-1 text-yellow-500">
+              <div className="flex items-center gap-1 text-yellow-400">
                 <Trophy className="w-4 h-4" />
                 <span className="font-mono text-xs">{formatTime(bestTime)}</span>
               </div>

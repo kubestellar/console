@@ -334,7 +334,7 @@ export function KubeSnake() {
             <span>Speed: {Math.round((INITIAL_SPEED - speed) / 3) + 1}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-yellow-500" />
+            <Trophy className="w-4 h-4 text-yellow-400" />
             <span>{highScore}</span>
           </div>
         </div>

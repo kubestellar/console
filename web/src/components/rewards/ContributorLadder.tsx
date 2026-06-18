@@ -50,7 +50,7 @@ export function ContributorBanner() {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2.5">
             <div className="flex items-center gap-1.5">
-              <Coins className="w-4 h-4 text-yellow-500" />
+              <Coins className="w-4 h-4 text-yellow-400" />
               <span className="text-lg font-bold text-yellow-400">{totalCoins.toLocaleString()}</span>
               <span className="text-xs text-muted-foreground">coins</span>
             </div>

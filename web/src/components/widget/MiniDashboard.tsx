@@ -396,7 +396,7 @@ export function MiniDashboard() {
               <p>{t('miniDashboard.safariInstall')}</p>
             ) : (
               <>
-                <p className="text-yellow-500/80">⚠️ {t('miniDashboard.installFromThisPage')}</p>
+                <p className="text-yellow-400/80">⚠️ {t('miniDashboard.installFromThisPage')}</p>
                 <p>{t('miniDashboard.installInstruction')}</p>
               </>
             )}

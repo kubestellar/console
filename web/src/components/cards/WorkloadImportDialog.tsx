@@ -675,7 +675,7 @@ export function WorkloadImportDialog({
       <BaseModal.Content className="min-h-[520px]">
         {isDemoData && (
           <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20" data-testid="demo-warning-banner">
-            <AlertCircle className="h-4 w-4 text-yellow-500 shrink-0" />
+            <AlertCircle className="h-4 w-4 text-yellow-400 shrink-0" />
             <span className="text-sm text-yellow-400">
               {t('workloadImport.demoModeWarning', {
                 defaultValue: 'Demo Mode: Workload import is simulated or disabled.',
@@ -685,7 +685,7 @@ export function WorkloadImportDialog({
         )}
         {importSuccess && (
           <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
-            <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+            <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
             <span className="text-sm text-green-400">{t('workloadImport.importSuccess')}</span>
             <button
               className="ml-auto p-0.5 rounded hover:bg-green-500/20 text-green-400"

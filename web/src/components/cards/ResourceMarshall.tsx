@@ -93,7 +93,6 @@ export function ResourceMarshall() {
   // Auto-select a cluster only when demo mode leaves a single visible choice.
   useEffect(() => {
     if (!demoMode || selectedCluster || clusters.length !== SINGLE_VISIBLE_CLUSTER_COUNT) return
-    // clusters[0] is intentional: only auto-selected when exactly ONE cluster exists (unambiguous choice)
     setSelectedCluster(clusters[0].name)
   }, [demoMode, clusters, selectedCluster])
 
@@ -335,7 +334,7 @@ export function ResourceMarshall() {
                           <span className="text-muted-foreground w-24 truncate shrink-0">{dep.kind}</span>
                           <span className="text-foreground truncate flex-1">{dep.name}</span>
                           {dep.optional && (
-                            <span className="text-2xs text-yellow-500 shrink-0">optional</span>
+                            <span className="text-2xs text-yellow-400 shrink-0">optional</span>
                           )}
                         </div>
                       )

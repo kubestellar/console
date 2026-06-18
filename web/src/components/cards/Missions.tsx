@@ -767,7 +767,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
           {mission.warnings && mission.warnings.length > 0 && (
             <div className="mt-1.5 space-y-0.5">
               {mission.warnings.map((w, i) => (
-                <div key={i} className="text-2xs text-yellow-500/80 flex items-start gap-1">
+                <div key={i} className="text-2xs text-yellow-400/80 flex items-start gap-1">
                   <AlertTriangle className="w-2.5 h-2.5 mt-[2px] shrink-0" />
                   <span>{w}</span>
                 </div>

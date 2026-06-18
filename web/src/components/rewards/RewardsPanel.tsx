@@ -35,7 +35,7 @@ export function RewardsPanel() {
           <div>
             <p className="text-sm text-muted-foreground mb-1">Your Balance</p>
             <div className="flex items-center gap-3">
-              <Coins className="w-8 h-8 text-yellow-500" />
+              <Coins className="w-8 h-8 text-yellow-400" />
               <span className="text-4xl font-bold text-yellow-400">{totalCoins.toLocaleString()}</span>
             </div>
           </div>
@@ -305,7 +305,7 @@ export function RewardsPanel() {
                 className="flex items-center justify-between p-3 rounded-lg bg-secondary/30"
               >
                 <div className="flex items-center gap-3">
-                  <Coins className="w-4 h-4 text-yellow-500" />
+                  <Coins className="w-4 h-4 text-yellow-400" />
                   <span className="text-sm text-foreground">
                     {REWARD_ACTIONS[event.action]?.label || event.action}
                   </span>

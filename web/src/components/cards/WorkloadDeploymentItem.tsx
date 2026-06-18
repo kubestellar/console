@@ -30,13 +30,13 @@ interface StatusIconProps {
 function StatusIcon({ status }: StatusIconProps) {
   const Icon = getStatusIconClassName(status)
   const className = status === 'Running'
-    ? 'h-4 w-4 text-green-500'
+    ? 'h-4 w-4 text-green-400'
     : status === 'Degraded'
-      ? 'h-4 w-4 text-yellow-500'
+      ? 'h-4 w-4 text-yellow-400'
       : status === 'Pending'
         ? 'h-4 w-4 text-blue-500'
         : status === 'Failed'
-          ? 'h-4 w-4 text-red-500'
+          ? 'h-4 w-4 text-red-400'
           : 'h-4 w-4 text-muted-foreground'
 
   return <Icon className={className} />
@@ -55,7 +55,7 @@ function TypeIcon({ type }: TypeIconProps) {
       : type === 'DaemonSet'
         ? 'h-4 w-4 text-orange-500'
         : type === 'Job' || type === 'CronJob'
-          ? 'h-4 w-4 text-green-500'
+          ? 'h-4 w-4 text-green-400'
           : 'h-4 w-4 text-muted-foreground'
 
   return <Icon className={className} />
