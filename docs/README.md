@@ -67,5 +67,6 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [COMMUNITY.md](COMMUNITY.md) | Community channels, engagement guidance, and project participation information. |
 | [HOMEBREW.md](HOMEBREW.md) | Explains Homebrew support status for the console and kc-agent. |
 | [RELEASING.md](RELEASING.md) | Release-process reference for maintainers packaging and publishing releases. |
+| [community/outreach/harbor-jaeger-thanos.md](community/outreach/harbor-jaeger-thanos.md) | Outreach pack with ready-to-post Harbor, Jaeger, and Thanos community messaging. |
 | [cncf-insights/2026-05-27.md](cncf-insights/2026-05-27.md) | Snapshot report of CNCF landscape intelligence from 2026-05-27. |
 | [security/SELF-ASSESSMENT.md](security/SELF-ASSESSMENT.md) | Project security self-assessment and related review notes. |
