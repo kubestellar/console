@@ -22,14 +22,28 @@ type syncFeedbackStoreStub struct {
 	capturedCreatePRBody *models.PRFeedback
 }
 
+var unauthenticatedUserID = uuid.Nil
+
 func (s *syncFeedbackStoreStub) CreatePRFeedback(_ context.Context, feedback *models.PRFeedback) error {
 	s.capturedCreatePRBody = feedback
 	return s.createPRFeedbackErr
 }
 
+func setupFeedbackTestWithSyncStore(t *testing.T, userID uuid.UUID, store *syncFeedbackStoreStub) (*fiber.App, *FeedbackHandler) {
+	t.Helper()
+	app := fiber.New()
+	handler := NewFeedbackHandler(store, FeedbackConfig{})
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	return app, handler
+}
+
 func TestSyncHandlers_CloseRequest_GitHubID_NoGitHubLoginForbidden(t *testing.T) {
 	userID := uuid.New()
-	app, handler := setupFeedbackTest(t, userID, "", nil)
+	store := &feedbackStoreStub{MockStore: &test.MockStore{}}
+	app, handler := setupFeedbackTest(t, userID, "", store)
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/feedback/requests/gh-42/close", nil)
@@ -42,7 +56,7 @@ func TestSyncHandlers_CloseRequest_GitHubID_NoGitHubLoginForbidden(t *testing.T)
 	assert.Contains(t, body, "GitHub login not available")
 }
 
-func TestSyncHandlers_CloseRequest_UUID_HappyPath_NoGitHubToken(t *testing.T) {
+func TestSyncHandlers_CloseRequest_UUID_HappyPath(t *testing.T) {
 	userID := uuid.New()
 	requestID := uuid.New()
 	initial := &models.FeatureRequest{ID: requestID, UserID: userID, Status: models.RequestStatusFixComplete}
@@ -86,7 +100,7 @@ func TestSyncHandlers_ReopenRequest_ValidationAndAuthorization(t *testing.T) {
 	}{
 		{
 			name:       "unauthenticated",
-			userID:     uuid.Nil,
+			userID:     unauthenticatedUserID,
 			id:         requestID.String(),
 			body:       `{"comment":"still broken"}`,
 			wantStatus: http.StatusUnauthorized,
@@ -151,7 +165,7 @@ func TestSyncHandlers_ReopenRequest_ValidationAndAuthorization(t *testing.T) {
 	}
 }
 
-func TestSyncHandlers_ReopenRequest_UUID_HappyPath_NoGitHubToken(t *testing.T) {
+func TestSyncHandlers_ReopenRequest_UUID_HappyPath(t *testing.T) {
 	userID := uuid.New()
 	requestID := uuid.New()
 	initial := &models.FeatureRequest{ID: requestID, UserID: userID, Status: models.RequestStatusFixComplete}
@@ -195,7 +209,7 @@ func TestSyncHandlers_RequestUpdate_UUIDFlow(t *testing.T) {
 	}{
 		{
 			name:       "unauthenticated uuid",
-			userID:     uuid.Nil,
+			userID:     unauthenticatedUserID,
 			id:         requestID.String(),
 			wantStatus: http.StatusUnauthorized,
 			wantText:   "User authentication required",
@@ -268,7 +282,7 @@ func TestSyncHandlers_SubmitFeedback_ValidationAuthorizationAndHappyPath(t *test
 	}{
 		{
 			name:       "unauthenticated",
-			userID:     uuid.Nil,
+			userID:     unauthenticatedUserID,
 			id:         requestID.String(),
 			body:       `{"feedback_type":"positive"}`,
 			store:      &syncFeedbackStoreStub{feedbackStoreStub: &feedbackStoreStub{MockStore: &test.MockStore{}}},
@@ -363,12 +377,7 @@ func TestSyncHandlers_SubmitFeedback_ValidationAuthorizationAndHappyPath(t *test
 			if tt.storeSetup != nil {
 				tt.storeSetup(tt.store)
 			}
-			app := fiber.New()
-			handler := NewFeedbackHandler(tt.store, FeedbackConfig{})
-			app.Use(func(c *fiber.Ctx) error {
-				c.Locals("userID", tt.userID)
-				return c.Next()
-			})
+			app, handler := setupFeedbackTestWithSyncStore(t, tt.userID, tt.store)
 			app.Post("/api/feedback/requests/:id/feedback", handler.SubmitFeedback)
 
 			req := httptest.NewRequest(http.MethodPost, "/api/feedback/requests/"+tt.id+"/feedback", strings.NewReader(tt.body))
