@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Siren, Check, X } from 'lucide-react'
 import { NotificationConfig } from '../../../types/alerts'
 import type { TestResultState } from './NotificationSettingsSection'
+import { cn } from '@/lib/cn'
 
 interface PagerDutyNotificationSettingsProps {
   config: NotificationConfig
@@ -90,16 +91,17 @@ export function PagerDutyNotificationSettings({
 
       {testResult && testResult.type === 'pagerduty' && (
         <div
-          className={`flex items-start gap-2 p-3 rounded-lg ${
-            testResult.success ? 'bg-green-500/20 border border-green-500/20' : 'bg-red-500/20 border border-red-500/20'
-          }`}
+          className={cn(
+            'flex items-start gap-2 p-3 rounded-lg',
+            testResult.success ? 'bg-green-500/20 border border-green-500/20' : 'bg-red-500/20 border border-red-500/20',
+          )}
         >
           {testResult.success ? (
             <Check className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
           ) : (
             <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           )}
-          <p className={`text-sm ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
+          <p className={cn('text-sm', testResult.success ? 'text-green-400' : 'text-red-400')}>
             {testResult.message}
           </p>
         </div>

@@ -408,6 +408,12 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           if (enabledChannels.length > 0) {
             const resolvedAlert: Alert = { ...alertToResolve, status: 'resolved', resolvedAt }
             localSendNotifications(resolvedAlert, enabledChannels).catch((error) => {
+              window.dispatchEvent(new CustomEvent('notification-error', {
+                detail: {
+                  source: 'AlertsContext.resolveAlert',
+                  error: error instanceof Error ? error.message : String(error),
+                },
+              }))
               console.error('[AlertsContext] resolved notification send failed:', error)
             })
           }

@@ -256,7 +256,15 @@ export function createAlertRulesEngine({
     queueMicrotask(() => {
       const enabledChannels = getEnabledChannels(rule)
       if (enabledChannels.length > 0) {
-        localSendNotifications(newAlert, enabledChannels).catch(error => console.error('[AlertsContext] firing notification send failed:', error))
+        localSendNotifications(newAlert, enabledChannels).catch(error => {
+          window.dispatchEvent(new CustomEvent('notification-error', {
+            detail: {
+              source: 'alertRulesEngine.createAlert',
+              error: error instanceof Error ? error.message : String(error),
+            },
+          }))
+          console.error('[AlertsContext] firing notification send failed:', error)
+        })
       }
     })
   }
