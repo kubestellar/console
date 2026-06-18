@@ -1,0 +1,397 @@
+package gitops
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"os/exec"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/safego"
+)
+
+func (h *GitOpsHandlers) listOperators(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+
+	if cluster != "" {
+		if err := validateK8sName(cluster, "cluster"); err != nil {
+			slog.Warn("[gitops] invalid cluster parameter (operators)", "error", err)
+			return c.Status(400).JSON(fiber.Map{"error": "invalid cluster parameter"})
+		}
+	}
+
+	if cluster != "" {
+		ctx, cancel := context.WithTimeout(c.Context(), operatorPerClusterTimeout)
+		defer cancel()
+		operators, fetchErr := h.getOperatorsForClusterWithError(ctx, cluster)
+		resp := fiber.Map{"operators": operators}
+		if fetchErr != nil {
+			slog.Warn("[GitOps] operator fetch failed for cluster", "cluster", cluster, "error", fetchErr)
+			resp["clusterErrors"] = []string{fmt.Sprintf("%s: failed to fetch operators", cluster)}
+		}
+		return c.JSON(resp)
+	}
+
+	if h.k8sClient != nil {
+		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+		if err != nil {
+			slog.Warn("[GitOps] error listing healthy clusters for operators", "error", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "operators": []Operator{}})
+		}
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		allOperators := make([]Operator, 0)
+		clusterErrors := make([]string, 0)
+
+		overallCtx, overallCancel := context.WithTimeout(c.Context(), operatorRestOverallTimeout)
+		defer overallCancel()
+
+		for _, cl := range clusters {
+			clusterName := cl.Name
+			wg.Add(1)
+			safego.GoWith("gitops-operators/"+clusterName, func() {
+				defer wg.Done()
+				subprocessSem <- struct{}{}
+				defer func() { <-subprocessSem }()
+				ctx, cancel := context.WithTimeout(overallCtx, operatorPerClusterTimeout)
+				defer cancel()
+
+				operators, fetchErr := h.getOperatorsForClusterWithError(ctx, clusterName)
+				mu.Lock()
+				if fetchErr != nil {
+					slog.Warn("[GitOps] operator fetch failed for cluster", "cluster", clusterName, "error", fetchErr)
+					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: failed to fetch operators", clusterName))
+				}
+				if len(operators) > 0 {
+					allOperators = append(allOperators, operators...)
+				}
+				mu.Unlock()
+			})
+		}
+
+		wg.Wait()
+		resp := fiber.Map{"operators": allOperators}
+		if len(clusterErrors) > 0 {
+			resp["clusterErrors"] = clusterErrors
+		}
+		return c.JSON(resp)
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), operatorPerClusterTimeout)
+	defer cancel()
+	operators := h.getOperatorsForCluster(ctx, "")
+	return c.JSON(fiber.Map{"operators": operators})
+}
+
+func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster string) []Operator {
+	operators, _ := h.getOperatorsWithSingleflight(ctx, cluster, false)
+	return operators
+}
+
+func (h *GitOpsHandlers) getOperatorsForClusterWithError(ctx context.Context, cluster string) ([]Operator, error) {
+	return h.getOperatorsWithSingleflight(ctx, cluster, true)
+}
+
+func (h *GitOpsHandlers) getOperatorsWithSingleflight(ctx context.Context, cluster string, returnError bool) ([]Operator, error) {
+	startOperatorCacheEvictor()
+
+	cacheKey := cluster
+	if cacheKey == "" {
+		cacheKey = "__default__"
+	}
+
+	operatorCacheMu.RLock()
+	if entry, ok := operatorCacheData[cacheKey]; ok {
+		ttl := operatorCacheTTL
+		if len(entry.operators) == 0 {
+			ttl = operatorCacheEmptyTTL
+		}
+		if time.Since(entry.fetchedAt) < ttl {
+			result := make([]Operator, len(entry.operators))
+			copy(result, entry.operators)
+			operatorCacheMu.RUnlock()
+			return result, nil
+		}
+	}
+	operatorCacheMu.RUnlock()
+
+	sfKey := cacheKey
+	if returnError {
+		sfKey = "err:" + cacheKey
+	}
+
+	type fetchResult struct {
+		operators []Operator
+		err       error
+	}
+	val, _, _ := operatorFetchGroup.Do(sfKey, func() (interface{}, error) {
+		operatorCacheMu.RLock()
+		if entry, ok := operatorCacheData[cacheKey]; ok {
+			ttl := operatorCacheTTL
+			if len(entry.operators) == 0 {
+				ttl = operatorCacheEmptyTTL
+			}
+			if time.Since(entry.fetchedAt) < ttl {
+				result := make([]Operator, len(entry.operators))
+				copy(result, entry.operators)
+				operatorCacheMu.RUnlock()
+				return &fetchResult{operators: result}, nil
+			}
+		}
+		operatorCacheMu.RUnlock()
+
+		fetchCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), operatorPerClusterTimeout)
+		defer cancel()
+
+		operators, err := h.fetchOperatorsFromCluster(fetchCtx, cluster)
+		if err != nil {
+			if _, ok := err.(errPermanent); ok {
+				operatorCacheMu.Lock()
+				operatorCacheData[cacheKey] = &operatorCacheEntry{operators: []Operator{}, fetchedAt: time.Now()}
+				operatorCacheMu.Unlock()
+				return &fetchResult{operators: []Operator{}}, nil
+			}
+			if fetchCtx.Err() == nil {
+				slog.Warn("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
+				select {
+				case <-fetchCtx.Done():
+					return &fetchResult{operators: []Operator{}}, nil
+				case <-time.After(gitopsRetryDelay):
+				}
+				operators, err = h.fetchOperatorsFromCluster(fetchCtx, cluster)
+			}
+		}
+		if err != nil {
+			if returnError {
+				return &fetchResult{operators: []Operator{}, err: err}, nil
+			}
+			return &fetchResult{operators: []Operator{}}, nil
+		}
+
+		operatorCacheMu.Lock()
+		operatorCacheData[cacheKey] = &operatorCacheEntry{operators: operators, fetchedAt: time.Now()}
+		operatorCacheMu.Unlock()
+		return &fetchResult{operators: operators}, nil
+	})
+
+	result := val.(*fetchResult)
+	if returnError {
+		return result.operators, result.err
+	}
+	return result.operators, nil
+}
+
+type errPermanent struct{ error }
+
+func (h *GitOpsHandlers) fetchOperatorsFromCluster(ctx context.Context, cluster string) ([]Operator, error) {
+	args := []string{"get", "csv", "-A", "-o", "json", "--request-timeout=0"}
+	if cluster != "" {
+		args = append([]string{"--context", cluster}, args...)
+	}
+
+	cmd := exec.CommandContext(ctx, "kubectl", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		stderrStr := stderr.String()
+		if ctx.Err() == nil {
+			slog.Warn("[GitOps] kubectl get csv failed", "cluster", cluster, "error", err, "stderr", stderrStr)
+		} else {
+			slog.Info("[GitOps] kubectl get csv timed out", "cluster", cluster)
+		}
+		if strings.Contains(stderrStr, "doesn't have a resource type") {
+			return nil, errPermanent{err}
+		}
+		return nil, err
+	}
+
+	var result struct {
+		Items []struct {
+			Metadata struct {
+				Name      string `json:"name"`
+				Namespace string `json:"namespace"`
+			} `json:"metadata"`
+			Spec struct {
+				DisplayName string `json:"displayName"`
+				Version     string `json:"version"`
+			} `json:"spec"`
+			Status struct {
+				Phase string `json:"phase"`
+			} `json:"status"`
+		} `json:"items"`
+	}
+
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		slog.Warn("[GitOps] failed to parse operators JSON", "cluster", cluster, "error", err)
+		return nil, err
+	}
+
+	operators := make([]Operator, 0, len(result.Items))
+	for _, item := range result.Items {
+		displayName := item.Spec.DisplayName
+		if displayName == "" {
+			displayName = item.Metadata.Name
+		}
+		operators = append(operators, Operator{
+			Name:        item.Metadata.Name,
+			Namespace:   item.Metadata.Namespace,
+			DisplayName: displayName,
+			Version:     item.Spec.Version,
+			Phase:       item.Status.Phase,
+			Cluster:     cluster,
+		})
+	}
+
+	return operators, nil
+}
+
+func (h *GitOpsHandlers) listOperatorSubscriptions(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+
+	if cluster != "" {
+		if err := validateK8sName(cluster, "cluster"); err != nil {
+			slog.Warn("[gitops] invalid cluster parameter (subscriptions)", "error", err)
+			return c.Status(400).JSON(fiber.Map{"error": "invalid cluster parameter"})
+		}
+	}
+
+	if cluster != "" {
+		ctx, cancel := context.WithTimeout(c.Context(), subscriptionPerClusterTimeout)
+		defer cancel()
+		subs, fetchErr := h.getSubscriptionsForClusterWithError(ctx, cluster)
+		resp := fiber.Map{"subscriptions": subs}
+		if fetchErr != nil {
+			slog.Warn("[GitOps] subscription fetch failed for cluster", "cluster", cluster, "error", fetchErr)
+			resp["clusterErrors"] = []string{fmt.Sprintf("%s: failed to fetch subscriptions", cluster)}
+		}
+		return c.JSON(resp)
+	}
+
+	if h.k8sClient != nil {
+		clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+		if err != nil {
+			slog.Warn("[GitOps] error listing healthy clusters for subscriptions", "error", err)
+			return c.Status(500).JSON(fiber.Map{"error": "internal server error", "subscriptions": []OperatorSubscription{}})
+		}
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		allSubs := make([]OperatorSubscription, 0)
+		clusterErrors := make([]string, 0)
+
+		for _, cl := range clusters {
+			clusterName := cl.Name
+			wg.Add(1)
+			safego.GoWith("gitops-subscriptions/"+clusterName, func() {
+				defer wg.Done()
+				subprocessSem <- struct{}{}
+				defer func() { <-subprocessSem }()
+				ctx, cancel := context.WithTimeout(c.Context(), subscriptionPerClusterTimeout)
+				defer cancel()
+
+				subs, fetchErr := h.getSubscriptionsForClusterWithError(ctx, clusterName)
+				mu.Lock()
+				if fetchErr != nil {
+					slog.Warn("[GitOps] subscription fetch failed for cluster", "cluster", clusterName, "error", fetchErr)
+					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: failed to fetch subscriptions", clusterName))
+				}
+				if len(subs) > 0 {
+					allSubs = append(allSubs, subs...)
+				}
+				mu.Unlock()
+			})
+		}
+
+		wg.Wait()
+		resp := fiber.Map{"subscriptions": allSubs}
+		if len(clusterErrors) > 0 {
+			resp["clusterErrors"] = clusterErrors
+		}
+		return c.JSON(resp)
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), subscriptionPerClusterTimeout)
+	defer cancel()
+	subs := h.getSubscriptionsForCluster(ctx, "")
+	return c.JSON(fiber.Map{"subscriptions": subs})
+}
+
+func (h *GitOpsHandlers) getSubscriptionsForClusterWithError(ctx context.Context, cluster string) ([]OperatorSubscription, error) {
+	subs, err := h.fetchSubscriptionsFromCluster(ctx, cluster)
+	if err != nil {
+		return []OperatorSubscription{}, err
+	}
+	return subs, nil
+}
+
+func (h *GitOpsHandlers) getSubscriptionsForCluster(ctx context.Context, cluster string) []OperatorSubscription {
+	subs, err := h.fetchSubscriptionsFromCluster(ctx, cluster)
+	if err != nil {
+		slog.Warn("[GitOps] subscription fetch failed for cluster", "cluster", cluster, "error", err)
+	}
+	return subs
+}
+
+func (h *GitOpsHandlers) fetchSubscriptionsFromCluster(ctx context.Context, cluster string) ([]OperatorSubscription, error) {
+	jsonpathExpr := `{range .items[*]}{.metadata.name}{"\t"}{.metadata.namespace}{"\t"}{.spec.channel}{"\t"}{.spec.source}{"\t"}{.spec.installPlanApproval}{"\t"}{.status.currentCSV}{"\t"}{.status.installedCSV}{"\n"}{end}`
+	args := []string{"get", "subscriptions.operators.coreos.com", "-A", "-o", "jsonpath=" + jsonpathExpr}
+	if cluster != "" {
+		args = append([]string{"--context", cluster}, args...)
+	}
+
+	cmd := exec.CommandContext(ctx, "kubectl", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() == nil {
+			slog.Warn("[GitOps] kubectl get subscriptions failed", "cluster", cluster, "error", err)
+		}
+		return []OperatorSubscription{}, err
+	}
+
+	output := strings.TrimSpace(stdout.String())
+	if output == "" {
+		return []OperatorSubscription{}, nil
+	}
+
+	lines := strings.Split(output, "\n")
+	subs := make([]OperatorSubscription, 0, len(lines))
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		fields := strings.Split(line, "\t")
+		if len(fields) < 6 {
+			continue
+		}
+		sub := OperatorSubscription{
+			Name:                fields[0],
+			Namespace:           fields[1],
+			Channel:             fields[2],
+			Source:              fields[3],
+			InstallPlanApproval: fields[4],
+			CurrentCSV:          fields[5],
+			Cluster:             cluster,
+		}
+		if len(fields) > 6 {
+			sub.InstalledCSV = fields[6]
+			if sub.InstalledCSV != "" && sub.InstalledCSV != sub.CurrentCSV {
+				sub.PendingUpgrade = sub.CurrentCSV
+			}
+		}
+		subs = append(subs, sub)
+	}
+
+	return subs, nil
+}
