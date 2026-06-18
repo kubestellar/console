@@ -5,11 +5,9 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 
-type OverviewTreeLens = 'nodes' | 'workloads'
-
 interface ClusterDrillDownOverviewProps {
   health: ClusterHealth | null
-  navigateToResourceTree: (lens: OverviewTreeLens) => void
+  navigateToResourceTree: (lens: 'nodes' | 'workloads') => void
   gpuByType: Record<string, { total: number; allocated: number; nodes: number }>
   podIssues: PodIssue[]
   clusterDeploymentIssues: DeploymentIssue[]
@@ -114,9 +112,12 @@ export function ClusterDrillDownOverview({
             <div className="mb-4">
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Pod Issues</h4>
               <div className="space-y-2">
-                {podIssues.map((issue, i) => (
+                {podIssues.map((issue, index) => {
+                  const issueMessages = issue.issues || []
+
+                  return (
                   <div
-                    key={i}
+                    key={`${issue.namespace}-${issue.name}-${index}`}
                     onClick={() => drillToPod(effectiveClusterName, issue.namespace, issue.name, { ...issue })}
                     className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
                   >
@@ -126,8 +127,8 @@ export function ClusterDrillDownOverview({
                         <div className="text-xs text-muted-foreground mt-1">
                           {issue.namespace} • {issue.restarts} restarts
                         </div>
-                        {(issue.issues || []).length > 0 && (
-                          <div className="text-xs text-red-400 mt-1">{(issue.issues || []).join(', ')}</div>
+                        {issueMessages.length > 0 && (
+                          <div className="text-xs text-red-400 mt-1">{issueMessages.join(', ')}</div>
                         )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -136,7 +137,8 @@ export function ClusterDrillDownOverview({
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -146,9 +148,9 @@ export function ClusterDrillDownOverview({
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Deployment Issues</h4>
               <div className="space-y-2">
-                {clusterDeploymentIssues.map((issue, i) => (
+                {clusterDeploymentIssues.map((issue, index) => (
                   <div
-                    key={i}
+                    key={`${issue.namespace}-${issue.name}-${index}`}
                     onClick={() => drillToNamespace(effectiveClusterName, issue.namespace)}
                     className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors"
                   >
@@ -207,9 +209,9 @@ export function ClusterDrillDownOverview({
             GPU Nodes ({clusterGPUNodes.length})
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {clusterGPUNodes.map((node, i) => (
+            {clusterGPUNodes.map(node => (
               <div
-                key={i}
+                key={node.name}
                 onClick={() => drillToGPUNode(effectiveClusterName, node.name, { ...node })}
                 className="p-4 rounded-lg bg-card/50 border border-border flex items-center justify-between cursor-pointer hover:bg-card hover:border-primary/50 transition-colors"
               >
