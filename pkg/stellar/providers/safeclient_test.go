@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,5 +56,38 @@ func TestSafeDialContext_BlocksNonPublicIPs(t *testing.T) {
 			assert.Nil(t, conn)
 			assert.True(t, strings.Contains(err.Error(), "blocked: non-public IP"), "unexpected error: %v", err)
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// timeout() — context-deadline extraction helper
+// ---------------------------------------------------------------------------
+
+func TestTimeout_ContextWithFutureDeadline(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	d := timeout(ctx)
+	if d <= 0 || d > 5*time.Second {
+		t.Errorf("timeout() with 5s deadline = %v, want positive ≤5s", d)
+	}
+}
+
+func TestTimeout_ContextWithNoDeadline(t *testing.T) {
+	t.Parallel()
+	d := timeout(context.Background())
+	if d != 30*time.Second {
+		t.Errorf("timeout() with no deadline = %v, want 30s", d)
+	}
+}
+
+func TestTimeout_ContextWithExpiredDeadline_FallsBackToDefault(t *testing.T) {
+	t.Parallel()
+	// Create a context with a deadline already in the past
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+	d := timeout(ctx)
+	if d != 30*time.Second {
+		t.Errorf("timeout() with expired deadline = %v, want 30s default", d)
 	}
 }

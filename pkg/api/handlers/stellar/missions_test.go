@@ -152,7 +152,7 @@ func Test_parseMissionPayload(t *testing.T) {
 			wantErr: false,
 			checks: func(t *testing.T, mission interface{}) {
 				m := mission.(map[string]interface{})
-				tools := m["toolBindings"].([]interface{})
+				tools := m["toolBindings"].([]string)
 				assert.Len(t, tools, 2)
 				assert.Equal(t, "kubectl", tools[0])
 				assert.Equal(t, "prometheus", tools[1])
