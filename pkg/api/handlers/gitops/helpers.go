@@ -21,6 +21,7 @@ import (
 // for when SSE streaming is not used. Set to 30s to allow healthy clusters
 // time to respond (offline clusters are now skipped via HealthyClusters).
 const maxResponseDeadline = 30 * time.Second
+const sseEventClusterError = "cluster_error"
 
 // waitWithDeadline waits for all goroutines in wg to finish, but returns
 // early if the deadline is reached. When the deadline fires, cancel is
