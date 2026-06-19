@@ -580,7 +580,9 @@ export function Settings() {
           </h2>
           <div className="space-y-6">
             <ProfileSection
-              user={user}
+              initialEmail={user?.email ?? ''}
+              initialSlackId={user?.slack_id ?? ''}
+              githubLogin={user?.github_login ?? ''}
               refreshUser={refreshUser}
               isLoading={isUserLoading}
             />
@@ -594,7 +596,12 @@ export function Settings() {
             {t('settings.groups.appearance')}
           </h2>
           <div className="space-y-6">
-            <ThemeSection />
+            <ThemeSection
+              themeId={themeId}
+              setTheme={setTheme}
+              themes={themes}
+              currentTheme={currentTheme}
+            />
             <AccessibilitySection
               colorBlindMode={colorBlindMode}
               setColorBlindMode={setColorBlindMode}
@@ -613,8 +620,11 @@ export function Settings() {
           </h2>
           <div className="space-y-6">
             <SettingsBackupSection
-              exportSettings={exportSettings}
-              importSettings={importSettings}
+              syncStatus={syncStatus}
+              lastSaved={lastSaved}
+              filePath={filePath}
+              onExport={exportSettings}
+              onImport={importSettings}
             />
             <LocalClustersSection />
             <PermissionsSection />
