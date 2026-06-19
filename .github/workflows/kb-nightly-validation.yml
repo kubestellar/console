@@ -127,10 +127,17 @@ jobs:
           else
             gh label create "kb-gap" --color "B60205" \
               --description "KB coverage gap detected by nightly validation" 2>/dev/null || true
-            gh issue create \
-              --title "$TITLE" \
-              --label "kb-gap,triage/needed,help wanted" \
-              --body-file kb-gap-report.md
+            if [ -f kb-gap-report.md ]; then
+              gh issue create \
+                --title "$TITLE" \
+                --label "kb-gap,triage/needed,help wanted" \
+                --body-file kb-gap-report.md
+            else
+              gh issue create \
+                --title "$TITLE" \
+                --label "kb-gap,triage/needed,help wanted" \
+                --body "KB Nightly Validation failed. No gap report was generated. See workflow run for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            fi
           fi
 
       - name: Upload reports

@@ -89,12 +89,12 @@ func TestValidation_SaveAll_EmptySettings(t *testing.T) {
 		t.Fatalf("GetAll failed: %v", err)
 	}
 
-	// SaveAll preserves explicitly empty plaintext values.
-	if loaded.AIMode != "" {
-		t.Errorf("aiMode = %q, want empty string", loaded.AIMode)
+	// Empty fields should get defaults
+	if loaded.AIMode != "medium" {
+		t.Errorf("aiMode = %q, want default %q", loaded.AIMode, "medium")
 	}
-	if loaded.Theme != "" {
-		t.Errorf("theme = %q, want empty string", loaded.Theme)
+	if loaded.Theme != "kubestellar" {
+		t.Errorf("theme = %q, want default %q", loaded.Theme, "kubestellar")
 	}
 }
 
@@ -153,9 +153,20 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// SaveAll persists the provided threshold struct as-is.
-				if loaded.Predictions.Thresholds != tc.thresholds {
-					t.Errorf("thresholds = %+v, want %+v", loaded.Predictions.Thresholds, tc.thresholds)
+				// Zero values should get defaults on load
+				if tc.thresholds.HighRestartCount == 0 {
+					if loaded.Predictions.Thresholds.HighRestartCount != 3 {
+						t.Errorf("HighRestartCount = %d, want default 3", loaded.Predictions.Thresholds.HighRestartCount)
+					}
+					if loaded.Predictions.Thresholds.CPUPressure != 80 {
+						t.Errorf("CPUPressure = %d, want default 80", loaded.Predictions.Thresholds.CPUPressure)
+					}
+					if loaded.Predictions.Thresholds.MemoryPressure != 85 {
+						t.Errorf("MemoryPressure = %d, want default 85", loaded.Predictions.Thresholds.MemoryPressure)
+					}
+					if loaded.Predictions.Thresholds.GPUMemoryPressure != 90 {
+						t.Errorf("GPUMemoryPressure = %d, want default 90", loaded.Predictions.Thresholds.GPUMemoryPressure)
+					}
 				}
 			}
 		})
@@ -219,9 +230,17 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// SaveAll persists the provided token usage settings as-is.
-				if loaded.TokenUsage != tc.tokenUsage {
-					t.Errorf("tokenUsage = %+v, want %+v", loaded.TokenUsage, tc.tokenUsage)
+				// Zero thresholds should get defaults
+				if tc.tokenUsage.WarningThreshold == 0 {
+					if loaded.TokenUsage.WarningThreshold != 0.7 {
+						t.Errorf("WarningThreshold = %v, want default 0.7", loaded.TokenUsage.WarningThreshold)
+					}
+					if loaded.TokenUsage.CriticalThreshold != 0.9 {
+						t.Errorf("CriticalThreshold = %v, want default 0.9", loaded.TokenUsage.CriticalThreshold)
+					}
+					if loaded.TokenUsage.StopThreshold != 1.0 {
+						t.Errorf("StopThreshold = %v, want default 1.0", loaded.TokenUsage.StopThreshold)
+					}
 				}
 			}
 		})
