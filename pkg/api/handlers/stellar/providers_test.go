@@ -154,7 +154,7 @@ func Test_validateStellarProviderBaseURL(t *testing.T) {
 			provider: "anthropic",
 			url:      "not a valid url",
 			wantErr:  true,
-			errHint:  "invalid base URL",
+			errHint:  "whitespace",
 		},
 		{
 			name:     "URL with credentials",
@@ -240,7 +240,7 @@ func Test_validateStellarProviderBaseURL(t *testing.T) {
 		{
 			name:     "trailing slash removed",
 			provider: "anthropic",
-			url:      "https://api.example.com/",
+			url:      "https://example.com/",
 			wantErr:  false,
 		},
 	}

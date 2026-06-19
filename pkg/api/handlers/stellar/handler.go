@@ -355,8 +355,10 @@ func stellarSSEAudienceFromUserID(userID string) (string, bool, bool) {
 func NewHandler(s Store, k8sClient *k8s.MultiClusterClient, opts ...HandlerOption) *Handler {
 	h := &Handler{
 		store:            s,
-		k8sClient:        k8sClient,
 		providerRegistry: providers.NewRegistry(),
+	}
+	if k8sClient != nil {
+		h.k8sClient = k8sClient
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -523,7 +525,14 @@ func (h *Handler) buildState(ctx context.Context, userID string) (*OperationalSt
 		return nil, err
 	}
 	if state == nil {
-    	return nil, fmt.Errorf("state is nil") // or handle appropriately
+		state = &OperationalState{
+			GeneratedAt:      time.Now().UTC(),
+			ClustersWatching: []string{},
+			EventCounts:      map[string]int{"critical": 0, "warning": 0, "info": 0},
+			RecentEvents:     []store.ClusterEvent{},
+			ActiveMissionIDs: []string{},
+			PendingActionIDs: []string{},
+		}
 	}
 	state.UnreadAlerts = unread
 	return state, nil
@@ -539,43 +548,41 @@ func (h *Handler) buildOperationalState(ctx context.Context, userID, focusCluste
 		PendingActionIDs: []string{},
 	}
 	if h.k8sClient == nil {
-        return nil, nil 
-    }
-	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
-		if err != nil {
-			clusters, err = h.k8sClient.ListClusters(ctx)
-		}
-		if err == nil {
-			for _, cluster := range clusters {
-				state.ClustersWatching = append(state.ClustersWatching, cluster.Name)
-				if focusCluster != "" && focusCluster != cluster.Name {
-					continue
+		return state, nil
+	}
+	clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
+	if err != nil {
+		clusters, err = h.k8sClient.ListClusters(ctx)
+	}
+	if err == nil {
+		for _, cluster := range clusters {
+			state.ClustersWatching = append(state.ClustersWatching, cluster.Name)
+			if focusCluster != "" && focusCluster != cluster.Name {
+				continue
+			}
+			events, eventErr := h.k8sClient.GetWarningEvents(ctx, cluster.Name, "", 50)
+			if eventErr != nil {
+				continue
+			}
+			for _, event := range events {
+				severity := "warning"
+				if isCriticalReason(event.Reason) {
+					severity = "critical"
 				}
-				events, eventErr := h.k8sClient.GetWarningEvents(ctx, cluster.Name, "", 50)
-				if eventErr != nil {
-					continue
-				}
-				for _, event := range events {
-					severity := "warning"
-					if isCriticalReason(event.Reason) {
-						severity = "critical"
-					}
-					state.EventCounts[severity]++
-					state.RecentEvents = append(state.RecentEvents, store.ClusterEvent{
-						ID:                 fmt.Sprintf("%s:%s:%s", cluster.Name, event.Namespace, event.Object),
-						ClusterName:        cluster.Name,
-						Namespace:          event.Namespace,
-						EventType:          event.Type,
-						Reason:             event.Reason,
-						Message:            event.Message,
-						InvolvedObjectKind: splitEventObjectKind(event.Object),
-						InvolvedObjectName: splitEventObjectName(event.Object),
-						EventCount:         event.Count,
-						LastSeen:           event.LastSeen,
-						FirstSeen:          event.FirstSeen,
-					})
-				}
+				state.EventCounts[severity]++
+				state.RecentEvents = append(state.RecentEvents, store.ClusterEvent{
+					ID:                 fmt.Sprintf("%s:%s:%s", cluster.Name, event.Namespace, event.Object),
+					ClusterName:        cluster.Name,
+					Namespace:          event.Namespace,
+					EventType:          event.Type,
+					Reason:             event.Reason,
+					Message:            event.Message,
+					InvolvedObjectKind: splitEventObjectKind(event.Object),
+					InvolvedObjectName: splitEventObjectName(event.Object),
+					EventCount:         event.Count,
+					LastSeen:           event.LastSeen,
+					FirstSeen:          event.FirstSeen,
+				})
 			}
 		}
 	}
