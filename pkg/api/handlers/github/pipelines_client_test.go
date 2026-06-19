@@ -120,7 +120,8 @@ func TestGHGetWithRetry_MaxAttemptsExceeded(t *testing.T) {
 	}
 
 	resp, err := handler.ghGetWithRetry(context.Background(), "/test")
-	require.NoError(t, err) // Function returns the response, not an error
+	require.Error(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	// Should have attempted the maximum number of times
 	assert.True(t, attemptCount >= 1, "should make at least one attempt")

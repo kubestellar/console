@@ -44,9 +44,28 @@ func TestNightlyE2EHandler_GetRuns_NoToken(t *testing.T) {
 }
 
 func TestNightlyE2EHandler_GetRunLogs_DemoMode(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.Contains(r.URL.Path, "/actions/runs/") && strings.HasSuffix(r.URL.Path, "/jobs") {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"jobs":[{"id":1,"name":"test-job","conclusion":"failure"}]}`))
+			return
+		}
+		if strings.Contains(r.URL.Path, "/actions/jobs/") && strings.HasSuffix(r.URL.Path, "/logs") {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("job failed"))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	os.Setenv("GITHUB_URL", server.URL)
+	defer os.Unsetenv("GITHUB_URL")
+
 	app, _ := setupNightlyE2EHandler("test-token")
 
-	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/owner/repo/123", nil)
+	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
 	req.Header.Set("X-Demo-Mode", "true")
 
 	resp, _ := app.Test(req, 5000)
@@ -118,7 +137,7 @@ func TestNightlyE2EHandler_GetRunLogs_NetworkError(t *testing.T) {
 
 	app, _ := setupNightlyE2EHandler("test-token")
 
-	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/owner/repo/123", nil)
+	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
 	resp, _ := app.Test(req, 5000)
 
 	if resp == nil {
@@ -154,7 +173,7 @@ func TestNightlyE2EHandler_GetRunLogs_CacheBehavior(t *testing.T) {
 
 	app, _ := setupNightlyE2EHandler("test-token")
 
-	req1 := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/owner/repo/123", nil)
+	req1 := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
 	resp1, _ := app.Test(req1, 5000)
 	if resp1 == nil {
 		t.Fatal("expected non-nil response")
@@ -163,7 +182,7 @@ func TestNightlyE2EHandler_GetRunLogs_CacheBehavior(t *testing.T) {
 
 	initialCallCount := callCount
 
-	req2 := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/owner/repo/123", nil)
+	req2 := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
 	resp2, _ := app.Test(req2, 5000)
 	if resp2 == nil {
 		t.Fatal("expected non-nil response")
@@ -186,7 +205,7 @@ func TestNightlyE2EHandler_EmptyJobsList(t *testing.T) {
 
 	app, _ := setupNightlyE2EHandler("test-token")
 
-	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/owner/repo/123", nil)
+	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
 	resp, _ := app.Test(req, 5000)
 
 	if resp == nil {

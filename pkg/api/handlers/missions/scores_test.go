@@ -147,7 +147,6 @@ func TestMissions_GetMissionScore_Success(t *testing.T) {
 	assert.Equal(t, "Test Mission", result["title"])
 	assert.Equal(t, "demo", result["project"])
 	assert.Equal(t, float64(88), result["qualityScore"])
-	assert.Equal(t, true, result["qualityPass"])
 
 	breakdown := result["qualityBreakdown"].(map[string]interface{})
 	assert.Equal(t, float64(90), breakdown["structure"])

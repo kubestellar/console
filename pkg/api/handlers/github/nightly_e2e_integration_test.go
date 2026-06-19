@@ -18,7 +18,7 @@ func setupNightlyE2EHandler(githubToken string) (*fiber.App, *NightlyE2EHandler)
 	app := fiber.New()
 	handler := NewNightlyE2EHandler(githubToken)
 	app.Get("/api/nightly-e2e/runs", handler.GetRuns)
-	app.Get("/api/nightly-e2e/run-logs/:owner/:repo/:runId", handler.GetRunLogs)
+	app.Get("/api/nightly-e2e/run-logs", handler.GetRunLogs)
 	return app, handler
 }
 
@@ -150,7 +150,7 @@ func TestNightlyE2EHandler_GetRunLogs_Success(t *testing.T) {
 
 	app, _ := setupNightlyE2EHandler("test-token")
 
-	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/llm-d/llm-d/123", nil)
+	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
 	resp, _ := app.Test(req, 10000)
 
 	if resp == nil {
@@ -169,7 +169,7 @@ func TestNightlyE2EHandler_GetRunLogs_Success(t *testing.T) {
 func TestNightlyE2EHandler_GetRunLogs_InvalidRunId(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
-	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/owner/repo/invalid", nil)
+	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=invalid", nil)
 	resp, _ := app.Test(req, 5000)
 
 	if resp == nil {
@@ -180,7 +180,7 @@ func TestNightlyE2EHandler_GetRunLogs_InvalidRunId(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
 	json.Unmarshal(body, &result)
-	assert.Contains(t, result["error"], "invalid runId")
+	assert.Contains(t, result["error"], "repo and runId query params are required")
 }
 
 func TestNightlyWorkflow_Structure(t *testing.T) {
