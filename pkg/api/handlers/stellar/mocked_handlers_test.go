@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	stellarproviders "github.com/kubestellar/console/pkg/stellar/providers"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -275,7 +274,6 @@ func TestStellarCreateProvider_UsesMockedUpsert(t *testing.T) {
 func TestStellarListProviders_MasksUserAPIKey(t *testing.T) {
 	app, mockStore, userID := newMockedStellarHandlerApp(t)
 
-	key := "sk-test-1234567890"
 	mockStore.On("GetUserProviderConfigs", userID).Return([]store.StellarProviderConfig{
 		{
 			ID:          "cfg-1",
@@ -302,7 +300,6 @@ func TestStellarListProviders_MasksUserAPIKey(t *testing.T) {
 	assert.NotEmpty(t, payload.Global)
 	require.Len(t, payload.User, 1)
 	assert.Empty(t, payload.User[0].APIKeyMask)
-	assert.NotEqual(t, stellarproviders.MaskAPIKey(key), payload.User[0].APIKeyMask)
 	mockStore.AssertExpectations(t)
 }
 
@@ -389,6 +386,7 @@ func TestStellarTestProvider_SuccessUpdatesLatency(t *testing.T) {
 	latency, ok := payload["latencyMs"].(float64)
 	require.True(t, ok)
 	assert.GreaterOrEqual(t, latency, float64(0))
+	assert.Less(t, latency, float64(10000))
 	mockStore.AssertExpectations(t)
 }
 
