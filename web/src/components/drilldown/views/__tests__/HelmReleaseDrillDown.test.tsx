@@ -10,6 +10,8 @@ import {
   renderWithDrillDown,
 } from './drilldown-interaction-helpers'
 
+const mockRollbackFn = vi.hoisted(() => vi.fn())
+
 vi.mock('../../../../hooks/useDrillDown', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../hooks/useDrillDown')>()
   return {
@@ -30,7 +32,7 @@ vi.mock('../../../../hooks/useMissions', () => ({
 
 vi.mock('../../../../hooks/useHelmActions', () => ({
   useHelmActions: () => ({
-    rollback: vi.fn(),
+    rollback: mockRollbackFn,
     uninstall: vi.fn(),
     isLoading: false,
   }),
@@ -216,5 +218,63 @@ metadata:
     fireEvent.click(within(resourcesPanel).getByText('web'))
 
     expect(mockDrillToDeployment).toHaveBeenCalledWith('cluster-a', 'default', 'web')
+  })
+
+  it('shows the correct revision and rollback buttons after a successful rollback', async () => {
+    // Helm creates a new revision (3) when rolling back from rev 2 to rev 1.
+    // Before fix, the stale `releaseRevision` prop ("2") shadowed the freshly-fetched
+    // `releaseInfo.revision` ("3"), so rev 3 incorrectly showed a Rollback button
+    // and the Overview still displayed "Revision: 2".
+    const POST_ROLLBACK_HISTORY = [
+      { revision: 3, updated: '2026-05-03T10:00:00Z', status: 'deployed',   chart: 'nginx-1.1.0', app_version: '1.24', description: 'Rollback to 1' },
+      { revision: 2, updated: '2026-05-02T12:00:00Z', status: 'superseded', chart: 'nginx-1.2.0', app_version: '1.25', description: 'Upgrade complete' },
+      { revision: 1, updated: '2026-05-01T12:00:00Z', status: 'superseded', chart: 'nginx-1.1.0', app_version: '1.24', description: 'Install complete' },
+    ]
+
+    let postRollback = false
+    mockRollbackFn.mockImplementation(async () => {
+      postRollback = true
+      return { success: true, message: 'Rolled back successfully' }
+    })
+    mockRunHelm.mockImplementation(async (args: string[]) => {
+      const joined = args.join(' ')
+      if (joined.includes('status')) {
+        return JSON.stringify(postRollback ? { ...HELM_STATUS_JSON, version: 3 } : HELM_STATUS_JSON)
+      }
+      if (joined.includes('history')) {
+        return JSON.stringify(postRollback ? POST_ROLLBACK_HISTORY : HELM_HISTORY_JSON)
+      }
+      if (joined.includes('get') && joined.includes('values')) return 'replicaCount: 2'
+      if (joined.includes('manifest')) return HELM_MANIFEST
+      return ''
+    })
+
+    renderWithDrillDown(<HelmReleaseDrillDown data={BASE_DATA} />)
+    await waitFor(() => expect(screen.getByText('nginx')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: 'drilldown.tabs.history' }))
+    await waitFor(() => expect(screen.getByText('Upgrade complete')).toBeInTheDocument())
+
+    // Pre-rollback: rev 1 (superseded) has a Rollback button; rev 2 (current) does not
+    expect(screen.getByTitle('Roll back to revision 1')).toBeInTheDocument()
+    expect(screen.queryByTitle('Roll back to revision 2')).not.toBeInTheDocument()
+
+    // Trigger rollback to rev 1
+    fireEvent.click(screen.getByTitle('Roll back to revision 1'))
+    await waitFor(() => expect(screen.getByText(/Roll back "nginx" to revision 1/)).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Rollback to #1' }))
+
+    // Success feedback
+    await waitFor(() => expect(screen.getByText('Rolled back successfully')).toBeInTheDocument())
+
+    // Post-rollback: history refreshes — rev 3 is now current (no Rollback button)
+    await waitFor(() => expect(screen.getByText('Rollback to 1')).toBeInTheDocument())
+    expect(screen.queryByTitle('Roll back to revision 3')).not.toBeInTheDocument()
+    // Rev 2 (now superseded) gets its Rollback button back
+    expect(screen.getByTitle('Roll back to revision 2')).toBeInTheDocument()
+
+    // Overview must show the updated revision number from the live fetch, not the stale prop
+    fireEvent.click(screen.getByRole('button', { name: 'drilldown.tabs.overview' }))
+    await waitFor(() => expect(screen.getByText('Revision: 3')).toBeInTheDocument())
   })
 })

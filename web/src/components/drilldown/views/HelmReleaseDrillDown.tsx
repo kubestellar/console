@@ -533,7 +533,7 @@ Please:
                     )}
                     <div className="flex items-center gap-1.5">
                       <RefreshCw className="w-4 h-4" />
-                      <span>Revision: {releaseRevision || releaseInfo?.revision || '1'}</span>
+                      <span>Revision: {releaseInfo?.revision || releaseRevision || '1'}</span>
                     </div>
                   </div>
                   {releaseInfo?.updated && (
@@ -696,7 +696,7 @@ Please:
                           {new Date(rev.updated).toLocaleDateString()}
                         </span>
                         {/* Show rollback button for non-current revisions */}
-                        {String(rev.revision) !== (releaseRevision || releaseInfo?.revision) && (
+                        {String(rev.revision) !== (releaseInfo?.revision || releaseRevision) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
