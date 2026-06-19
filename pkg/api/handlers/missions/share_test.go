@@ -1,7 +1,12 @@
 package missions
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -162,4 +167,435 @@ func TestIsRepoAllowedForShare(t *testing.T) {
 
 		assert.False(t, isRepoAllowedForShare("layer5io/../admin/repo"))
 	})
+}
+
+// newSlackMockTransport returns an http.Client whose transport rewrites all
+// outbound requests to point at the given httptest.Server by modifying the
+// request URL's scheme and host so that the handler's strict
+// https://hooks.slack.com/… URL validation still passes while the actual TCP
+// connection goes to the test server.
+func newSlackMockTransport(mock *httptest.Server) *http.Client {
+	transport := &mockTransport{handler: func(req *http.Request) (*http.Response, error) {
+		req.URL.Scheme = "http"
+		req.URL.Host = strings.TrimPrefix(mock.URL, "http://")
+		return http.DefaultTransport.RoundTrip(req)
+	}}
+	return &http.Client{Transport: transport}
+}
+
+// ---------- ShareToSlack handler ----------
+
+func TestShareToSlack_EmptyText(t *testing.T) {
+	app, _ := setupMissionsTest()
+
+	payload := `{"webhookUrl":"https://hooks.slack.com/services/T00/B00/xxx","text":""}`
+	req, err := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"], "text is required")
+}
+
+func TestShareToSlack_OversizedText(t *testing.T) {
+	app, _ := setupMissionsTest()
+
+	oversized := strings.Repeat("x", slackMaxTextBytes+1)
+	payload := fmt.Sprintf(`{"webhookUrl":"https://hooks.slack.com/services/T00/B00/xxx","text":"%s"}`, oversized)
+	req, err := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "exceeds maximum size")
+}
+
+func TestShareToSlack_SlackNon200Response(t *testing.T) {
+	slackMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("internal error"))
+	}))
+	defer slackMock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.httpClient = newSlackMockTransport(slackMock)
+
+	payload := `{"webhookUrl":"https://hooks.slack.com/services/T00/B00/xxx","text":"hello"}`
+	req, err := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "500")
+}
+
+// ---------- ShareToGitHub handler ----------
+
+func TestShareToGitHub_MissingRequiredFields(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+	}{
+		{"missing repo", `{"filePath":"missions/f.yaml","content":"dGVzdA==","branch":"b","message":"m"}`},
+		{"missing filePath", `{"repo":"kubestellar/console-kb","content":"dGVzdA==","branch":"b","message":"m"}`},
+		{"missing content", `{"repo":"kubestellar/console-kb","filePath":"missions/f.yaml","branch":"b","message":"m"}`},
+		{"missing branch", `{"repo":"kubestellar/console-kb","filePath":"missions/f.yaml","content":"dGVzdA==","message":"m"}`},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			app, _ := setupMissionsTest()
+			req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(tt.payload))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-GitHub-Token", "ghp_test")
+
+			resp, err := app.Test(req, 5000)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+			var body map[string]interface{}
+			require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+			assert.Contains(t, body["error"].(string), "required")
+		})
+	}
+}
+
+func TestShareToGitHub_InvalidFilePath(t *testing.T) {
+	app, _ := setupMissionsTest()
+
+	payload := `{"repo":"kubestellar/console-kb","filePath":"../escape/secret","content":"dGVzdA==","branch":"mission-test","message":"m"}`
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Token", "ghp_test")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "filePath")
+}
+
+func TestShareToGitHub_InvalidBranch(t *testing.T) {
+	app, _ := setupMissionsTest()
+
+	payload := `{"repo":"kubestellar/console-kb","filePath":"missions/f.yaml","content":"dGVzdA==","branch":"--inject-flag","message":"m"}`
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Token", "ghp_test")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "branch")
+}
+
+// validSharePayload is a minimal ShareToGitHub request body for the
+// kubestellar/console-kb repo (which is on the default allowlist).
+const validSharePayload = `{"repo":"kubestellar/console-kb","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`
+
+func TestShareToGitHub_ForkFails(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/forks") {
+			w.WriteHeader(http.StatusForbidden)
+			json.NewEncoder(w).Encode(map[string]string{"message": "forbidden"})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubAPIURL = mock.URL
+
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(validSharePayload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Token", "ghp_test")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "fork failed")
+}
+
+func TestShareToGitHub_ForkResponseMalformed(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/forks") {
+			w.WriteHeader(http.StatusAccepted)
+			w.Write([]byte("not-json{{{{"))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubAPIURL = mock.URL
+
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(validSharePayload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Token", "ghp_test")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "decode fork response")
+}
+
+func TestShareToGitHub_ForkMissingFullName(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/forks") {
+			w.WriteHeader(http.StatusAccepted)
+			// full_name absent — handler should reject with 502
+			json.NewEncoder(w).Encode(map[string]string{"id": "123"})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubAPIURL = mock.URL
+
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(validSharePayload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Token", "ghp_test")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "full_name")
+}
+
+// buildSuccessfulGitHubMock returns a handler that succeeds for the fork,
+// upstream repo query, and HEAD-ref lookup steps, then delegates all remaining
+// calls to the provided tailHandler.  This avoids duplicating the fork/ref
+// boilerplate in every test that exercises a later step.
+func buildSuccessfulGitHubMock(tailHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case strings.Contains(r.URL.Path, "/forks"):
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"full_name": "testuser/console-kb",
+				"default_branch": "main",
+			})
+		case strings.HasSuffix(r.URL.Path, "/repos/kubestellar/console-kb"):
+			// upstream repo query for default_branch
+			json.NewEncoder(w).Encode(map[string]interface{}{"default_branch": "main"})
+		case strings.Contains(r.URL.Path, "/git/ref/heads/main"):
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"object": map[string]string{"sha": "abc123def456"},
+			})
+		default:
+			tailHandler.ServeHTTP(w, r)
+		}
+	})
+}
+
+func TestShareToGitHub_BranchCreationFails(t *testing.T) {
+	tail := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/git/refs") {
+			// Non-422 error — should cause 502
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"message": "server error"})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	})
+	mock := httptest.NewServer(buildSuccessfulGitHubMock(tail))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubAPIURL = mock.URL
+
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(validSharePayload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Token", "ghp_test")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "branch creation failed")
+}
+
+func TestShareToGitHub_FileCommitFails(t *testing.T) {
+	tail := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/git/refs"):
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(map[string]string{"ref": "refs/heads/mission-test"})
+		case strings.Contains(r.URL.Path, "/contents/"):
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			json.NewEncoder(w).Encode(map[string]string{"message": "conflict"})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+	mock := httptest.NewServer(buildSuccessfulGitHubMock(tail))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubAPIURL = mock.URL
+
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(validSharePayload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Token", "ghp_test")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "commit failed")
+}
+
+func TestShareToGitHub_CommitSHAMissing(t *testing.T) {
+	tail := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/git/refs"):
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(map[string]string{"ref": "refs/heads/mission-test"})
+		case strings.Contains(r.URL.Path, "/contents/"):
+			w.WriteHeader(http.StatusCreated)
+			// content.sha is absent — handler must reject
+			json.NewEncoder(w).Encode(map[string]interface{}{"content": map[string]string{}})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+	mock := httptest.NewServer(buildSuccessfulGitHubMock(tail))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubAPIURL = mock.URL
+
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(validSharePayload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Token", "ghp_test")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "content SHA")
+}
+
+func TestShareToGitHub_PRCreationFails(t *testing.T) {
+	tail := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/git/refs"):
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(map[string]string{"ref": "refs/heads/mission-test"})
+		case strings.Contains(r.URL.Path, "/contents/"):
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(map[string]interface{}{"content": map[string]string{"sha": "abc123"}})
+		case strings.Contains(r.URL.Path, "/pulls"):
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			json.NewEncoder(w).Encode(map[string]string{"message": "already exists"})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+	mock := httptest.NewServer(buildSuccessfulGitHubMock(tail))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubAPIURL = mock.URL
+
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(validSharePayload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Token", "ghp_test")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "PR creation failed")
+}
+
+func TestShareToGitHub_PRHtmlURLMissing(t *testing.T) {
+	tail := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/git/refs"):
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(map[string]string{"ref": "refs/heads/mission-test"})
+		case strings.Contains(r.URL.Path, "/contents/"):
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(map[string]interface{}{"content": map[string]string{"sha": "abc123"}})
+		case strings.Contains(r.URL.Path, "/pulls"):
+			w.WriteHeader(http.StatusCreated)
+			// html_url absent — handler must reject
+			json.NewEncoder(w).Encode(map[string]interface{}{"number": 42})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+	mock := httptest.NewServer(buildSuccessfulGitHubMock(tail))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubAPIURL = mock.URL
+
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(validSharePayload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Token", "ghp_test")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"].(string), "html_url")
 }
