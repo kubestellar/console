@@ -101,12 +101,12 @@ func executeCAPIScaleMachineDeployment(ctx context.Context, cfg *rest.Config, re
 		return federation.ActionResult{}, fmt.Errorf("getting MachineDeployment %s/%s: %w", ns, mdName, err)
 	}
 
-	// Unstructured JSON numbers come back as float64 even for integer fields.
-	var currentReplicasF float64
+	var currentReplicas int64
+	var hasCurrentReplicas bool
 	if spec, ok := current.Object["spec"].(map[string]interface{}); ok {
-		currentReplicasF, _ = spec["replicas"].(float64)
+		currentReplicas, hasCurrentReplicas = int64FromAny(spec["replicas"])
 	}
-	if int64(currentReplicasF) == replicas {
+	if hasCurrentReplicas && currentReplicas == replicas {
 		return federation.ActionResult{
 			OK:      true,
 			Already: true,
@@ -127,6 +127,23 @@ func executeCAPIScaleMachineDeployment(ctx context.Context, cfg *rest.Config, re
 		OK:      true,
 		Message: fmt.Sprintf("MachineDeployment %s/%s scaled to %d replicas", ns, mdName, replicas),
 	}, nil
+}
+
+func int64FromAny(value interface{}) (int64, bool) {
+	switch v := value.(type) {
+	case int64:
+		return v, true
+	case int32:
+		return int64(v), true
+	case int:
+		return int64(v), true
+	case float64:
+		return int64(v), true
+	case float32:
+		return int64(v), true
+	default:
+		return 0, false
+	}
 }
 
 // executeCAPIDeleteCluster deletes a Cluster resource. This is destructive —
