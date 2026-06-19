@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -143,19 +144,158 @@ func TestDriveGetWithRetry(t *testing.T) {
 	})
 }
 
+func TestCollectBenchmarkFiles(t *testing.T) {
+	validYAML := `
+apiVersion: v1
+kind: BenchmarkReport
+metadata:
+  name: test-benchmark
+  timestamp: "2025-05-01T10:00:00Z"
+results:
+  - name: BenchmarkTest
+    nsPerOp: 1000
+    bytesPerOp: 100
+    allocsPerOp: 5
+`
+
+	t.Run("parses valid benchmark files", func(t *testing.T) {
+		fileCount := 0
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.URL.String(), "files?q=") {
+				w.Header().Set("Content-Type", "application/json")
+				json := `{
+					"files": [
+						{"id": "file1", "name": "benchmark_report_1.yaml", "mimeType": "text/yaml", "createdTime": "2025-05-01T10:00:00Z"},
+						{"id": "file2", "name": "benchmark_report_2.yaml", "mimeType": "text/yaml", "createdTime": "2025-05-01T11:00:00Z"}
+					]
+				}`
+				w.Write([]byte(json))
+			} else if strings.Contains(r.URL.String(), "uc?id=") {
+				fileCount++
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(validYAML))
+			}
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{
+			client:   srv.Client(),
+			apiKey:   "test-key",
+			folderID: "folder123",
+		}
+		ctx := context.Background()
+
+		reports, failures, err := h.collectBenchmarkFiles(ctx, "folder123", "exp1", "run1")
+		require.NoError(t, err)
+		require.Equal(t, 0, failures)
+		require.Len(t, reports, 2)
+		require.Equal(t, 2, fileCount, "should download both files")
+	})
+
+	.Run("skips folders and non-benchmark files", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.URL.String(), "files?q=") {
+				json := `{
+					"files": [
+						{"id": "folder1", "name": "subfolder", "mimeType": "application/vnd.google-apps.folder", "createdTime": "2025-05-01T10:00:00Z"},
+						{"id": "file1", "name": "readme.txt", "mimeType": "text/plain", "createdTime": "2025-05-01T11:00:00Z"}
+					]
+				}`
+				w.Write([]byte(json))
+			}
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{
+			client:   srv.Client(),
+			apiKey:   "test-key",
+			folderID: "folder123",
+		}
+		ctx := context.Background()
+
+		reports, failures, err := h.collectBenchmarkFiles(ctx, "folder123", "exp1", "run1")
+		require.NoError(t, err)
+		require.Equal(t, 0, failures)
+		require.Len(t, reports, 0, "should skip non-benchmark files and folders")
+	})
+}
+
+func TestDownloadAndParseReport(t *testing.T) {
+	validYAML := `
+apiVersion: v1
+kind: BenchmarkReport
+metadata:
+  name: test
+results:
+  - name: BenchmarkTest
+    nsPerOp: 1000
+`
+
+	t.Run("successfully downloads and parses valid YAML", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(validYAML))
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: srv.Client()}
+		ctx := context.Background()
+
+		file := driveFile{
+			ID:          "file123",
+			Name:        "benchmark_report_1.yaml",
+			CreatedTime: "2025-05-01T10:00:00Z",
+		}
+
+		report, err := h.downloadAndParseReport(ctx, file, "exp1", "run1")
+		require.NoError(t, err)
+		require.NotEmpty(t, report.Run.EID)
+	})
+
+	t.Run("returns error on invalid YAML", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("not valid yaml: {{{"))
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: srv.Client()}
+		ctx := context.Background()
+
+		file := driveFile{
+			ID:          "file123",
+			Name:        "benchmark_report_bad.yaml",
+			CreatedTime: "2025-05-01T10:00:00Z",
+		}
+
+		_, err := h.downloadAndParseReport(ctx, file, "exp1", "run1")
+		require.Error(t, err, "should fail on invalid YAML")
+	})
+
+	t.Run("returns error on download failure", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: srv.Client()}
+		ctx := context.Background()
+
+		file := driveFile{
+			ID:          "missing",
+			Name:        "benchmark_report_missing.yaml",
+			CreatedTime: "2025-05-01T10:00:00Z",
+		}
+
+		_, err := h.downloadAndParseReport(ctx, file, "exp1", "run1")
+		require.Error(t, err, "should fail on 404")
+	})
+}
+
 func TestDownloadDriveFile(t *testing.T) {
 	t.Run("downloads file successfully", func(t *testing.T) {
 		content := "benchmark data here"
-		callCount := 0
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			callCount++
-			// The first call is the throttle check via driveGet
-			// Google redirects the uc?id= URL, so we get the actual download URL
-			if r.URL.Path == "/uc" {
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(content))
-				return
-			}
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(content))
 		}))
@@ -164,14 +304,9 @@ func TestDownloadDriveFile(t *testing.T) {
 		h := &BenchmarkHandlers{client: srv.Client()}
 		ctx := context.Background()
 
-		// Override the download URL to point to our test server
-		// Since downloadDriveFile constructs the URL internally, we need to test it differently
-		// Test by calling driveGet directly with our server URL
-		resp, err := h.driveGet(ctx, srv.URL+"/uc?id=file123")
+		data, err := h.downloadDriveFile(ctx, "file123")
 		require.NoError(t, err)
-		require.NotNil(t, resp)
-		defer resp.Body.Close()
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+		require.Equal(t, content, string(data))
 	})
 
 	t.Run("returns error on non-200 status", func(t *testing.T) {
@@ -184,53 +319,90 @@ func TestDownloadDriveFile(t *testing.T) {
 		h := &BenchmarkHandlers{client: srv.Client()}
 		ctx := context.Background()
 
-		resp, err := h.driveGet(ctx, srv.URL)
-		require.NoError(t, err)
-		require.NotNil(t, resp)
-		require.Equal(t, http.StatusForbidden, resp.StatusCode)
+		_, err := h.downloadDriveFile(ctx, "file123")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "403")
 	})
 
 	t.Run("enforces max file size limit", func(t *testing.T) {
-		// This test verifies the concept - actual enforcement tested via integration
-		maxSize := int64(maxBenchmarkReportBytes)
-		require.Equal(t, int64(50*1024*1024), maxSize)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			largeData := make([]byte, maxBenchmarkReportBytes+1000)
+			w.Write(largeData)
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: srv.Client()}
+		ctx := context.Background()
+
+		_, err := h.downloadDriveFile(ctx, "huge-file")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "exceeded max size")
 	})
 }
 
 func TestListDriveFolder(t *testing.T) {
-	t.Run("mock pagination test", func(t *testing.T) {
-		// Since listDriveFolder constructs the Drive API URL internally,
-		// we test the pagination logic via unit tests of the core logic
-		// Real integration would require mocking at a different level
-		
-		// Test that the function expects proper Drive API response format
-		type mockResponse struct {
-			Files         []driveFile `json:"files"`
-			NextPageToken string      `json:"nextPageToken,omitempty"`
-		}
-		
-		// Verify structure compatibility
-		resp := mockResponse{
-			Files: []driveFile{
-				{ID: "f1", Name: "file1.yaml", MimeType: "text/yaml", CreatedTime: "2025-05-01T10:00:00Z"},
-			},
-			NextPageToken: "token123",
-		}
-		
-		require.Len(t, resp.Files, 1)
-		require.Equal(t, "token123", resp.NextPageToken)
+	t.Run("lists all files in single page", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			json := `{
+				"files": [
+					{"id": "f1", "name": "file1.yaml", "mimeType": "text/yaml", "createdTime": "2025-05-01T10:00:00Z"},
+					{"id": "f2", "name": "file2.yaml", "mimeType": "text/yaml", "createdTime": "2025-05-01T11:00:00Z"}
+				]
+			}`
+			w.Write([]byte(json))
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: srv.Client(), apiKey: "key"}
+		ctx := context.Background()
+
+		files, err := h.listDriveFolder(ctx, "folder123")
+		require.NoError(t, err)
+		require.Len(t, files, 2)
+		require.Equal(t, "file1.yaml", files[0].Name)
+		require.Equal(t, "file2.yaml", files[1].Name)
 	})
 
-	t.Run("error handling concept", func(t *testing.T) {
-		// The actual listDriveFolder requires real Drive API URLs
-		// so we test the error handling pattern via the retry logic
-		h := &BenchmarkHandlers{apiKey: "test-key"}
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel context
+	t.Run("handles pagination with nextPageToken", func(t *testing.T) {
+		page := 0
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			page++
+			if page == 1 {
+				json := `{
+					"files": [{"id": "f1", "name": "file1.yaml", "mimeType": "text/yaml", "createdTime": "2025-05-01T10:00:00Z"}],
+					"nextPageToken": "token123"
+				}`
+				w.Write([]byte(json))
+			} else {
+				json := `{
+					"files": [{"id": "f2", "name": "file2.yaml", "mimeType": "text/yaml", "createdTime": "2025-05-01T11:00:00Z"}]
+				}`
+				w.Write([]byte(json))
+			}
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: srv.Client(), apiKey: "key"}
+		ctx := context.Background()
+
+		files, err := h.listDriveFolder(ctx, "folder123")
+		require.NoError(t, err)
+		require.Len(t, files, 2, "should combine both pages")
+		require.Equal(t, 2, page, "should make 2 requests")
+	})
+
+	t.Run("returns error on API failure", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: srv.Client(), apiKey: "key"}
+		ctx := context.Background()
 
 		_, err := h.listDriveFolder(ctx, "folder123")
 		require.Error(t, err)
-		require.Equal(t, context.Canceled, err)
 	})
 }
 

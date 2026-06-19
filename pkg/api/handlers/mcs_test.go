@@ -218,7 +218,7 @@ func TestListServiceExportsMock(t *testing.T) {
 		assert.Equal(t, 500, resp.StatusCode)
 	})
 
-	t.Run("Cluster-specific error", func(t *testing.T) {
+	.Run("Cluster-specific error", func(t *testing.T) {
 		mock := &mockMCSClient{
 			listServiceExportsForClusterFunc: func(ctx context.Context, contextName, namespace string) ([]v1alpha1.ServiceExport, error) {
 				return nil, errors.New("cluster-specific error")
@@ -273,7 +273,7 @@ func TestListServiceImportsMock(t *testing.T) {
 		assert.Equal(t, 500, resp.StatusCode)
 	})
 
-	t.Run("Cluster-specific query error", func(t *testing.T) {
+	.Run("Cluster-specific query error", func(t *testing.T) {
 		mock := &mockMCSClient{
 			listServiceImportsForClusterFunc: func(ctx context.Context, contextName, namespace string) ([]v1alpha1.ServiceImport, error) {
 				return nil, errors.New("cluster-specific error")
@@ -288,7 +288,7 @@ func TestListServiceImportsMock(t *testing.T) {
 		assert.Equal(t, 500, resp.StatusCode)
 	})
 
-	t.Run("IsMCSAvailable check", func(t *testing.T) {
+	.Run("IsMCSAvailable check", func(t *testing.T) {
 		mock := &mockMCSClient{
 			isMCSAvailableFunc: func(ctx context.Context, contextName string) bool {
 				return false
