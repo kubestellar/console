@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "count": 1,
+  "missions": [
+    {
+      "path": "fixes/cncf-install/install-cert-manager.json",
+      "title": "Install cert-manager",
+      "description": "Install and configure cert-manager on Kubernetes.",
+      "cncfProjects": [
+        "cert-manager"
+      ],
+      "qualityScore": 92,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "structure": 95,
+        "completeness": 89
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": [
+        "Validate cluster prerequisites before install."
+      ]
+    }
+  ]
+}

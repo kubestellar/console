@@ -376,6 +376,13 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 	if sm.settings == nil {
 		sm.settings = DefaultSettings()
 	}
+	if sm.key == nil {
+		key, err := ensureKeyFile(sm.keyPath)
+		if err != nil {
+			return fmt.Errorf("failed to initialize encryption key: %w", err)
+		}
+		sm.key = key
+	}
 
 	// Apply defaults for zero-value fields
 	applyDefaults(all)

@@ -1,0 +1,23 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-cert-manager",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Cert Manager on Kubernetes",
+    "description": "Install cert-manager with Helm and verify the deployment on your cluster.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Add the Jetstack Helm repository",
+        "description": "helm repo add jetstack https://charts.jetstack.io && helm repo update"
+      },
+      {
+        "title": "Install cert-manager",
+        "description": "helm install cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --set installCRDs=true"
+      }
+    ]
+  }
+}
