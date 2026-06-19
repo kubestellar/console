@@ -209,7 +209,7 @@ export async function fetchCiliumStatus(): Promise<CiliumStatus | null> {
  * Fetch aggregated Jaeger tracing status from the local agent.
  * Matches backend handler at /jaeger-status.
  */
-export async function fetchJaegerStatus(): Promise<any | null> {
+export async function fetchJaegerStatus(): Promise<unknown> {
   // Rule: Check if agent is available before attempting fetch
   if (isAgentUnavailable()) return null
 

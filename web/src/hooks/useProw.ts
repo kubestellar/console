@@ -142,11 +142,12 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
         setError(err instanceof Error ? err.message : 'Failed to fetch ProwJobs')
       }
     } finally {
-      if (!mountedRef.current) return
-      if (!silent) {
-        setIsLoading(false)
+      if (mountedRef.current) {
+        if (!silent) {
+          setIsLoading(false)
+        }
+        setIsRefreshing(false)
       }
-      setIsRefreshing(false)
     }
   }, []) // state setters and refs are stable; no other reactive deps
 

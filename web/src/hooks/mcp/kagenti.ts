@@ -165,7 +165,7 @@ async function agentFetch<T>(path: string, cluster: string, namespace?: string):
       throw err
     }
     // Classify network/abort errors into friendly messages
-    throw new Error(classifyFetchError(err, path, cluster))
+    throw new Error(classifyFetchError(err, path, cluster), { cause: err })
   }
 }
 
