@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 
 	"github.com/kubestellar/console/pkg/agent/federation"
@@ -46,7 +45,7 @@ func (p *kubeAdmiralProvider) Execute(ctx context.Context, cfg *rest.Config, req
 // kubeAdmiralUnfederateCluster deletes the named FederatedCluster CR. If the
 // CR is already absent the operation returns Skipped=true (idempotent).
 func kubeAdmiralUnfederateCluster(ctx context.Context, cfg *rest.Config, clusterName string) (federation.ActionResult, error) {
-	dc, err := dynamic.NewForConfig(cfg)
+	dc, err := newDynamicClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, err
 	}

@@ -7,7 +7,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 
 	"github.com/kubestellar/console/pkg/agent/federation"
@@ -87,7 +86,7 @@ func executeCAPIScaleMachineDeployment(ctx context.Context, cfg *rest.Config, re
 	}
 	replicas := int64(replicasFloat)
 
-	dc, err := dynamic.NewForConfig(cfg)
+	dc, err := newDynamicClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}
@@ -101,12 +100,22 @@ func executeCAPIScaleMachineDeployment(ctx context.Context, cfg *rest.Config, re
 		return federation.ActionResult{}, fmt.Errorf("getting MachineDeployment %s/%s: %w", ns, mdName, err)
 	}
 
-	// Unstructured JSON numbers come back as float64 even for integer fields.
-	var currentReplicasF float64
+	var currentReplicas int64
 	if spec, ok := current.Object["spec"].(map[string]interface{}); ok {
-		currentReplicasF, _ = spec["replicas"].(float64)
+		switch v := spec["replicas"].(type) {
+		case int64:
+			currentReplicas = v
+		case int32:
+			currentReplicas = int64(v)
+		case int:
+			currentReplicas = int64(v)
+		case float64:
+			currentReplicas = int64(v)
+		case float32:
+			currentReplicas = int64(v)
+		}
 	}
-	if int64(currentReplicasF) == replicas {
+	if currentReplicas == replicas {
 		return federation.ActionResult{
 			OK:      true,
 			Already: true,
@@ -142,7 +151,7 @@ func executeCAPIDeleteCluster(ctx context.Context, cfg *rest.Config, req federat
 		return federation.ActionResult{}, fmt.Errorf("payload.namespace is required for %s", capiActionDeleteCluster)
 	}
 
-	dc, err := dynamic.NewForConfig(cfg)
+	dc, err := newDynamicClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}
@@ -179,7 +188,7 @@ func executeCAPIRetryProvisioning(ctx context.Context, cfg *rest.Config, req fed
 		return federation.ActionResult{}, fmt.Errorf("payload.namespace is required for %s", capiActionRetryProvisioning)
 	}
 
-	dc, err := dynamic.NewForConfig(cfg)
+	dc, err := newDynamicClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}

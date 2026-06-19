@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 
 	"github.com/kubestellar/console/pkg/agent/federation"
@@ -47,7 +46,7 @@ func (p *liqoProvider) Execute(ctx context.Context, cfg *rest.Config, req federa
 // peering relationship. If the CR is already absent the operation returns
 // Skipped=true (idempotent).
 func liqoUnpeerWith(ctx context.Context, cfg *rest.Config, clusterName string) (federation.ActionResult, error) {
-	dc, err := dynamic.NewForConfig(cfg)
+	dc, err := newDynamicClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, err
 	}

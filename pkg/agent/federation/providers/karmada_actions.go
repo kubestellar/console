@@ -8,7 +8,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 
 	"github.com/kubestellar/console/pkg/agent/federation"
@@ -77,7 +76,7 @@ func executeKarmadaJoinCluster(ctx context.Context, cfg *rest.Config, req federa
 		return federation.ActionResult{}, fmt.Errorf("payload.apiEndpoint is required for %s", karmadaActionJoinCluster)
 	}
 
-	dc, err := dynamic.NewForConfig(cfg)
+	dc, err := newDynamicClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}
@@ -138,7 +137,7 @@ func executeKarmadaUnjoinCluster(ctx context.Context, cfg *rest.Config, req fede
 		return federation.ActionResult{}, fmt.Errorf("clusterName is required for %s", karmadaActionUnjoinCluster)
 	}
 
-	dc, err := dynamic.NewForConfig(cfg)
+	dc, err := newDynamicClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}
@@ -176,7 +175,7 @@ func executeKarmadaTaintCluster(ctx context.Context, cfg *rest.Config, req feder
 		return federation.ActionResult{}, fmt.Errorf("payload.key and payload.effect are required for %s", karmadaActionTaintCluster)
 	}
 
-	dc, err := dynamic.NewForConfig(cfg)
+	dc, err := newDynamicClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}

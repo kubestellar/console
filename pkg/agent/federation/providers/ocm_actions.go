@@ -11,8 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	"github.com/kubestellar/console/pkg/agent/federation"
@@ -86,7 +84,7 @@ func executeOCMApproveCSR(ctx context.Context, cfg *rest.Config, req federation.
 		return federation.ActionResult{}, fmt.Errorf("payload.csrName is required for %s", ocmActionApproveCSR)
 	}
 
-	clientset, err := kubernetes.NewForConfig(cfg)
+	clientset, err := newKubernetesClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, fmt.Errorf("building kubernetes client: %w", err)
 	}
@@ -135,7 +133,7 @@ func executeOCMAcceptCluster(ctx context.Context, cfg *rest.Config, req federati
 		return federation.ActionResult{}, fmt.Errorf("clusterName is required for %s", ocmActionAcceptCluster)
 	}
 
-	dc, err := dynamic.NewForConfig(cfg)
+	dc, err := newDynamicClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}
@@ -173,7 +171,7 @@ func executeOCMDetachCluster(ctx context.Context, cfg *rest.Config, req federati
 		return federation.ActionResult{}, fmt.Errorf("clusterName is required for %s", ocmActionDetachCluster)
 	}
 
-	dc, err := dynamic.NewForConfig(cfg)
+	dc, err := newDynamicClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}
@@ -204,7 +202,7 @@ func executeOCMTaintCluster(ctx context.Context, cfg *rest.Config, req federatio
 		return federation.ActionResult{}, fmt.Errorf("payload.key and payload.effect are required for %s", ocmActionTaintCluster)
 	}
 
-	dc, err := dynamic.NewForConfig(cfg)
+	dc, err := newDynamicClientForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}
