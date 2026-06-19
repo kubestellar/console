@@ -8,6 +8,16 @@ import type { RelatedResource } from './pod-drilldown'
 
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
 
+interface WsMessage {
+  id?: string
+  type?: string
+  payload?: {
+    exitCode?: number
+    error?: string
+    output?: string
+  }
+}
+
 interface UsePodActionsProps {
   cluster: string
   namespace: string
@@ -22,7 +32,7 @@ interface UsePodActionsProps {
   annotations: Record<string, string> | null
   ownerChain: RelatedResource[]
   openTrackedWs: () => Promise<WebSocket>
-  parseWsMessage: (event: MessageEvent, context: string) => unknown
+  parseWsMessage: (event: MessageEvent, context: string) => WsMessage | null
 }
 
 export function usePodActions({
