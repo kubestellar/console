@@ -105,13 +105,7 @@ func executeCAPIScaleMachineDeployment(ctx context.Context, cfg *rest.Config, re
 		switch v := spec["replicas"].(type) {
 		case int64:
 			currentReplicas = v
-		case int32:
-			currentReplicas = int64(v)
-		case int:
-			currentReplicas = int64(v)
 		case float64:
-			currentReplicas = int64(v)
-		case float32:
 			currentReplicas = int64(v)
 		}
 	}
