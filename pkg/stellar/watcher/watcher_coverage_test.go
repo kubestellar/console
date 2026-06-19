@@ -327,7 +327,9 @@ func TestPollCluster_CriticalEvent_BroadcastsSSEEvent(t *testing.T) {
 		t.Errorf("broadcaster.EventCount() = %d, want ≥1 (broadcaster must be called on notification creation)", bc.EventCount())
 	}
 	events := bc.events
-	if len(events) < 1 || events[0].Type != "notification" {
+	if len(events) < 1 {
+		t.Error("broadcaster should have received at least one SSE event")
+	} else if events[0].Type != "notification" {
 		t.Errorf("SSE event type = %q, want notification", events[0].Type)
 	}
 }
