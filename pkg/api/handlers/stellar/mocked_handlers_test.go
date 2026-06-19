@@ -103,11 +103,11 @@ func (m *mockedStellarStore) GetUserProviderConfigs(ctx context.Context, userID 
 	return nil, args.Error(1)
 }
 
-func (m *mockedStellarStore) DeleteProviderConfig(ctx context.Context, id, userID string) error {
+func (m *mockedStellarStore) DeleteProviderConfig(ctx context.Context, providerID, userID string) error {
 	if !m.hasExpectation("DeleteProviderConfig") {
-		return m.SQLiteStore.DeleteProviderConfig(ctx, id, userID)
+		return m.SQLiteStore.DeleteProviderConfig(ctx, providerID, userID)
 	}
-	args := m.Called(id, userID)
+	args := m.Called(providerID, userID)
 	return args.Error(0)
 }
 
