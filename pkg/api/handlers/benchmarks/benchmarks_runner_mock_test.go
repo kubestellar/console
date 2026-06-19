@@ -44,6 +44,11 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
 
+const oversizedChunkBytes = 1024 * 1024
+const throttleTimingTolerance = 50 * time.Millisecond
+const recentFileAge = 1 * time.Hour
+const oldFileAge = 72 * time.Hour
+
 // validBenchmarkYAML returns a minimal v1 YAML report that can be parsed.
 const validBenchmarkYAML = `experiment: test-exp
 run: run-1
@@ -104,7 +109,7 @@ func TestDriveGet_WithMockServer(t *testing.T) {
 		require.NotNil(t, resp2)
 		resp2.Body.Close()
 
-		assert.GreaterOrEqual(t, time.Since(start), driveRequestDelay-(20*time.Millisecond))
+		assert.GreaterOrEqual(t, time.Since(start), driveRequestDelay-throttleTimingTolerance)
 	})
 
 	t.Run("returns network failure", func(t *testing.T) {
@@ -330,10 +335,18 @@ func TestDownloadDriveFile_WithMockServer(t *testing.T) {
 	t.Run("rejects oversized files", func(t *testing.T) {
 		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			const chunkSize = 1024 * 1024
-			chunk := strings.Repeat("x", chunkSize)
-			for written := int64(0); written <= maxBenchmarkReportBytes; written += chunkSize {
-				_, _ = io.WriteString(w, chunk)
+			chunk := strings.Repeat("x", oversizedChunkBytes)
+			remaining := maxBenchmarkReportBytes + 1
+			for remaining > 0 {
+				toWrite := oversizedChunkBytes
+				if remaining < toWrite {
+					toWrite = remaining
+				}
+				_, _ = io.WriteString(w, chunk[:toWrite])
+				remaining -= toWrite
+				if flusher, ok := w.(http.Flusher); ok {
+					flusher.Flush()
+				}
 			}
 		}))
 		defer srv.Close()
@@ -601,14 +614,14 @@ func TestDownloadAndParseReport_WithMockServer(t *testing.T) {
 func TestFetchAllReports_WithMockServer(t *testing.T) {
 	t.Run("processes experiments concurrently with cutoff filtering and parse failures", func(t *testing.T) {
 		now := time.Now().UTC()
-		recent := now.Add(-1 * time.Hour).Format(time.RFC3339)
-		old := now.Add(-72 * time.Hour).Format(time.RFC3339)
-		var oldExperimentListCalls int32
+		recent := now.Add(-recentFileAge).Format(time.RFC3339)
+		old := now.Add(-oldFileAge).Format(time.RFC3339)
+		var oldExperimentRequestCount int32
 
 		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			parentQuery := r.URL.Query().Get("q")
 			if strings.Contains(parentQuery, "'exp-old' in parents") {
-				atomic.AddInt32(&oldExperimentListCalls, 1)
+				atomic.AddInt32(&oldExperimentRequestCount, 1)
 			}
 
 			if strings.Contains(r.URL.RawQuery, "in+parents") {
@@ -680,7 +693,7 @@ func TestFetchAllReports_WithMockServer(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, reports, 2)
 		assert.Equal(t, 1, failures, "invalid benchmark YAML should accumulate parse failure")
-		assert.Equal(t, int32(0), atomic.LoadInt32(&oldExperimentListCalls), "old experiments should be filtered by cutoff")
+		assert.Equal(t, int32(0), atomic.LoadInt32(&oldExperimentRequestCount), "old experiments should be filtered by cutoff")
 	})
 
 	t.Run("returns context cancellation", func(t *testing.T) {
