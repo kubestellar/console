@@ -38,11 +38,21 @@ export function ActionTooltipWrapper({
   tooltip: string
   children: ReactNode
 }) {
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+  }
+
   return (
     <span
       className="inline-flex"
+      role="button"
+      tabIndex={0}
       onClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
+      onKeyDown={handleKeyDown}
     >
       <Tooltip content={tooltip}>{children}</Tooltip>
     </span>
