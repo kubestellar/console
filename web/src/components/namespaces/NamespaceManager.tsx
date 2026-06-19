@@ -486,7 +486,8 @@ export function NamespaceManager() {
     if (!isAdmin) return
     if (!selectedNamespace) return
 
-    if (!confirm(`Revoke access for ${binding.subjectName}?`)) {
+    // eslint-disable-next-line no-restricted-globals -- inline confirmation for destructive action before a modal is implemented
+    if (!window.confirm(`Revoke access for ${binding.subjectName}?`)) {
       return
     }
 

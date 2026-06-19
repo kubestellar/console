@@ -62,7 +62,7 @@ vi.mock('../../../hooks/useDrillDown', () => ({
 
 vi.mock('../../../hooks/useUniversalStats', () => ({
   useUniversalStats: () => ({ getStatValue: () => ({ value: 0 }) }),
-  createMergedStatValueGetter: (primary: Function, fallback: Function) => (id: string) => primary(id) ?? fallback(id),
+  createMergedStatValueGetter: (primary: (...args: unknown[]) => unknown, fallback: (...args: unknown[]) => unknown) => (id: string) => primary(id) ?? fallback(id),
 }))
 
 vi.mock('react-i18next', () => ({

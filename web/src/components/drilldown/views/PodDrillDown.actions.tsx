@@ -22,7 +22,7 @@ interface UsePodActionsProps {
   annotations: Record<string, string> | null
   ownerChain: RelatedResource[]
   openTrackedWs: () => Promise<WebSocket>
-  parseWsMessage: (event: MessageEvent, context: string) => any
+  parseWsMessage: (event: MessageEvent, context: string) => unknown
 }
 
 export function usePodActions({
