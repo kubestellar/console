@@ -304,3 +304,182 @@ func Test_updateNotificationState_Logic(t *testing.T) {
 		})
 	}
 }
+
+// TestListNotifications_Integration tests the ListNotifications HTTP handler
+func TestListNotifications_Integration(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-list-notif-integration.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+h := NewHandler(s, nil)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Get("/api/notifications", h.ListNotifications)
+
+_ = s.CreateStellarNotification(context.Background(), &store.StellarNotification{
+1",
+, _ := http.NewRequest(http.MethodGet, "/api/notifications", nil)
+resp, err := app.Test(req, 5000)
+require.NoError(t, err)
+defer resp.Body.Close()
+
+assert.Equal(t, http.StatusOK, resp.StatusCode)
+var payload map[string]interface{}
+json.NewDecoder(resp.Body).Decode(&payload)
+assert.NotNil(t, payload["items"])
+}
+
+// TestListNotifications_UnreadFilter tests unread filtering
+func TestListNotifications_UnreadFilter(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-unread-filter.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+h := NewHandler(s, nil)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Get("/api/notifications", h.ListNotifications)
+
+now := time.Now().UTC()
+_ = s.CreateStellarNotification(context.Background(), &store.StellarNotification{
+1",
+read",
+otification(context.Background(), &store.StellarNotification{
+2",
+ow,
+})
+
+req, _ := http.NewRequest(http.MethodGet, "/api/notifications?unread=true", nil)
+resp, err := app.Test(req, 5000)
+require.NoError(t, err)
+defer resp.Body.Close()
+
+assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+// TestMarkNotificationRead_HTTPHandler tests the mark read endpoint
+func TestMarkNotificationRead_HTTPHandler(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-mark-read-http.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+h := NewHandler(s, nil)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Patch("/api/notifications/:id/read", h.MarkNotificationRead)
+
+notifID := uuid.NewString()
+_ = s.CreateStellarNotification(context.Background(), &store.StellarNotification{
+otifID,
+, _ := http.NewRequest(http.MethodPatch, "/api/notifications/"+notifID+"/read", nil)
+resp, err := app.Test(req, 5000)
+require.NoError(t, err)
+defer resp.Body.Close()
+
+assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+// TestMarkNotificationRead_EmptyID tests error handling for empty ID
+func TestMarkNotificationRead_EmptyID(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-mark-read-empty-id.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+h := NewHandler(s, nil)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Patch("/api/notifications/:id/read", h.MarkNotificationRead)
+
+req, _ := http.NewRequest(http.MethodPatch, "/api/notifications/%20/read", nil)
+resp, err := app.Test(req, 5000)
+require.NoError(t, err)
+defer resp.Body.Close()
+
+assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+// TestNotificationStateRouting tests all state transition endpoints
+func TestNotificationStateRouting(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-state-routing.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+h := NewHandler(s, nil)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Patch("/api/notifications/:id/investigating", h.MarkNotificationInvestigating)
+app.Patch("/api/notifications/:id/resolve", h.ResolveNotification)
+app.Patch("/api/notifications/:id/dismiss", h.DismissNotification)
+
+tests := []struct {
+ame       string
+dpoint   string
+g
+tStatus int
+}{
+ame:       "investigating route",
+dpoint:   "/investigating",
+vestigationSummary":"checking"}`,
+tStatus: http.StatusOK,
+ame:       "resolve route",
+dpoint:   "/resolve",
+Note":"fixed"}`,
+tStatus: http.StatusOK,
+ame:       "dismiss route",
+dpoint:   "/dismiss",
+":"dup"}`,
+tStatus: http.StatusOK,
+ge tests {
+(tt.name, func(t *testing.T) {
+otifID := uuid.NewString()
+otification(context.Background(), &store.StellarNotification{
+otifID,
+ew",
+ewRequest(http.MethodPatch, "/api/notifications/"+notifID+tt.endpoint, bytes.NewReader([]byte(tt.body)))
+tent-Type", "application/json")
+, 5000)
+oError(t, err)
+ual(t, tt.wantStatus, resp.StatusCode)
+otificationState_InvalidJSON tests malformed request handling
+func TestUpdateNotificationState_InvalidJSON(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-invalid-json-notif.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+h := NewHandler(s, nil)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Patch("/api/notifications/:id/resolve", h.ResolveNotification)
+
+req, _ := http.NewRequest(http.MethodPatch, "/api/notifications/test/resolve", bytes.NewReader([]byte(`{invalid`)))
+req.Header.Set("Content-Type", "application/json")
+resp, err := app.Test(req, 5000)
+require.NoError(t, err)
+defer resp.Body.Close()
+
+assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
