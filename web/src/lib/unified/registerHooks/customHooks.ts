@@ -3,19 +3,39 @@
  */
 
 import { useMemo, useState, useEffect } from 'react'
-import { MS_PER_HOUR } from '../../constants/time'
+import { MS_PER_HOUR, MS_PER_MINUTE, MS_PER_SECOND } from '../../constants/time'
 import { useCachedEvents } from '../../../hooks/useCachedData'
 import { useFluxStatus } from '../../../components/cards/flux_status/useFluxStatus'
 import { useContourStatus } from '../../../components/cards/contour_status/useContourStatus'
 import { useChaosMeshStatus } from '../../../components/cards/chaos_mesh_status/useChaosMeshStatus'
-import { DEMO_NAMESPACE_EVENTS } from './demoHooks'
-
 // ============================================================================
 // Filtered event hooks and manual status hooks
 // ============================================================================
 
 /** Maximum namespace events to return when no namespace filter is set */
 const MAX_NAMESPACE_EVENTS_UNFILTERED = 20
+const THIRTY_SECONDS_MS = 30 * MS_PER_SECOND
+
+const DEMO_NAMESPACE_EVENTS = [
+  {
+    type: 'Normal',
+    reason: 'Scheduled',
+    message: 'Pod scheduled',
+    object: 'pod/api-7d8f',
+    namespace: 'production',
+    count: 1,
+    lastSeen: Date.now() - THIRTY_SECONDS_MS,
+  },
+  {
+    type: 'Warning',
+    reason: 'BackOff',
+    message: 'Container restarting',
+    object: 'pod/worker-5c6d',
+    namespace: 'production',
+    count: 5,
+    lastSeen: Date.now() - MS_PER_MINUTE,
+  },
+]
 
 export function useWarningEvents(params?: Record<string, unknown>) {
   const cluster = params?.cluster as string | undefined
