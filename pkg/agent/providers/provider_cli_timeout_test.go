@@ -18,6 +18,8 @@ func fakeProviderCLICommandContext(ctx context.Context, _ string, _ ...string) *
 }
 
 func TestCodexProvider_StreamChatDrainsStderr(t *testing.T) {
+	skipIfExecutableMissing(t, "codex")
+
 	defer func() { ExecCommandContext = exec.CommandContext }()
 	ExecCommandContext = fakeProviderCLICommandContext
 
@@ -38,6 +40,8 @@ func TestCodexProvider_StreamChatDrainsStderr(t *testing.T) {
 }
 
 func TestGeminiCLIProvider_StreamChatDrainsStderr(t *testing.T) {
+	skipIfExecutableMissing(t, "gemini")
+
 	defer func() { ExecCommandContext = exec.CommandContext }()
 	ExecCommandContext = fakeProviderCLICommandContext
 
