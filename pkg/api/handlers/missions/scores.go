@@ -171,6 +171,7 @@ func (h *MissionsHandler) GetMissionScore(c *fiber.Ctx) error {
 				"project":            mProject,
 				"title":              m.Title,
 				"qualityScore":       m.QualityScore,
+				"qualityPass":        m.QualityPass,
 				"qualityBreakdown":   m.QualityBreakdown,
 				"qualityIssues":      m.QualityIssues,
 				"qualitySuggestions": m.QualitySuggestions,

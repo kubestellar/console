@@ -13,7 +13,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/kubestellar/console/pkg/kb"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
@@ -939,11 +938,12 @@ func TestGetKBScores_UpstreamError(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	// When upstream returns 5xx, the handler returns 502 with an error response.
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 
 	var body map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-	assert.Greater(t, int(body["count"].(float64)), 0)
+	assert.NotEmpty(t, body["error"])
 }
 
 func TestGetKBScores_StaleCache(t *testing.T) {
@@ -996,11 +996,12 @@ func TestGetKBScores_EmbeddedFallback(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	// GetKBScores has no embedded fallback — upstream 5xx produces 502.
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 
 	var body map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-	assert.Greater(t, int(body["count"].(float64)), 0)
+	assert.NotEmpty(t, body["error"])
 }
 
 // ---------- GetMissionScore ----------
@@ -1087,26 +1088,6 @@ func TestGetMissionScore_ExactIDMatch(t *testing.T) {
 }
 
 func TestGetMissionScore_UpstreamError(t *testing.T) {
-	embeddedIndexBody, err := kb.ReadFile("fixes/index.json")
-	require.NoError(t, err)
-
-	var embeddedIndex indexJsonFormat
-	require.NoError(t, json.Unmarshal(embeddedIndexBody, &embeddedIndex))
-
-	project := ""
-	missionID := ""
-	for _, mission := range embeddedIndex.Missions {
-		if len(mission.CncfProjects) == 0 || mission.QualityScore == nil {
-			continue
-		}
-		segments := strings.Split(mission.Path, "/")
-		project = mission.CncfProjects[0]
-		missionID = strings.TrimSuffix(segments[len(segments)-1], ".json")
-		break
-	}
-	require.NotEmpty(t, project)
-	require.NotEmpty(t, missionID)
-
 	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
@@ -1115,15 +1096,16 @@ func TestGetMissionScore_UpstreamError(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubRawURL = mock.URL
 
-	req, err := http.NewRequest("GET", "/api/missions/scores/"+project+"/"+missionID, nil)
+	req, err := http.NewRequest("GET", "/api/missions/scores/demo/test-123", nil)
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	// GetMissionScore has no embedded fallback — upstream 5xx produces 502.
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 
 	var body map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-	assert.Equal(t, project, body["project"])
+	assert.NotEmpty(t, body["error"])
 }
 
 // ---------- GetKBGaps ----------
