@@ -99,6 +99,7 @@ func TestGHGetWithRetry_RateLimitRetry(t *testing.T) {
 
 	resp, err := handler.ghGetWithRetry(context.Background(), "/test")
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, 2, attemptCount, "should retry after rate limit")
 }

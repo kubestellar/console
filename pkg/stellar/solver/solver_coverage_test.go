@@ -655,8 +655,7 @@ func TestMarshalTriggerDataWithEmptyValues(t *testing.T) {
 }
 
 func TestSolveLoopWithNilStorage(t *testing.T) {
-	// This test verifies the loop doesn't panic with nil storage
-	// In practice, storage is never nil, but we test defensive programming
+	// This test verifies the loop returns early without panicking when storage is nil.
 	broadcaster := &mockBroadcaster{}
 	input := Input{
 		SolveID:   "solve-nil-storage",
@@ -668,15 +667,9 @@ func TestSolveLoopWithNilStorage(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
+	defer cancel()
 
-	// Should not panic - nil storage will cause nil pointer dereference
-	// but we're testing that the code path is reached
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("expected panic with nil storage")
-		}
-	}()
+	// Should return without panicking when storage is nil.
 	SolveLoop(ctx, input, nil, nil, broadcaster)
 }
 

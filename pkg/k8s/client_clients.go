@@ -61,6 +61,9 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client for context %s: %w", contextName, err)
 	}
+	if client == nil {
+		return nil, fmt.Errorf("failed to create client for context %s: unexpected nil client", contextName)
+	}
 
 	// Install the constructed client under a short write lock. If a concurrent
 	// caller beat us to it, reuse the existing entry (#9334).
@@ -148,6 +151,9 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 	client, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create dynamic client for context %s: %w", contextName, err)
+	}
+	if client == nil {
+		return nil, fmt.Errorf("failed to create dynamic client for context %s: unexpected nil client", contextName)
 	}
 
 	// Install the constructed client under a short write lock. If a concurrent

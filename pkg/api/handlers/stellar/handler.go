@@ -827,6 +827,9 @@ func (h *Handler) resolveUserProvider(ctx context.Context, userID string) (*prov
 }
 
 func buildLLMContext(state *OperationalState, memories []store.StellarMemoryEntry, tasks []store.StellarTask, cluster string) string {
+	if state == nil {
+		return ""
+	}
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Time: %s UTC\n", state.GeneratedAt.UTC().Format("2006-01-02 15:04")))
 	sb.WriteString(fmt.Sprintf("Clusters: %s\n", strings.Join(state.ClustersWatching, ", ")))

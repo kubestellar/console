@@ -117,6 +117,9 @@ func TestBroadcastToClients_RemovesDeadClients(t *testing.T) {
 	s.BroadcastToClients("ping2", nil)
 
 	// Client 1 should still receive messages.
+	if clients[1] == nil {
+		t.Fatal("client 1 is nil")
+	}
 	clients[1].SetReadDeadline(time.Now().Add(2 * time.Second))
 	_, msg, err := clients[1].ReadMessage()
 	if err != nil {
