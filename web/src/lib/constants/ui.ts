@@ -16,6 +16,10 @@ export const CHART_MIN_HEIGHT_PX = 200
 export const CHART_MIN_HEIGHT_TALL_PX = 250
 
 // ── Recharts shared styles ──────────────────────────────────────────────
+// NOTE: Chart libraries (ECharts, Recharts) require hex color strings passed programmatically.
+// These cannot use CSS variables or Tailwind classes because the chart library APIs expect
+// static color values at render time. They don't read from the DOM's computed styles.
+// TODO: Investigate theme-aware chart color system that reads from CSS custom properties at mount
 export const CHART_TOOLTIP_BG = '#1a1a2e'
 export const CHART_TOOLTIP_BORDER = '#333'
 /** Standard font size for chart tooltip text */
