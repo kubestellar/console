@@ -144,6 +144,18 @@ func TestExecuteCAPIScaleMachineDeployment_ValidationErrors(t *testing.T) {
 			},
 			wantErrSubstring: "payload.name",
 		},
+		{
+			name: "replicas must be whole number",
+			req: federation.ActionRequest{
+				ActionID: capiActionScaleMachineDeployment,
+				Payload: map[string]interface{}{
+					"name":      "md-workers",
+					"namespace": "default",
+					"replicas":  3.5,
+				},
+			},
+			wantErrSubstring: "must be a whole number",
+		},
 	}
 
 	for _, tt := range tests {
@@ -249,4 +261,3 @@ func TestExecuteCAPIRetryProvisioning_ValidationErrors(t *testing.T) {
 		})
 	}
 }
-

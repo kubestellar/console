@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,6 +86,9 @@ func executeCAPIScaleMachineDeployment(ctx context.Context, cfg *rest.Config, re
 	if mdName == "" || ns == "" || !ok {
 		return federation.ActionResult{}, fmt.Errorf("payload.name, payload.namespace, and payload.replicas are required for %s", capiActionScaleMachineDeployment)
 	}
+	if math.Trunc(replicasFloat) != replicasFloat {
+		return federation.ActionResult{}, fmt.Errorf("payload.replicas must be a whole number for %s", capiActionScaleMachineDeployment)
+	}
 	replicas := int64(replicasFloat)
 
 	dc, err := dynamic.NewForConfig(cfg)
@@ -129,6 +133,9 @@ func executeCAPIScaleMachineDeployment(ctx context.Context, cfg *rest.Config, re
 	}, nil
 }
 
+// int64FromAny normalizes unstructured numeric values to int64.
+// Kubernetes unstructured objects may decode integer fields as int64, but
+// some test/server paths can still present numeric values as float64.
 func int64FromAny(value interface{}) (int64, bool) {
 	switch v := value.(type) {
 	case int64:
@@ -138,8 +145,14 @@ func int64FromAny(value interface{}) (int64, bool) {
 	case int:
 		return int64(v), true
 	case float64:
+		if math.Trunc(v) != v {
+			return 0, false
+		}
 		return int64(v), true
 	case float32:
+		if math.Trunc(float64(v)) != float64(v) {
+			return 0, false
+		}
 		return int64(v), true
 	default:
 		return 0, false
