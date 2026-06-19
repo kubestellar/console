@@ -37,6 +37,6 @@ export const useCachedJaegerStatus = createCachedHook<JaegerStatus>({
     fetcher: async () => {
         const data = await fetchJaegerStatus()
         if (!data) throw new Error('Jaeger status unavailable')
-        return data as JaegerStatus
+        return data as unknown as JaegerStatus
     },
 })
