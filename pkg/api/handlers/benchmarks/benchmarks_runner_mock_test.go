@@ -3,10 +3,13 @@ package benchmarks
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -53,6 +56,88 @@ results:
     mean: 1234.5
     units: tokens/s
 `
+
+func TestDriveGet_WithMockServer(t *testing.T) {
+	t.Run("sets user-agent header", func(t *testing.T) {
+		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, driveUserAgent, r.Header.Get("User-Agent"))
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: client}
+		resp, err := h.driveGet(context.Background(), "https://www.googleapis.com/drive/v3/files?q=test")
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("returns context cancellation immediately", func(t *testing.T) {
+		h := &BenchmarkHandlers{client: http.DefaultClient}
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		resp, err := h.driveGet(ctx, "https://www.googleapis.com/drive/v3/files?q=test")
+		require.Error(t, err)
+		assert.ErrorIs(t, err, context.Canceled)
+		assert.Nil(t, resp)
+	})
+
+	t.Run("throttles sequential requests", func(t *testing.T) {
+		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: client}
+		start := time.Now()
+		resp1, err1 := h.driveGet(context.Background(), "https://www.googleapis.com/drive/v3/files?q=a")
+		require.NoError(t, err1)
+		require.NotNil(t, resp1)
+		resp1.Body.Close()
+
+		resp2, err2 := h.driveGet(context.Background(), "https://www.googleapis.com/drive/v3/files?q=b")
+		require.NoError(t, err2)
+		require.NotNil(t, resp2)
+		resp2.Body.Close()
+
+		assert.GreaterOrEqual(t, time.Since(start), driveRequestDelay-(20*time.Millisecond))
+	})
+
+	t.Run("returns network failure", func(t *testing.T) {
+		expectedErr := errors.New("network down")
+		h := &BenchmarkHandlers{
+			client: &http.Client{
+				Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+					return nil, expectedErr
+				}),
+			},
+		}
+
+		resp, err := h.driveGet(context.Background(), "https://www.googleapis.com/drive/v3/files?q=test")
+		require.Error(t, err)
+		assert.ErrorIs(t, err, expectedErr)
+		assert.Nil(t, resp)
+	})
+
+	t.Run("returns non-2xx response without transport error", func(t *testing.T) {
+		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("unavailable"))
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: client}
+		resp, err := h.driveGet(context.Background(), "https://www.googleapis.com/drive/v3/files?q=test")
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+	})
+}
 
 func TestFetchRunFolderStreaming_WithMockServer(t *testing.T) {
 	t.Run("streams each report via onReport callback", func(t *testing.T) {
@@ -243,14 +328,13 @@ func TestDownloadDriveFile_WithMockServer(t *testing.T) {
 	})
 
 	t.Run("rejects oversized files", func(t *testing.T) {
-		// Create response larger than maxBenchmarkReportBytes
-		// We can't actually send 50MB in a test, but we can verify the limit logic
-		// by checking with a smaller custom limit approach. Since the limit is hardcoded,
-		// we verify the error message format.
-		bigContent := strings.Repeat("x", 1024) // Just verify it works for normal content
 		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(bigContent))
+			const chunkSize = 1024 * 1024
+			chunk := strings.Repeat("x", chunkSize)
+			for written := int64(0); written <= maxBenchmarkReportBytes; written += chunkSize {
+				_, _ = io.WriteString(w, chunk)
+			}
 		}))
 		defer srv.Close()
 
@@ -258,8 +342,9 @@ func TestDownloadDriveFile_WithMockServer(t *testing.T) {
 		ctx := context.Background()
 
 		data, err := h.downloadDriveFile(ctx, "file123")
-		require.NoError(t, err)
-		assert.Equal(t, 1024, len(data))
+		require.Error(t, err)
+		assert.Nil(t, data)
+		assert.Contains(t, err.Error(), "exceeded max size")
 	})
 
 	t.Run("respects context cancellation", func(t *testing.T) {
@@ -510,5 +595,127 @@ func TestDownloadAndParseReport_WithMockServer(t *testing.T) {
 		file := driveFile{ID: "missing", Name: "benchmark_report_missing.yaml", CreatedTime: "2025-06-01T10:00:00Z"}
 		_, err := h.downloadAndParseReport(ctx, file, "exp1", "run1")
 		require.Error(t, err)
+	})
+}
+
+func TestFetchAllReports_WithMockServer(t *testing.T) {
+	t.Run("processes experiments concurrently with cutoff filtering and parse failures", func(t *testing.T) {
+		now := time.Now().UTC()
+		recent := now.Add(-1 * time.Hour).Format(time.RFC3339)
+		old := now.Add(-72 * time.Hour).Format(time.RFC3339)
+		var oldExperimentListCalls int32
+
+		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			parentQuery := r.URL.Query().Get("q")
+			if strings.Contains(parentQuery, "'exp-old' in parents") {
+				atomic.AddInt32(&oldExperimentListCalls, 1)
+			}
+
+			if strings.Contains(r.URL.RawQuery, "in+parents") {
+				switch parentQuery {
+				case "'root' in parents":
+					_ = json.NewEncoder(w).Encode(driveFileList{
+						Files: []driveFile{
+							{ID: "exp-new-1", Name: "exp-new-1", MimeType: driveFolderMIME, CreatedTime: recent},
+							{ID: "exp-old", Name: "exp-old", MimeType: driveFolderMIME, CreatedTime: old},
+							{ID: "exp-new-2", Name: "exp-new-2", MimeType: driveFolderMIME, CreatedTime: recent},
+						},
+					})
+					return
+				case "'exp-new-1' in parents":
+					_ = json.NewEncoder(w).Encode(driveFileList{
+						Files: []driveFile{
+							{ID: "run-1", Name: "run-1", MimeType: driveFolderMIME, CreatedTime: recent},
+						},
+					})
+					return
+				case "'exp-new-2' in parents":
+					_ = json.NewEncoder(w).Encode(driveFileList{
+						Files: []driveFile{
+							{ID: "run-2", Name: "run-2", MimeType: driveFolderMIME, CreatedTime: recent},
+						},
+					})
+					return
+				case "'run-1' in parents":
+					_ = json.NewEncoder(w).Encode(driveFileList{
+						Files: []driveFile{
+							{ID: "good-1", Name: "benchmark_report_good_1.yaml", MimeType: "text/yaml", CreatedTime: recent},
+							{ID: "bad-1", Name: "benchmark_report_bad_1.yaml", MimeType: "text/yaml", CreatedTime: recent},
+						},
+					})
+					return
+				case "'run-2' in parents":
+					_ = json.NewEncoder(w).Encode(driveFileList{
+						Files: []driveFile{
+							{ID: "good-2", Name: "benchmark_report_good_2.yaml", MimeType: "text/yaml", CreatedTime: recent},
+						},
+					})
+					return
+				default:
+					_ = json.NewEncoder(w).Encode(driveFileList{Files: []driveFile{}})
+					return
+				}
+			}
+
+			switch r.URL.Query().Get("id") {
+			case "good-1", "good-2":
+				_, _ = w.Write([]byte(validBenchmarkYAML))
+			case "bad-1":
+				_, _ = w.Write([]byte("{{{{not yaml at all::::"))
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				_, _ = w.Write([]byte("not found"))
+			}
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{
+			client:   client,
+			apiKey:   "test-key",
+			folderID: "root",
+		}
+
+		cutoff := now.Add(-24 * time.Hour)
+		reports, failures, err := h.fetchAllReports(context.Background(), cutoff)
+		require.NoError(t, err)
+		assert.Len(t, reports, 2)
+		assert.Equal(t, 1, failures, "invalid benchmark YAML should accumulate parse failure")
+		assert.Equal(t, int32(0), atomic.LoadInt32(&oldExperimentListCalls), "old experiments should be filtered by cutoff")
+	})
+
+	t.Run("returns context cancellation", func(t *testing.T) {
+		h := &BenchmarkHandlers{
+			client:   http.DefaultClient,
+			apiKey:   "test-key",
+			folderID: "root",
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		reports, failures, err := h.fetchAllReports(ctx, time.Time{})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, context.Canceled)
+		assert.Nil(t, reports)
+		assert.Equal(t, 0, failures)
+	})
+
+	t.Run("returns listing errors for top-level folder", func(t *testing.T) {
+		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("drive unavailable"))
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{
+			client:   client,
+			apiKey:   "test-key",
+			folderID: "root",
+		}
+
+		reports, failures, err := h.fetchAllReports(context.Background(), time.Time{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "listing top-level folder")
+		assert.Nil(t, reports)
+		assert.Equal(t, 0, failures)
 	})
 }
