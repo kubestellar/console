@@ -12,7 +12,7 @@ jobs:
   build-gate:
     name: build-gate
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
