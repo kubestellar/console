@@ -437,6 +437,7 @@ export function Settings() {
               <h1
                 data-testid="settings-title"
                 className="text-xl font-bold text-foreground"
+                data-qa="settings-header"
               >
                 {t('settings.title')}
               </h1>
@@ -505,8 +506,9 @@ export function Settings() {
         <div className="lg:hidden mb-6">
           <div className="flex items-center justify-between">
             <h1
-              data-testid="settings-title-mobile"
+              data-testid="settings-title"
               className="text-2xl font-bold text-foreground"
+              data-qa="settings-header-mobile"
             >
               {t('settings.title')}
             </h1>
@@ -578,9 +580,9 @@ export function Settings() {
           </h2>
           <div className="space-y-6">
             <ProfileSection
-              initialEmail={user?.email || ''}
-              initialSlackId={user?.slack_id || ''}
-              githubLogin={user?.github_login}
+              initialEmail={user?.email ?? ''}
+              initialSlackId={user?.slack_id ?? ''}
+              githubLogin={user?.github_login ?? ''}
               refreshUser={refreshUser}
               isLoading={isUserLoading}
             />

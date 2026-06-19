@@ -217,7 +217,7 @@ export function useDrasiQueryStream(args: Args): UseDrasiQueryStreamResult {
           try {
             payload = JSON.parse(ev.data)
           } catch {
-            return // Non-JSON heartbeats etc.
+            return void 0 // Non-JSON heartbeats etc.
           }
 
           // Lifecycle events update connection state but don't touch the table.
@@ -253,7 +253,7 @@ export function useDrasiQueryStream(args: Args): UseDrasiQueryStreamResult {
 
         es.onerror = async () => {
           // Close the current source and attempt a reconnect backoff loop.
-          try { es?.close() } catch { /* SSE close may throw if already closed */ }
+          try { es?.close() } catch { void 0 /* SSE close may throw if already closed */ }
           sourceRef.current = null
           setConnected(false)
           setErrorOnce('SSE connection error')
@@ -279,7 +279,7 @@ export function useDrasiQueryStream(args: Args): UseDrasiQueryStreamResult {
     return () => {
       aborted = true
       clearTimer()
-      try { es?.close() } catch { /* SSE close may throw if already closed */ }
+      try { es?.close() } catch { void 0 /* SSE close may throw if already closed */ }
       sourceRef.current = null
       setConnected(false)
     }

@@ -61,9 +61,8 @@ test.describe('Deep Links', () => {
   test('direct URL to /settings loads settings page', async ({ page }) => {
     await setupDemoAndNavigate(page, '/settings')
 
-    // Settings has its own title testid
+    // Settings has its own title testid (shared for desktop and mobile)
     const settingsTitle = page.getByTestId('settings-title')
-      .or(page.getByTestId('settings-title-mobile'))
       .or(page.getByRole('heading', { name: /settings/i }))
 
     await expect(settingsTitle.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
