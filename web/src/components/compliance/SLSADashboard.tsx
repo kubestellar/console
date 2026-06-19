@@ -162,6 +162,13 @@ const LEVEL_BG: Record<number, string> = {
   4: 'bg-emerald-500/20 border-emerald-500/30',
 }
 
+const LEVEL_BAR_COLORS: Record<number, string> = {
+  1: 'bg-yellow-500',
+  2: 'bg-blue-500',
+  3: 'bg-green-500',
+  4: 'bg-emerald-500',
+}
+
 const STATUS_COLORS: Record<string, string> = {
   pass: 'text-green-400',
   fail: 'text-red-400',
@@ -299,8 +306,8 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-2">
                     <div
-                      className="h-2 rounded-full transition-all"
-                      style={{ width: `${pct}%`, backgroundColor: level === 1 ? 'rgb(234,179,8)' : level === 2 ? 'rgb(59,130,246)' : level === 3 ? 'rgb(34,197,94)' : 'rgb(16,185,129)' }}
+                      className={`h-2 rounded-full transition-all ${LEVEL_BAR_COLORS[level]}`}
+                      style={{ width: `${pct}%` }}
                     />
                   </div>
                   <p className="text-xs text-gray-400 mt-1">{pct}%</p>
