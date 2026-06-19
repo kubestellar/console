@@ -59,21 +59,18 @@ jobs:
           REPO="${{ github.repository }}"
           ISSUE="${{ github.event.issue.number }}"
 
-          BOT_SUFFIXES="[bot]"
-          ASSIGNEES=$(gh api "repos/$REPO/issues/$ISSUE" \
-            --jq '[.assignees[].login] | join(",")' 2>/dev/null || echo "")
-          LABELS=$(gh api "repos/$REPO/issues/$ISSUE" \
-            --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+          ISSUE_DATA=$(gh api "repos/$REPO/issues/$ISSUE" 2>/dev/null)
+          ASSIGNEES=$(echo "$ISSUE_DATA" | jq -r '[.assignees[].login] | join(",")')
+          LABELS=$(echo "$ISSUE_DATA" | jq -r '[.labels[].name] | join(",")')
 
           HAS_HUMAN="false"
           if [ -n "$ASSIGNEES" ]; then
             IFS=',' read -ra ADDR <<< "$ASSIGNEES"
             for assignee in "${ADDR[@]}"; do
-              if [[ "$assignee" != *"$BOT_SUFFIXES"* ]]; then
-                HAS_HUMAN="true"
-                echo "Found human assignee: $assignee"
-                break
-              fi
+              case "$assignee" in
+                *\[bot\]) ;; # skip bot accounts
+                *) HAS_HUMAN="true"; echo "Found human assignee: $assignee"; break ;;
+              esac
             done
           fi
 
@@ -119,16 +116,17 @@ jobs:
           ASSIGNEES=$(gh api "repos/$REPO/issues/$ISSUE" \
             --jq '[.assignees[].login | select(endswith("[bot]") | not)] | map("@" + .) | join(", ")' 2>/dev/null || echo "unknown")
 
-          # Still add triage/accepted but NOT ai-fix-requested
+          # Add triage/accepted but NOT ai-fix-requested; remove ai-fix-requested if already present
           gh label create "triage/accepted" --repo "$REPO" --color "0e8a16" \
             --description "Issue has been triaged and accepted" 2>/dev/null || true
           gh issue edit "$ISSUE" --repo "$REPO" --remove-label "needs-triage" 2>/dev/null || true
           gh issue edit "$ISSUE" --repo "$REPO" --remove-label "help wanted" 2>/dev/null || true
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "ai-fix-requested" 2>/dev/null || true
           gh issue edit "$ISSUE" --repo "$REPO" --add-label "triage/accepted"
 
           gh issue comment "$ISSUE" --repo "$REPO" --body "**Scanner deferred** — this issue is assigned to a human contributor (${ASSIGNEES}). The scanner will not open a competing PR.
 
-          To hand this off to the scanner instead, add the \`scanner-please-take\` label."
+To hand this off to the scanner instead, add the \`scanner-please-take\` label."
 
       - name: Add rocket reaction to issue
         if: steps.check_perms.outputs.authorized == 'true'
@@ -334,21 +332,18 @@ jobs:
           REPO="${{ github.repository }}"
           ISSUE="${{ github.event.issue.number }}"
 
-          BOT_SUFFIXES="[bot]"
-          ASSIGNEES=$(gh api "repos/$REPO/issues/$ISSUE" \
-            --jq '[.assignees[].login] | join(",")' 2>/dev/null || echo "")
-          LABELS=$(gh api "repos/$REPO/issues/$ISSUE" \
-            --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+          ISSUE_DATA=$(gh api "repos/$REPO/issues/$ISSUE" 2>/dev/null)
+          ASSIGNEES=$(echo "$ISSUE_DATA" | jq -r '[.assignees[].login] | join(",")')
+          LABELS=$(echo "$ISSUE_DATA" | jq -r '[.labels[].name] | join(",")')
 
           HAS_HUMAN="false"
           if [ -n "$ASSIGNEES" ]; then
             IFS=',' read -ra ADDR <<< "$ASSIGNEES"
             for assignee in "${ADDR[@]}"; do
-              if [[ "$assignee" != *"$BOT_SUFFIXES"* ]]; then
-                HAS_HUMAN="true"
-                echo "Found human assignee: $assignee"
-                break
-              fi
+              case "$assignee" in
+                *\[bot\]) ;; # skip bot accounts
+                *) HAS_HUMAN="true"; echo "Found human assignee: $assignee"; break ;;
+              esac
             done
           fi
 
@@ -392,9 +387,12 @@ jobs:
           ASSIGNEES=$(gh api "repos/$REPO/issues/$ISSUE" \
             --jq '[.assignees[].login | select(endswith("[bot]") | not)] | map("@" + .) | join(", ")' 2>/dev/null || echo "unknown")
 
+          # Remove ai-fix-requested if already present
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "ai-fix-requested" 2>/dev/null || true
+
           gh issue comment "$ISSUE" --repo "$REPO" --body "**Scanner deferred** — this issue is assigned to a human contributor (${ASSIGNEES}). The scanner will not open a competing PR.
 
-          To hand this off to the scanner instead, add the \`scanner-please-take\` label."
+To hand this off to the scanner instead, add the \`scanner-please-take\` label."
 
       - name: Add rocket reaction to issue
         if: steps.check_perms.outputs.authorized == 'true'
