@@ -318,7 +318,7 @@ func TestDiscover(t *testing.T) {
 
 	t.Run("escapes namespace and agent name", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "/api/a2a/team%2Fa/agent%20one/.well-known/agent.json", r.URL.Path)
+			assert.Equal(t, "/api/a2a/team%2Fa/agent%20one/.well-known/agent.json", r.URL.EscapedPath())
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"name":"agent one","description":"demo"}`))
 		}))

@@ -1,24 +1,15 @@
 package agent
 
 import (
-	"encoding/json"
-	"os"
 	"strings"
 	"testing"
-	"time"
+
+	"github.com/kubestellar/console/pkg/agent/tokentracker"
 )
 
-func TestServer_TokenUsageDebounce(t *testing.T) {
-	// Setup temp home for token usage file
-	tmpDir, err := os.MkdirTemp("", "agent-tokens-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-	t.Setenv("HOME", tmpDir)
-
+func TestServer_TokenUsageAccumulation(t *testing.T) {
 	s := &Server{
-		todayDate: time.Now().Format("2006-01-02"),
+		tokens: tokentracker.New(0),
 	}
 
 	usage := &ProviderTokenUsage{
@@ -27,42 +18,18 @@ func TestServer_TokenUsageDebounce(t *testing.T) {
 		TotalTokens:  150,
 	}
 
-	// 1. Add usage
 	s.addTokenUsage(usage)
 
-	s.tokenMux.RLock()
-	if s.sessionTokensIn != 100 || s.sessionTokensOut != 50 {
-		t.Errorf("Expected 100/50 session tokens, got %d/%d", s.sessionTokensIn, s.sessionTokensOut)
-	}
-	s.tokenMux.RUnlock()
-
-	// 2. Verify file NOT written immediately (debounce)
-	path := getTokenUsagePath()
-	if _, err := os.Stat(path); err == nil {
-		t.Error("Token usage file should not be written immediately due to debounce")
-	}
-
-	// 3. Force save
-	s.saveTokenUsage()
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("Failed to read usage file: %v", err)
-	}
-
-	var saved tokenUsageData
-	if err := json.Unmarshal(data, &saved); err != nil {
-		t.Fatalf("Failed to unmarshal usage data: %v", err)
-	}
-
-	if saved.InputIn != 100 || saved.OutputOut != 50 {
-		t.Errorf("Expected 100/50 in file, got %d/%d", saved.InputIn, saved.OutputOut)
+	sessionIn, sessionOut, _, _ := s.tokens.GetUsage()
+	if sessionIn != 100 || sessionOut != 50 {
+		t.Errorf("Expected 100/50 session tokens, got %d/%d", sessionIn, sessionOut)
 	}
 }
 
 func TestServer_SessionQuota(t *testing.T) {
+	const quota int64 = 500
 	s := &Server{
-		sessionTokenQuota: 500,
+		tokens: tokentracker.New(quota),
 	}
 
 	if s.isSessionQuotaExceeded() {

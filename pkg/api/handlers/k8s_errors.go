@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 
@@ -52,4 +53,16 @@ func HandleK8sError(c *fiber.Ctx, err error) error {
 			"errorMessage":  "An internal error occurred",
 		})
 	}
+}
+
+// handleK8sError preserves the legacy helper signature and response format used
+// by older callers and tests while newer handlers migrate to HandleK8sError.
+func handleK8sError(c *fiber.Ctx, err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		return c.Status(fiber.StatusGatewayTimeout).JSON(fiber.Map{"error": "Request timeout"})
+	}
+	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Kubernetes operation failed"})
 }

@@ -1,123 +1,150 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { LocalClusterControls } from './LocalClusterControls'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+  useTranslation: () => ({ t: (key: string) => key }),
 }))
+
+let mockLocalClusters = [
+  { name: 'kubeflex', tool: 'kind', status: 'running' as const },
+  { name: 'minikube', tool: 'minikube', status: 'stopped' as const },
+]
+
+const mockClusterLifecycle = vi.fn<(...args: [string, string, 'start' | 'stop' | 'restart']) => Promise<void>>()
 
 vi.mock('../../../hooks/useLocalClusterTools', () => ({
   useLocalClusterTools: () => ({
-    clusterLifecycle: vi.fn(() => Promise.resolve()),
-    clusters: [
-      { name: 'test-cluster', status: 'running', tool: 'kind' },
-    ],
+    clusterLifecycle: mockClusterLifecycle,
+    clusters: mockLocalClusters,
   }),
 }))
 
-vi.mock('./ClusterGrid.common', () => ({
-  ActionTooltipWrapper: ({ children, tooltip }: { children: React.ReactNode; tooltip: string }) => (
-    <div data-tooltip={tooltip}>{children}</div>
-  ),
-}))
-
-import { LocalClusterControls } from './LocalClusterControls'
-
 describe('LocalClusterControls', () => {
-  it('does not render for unsupported providers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockLocalClusters = [
+      { name: 'kubeflex', tool: 'kind', status: 'running' },
+      { name: 'minikube', tool: 'minikube', status: 'stopped' },
+    ]
+    mockClusterLifecycle.mockResolvedValue(undefined)
+  })
+
+  it('renders null for unsupported providers', () => {
     const { container } = render(
-      <LocalClusterControls clusterName="test-cluster" provider="aks" unreachable={false} />
+      <LocalClusterControls
+        clusterName="unsupported-cluster"
+        provider="unsupported"
+        unreachable={false}
+      />,
     )
+
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders for kind provider', () => {
-    const { getByTestId } = render(
-      <LocalClusterControls clusterName="kind-test-cluster" provider="kind" unreachable={false} />
+  it('renders start button for stopped or unreachable clusters', () => {
+    render(
+      <LocalClusterControls clusterName="kind-kubeflex" provider="kind" unreachable={true} />,
     )
-    expect(getByTestId('local-cluster-start-button')).toBeTruthy()
+
+    expect(screen.getByLabelText('cluster.startCluster')).toBeInTheDocument()
+    expect(screen.queryByLabelText('cluster.stopCluster')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('cluster.restartCluster')).toBeInTheDocument()
   })
 
-  it('renders for minikube provider', () => {
-    const { getByTestId } = render(
-      <LocalClusterControls clusterName="minikube" provider="minikube" unreachable={false} />
+  it('renders stop button for reachable running clusters', () => {
+    render(
+      <LocalClusterControls clusterName="kind-kubeflex" provider="kind" unreachable={false} />,
     )
-    expect(getByTestId('local-cluster-start-button')).toBeTruthy()
+
+    expect(screen.getByLabelText('cluster.stopCluster')).toBeInTheDocument()
+    expect(screen.queryByLabelText('cluster.startCluster')).not.toBeInTheDocument()
   })
 
-  it('renders for k3s provider (using k3d)', () => {
-    const { getByTestId } = render(
-      <LocalClusterControls clusterName="k3s-default" provider="k3s" unreachable={false} />
+  it('calls clusterLifecycle with normalized kind cluster name', async () => {
+    render(
+      <LocalClusterControls clusterName="kind-kubeflex" provider="kind" unreachable={false} />,
     )
-    expect(getByTestId('local-cluster-start-button')).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText('cluster.stopCluster'))
+
+    await waitFor(() => {
+      expect(mockClusterLifecycle).toHaveBeenCalledWith('kind', 'kubeflex', 'stop')
+    })
   })
 
-  it('shows start button when cluster is stopped', () => {
-    const { getByTestId, queryByTestId } = render(
-      <LocalClusterControls clusterName="kind-test-cluster" provider="kind" unreachable={true} />
+  it('maps k3s provider to k3d when no local cluster match exists', async () => {
+    mockLocalClusters = []
+
+    render(
+      <LocalClusterControls clusterName="k3s-cluster" provider="k3s" unreachable={false} />,
     )
-    expect(getByTestId('local-cluster-start-button')).toBeTruthy()
-    expect(queryByTestId('local-cluster-stop-button')).toBeNull()
+
+    fireEvent.click(screen.getByLabelText('cluster.stopCluster'))
+
+    await waitFor(() => {
+      expect(mockClusterLifecycle).toHaveBeenCalledWith('k3d', 'k3s-cluster', 'stop')
+    })
   })
 
-  it('shows stop and restart buttons when cluster is running', () => {
-    const { getByTestId, queryByTestId } = render(
-      <LocalClusterControls clusterName="kind-test-cluster" provider="kind" unreachable={false} />
+  it('disables controls when cluster is unreachable and not locally detected', () => {
+    mockLocalClusters = [{ name: 'other', tool: 'kind', status: 'running' }]
+
+    render(
+      <LocalClusterControls clusterName="kind-missing" provider="kind" unreachable={true} />,
     )
-    expect(getByTestId('local-cluster-stop-button')).toBeTruthy()
-    expect(getByTestId('local-cluster-restart-button')).toBeTruthy()
-    expect(queryByTestId('local-cluster-start-button')).toBeNull()
+
+    const [startButton, restartButton] = screen.getAllByLabelText('cluster.controlsDisabledOffline')
+
+    expect(startButton).toBeDisabled()
+    expect(restartButton).toBeDisabled()
   })
 
-  it('stops event propagation when clicking action buttons', () => {
+  it('stops click propagation when an action button is pressed', async () => {
     const parentClick = vi.fn()
-    const { getByTestId } = render(
+
+    render(
       <div onClick={parentClick}>
-        <LocalClusterControls clusterName="kind-test-cluster" provider="kind" unreachable={false} />
-      </div>
+        <LocalClusterControls clusterName="kind-kubeflex" provider="kind" unreachable={false} />
+      </div>,
     )
-    const stopButton = getByTestId('local-cluster-stop-button')
-    fireEvent.click(stopButton)
+
+    fireEvent.click(screen.getByLabelText('cluster.stopCluster'))
+
     expect(parentClick).not.toHaveBeenCalled()
-  })
 
-  it('calls clusterLifecycle with correct parameters when starting cluster', async () => {
-    const mockLifecycle = vi.fn(() => Promise.resolve())
-    vi.mocked(useLocalClusterTools).mockReturnValue({
-      clusterLifecycle: mockLifecycle,
-      clusters: [{ name: 'test-cluster', status: 'stopped', tool: 'kind' }],
+    await waitFor(() => {
+      expect(mockClusterLifecycle).toHaveBeenCalledWith('kind', 'kubeflex', 'stop')
     })
-
-    const { getByTestId } = render(
-      <LocalClusterControls clusterName="kind-test-cluster" provider="kind" unreachable={true} />
-    )
-    const startButton = getByTestId('local-cluster-start-button')
-    await fireEvent.click(startButton)
-    
-    expect(mockLifecycle).toHaveBeenCalledWith('kind', 'test-cluster', 'start')
   })
 
-  it('disables controls when cluster is unreachable and not detected locally', () => {
-    vi.mocked(useLocalClusterTools).mockReturnValue({
-      clusterLifecycle: vi.fn(() => Promise.resolve()),
-      clusters: [],
-    })
-
-    const { container } = render(
-      <LocalClusterControls clusterName="kind-test-cluster" provider="kind" unreachable={true} />
+  it('disables all controls while an action is in progress', async () => {
+    let resolveAction: (() => void) | undefined
+    mockClusterLifecycle.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveAction = resolve
+        }),
     )
-    const tooltip = container.querySelector('[data-tooltip="cluster.controlsDisabledOffline"]')
-    expect(tooltip).toBeTruthy()
-  })
 
-  it('shows action in progress state during lifecycle operations', async () => {
-    const { getByTestId } = render(
-      <LocalClusterControls clusterName="kind-test-cluster" provider="kind" unreachable={false} />
+    render(
+      <LocalClusterControls clusterName="kind-kubeflex" provider="kind" unreachable={false} />,
     )
-    const stopButton = getByTestId('local-cluster-stop-button')
+
+    const stopButton = screen.getByLabelText('cluster.stopCluster')
+    const restartButton = screen.getByLabelText('cluster.restartCluster')
+
     fireEvent.click(stopButton)
-    
-    // Button should be disabled during action
-    expect(stopButton).toHaveProperty('disabled', true)
+
+    expect(stopButton).toBeDisabled()
+    expect(restartButton).toBeDisabled()
+
+    resolveAction?.()
+
+    await waitFor(() => {
+      expect(stopButton).not.toBeDisabled()
+      expect(restartButton).not.toBeDisabled()
+    })
   })
 })

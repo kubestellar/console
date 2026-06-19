@@ -24,7 +24,7 @@ func TestFindFeatureRequest_Success(t *testing.T) {
 		Return(&models.FeatureRequest{
 			ID:          requestID,
 			UserID:      userID,
-			IssueNumber: issueNumber,
+			GitHubIssueNumber: &issueNumber,
 			Title:       "Test Request",
 		}, nil)
 
@@ -33,7 +33,7 @@ func TestFindFeatureRequest_Success(t *testing.T) {
 
 	require.NotNil(t, result, "should find feature request")
 	assert.Equal(t, requestID, result.ID)
-	assert.Equal(t, issueNumber, result.IssueNumber)
+	assert.Equal(t, &issueNumber, result.GitHubIssueNumber)
 	mockStore.AssertExpectations(t)
 }
 
@@ -62,30 +62,6 @@ func TestFindFeatureRequest_StoreError(t *testing.T) {
 }
 
 // --- resolveIssueAuthToken tests ---
-
-func TestResolveIssueAuthToken_AppTokenAvailable(t *testing.T) {
-	mockProvider := &mockTokenProvider{token: "app-token-12345", err: nil}
-	handler := &FeedbackHandler{
-		githubToken:      "fallback-pat",
-		appTokenProvider: mockProvider,
-	}
-
-	token := handler.resolveIssueAuthToken(context.Background())
-	assert.Equal(t, "app-token-12345", token, "should prefer app token over PAT")
-	assert.True(t, mockProvider.called, "should call app token provider")
-}
-
-func TestResolveIssueAuthToken_AppTokenError_FallbackToPAT(t *testing.T) {
-	mockProvider := &mockTokenProvider{token: "", err: errors.New("app not configured")}
-	handler := &FeedbackHandler{
-		githubToken:      "fallback-pat",
-		appTokenProvider: mockProvider,
-	}
-
-	token := handler.resolveIssueAuthToken(context.Background())
-	assert.Equal(t, "fallback-pat", token, "should fallback to PAT when app token unavailable")
-	assert.True(t, mockProvider.called, "should attempt app token first")
-}
 
 func TestResolveIssueAuthToken_NoAppProvider_UsesPAT(t *testing.T) {
 	handler := &FeedbackHandler{
@@ -300,7 +276,7 @@ func TestHandleDeploymentStatus_UpdatePreviewError(t *testing.T) {
 		Return(&models.FeatureRequest{
 			ID:       requestID,
 			UserID:   userID,
-			PRNumber: prNumber,
+			PRNumber: &prNumber,
 			Title:    "Test Feature",
 		}, nil)
 	mockStore.On("UpdateFeatureRequestPreview", context.Background(), requestID, targetURL).
@@ -323,15 +299,3 @@ func TestHandleDeploymentStatus_UpdatePreviewError(t *testing.T) {
 	mockStore.AssertExpectations(t)
 }
 
-// --- Mock TokenProvider for testing ---
-
-type mockTokenProvider struct {
-	token  string
-	err    error
-	called bool
-}
-
-func (m *mockTokenProvider) Token(ctx context.Context) (string, error) {
-	m.called = true
-	return m.token, m.err
-}

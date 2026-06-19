@@ -50,7 +50,7 @@ func TestOAuthConfigured(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Server{
 				config: Config{
-					IntegrationsConfig: IntegrationsConfig{
+					AuthConfig: AuthConfig{
 						GitHubClientID: tt.clientID,
 						GitHubSecret:   tt.clientSecret,
 					},
@@ -72,7 +72,7 @@ func TestResolveOAuthCredentials_LoadsFromDatabase(t *testing.T) {
 
 	s := &Server{
 		config: Config{
-			IntegrationsConfig: IntegrationsConfig{
+			AuthConfig: AuthConfig{
 				GitHubClientID: "",
 				GitHubSecret:   "",
 			},
@@ -95,7 +95,7 @@ func TestResolveOAuthCredentials_SkipsWhenAlreadyConfigured(t *testing.T) {
 
 	s := &Server{
 		config: Config{
-			IntegrationsConfig: IntegrationsConfig{
+			AuthConfig: AuthConfig{
 				GitHubClientID: "env-client-id",
 				GitHubSecret:   "env-client-secret",
 			},
@@ -120,11 +120,13 @@ func TestReloadOAuth_HotSwapsCredentials(t *testing.T) {
 
 	s := &Server{
 		config: Config{
-			IntegrationsConfig: IntegrationsConfig{
+			AuthConfig: AuthConfig{
 				GitHubClientID: "old-client-id",
 				GitHubSecret:   "old-client-secret",
 				JWTSecret:      "test-jwt-secret",
-				FrontendURL:    "http://localhost:3000",
+			},
+			IntegrationsConfig: IntegrationsConfig{
+				FrontendURL: "http://localhost:3000",
 			},
 		},
 		store: mockStore,
@@ -156,8 +158,10 @@ func TestSetupAuthRoutes_RegistersAllAuthRoutes(t *testing.T) {
 	s := &Server{
 		app: fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
 		config: Config{
+			AuthConfig: AuthConfig{
+				JWTSecret: "test-jwt-secret",
+			},
 			IntegrationsConfig: IntegrationsConfig{
-				JWTSecret:   "test-jwt-secret",
 				FrontendURL: "http://localhost:3000",
 			},
 		},
@@ -216,8 +220,10 @@ func TestSetupAuthRoutes_FailureTrackerInjection(t *testing.T) {
 	s := &Server{
 		app: fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
 		config: Config{
+			AuthConfig: AuthConfig{
+				JWTSecret: "test-jwt-secret",
+			},
 			IntegrationsConfig: IntegrationsConfig{
-				JWTSecret:   "test-jwt-secret",
 				FrontendURL: "http://localhost:3000",
 			},
 		},
@@ -239,8 +245,10 @@ func TestSetupAuthRoutes_RateLimiters(t *testing.T) {
 	s := &Server{
 		app: fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
 		config: Config{
+			AuthConfig: AuthConfig{
+				JWTSecret: "test-jwt-secret",
+			},
 			IntegrationsConfig: IntegrationsConfig{
-				JWTSecret:   "test-jwt-secret",
 				FrontendURL: "http://localhost:3000",
 			},
 		},
@@ -262,8 +270,10 @@ func TestSetupAuthRoutes_BodyGuards(t *testing.T) {
 	s := &Server{
 		app: fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
 		config: Config{
+			AuthConfig: AuthConfig{
+				JWTSecret: "test-jwt-secret",
+			},
 			IntegrationsConfig: IntegrationsConfig{
-				JWTSecret:   "test-jwt-secret",
 				FrontendURL: "http://localhost:3000",
 			},
 		},
@@ -285,8 +295,10 @@ func TestSetupAuthRoutes_PublicAPIGroup(t *testing.T) {
 	s := &Server{
 		app: fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
 		config: Config{
+			AuthConfig: AuthConfig{
+				JWTSecret: "test-jwt-secret",
+			},
 			IntegrationsConfig: IntegrationsConfig{
-				JWTSecret:   "test-jwt-secret",
 				FrontendURL: "http://localhost:3000",
 			},
 		},
@@ -307,8 +319,10 @@ func TestSetupAuthRoutes_AuthenticatedAPIGroup(t *testing.T) {
 	s := &Server{
 		app: fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
 		config: Config{
+			AuthConfig: AuthConfig{
+				JWTSecret: "test-jwt-secret",
+			},
 			IntegrationsConfig: IntegrationsConfig{
-				JWTSecret:   "test-jwt-secret",
 				FrontendURL: "http://localhost:3000",
 			},
 		},

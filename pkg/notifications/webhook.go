@@ -166,9 +166,17 @@ func isLoopbackHost(host string) bool {
 // checkWebhookHostAllowed enforces the optional KC_WEBHOOK_ALLOWED_HOSTS
 // env allowlist. Empty env = allow all (default). This keeps the change
 // backwards compatible while giving operators a simple knob to block SSRF.
+//
+// Loopback addresses are always exempt from the allowlist (#18713) — they
+// are used for local development, httptest servers in tests, and in-cluster
+// sidecar receivers that should never be operator-restricted.
 func checkWebhookHostAllowed(host string) error {
 	raw := os.Getenv(webhookAllowedHostsEnv)
 	if raw == "" {
+		return nil
+	}
+	// Loopback is always allowed regardless of the operator allowlist.
+	if isLoopbackHost(host) {
 		return nil
 	}
 	for _, allowed := range strings.Split(raw, ",") {

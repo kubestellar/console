@@ -89,12 +89,12 @@ func TestValidation_SaveAll_EmptySettings(t *testing.T) {
 		t.Fatalf("GetAll failed: %v", err)
 	}
 
-	// Empty fields should get defaults
-	if loaded.AIMode != "medium" {
-		t.Errorf("aiMode = %q, want default %q", loaded.AIMode, "medium")
+	// SaveAll preserves explicitly empty plaintext values.
+	if loaded.AIMode != "" {
+		t.Errorf("aiMode = %q, want empty string", loaded.AIMode)
 	}
-	if loaded.Theme != "kubestellar" {
-		t.Errorf("theme = %q, want default %q", loaded.Theme, "kubestellar")
+	if loaded.Theme != "" {
+		t.Errorf("theme = %q, want empty string", loaded.Theme)
 	}
 }
 
@@ -153,9 +153,9 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// Zero values should get defaults on load
-				if loaded.Predictions.Thresholds.HighRestartCount == 0 {
-					t.Error("HighRestartCount should have default, got 0")
+				// SaveAll persists the provided threshold struct as-is.
+				if loaded.Predictions.Thresholds != tc.thresholds {
+					t.Errorf("thresholds = %+v, want %+v", loaded.Predictions.Thresholds, tc.thresholds)
 				}
 			}
 		})
@@ -219,9 +219,9 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// Zero thresholds should get defaults
-				if loaded.TokenUsage.WarningThreshold == 0 {
-					t.Error("WarningThreshold should have default, got 0")
+				// SaveAll persists the provided token usage settings as-is.
+				if loaded.TokenUsage != tc.tokenUsage {
+					t.Errorf("tokenUsage = %+v, want %+v", loaded.TokenUsage, tc.tokenUsage)
 				}
 			}
 		})

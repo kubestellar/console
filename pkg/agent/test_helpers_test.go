@@ -34,11 +34,9 @@ func fakeExecCommand(command string, args ...string) *exec.Cmd {
 	return cmd
 }
 
-func init() {
-	// Wire the package-level var declared in provider_helpers.go
-	fakeExecCommandContext = func(_ context.Context, command string, args ...string) *exec.Cmd {
-		return fakeExecCommand(command, args...)
-	}
+// fakeExecCommandContext mimics exec.CommandContext for testing.
+func fakeExecCommandContext(_ context.Context, command string, args ...string) *exec.Cmd {
+	return fakeExecCommand(command, args...)
 }
 
 // TestHelperProcess is the subprocess entry point used by fakeExecCommand.

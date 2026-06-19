@@ -19,7 +19,7 @@ import (
 
 // ---------- requireAdmin ----------
 
-func TestRequireAdmin(t *testing.T) {
+func TestRequireAdminHelpers(t *testing.T) {
 	cases := []struct {
 		name       string
 		userStore  func(uid uuid.UUID) *test.MockStore
@@ -102,7 +102,7 @@ func TestRequireAdmin(t *testing.T) {
 				return c.Next()
 			})
 			app.Get("/test", func(c *fiber.Ctx) error {
-				if err := h.requireAdmin(c); err != nil {
+				if err := h.RequireAdmin(c); err != nil {
 					return err
 				}
 				return c.SendString("ok")

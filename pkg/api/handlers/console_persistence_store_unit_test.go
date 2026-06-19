@@ -53,7 +53,7 @@ func performRequireAdminRequest(t *testing.T, app *fiber.App) (int, string) {
 	return resp.StatusCode, string(body)
 }
 
-func TestRequireAdmin(t *testing.T) {
+func TestRequireAdminUnit(t *testing.T) {
 	adminUserID := uuid.New()
 	viewerUserID := uuid.New()
 	missingUserID := uuid.New()
@@ -122,7 +122,7 @@ func TestRequireAdmin(t *testing.T) {
 	mockStore.AssertExpectations(t)
 }
 
-func TestCheckClusterHealth(t *testing.T) {
+func TestCheckClusterHealthUnit(t *testing.T) {
 	freshK8sClient := newStoreBackedK8sClient(t)
 
 	tests := []struct {
@@ -159,7 +159,7 @@ func TestCheckClusterHealth(t *testing.T) {
 	}
 }
 
-func TestGetClusterClient(t *testing.T) {
+func TestGetClusterClientUnit(t *testing.T) {
 	freshK8sClient := newStoreBackedK8sClient(t)
 
 	tests := []struct {

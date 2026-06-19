@@ -1,119 +1,95 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
-import type { ClusterInfo } from '../../../hooks/useMCP'
+import { render, screen } from '@testing-library/react'
+import { ClusterStatusDetails } from './ClusterStatusDetails'
+import type { ClusterInfo } from '../../hooks/mcp/types'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+  useTranslation: () => ({ t: (key: string) => key }),
 }))
-
-vi.mock('../utils', () => ({
-  getClusterHealthState: () => 'healthy',
-  isClusterUnreachable: () => false,
-}))
-
-vi.mock('../../../lib/errorClassifier', () => ({
-  formatLastSeen: () => 'Just now',
-  getSuggestionForErrorType: () => 'Check your connection',
-}))
-
-import { ClusterStatusDetails } from './ClusterStatusDetails'
 
 describe('ClusterStatusDetails', () => {
-  const mockCluster: ClusterInfo = {
-    name: 'test-cluster',
-    context: 'test-context',
-    server: 'https://test.example.com',
-    healthy: true,
-    namespaces: [],
-    aliases: [],
-  }
+  it('returns null when cluster has no diagnostic fields', () => {
+    const cluster = {
+      name: 'test-cluster',
+      reachable: true,
+      errorType: undefined,
+      errorMessage: undefined,
+      lastSeen: undefined,
+      externallyReachable: undefined,
+      neverConnected: false,
+    } as ClusterInfo
 
-  it('renders without crashing', () => {
-    const { container } = render(<ClusterStatusDetails cluster={mockCluster} />)
-    expect(container).toBeTruthy()
+    const { container } = render(<ClusterStatusDetails cluster={cluster} />)
+    expect(container.firstChild).toBeNull()
   })
 
-  it('displays error type when present', () => {
-    const clusterWithError = {
-      ...mockCluster,
-      errorType: 'auth' as const,
-      healthy: false,
-    }
-    const { container } = render(<ClusterStatusDetails cluster={clusterWithError} />)
-    expect(container.textContent).toMatch(/Auth/)
-  })
-
-  it('displays certificate error icon for certificate errors', () => {
-    const clusterWithCertError = {
-      ...mockCluster,
-      errorType: 'certificate' as const,
-      healthy: false,
-    }
-    const { container } = render(<ClusterStatusDetails cluster={clusterWithCertError} />)
-    expect(container).toBeTruthy()
-  })
-
-  it('displays network error icon for network errors', () => {
-    const clusterWithNetError = {
-      ...mockCluster,
-      errorType: 'network' as const,
-      healthy: false,
-    }
-    const { container } = render(<ClusterStatusDetails cluster={clusterWithNetError} />)
-    expect(container).toBeTruthy()
-  })
-
-  it('displays timeout error icon for timeout errors', () => {
-    const clusterWithTimeoutError = {
-      ...mockCluster,
-      errorType: 'timeout' as const,
-      healthy: false,
-    }
-    const { container } = render(<ClusterStatusDetails cluster={clusterWithTimeoutError} />)
-    expect(container).toBeTruthy()
-  })
-
-  it('applies custom className when provided', () => {
-    const { container } = render(<ClusterStatusDetails cluster={mockCluster} className="custom-class" />)
-    expect(container.querySelector('.custom-class')).toBeTruthy()
-  })
-
-  it('shows unreachable reason when cluster is unreachable', () => {
-    const unreachableCluster = {
-      ...mockCluster,
+  it('renders unreachable reason with auth error', () => {
+    const cluster = {
+      name: 'test-cluster',
       reachable: false,
-      unreachableReason: 'Network timeout',
-    }
-    const { container } = render(<ClusterStatusDetails cluster={unreachableCluster} />)
-    expect(container.textContent).toMatch(/Network timeout/)
+      errorType: 'auth',
+      errorMessage: 'authentication failed',
+    } as ClusterInfo
+
+    render(<ClusterStatusDetails cluster={cluster} />)
+    expect(screen.getByText(/Unreachable: Auth/)).toBeInTheDocument()
+    expect(screen.getByText('authentication failed')).toBeInTheDocument()
   })
 
-  it('shows external reachability status', () => {
-    const externalCluster = {
-      ...mockCluster,
-      externalReachable: true,
-    }
-    const { container } = render(<ClusterStatusDetails cluster={externalCluster} />)
-    expect(container).toBeTruthy()
+  it('renders unreachable reason with network error', () => {
+    const cluster = {
+      name: 'test-cluster',
+      reachable: false,
+      errorType: 'network',
+      errorMessage: 'connection refused',
+    } as ClusterInfo
+
+    render(<ClusterStatusDetails cluster={cluster} />)
+    expect(screen.getByText(/Unreachable: Network/)).toBeInTheDocument()
   })
 
-  it('shows last seen timestamp when available', () => {
-    const clusterWithLastSeen = {
-      ...mockCluster,
-      lastSeen: new Date().toISOString(),
-    }
-    const { container } = render(<ClusterStatusDetails cluster={clusterWithLastSeen} />)
-    expect(container.textContent).toMatch(/Just now/)
+  it('renders never connected status', () => {
+    const cluster = {
+      name: 'test-cluster',
+      neverConnected: true,
+    } as ClusterInfo
+
+    render(<ClusterStatusDetails cluster={cluster} />)
+    expect(screen.getByText('Never connected')).toBeInTheDocument()
   })
 
-  it('shows suggestion for error type when available', () => {
-    const clusterWithError = {
-      ...mockCluster,
-      errorType: 'auth' as const,
-      healthy: false,
-    }
-    const { container } = render(<ClusterStatusDetails cluster={clusterWithError} />)
-    expect(container.textContent).toMatch(/Check your connection/)
+  it('renders external reachability when reachable', () => {
+    const cluster = {
+      name: 'test-cluster',
+      externallyReachable: true,
+    } as ClusterInfo
+
+    render(<ClusterStatusDetails cluster={cluster} />)
+    expect(screen.getByText('External reachability:')).toBeInTheDocument()
+    expect(screen.getByText('Reachable')).toBeInTheDocument()
+  })
+
+  it('renders last seen timestamp', () => {
+    const cluster = {
+      name: 'test-cluster',
+      lastSeen: '2026-06-17T10:00:00Z',
+    } as ClusterInfo
+
+    render(<ClusterStatusDetails cluster={cluster} />)
+    expect(screen.getByText('Last seen:')).toBeInTheDocument()
+  })
+
+  it('applies custom className', () => {
+    const cluster = {
+      name: 'test-cluster',
+      lastSeen: '2026-06-17T10:00:00Z',
+    } as ClusterInfo
+
+    const { container } = render(
+      <ClusterStatusDetails cluster={cluster} className="custom-class" />,
+    )
+    const statusDiv = container.querySelector('.custom-class')
+    expect(statusDiv).toBeInTheDocument()
   })
 })
