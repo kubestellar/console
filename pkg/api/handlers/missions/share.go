@@ -235,6 +235,10 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 
 	// SECURITY: Validate path and branch to prevent traversal/injection
+	if strings.HasPrefix(req.FilePath, "/") {
+		slog.Error("[MissionsHandler] invalid filePath", "filePath", req.FilePath, "error", "absolute path is not allowed")
+		return c.Status(400).JSON(fiber.Map{"error": "invalid filePath"})
+	}
 	if _, err := sanitizePath(req.FilePath); err != nil {
 		slog.Error("[MissionsHandler] invalid filePath", "filePath", req.FilePath, "error", err)
 		return c.Status(400).JSON(fiber.Map{"error": "invalid filePath"})
