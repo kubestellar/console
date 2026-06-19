@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -527,20 +528,22 @@ func TestDownloadAndParseReport_WithMockServer(t *testing.T) {
 
 func TestDriveGet_ThrottleAndRequestError(t *testing.T) {
 	t.Run("returns throttle cancellation error", func(t *testing.T) {
+		var requestCount int32
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			atomic.AddInt32(&requestCount, 1)
 			w.WriteHeader(http.StatusOK)
 		}))
 		defer srv.Close()
 
-		h := &BenchmarkHandlers{client: srv.Client(), lastReq: time.Now()}
-		ctx, cancel := context.WithCancel(context.Background())
-		go func() {
-			time.Sleep(10 * time.Millisecond)
-			cancel()
-		}()
+		timeSinceLastRequest := driveRequestDelay / 2
+		contextTimeout := driveRequestDelay / 4
+		h := &BenchmarkHandlers{client: srv.Client(), lastReq: time.Now().Add(-timeSinceLastRequest)}
+		ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+		defer cancel()
 
 		_, err := h.driveGet(ctx, srv.URL)
-		require.ErrorIs(t, err, context.Canceled)
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.Zero(t, atomic.LoadInt32(&requestCount), "request should time out in throttle before reaching server")
 	})
 
 	t.Run("returns request construction error for invalid URL", func(t *testing.T) {
@@ -551,15 +554,11 @@ func TestDriveGet_ThrottleAndRequestError(t *testing.T) {
 }
 
 func TestDriveGetWithRetry_BodyReadFailureFallback(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	calls := 0
+	var calls int32
 	h := &BenchmarkHandlers{
 		client: &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				calls++
-				if calls == 1 {
-					cancel()
-				}
+				atomic.AddInt32(&calls, 1)
 				return &http.Response{
 					StatusCode: http.StatusTooManyRequests,
 					Body:       errReadCloser{},
@@ -570,9 +569,10 @@ func TestDriveGetWithRetry_BodyReadFailureFallback(t *testing.T) {
 		},
 	}
 
-	_, err := h.driveGetWithRetry(ctx, "https://example.com")
+	_, err := h.driveGetWithRetry(context.Background(), "https://example.com")
 	require.Error(t, err)
-	require.ErrorIs(t, err, context.Canceled)
+	require.Contains(t, err.Error(), "(failed to read response body)")
+	require.EqualValues(t, driveMaxRetries+1, atomic.LoadInt32(&calls))
 }
 
 func TestFetchAllReports_ErrorBranches(t *testing.T) {
@@ -648,7 +648,7 @@ func TestFetchRunFolder_ResultsFallbackBranches(t *testing.T) {
 		require.Zero(t, failures)
 	})
 
-	t.Run("skips non-folder entries and collect errors under results", func(t *testing.T) {
+	t.Run("skips non-folder entries and skips collect errors under results", func(t *testing.T) {
 		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch {
 			case strings.Contains(r.URL.RawQuery, "'run'+in+parents"):
@@ -681,7 +681,8 @@ func TestFetchRunFolder_ResultsFallbackBranches(t *testing.T) {
 func TestListDriveFolder_DecodeError(t *testing.T) {
 	srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, "{not-json")
+		_, err := io.WriteString(w, "{not-json")
+		require.NoError(t, err)
 	}))
 	defer srv.Close()
 
