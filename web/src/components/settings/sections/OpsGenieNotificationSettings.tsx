@@ -68,7 +68,7 @@ export function OpsGenieNotificationSettings({
             opsgenieApiKeyConfigured: e.target.value.trim().length > 0,
           })}
           placeholder="e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary"
         />
         {hasStoredApiKey && (
           <p className="mt-1 text-xs text-green-400">
@@ -83,15 +83,15 @@ export function OpsGenieNotificationSettings({
       <button
         onClick={handleTestOpsGenie}
         disabled={isLoading}
-        className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors disabled:opacity-50"
+        className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
       >
         {isLoading ? t('settings.notifications.opsgenie.testing') : t('settings.notifications.opsgenie.testNotification', 'Test OpsGenie')}
       </button>
 
       {testResult && testResult.type === 'opsgenie' && (
         <div
-          className={`flex items-start gap-2 p-3 rounded-lg ${
-            testResult.success ? 'bg-green-500/20 border border-green-500/20' : 'bg-red-500/20 border border-red-500/20'
+          className={`flex items-start gap-2 p-3 rounded-lg border ${
+            testResult.success ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'
           }`}
         >
           {testResult.success ? (

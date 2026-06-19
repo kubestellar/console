@@ -137,11 +137,11 @@ export function PersistenceSection() {
           aria-checked={localConfig.enabled}
           aria-label={t('settings.persistence.enablePersistence')}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            localConfig.enabled ? 'bg-purple-500' : 'bg-secondary'
+            localConfig.enabled ? 'bg-primary' : 'bg-secondary'
           }`}
         >
           <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-100 transition-transform ${
+            className={`inline-block h-4 w-4 transform rounded-full border border-border bg-background transition-transform ${
               localConfig.enabled ? 'translate-x-6' : 'translate-x-1'
             }`}
           />
@@ -196,7 +196,7 @@ export function PersistenceSection() {
                 onClick={() => setLocalConfig(prev => ({ ...prev, syncMode: 'primary-only' }))}
                 className={`flex-1 px-3 py-2 rounded-lg border ${
                   localConfig.syncMode === 'primary-only'
-                    ? 'bg-purple-500/20 border-purple-500 text-purple-400'
+                    ? 'bg-primary/10 border-primary/30 text-primary'
                     : 'bg-secondary border-border text-muted-foreground'
                 }`}
               >
@@ -206,7 +206,7 @@ export function PersistenceSection() {
                 onClick={() => setLocalConfig(prev => ({ ...prev, syncMode: 'active-passive' }))}
                 className={`flex-1 px-3 py-2 rounded-lg border ${
                   localConfig.syncMode === 'active-passive'
-                    ? 'bg-purple-500/20 border-purple-500 text-purple-400'
+                    ? 'bg-primary/10 border-primary/30 text-primary'
                     : 'bg-secondary border-border text-muted-foreground'
                 }`}
               >
@@ -322,7 +322,7 @@ export function PersistenceSection() {
             <div className="flex justify-end">
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 <Check className="w-4 h-4" />
                 {t('settings.persistence.saveChanges')}
