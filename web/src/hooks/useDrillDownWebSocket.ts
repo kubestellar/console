@@ -9,7 +9,7 @@ const DEFAULT_HELM_TIMEOUT_MS = KUBECTL_MEDIUM_TIMEOUT_MS
 // are dropped to prevent OOM from a malicious or malfunctioning agent.
 const MAX_WS_PAYLOAD_BYTES = 5 * 1024 * 1024
 
-interface KubectlMessage {
+export interface KubectlMessage {
   id?: string
   type?: string
   payload?: {

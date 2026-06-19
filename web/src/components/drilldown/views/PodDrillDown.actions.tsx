@@ -5,6 +5,7 @@ import { useCanI } from '../../../hooks/usePermissions'
 import { useToast } from '../../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import type { RelatedResource } from './pod-drilldown'
+import type { KubectlMessage } from '../../../hooks/useDrillDownWebSocket'
 
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
 
@@ -22,7 +23,7 @@ interface UsePodActionsProps {
   annotations: Record<string, string> | null
   ownerChain: RelatedResource[]
   openTrackedWs: () => Promise<WebSocket>
-  parseWsMessage: (event: MessageEvent, context: string) => any
+  parseWsMessage: (event: MessageEvent, context: string) => KubectlMessage | null
 }
 
 export function usePodActions({
