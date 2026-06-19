@@ -48,6 +48,8 @@ Only process issues that have BOTH `ai-fix-requested` AND `triage/accepted` labe
 
 **IMPORTANT: Skip if any of these labels are already present:** `ai-awaiting-fix`, `ai-processing`, `ai-pr-draft`, `ai-pr-ready`. These indicate another workflow (triage-command.yml or copilot-assigned.yml) already assigned Copilot. Do NOT double-assign.
 
+**Human assignee respect:** The `ai-fix-requested` label is NOT added by triage-command.yml when a human (non-bot) is assigned to the issue. This prevents the scanner from racing a human contributor. The `scanner-please-take` label overrides this check.
+
 ## Your Task
 
 **Assign Copilot to work on this issue.**

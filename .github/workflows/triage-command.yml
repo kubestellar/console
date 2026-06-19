@@ -50,8 +50,43 @@ jobs:
           gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
             -X POST -f content='+1'
 
-      - name: Add triage and AI labels
+      - name: Check for human assignee
         if: steps.check_perms.outputs.authorized == 'true'
+        id: check_assignee
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+
+          BOT_SUFFIXES="[bot]"
+          ASSIGNEES=$(gh api "repos/$REPO/issues/$ISSUE" \
+            --jq '[.assignees[].login] | join(",")' 2>/dev/null || echo "")
+          LABELS=$(gh api "repos/$REPO/issues/$ISSUE" \
+            --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+
+          HAS_HUMAN="false"
+          if [ -n "$ASSIGNEES" ]; then
+            IFS=',' read -ra ADDR <<< "$ASSIGNEES"
+            for assignee in "${ADDR[@]}"; do
+              if [[ "$assignee" != *"$BOT_SUFFIXES"* ]]; then
+                HAS_HUMAN="true"
+                echo "Found human assignee: $assignee"
+                break
+              fi
+            done
+          fi
+
+          # scanner-please-take label overrides the human assignee check
+          if echo "$LABELS" | grep -q "scanner-please-take"; then
+            echo "scanner-please-take label found — overriding human assignee check"
+            HAS_HUMAN="false"
+          fi
+
+          echo "has_human=$HAS_HUMAN" >> $GITHUB_OUTPUT
+
+      - name: Add triage and AI labels
+        if: steps.check_perms.outputs.authorized == 'true' && steps.check_assignee.outputs.has_human != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -73,6 +108,27 @@ jobs:
             --add-label "ai-fix-requested"
 
           echo "Triaged issue #$ISSUE: removed needs-triage, added triage/accepted + ai-fix-requested"
+
+      - name: Comment deferring to human assignee
+        if: steps.check_perms.outputs.authorized == 'true' && steps.check_assignee.outputs.has_human == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+          ASSIGNEES=$(gh api "repos/$REPO/issues/$ISSUE" \
+            --jq '[.assignees[].login | select(endswith("[bot]") | not)] | map("@" + .) | join(", ")' 2>/dev/null || echo "unknown")
+
+          # Still add triage/accepted but NOT ai-fix-requested
+          gh label create "triage/accepted" --repo "$REPO" --color "0e8a16" \
+            --description "Issue has been triaged and accepted" 2>/dev/null || true
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "needs-triage" 2>/dev/null || true
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "help wanted" 2>/dev/null || true
+          gh issue edit "$ISSUE" --repo "$REPO" --add-label "triage/accepted"
+
+          gh issue comment "$ISSUE" --repo "$REPO" --body "**Scanner deferred** — this issue is assigned to a human contributor (${ASSIGNEES}). The scanner will not open a competing PR.
+
+          To hand this off to the scanner instead, add the \`scanner-please-take\` label."
 
       - name: Add rocket reaction to issue
         if: steps.check_perms.outputs.authorized == 'true'
@@ -269,8 +325,43 @@ jobs:
             echo "::warning::User $ACTOR lacks write permission (has: $PERMISSION)"
           fi
 
-      - name: Add AI labels
+      - name: Check for human assignee
         if: steps.check_perms.outputs.authorized == 'true'
+        id: check_assignee
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+
+          BOT_SUFFIXES="[bot]"
+          ASSIGNEES=$(gh api "repos/$REPO/issues/$ISSUE" \
+            --jq '[.assignees[].login] | join(",")' 2>/dev/null || echo "")
+          LABELS=$(gh api "repos/$REPO/issues/$ISSUE" \
+            --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+
+          HAS_HUMAN="false"
+          if [ -n "$ASSIGNEES" ]; then
+            IFS=',' read -ra ADDR <<< "$ASSIGNEES"
+            for assignee in "${ADDR[@]}"; do
+              if [[ "$assignee" != *"$BOT_SUFFIXES"* ]]; then
+                HAS_HUMAN="true"
+                echo "Found human assignee: $assignee"
+                break
+              fi
+            done
+          fi
+
+          # scanner-please-take label overrides the human assignee check
+          if echo "$LABELS" | grep -q "scanner-please-take"; then
+            echo "scanner-please-take label found — overriding human assignee check"
+            HAS_HUMAN="false"
+          fi
+
+          echo "has_human=$HAS_HUMAN" >> $GITHUB_OUTPUT
+
+      - name: Add AI labels
+        if: steps.check_perms.outputs.authorized == 'true' && steps.check_assignee.outputs.has_human != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -290,6 +381,20 @@ jobs:
             --add-label "ai-fix-requested"
 
           echo "Label-triggered triage for issue #$ISSUE: added ai-fix-requested"
+
+      - name: Comment deferring to human assignee
+        if: steps.check_perms.outputs.authorized == 'true' && steps.check_assignee.outputs.has_human == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+          ASSIGNEES=$(gh api "repos/$REPO/issues/$ISSUE" \
+            --jq '[.assignees[].login | select(endswith("[bot]") | not)] | map("@" + .) | join(", ")' 2>/dev/null || echo "unknown")
+
+          gh issue comment "$ISSUE" --repo "$REPO" --body "**Scanner deferred** — this issue is assigned to a human contributor (${ASSIGNEES}). The scanner will not open a competing PR.
+
+          To hand this off to the scanner instead, add the \`scanner-please-take\` label."
 
       - name: Add rocket reaction to issue
         if: steps.check_perms.outputs.authorized == 'true'

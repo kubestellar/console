@@ -81,6 +81,13 @@ scanner:
       - build-break
       - needs-investigation
       
+  # Human Assignee Respect
+  assignee_respect:
+    enabled: true
+    # Scanner defers if a human (non-bot) is assigned to the issue.
+    # The scanner-please-take label overrides this check.
+    override_label: scanner-please-take
+
   # Emergency Controls
   emergency:
     # Kill switch: completely disable scanner merges
