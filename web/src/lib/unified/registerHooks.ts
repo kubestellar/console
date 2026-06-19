@@ -101,6 +101,8 @@ const TWO_HOURS_MS = 2 * MS_PER_HOUR
 const THREE_HOURS_MS = 3 * MS_PER_HOUR
 const TWO_DAYS_MS = 2 * MS_PER_DAY
 const THREE_DAYS_MS = 3 * MS_PER_DAY
+const DEMO_REFERENCE_TIME = Date.now()
+const MODULE_ONE_HOUR_AGO = DEMO_REFERENCE_TIME - MS_PER_HOUR
 
 // ============================================================================
 // Factory-generated hook registration config
@@ -305,13 +307,29 @@ function useDemoDataHook<T>(demoData: T[]) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!demoMode) {
-      setIsLoading(false)
-      return
+    let frameId: number | null = null
+    const scheduleLoadingState = (nextIsLoading: boolean) => {
+      frameId = requestAnimationFrame(() => {
+        setIsLoading(nextIsLoading)
+      })
     }
-    setIsLoading(true)
-    const timer = setTimeout(() => setIsLoading(false), SHORT_DELAY_MS)
-    return () => clearTimeout(timer)
+
+    if (!demoMode) {
+      scheduleLoadingState(false)
+      return () => {
+        if (frameId !== null) cancelAnimationFrame(frameId)
+      }
+    }
+
+    scheduleLoadingState(true)
+    const timer = setTimeout(() => {
+      scheduleLoadingState(false)
+    }, SHORT_DELAY_MS)
+
+    return () => {
+      clearTimeout(timer)
+      if (frameId !== null) cancelAnimationFrame(frameId)
+    }
   }, [demoMode])
 
   return {
@@ -323,12 +341,12 @@ function useDemoDataHook<T>(demoData: T[]) {
 
 // Cluster metrics demo data
 const DEMO_CLUSTER_METRICS = [
-  { timestamp: Date.now() - FIVE_MINUTES_MS, cpu: 45, memory: 62, pods: 156 },
-  { timestamp: Date.now() - FOUR_MINUTES_MS, cpu: 48, memory: 64, pods: 158 },
-  { timestamp: Date.now() - THREE_MINUTES_MS, cpu: 42, memory: 61, pods: 155 },
-  { timestamp: Date.now() - TWO_MINUTES_MS, cpu: 51, memory: 67, pods: 162 },
-  { timestamp: Date.now() - MS_PER_MINUTE, cpu: 47, memory: 65, pods: 159 },
-  { timestamp: Date.now(), cpu: 49, memory: 66, pods: 161 },
+  { timestamp: DEMO_REFERENCE_TIME - FIVE_MINUTES_MS, cpu: 45, memory: 62, pods: 156 },
+  { timestamp: DEMO_REFERENCE_TIME - FOUR_MINUTES_MS, cpu: 48, memory: 64, pods: 158 },
+  { timestamp: DEMO_REFERENCE_TIME - THREE_MINUTES_MS, cpu: 42, memory: 61, pods: 155 },
+  { timestamp: DEMO_REFERENCE_TIME - TWO_MINUTES_MS, cpu: 51, memory: 67, pods: 162 },
+  { timestamp: DEMO_REFERENCE_TIME - MS_PER_MINUTE, cpu: 47, memory: 65, pods: 159 },
+  { timestamp: DEMO_REFERENCE_TIME, cpu: 49, memory: 66, pods: 161 },
 ]
 
 // Resource usage demo data
@@ -340,12 +358,12 @@ const DEMO_RESOURCE_USAGE = [
 
 // Events timeline demo data
 const DEMO_EVENTS_TIMELINE = [
-  { timestamp: Date.now() - FIVE_MINUTES_MS, count: 12, type: 'Normal' },
-  { timestamp: Date.now() - FOUR_MINUTES_MS, count: 8, type: 'Warning' },
-  { timestamp: Date.now() - THREE_MINUTES_MS, count: 15, type: 'Normal' },
-  { timestamp: Date.now() - TWO_MINUTES_MS, count: 5, type: 'Warning' },
-  { timestamp: Date.now() - MS_PER_MINUTE, count: 10, type: 'Normal' },
-  { timestamp: Date.now(), count: 7, type: 'Warning' },
+  { timestamp: DEMO_REFERENCE_TIME - FIVE_MINUTES_MS, count: 12, type: 'Normal' },
+  { timestamp: DEMO_REFERENCE_TIME - FOUR_MINUTES_MS, count: 8, type: 'Warning' },
+  { timestamp: DEMO_REFERENCE_TIME - THREE_MINUTES_MS, count: 15, type: 'Normal' },
+  { timestamp: DEMO_REFERENCE_TIME - TWO_MINUTES_MS, count: 5, type: 'Warning' },
+  { timestamp: DEMO_REFERENCE_TIME - MS_PER_MINUTE, count: 10, type: 'Normal' },
+  { timestamp: DEMO_REFERENCE_TIME, count: 7, type: 'Warning' },
 ]
 
 // Security issues demo data
@@ -384,29 +402,29 @@ const DEMO_TOP_PODS = [
 
 // GitOps drift demo data
 const DEMO_GITOPS_DRIFT = [
-  { app: 'frontend', status: 'synced', cluster: 'prod-east', lastSync: Date.now() - MS_PER_MINUTE },
-  { app: 'backend', status: 'drifted', cluster: 'staging', lastSync: Date.now() - FIVE_MINUTES_MS },
-  { app: 'monitoring', status: 'synced', cluster: 'dev', lastSync: Date.now() - TWO_MINUTES_MS },
+  { app: 'frontend', status: 'synced', cluster: 'prod-east', lastSync: DEMO_REFERENCE_TIME - MS_PER_MINUTE },
+  { app: 'backend', status: 'drifted', cluster: 'staging', lastSync: DEMO_REFERENCE_TIME - FIVE_MINUTES_MS },
+  { app: 'monitoring', status: 'synced', cluster: 'dev', lastSync: DEMO_REFERENCE_TIME - TWO_MINUTES_MS },
 ]
 
 // Pod health trend demo data
 const DEMO_POD_HEALTH_TREND = [
-  { timestamp: Date.now() - FIVE_MINUTES_MS, healthy: 145, unhealthy: 3 },
-  { timestamp: Date.now() - FOUR_MINUTES_MS, healthy: 148, unhealthy: 2 },
-  { timestamp: Date.now() - THREE_MINUTES_MS, healthy: 142, unhealthy: 5 },
-  { timestamp: Date.now() - TWO_MINUTES_MS, healthy: 150, unhealthy: 1 },
-  { timestamp: Date.now() - MS_PER_MINUTE, healthy: 147, unhealthy: 4 },
-  { timestamp: Date.now(), healthy: 149, unhealthy: 2 },
+  { timestamp: DEMO_REFERENCE_TIME - FIVE_MINUTES_MS, healthy: 145, unhealthy: 3 },
+  { timestamp: DEMO_REFERENCE_TIME - FOUR_MINUTES_MS, healthy: 148, unhealthy: 2 },
+  { timestamp: DEMO_REFERENCE_TIME - THREE_MINUTES_MS, healthy: 142, unhealthy: 5 },
+  { timestamp: DEMO_REFERENCE_TIME - TWO_MINUTES_MS, healthy: 150, unhealthy: 1 },
+  { timestamp: DEMO_REFERENCE_TIME - MS_PER_MINUTE, healthy: 147, unhealthy: 4 },
+  { timestamp: DEMO_REFERENCE_TIME, healthy: 149, unhealthy: 2 },
 ]
 
 // Resource trend demo data
 const DEMO_RESOURCE_TREND = [
-  { timestamp: Date.now() - FIVE_MINUTES_MS, cpu: 45, memory: 62 },
-  { timestamp: Date.now() - FOUR_MINUTES_MS, cpu: 52, memory: 65 },
-  { timestamp: Date.now() - THREE_MINUTES_MS, cpu: 48, memory: 58 },
-  { timestamp: Date.now() - TWO_MINUTES_MS, cpu: 55, memory: 70 },
-  { timestamp: Date.now() - MS_PER_MINUTE, cpu: 50, memory: 67 },
-  { timestamp: Date.now(), cpu: 53, memory: 64 },
+  { timestamp: DEMO_REFERENCE_TIME - FIVE_MINUTES_MS, cpu: 45, memory: 62 },
+  { timestamp: DEMO_REFERENCE_TIME - FOUR_MINUTES_MS, cpu: 52, memory: 65 },
+  { timestamp: DEMO_REFERENCE_TIME - THREE_MINUTES_MS, cpu: 48, memory: 58 },
+  { timestamp: DEMO_REFERENCE_TIME - TWO_MINUTES_MS, cpu: 55, memory: 70 },
+  { timestamp: DEMO_REFERENCE_TIME - MS_PER_MINUTE, cpu: 50, memory: 67 },
+  { timestamp: DEMO_REFERENCE_TIME, cpu: 53, memory: 64 },
 ]
 
 // Compute overview demo data
@@ -436,9 +454,9 @@ const DEMO_GPU_INVENTORY = [
 
 // Prow jobs demo data
 const DEMO_PROW_JOBS = [
-  { name: 'pull-kubestellar-verify', type: 'presubmit', state: 'success', startTime: Date.now() - TWO_MINUTES_MS },
-  { name: 'periodic-e2e-tests', type: 'periodic', state: 'pending', startTime: Date.now() - MS_PER_MINUTE },
-  { name: 'post-kubestellar-deploy', type: 'postsubmit', state: 'failure', startTime: Date.now() - FIVE_MINUTES_MS },
+  { name: 'pull-kubestellar-verify', type: 'presubmit', state: 'success', startTime: DEMO_REFERENCE_TIME - TWO_MINUTES_MS },
+  { name: 'periodic-e2e-tests', type: 'periodic', state: 'pending', startTime: DEMO_REFERENCE_TIME - MS_PER_MINUTE },
+  { name: 'post-kubestellar-deploy', type: 'postsubmit', state: 'failure', startTime: DEMO_REFERENCE_TIME - FIVE_MINUTES_MS },
 ]
 
 // ML jobs demo data
@@ -499,8 +517,8 @@ const DEMO_COMPLIANCE_SCORE = {
 
 // Namespace events demo data
 const DEMO_NAMESPACE_EVENTS = [
-  { type: 'Normal', reason: 'Scheduled', message: 'Pod scheduled', object: 'pod/api-7d8f', namespace: 'production', count: 1, lastSeen: Date.now() - THIRTY_SECONDS_MS },
-  { type: 'Warning', reason: 'BackOff', message: 'Container restarting', object: 'pod/worker-5c6d', namespace: 'production', count: 5, lastSeen: Date.now() - MS_PER_MINUTE },
+  { type: 'Normal', reason: 'Scheduled', message: 'Pod scheduled', object: 'pod/api-7d8f', namespace: 'production', count: 1, lastSeen: DEMO_REFERENCE_TIME - THIRTY_SECONDS_MS },
+  { type: 'Warning', reason: 'BackOff', message: 'Container restarting', object: 'pod/worker-5c6d', namespace: 'production', count: 5, lastSeen: DEMO_REFERENCE_TIME - MS_PER_MINUTE },
 ]
 
 // GPU workloads demo data
@@ -540,9 +558,9 @@ const DEMO_GATEWAY_STATUS = [
 
 // Kustomization status demo data
 const DEMO_KUSTOMIZATION_STATUS = [
-  { name: 'apps', namespace: 'flux-system', ready: true, lastApplied: Date.now() - TWO_MINUTES_MS },
-  { name: 'infra', namespace: 'flux-system', ready: true, lastApplied: Date.now() - FIVE_MINUTES_MS },
-  { name: 'monitoring', namespace: 'flux-system', ready: false, lastApplied: Date.now() - TEN_MINUTES_MS },
+  { name: 'apps', namespace: 'flux-system', ready: true, lastApplied: DEMO_REFERENCE_TIME - TWO_MINUTES_MS },
+  { name: 'infra', namespace: 'flux-system', ready: true, lastApplied: DEMO_REFERENCE_TIME - FIVE_MINUTES_MS },
+  { name: 'monitoring', namespace: 'flux-system', ready: false, lastApplied: DEMO_REFERENCE_TIME - TEN_MINUTES_MS },
 ]
 
 // Provider health demo data
@@ -568,15 +586,15 @@ const DEMO_PROW_STATUS = {
 
 // Prow history demo data
 const DEMO_PROW_HISTORY = [
-  { job: 'e2e-tests', result: 'success', duration: 1200, finishedAt: Date.now() - MS_PER_HOUR },
-  { job: 'unit-tests', result: 'success', duration: 300, finishedAt: Date.now() - TWO_HOURS_MS },
-  { job: 'lint', result: 'failure', duration: 60, finishedAt: Date.now() - THREE_HOURS_MS },
+  { job: 'e2e-tests', result: 'success', duration: 1200, finishedAt: DEMO_REFERENCE_TIME - MS_PER_HOUR },
+  { job: 'unit-tests', result: 'success', duration: 300, finishedAt: DEMO_REFERENCE_TIME - TWO_HOURS_MS },
+  { job: 'lint', result: 'failure', duration: 60, finishedAt: DEMO_REFERENCE_TIME - THREE_HOURS_MS },
 ]
 
 // Helm history demo data
 const DEMO_HELM_HISTORY = [
-  { revision: 5, chart: 'nginx-ingress-4.6.0', appVersion: '1.9.0', status: 'deployed', updated: Date.now() - MS_PER_DAY },
-  { revision: 4, chart: 'nginx-ingress-4.5.2', appVersion: '1.8.0', status: 'superseded', updated: Date.now() - TWO_DAYS_MS },
+  { revision: 5, chart: 'nginx-ingress-4.6.0', appVersion: '1.9.0', status: 'deployed', updated: DEMO_REFERENCE_TIME - MS_PER_DAY },
+  { revision: 4, chart: 'nginx-ingress-4.5.2', appVersion: '1.8.0', status: 'superseded', updated: DEMO_REFERENCE_TIME - TWO_DAYS_MS },
 ]
 
 // External secrets demo data (stats-grid)
@@ -594,14 +612,14 @@ const DEMO_CERT_MANAGER = {
 
 // Vault secrets demo data
 const DEMO_VAULT_SECRETS = [
-  { path: 'secret/data/api-keys', status: 'synced', lastSync: Date.now() - MS_PER_MINUTE },
-  { path: 'secret/data/db-creds', status: 'synced', lastSync: Date.now() - TWO_MINUTES_MS },
+  { path: 'secret/data/api-keys', status: 'synced', lastSync: DEMO_REFERENCE_TIME - MS_PER_MINUTE },
+  { path: 'secret/data/db-creds', status: 'synced', lastSync: DEMO_REFERENCE_TIME - TWO_MINUTES_MS },
 ]
 
 // Falco alerts demo data
 const DEMO_FALCO_ALERTS = [
-  { rule: 'Terminal shell in container', severity: 'Warning', count: 3, lastSeen: Date.now() - FIVE_MINUTES_MS },
-  { rule: 'Sensitive file read', severity: 'Notice', count: 12, lastSeen: Date.now() - TEN_MINUTES_MS },
+  { rule: 'Terminal shell in container', severity: 'Warning', count: 3, lastSeen: DEMO_REFERENCE_TIME - FIVE_MINUTES_MS },
+  { rule: 'Sensitive file read', severity: 'Notice', count: 12, lastSeen: DEMO_REFERENCE_TIME - TEN_MINUTES_MS },
 ]
 
 // Kubescape scan demo data (stats-grid)
@@ -639,21 +657,21 @@ const DEMO_GPU_STATUS = {
 
 // GPU utilization demo data (chart)
 const DEMO_GPU_UTILIZATION = [
-  { timestamp: Date.now() - FIVE_MINUTES_MS, utilization: 72, memory: 68 },
-  { timestamp: Date.now() - FOUR_MINUTES_MS, utilization: 78, memory: 72 },
-  { timestamp: Date.now() - THREE_MINUTES_MS, utilization: 65, memory: 60 },
-  { timestamp: Date.now() - TWO_MINUTES_MS, utilization: 82, memory: 78 },
-  { timestamp: Date.now() - MS_PER_MINUTE, utilization: 75, memory: 70 },
-  { timestamp: Date.now(), utilization: 80, memory: 74 },
+  { timestamp: DEMO_REFERENCE_TIME - FIVE_MINUTES_MS, utilization: 72, memory: 68 },
+  { timestamp: DEMO_REFERENCE_TIME - FOUR_MINUTES_MS, utilization: 78, memory: 72 },
+  { timestamp: DEMO_REFERENCE_TIME - THREE_MINUTES_MS, utilization: 65, memory: 60 },
+  { timestamp: DEMO_REFERENCE_TIME - TWO_MINUTES_MS, utilization: 82, memory: 78 },
+  { timestamp: DEMO_REFERENCE_TIME - MS_PER_MINUTE, utilization: 75, memory: 70 },
+  { timestamp: DEMO_REFERENCE_TIME, utilization: 80, memory: 74 },
 ]
 
 // GPU usage trend demo data (chart)
 const DEMO_GPU_USAGE_TREND = [
-  { timestamp: Date.now() - MS_PER_HOUR, avgUtilization: 68 },
-  { timestamp: Date.now() - FORTY_FIVE_MINUTES_MS, avgUtilization: 72 },
-  { timestamp: Date.now() - THIRTY_MINUTES_MS, avgUtilization: 78 },
-  { timestamp: Date.now() - FIFTEEN_MINUTES_MS, avgUtilization: 74 },
-  { timestamp: Date.now(), avgUtilization: 76 },
+  { timestamp: DEMO_REFERENCE_TIME - MS_PER_HOUR, avgUtilization: 68 },
+  { timestamp: DEMO_REFERENCE_TIME - FORTY_FIVE_MINUTES_MS, avgUtilization: 72 },
+  { timestamp: DEMO_REFERENCE_TIME - THIRTY_MINUTES_MS, avgUtilization: 78 },
+  { timestamp: DEMO_REFERENCE_TIME - FIFTEEN_MINUTES_MS, avgUtilization: 74 },
+  { timestamp: DEMO_REFERENCE_TIME, avgUtilization: 76 },
 ]
 
 // Policy violations demo data
@@ -694,16 +712,16 @@ const DEMO_RESOURCE_CAPACITY = {
 
 // GitHub activity demo data
 const DEMO_GITHUB_ACTIVITY = [
-  { type: 'PushEvent', repo: 'kubestellar/console', actor: 'developer1', timestamp: Date.now() - MS_PER_HOUR },
-  { type: 'PullRequestEvent', repo: 'kubestellar/console', actor: 'developer2', timestamp: Date.now() - TWO_HOURS_MS },
-  { type: 'IssuesEvent', repo: 'kubestellar/kubestellar', actor: 'contributor', timestamp: Date.now() - THREE_HOURS_MS },
+  { type: 'PushEvent', repo: 'kubestellar/console', actor: 'developer1', timestamp: DEMO_REFERENCE_TIME - MS_PER_HOUR },
+  { type: 'PullRequestEvent', repo: 'kubestellar/console', actor: 'developer2', timestamp: DEMO_REFERENCE_TIME - TWO_HOURS_MS },
+  { type: 'IssuesEvent', repo: 'kubestellar/kubestellar', actor: 'contributor', timestamp: DEMO_REFERENCE_TIME - THREE_HOURS_MS },
 ]
 
 // RSS feed demo data
 const DEMO_RSS_FEED = [
-  { title: 'Kubernetes 1.30 Released', source: 'k8s.io', pubDate: Date.now() - MS_PER_DAY },
-  { title: 'New CNCF Project Announcement', source: 'cncf.io', pubDate: Date.now() - TWO_DAYS_MS },
-  { title: 'Cloud Native Best Practices', source: 'blog.k8s.io', pubDate: Date.now() - THREE_DAYS_MS },
+  { title: 'Kubernetes 1.30 Released', source: 'k8s.io', pubDate: DEMO_REFERENCE_TIME - MS_PER_DAY },
+  { title: 'New CNCF Project Announcement', source: 'cncf.io', pubDate: DEMO_REFERENCE_TIME - TWO_DAYS_MS },
+  { title: 'Cloud Native Best Practices', source: 'blog.k8s.io', pubDate: DEMO_REFERENCE_TIME - THREE_DAYS_MS },
 ]
 
 // Kubecost overview demo data (chart/donut)
@@ -827,10 +845,9 @@ function useRecentEvents(params?: Record<string, unknown>) {
 
   const recentEvents = (() => {
     if (!result.data) return []
-    const oneHourAgo = Date.now() - MS_PER_HOUR
     return result.data.filter(e => {
       if (!e.lastSeen) return false
-      return new Date(e.lastSeen).getTime() >= oneHourAgo
+      return new Date(e.lastSeen).getTime() >= MODULE_ONE_HOUR_AGO
     })
   })()
 
