@@ -6,14 +6,14 @@
   "authorGithub": "kubestellar",
   "mission": {
     "title": "Install and Configure Vultr Kubernetes Engine (VKE)",
-    "description": "This mission guides you through the installation of the Vultr Kubernetes Engine (VKE), a managed Kubernetes service that simplifies the deployment and management of Kubernetes clusters on Vultr's infrastructure. It is ideal for users looking for a fully managed solution with integrated Vultr features, but it may incur costs based on resource usage.",
+    "description": "This mission guides you through installing the Vultr Kubernetes Engine (VKE), a managed Kubernetes service that simplifies the deployment and management of Kubernetes clusters on Vultr's infrastructure. It provides seamless integration with Vultr's features, such as automatic load balancer provisioning and node management. Key trade-offs include reliance on Vultr's infrastructure and potential costs associated with resource usage.",
     "type": "deploy",
     "status": "completed",
     "estimatedMinutes": 15,
     "steps": [
       {
         "title": "Install the Vultr CLI",
-        "description": "This step installs the Vultr CLI, which is necessary for managing your Vultr resources from the command line.\n\n```bash\n\ncurl -LO https://github.com/vultr/vultr-cli/releases/download/v1.0.0/vultr-cli_linux_amd64.tar.gz\n\ntar -xzf vultr-cli_linux_amd64.tar.gz\n\nsudo mv vultr-cli /usr/local/bin/\n\nvultr-cli version\n\n```\n\n> Download the latest Vultr CLI binary.\n> Extract the downloaded tarball.\n> Move the binary to a directory in your PATH.\n> Verify the installation.",
+        "description": "The Vultr CLI is necessary for managing your Vultr resources from the command line.\n\n```bash\n\ncurl -LO https://github.com/vultr/vultr-cli/releases/download/v1.0.0/vultr-cli_linux_amd64.tar.gz\n\ntar -xzf vultr-cli_linux_amd64.tar.gz\n\nsudo mv vultr-cli /usr/local/bin/\n\nvultr-cli version\n\n```\n\n> Download the latest Vultr CLI\n> Extract the downloaded tarball\n> Move the CLI to a directory in your PATH\n> Verify the installation",
         "commands": [
           "curl -LO https://github.com/vultr/vultr-cli/releases/download/v1.0.0/vultr-cli_linux_amd64.tar.gz",
           "tar -xzf vultr-cli_linux_amd64.tar.gz",
@@ -23,99 +23,100 @@
       },
       {
         "title": "Create a Kubernetes Cluster",
-        "description": "This step creates a new Kubernetes cluster on Vultr with the specified version and node count.\n\n```bash\n\nvultr-cli k8s create --region 'ewr' --version '1.30' --node-count 3 --plan 'vc2-2c-4gb'\n\n```\n\n> Replace 'ewr' with your preferred region.",
+        "description": "This step creates a new Kubernetes cluster on Vultr with the specified version and node count.\n\n```bash\n\nvultr-cli k8s create --region 'ewr' --version '1.30' --node-count 3 --plan 'vc2-2c-4gb'\n\n```\n\n> Replace 'ewr' with your preferred region",
         "commands": [
           "vultr-cli k8s create --region 'ewr' --version '1.30' --node-count 3 --plan 'vc2-2c-4gb'"
         ]
       },
       {
-        "title": "Set Up Kubeconfig",
-        "description": "This step configures your kubeconfig file to connect to the newly created Kubernetes cluster.\n\n```bash\n\nvultr-cli k8s kubeconfig --cluster-id <YOUR_CLUSTER_ID> > ~/.kube/config\n\n```\n\n> Replace <YOUR_CLUSTER_ID> with your actual cluster ID.",
+        "title": "Set Up kubeconfig",
+        "description": "This step configures your kubeconfig file to connect to the newly created Kubernetes cluster.\n\n```bash\n\nvultr-cli k8s kubeconfig --cluster-id <your-cluster-id> > ~/.kube/config\n\nexport KUBECONFIG=~/.kube/config\n\n```\n\n> Replace <your-cluster-id> with the actual cluster ID\n> Set the KUBECONFIG environment variable",
         "commands": [
-          "vultr-cli k8s kubeconfig --cluster-id <YOUR_CLUSTER_ID> > ~/.kube/config"
+          "vultr-cli k8s kubeconfig --cluster-id <your-cluster-id> > ~/.kube/config",
+          "export KUBECONFIG=~/.kube/config"
         ]
       },
       {
         "title": "Verify Cluster Nodes",
-        "description": "This step checks the status of the nodes in your Kubernetes cluster to ensure they are running.\n\n```bash\n\nkubectl get nodes\n\n```\n\n> You should see your nodes listed with a 'Ready' status.",
+        "description": "This step checks the status of the nodes in your Kubernetes cluster to ensure they are ready.\n\n```bash\n\nkubectl get nodes\n\n```\n\n> You should see all nodes in 'Ready' status",
         "commands": [
           "kubectl get nodes"
         ]
       },
       {
         "title": "Post-Install Configuration",
-        "description": "This step sets up additional features like autoscaling and monitoring for your cluster.\n\n```bash\n\nkubectl apply -f https://raw.githubusercontent.com/kubernetes/autoscaler/master/cluster-autoscaler/cloudprovider/vultr/examples/cluster-autoscaler.yaml\n\nkubectl apply -f https://raw.githubusercontent.com/vultr/vultr-cloud-controller-manager/master/docs/examples/monitoring.yaml\n\n```\n\n> Deploy the cluster autoscaler.\n> Deploy monitoring tools.",
+        "description": "This step sets up additional configurations like autoscaling and monitoring.\n\n```bash\n\nkubectl apply -f https://raw.githubusercontent.com/kubernetes/autoscaler/master/cluster-autoscaler/cloudprovider/vultr/examples/cluster-autoscaler-vultr.yaml\n\nkubectl apply -f https://raw.githubusercontent.com/kubernetes/monitoring/main/monitoring.yaml\n\n```\n\n> Install the Cluster Autoscaler\n> Install monitoring tools",
         "commands": [
-          "kubectl apply -f https://raw.githubusercontent.com/kubernetes/autoscaler/master/cluster-autoscaler/cloudprovider/vultr/examples/cluster-autoscaler.yaml",
-          "kubectl apply -f https://raw.githubusercontent.com/vultr/vultr-cloud-controller-manager/master/docs/examples/monitoring.yaml"
+          "kubectl apply -f https://raw.githubusercontent.com/kubernetes/autoscaler/master/cluster-autoscaler/cloudprovider/vultr/examples/cluster-autoscaler-vultr.yaml",
+          "kubectl apply -f https://raw.githubusercontent.com/kubernetes/monitoring/main/monitoring.yaml"
         ]
       }
     ],
     "uninstall": [
       {
         "title": "Delete the Kubernetes Cluster",
-        "description": "This step removes the Kubernetes cluster and all associated resources, which may lead to data loss.\n\n```bash\n\nvultr-cli k8s delete --cluster-id <YOUR_CLUSTER_ID>\n\n```\n\n> Replace <YOUR_CLUSTER_ID> with your actual cluster ID.",
+        "description": "This step will remove the Kubernetes cluster and all associated resources. Be aware that this will result in data loss.\n\n```bash\n\nvultr-cli k8s delete --cluster-id <your-cluster-id>\n\n```\n\n> Replace <your-cluster-id> with the actual cluster ID",
         "commands": [
-          "vultr-cli k8s delete --cluster-id <YOUR_CLUSTER_ID>"
+          "vultr-cli k8s delete --cluster-id <your-cluster-id>"
         ]
       },
       {
         "title": "Remove Orphaned Resources",
-        "description": "This step ensures that any orphaned resources such as load balancers or DNS records are cleaned up.\n\n```bash\n\nvultr-cli loadbalancer list\n\nvultr-cli dns list\n\n```\n\n> Check for any remaining load balancers.\n> Check for any remaining DNS records.",
+        "description": "This step ensures that any orphaned resources like load balancers or DNS records are cleaned up.\n\n```bash\n\nvultr-cli loadbalancer list\n\nvultr-cli loadbalancer delete --loadbalancer-id <id>\n\n```\n\n> List load balancers to check for any orphaned resources\n> Replace <id> with the actual load balancer ID to delete",
         "commands": [
           "vultr-cli loadbalancer list",
-          "vultr-cli dns list"
+          "vultr-cli loadbalancer delete --loadbalancer-id <id>"
         ]
       }
     ],
     "upgrade": [
       {
         "title": "Upgrade the Kubernetes Cluster",
-        "description": "This step includes backing up your data, upgrading the cluster, and verifying the upgrade.\n\n```bash\n\nkubectl get all --all-namespaces -o yaml > backup.yaml\n\nvultr-cli k8s upgrade --cluster-id <YOUR_CLUSTER_ID> --version '1.31'\n\nkubectl get nodes\n\n```\n\n> Backup your current cluster state.\n> Upgrade to the desired Kubernetes version.\n> Verify that all nodes are in 'Ready' state after the upgrade.",
+        "description": "Before upgrading, ensure you have a backup of your data. This step upgrades your cluster to a newer version.\n\n```bash\n\nkubectl get pods --all-namespaces -o wide\n\nvultr-cli k8s upgrade --cluster-id <your-cluster-id> --version '1.31'\n\nkubectl get nodes\n\n```\n\n> Check the status of all pods before upgrade\n> Replace <your-cluster-id> with the actual cluster ID\n> Verify that all nodes are in 'Ready' status after the upgrade",
         "commands": [
-          "kubectl get all --all-namespaces -o yaml > backup.yaml",
-          "vultr-cli k8s upgrade --cluster-id <YOUR_CLUSTER_ID> --version '1.31'",
+          "kubectl get pods --all-namespaces -o wide",
+          "vultr-cli k8s upgrade --cluster-id <your-cluster-id> --version '1.31'",
           "kubectl get nodes"
         ]
       }
     ],
     "troubleshooting": [
       {
-        "title": "Error: 'Failed to connect to the server'",
-        "description": "**Cause:** This may occur if the kubeconfig is not set up correctly.\n\n**Fix:**\nEnsure that your kubeconfig file is correctly configured with the right cluster context."
+        "title": "Error: 'Unable to connect to the server: x509: certificate signed by unknown authority'",
+        "description": "**Cause:** This indicates an issue with the kubeconfig or the cluster not being reachable.\n\n**Fix:**\nEnsure your kubeconfig is correctly set up and the cluster is running."
       },
       {
-        "title": "Error: 'Insufficient resources available'",
-        "description": "**Cause:** This indicates that the requested resources exceed the available capacity in the selected region.\n\n**Fix:**\nTry reducing the node count or selecting a different plan."
+        "title": "Error: 'No resources found in default namespace'",
+        "description": "**Cause:** This indicates that there are no resources deployed in the default namespace.\n\n**Fix:**\nCheck if you have deployed any applications or switch to the correct namespace."
       },
       {
-        "title": "Error: 'LoadBalancer service is not working'",
-        "description": "**Cause:** This may happen if the Vultr Cloud Controller Manager is not deployed correctly.\n\n**Fix:**\nVerify that the Vultr Cloud Controller Manager is running and configured properly."
+        "title": "Error: 'Failed to create load balancer: Invalid API key'",
+        "description": "**Cause:** This indicates that the API key used for Vultr is incorrect or not set.\n\n**Fix:**\nVerify your API key and ensure it is correctly configured in your environment."
       },
       {
-        "title": "Error: 'Node not ready'",
-        "description": "**Cause:** This can occur if the node is not properly initialized or has failed to join the cluster.\n\n**Fix:**\nCheck the node logs for errors and ensure that the node is correctly configured."
+        "title": "Error: 'Insufficient capacity in region'",
+        "description": "**Cause:** This indicates that the selected region does not have enough resources available.\n\n**Fix:**\nTry creating the cluster in a different region or reduce the node count."
       }
     ],
     "versionNotes": [
       {
-        "version": "v0.17.0",
-        "changes": "Added support for Kubernetes v1.30, improved load balancer management.",
-        "deprecations": "None.",
+        "version": "v1.30",
+        "changes": "Added support for new Vultr instance types and improved load balancer provisioning.",
+        "deprecations": "No specific deprecations noted.",
         "migrationSteps": "No specific migration steps required for this version."
       }
     ],
     "resolution": {
-      "summary": "You should see the nodes listed with 'Ready' status when running 'kubectl get nodes'.",
+      "summary": "You should see output similar to: 'NAME STATUS ROLES AGE VERSION' with all nodes in 'Ready' status.",
       "codeSnippets": [
         "curl -LO https://github.com/vultr/vultr-cli/releases/download/v1.0.0/vultr-cli_linux_amd64.tar.gz",
         "tar -xzf vultr-cli_linux_amd64.tar.gz",
         "sudo mv vultr-cli /usr/local/bin/",
         "vultr-cli version",
         "vultr-cli k8s create --region 'ewr' --version '1.30' --node-count 3 --plan 'vc2-2c-4gb'",
-        "vultr-cli k8s kubeconfig --cluster-id <YOUR_CLUSTER_ID> > ~/.kube/config",
-        "kubectl get nodes",
-        "kubectl apply -f https://raw.githubusercontent.com/kubernetes/autoscaler/master/cluster-autoscaler/cloudprovider/vultr/examples/cluster-autoscaler.yaml"
+        "vultr-cli k8s kubeconfig --cluster-id <your-cluster-id> > ~/.kube/config",
+        "export KUBECONFIG=~/.kube/config",
+        "kubectl get nodes"
       ]
     }
   },
@@ -169,10 +170,10 @@
     ],
     "cloudCLI": "vultr-cli",
     "resources": "Minimum 2 vCPU, 4GB RAM per node",
-    "description": "Ensure you have the necessary tools and resources before starting the installation."
+    "description": "Ensure you have the necessary tools installed and a valid Vultr account."
   },
   "security": {
-    "scannedAt": "2026-06-05T07:20:52.902Z",
+    "scannedAt": "2026-06-19T07:43:44.505Z",
     "scannerVersion": "platform-install-gen-2.0.0",
     "sanitized": true,
     "findings": []

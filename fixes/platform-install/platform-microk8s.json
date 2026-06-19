@@ -6,44 +6,39 @@
   "authorGithub": "kubestellar",
   "mission": {
     "title": "Install and Configure MicroK8s",
-    "description": "MicroK8s is a lightweight, single-package Kubernetes distribution designed for developers and edge computing. It is easy to install and manage, making it ideal for local development and CI/CD environments. However, it is limited to single-node setups and may not be suitable for production-grade multi-node clusters.",
+    "description": "MicroK8s is a lightweight, single-package Kubernetes distribution designed for simplicity and speed, ideal for development, IoT, and edge computing. It provides a fully conformant Kubernetes experience with minimal overhead, making it perfect for local development environments. Key trade-offs include limited scalability compared to full Kubernetes clusters and reliance on the Snap package manager.",
     "type": "deploy",
     "status": "completed",
     "estimatedMinutes": 15,
     "steps": [
       {
         "title": "Install MicroK8s",
-        "description": "This step installs MicroK8s using the Snap package manager, which is the recommended method for installation.\n\n```bash\n\nsudo snap install microk8s --classic\n\n```\n\n> Use --classic for full access to system resources.",
+        "description": "This step installs MicroK8s using Snap, which is the recommended method for installation.\n\n```bash\n\nsudo snap install microk8s --classic\n\n```\n\n> Installs the latest stable version of MicroK8s.",
         "commands": [
           "sudo snap install microk8s --classic"
         ]
       },
       {
         "title": "Add User to MicroK8s Group",
-        "description": "This step allows your user to run MicroK8s commands without needing sudo.\n\n```bash\n\nsudo usermod -a -G microk8s $USER\n\n```\n\n> Replace $USER with your username if needed.",
+        "description": "This step allows your user to run MicroK8s commands without sudo by adding it to the microk8s group.\n\n```bash\n\nsudo usermod -a -G microk8s $USER\n\nnewgrp microk8s\n\n```\n\n> Replace $USER with your username if needed.\n> Refresh the group membership in the current session.",
         "commands": [
-          "sudo usermod -a -G microk8s $USER"
+          "sudo usermod -a -G microk8s $USER",
+          "newgrp microk8s"
         ]
       },
       {
-        "title": "Verify MicroK8s Installation",
-        "description": "Check the status of MicroK8s to ensure it is running correctly.\n\n```bash\n\nmicrok8s status --wait-ready\n\n```\n\n> This command waits until MicroK8s is fully initialized.",
+        "title": "Enable Core Add-ons",
+        "description": "This step enables essential add-ons like DNS and the Kubernetes dashboard for better functionality.\n\n```bash\n\nsudo microk8s enable dns\n\nsudo microk8s enable dashboard\n\n```\n\n> Enables the DNS add-on.\n> Enables the Kubernetes dashboard.",
         "commands": [
-          "microk8s status --wait-ready"
+          "sudo microk8s enable dns",
+          "sudo microk8s enable dashboard"
         ]
       },
       {
-        "title": "Enable Add-ons",
-        "description": "Enable essential add-ons like DNS and the Kubernetes dashboard for better functionality.\n\n```bash\n\nmicrok8s enable dns\n\nmicrok8s enable dashboard\n\n```\n\n> Enables the DNS add-on.\n> Enables the Kubernetes dashboard.",
+        "title": "Verify Installation",
+        "description": "This step checks that the MicroK8s installation is successful and that the nodes are ready.\n\n```bash\n\nmicrok8s status\n\nmicrok8s kubectl get nodes\n\n```\n\n> Check the status of MicroK8s and enabled add-ons.\n> Verify that the node is listed and in a Ready state.",
         "commands": [
-          "microk8s enable dns",
-          "microk8s enable dashboard"
-        ]
-      },
-      {
-        "title": "Verify Nodes",
-        "description": "Ensure that the Kubernetes nodes are up and running.\n\n```bash\n\nmicrok8s kubectl get nodes\n\n```\n\n> This command lists all nodes in the cluster.",
-        "commands": [
+          "microk8s status",
           "microk8s kubectl get nodes"
         ]
       }
@@ -51,56 +46,65 @@
     "uninstall": [
       {
         "title": "Uninstall MicroK8s",
-        "description": "This step removes MicroK8s from your system. Be aware that this will delete all Kubernetes resources managed by MicroK8s.\n\n```bash\n\nsudo snap remove microk8s\n\n```\n\n> This will remove MicroK8s and all associated data.",
+        "description": "This step removes MicroK8s from your system. Be aware that this will delete all Kubernetes resources managed by MicroK8s.\n\n```bash\n\nsudo snap remove microk8s\n\n```\n\n> This command will remove MicroK8s and all associated data.",
         "commands": [
           "sudo snap remove microk8s"
+        ]
+      },
+      {
+        "title": "Remove User from MicroK8s Group",
+        "description": "This step removes your user from the microk8s group to prevent access to MicroK8s commands.\n\n```bash\n\nsudo gpasswd -d $USER microk8s\n\n```\n\n> Replace $USER with your username if needed.",
+        "commands": [
+          "sudo gpasswd -d $USER microk8s"
         ]
       }
     ],
     "upgrade": [
       {
         "title": "Upgrade MicroK8s",
-        "description": "Before upgrading, ensure you backup your configurations. This step will upgrade MicroK8s to the latest version.\n\n```bash\n\nsudo snap refresh microk8s\n\nmicrok8s status\n\n```\n\n> This command upgrades MicroK8s to the latest stable version.\n> Verify that MicroK8s is running after the upgrade.",
+        "description": "Before upgrading, ensure you backup your configurations and resources. After the upgrade, verify that the nodes are still ready.\n\n```bash\n\nmicrok8s config > microk8s-backup.yaml\n\nsudo snap refresh microk8s\n\nmicrok8s kubectl get nodes\n\n```\n\n> Backup current MicroK8s configuration.\n> Upgrades MicroK8s to the latest version.\n> Verify that the nodes are still in a Ready state after the upgrade.",
         "commands": [
+          "microk8s config > microk8s-backup.yaml",
           "sudo snap refresh microk8s",
-          "microk8s status"
+          "microk8s kubectl get nodes"
         ]
       }
     ],
     "troubleshooting": [
       {
         "title": "Error: 'microk8s is not running'",
-        "description": "**Cause:** MicroK8s may not have started correctly after installation.\n\n**Fix:**\nRun 'sudo microk8s start' to start the MicroK8s service."
+        "description": "**Cause:** MicroK8s service may not be started.\n\n**Fix:**\nRun 'sudo microk8s start' to start the MicroK8s service."
       },
       {
-        "title": "Error: 'kubectl command not found'",
-        "description": "**Cause:** The kubectl command is not linked to your PATH.\n\n**Fix:**\nUse 'sudo microk8s kubectl' or add the microk8s user group to your user."
+        "title": "Error: 'kubectl: command not found'",
+        "description": "**Cause:** The kubectl command is not available in the current path.\n\n**Fix:**\nUse 'microk8s kubectl' instead of 'kubectl'."
       },
       {
-        "title": "Error: 'Unable to connect to the server: localhost:8080'",
-        "description": "**Cause:** Kubernetes API server is not running.\n\n**Fix:**\nCheck the status with 'microk8s status' and start it if necessary."
+        "title": "Error: 'Failed to connect to the server'",
+        "description": "**Cause:** Kubernetes API server may not be accessible.\n\n**Fix:**\nCheck the status of MicroK8s with 'microk8s status' and ensure it is running."
       },
       {
-        "title": "Error: 'Failed to enable addon'",
-        "description": "**Cause:** The required permissions or dependencies for the add-on are missing.\n\n**Fix:**\nEnsure you have the necessary permissions and try enabling the add-on again."
+        "title": "Error: 'Insufficient resources'",
+        "description": "**Cause:** The system may not meet the minimum resource requirements.\n\n**Fix:**\nEnsure your system has at least 2 vCPU and 4GB RAM."
       }
     ],
     "versionNotes": [
       {
         "version": "v1.31",
-        "changes": "Added support for Kubernetes v1.31 features, improved add-on management.",
-        "deprecations": "No specific deprecations noted.",
-        "migrationSteps": "No specific migration steps required for this version."
+        "changes": "Added support for Kubernetes v1.31 features, including improved resource management and new API endpoints.",
+        "deprecations": "Deprecated certain legacy add-ons that are no longer maintained.",
+        "migrationSteps": "No specific migration steps required for users upgrading from v1.30."
       }
     ],
     "resolution": {
-      "summary": "You should see a list of nodes with their statuses when running 'microk8s kubectl get nodes'. The output should show the node name and its status as 'Ready'.",
+      "summary": "You should see output similar to 'NAME STATUS ROLES AGE VERSION' when running 'microk8s kubectl get nodes'.",
       "codeSnippets": [
         "sudo snap install microk8s --classic",
         "sudo usermod -a -G microk8s $USER",
-        "microk8s status --wait-ready",
-        "microk8s enable dns",
-        "microk8s enable dashboard",
+        "newgrp microk8s",
+        "sudo microk8s enable dns",
+        "sudo microk8s enable dashboard",
+        "microk8s status",
         "microk8s kubectl get nodes"
       ]
     }
@@ -146,19 +150,19 @@
       "docs": "https://microk8s.io/docs",
       "repo": "https://github.com/canonical/microk8s"
     },
-    "qualityScore": 98
+    "qualityScore": 97
   },
   "prerequisites": {
-    "kubernetes": ">=1.25",
+    "kubernetes": ">=1.29",
     "tools": [
       "snap"
     ],
     "cloudCLI": "none",
     "resources": "Minimum 2 vCPU, 4GB RAM per node",
-    "description": "Ensure your system meets the minimum requirements for running MicroK8s."
+    "description": "Ensure your system meets the minimum requirements and has Snap installed."
   },
   "security": {
-    "scannedAt": "2026-06-05T07:22:26.249Z",
+    "scannedAt": "2026-06-19T07:45:16.085Z",
     "scannerVersion": "platform-install-gen-2.0.0",
     "sanitized": true,
     "findings": []

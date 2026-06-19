@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-19T02:50:53.816Z",
-  "count": 1610,
+  "generatedAt": "2026-06-19T07:47:25.005Z",
+  "count": 1608,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -23601,7 +23601,7 @@
     {
       "path": "fixes/platform-install/platform-charmed-kubernetes.json",
       "title": "Install and Configure Charmed Kubernetes",
-      "description": "Charmed Kubernetes is a distribution of Kubernetes that is tested across various clouds and focuses on modern metrics and monitoring. It is ideal for enterprises looking for a robust Kubernetes soluti",
+      "description": "Charmed Kubernetes is a distribution of Kubernetes that is designed for ease of deployment and management using Juju. It is ideal for users who want a fully managed Kubernetes experience on Ubuntu wit",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
@@ -23629,7 +23629,7 @@
       "installMethods": [
         "cli"
       ],
-      "qualityScore": 98,
+      "qualityScore": 96,
       "qualityPass": true,
       "qualityBreakdown": {
         "clarity": 100,
@@ -24657,49 +24657,6 @@
         "cli"
       ],
       "qualityScore": 100,
-      "qualityPass": true,
-      "qualityBreakdown": {
-        "clarity": 100,
-        "completeness": 100,
-        "correctness": 100,
-        "structure": 100,
-        "observability": 100
-      },
-      "qualityIssues": [],
-      "qualitySuggestions": []
-    },
-    {
-      "path": "fixes/platform-install/platform-docker-desktop-k8s.json",
-      "title": "Install and Configure Docker Desktop Kubernetes",
-      "description": "Docker Desktop for Mac provides a seamless local development environment for building and testing containerized applications using Docker and Kubernetes. It is ideal for developers who need a lightwei",
-      "category": "platform-install",
-      "missionClass": "install",
-      "author": "KubeStellar Bot",
-      "authorGithub": "kubestellar",
-      "authorAvatar": "https://github.com/kubestellar.png",
-      "tags": [
-        "installation",
-        "configuration",
-        "local",
-        "local-dev",
-        "docker"
-      ],
-      "cncfProjects": [],
-      "targetResourceKinds": [
-        "Namespace",
-        "Deployment",
-        "Service"
-      ],
-      "difficulty": "beginner",
-      "issueTypes": [
-        "installation",
-        "configuration"
-      ],
-      "type": "deploy",
-      "installMethods": [
-        "cli"
-      ],
-      "qualityScore": 91,
       "qualityPass": true,
       "qualityBreakdown": {
         "clarity": 100,
@@ -29454,7 +29411,7 @@
     {
       "path": "fixes/platform-install/platform-microk8s.json",
       "title": "Install and Configure MicroK8s",
-      "description": "MicroK8s is a lightweight, single-package Kubernetes distribution designed for developers and edge computing. It is easy to install and manage, making it ideal for local development and CI/CD environm",
+      "description": "MicroK8s is a lightweight, single-package Kubernetes distribution designed for simplicity and speed, ideal for development, IoT, and edge computing. It provides a fully conformant Kubernetes experienc",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
@@ -29482,7 +29439,7 @@
       "installMethods": [
         "cli"
       ],
-      "qualityScore": 98,
+      "qualityScore": 97,
       "qualityPass": true,
       "qualityBreakdown": {
         "clarity": 100,
@@ -31428,7 +31385,7 @@
     {
       "path": "fixes/platform-install/platform-prometheus-operator.json",
       "title": "Install and Configure Prometheus Operator / kube-prometheus-stack",
-      "description": "The Prometheus Operator simplifies the deployment and management of Prometheus monitoring stacks on Kubernetes. It leverages Kubernetes custom resources to automate configuration and management tasks,",
+      "description": "The Prometheus Operator simplifies the deployment and management of Prometheus monitoring stacks on Kubernetes using custom resources. It is ideal for users who want to automate the configuration of P",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
@@ -31699,54 +31656,6 @@
       },
       "qualityIssues": [],
       "qualitySuggestions": []
-    },
-    {
-      "path": "fixes/platform-install/platform-openshift.json",
-      "title": "Install and Configure Red Hat OpenShift Container Platform (OCP)",
-      "description": "Red Hat OpenShift Container Platform (OCP) is a comprehensive Kubernetes distribution that provides a robust platform for deploying and managing containerized applications. It includes features such a",
-      "category": "platform-install",
-      "missionClass": "install",
-      "author": "KubeStellar Bot",
-      "authorGithub": "kubestellar",
-      "authorAvatar": "https://github.com/kubestellar.png",
-      "tags": [
-        "installation",
-        "configuration",
-        "distribution",
-        "distribution",
-        "red-hat"
-      ],
-      "cncfProjects": [],
-      "targetResourceKinds": [
-        "Namespace",
-        "Deployment",
-        "Service"
-      ],
-      "difficulty": "intermediate",
-      "issueTypes": [
-        "installation",
-        "configuration"
-      ],
-      "type": "deploy",
-      "installMethods": [
-        "cli",
-        "kubectl"
-      ],
-      "qualityScore": 100,
-      "qualityPass": true,
-      "qualityBreakdown": {
-        "clarity": 100,
-        "completeness": 100,
-        "correctness": 100,
-        "structure": 100,
-        "observability": 70
-      },
-      "qualityIssues": [
-        "Missing expected output or log checks"
-      ],
-      "qualitySuggestions": [
-        "Include command outputs or log tailing instructions (e.g., kubectl get events/logs) to help users confirm success"
-      ]
     },
     {
       "path": "fixes/platform-install/platform-redis-operator.json",
@@ -33326,7 +33235,7 @@
     {
       "path": "fixes/platform-install/platform-tanzu.json",
       "title": "Install and Configure VMware Tanzu Kubernetes Grid",
-      "description": "VMware Tanzu Kubernetes Grid is a distribution that provides a comprehensive platform for deploying and managing Kubernetes clusters in an enterprise environment. It leverages the Tanzu Framework and ",
+      "description": "VMware Tanzu Kubernetes Grid is a distribution that provides a robust framework for deploying and managing Kubernetes clusters in an enterprise environment. It leverages Carvel packaging and plugins f",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
@@ -33417,7 +33326,7 @@
     {
       "path": "fixes/platform-install/platform-vke.json",
       "title": "Install and Configure Vultr Kubernetes Engine (VKE)",
-      "description": "This mission guides you through the installation of the Vultr Kubernetes Engine (VKE), a managed Kubernetes service that simplifies the deployment and management of Kubernetes clusters on Vultr's infr",
+      "description": "This mission guides you through installing the Vultr Kubernetes Engine (VKE), a managed Kubernetes service that simplifies the deployment and management of Kubernetes clusters on Vultr's infrastructur",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",

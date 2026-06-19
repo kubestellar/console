@@ -6,14 +6,14 @@
   "authorGithub": "kubestellar",
   "mission": {
     "title": "Install and Configure Prometheus Operator / kube-prometheus-stack",
-    "description": "The Prometheus Operator simplifies the deployment and management of Prometheus monitoring stacks on Kubernetes. It leverages Kubernetes custom resources to automate configuration and management tasks, making it easier to set up monitoring for your applications. Key trade-offs include the need for familiarity with Kubernetes custom resources and the potential complexity of managing multiple monitoring components.",
+    "description": "The Prometheus Operator simplifies the deployment and management of Prometheus monitoring stacks on Kubernetes using custom resources. It is ideal for users who want to automate the configuration of Prometheus and related components while maintaining flexibility. Key trade-offs include the need for familiarity with Kubernetes custom resources and potential complexity in advanced configurations.",
     "type": "deploy",
     "status": "completed",
     "estimatedMinutes": 20,
     "steps": [
       {
-        "title": "Add the Helm repository",
-        "description": "This step adds the Prometheus community Helm chart repository to your Helm client, allowing you to install the kube-prometheus-stack.\n\n```bash\n\nhelm repo add prometheus-community https://prometheus-community.github.io/helm-charts\n\nhelm repo update\n\n```\n\n> This is the official repository for Prometheus Helm charts.\n> Updates the local Helm chart repository cache.",
+        "title": "Add the Prometheus Operator Helm repository",
+        "description": "This step adds the official Prometheus Operator Helm chart repository to your Helm client.\n\n```bash\n\nhelm repo add prometheus-community https://prometheus-community.github.io/helm-charts\n\nhelm repo update\n\n```\n\n> This repository contains the kube-prometheus-stack chart.\n> Updates your local Helm chart repository cache.",
         "commands": [
           "helm repo add prometheus-community https://prometheus-community.github.io/helm-charts",
           "helm repo update"
@@ -21,32 +21,31 @@
       },
       {
         "title": "Install the kube-prometheus-stack",
-        "description": "This command installs the kube-prometheus-stack Helm chart in the 'monitoring' namespace, which includes Prometheus, Alertmanager, and Grafana.\n\n```bash\n\nkubectl create namespace monitoring\n\nhelm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --version 0.77.0\n\n```\n\n> Creates a namespace for the monitoring stack.\n> Installs the kube-prometheus-stack with the specified version.",
+        "description": "This command installs the kube-prometheus-stack Helm chart in the 'monitoring' namespace, which includes Prometheus, Alertmanager, and Grafana.\n\n```bash\n\nhelm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace --version 0.77.0\n\n```\n\n> Replace '0.77.0' with the desired version if needed.",
         "commands": [
-          "kubectl create namespace monitoring",
-          "helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --version 0.77.0"
+          "helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace --version 0.77.0"
         ]
       },
       {
         "title": "Verify the installation",
-        "description": "This step checks that the Prometheus and Alertmanager pods are running correctly in the monitoring namespace.\n\n```bash\n\nkubectl get pods -n monitoring\n\n```\n\n> Lists all pods in the monitoring namespace to verify their status.",
+        "description": "This step checks if all the components of the kube-prometheus-stack are running correctly.\n\n```bash\n\nkubectl get pods -n monitoring\n\n```\n\n> You should see pods for Prometheus, Alertmanager, and Grafana in the Running state.",
         "commands": [
           "kubectl get pods -n monitoring"
         ]
       },
       {
-        "title": "Access the Prometheus UI",
-        "description": "This command sets up port forwarding to access the Prometheus UI from your local machine.\n\n```bash\n\nkubectl port-forward svc/kube-prometheus-stack-prometheus 9090:9090 -n monitoring\n\necho 'Access Prometheus at http://localhost:9090'\n\n```\n\n> Forwards local port 9090 to the Prometheus service.\n> Informs the user where to access the Prometheus UI.",
+        "title": "Access Grafana Dashboard",
+        "description": "This command retrieves the Grafana admin password and provides instructions to access the Grafana dashboard.\n\n```bash\n\nkubectl get secret --namespace monitoring kube-prometheus-stack-grafana -o jsonpath=\"{.data.admin-password}\" | base64 --decode; echo\n\nkubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80\n\n```\n\n> Use this password to log in to Grafana.\n> Access Grafana at http://localhost:3000.",
         "commands": [
-          "kubectl port-forward svc/kube-prometheus-stack-prometheus 9090:9090 -n monitoring",
-          "echo 'Access Prometheus at http://localhost:9090'"
+          "kubectl get secret --namespace monitoring kube-prometheus-stack-grafana -o jsonpath=\"{.data.admin-password}\" | base64 --decode; echo",
+          "kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80"
         ]
       }
     ],
     "uninstall": [
       {
-        "title": "Uninstall the kube-prometheus-stack",
-        "description": "This command removes the kube-prometheus-stack and all associated resources. Be aware that this will delete all monitoring data.\n\n```bash\n\nhelm uninstall kube-prometheus-stack --namespace monitoring\n\nkubectl delete namespace monitoring\n\n```\n\n> Uninstalls the Helm release.\n> Deletes the monitoring namespace and all resources within it.",
+        "title": "Uninstall kube-prometheus-stack",
+        "description": "This command removes the kube-prometheus-stack and all associated resources. Be aware that this will delete all monitoring data.\n\n```bash\n\nhelm uninstall kube-prometheus-stack --namespace monitoring\n\nkubectl delete namespace monitoring\n\n```\n\n> This will remove the Helm release.\n> This will delete the monitoring namespace and all resources within it.",
         "commands": [
           "helm uninstall kube-prometheus-stack --namespace monitoring",
           "kubectl delete namespace monitoring"
@@ -55,10 +54,10 @@
     ],
     "upgrade": [
       {
-        "title": "Upgrade the kube-prometheus-stack",
-        "description": "Before upgrading, ensure you have a backup of your Prometheus data. This step upgrades the kube-prometheus-stack to the latest version.\n\n```bash\n\nkubectl cp monitoring/kube-prometheus-stack-prometheus-0:/prometheus /path/to/backup\n\nhelm upgrade kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --version 0.77.0\n\nkubectl get pods -n monitoring\n\n```\n\n> Backs up Prometheus data.\n> Upgrades the kube-prometheus-stack to the specified version.\n> Verifies that all pods are running after the upgrade.",
+        "title": "Upgrade kube-prometheus-stack",
+        "description": "Before upgrading, ensure you have a backup of your Prometheus data. This step will upgrade the kube-prometheus-stack to a newer version.\n\n```bash\n\nkubectl cp <prometheus-pod-name>:/prometheus /tmp/prometheus-backup\n\nhelm upgrade kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --version 0.77.0\n\nkubectl get pods -n monitoring\n\n```\n\n> Backup Prometheus data.\n> Replace '0.77.0' with the desired version.\n> Verify that all pods are running after the upgrade.",
         "commands": [
-          "kubectl cp monitoring/kube-prometheus-stack-prometheus-0:/prometheus /path/to/backup",
+          "kubectl cp <prometheus-pod-name>:/prometheus /tmp/prometheus-backup",
           "helm upgrade kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --version 0.77.0",
           "kubectl get pods -n monitoring"
         ]
@@ -67,39 +66,38 @@
     "troubleshooting": [
       {
         "title": "Error: 'Error: unable to recognize \"\": no matches for kind \"Prometheus\" in version \"monitoring.coreos.com/v1\"'",
-        "description": "**Cause:** This error indicates that the Custom Resource Definitions (CRDs) for Prometheus are not installed.\n\n**Fix:**\nRun 'kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml' to install the CRDs."
+        "description": "**Cause:** This indicates that the Prometheus CRD is not installed or not recognized.\n\n**Fix:**\nEnsure that the Prometheus Operator is installed correctly and the CRDs are applied."
       },
       {
-        "title": "Error: 'Error: unable to connect to the server: dial tcp 127.0.0.1:8080: connect: connection refused'",
-        "description": "**Cause:** This indicates that the Kubernetes API server is not reachable, possibly due to incorrect kubeconfig settings.\n\n**Fix:**\nCheck your kubeconfig file and ensure you are connected to the correct cluster."
+        "title": "Grafana dashboard shows 'Data source not found'",
+        "description": "**Cause:** This usually means that the Prometheus data source is not configured correctly.\n\n**Fix:**\nCheck the Grafana data source settings and ensure that the Prometheus service is reachable."
       },
       {
-        "title": "Prometheus UI shows 'No data found'",
-        "description": "**Cause:** This can occur if Prometheus is not scraping any targets due to misconfiguration.\n\n**Fix:**\nVerify the service monitors and scrape configurations in your Prometheus custom resource."
+        "title": "Prometheus pod is in CrashLoopBackOff state",
+        "description": "**Cause:** This can happen due to misconfiguration or resource limits being exceeded.\n\n**Fix:**\nCheck the logs of the Prometheus pod using 'kubectl logs <prometheus-pod-name> -n monitoring' for more details."
       },
       {
         "title": "Alertmanager is not sending alerts",
-        "description": "**Cause:** This may happen if Alertmanager configuration is incorrect or if it cannot reach the notification endpoint.\n\n**Fix:**\nCheck the Alertmanager configuration and ensure that the notification channels are correctly set up."
+        "description": "**Cause:** This may occur if the Alertmanager configuration is incorrect or if there are no active alerts.\n\n**Fix:**\nReview the Alertmanager configuration and ensure that alerts are defined and firing."
       }
     ],
     "versionNotes": [
       {
         "version": "v0.77",
-        "changes": "Added support for custom alerting rules and improved Grafana dashboards.",
-        "deprecations": "Deprecated the use of legacy service monitors.",
-        "migrationSteps": "If upgrading from v0.76, review the new alerting rules format in the documentation."
+        "changes": "Added support for new alerting rules and improved Grafana dashboards.",
+        "deprecations": "Deprecated the use of legacy alerting rules.",
+        "migrationSteps": "If upgrading from v0.76, review the new alerting rules documentation for changes."
       }
     ],
     "resolution": {
-      "summary": "You should see the Prometheus UI with metrics being collected and displayed correctly, and the command 'kubectl get pods -n monitoring' should show all pods in the 'Running' state.",
+      "summary": "You should see all Prometheus, Alertmanager, and Grafana pods in the Running state when you execute 'kubectl get pods -n monitoring'.",
       "codeSnippets": [
         "helm repo add prometheus-community https://prometheus-community.github.io/helm-charts",
         "helm repo update",
-        "kubectl create namespace monitoring",
-        "helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --version 0.77.0",
+        "helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace --version 0.77.0",
         "kubectl get pods -n monitoring",
-        "kubectl port-forward svc/kube-prometheus-stack-prometheus 9090:9090 -n monitoring",
-        "echo 'Access Prometheus at http://localhost:9090'"
+        "kubectl get secret --namespace monitoring kube-prometheus-stack-grafana -o jsonpath=\"{.data.admin-password}\" | base64 --decode; echo",
+        "kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80"
       ]
     }
   },
@@ -143,9 +141,9 @@
       "helm"
     ],
     "containerImages": [
-      "docker.io/prom/prometheus:v2.36.0",
-      "docker.io/prom/alertmanager:v0.24.0",
-      "docker.io/grafana/grafana:v8.5.0"
+      "docker.io/prometheus/prometheus:v2.36.0",
+      "docker.io/prometheus/alertmanager:v0.24.0",
+      "grafana/grafana:8.5.0"
     ],
     "sourceUrls": {
       "docs": "https://prometheus-operator.dev/",
@@ -160,10 +158,10 @@
       "helm 3.x"
     ],
     "resources": "Minimum 2 vCPU, 4GB RAM per node",
-    "description": "Ensure you have a Kubernetes cluster running with sufficient resources and the required tools installed."
+    "description": "Ensure you have a running Kubernetes cluster and the necessary tools installed."
   },
   "security": {
-    "scannedAt": "2026-06-05T07:24:06.172Z",
+    "scannedAt": "2026-06-19T07:47:03.717Z",
     "scannerVersion": "platform-install-gen-2.0.0",
     "sanitized": true,
     "findings": []
