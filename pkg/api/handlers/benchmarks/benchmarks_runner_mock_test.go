@@ -3,7 +3,9 @@ package benchmarks
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -39,6 +41,16 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
+}
+
+type errReadCloser struct{}
+
+func (errReadCloser) Read([]byte) (int, error) {
+	return 0, errors.New("read error")
+}
+
+func (errReadCloser) Close() error {
+	return nil
 }
 
 // validBenchmarkYAML returns a minimal v1 YAML report that can be parsed.
@@ -511,4 +523,210 @@ func TestDownloadAndParseReport_WithMockServer(t *testing.T) {
 		_, err := h.downloadAndParseReport(ctx, file, "exp1", "run1")
 		require.Error(t, err)
 	})
+}
+
+func TestDriveGet_ThrottleAndRequestError(t *testing.T) {
+	t.Run("returns throttle cancellation error", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: srv.Client(), lastReq: time.Now()}
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() {
+			time.Sleep(10 * time.Millisecond)
+			cancel()
+		}()
+
+		_, err := h.driveGet(ctx, srv.URL)
+		require.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("returns request construction error for invalid URL", func(t *testing.T) {
+		h := &BenchmarkHandlers{client: &http.Client{}}
+		_, err := h.driveGet(context.Background(), ":bad-url")
+		require.Error(t, err)
+	})
+}
+
+func TestDriveGetWithRetry_BodyReadFailureFallback(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	calls := 0
+	h := &BenchmarkHandlers{
+		client: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				calls++
+				if calls == 1 {
+					cancel()
+				}
+				return &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Body:       errReadCloser{},
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			}),
+		},
+	}
+
+	_, err := h.driveGetWithRetry(ctx, "https://example.com")
+	require.Error(t, err)
+	require.ErrorIs(t, err, context.Canceled)
+}
+
+func TestFetchAllReports_ErrorBranches(t *testing.T) {
+	t.Run("skips experiment when listing run folders fails", func(t *testing.T) {
+		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case strings.Contains(r.URL.RawQuery, "'top'+in+parents"):
+				_ = json.NewEncoder(w).Encode(driveFileList{
+					Files: []driveFile{{ID: "exp-1", Name: "exp-1", MimeType: driveFolderMIME, CreatedTime: time.Now().UTC().Format(time.RFC3339)}},
+				})
+			case strings.Contains(r.URL.RawQuery, "'exp-1'+in+parents"):
+				http.Error(w, "boom", http.StatusInternalServerError)
+			default:
+				_ = json.NewEncoder(w).Encode(driveFileList{})
+			}
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: client, apiKey: "k", folderID: "top"}
+		reports, failures, err := h.fetchAllReports(context.Background(), time.Time{})
+		require.NoError(t, err)
+		require.Empty(t, reports)
+		require.Zero(t, failures)
+	})
+
+	t.Run("skips run when fetchRunFolder fails", func(t *testing.T) {
+		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case strings.Contains(r.URL.RawQuery, "'top'+in+parents"):
+				_ = json.NewEncoder(w).Encode(driveFileList{
+					Files: []driveFile{{ID: "exp-1", Name: "exp-1", MimeType: driveFolderMIME, CreatedTime: time.Now().UTC().Format(time.RFC3339)}},
+				})
+			case strings.Contains(r.URL.RawQuery, "'exp-1'+in+parents"):
+				_ = json.NewEncoder(w).Encode(driveFileList{
+					Files: []driveFile{{ID: "run-1", Name: "run-1", MimeType: driveFolderMIME, CreatedTime: time.Now().UTC().Format(time.RFC3339)}},
+				})
+			case strings.Contains(r.URL.RawQuery, "'run-1'+in+parents"):
+				http.Error(w, "boom", http.StatusInternalServerError)
+			default:
+				_ = json.NewEncoder(w).Encode(driveFileList{})
+			}
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: client, apiKey: "k", folderID: "top"}
+		reports, failures, err := h.fetchAllReports(context.Background(), time.Time{})
+		require.NoError(t, err)
+		require.Empty(t, reports)
+		require.Zero(t, failures)
+	})
+}
+
+func TestFetchRunFolder_ResultsFallbackBranches(t *testing.T) {
+	t.Run("continues when results folder listing fails", func(t *testing.T) {
+		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case strings.Contains(r.URL.RawQuery, "'run'+in+parents"):
+				_ = json.NewEncoder(w).Encode(driveFileList{
+					Files: []driveFile{{ID: "results", Name: "results", MimeType: driveFolderMIME}},
+				})
+			case strings.Contains(r.URL.RawQuery, "'results'+in+parents"):
+				http.Error(w, "nope", http.StatusInternalServerError)
+			default:
+				_ = json.NewEncoder(w).Encode(driveFileList{})
+			}
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: client, apiKey: "k"}
+		reports, failures, err := h.fetchRunFolder(context.Background(), "run", "exp", "run")
+		require.NoError(t, err)
+		require.Empty(t, reports)
+		require.Zero(t, failures)
+	})
+
+	t.Run("skips non-folder entries and collect errors under results", func(t *testing.T) {
+		srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case strings.Contains(r.URL.RawQuery, "'run'+in+parents"):
+				_ = json.NewEncoder(w).Encode(driveFileList{
+					Files: []driveFile{{ID: "results", Name: "results", MimeType: driveFolderMIME}},
+				})
+			case strings.Contains(r.URL.RawQuery, "'results'+in+parents"):
+				_ = json.NewEncoder(w).Encode(driveFileList{
+					Files: []driveFile{
+						{ID: "not-folder", Name: "readme.txt", MimeType: "text/plain"},
+						{ID: "result-1", Name: "result-1", MimeType: driveFolderMIME},
+					},
+				})
+			case strings.Contains(r.URL.RawQuery, "'result-1'+in+parents"):
+				http.Error(w, "broken result folder", http.StatusInternalServerError)
+			default:
+				_ = json.NewEncoder(w).Encode(driveFileList{})
+			}
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: client, apiKey: "k"}
+		reports, failures, err := h.fetchRunFolder(context.Background(), "run", "exp", "run")
+		require.NoError(t, err)
+		require.Empty(t, reports)
+		require.Zero(t, failures)
+	})
+}
+
+func TestListDriveFolder_DecodeError(t *testing.T) {
+	srv, client := newMockDriveServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, "{not-json")
+	}))
+	defer srv.Close()
+
+	h := &BenchmarkHandlers{client: client, apiKey: "k"}
+	_, err := h.listDriveFolder(context.Background(), "folder")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "decoding response")
+}
+
+func TestDownloadDriveFile_ReadErrors(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		wantErrSub string
+	}{
+		{
+			name:       "handles body read error in non-200 response",
+			statusCode: http.StatusInternalServerError,
+			wantErrSub: "(failed to read response body)",
+		},
+		{
+			name:       "returns read error for successful response body",
+			statusCode: http.StatusOK,
+			wantErrSub: "read error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &BenchmarkHandlers{
+				client: &http.Client{
+					Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+						return &http.Response{
+							StatusCode: tt.statusCode,
+							Body:       errReadCloser{},
+							Header:     make(http.Header),
+							Request:    req,
+						}, nil
+					}),
+				},
+			}
+
+			_, err := h.downloadDriveFile(context.Background(), "file")
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.wantErrSub)
+		})
+	}
 }
