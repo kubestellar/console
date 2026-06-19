@@ -102,7 +102,7 @@ func TestBroadcastToClients_RemovesDeadClients(t *testing.T) {
 	defer cleanup()
 
 	// Close client 0's underlying TCP connection to simulate a dead peer.
-	if clients[0] != nil {
+	if len(clients) > 0 && clients[0] != nil {
 		if uc := clients[0].UnderlyingConn(); uc != nil {
 			uc.Close()
 		}

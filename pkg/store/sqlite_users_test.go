@@ -217,6 +217,7 @@ func TestSQLiteStore_UpdateUserRole(t *testing.T) {
 
 	got, err := s.GetUser(ctx, user.ID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	assert.Equal(t, models.UserRoleAdmin, got.Role)
 }
 

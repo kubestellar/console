@@ -426,6 +426,9 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (j
 		}
 		return nil, fmt.Errorf("context done")
 	case resp := <-respCh:
+		if resp == nil {
+			return nil, fmt.Errorf("nil response from channel")
+		}
 		if resp.Error != nil {
 			return nil, fmt.Errorf("RPC error %d: %s", resp.Error.Code, resp.Error.Message)
 		}

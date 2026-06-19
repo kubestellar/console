@@ -372,7 +372,7 @@ func (t *DeviceTracker) checkForDrop(key, nodeName, cluster, deviceType string, 
 	}
 
 	now := time.Now()
-	if existing, ok := t.alerts[alertKey]; ok {
+	if existing, ok := t.alerts[alertKey]; ok && existing != nil {
 		existing.CurrentCount = currentCount
 		existing.DroppedCount = dropped
 		existing.LastSeen = now
@@ -417,7 +417,7 @@ func (t *DeviceTracker) checkForBoolDrop(key, nodeName, cluster, deviceType stri
 		severity = "critical" // Driver issues are critical
 	}
 
-	if existing, ok := t.alerts[alertKey]; ok {
+	if existing, ok := t.alerts[alertKey]; ok && existing != nil {
 		existing.LastSeen = now
 		existing.Severity = severity
 		return existing

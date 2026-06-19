@@ -37,6 +37,10 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 	isInCluster := inClusterConfig != nil && (contextName == "in-cluster" || contextName == inClusterName)
 	if isInCluster {
 		config = rest.CopyConfig(inClusterConfig)
+		// Guard against nil return from rest.CopyConfig (#19194).
+		if config == nil {
+			return nil, fmt.Errorf("failed to copy in-cluster config for context %s", contextName)
+		}
 	} else {
 		config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 			&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
@@ -127,6 +131,10 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 		isInCluster := inClusterConfig != nil && (contextName == "in-cluster" || contextName == inClusterName)
 		if isInCluster {
 			config = rest.CopyConfig(inClusterConfig)
+			// Guard against nil return from rest.CopyConfig (#19194).
+			if config == nil {
+				return nil, fmt.Errorf("failed to copy in-cluster config for context %s", contextName)
+			}
 		} else {
 			config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 				&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},

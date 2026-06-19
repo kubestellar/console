@@ -158,6 +158,9 @@ func writeStatusResponse(w http.ResponseWriter, code int, path string) {
 }
 
 func mergeMaps(dst, patch map[string]interface{}) {
+	if dst == nil || patch == nil {
+		return
+	}
 	for key, value := range patch {
 		patchMap, patchIsMap := value.(map[string]interface{})
 		dstMap, dstIsMap := dst[key].(map[string]interface{})

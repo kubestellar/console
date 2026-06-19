@@ -285,6 +285,9 @@ func verifyResourceHealth(ctx context.Context, k8sClient *k8s.MultiClusterClient
 	if err != nil {
 		return false, fmt.Sprintf("deployment read error: %s", err.Error())
 	}
+	if deploy == nil {
+		return false, "deployment read returned nil"
+	}
 	if deploy.Status.ReadyReplicas > 0 && deploy.Status.ReadyReplicas == deploy.Status.Replicas {
 		return true, fmt.Sprintf("%d/%d replicas ready.", deploy.Status.ReadyReplicas, deploy.Status.Replicas)
 	}

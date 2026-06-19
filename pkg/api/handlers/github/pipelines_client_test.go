@@ -29,6 +29,7 @@ func TestGHGet_BuildsCorrectURL(t *testing.T) {
 
 	resp, err := handler.ghGet(context.Background(), "/repos/test/repo/actions/runs")
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
@@ -49,6 +50,7 @@ func TestGHGet_HandlesFullURL(t *testing.T) {
 
 	resp, err := handler.ghGet(context.Background(), "https://api.github.com/repos/test/repo")
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
@@ -68,9 +70,7 @@ func TestGHGetWithRetry_SuccessFirstAttempt(t *testing.T) {
 
 	resp, err := handler.ghGetWithRetry(context.Background(), "/test")
 	require.NoError(t, err)
-	if resp == nil {
-		t.Fatal("expected non-nil response")
-	}
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
@@ -99,6 +99,7 @@ func TestGHGetWithRetry_RateLimitRetry(t *testing.T) {
 
 	resp, err := handler.ghGetWithRetry(context.Background(), "/test")
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, 2, attemptCount, "should retry after rate limit")
 }
@@ -121,6 +122,7 @@ func TestGHGetWithRetry_MaxAttemptsExceeded(t *testing.T) {
 
 	resp, err := handler.ghGetWithRetry(context.Background(), "/test")
 	require.NoError(t, err) // Function returns the response, not an error
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	// Should have attempted the maximum number of times
 	assert.True(t, attemptCount >= 1, "should make at least one attempt")
@@ -156,6 +158,7 @@ func TestGHGetWithRetry_RespectsRetryAfterHeader(t *testing.T) {
 	elapsed := time.Since(start)
 
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	// Should have waited at least 1 second due to Retry-After header
 	assert.True(t, elapsed >= time.Second, "should respect Retry-After header")
