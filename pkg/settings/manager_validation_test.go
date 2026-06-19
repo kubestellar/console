@@ -89,7 +89,7 @@ func TestValidation_SaveAll_EmptySettings(t *testing.T) {
 		t.Fatalf("GetAll failed: %v", err)
 	}
 
-	// SaveAll preserves explicitly empty plaintext values.
+	// Empty string fields should remain empty (not overridden with defaults)
 	if loaded.AIMode != "" {
 		t.Errorf("aiMode = %q, want empty string", loaded.AIMode)
 	}
@@ -106,6 +106,11 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 		name       string
 		thresholds PredictionThresholds
 		wantErr    bool
+		// Expected values after SaveAll + GetAll round-trip
+		wantHighRestartCount  int
+		wantCPUPressure       int
+		wantMemoryPressure    int
+		wantGPUMemoryPressure int
 	}{
 		{
 			name: "valid thresholds",
@@ -115,7 +120,11 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 				MemoryPressure:    85,
 				GPUMemoryPressure: 90,
 			},
-			wantErr: false,
+			wantErr:               false,
+			wantHighRestartCount:  10,
+			wantCPUPressure:       80,
+			wantMemoryPressure:    85,
+			wantGPUMemoryPressure: 90,
 		},
 		{
 			name: "zero thresholds get defaults",
@@ -125,7 +134,11 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 				MemoryPressure:    0,
 				GPUMemoryPressure: 0,
 			},
-			wantErr: false,
+			wantErr:               false,
+			wantHighRestartCount:  3,  // Default from types.go
+			wantCPUPressure:       80, // Default from types.go
+			wantMemoryPressure:    85, // Default from types.go
+			wantGPUMemoryPressure: 90, // Default from types.go,
 		},
 		{
 			name: "partial thresholds",
@@ -133,7 +146,11 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 				HighRestartCount: 15,
 				CPUPressure:      0, // Should get default
 			},
-			wantErr: false,
+			wantErr:               false,
+			wantHighRestartCount:  15,
+			wantCPUPressure:       80, // Default from types.go
+			wantMemoryPressure:    85, // Default from types.go
+			wantGPUMemoryPressure: 90, // Default from types.go,
 		},
 	}
 
@@ -153,9 +170,18 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// SaveAll persists the provided threshold struct as-is.
-				if loaded.Predictions.Thresholds != tc.thresholds {
-					t.Errorf("thresholds = %+v, want %+v", loaded.Predictions.Thresholds, tc.thresholds)
+				// Check that loaded values match expected values
+				if loaded.Predictions.Thresholds.HighRestartCount != tc.wantHighRestartCount {
+					t.Errorf("HighRestartCount = %d, want %d", loaded.Predictions.Thresholds.HighRestartCount, tc.wantHighRestartCount)
+				}
+				if loaded.Predictions.Thresholds.CPUPressure != tc.wantCPUPressure {
+					t.Errorf("CPUPressure = %d, want %d", loaded.Predictions.Thresholds.CPUPressure, tc.wantCPUPressure)
+				}
+				if loaded.Predictions.Thresholds.MemoryPressure != tc.wantMemoryPressure {
+					t.Errorf("MemoryPressure = %d, want %d", loaded.Predictions.Thresholds.MemoryPressure, tc.wantMemoryPressure)
+				}
+				if loaded.Predictions.Thresholds.GPUMemoryPressure != tc.wantGPUMemoryPressure {
+					t.Errorf("GPUMemoryPressure = %d, want %d", loaded.Predictions.Thresholds.GPUMemoryPressure, tc.wantGPUMemoryPressure)
 				}
 			}
 		})
@@ -170,6 +196,11 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 		name       string
 		tokenUsage TokenUsageSettings
 		wantErr    bool
+		// Expected values after SaveAll + GetAll round-trip
+		wantLimit             int
+		wantWarningThreshold  float64
+		wantCriticalThreshold float64
+		wantStopThreshold     float64
 	}{
 		{
 			name: "valid token usage",
@@ -179,7 +210,11 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 				CriticalThreshold: 0.85,
 				StopThreshold:     0.95,
 			},
-			wantErr: false,
+			wantErr:               false,
+			wantLimit:             1000000,
+			wantWarningThreshold:  0.7,
+			wantCriticalThreshold: 0.85,
+			wantStopThreshold:     0.95,
 		},
 		{
 			name: "zero values get defaults",
@@ -189,7 +224,11 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 				CriticalThreshold: 0,
 				StopThreshold:     0,
 			},
-			wantErr: false,
+			wantErr:               false,
+			wantLimit:             500000000, // Default from types.go
+			wantWarningThreshold:  0.7,       // Default from types.go
+			wantCriticalThreshold: 0.9,       // Default from types.go
+			wantStopThreshold:     1.0,       // Default from types.go,
 		},
 		{
 			name: "custom limit with default thresholds",
@@ -199,7 +238,11 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 				CriticalThreshold: 0,
 				StopThreshold:     0,
 			},
-			wantErr: false,
+			wantErr:               false,
+			wantLimit:             500000,
+			wantWarningThreshold:  0.7,  // Default from types.go
+			wantCriticalThreshold: 0.9,  // Default from types.go
+			wantStopThreshold:     1.0,  // Default from types.go,
 		},
 	}
 
@@ -219,9 +262,18 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 					t.Fatalf("GetAll failed: %v", err)
 				}
 
-				// SaveAll persists the provided token usage settings as-is.
-				if loaded.TokenUsage != tc.tokenUsage {
-					t.Errorf("tokenUsage = %+v, want %+v", loaded.TokenUsage, tc.tokenUsage)
+				// Check that loaded values match expected values
+				if loaded.TokenUsage.Limit != tc.wantLimit {
+					t.Errorf("Limit = %d, want %d", loaded.TokenUsage.Limit, tc.wantLimit)
+				}
+				if loaded.TokenUsage.WarningThreshold != tc.wantWarningThreshold {
+					t.Errorf("WarningThreshold = %f, want %f", loaded.TokenUsage.WarningThreshold, tc.wantWarningThreshold)
+				}
+				if loaded.TokenUsage.CriticalThreshold != tc.wantCriticalThreshold {
+					t.Errorf("CriticalThreshold = %f, want %f", loaded.TokenUsage.CriticalThreshold, tc.wantCriticalThreshold)
+				}
+				if loaded.TokenUsage.StopThreshold != tc.wantStopThreshold {
+					t.Errorf("StopThreshold = %f, want %f", loaded.TokenUsage.StopThreshold, tc.wantStopThreshold)
 				}
 			}
 		})
