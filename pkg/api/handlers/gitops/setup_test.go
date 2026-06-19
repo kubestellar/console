@@ -64,11 +64,11 @@ func setupTestEnv(t *testing.T) *testEnv {
 	}
 	kubeconfigPath := filepath.Join(tempDir, "kubeconfig")
 	if err := clientcmd.WriteToFile(*rawConfig, kubeconfigPath); err != nil {
-			fatalf := t.Fatalf; fatalf("write test kubeconfig: %v", err)
+		t.Fatalf("write test kubeconfig: %v", err)
 	}
 	k8sClient, err := k8s.NewMultiClusterClient(kubeconfigPath)
 	if err != nil {
-			t.Fatalf("create test k8s client: %v", err)
+		t.Fatalf("create test k8s client: %v", err)
 	}
 	k8sClient.InjectClient("test-cluster", k8sfake.NewSimpleClientset())
 	k8sClient.SetRawConfig(rawConfig)
