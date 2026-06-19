@@ -76,7 +76,7 @@ export function createMissionConnectionApi(
       return Promise.resolve()
     }
 
-    return new Promise<void>(async (resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       state.setAgentsLoading(true)
 
       const timeout = setTimeout(() => {
@@ -93,7 +93,8 @@ export function createMissionConnectionApi(
         reject(new Error('CONNECTION_TIMEOUT'))
       }, WS_CONNECTION_TIMEOUT_MS)
 
-      try {
+      const setup = async () => {
+        try {
         state.connectionEstablished.current = false
         const { url, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
         state.wsRef.current = new WebSocket(url, protocols)
@@ -452,6 +453,12 @@ export function createMissionConnectionApi(
         clearTimeout(timeout)
         reject(error)
       }
+      }
+
+      setup().catch((error: unknown) => {
+        clearTimeout(timeout)
+        reject(error)
+      })
     })
   }
 

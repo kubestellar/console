@@ -46,7 +46,7 @@ vi.mock('../../../lib/dashboards/DashboardPage', () => ({
 let mockPodIssues: any[] = []
 let mockDeploymentIssues: any[] = []
 let mockDeployments: any[] = []
-let mockClusters: any[] = []
+const mockClusters: any[] = []
 let mockIsLoading = false
 let mockIsDemoMode = true
 

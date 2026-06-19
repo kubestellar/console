@@ -157,7 +157,7 @@ export class CacheStore<T> {
     } else {
       try {
         localStorage.setItem(META_PREFIX + this.key, JSON.stringify(meta))
-      } catch {}
+      } catch { /* storage may be full or disabled */ }
     }
   }
 
@@ -271,7 +271,7 @@ export class CacheStore<T> {
       const currentPromise = this.storageLoadPromise
       try {
         await currentPromise
-      } catch {}
+      } catch { /* prior load may have failed; safe to continue */ }
       if (this.storageLoadPromise === currentPromise) {
         this.storageLoadPromise = null
       }
@@ -341,7 +341,7 @@ export class CacheStore<T> {
 
       await this.saveToStorage(finalData)
       if (this.resetVersion !== fetchVersion) {
-        try { sessionStorage.removeItem(SS_PREFIX + this.key) } catch {}
+        try { sessionStorage.removeItem(SS_PREFIX + this.key) } catch { /* storage access may fail */ }
         cacheStorage.delete(this.key).catch(() => {})
         this.fetchingRef = false
         return
@@ -398,7 +398,7 @@ export class CacheStore<T> {
 
   async clear(): Promise<void> {
     await cacheStorage.delete(this.key)
-    try { sessionStorage.removeItem(SS_PREFIX + this.key) } catch {}
+    try { sessionStorage.removeItem(SS_PREFIX + this.key) } catch { /* storage access may fail */ }
     preloadedMetaMap.delete(this.key)
     if (workerRpc) {
       workerRpc.setMeta(this.key, { consecutiveFailures: 0 })

@@ -486,7 +486,7 @@ export function NamespaceManager() {
     if (!isAdmin) return
     if (!selectedNamespace) return
 
-    if (!confirm(`Revoke access for ${binding.subjectName}?`)) {
+    if (!window.confirm(`Revoke access for ${binding.subjectName}?`)) {
       return
     }
 
