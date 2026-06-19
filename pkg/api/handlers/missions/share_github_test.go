@@ -32,7 +32,7 @@ func TestMissions_ShareToGitHub_PayloadTooLarge(t *testing.T) {
 	req := newShareGitHubRequest(t, GitHubShareRequest{
 		Repo:     "kubestellar/console-kb",
 		FilePath: "missions/test.yaml",
-		Content:  strings.Repeat("A", missionsGitHubShareMaxBytes),
+		Content:  strings.Repeat("A", missionsGitHubShareMaxBytes+1),
 		Message:  "add mission",
 		Branch:   "mission-test",
 	}, "ghp_test123")
@@ -147,7 +147,7 @@ func TestMissions_ShareToGitHub_InvalidBranch(t *testing.T) {
 		branch string
 	}{
 		{name: "ref traversal", branch: "refs/heads/../main"},
-		{name: "shell injection", branch: "main;rm-rf"},
+		{name: "shell injection", branch: "main;rm -rf"},
 		{name: "ref starts with dash", branch: "-main"},
 	}
 
