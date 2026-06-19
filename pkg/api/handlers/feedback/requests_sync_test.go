@@ -86,7 +86,8 @@ func TestReopenRequest_Unauthorized(t *testing.T) {
 	handler := NewFeedbackHandler(&feedbackStoreStub{MockStore: &test.MockStore{}}, FeedbackConfig{})
 	app.Post("/api/feedback/requests/:id/reopen", handler.ReopenRequest)
 
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+uuid.New().String()+"/reopen",
+	requestID := uuid.New()
+	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/reopen",
 		strings.NewReader(`{"comment":"still broken"}`))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
@@ -103,7 +104,8 @@ func TestReopenRequest_InvalidBody(t *testing.T) {
 	app, handler := setupFeedbackTest(t, userID, "", nil)
 	app.Post("/api/feedback/requests/:id/reopen", handler.ReopenRequest)
 
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+uuid.New().String()+"/reopen",
+	requestID := uuid.New()
+	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/reopen",
 		strings.NewReader(`not valid json`))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
@@ -120,7 +122,8 @@ func TestReopenRequest_EmptyComment(t *testing.T) {
 	app, handler := setupFeedbackTest(t, userID, "", nil)
 	app.Post("/api/feedback/requests/:id/reopen", handler.ReopenRequest)
 
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+uuid.New().String()+"/reopen",
+	requestID := uuid.New()
+	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/reopen",
 		strings.NewReader(`{"comment":"   "}`))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
@@ -140,8 +143,8 @@ func TestReopenRequest_CommentTooLong(t *testing.T) {
 	app.Post("/api/feedback/requests/:id/reopen", handler.ReopenRequest)
 
 	longComment := strings.Repeat("a", maxVerificationCommentChars+1)
-
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+uuid.New().String()+"/reopen",
+	requestID := uuid.New()
+	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/reopen",
 		strings.NewReader(`{"comment":"`+longComment+`"}`))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
@@ -324,7 +327,8 @@ func TestRequestUpdate_Unauthorized_UUIDPath(t *testing.T) {
 	handler := NewFeedbackHandler(&feedbackStoreStub{MockStore: &test.MockStore{}}, FeedbackConfig{})
 	app.Post("/api/feedback/requests/:id/request-update", handler.RequestUpdate)
 
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+uuid.New().String()+"/request-update", nil)
+	requestID := uuid.New()
+	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/request-update", nil)
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -429,7 +433,8 @@ func TestSubmitFeedback_Unauthorized(t *testing.T) {
 	handler := NewFeedbackHandler(&feedbackStoreStub{MockStore: &test.MockStore{}}, FeedbackConfig{})
 	app.Post("/api/feedback/requests/:id/feedback", handler.SubmitFeedback)
 
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+uuid.New().String()+"/feedback",
+	requestID := uuid.New()
+	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/feedback",
 		strings.NewReader(`{"feedback_type":"positive"}`))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
@@ -463,7 +468,8 @@ func TestSubmitFeedback_InvalidBody(t *testing.T) {
 	app, handler := setupFeedbackTest(t, userID, "", nil)
 	app.Post("/api/feedback/requests/:id/feedback", handler.SubmitFeedback)
 
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+uuid.New().String()+"/feedback",
+	requestID := uuid.New()
+	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/feedback",
 		strings.NewReader(`not json`))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
@@ -480,7 +486,8 @@ func TestSubmitFeedback_InvalidFeedbackType(t *testing.T) {
 	app, handler := setupFeedbackTest(t, userID, "", nil)
 	app.Post("/api/feedback/requests/:id/feedback", handler.SubmitFeedback)
 
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+uuid.New().String()+"/feedback",
+	requestID := uuid.New()
+	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/feedback",
 		strings.NewReader(`{"feedback_type":"unknown"}`))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
