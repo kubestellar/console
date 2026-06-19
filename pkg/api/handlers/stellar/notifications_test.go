@@ -109,9 +109,10 @@ func Test_describeNotificationStateChange(t *testing.T) {
 }
 
 func Test_deriveNotificationWorkload(t *testing.T) {
-	// Production DedupeKey formats:
-	//   with ev prefix:    "ev:cluster:namespace:name[:reason]"  (≥4 parts)
-	//   without ev prefix: "cluster:namespace:name[:reason]"     (≥3 parts)
+	// Production DedupeKey formats (minimum required parts in parentheses):
+	//   with ev prefix:    "ev:cluster:namespace:name[:reason]"  (4+ parts)
+	//   without ev prefix: "cluster:namespace:name[:reason]"     (3+ parts)
+	// Keys with fewer parts always return "".
 	tests := []struct {
 		name       string
 		dedupeKey  string
@@ -177,9 +178,9 @@ func Test_deriveNotificationWorkload(t *testing.T) {
 }
 
 func Test_deriveStellarNotificationResource(t *testing.T) {
-	// Production DedupeKey formats:
-	//   with ev prefix:    "ev:cluster:namespace:name[:reason]"  — parts[2]=namespace, parts[3]=name
-	//   without ev prefix: "cluster:namespace:name[:reason]"     — parts[1]=namespace, parts[2]=name
+	// Same DedupeKey format as Test_deriveNotificationWorkload — parts[2] and
+	// parts[3] hold namespace and name for ev-prefixed keys; parts[1] and
+	// parts[2] hold them for non-prefixed keys.
 	tests := []struct {
 		name         string
 		dedupeKey    string
