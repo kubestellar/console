@@ -428,10 +428,10 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
       return data
     } catch (err: unknown) {
       if (err instanceof RateLimitError) {
-        throw new Error('Too many requests — please wait a moment and try again.')
+        throw new Error('Too many requests — please wait a moment and try again.', { cause: err })
       }
       if (err instanceof Error && isFeedbackBodyLimitError(err.message)) {
-        throw new Error(FEEDBACK_ATTACHMENT_LIMIT_ERROR)
+        throw new Error(FEEDBACK_ATTACHMENT_LIMIT_ERROR, { cause: err })
       }
       throw err
     } finally {

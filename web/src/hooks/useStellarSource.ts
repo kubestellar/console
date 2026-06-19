@@ -75,7 +75,7 @@ export function useStellarSource() {
     try {
       const persisted = localStorage.getItem('kc_selected_agent')
       if (persisted && persisted !== 'none') return { provider: persisted, model: '', source: 'user-default' as const, isCli: true }
-    } catch {}
+    } catch { /* localStorage may be unavailable */ }
     return null
   })
   const [solves, setSolves] = useState<StellarSolve[]>([])
@@ -439,7 +439,7 @@ export function useStellarSource() {
   const snoozeWatch = useCallback(async (id: string, minutes: number) => {
     try {
       await stellarApi.snoozeWatch(id, minutes)
-    } catch {}
+    } catch { /* snooze is best-effort */ }
   }, [])
   const dismissCatchUp = useCallback(() => setCatchUp(null), [])
   const startSolve = useCallback(async (eventID: string) => {

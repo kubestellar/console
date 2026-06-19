@@ -47,7 +47,7 @@ export default function AlertsDataFetcher({ onData }: Props) {
       isLoading,
       error: errorStr,
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps — onData is stable (useState setter)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gpuNodes, podIssues, clusters, isGPULoading, isPodIssuesLoading, isClustersLoading, gpuError, podIssuesError, clustersError])
 
   return null

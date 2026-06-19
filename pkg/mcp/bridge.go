@@ -13,11 +13,21 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 )
 
+// bridgeClient is the interface that MCP clients must satisfy for use in Bridge.
+// It is defined here (not in client.go) to keep Bridge testable: tests inject
+// mock implementations without spinning up real stdio processes.
+type bridgeClient interface {
+	CallTool(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error)
+	Tools() []Tool
+	Stop() error
+	IsReady() bool
+}
+
 // Bridge manages MCP client connections and provides a unified interface
 type Bridge struct {
-	opsClient    *Client
-	deployClient *Client
-	gadgetClient *Client
+	opsClient    bridgeClient
+	deployClient bridgeClient
+	gadgetClient bridgeClient
 	mu           sync.RWMutex
 	config       BridgeConfig
 }
@@ -488,8 +498,6 @@ func (b *Bridge) CallDeployTool(ctx context.Context, name string, args map[strin
 
 	return client.CallTool(ctx, name, args)
 }
-
-
 
 // Status returns the current status of the MCP bridge
 func (b *Bridge) Status() map[string]interface{} {
