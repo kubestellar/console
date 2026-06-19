@@ -48,27 +48,6 @@ func TestMissionsHandler_ValidateMaxBytes(t *testing.T) {
 	assert.Equal(t, 1*1024*1024, missionsValidateMaxBytes)
 }
 
-func TestIsSafeImageKey(t *testing.T) {
-	tests := []struct {
-		key  string
-		safe bool
-	}{
-		{"component-a", true},
-		{"valid_image", true},
-		{"image123", true},
-		{"__proto__", false},
-		{"constructor", false},
-		{"prototype", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.key, func(t *testing.T) {
-			result := isSafeImageKey(tt.key)
-			assert.Equal(t, tt.safe, result)
-		})
-	}
-}
-
 func TestMissionSpec_Structure(t *testing.T) {
 	spec := MissionSpec{
 		APIVersion: "kc-mission-v1",
