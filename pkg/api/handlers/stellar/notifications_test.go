@@ -1,136 +1,518 @@
 package stellar
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"net/http"
+	"path/filepath"
 	"testing"
-	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
 
-func Test_describeNotificationStateChange(t *testing.T) {
-	tests := []struct {
-		name       string
-		status     string
-		note       string
-		wantTitle  string
-		wantDetail string
-		wantKind   string
-	}{
-		{
-			name:       "investigating with note",
-			status:     stellarNotificationStatusInvestigating,
-			note:       "pulling logs",
-			wantTitle:  "Event marked investigating",
-			wantDetail: "pulling logs",
-			wantKind:   "manual_investigating",
-		},
-		{
-			name:       "investigating without note",
-			status:     stellarNotificationStatusInvestigating,
-			note:       "",
-			wantTitle:  "Event marked investigating",
-			wantDetail: "Operator opened investigation from the escalated event modal.",
-			wantKind:   "manual_investigating",
-		},
-		{
-			name:       "resolved with note",
-			status:     stellarNotificationStatusResolved,
-			note:       "restarted deployment",
-			wantTitle:  "Event resolved manually",
-			wantDetail: "restarted deployment",
-			wantKind:   "manual_resolved",
-		},
-		{
-			name:       "resolved without note",
-			status:     stellarNotificationStatusResolved,
-			note:       "",
-			wantTitle:  "Event resolved manually",
-			wantDetail: "Operator resolved the escalated event from the modal.",
-			wantKind:   "manual_resolved",
-		},
-		{
-			name:       "dismissed with note",
-			status:     stellarNotificationStatusDismissed,
-			note:       "duplicate event",
-			wantTitle:  "Event removed from escalated list",
-			wantDetail: "duplicate event",
-			wantKind:   "manual_dismissed",
-		},
-		{
-			name:       "dismissed without note",
-			status:     stellarNotificationStatusDismissed,
-			note:       "",
-			wantTitle:  "Event removed from escalated list",
-			wantDetail: "Operator dismissed the escalated event from the modal.",
-			wantKind:   "manual_dismissed",
-		},
-		{
-			name:       "unknown status",
-			status:     "unknown",
-			note:       "custom note",
-			wantTitle:  "Event updated",
-			wantDetail: "custom note",
-			wantKind:   "manual_updated",
-		},
-	}
+const stellarNotificationTestTimeoutMs = 5000
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			notification := &store.StellarNotification{
-				Status: tt.status,
-			}
+// Test helper to create app with notification routes
+func newNotificationTestApp(t *testing.T) (*fiber.App, *store.SQLiteStore, string) {
+	t.Helper()
 
-			title, detail, kind := describeNotificationStateChange(notification, tt.note)
+	dbPath := filepath.Join(t.TempDir(), "stellar-notifications-test.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = sqlStore.Close()
+	})
 
-			assert.Equal(t, tt.wantTitle, title)
-			assert.Equal(t, tt.wantDetail, detail)
-			assert.Equal(t, tt.wantKind, kind)
-		})
-	}
+	userID := uuid.New()
+	require.NoError(t, sqlStore.CreateUser(context.Background(), &models.User{
+		ID:          userID,
+		GitHubLogin: "notification-test-user",
+		Role:        models.UserRoleEditor,
+	}))
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+
+	handler := NewHandler(sqlStore, nil)
+	app.Get("/api/stellar/notifications", handler.ListNotifications)
+	app.Post("/api/stellar/notifications/:id/read", handler.MarkNotificationRead)
+	app.Post("/api/stellar/notifications/:id/investigating", handler.MarkNotificationInvestigating)
+	app.Post("/api/stellar/notifications/:id/resolve", handler.ResolveNotification)
+	app.Post("/api/stellar/notifications/:id/dismiss", handler.DismissNotification)
+
+	return app, sqlStore, userID.String()
 }
 
-func Test_deriveNotificationWorkload(t *testing.T) {
+func TestListNotifications_EmptyResult(t *testing.T) {
+	app, _, _ := newNotificationTestApp(t)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/notifications", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var payload map[string]any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	items, ok := payload["items"].([]any)
+	require.True(t, ok)
+	assert.Len(t, items, 0)
+}
+
+func TestListNotifications_ReturnsCreatedNotifications(t *testing.T) {
+	app, sqlStore, userID := newNotificationTestApp(t)
+	ctx := context.Background()
+
+	// Create two notifications
+	n1 := &store.StellarNotification{
+		UserID:   userID,
+		Type:     "event",
+		Severity: "warning",
+		Title:    "Pod CrashLooping",
+		Body:     "Pod web-1 is crash looping",
+		Cluster:  "cluster-a",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, n1))
+
+	n2 := &store.StellarNotification{
+		UserID:   userID,
+		Type:     "event",
+		Severity: "critical",
+		Title:    "Node Down",
+		Body:     "Node node-1 is unreachable",
+		Cluster:  "cluster-b",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, n2))
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/notifications", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var payload map[string]any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	items, ok := payload["items"].([]any)
+	require.True(t, ok)
+	assert.Len(t, items, 2)
+}
+
+func TestListNotifications_UnreadOnlyFilter(t *testing.T) {
+	app, sqlStore, userID := newNotificationTestApp(t)
+	ctx := context.Background()
+
+	// Create two notifications
+	n1 := &store.StellarNotification{
+		UserID:   userID,
+		Type:     "event",
+		Severity: "warning",
+		Title:    "Unread Event",
+		Body:     "This notification is unread",
+		Cluster:  "cluster-a",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, n1))
+
+	n2 := &store.StellarNotification{
+		UserID:   userID,
+		Type:     "event",
+		Severity: "info",
+		Title:    "Read Event",
+		Body:     "This notification will be marked read",
+		Cluster:  "cluster-b",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, n2))
+
+	// Mark n2 as read
+	require.NoError(t, sqlStore.MarkStellarNotificationRead(ctx, userID, n2.ID))
+
+	// Query for unread only
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/notifications?unread=true", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var payload map[string]any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	items, ok := payload["items"].([]any)
+	require.True(t, ok)
+	require.Len(t, items, 1)
+	item0 := items[0].(map[string]any)
+	assert.Equal(t, "Unread Event", item0["title"])
+}
+
+func TestMarkNotificationRead_Success(t *testing.T) {
+	app, sqlStore, userID := newNotificationTestApp(t)
+	ctx := context.Background()
+
+	n := &store.StellarNotification{
+		UserID:   userID,
+		Type:     "event",
+		Severity: "warning",
+		Title:    "Test Notification",
+		Body:     "Test body",
+		Cluster:  "cluster-a",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, n))
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/read", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+
+	// Verify notification was marked read
+	updated, err := sqlStore.GetStellarNotification(ctx, userID, n.ID)
+	require.NoError(t, err)
+	require.NotNil(t, updated)
+	assert.True(t, updated.Read)
+	assert.NotNil(t, updated.ReadAt)
+}
+
+func TestMarkNotificationRead_MissingID(t *testing.T) {
+	app, _, _ := newNotificationTestApp(t)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/ /read", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var payload map[string]any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	assert.Contains(t, payload["error"], "id is required")
+}
+
+func TestMarkNotificationInvestigating_Success(t *testing.T) {
+	app, sqlStore, userID := newNotificationTestApp(t)
+	ctx := context.Background()
+
+	n := &store.StellarNotification{
+		UserID:    userID,
+		Type:      "event",
+		Severity:  "warning",
+		Title:     "Pod Issue",
+		Body:      "Pod has failed",
+		Cluster:   "cluster-a",
+		Namespace: "default",
+		DedupeKey: "ev:cluster-a:pod:web-1",
+		Status:    "escalated",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, n))
+
+	body := map[string]string{
+		"investigationSummary": "Checking pod logs and events",
+	}
+	bodyBytes, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/investigating", bytes.NewReader(bodyBytes))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var updated store.StellarNotification
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&updated))
+	assert.Equal(t, "investigating", updated.Status)
+	assert.Equal(t, "Checking pod logs and events", updated.InvestigationSummary)
+	assert.False(t, updated.Read)
+}
+
+func TestMarkNotificationInvestigating_InvalidJSON(t *testing.T) {
+	app, _, _ := newNotificationTestApp(t)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/some-id/investigating", bytes.NewReader([]byte("invalid-json")))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestResolveNotification_Success(t *testing.T) {
+	app, sqlStore, userID := newNotificationTestApp(t)
+	ctx := context.Background()
+
+	n := &store.StellarNotification{
+		UserID:    userID,
+		Type:      "event",
+		Severity:  "warning",
+		Title:     "Pod Issue",
+		Body:      "Pod has failed",
+		Cluster:   "cluster-a",
+		Namespace: "default",
+		DedupeKey: "ev:cluster-a:pod:web-1",
+		Status:    "investigating",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, n))
+
+	body := map[string]string{
+		"resolutionNote": "Increased memory limits and restarted pod",
+	}
+	bodyBytes, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/resolve", bytes.NewReader(bodyBytes))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var updated store.StellarNotification
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&updated))
+	assert.Equal(t, "resolved", updated.Status)
+	assert.Equal(t, "Increased memory limits and restarted pod", updated.ResolutionNote)
+	assert.True(t, updated.Read)
+	assert.NotNil(t, updated.ReadAt)
+}
+
+func TestDismissNotification_Success(t *testing.T) {
+	app, sqlStore, userID := newNotificationTestApp(t)
+	ctx := context.Background()
+
+	n := &store.StellarNotification{
+		UserID:    userID,
+		Type:      "event",
+		Severity:  "warning",
+		Title:     "Pod Issue",
+		Body:      "Pod has failed",
+		Cluster:   "cluster-a",
+		Namespace: "default",
+		DedupeKey: "ev:cluster-a:pod:web-1",
+		Status:    "escalated",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, n))
+
+	body := map[string]string{
+		"dismissalReason": "False positive - expected behavior",
+	}
+	bodyBytes, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/dismiss", bytes.NewReader(bodyBytes))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var updated store.StellarNotification
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&updated))
+	assert.Equal(t, "dismissed", updated.Status)
+	assert.Equal(t, "False positive - expected behavior", updated.DismissalReason)
+	assert.True(t, updated.Read)
+	assert.NotNil(t, updated.ReadAt)
+}
+
+func TestUpdateNotificationState_NotificationNotFound(t *testing.T) {
+	app, _, _ := newNotificationTestApp(t)
+
+	body := map[string]string{
+		"resolutionNote": "Some note",
+	}
+	bodyBytes, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/nonexistent-id/resolve", bytes.NewReader(bodyBytes))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	var payload map[string]any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	assert.Contains(t, payload["error"], "notification not found")
+}
+
+func TestUpdateNotificationState_FillsAffectedResource(t *testing.T) {
+	app, sqlStore, userID := newNotificationTestApp(t)
+	ctx := context.Background()
+
+	// Notification with DedupeKey but no AffectedResource
+	n := &store.StellarNotification{
+		UserID:    userID,
+		Type:      "event",
+		Severity:  "warning",
+		Title:     "Pod Issue",
+		Body:      "Pod has failed",
+		Cluster:   "cluster-a",
+		Namespace: "default",
+		DedupeKey: "ev:cluster-a:Deployment:web-app",
+		Status:    "escalated",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, n))
+
+	body := map[string]string{
+		"resolutionNote": "Fixed",
+	}
+	bodyBytes, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/resolve", bytes.NewReader(bodyBytes))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var updated store.StellarNotification
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&updated))
+	assert.Equal(t, "Deployment/web-app", updated.AffectedResource)
+}
+
+func TestDescribeNotificationStateChange_Investigating(t *testing.T) {
+	notification := &store.StellarNotification{
+		Status: "investigating",
+	}
+
+	title, detail, kind := describeNotificationStateChange(notification, "Looking into the logs")
+
+	assert.Equal(t, "manual_investigating", kind)
+	assert.Equal(t, "Event marked investigating", title)
+	assert.Equal(t, "Looking into the logs", detail)
+}
+
+func TestDescribeNotificationStateChange_InvestigatingNoNote(t *testing.T) {
+	notification := &store.StellarNotification{
+		Status: "investigating",
+	}
+
+	_, detail, kind := describeNotificationStateChange(notification, "")
+
+	assert.Equal(t, "manual_investigating", kind)
+	assert.Equal(t, "Operator opened investigation from the escalated event modal.", detail)
+}
+
+func TestDescribeNotificationStateChange_Resolved(t *testing.T) {
+	notification := &store.StellarNotification{
+		Status: "resolved",
+	}
+
+	title, detail, kind := describeNotificationStateChange(notification, "Applied fix")
+
+	assert.Equal(t, "manual_resolved", kind)
+	assert.Equal(t, "Event resolved manually", title)
+	assert.Equal(t, "Applied fix", detail)
+}
+
+func TestDescribeNotificationStateChange_ResolvedNoNote(t *testing.T) {
+	notification := &store.StellarNotification{
+		Status: "resolved",
+	}
+
+	_, detail, kind := describeNotificationStateChange(notification, "")
+
+	assert.Equal(t, "manual_resolved", kind)
+	assert.Equal(t, "Operator resolved the escalated event from the modal.", detail)
+}
+
+func TestDescribeNotificationStateChange_Dismissed(t *testing.T) {
+	notification := &store.StellarNotification{
+		Status: "dismissed",
+	}
+
+	title, detail, kind := describeNotificationStateChange(notification, "Not relevant")
+
+	assert.Equal(t, "manual_dismissed", kind)
+	assert.Equal(t, "Event removed from escalated list", title)
+	assert.Equal(t, "Not relevant", detail)
+}
+
+func TestDescribeNotificationStateChange_DismissedNoNote(t *testing.T) {
+	notification := &store.StellarNotification{
+		Status: "dismissed",
+	}
+
+	_, detail, kind := describeNotificationStateChange(notification, "")
+
+	assert.Equal(t, "manual_dismissed", kind)
+	assert.Equal(t, "Operator dismissed the escalated event from the modal.", detail)
+}
+
+func TestDescribeNotificationStateChange_UnknownStatus(t *testing.T) {
+	notification := &store.StellarNotification{
+		Status: "unknown",
+	}
+
+	title, detail, kind := describeNotificationStateChange(notification, "custom note")
+
+	assert.Equal(t, "manual_updated", kind)
+	assert.Equal(t, "Event updated", title)
+	assert.Equal(t, "custom note", detail)
+}
+
+func TestDeriveNotificationWorkload_StandardFormat(t *testing.T) {
 	tests := []struct {
-		name       string
-		dedupeKey  string
-		wantResult string
+		name      string
+		dedupeKey string
+		want      string
 	}{
 		{
-			name:       "standard event key with ev prefix",
-			dedupeKey:  "ev:Pod:api-7c9d",
-			wantResult: "api-7c9d",
+			name:      "WithEvPrefix",
+			dedupeKey: "ev:cluster-a:Deployment:web-app",
+			want:      "web-app",
 		},
 		{
-			name:       "standard event key without ev prefix",
-			dedupeKey:  "Pod:default:nginx",
-			wantResult: "nginx",
+			name:      "WithoutEvPrefix",
+			dedupeKey: "cluster-a:Pod:nginx-pod",
+			want:      "nginx-pod",
 		},
 		{
-			name:       "deployment key",
-			dedupeKey:  "ev:Deployment:frontend",
-			wantResult: "frontend",
+			name:      "TooShort",
+			dedupeKey: "ev:cluster",
+			want:      "",
 		},
 		{
-			name:       "service key",
-			dedupeKey:  "ev:Service:backend-svc",
-			wantResult: "backend-svc",
-		},
-		{
-			name:       "insufficient parts",
-			dedupeKey:  "ev:Pod",
-			wantResult: "",
-		},
-		{
-			name:       "single part",
-			dedupeKey:  "something",
-			wantResult: "",
-		},
-		{
-			name:       "empty string",
-			dedupeKey:  "",
-			wantResult: "",
+			name:      "Empty",
+			dedupeKey: "",
+			want:      "",
 		},
 	}
 
@@ -139,67 +521,42 @@ func Test_deriveNotificationWorkload(t *testing.T) {
 			notification := &store.StellarNotification{
 				DedupeKey: tt.dedupeKey,
 			}
-
-			result := deriveNotificationWorkload(notification)
-			assert.Equal(t, tt.wantResult, result)
+			got := deriveNotificationWorkload(notification)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func Test_deriveStellarNotificationResource(t *testing.T) {
+func TestDeriveStellarNotificationResource_StandardFormat(t *testing.T) {
 	tests := []struct {
-		name         string
-		dedupeKey    string
-		notifTitle   string
-		namespace    string
-		wantResult   string
-		wantContains string
+		name      string
+		dedupeKey string
+		namespace string
+		title     string
+		want      string
 	}{
 		{
-			name:         "standard event key with ev prefix",
-			dedupeKey:    "ev:Pod:api-7c9d",
-			wantResult:   "Pod/api-7c9d",
-			wantContains: "",
+			name:      "WithEvPrefix",
+			dedupeKey: "ev:cluster-a:Deployment:web-app",
+			want:      "Deployment/web-app",
 		},
 		{
-			name:         "deployment key",
-			dedupeKey:    "ev:Deployment:frontend",
-			wantResult:   "Deployment/frontend",
-			wantContains: "",
+			name:      "WithoutEvPrefix",
+			dedupeKey: "cluster-a:Pod:nginx-pod",
+			want:      "Pod/nginx-pod",
 		},
 		{
-			name:         "standard event key without ev prefix",
-			dedupeKey:    "Pod:default:nginx",
-			wantResult:   "Pod/nginx",
-			wantContains: "",
+			name:      "TooShortWithFallback",
+			dedupeKey: "ev:cluster",
+			namespace: "default",
+			title:     "some-pod",
+			want:      "default/some-pod",
 		},
 		{
-			name:         "key with kind and name",
-			dedupeKey:    "Service:backend-svc",
-			wantResult:   "",
-			wantContains: "",
-		},
-		{
-			name:         "insufficient parts falls back to namespace/title",
-			dedupeKey:    "short",
-			namespace:    "default",
-			notifTitle:   "CrashLoopBackOff",
-			wantResult:   "default/CrashLoopBackOff",
-			wantContains: "",
-		},
-		{
-			name:         "empty dedupe key falls back to title",
-			dedupeKey:    "",
-			namespace:    "",
-			notifTitle:   "FailedScheduling",
-			wantResult:   "FailedScheduling",
-			wantContains: "",
-		},
-		{
-			name:         "name only when kind is empty",
-			dedupeKey:    "ev::api-pod",
-			wantResult:   "api-pod",
-			wantContains: "",
+			name:      "EmptyDedupeKeyWithTitle",
+			dedupeKey: "",
+			title:     "nginx",
+			want:      "nginx",
 		},
 	}
 
@@ -207,100 +564,71 @@ func Test_deriveStellarNotificationResource(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			notification := &store.StellarNotification{
 				DedupeKey: tt.dedupeKey,
-				Title:     tt.notifTitle,
 				Namespace: tt.namespace,
+				Title:     tt.title,
 			}
-
-			result := deriveStellarNotificationResource(notification)
-
-			if tt.wantResult != "" {
-				assert.Equal(t, tt.wantResult, result)
-			}
-			if tt.wantContains != "" {
-				assert.Contains(t, result, tt.wantContains)
-			}
+			got := deriveStellarNotificationResource(notification)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func Test_updateNotificationState_Logic(t *testing.T) {
-	// This tests the state transition logic without HTTP layer
-	now := time.Now().UTC()
-	tests := []struct {
-		name       string
-		status     string
-		note       string
-		wantRead   bool
-		wantFields map[string]string
-	}{
-		{
-			name:     "investigating status",
-			status:   stellarNotificationStatusInvestigating,
-			note:     "checking logs",
-			wantRead: false,
-			wantFields: map[string]string{
-				"investigationSummary": "checking logs",
-			},
-		},
-		{
-			name:     "resolved status",
-			status:   stellarNotificationStatusResolved,
-			note:     "fixed",
-			wantRead: true,
-			wantFields: map[string]string{
-				"resolutionNote": "fixed",
-			},
-		},
-		{
-			name:     "dismissed status",
-			status:   stellarNotificationStatusDismissed,
-			note:     "duplicate",
-			wantRead: true,
-			wantFields: map[string]string{
-				"dismissalReason": "duplicate",
-			},
-		},
+func TestUpdateNotificationState_WrongUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "notif-wrong-user.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	defer sqlStore.Close()
+
+	user1 := uuid.New()
+	user2 := uuid.New()
+
+	ctx := context.Background()
+	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{
+		ID:          user1,
+		GitHubLogin: "user1",
+		Role:        models.UserRoleEditor,
+	}))
+	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{
+		ID:          user2,
+		GitHubLogin: "user2",
+		Role:        models.UserRoleEditor,
+	}))
+
+	// Create notification for user1
+	n := &store.StellarNotification{
+		UserID:   user1.String(),
+		Type:     "event",
+		Severity: "warning",
+		Title:    "User1 Notification",
+		Body:     "This belongs to user1",
+		Cluster:  "cluster-a",
 	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, n))
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			notification := &store.StellarNotification{
-				ID:        "test-id",
-				CreatedAt: now.Add(-1 * time.Hour),
-				Status:    "new",
-			}
+	// Setup app for user2
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", user2)
+		return c.Next()
+	})
 
-			// Simulate the state update logic
-			updated := *notification
-			updated.Status = tt.status
+	handler := NewHandler(sqlStore, nil)
+	app.Post("/api/stellar/notifications/:id/resolve", handler.ResolveNotification)
 
-			switch tt.status {
-			case stellarNotificationStatusInvestigating:
-				updated.InvestigationSummary = tt.note
-				updated.Read = false
-				updated.ReadAt = nil
-			case stellarNotificationStatusResolved:
-				updated.ResolutionNote = tt.note
-				updated.Read = true
-				updated.ReadAt = &now
-			case stellarNotificationStatusDismissed:
-				updated.DismissalReason = tt.note
-				updated.Read = true
-				updated.ReadAt = &now
-			}
-
-			assert.Equal(t, tt.status, updated.Status)
-			assert.Equal(t, tt.wantRead, updated.Read)
-
-			if tt.wantFields["investigationSummary"] != "" {
-				assert.Equal(t, tt.wantFields["investigationSummary"], updated.InvestigationSummary)
-			}
-			if tt.wantFields["resolutionNote"] != "" {
-				assert.Equal(t, tt.wantFields["resolutionNote"], updated.ResolutionNote)
-			}
-			if tt.wantFields["dismissalReason"] != "" {
-				assert.Equal(t, tt.wantFields["dismissalReason"], updated.DismissalReason)
-			}
-		})
+	body := map[string]string{
+		"resolutionNote": "Trying to resolve someone else's notification",
 	}
+	bodyBytes, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/resolve", bytes.NewReader(bodyBytes))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// Should get not found because the notification doesn't belong to user2
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
