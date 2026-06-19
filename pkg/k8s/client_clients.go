@@ -62,6 +62,8 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 		return nil, fmt.Errorf("failed to create client for context %s: %w", contextName, err)
 	}
 	if client == nil {
+		// kubernetes.NewForConfig should never return (nil, nil) — this guard
+		// is defensive so nilaway can prove the stored client is non-nil.
 		return nil, fmt.Errorf("failed to create client for context %s: unexpected nil client", contextName)
 	}
 
@@ -153,6 +155,8 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 		return nil, fmt.Errorf("failed to create dynamic client for context %s: %w", contextName, err)
 	}
 	if client == nil {
+		// dynamic.NewForConfig should never return (nil, nil) — this guard
+		// is defensive so nilaway can prove the stored client is non-nil.
 		return nil, fmt.Errorf("failed to create dynamic client for context %s: unexpected nil client", contextName)
 	}
 

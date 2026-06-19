@@ -417,6 +417,8 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (j
 		}
 		return nil, fmt.Errorf("context done")
 	case resp := <-respCh:
+		// resp is *Response; a nil value can arrive if the channel was closed
+		// or a sender explicitly enqueued nil (e.g. on transport error).
 		if resp == nil {
 			return nil, fmt.Errorf("nil response received")
 		}

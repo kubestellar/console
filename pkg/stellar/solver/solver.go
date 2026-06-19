@@ -117,6 +117,15 @@ func SolveLoop(
 ) {
 	if storage == nil {
 		slog.Error("solver: SolveLoop called with nil storage; aborting")
+		if broadcaster != nil {
+			broadcaster.Broadcast(SSEEvent{Type: "solve_complete", Data: map[string]interface{}{
+				"userId":  input.UserID,
+				"solveId": input.SolveID,
+				"eventId": input.EventID,
+				"status":  "exhausted",
+				"summary": "Internal error: storage unavailable.",
+			}})
+		}
 		return
 	}
 	dedupeKey := fmt.Sprintf("solve:%s/%s/%s", input.Cluster, input.Namespace, input.Workload)
