@@ -1,0 +1,74 @@
+{
+  "version": "kc-mission-v1",
+  "name": "kserve-2240-add-a-new-inference-routing-type-mirroring",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "kserve: Add a new inference routing type: Mirroring",
+    "description": "Add a new inference routing type: Mirroring. Requested by 11+ users.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current kserve deployment",
+        "description": "Verify your kserve version and configuration:\n```bash\nkubectl get pods -n kserve -l app.kubernetes.io/name=kserve\nhelm list -n kserve 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working kserve installation."
+      },
+      {
+        "title": "Review kserve configuration",
+        "description": "Inspect the relevant kserve configuration:\n```bash\nkubectl get all -n kserve -l app.kubernetes.io/name=kserve\nkubectl get configmap -n kserve -l app.kubernetes.io/part-of=kserve\n```\nWe are facing a new use case: we want to add a testing branch to an online service(main branch), this testing branch will get some of online queries, but we don't want the testing branch response."
+      },
+      {
+        "title": "Apply the fix for Add a new inference routing type: Mirroring",
+        "description": "Apply the configuration change to resolve the issue:\n```yaml\n+--------------+\n      <---------Res--------+              |\nClient          100%       |              |\n      ----+-----Req-------->     Main     |\n          |                |              |\n          |                |              |\n          |                +--------------+\n          |\n          |\n          |                +--------------+\n          |                |              |\n          |  20%           |              |\n           +-----Req-------->   Testing    |\n                           |              |\n          <-------X--------+              |\n                           +--\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n kserve -l app.kubernetes.io/name=kserve\nkubectl get events -n kserve --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Add a new inference routing type: Mirroring\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "See the source issue for the community-verified solution: https://github.com/kserve/kserve/issues/2240",
+      "codeSnippets": [
+        "+--------------+\n      <---------Res--------+              |\nClient          100%       |              |\n      ----+-----Req-------->     Main     |\n          |                |              |\n          |                |              |\n          |                +--------------+\n          |\n          |\n          |                +--------------+\n          |                |              |\n          |  20%           |              |\n           +-----Req-------->   Testing    |\n                           |              |\n          <-------X--------+              |\n                           +--------------+"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "kserve",
+      "incubating",
+      "app-definition",
+      "feature"
+    ],
+    "cncfProjects": [
+      "kserve"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "incubating",
+    "sourceUrls": {
+      "issue": "https://github.com/kserve/kserve/issues/2240",
+      "repo": "https://github.com/kserve/kserve"
+    },
+    "reactions": 11,
+    "comments": 7,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with kserve installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-19T07:58:57.677Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
