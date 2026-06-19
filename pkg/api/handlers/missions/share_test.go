@@ -124,7 +124,7 @@ func TestMissions_ResolveAllowedShareRepos(t *testing.T) {
 		assert.Len(t, allowed, len(missionsDefaultShareRepos))
 	})
 
-	.Run("with env override", func(t *testing.T) {
+	t.Run("with env override", func(t *testing.T) {
 		t.Setenv("KC_ALLOWED_SHARE_REPOS", "org1/repo1,org2/repo2")
 		allowed := resolveAllowedShareRepos()
 		assert.Contains(t, allowed, "kubestellar/console-kb")
@@ -132,7 +132,7 @@ func TestMissions_ResolveAllowedShareRepos(t *testing.T) {
 		assert.Contains(t, allowed, "org2/repo2")
 	})
 
-	.Run("env with empty entries", func(t *testing.T) {
+	t.Run("env with empty entries", func(t *testing.T) {
 		t.Setenv("KC_ALLOWED_SHARE_REPOS", "org1/repo1, , org2/repo2,  ")
 		allowed := resolveAllowedShareRepos()
 		assert.Contains(t, allowed, "org1/repo1")
