@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -474,7 +475,9 @@ func (m *mockClient) CallTool(ctx context.Context, name string, args map[string]
 	return nil, fmt.Errorf("mock CallTool not implemented")
 }
 
-func newMockClient(name string, callToolFunc func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error)) *mockClient {
+func newMockClient(t *testing.T, name string, callToolFunc func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error)) *mockClient {
+	t.Helper()
+
 	inReader, inWriter := io.Pipe()
 	outReader, outWriter := io.Pipe()
 	base := &Client{
@@ -486,12 +489,21 @@ func newMockClient(name string, callToolFunc func(ctx context.Context, toolName 
 	}
 	base.ready.Store(true)
 	go base.readResponses()
+	t.Cleanup(func() {
+		_ = outWriter.Close()
+		_ = outReader.Close()
+		_ = inWriter.Close()
+		_ = inReader.Close()
+		_ = base.Stop()
+	})
+
 	go func() {
 		scanner := bufio.NewScanner(inReader)
 		for scanner.Scan() {
 			var req Request
 			if err := json.Unmarshal(scanner.Bytes(), &req); err != nil {
-				continue
+				t.Errorf("failed to unmarshal mock request: %v", err)
+				return
 			}
 			if req.Method != "tools/call" {
 				continue
@@ -500,10 +512,12 @@ func newMockClient(name string, callToolFunc func(ctx context.Context, toolName 
 			var params CallToolParams
 			data, err := json.Marshal(req.Params)
 			if err != nil {
-				continue
+				t.Errorf("failed to marshal mock request params: %v", err)
+				return
 			}
 			if err := json.Unmarshal(data, &params); err != nil {
-				continue
+				t.Errorf("failed to unmarshal mock request params: %v", err)
+				return
 			}
 
 			resp := Response{
@@ -521,9 +535,18 @@ func newMockClient(name string, callToolFunc func(ctx context.Context, toolName 
 
 			respData, err := json.Marshal(resp)
 			if err != nil {
-				continue
+				t.Errorf("failed to marshal mock response: %v", err)
+				return
 			}
-			_, _ = outWriter.Write(append(respData, '\n'))
+			if _, err := outWriter.Write(append(respData, '\n')); err != nil {
+				if !errors.Is(err, io.ErrClosedPipe) {
+					t.Errorf("failed to write mock response: %v", err)
+				}
+				return
+			}
+		}
+		if err := scanner.Err(); err != nil && !errors.Is(err, io.ErrClosedPipe) {
+			t.Errorf("mock request scanner failed: %v", err)
 		}
 	}()
 	return &mockClient{
@@ -590,7 +613,7 @@ func TestBridge_GetPods(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient(t, "ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "get_pods", toolName)
 				if tc.cluster != "" {
 					require.Equal(t, tc.cluster, args["cluster"])
@@ -686,7 +709,7 @@ func TestBridge_FindPodIssues(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient(t, "ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "find_pod_issues", toolName)
 				if tc.cluster != "" {
 					require.Equal(t, tc.cluster, args["cluster"])
@@ -769,7 +792,7 @@ func TestBridge_GetEvents(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient(t, "ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "get_events", toolName)
 				if tc.cluster != "" {
 					require.Equal(t, tc.cluster, args["cluster"])
@@ -854,7 +877,7 @@ func TestBridge_GetWarningEvents(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient(t, "ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "get_warning_events", toolName)
 				if tc.cluster != "" {
 					require.Equal(t, tc.cluster, args["cluster"])
@@ -946,7 +969,7 @@ func TestBridge_GetClusterHealth(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient(t, "ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "get_cluster_health", toolName)
 				if tc.cluster != "" {
 					require.Equal(t, tc.cluster, args["cluster"])
@@ -1017,7 +1040,7 @@ func TestBridge_ListClusters(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient(t, "ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "list_clusters", toolName)
 				require.Equal(t, "all", args["source"])
 				if tc.mockError != nil {
