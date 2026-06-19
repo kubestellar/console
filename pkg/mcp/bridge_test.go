@@ -555,7 +555,7 @@ func TestBridge_GetPods(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			pods, err := bridge.GetPods(context.Background(), tc.cluster, tc.namespace, tc.labelSelector)
 
@@ -648,7 +648,7 @@ func TestBridge_FindPodIssues(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			issues, err := bridge.FindPodIssues(context.Background(), tc.cluster, tc.namespace)
 
@@ -734,7 +734,7 @@ func TestBridge_GetEvents(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			events, err := bridge.GetEvents(context.Background(), tc.cluster, tc.namespace, tc.limit)
 
@@ -819,7 +819,7 @@ func TestBridge_GetWarningEvents(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			events, err := bridge.GetWarningEvents(context.Background(), tc.cluster, tc.namespace, tc.limit)
 
@@ -905,7 +905,7 @@ func TestBridge_GetClusterHealth(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			health, err := bridge.GetClusterHealth(context.Background(), tc.cluster)
 
@@ -974,7 +974,7 @@ func TestBridge_ListClusters(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
-			bridge.opsClient = mockOps.Client
+			bridge.opsClient = mockOps
 
 			clusters, err := bridge.ListClusters(context.Background())
 

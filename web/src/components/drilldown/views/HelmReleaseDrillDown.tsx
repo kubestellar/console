@@ -169,7 +169,7 @@ export function HelmReleaseDrillDown({ data }: Props) {
     if (result.success) {
       // Refresh data after rollback
       fetchReleaseInfo()
-      fetchHistory()
+      fetchHistory(true)
     }
   }
 
@@ -228,8 +228,8 @@ export function HelmReleaseDrillDown({ data }: Props) {
   }
 
   // Fetch release history
-  const fetchHistory = async () => {
-    if (!agentConnected || releaseHistory) return
+  const fetchHistory = async (force = false) => {
+    if (!agentConnected || (releaseHistory && !force)) return
     setHistoryLoading(true)
     try {
       const output = await runHelm(['history', releaseName, '-n', namespace, '-o', 'json'])
@@ -252,8 +252,9 @@ export function HelmReleaseDrillDown({ data }: Props) {
       }
     } catch {
       setReleaseHistory([])
+    } finally {
+      setHistoryLoading(false)
     }
-    setHistoryLoading(false)
   }
 
   // Fetch release resources (manifest)

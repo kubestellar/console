@@ -333,6 +333,9 @@ func (c *Client) CallTool(ctx context.Context, name string, args map[string]inte
 		return nil, err
 	}
 
+	if result == nil {
+		return nil, fmt.Errorf("nil result from tools/call")
+	}
 	var toolResult CallToolResult
 	if err := json.Unmarshal(result, &toolResult); err != nil {
 		return nil, fmt.Errorf("failed to parse tool result: %w", err)
@@ -355,6 +358,9 @@ func (c *Client) initialize(ctx context.Context) error {
 		return err
 	}
 
+	if result == nil {
+		return fmt.Errorf("nil result from initialize")
+	}
 	var initResult InitializeResult
 	if err := json.Unmarshal(result, &initResult); err != nil {
 		return fmt.Errorf("failed to parse initialize result: %w", err)
@@ -375,6 +381,9 @@ func (c *Client) listTools(ctx context.Context) error {
 		return err
 	}
 
+	if result == nil {
+		return fmt.Errorf("nil result from tools/list")
+	}
 	var toolsResult ToolsListResult
 	if err := json.Unmarshal(result, &toolsResult); err != nil {
 		return fmt.Errorf("failed to parse tools list: %w", err)
