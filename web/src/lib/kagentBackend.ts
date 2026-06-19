@@ -69,7 +69,7 @@ export async function fetchKagentStatus(options: FetchKagentStatusOptions = {}):
   } catch (error: unknown) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       if (options.throwOnError) {
-        throw new Error(`Request timeout after ${timeoutMs / 1000}s: ${KAGENT_STATUS_ENDPOINT}: ${error instanceof Error ? error.message : String(error)}`)
+        throw new Error(`Request timeout after ${timeoutMs / 1000}s: ${KAGENT_STATUS_ENDPOINT}: ${error instanceof Error ? error.message : String(error)}`, { cause: error })
       }
       throw error
     }
