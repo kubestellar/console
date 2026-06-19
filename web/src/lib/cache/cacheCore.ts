@@ -129,7 +129,7 @@ export class CacheStore<T> {
         this.saveMeta({ consecutiveFailures: 0, lastSuccessfulRefresh: entry.timestamp })
       }
     } catch {
-      // Ignore errors, will use initial data with isLoading=true
+      void 0 // Ignore errors, will use initial data with isLoading=true
     }
   }
 
@@ -157,7 +157,7 @@ export class CacheStore<T> {
     } else {
       try {
         localStorage.setItem(META_PREFIX + this.key, JSON.stringify(meta))
-      } catch { /* localStorage may be full or unavailable */ }
+      } catch { void 0 /* localStorage may be full or unavailable */ }
     }
   }
 
@@ -271,7 +271,7 @@ export class CacheStore<T> {
       const currentPromise = this.storageLoadPromise
       try {
         await currentPromise
-      } catch { /* storage load failure is non-fatal */ }
+      } catch { void 0 /* storage load failure is non-fatal */ }
       if (this.storageLoadPromise === currentPromise) {
         this.storageLoadPromise = null
       }
@@ -341,8 +341,8 @@ export class CacheStore<T> {
 
       await this.saveToStorage(finalData)
       if (this.resetVersion !== fetchVersion) {
-        try { sessionStorage.removeItem(SS_PREFIX + this.key) } catch { /* sessionStorage may be unavailable */ }
-        cacheStorage.delete(this.key).catch(() => {})
+        try { sessionStorage.removeItem(SS_PREFIX + this.key) } catch { void 0 /* sessionStorage may be unavailable */ }
+        cacheStorage.delete(this.key).catch(() => void 0)
         this.fetchingRef = false
         return
       }
@@ -398,7 +398,7 @@ export class CacheStore<T> {
 
   async clear(): Promise<void> {
     await cacheStorage.delete(this.key)
-    try { sessionStorage.removeItem(SS_PREFIX + this.key) } catch { /* sessionStorage may be unavailable */ }
+    try { sessionStorage.removeItem(SS_PREFIX + this.key) } catch { void 0 /* sessionStorage may be unavailable */ }
     preloadedMetaMap.delete(this.key)
     if (workerRpc) {
       workerRpc.setMeta(this.key, { consecutiveFailures: 0 })

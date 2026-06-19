@@ -37,7 +37,7 @@ export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAcces
 
   const { deduplicatedClusters: clusters } = useClusters()
   const safeClusters = clusters || []
-  useGlobalFilters()
+  const _globalFilters = useGlobalFilters()
 
   const [selectedCluster, setSelectedCluster] = useState('')
   const [scope, setScope] = useState<'namespace' | 'cluster'>('namespace')

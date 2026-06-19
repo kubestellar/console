@@ -22,8 +22,7 @@ interface UsePodActionsProps {
   annotations: Record<string, string> | null
   ownerChain: RelatedResource[]
   openTrackedWs: () => Promise<WebSocket>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- WS messages are untyped JSON
-  parseWsMessage: (event: MessageEvent, context: string) => any
+  parseWsMessage: (event: MessageEvent, context: string) => unknown
 }
 
 export function usePodActions({

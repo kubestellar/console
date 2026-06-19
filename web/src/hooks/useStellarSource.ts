@@ -425,7 +425,7 @@ export function useStellarSource() {
     try {
       await stellarApi.resolveWatch(id)
     } catch {
-      stellarApi.getWatches().then(setWatches).catch(() => {})
+      stellarApi.getWatches().then(setWatches).catch(() => void 0)
     }
   }, [])
   const dismissWatch = useCallback(async (id: string) => {
@@ -433,7 +433,7 @@ export function useStellarSource() {
     try {
       await stellarApi.dismissWatch(id)
     } catch {
-      stellarApi.getWatches().then(setWatches).catch(() => {})
+      stellarApi.getWatches().then(setWatches).catch(() => void 0)
     }
   }, [])
   const snoozeWatch = useCallback(async (id: string, minutes: number) => {
