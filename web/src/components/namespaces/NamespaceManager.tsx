@@ -1,4 +1,4 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
+ 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Folder,
@@ -486,7 +486,7 @@ export function NamespaceManager() {
     if (!isAdmin) return
     if (!selectedNamespace) return
 
-    if (!confirm(`Revoke access for ${binding.subjectName}?`)) {
+    if (!window.confirm(`Revoke access for ${binding.subjectName}?`)) {
       return
     }
 

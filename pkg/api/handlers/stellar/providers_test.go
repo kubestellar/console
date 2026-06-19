@@ -377,3 +377,266 @@ func Test_resolveStellarProviderHostIPs(t *testing.T) {
 		})
 	}
 }
+
+// TestListProviders_HTTPHandler tests the list providers endpoint
+func TestListProviders_HTTPHandler(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-list-providers-http.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+registry := providers.NewRegistry()
+h := NewHandler(s, registry)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Get("/api/providers", h.ListProviders)
+
+_ = s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
+userID,
+thropic",
+, _ := http.NewRequest(http.MethodGet, "/api/providers", nil)
+resp, err := app.Test(req, 5000)
+require.NoError(t, err)
+defer resp.Body.Close()
+
+assert.Equal(t, http.StatusOK, resp.StatusCode)
+var payload map[string]interface{}
+json.NewDecoder(resp.Body).Decode(&payload)
+assert.NotNil(t, payload["global"])
+assert.NotNil(t, payload["user"])
+}
+
+// TestCreateProvider_AnthropicHTTP tests creating Anthropic provider
+func TestCreateProvider_AnthropicHTTP(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-create-anthropic-http.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+registry := providers.NewRegistry()
+h := NewHandler(s, registry)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Post("/api/providers", h.CreateProvider)
+
+body := `{"provider":"anthropic","displayName":"My Anthropic","apiKey":"sk-test-key","model":"claude-3-opus-20240229","baseUrl":"https://api.anthropic.com"}`
+req, _ := http.NewRequest(http.MethodPost, "/api/providers", bytes.NewReader([]byte(body)))
+req.Header.Set("Content-Type", "application/json")
+resp, err := app.Test(req, 5000)
+require.NoError(t, err)
+defer resp.Body.Close()
+
+assert.Equal(t, http.StatusCreated, resp.StatusCode)
+var created map[string]interface{}
+json.NewDecoder(resp.Body).Decode(&created)
+assert.Equal(t, "anthropic", created["provider"])
+assert.NotEmpty(t, created["apiKeyMask"])
+}
+
+// TestCreateProvider_InvalidBaseURLHTTP tests invalid base URL rejection
+func TestCreateProvider_InvalidBaseURLHTTP(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-create-invalid-url-http.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+registry := providers.NewRegistry()
+h := NewHandler(s, registry)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Post("/api/providers", h.CreateProvider)
+
+body := `{"provider":"anthropic","displayName":"Test","apiKey":"sk-key","baseUrl":"http://localhost"}`
+req, _ := http.NewRequest(http.MethodPost, "/api/providers", bytes.NewReader([]byte(body)))
+req.Header.Set("Content-Type", "application/json")
+resp, err := app.Test(req, 5000)
+require.NoError(t, err)
+defer resp.Body.Close()
+
+assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+// TestDeleteProvider_HTTPHandler tests the delete provider endpoint
+func TestDeleteProvider_HTTPHandler(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-delete-provider-http.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+registry := providers.NewRegistry()
+h := NewHandler(s, registry)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Delete("/api/providers/:id", h.DeleteProvider)
+
+providerID := "p1"
+_ = s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
+userID,
+, _ := http.NewRequest(http.MethodDelete, "/api/providers/"+providerID, nil)
+resp, err := app.Test(req, 5000)
+require.NoError(t, err)
+defer resp.Body.Close()
+
+assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+// TestSetDefaultProvider_HTTPHandler tests the set default provider endpoint
+func TestSetDefaultProvider_HTTPHandler(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-set-default-http.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+registry := providers.NewRegistry()
+h := NewHandler(s, registry)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Patch("/api/providers/:id/default", h.SetDefaultProvider)
+
+providerID := "p1"
+_ = s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
+userID,
+thropic",
+})
+
+req, _ := http.NewRequest(http.MethodPatch, "/api/providers/"+providerID+"/default", nil)
+resp, err := app.Test(req, 5000)
+require.NoError(t, err)
+defer resp.Body.Close()
+
+assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+// TestTestProvider_NotFoundHTTP tests provider not found error
+func TestTestProvider_NotFoundHTTP(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-provider-not-found-http.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+registry := providers.NewRegistry()
+h := NewHandler(s, registry)
+app := fiber.New()
+userID := uuid.NewString()
+app.Use(func(c *fiber.Ctx) error {
+ c.Next()
+})
+app.Post("/api/providers/:id/test", h.TestProvider)
+
+req, _ := http.NewRequest(http.MethodPost, "/api/providers/nonexistent/test", nil)
+resp, err := app.Test(req, 5000)
+require.NoError(t, err)
+defer resp.Body.Close()
+
+assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+// TestProviderRouterSelection tests provider selection logic
+func TestProviderRouterSelection(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-router-selection.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+userID := uuid.NewString()
+
+providerConfigs := []store.StellarProviderConfig{
+  userID,
+thropic",
+"p2",
+  "p3",
+ai",
+ge providerConfigs {
+fig(context.Background(), &p)
+}
+
+configs, err := s.GetUserProviderConfigs(context.Background(), userID)
+require.NoError(t, err)
+assert.Len(t, configs, 3)
+
+activeConfigs := make([]store.StellarProviderConfig, 0)
+for _, c := range configs {
+figs = append(activeConfigs, c)
+(t, activeConfigs, 2)
+
+var defaultProvider *store.StellarProviderConfig
+for i := range activeConfigs {
+figs[i].IsDefault {
+figs[i]
+otNil(t, defaultProvider)
+assert.Equal(t, "anthropic", defaultProvider.Provider)
+}
+
+// TestProviderModelSelection tests model selection for different providers
+func TestProviderModelSelection(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-model-selection-multi.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+userID := uuid.NewString()
+
+tests := []struct {
+ame     string
+g
+g
+}{
+ame:     "anthropic claude-3-opus",
+thropic",
+ame:     "ollama llama3",
+ame:     "openai gpt-4",
+ai",
+ge tests {
+(tt.name, func(t *testing.T) {
+fig{
+ewString(),
+:= s.UpsertProviderConfig(context.Background(), cfg)
+oError(t, err)
+
+figs, err := s.GetUserProviderConfigs(context.Background(), userID)
+oError(t, err)
+d := false
+ge configs {
+d = true
+d, "model %s for provider %s not found", tt.model, tt.provider)
+ tests failover logic between providers
+func TestProviderFailoverChain(t *testing.T) {
+dbPath := filepath.Join(t.TempDir(), "test-failover-chain.db")
+s, err := store.NewSQLiteStore(dbPath)
+require.NoError(t, err)
+defer s.Close()
+
+userID := uuid.NewString()
+
+primary := store.StellarProviderConfig{
+  userID,
+thropic",
+fig{
+userID,
+fig(context.Background(), &primary)
+_ = s.UpsertProviderConfig(context.Background(), &fallback)
+
+configs, err := s.GetUserProviderConfigs(context.Background(), userID)
+require.NoError(t, err)
+assert.Len(t, configs, 2)
+
+activeConfigs := make([]store.StellarProviderConfig, 0)
+for _, c := range configs {
+figs = append(activeConfigs, c)
+(t, activeConfigs, 2)
+}

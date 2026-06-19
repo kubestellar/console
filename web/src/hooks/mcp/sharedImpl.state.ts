@@ -39,7 +39,7 @@ import type { ClusterInfo } from './types'
 const storedClusters = loadClusterCacheFromStorage()
 // In forced demo mode (Netlify), don't show loading - demo data will be set synchronously
 const hasInitialData = storedClusters.length > 0 || isNetlifyDeployment
-export let clusterCache: ClusterCache = {
+export const clusterCache: ClusterCache = {
   clusters: storedClusters,
   lastUpdated: storedClusters.length > 0 ? new Date() : null,
   isLoading: !hasInitialData, // Don't show loading if we have cached data or are in forced demo mode

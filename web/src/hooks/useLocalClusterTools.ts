@@ -625,7 +625,7 @@ export function useLocalClusterTools() {
       setVclusterInstances([])
       setVclusterClusterStatus([])
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps — fetchTools/fetchVClusterClusterStatus are not memoized
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, isDemoMode, fetchClusters, fetchVClusters])
 
   // Auto-refresh cluster list when a create/delete operation completes
