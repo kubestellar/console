@@ -15,22 +15,25 @@ type AuthConfig = auth.AuthConfig
 // NewAuthHandler re-exports auth.NewAuthHandler for backward compatibility.
 var NewAuthHandler = auth.NewAuthHandler
 
-// RequireAdmin re-exports auth.RequireAdmin for backward compatibility.
+// requireAdmin re-exports auth.RequireAdmin for backward compatibility.
 // New code should import github.com/kubestellar/console/pkg/api/handlers/auth directly.
-// RequireAdmin ensures the request is made by an admin user.
-// Exported for use in sub-packages like gitops.
+func requireAdmin(c *fiber.Ctx, s store.Store) error {
+	return auth.RequireAdmin(c, s)
+}
+
+// RequireAdmin re-exports auth.RequireAdmin (exported) for backward compatibility.
 func RequireAdmin(c *fiber.Ctx, s store.Store) error {
 	return auth.RequireAdmin(c, s)
 }
 
 // requireEditorOrAdmin re-exports auth.RequireEditorOrAdmin for backward compatibility.
 // New code should import github.com/kubestellar/console/pkg/api/handlers/auth directly.
-func RequireEditorOrAdmin(c *fiber.Ctx, s store.Store) error {
+func requireEditorOrAdmin(c *fiber.Ctx, s store.Store) error {
 	return auth.RequireEditorOrAdmin(c, s)
 }
 
 // requireViewerOrAbove re-exports auth.RequireViewerOrAbove for backward compatibility.
-func RequireViewerOrAbove(c *fiber.Ctx, s store.Store) error {
+func requireViewerOrAbove(c *fiber.Ctx, s store.Store) error {
 	return auth.RequireViewerOrAbove(c, s)
 }
 

@@ -112,3 +112,19 @@ func TestResolveOAuthCredentials_SkipsDBWhenEnvVarSet(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveOAuthCredentials_LoadsFromDatabase(t *testing.T) {
+	t.Setenv("IGNORE_PERSISTED_OAUTH_CREDENTIALS", "false")
+
+	st := &oauthCredentialStore{
+		clientID:     "db-client-id",
+		clientSecret: "db-client-secret",
+	}
+
+	srv := newTestServerWithOAuthStore(Config{}, st)
+	srv.resolveOAuthCredentials()
+
+	assert.True(t, st.called, "expected OAuth credentials lookup to query the store")
+	assert.Equal(t, "db-client-id", srv.config.GitHubClientID)
+	assert.Equal(t, "db-client-secret", srv.config.GitHubSecret)
+}
