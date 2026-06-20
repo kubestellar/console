@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-20T07:16:56.273Z",
-  "count": 1609,
+  "generatedAt": "2026-06-20T12:32:21.933Z",
+  "count": 1610,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -24657,6 +24657,49 @@
         "cli"
       ],
       "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/platform-install/platform-docker-desktop-k8s.json",
+      "title": "Install and Configure Docker Desktop Kubernetes",
+      "description": "Docker Desktop for Mac provides an integrated Docker experience on macOS, allowing users to run Kubernetes clusters locally. It simplifies the setup process for developers looking to test and develop ",
+      "category": "platform-install",
+      "missionClass": "install",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "installation",
+        "configuration",
+        "local",
+        "local-dev",
+        "docker"
+      ],
+      "cncfProjects": [],
+      "targetResourceKinds": [
+        "Namespace",
+        "Deployment",
+        "Service"
+      ],
+      "difficulty": "beginner",
+      "issueTypes": [
+        "installation",
+        "configuration"
+      ],
+      "type": "deploy",
+      "installMethods": [
+        "cli"
+      ],
+      "qualityScore": 93,
       "qualityPass": true,
       "qualityBreakdown": {
         "clarity": 100,
