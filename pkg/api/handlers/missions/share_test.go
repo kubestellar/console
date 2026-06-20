@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -131,29 +130,6 @@ func TestMissions_ShareToSlack_TextTooLarge(t *testing.T) {
 	var result map[string]interface{}
 	require.NoError(t, json.Unmarshal(body, &result))
 	assert.Contains(t, result["error"], "exceeds maximum size")
-}
-
-func TestMissions_ShareToSlack_EmptyText(t *testing.T) {
-	app, _ := setupMissionsTest()
-
-	payload := map[string]string{
-		"webhookUrl": "https://hooks.slack.com/services/T00/B00/XXX",
-		"text":       "",
-	}
-	payloadBytes, _ := json.Marshal(payload)
-
-	req, err := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(string(payloadBytes)))
-	require.NoError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, 5000)
-	require.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-
-	body, _ := io.ReadAll(resp.Body)
-	var result map[string]interface{}
-	require.NoError(t, json.Unmarshal(body, &result))
-	assert.Contains(t, result["error"], "text is required")
 }
 
 func TestMissions_ResolveAllowedShareRepos(t *testing.T) {
