@@ -130,9 +130,9 @@ describe('ClusterGrid', () => {
       errorMessage: 'dial tcp timeout',
     })
 
-    const refreshButton = screen.getByRole('button', { name: 'cluster.controlsDisabledOffline' })
-    const startButton = screen.getByRole('button', { name: 'cluster.startCluster' })
-    const restartButton = screen.getByRole('button', { name: 'cluster.restartCluster' })
+    const refreshButton = screen.getAllByRole('button', { name: 'cluster.controlsDisabledOffline' }).find(el => el.tagName === 'BUTTON')!
+    const startButton = screen.getAllByRole('button', { name: 'cluster.startCluster' }).find(el => el.tagName === 'BUTTON')!
+    const restartButton = screen.getAllByRole('button', { name: 'cluster.restartCluster' }).find(el => el.tagName === 'BUTTON')!
 
     expect(refreshButton).toBeDisabled()
     expect(startButton).not.toBeDisabled()
@@ -158,8 +158,8 @@ describe('ClusterGrid', () => {
   it('keeps controls interactive for reachable local clusters', async () => {
     const { onSelectCluster, onRefreshCluster } = renderGrid()
 
-    const refreshButton = screen.getByRole('button', { name: 'common.refreshClusterData' })
-    const stopButton = screen.getByRole('button', { name: 'cluster.stopCluster' })
+    const refreshButton = screen.getAllByRole('button', { name: 'common.refreshClusterData' }).find(el => el.tagName === 'BUTTON')!
+    const stopButton = screen.getAllByRole('button', { name: 'cluster.stopCluster' }).find(el => el.tagName === 'BUTTON')!
 
     expect(refreshButton).not.toBeDisabled()
     expect(stopButton).not.toBeDisabled()

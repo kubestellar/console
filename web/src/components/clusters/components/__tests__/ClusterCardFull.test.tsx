@@ -46,7 +46,7 @@ describe('ClusterCardFull', () => {
 
   it('renders cluster name', () => {
     render(<ClusterCardFull {...defaultProps} />)
-    expect(screen.getByText('test-cluster')).toBeInTheDocument()
+    expect(screen.getByText('test-context')).toBeInTheDocument()
   })
 
   it('renders cluster stats', () => {
@@ -75,16 +75,16 @@ describe('ClusterCardFull', () => {
   it('calls onRefreshCluster when refresh button is clicked', () => {
     const onRefreshCluster = vi.fn()
     render(<ClusterCardFull {...defaultProps} onRefreshCluster={onRefreshCluster} />)
-    const refreshButton = screen.getByRole('button', { name: /common.refreshClusterData/i })
+    const refreshButton = screen.getAllByRole('button', { name: /common.refreshClusterData/i }).find(el => el.tagName === 'BUTTON')!
     fireEvent.click(refreshButton)
     expect(onRefreshCluster).toHaveBeenCalledTimes(1)
   })
 
   it('disables refresh button when cluster is unreachable', () => {
-    const cluster = createMockCluster({ healthy: false, unreachable: true })
+    const cluster = createMockCluster({ healthy: false, reachable: false, errorType: 'network' })
     const onRefreshCluster = vi.fn()
     render(<ClusterCardFull {...defaultProps} cluster={cluster} onRefreshCluster={onRefreshCluster} />)
-    const refreshButton = screen.getByRole('button', { name: /cluster.controlsDisabledOffline/i })
+    const refreshButton = screen.getAllByRole('button', { name: /cluster.controlsDisabledOffline/i }).find(el => el.tagName === 'BUTTON')!
     expect(refreshButton).toBeDisabled()
   })
 

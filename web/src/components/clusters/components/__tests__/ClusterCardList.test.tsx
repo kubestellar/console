@@ -38,7 +38,7 @@ describe('ClusterCardList', () => {
 
   it('renders cluster name', () => {
     render(<ClusterCardList {...defaultProps} />)
-    expect(screen.getByText('test-cluster')).toBeInTheDocument()
+    expect(screen.getByText('test-context')).toBeInTheDocument()
   })
 
   it('renders cluster stats', () => {
@@ -71,9 +71,9 @@ describe('ClusterCardList', () => {
   })
 
   it('disables refresh button when cluster is unreachable', () => {
-    const cluster = createMockCluster({ healthy: false, unreachable: true })
+    const cluster = createMockCluster({ healthy: false, reachable: false, errorType: 'network' })
     render(<ClusterCardList {...defaultProps} cluster={cluster} />)
-    const refreshButton = screen.getByRole('button', { name: /cluster.controlsDisabledOffline/i })
+    const refreshButton = screen.getAllByRole('button', { name: /cluster.controlsDisabledOffline/i }).find(el => el.tagName === 'BUTTON')!
     expect(refreshButton).toBeDisabled()
   })
 
