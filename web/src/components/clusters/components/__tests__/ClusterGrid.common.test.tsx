@@ -97,13 +97,14 @@ describe('ClusterGrid.common utilities', () => {
       
       render(
         <div onMouseDown={parentMouseDown}>
-          <ActionTooltipWrapper tooltip="Test">
-            <button>Test</button>
+          <ActionTooltipWrapper tooltip="Test tooltip">
+            <button>Test Button</button>
           </ActionTooltipWrapper>
         </div>
       )
       
-      const wrapper = screen.getByText('Test').parentElement
+      const button = screen.getByRole('button', { name: 'Test Button' })
+      const wrapper = button.closest('span')
       if (wrapper) {
         fireEvent.mouseDown(wrapper)
         expect(parentMouseDown).not.toHaveBeenCalled()
