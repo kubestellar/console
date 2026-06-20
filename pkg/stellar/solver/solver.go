@@ -115,6 +115,10 @@ func SolveLoop(
 	k8sClient *k8s.MultiClusterClient,
 	broadcaster Broadcaster,
 ) {
+	if storage == nil {
+		slog.Error("solver: storage is nil, cannot proceed")
+		return
+	}
 	dedupeKey := fmt.Sprintf("solve:%s/%s/%s", input.Cluster, input.Namespace, input.Workload)
 	broadcast := func(step, message string, actionsTaken int) {
 		if broadcaster == nil {
