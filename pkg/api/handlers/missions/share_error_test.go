@@ -14,7 +14,7 @@ import (
 // ---------- ShareToSlack error branches ----------
 
 func TestMissions_ShareToSlack_EmptyText(t *testing.T) {
-	app, h := setupTestApp(t)
+	app, h := setupMissionsTest()
 	_ = h
 	payload := `{"webhookUrl":"https://hooks.slack.com/services/T00/B00/XXX","text":""}`
 	req, err := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(payload))
@@ -26,9 +26,8 @@ func TestMissions_ShareToSlack_EmptyText(t *testing.T) {
 }
 
 func TestMissions_ShareToSlack_TextExceedsMaxSize(t *testing.T) {
-	app, h := setupTestApp(t)
+	app, h := setupMissionsTest()
 	_ = h
-	// slackMaxTextBytes is 10*1024=10240; send 10241 bytes
 	bigText := strings.Repeat("a", 10241)
 	payload := `{"webhookUrl":"https://hooks.slack.com/services/T00/B00/XXX","text":"` + bigText + `"}`
 	req, err := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(payload))
@@ -40,7 +39,6 @@ func TestMissions_ShareToSlack_TextExceedsMaxSize(t *testing.T) {
 }
 
 func TestMissions_ShareToSlack_WebhookReturnsError(t *testing.T) {
-	// Mock Slack returning 500
 	slackServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("internal error"))
@@ -51,14 +49,10 @@ func TestMissions_ShareToSlack_WebhookReturnsError(t *testing.T) {
 	h := &MissionsHandler{
 		httpClient:   slackServer.Client(),
 		githubAPIURL: "https://api.github.com",
-		cache:        newMissionsCache(),
+		cache:        &missionsResponseCache{entries: make(map[string]*missionsCacheEntry)},
 	}
 	app.Post("/api/missions/share/slack", h.ShareToSlack)
 
-	// Use the mock server URL - but validateSlackWebhookURL will reject it.
-	// We need to test the actual HTTP client path, so we test via the handler
-	// with a valid-looking URL that redirects to our mock.
-	// Since we can't bypass validation, test the invalid-body parse path instead.
 	req, err := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader("not json"))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
@@ -70,9 +64,8 @@ func TestMissions_ShareToSlack_WebhookReturnsError(t *testing.T) {
 // ---------- ShareToGitHub error branches ----------
 
 func TestMissions_ShareToGitHub_BodyTooLarge(t *testing.T) {
-	app, h := setupTestApp(t)
+	app, h := setupMissionsTest()
 	_ = h
-	// missionsGitHubShareMaxBytes is 1*1024*1024; send more than that
 	bigContent := strings.Repeat("x", 1*1024*1024+1)
 	payload := `{"repo":"kubestellar/console-kb","filePath":"missions/test.json","content":"` + bigContent + `","message":"test","branch":"test-branch"}`
 	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
@@ -96,7 +89,7 @@ func TestMissions_ShareToGitHub_MissingFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app, h := setupTestApp(t)
+			app, h := setupMissionsTest()
 			_ = h
 			req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(tt.payload))
 			require.NoError(t, err)
@@ -110,9 +103,8 @@ func TestMissions_ShareToGitHub_MissingFields(t *testing.T) {
 }
 
 func TestMissions_ShareToGitHub_InvalidFilePath(t *testing.T) {
-	app, h := setupTestApp(t)
+	app, h := setupMissionsTest()
 	_ = h
-	// Path traversal attempt
 	payload := `{"repo":"kubestellar/console-kb","filePath":"../../etc/passwd","content":"c","message":"m","branch":"test-branch"}`
 	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
 	require.NoError(t, err)
@@ -124,9 +116,8 @@ func TestMissions_ShareToGitHub_InvalidFilePath(t *testing.T) {
 }
 
 func TestMissions_ShareToGitHub_InvalidBranch(t *testing.T) {
-	app, h := setupTestApp(t)
+	app, h := setupMissionsTest()
 	_ = h
-	// Branch with invalid characters
 	payload := `{"repo":"kubestellar/console-kb","filePath":"missions/test.json","content":"c","message":"m","branch":"branch with spaces"}`
 	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
 	require.NoError(t, err)
@@ -138,7 +129,6 @@ func TestMissions_ShareToGitHub_InvalidBranch(t *testing.T) {
 }
 
 func TestMissions_ShareToGitHub_ForkFails(t *testing.T) {
-	// Mock GitHub API that returns 403 on fork
 	ghServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "/forks") {
 			w.WriteHeader(http.StatusForbidden)
@@ -153,7 +143,7 @@ func TestMissions_ShareToGitHub_ForkFails(t *testing.T) {
 	h := &MissionsHandler{
 		httpClient:   ghServer.Client(),
 		githubAPIURL: ghServer.URL,
-		cache:        newMissionsCache(),
+		cache:        &missionsResponseCache{entries: make(map[string]*missionsCacheEntry)},
 	}
 	app.Post("/api/missions/share/github", h.ShareToGitHub)
 
@@ -168,11 +158,10 @@ func TestMissions_ShareToGitHub_ForkFails(t *testing.T) {
 }
 
 func TestMissions_ShareToGitHub_ForkMissingFullName(t *testing.T) {
-	// Mock GitHub API that returns fork without full_name
 	ghServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "/forks") {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id": 123}`)) // no full_name
+			w.Write([]byte(`{"id": 123}`))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -183,7 +172,7 @@ func TestMissions_ShareToGitHub_ForkMissingFullName(t *testing.T) {
 	h := &MissionsHandler{
 		httpClient:   ghServer.Client(),
 		githubAPIURL: ghServer.URL,
-		cache:        newMissionsCache(),
+		cache:        &missionsResponseCache{entries: make(map[string]*missionsCacheEntry)},
 	}
 	app.Post("/api/missions/share/github", h.ShareToGitHub)
 
@@ -198,7 +187,7 @@ func TestMissions_ShareToGitHub_ForkMissingFullName(t *testing.T) {
 }
 
 func TestMissions_ShareToGitHub_InvalidBody(t *testing.T) {
-	app, h := setupTestApp(t)
+	app, h := setupMissionsTest()
 	_ = h
 	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader("not json"))
 	require.NoError(t, err)
