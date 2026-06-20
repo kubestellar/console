@@ -24,9 +24,6 @@ jobs:
       - name: Install pinned AJV tools for schema validation
         run: npm ci --ignore-scripts --prefix .github/kb-scripts
 
-      - name: Add AJV tools to PATH
-        run: echo "$GITHUB_WORKSPACE/.github/kb-scripts/node_modules/.bin" >> "$GITHUB_PATH"
-
       - name: Test mission schema validation path
         run: |
           chmod +x scripts/validate-missions-schema-test.sh
