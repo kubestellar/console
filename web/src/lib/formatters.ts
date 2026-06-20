@@ -4,6 +4,7 @@
 
 import type { TFunction } from 'i18next'
 import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY, MS_PER_MONTH, MS_PER_YEAR, SECONDS_PER_MINUTE, MINUTES_PER_HOUR } from './constants/time'
+import { BYTES_PER_KIB } from './constants/units'
 
 /**
  * Format the elapsed time between two ISO timestamps as a compact string.
@@ -81,7 +82,6 @@ interface FormatBytesOptions {
 
 const SI_UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
 const IEC_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB']
-const BYTES_PER_KIBIBYTE = 1024
 
 /**
  * Format bytes to a human-readable string.
@@ -106,8 +106,8 @@ export function formatBytes(
   if (!Number.isFinite(bytes) || bytes <= 0) return zeroLabel
 
   const units = binary ? IEC_UNITS : SI_UNITS
-  const i = Math.floor(Math.log(bytes) / Math.log(BYTES_PER_KIBIBYTE))
-  const value = bytes / Math.pow(BYTES_PER_KIBIBYTE, i)
+  const i = Math.floor(Math.log(bytes) / Math.log(BYTES_PER_KIB))
+  const value = bytes / Math.pow(BYTES_PER_KIB, i)
 
   // Use 0 decimals for whole numbers, otherwise use specified decimals
   if (value === Math.floor(value)) {

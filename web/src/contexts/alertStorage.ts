@@ -46,6 +46,9 @@ export const NOTIFICATION_COOLDOWN_BY_SEVERITY: Record<string, number> = {
 /** Fallback cooldown when severity is unknown */
 export const DEFAULT_NOTIFICATION_COOLDOWN_MS = 30 * MS_PER_MINUTE // 30 min
 
+/** Legacy DOMException error code for QuotaExceededError (used by older browsers). */
+const DOM_EXCEPTION_QUOTA_EXCEEDED_CODE = 22
+
 /** Load persisted notification dedup map from localStorage (key → timestamp).
  *  Prunes stale entries (older than NOTIFICATION_DEDUP_MAX_AGE_MS) and enforces
  *  the MAX_DEDUP_KEYS hard cap on load, persisting the cleaned map back. */
@@ -152,7 +155,7 @@ export function saveAlerts(alerts: Alert[]): void {
     // QuotaExceededError: DOMException with name 'QuotaExceededError', or legacy
     // browsers that use numeric code 22 instead of the named exception.
     // Pattern matches useMissions/useMetricsHistory for consistency across the codebase.
-    const isQuotaError = e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === 22)
+    const isQuotaError = e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === DOM_EXCEPTION_QUOTA_EXCEEDED_CODE)
     if (isQuotaError) {
       console.warn('[Alerts] localStorage quota exceeded, pruning resolved alerts')
       // Keep all firing alerts + a small number of recent resolved ones

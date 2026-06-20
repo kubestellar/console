@@ -18,7 +18,10 @@ export interface RunbookExecutionResult {
   stepResults: unknown[]
 }
 
+/** Maximum length (chars) for JSON-serialized prompt data before truncation. */
 const PROMPT_JSON_MAX_LENGTH = 4000
+
+/** Maximum length (chars) for runbook evidence text before truncation. */
 const RUNBOOK_EVIDENCE_MAX_LENGTH = 8000
 
 /**
