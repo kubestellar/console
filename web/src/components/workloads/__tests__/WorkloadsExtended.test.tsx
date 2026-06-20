@@ -43,17 +43,17 @@ vi.mock('../../../lib/dashboards/DashboardPage', () => ({
   ),
 }))
 
-const mockPodIssues: unknown[] = []
-const mockDeploymentIssues: unknown[] = []
-const mockDeployments: unknown[] = []
-const mockClusters: unknown[] = []
+let mockPodIssues: any[] = []
+let mockDeploymentIssues: any[] = []
+let mockDeployments: any[] = []
+const mockClusters: any[] = []
 let mockIsLoading = false
 let mockIsDemoMode = true
 
 vi.mock('../../../hooks/useMCP', () => ({
   usePodIssues: () => ({ issues: mockPodIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
-  useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: mockIsLoading, isRefreshing: false, refetch: vi.fn() }),
-  useDeployments: () => ({ deployments: mockDeployments, isLoading: mockIsLoading, isRefreshing: false, refetch: vi.fn() }),
+  useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
+  useDeployments: () => ({ deployments: mockDeployments, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
   useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters, isLoading: mockIsLoading, lastUpdated: null, refetch: vi.fn() }),
 }))
 
@@ -448,10 +448,10 @@ describe('Loading skeleton and agent-offline states (#12481)', () => {
     renderWorkloads()
 
     // Skeleton elements should be present (they use role or specific class)
-    const skeletons = screen.getAllByTestId ? 
+    const skeletons = screen.getAllByTestId ?
       document.querySelectorAll('[class*="skeleton"], [class*="Skeleton"], [class*="animate-pulse"]') :
       document.querySelectorAll('[class*="skeleton"], [class*="Skeleton"], [class*="animate-pulse"]')
-    
+
     expect(skeletons.length).toBeGreaterThan(0)
   })
 
