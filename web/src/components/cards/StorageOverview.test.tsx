@@ -61,8 +61,27 @@ vi.mock('../../lib/cards/cardHooks', () => ({
 }))
 
 vi.mock('../../lib/cards/CardComponents', () => ({
-  CardClusterFilter: ({ availableClusters }: { availableClusters: Array<{ name: string }> }) => (
-    <div data-testid="cluster-filter" data-count={availableClusters.length} />
+  CardHeaderRow: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  CardStatGrid: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  CardStatHeader: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  CardControlsRow: ({
+    clusterFilter,
+    clusterIndicator,
+  }: {
+    clusterFilter?: { availableClusters: Array<{ name: string }> }
+    clusterIndicator?: { selectedCount: number; totalCount: number }
+  }) => (
+    <div data-testid="card-controls-row">
+      {clusterFilter && (
+        <div
+          data-testid="cluster-filter"
+          data-count={clusterFilter.availableClusters.length}
+        />
+      )}
+      {clusterIndicator && (
+        <span>{clusterIndicator.selectedCount}/{clusterIndicator.totalCount}</span>
+      )}
+    </div>
   ),
 }))
 
