@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ClusterAuthBadges, ClusterIAMRefreshHint } from './ClusterAuthBadges'
 import type { ClusterInfo } from '../../../hooks/useMCP'
@@ -8,145 +8,176 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
-vi.mock('../../../lib/clipboard', () => ({
-  copyToClipboard: vi.fn(),
-}))
-
 describe('ClusterAuthBadges', () => {
-  it('renders IAM badge and exec login hint in the title', () => {
-    const cluster = { authMethod: 'exec', name: 'eks-prod', user: 'aws-user' } as ClusterInfo
-
+  it('renders IAM badge for exec auth method', () => {
+    const cluster = { authMethod: 'exec', name: 'test', user: 'test' } as ClusterInfo
     render(<ClusterAuthBadges cluster={cluster} className="test-class" />)
 
     const badge = screen.getByText('IAM')
+    expect(badge).toBeInTheDocument()
     expect(badge).toHaveClass('test-class')
-    expect(badge).toHaveAttribute('title', expect.stringContaining('aws sso login'))
   })
 
-  it('renders token and certificate badges for supported auth methods', () => {
-    const { rerender } = render(
-      <ClusterAuthBadges
-        cluster={{ authMethod: 'token', name: 'demo', user: 'demo' } as ClusterInfo}
-        className="token-class"
-      />,
-    )
+  it('renders token badge for token auth method', () => {
+    const cluster = { authMethod: 'token', name: 'test', user: 'test' } as ClusterInfo
+    render(<ClusterAuthBadges cluster={cluster} className="test-class" />)
 
     expect(screen.getByText('token')).toBeInTheDocument()
+  })
 
-    rerender(
-      <ClusterAuthBadges
-        cluster={{ authMethod: 'certificate', name: 'demo', user: 'demo' } as ClusterInfo}
-        className="cert-class"
-      />,
-    )
+  it('renders cert badge for certificate auth method', () => {
+    const cluster = { authMethod: 'certificate', name: 'test', user: 'test' } as ClusterInfo
+    render(<ClusterAuthBadges cluster={cluster} className="test-class" />)
 
     expect(screen.getByText('cert')).toBeInTheDocument()
   })
 
-  it('returns null for missing or unsupported auth methods', () => {
-    const { container, rerender } = render(
-      <ClusterAuthBadges cluster={{ name: 'demo' } as ClusterInfo} className="ignored" />,
-    )
+  it('renders IAM badge for auth-provider auth method', () => {
+    const cluster = { authMethod: 'auth-provider', name: 'test', user: 'test' } as ClusterInfo
+    render(<ClusterAuthBadges cluster={cluster} className="test-class" />)
+
+    expect(screen.getByText('IAM')).toBeInTheDocument()
+  })
+
+  it('returns null when authMethod is not set', () => {
+    const cluster = { name: 'test' } as ClusterInfo
+    const { container } = render(<ClusterAuthBadges cluster={cluster} className="test-class" />)
 
     expect(container.firstChild).toBeNull()
+  })
 
-    rerender(
-      <ClusterAuthBadges
-        cluster={{ authMethod: 'custom', name: 'demo' } as ClusterInfo}
-        className="ignored"
-      />,
-    )
+  it('returns null when authMethod is unknown', () => {
+    const cluster = { authMethod: 'unknown-method', name: 'test' } as ClusterInfo
+    const { container } = render(<ClusterAuthBadges cluster={cluster} className="test-class" />)
 
     expect(container.firstChild).toBeNull()
+  })
+
+  it('includes login hint in title for exec auth with AWS', () => {
+    const cluster = { authMethod: 'exec', user: 'aws-user', name: 'test' } as ClusterInfo
+    render(<ClusterAuthBadges cluster={cluster} className="test-class" />)
+
+    const badge = screen.getByText('IAM')
+    expect(badge).toHaveAttribute('title', expect.stringContaining('aws sso login'))
+  })
+
+  it('does not include login hint in title for exec auth without provider detection', () => {
+    const cluster = { authMethod: 'exec', user: 'unknown', name: 'test' } as ClusterInfo
+    render(<ClusterAuthBadges cluster={cluster} className="test-class" />)
+
+    const badge = screen.getByText('IAM')
+    expect(badge).toHaveAttribute('title', 'Auth: IAM (exec plugin)')
   })
 })
 
 describe('ClusterIAMRefreshHint', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    })
   })
 
-  it('renders an IAM login hint for expired exec tokens', () => {
-    render(
-      <ClusterIAMRefreshHint
-        cluster={{
-          authMethod: 'exec',
-          user: 'aws-user',
-          name: 'demo',
-          errorType: 'auth',
-          reachable: false,
-        } as ClusterInfo}
-        className="hint-class"
-      />,
-    )
+  it('renders login hint for exec auth with expired token', () => {
+    const cluster = {
+      authMethod: 'exec',
+      user: 'aws-user',
+      name: 'test',
+      errorType: 'auth',
+      reachable: false,
+    } as ClusterInfo
+    render(<ClusterIAMRefreshHint cluster={cluster} className="test-class" />)
 
-    expect(screen.getByText(/Login:/)).toBeInTheDocument()
     expect(screen.getByText('aws sso login')).toBeInTheDocument()
-    expect(screen.getByLabelText('Copy command to clipboard')).toBeInTheDocument()
+    expect(screen.getByText(/Login:/)).toBeInTheDocument()
   })
 
-  it('supports custom and omitted labels', () => {
-    const { rerender } = render(
-      <ClusterIAMRefreshHint
-        cluster={{
-          authMethod: 'exec',
-          user: 'az-user',
-          name: 'demo',
-          errorType: 'auth',
-          reachable: false,
-        } as ClusterInfo}
-        className="hint-class"
-        label="Custom:"
-      />,
-    )
+  it('renders login hint for unreachable exec cluster', () => {
+    const cluster = {
+      authMethod: 'exec',
+      user: 'gke-user',
+      name: 'test',
+      reachable: false,
+    } as ClusterInfo
+    render(<ClusterIAMRefreshHint cluster={cluster} className="test-class" />)
+
+    expect(screen.getByText('gcloud auth login')).toBeInTheDocument()
+  })
+
+  it('does not render for non-exec auth', () => {
+    const cluster = {
+      authMethod: 'token',
+      errorType: 'auth',
+      reachable: false,
+    } as ClusterInfo
+    const { container } = render(<ClusterIAMRefreshHint cluster={cluster} className="test-class" />)
+
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('does not render for reachable cluster with valid token', () => {
+    const cluster = {
+      authMethod: 'exec',
+      user: 'aws-user',
+      name: 'test',
+      reachable: true,
+    } as ClusterInfo
+    const { container } = render(<ClusterIAMRefreshHint cluster={cluster} className="test-class" />)
+
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('does not render when no IAM hint is available', () => {
+    const cluster = {
+      authMethod: 'exec',
+      user: 'unknown',
+      name: 'test',
+      errorType: 'auth',
+      reachable: false,
+    } as ClusterInfo
+    const { container } = render(<ClusterIAMRefreshHint cluster={cluster} className="test-class" />)
+
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('renders custom label when provided', () => {
+    const cluster = {
+      authMethod: 'exec',
+      user: 'az-user',
+      name: 'test',
+      errorType: 'auth',
+      reachable: false,
+    } as ClusterInfo
+    render(<ClusterIAMRefreshHint cluster={cluster} className="test-class" label="Custom:" />)
 
     expect(screen.getByText(/Custom:/)).toBeInTheDocument()
+  })
 
-    rerender(
-      <ClusterIAMRefreshHint
-        cluster={{
-          authMethod: 'exec',
-          user: 'az-user',
-          name: 'demo',
-          errorType: 'auth',
-          reachable: false,
-        } as ClusterInfo}
-        className="hint-class"
-        label={null}
-      />,
-    )
+  it('renders without label when label is null', () => {
+    const cluster = {
+      authMethod: 'exec',
+      user: 'az-user',
+      name: 'test',
+      errorType: 'auth',
+      reachable: false,
+    } as ClusterInfo
+    render(<ClusterIAMRefreshHint cluster={cluster} className="test-class" label={null} />)
 
     expect(screen.queryByText(/Login:/)).not.toBeInTheDocument()
     expect(screen.getByText('az login')).toBeInTheDocument()
   })
 
-  it('returns null when the cluster does not need or cannot infer refresh help', () => {
-    const { container, rerender } = render(
-      <ClusterIAMRefreshHint
-        cluster={{
-          authMethod: 'token',
-          errorType: 'auth',
-          reachable: false,
-        } as ClusterInfo}
-        className="hint-class"
-      />,
-    )
+  it('includes copy button', () => {
+    const cluster = {
+      authMethod: 'exec',
+      user: 'aws-user',
+      name: 'test',
+      errorType: 'auth',
+      reachable: false,
+    } as ClusterInfo
+    render(<ClusterIAMRefreshHint cluster={cluster} className="test-class" />)
 
-    expect(container.firstChild).toBeNull()
-
-    rerender(
-      <ClusterIAMRefreshHint
-        cluster={{
-          authMethod: 'exec',
-          user: 'custom-user',
-          name: 'custom-cluster',
-          errorType: 'auth',
-          reachable: false,
-        } as ClusterInfo}
-        className="hint-class"
-      />,
-    )
-
-    expect(container.firstChild).toBeNull()
+    expect(screen.getByLabelText('Copy command to clipboard')).toBeInTheDocument()
   })
 })

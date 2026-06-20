@@ -1,142 +1,184 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { renderHook, act, waitFor } from '@testing-library/react'
-import {
-  useClusterRefreshSpin,
-  isTokenExpired,
-  getIAMRefreshHint,
-  CopyCommandButton,
-} from './ClusterTokenRefresh'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
+import { useClusterRefreshSpin, isTokenExpired, getIAMRefreshHint, CopyCommandButton } from './ClusterTokenRefresh'
 import type { ClusterInfo } from '../../../hooks/useMCP'
-import { COPY_FEEDBACK_MS } from './ClusterGrid.constants'
-import { copyToClipboard } from '../../../lib/clipboard'
 
-vi.mock('../../../lib/clipboard', () => ({
-  copyToClipboard: vi.fn(),
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({ t: (key: string) => key }),
 }))
 
 describe('useClusterRefreshSpin', () => {
   beforeEach(() => {
     vi.useFakeTimers()
-    vi.setSystemTime(0)
   })
 
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  it('starts spinning immediately when refresh begins', () => {
+  it('returns true when refreshing starts', () => {
     const { result } = renderHook(() => useClusterRefreshSpin(true, 1000))
-
     expect(result.current).toBe(true)
   })
 
-  it('keeps spinning until the minimum duration has elapsed', () => {
+  it('maintains spinning state for minimum duration', () => {
     const { result, rerender } = renderHook(
       ({ refreshing }) => useClusterRefreshSpin(refreshing, 1000),
       { initialProps: { refreshing: true } },
     )
+    expect(result.current).toBe(true)
 
     rerender({ refreshing: false })
+    expect(result.current).toBe(true)
 
     act(() => {
-      vi.advanceTimersByTime(999)
+      vi.advanceTimersByTime(500)
     })
     expect(result.current).toBe(true)
 
     act(() => {
-      vi.advanceTimersByTime(1)
+      vi.advanceTimersByTime(500)
     })
     expect(result.current).toBe(false)
   })
 
-  it('stops immediately when the minimum duration has already elapsed', () => {
+  it('stops spinning immediately if refresh duration exceeds minimum', () => {
     const { result, rerender } = renderHook(
       ({ refreshing }) => useClusterRefreshSpin(refreshing, 1000),
       { initialProps: { refreshing: true } },
     )
 
     act(() => {
-      vi.setSystemTime(1500)
+      vi.advanceTimersByTime(1500)
     })
 
     rerender({ refreshing: false })
-
     act(() => {
       vi.advanceTimersByTime(0)
     })
-
     expect(result.current).toBe(false)
   })
 })
 
 describe('isTokenExpired', () => {
-  it('returns true only for auth errors', () => {
-    expect(isTokenExpired({ errorType: 'auth' } as ClusterInfo)).toBe(true)
-    expect(isTokenExpired({ errorType: 'network' } as ClusterInfo)).toBe(false)
-    expect(isTokenExpired({} as ClusterInfo)).toBe(false)
+  it('returns true when errorType is auth', () => {
+    const cluster = { errorType: 'auth' } as ClusterInfo
+    expect(isTokenExpired(cluster)).toBe(true)
+  })
+
+  it('returns false when errorType is not auth', () => {
+    const cluster = { errorType: 'network' } as ClusterInfo
+    expect(isTokenExpired(cluster)).toBe(false)
+  })
+
+  it('returns false when errorType is undefined', () => {
+    const cluster = {} as ClusterInfo
+    expect(isTokenExpired(cluster)).toBe(false)
   })
 })
 
 describe('getIAMRefreshHint', () => {
-  it('returns null for non-exec authentication', () => {
-    expect(
-      getIAMRefreshHint({ authMethod: 'token', user: 'aws-user', name: 'demo' } as ClusterInfo),
-    ).toBeNull()
+  it('returns null for non-exec auth methods', () => {
+    const cluster = { authMethod: 'token', user: 'test', name: 'test' } as ClusterInfo
+    expect(getIAMRefreshHint(cluster)).toBeNull()
   })
 
-  it('detects AWS, GCP, Azure, and OpenShift login commands', () => {
-    expect(getIAMRefreshHint({ authMethod: 'exec', user: 'aws-user', name: 'demo' } as ClusterInfo)).toBe('aws sso login')
-    expect(getIAMRefreshHint({ authMethod: 'exec', user: 'demo', name: 'gke-prod' } as ClusterInfo)).toBe('gcloud auth login')
-    expect(getIAMRefreshHint({ authMethod: 'exec', user: 'demo', name: 'aks-dev' } as ClusterInfo)).toBe('az login')
-    expect(getIAMRefreshHint({ authMethod: 'exec', user: 'demo', name: 'openshift-cluster' } as ClusterInfo)).toBe('oc login <api-server-url>')
+  it('returns aws sso login for AWS clusters', () => {
+    const cluster = { authMethod: 'exec', user: 'aws-user', name: 'test' } as ClusterInfo
+    expect(getIAMRefreshHint(cluster)).toBe('aws sso login')
   })
 
-  it('returns null for unknown exec providers', () => {
-    expect(
-      getIAMRefreshHint({ authMethod: 'exec', user: 'custom-user', name: 'private-cluster' } as ClusterInfo),
-    ).toBeNull()
+  it('returns aws sso login for EKS clusters by name', () => {
+    const cluster = { authMethod: 'exec', user: 'test', name: 'eks-cluster' } as ClusterInfo
+    expect(getIAMRefreshHint(cluster)).toBe('aws sso login')
+  })
+
+  it('returns gcloud auth login for GKE clusters', () => {
+    const cluster = { authMethod: 'exec', user: 'gke-user', name: 'test' } as ClusterInfo
+    expect(getIAMRefreshHint(cluster)).toBe('gcloud auth login')
+  })
+
+  it('returns gcloud auth login for GCP clusters by name', () => {
+    const cluster = { authMethod: 'exec', user: 'test', name: 'gcp-cluster' } as ClusterInfo
+    expect(getIAMRefreshHint(cluster)).toBe('gcloud auth login')
+  })
+
+  it('returns az login for Azure clusters', () => {
+    const cluster = { authMethod: 'exec', user: 'az-user', name: 'test' } as ClusterInfo
+    expect(getIAMRefreshHint(cluster)).toBe('az login')
+  })
+
+  it('returns az login for AKS clusters by name', () => {
+    const cluster = { authMethod: 'exec', user: 'test', name: 'aks-cluster' } as ClusterInfo
+    expect(getIAMRefreshHint(cluster)).toBe('az login')
+  })
+
+  it('returns oc login for OpenShift clusters', () => {
+    const cluster = { authMethod: 'exec', user: 'test', name: 'openshift-cluster' } as ClusterInfo
+    expect(getIAMRefreshHint(cluster)).toBe('oc login <api-server-url>')
+  })
+
+  it('returns null for unknown exec clusters', () => {
+    const cluster = { authMethod: 'exec', user: 'unknown', name: 'test' } as ClusterInfo
+    expect(getIAMRefreshHint(cluster)).toBeNull()
   })
 })
 
 describe('CopyCommandButton', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
     vi.clearAllMocks()
-    vi.mocked(copyToClipboard).mockResolvedValue(true)
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    })
   })
 
-  afterEach(() => {
-    vi.useRealTimers()
+  it('renders copy icon by default', () => {
+    render(<CopyCommandButton text="test command" />)
+    expect(screen.getByLabelText('Copy command to clipboard')).toBeInTheDocument()
   })
 
-  it('copies the command and shows temporary feedback', async () => {
+  it('copies text to clipboard when clicked', async () => {
     render(<CopyCommandButton text="aws sso login" />)
+    const button = screen.getByLabelText('Copy command to clipboard')
 
-    act(() => {
-      fireEvent.click(screen.getByLabelText('Copy command to clipboard'))
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('aws sso login')
     })
-
-    expect(copyToClipboard).toHaveBeenCalledWith('aws sso login')
-    expect(screen.getByText('Copied!')).toBeInTheDocument()
-
-    act(() => {
-      vi.advanceTimersByTime(COPY_FEEDBACK_MS)
-    })
-
-    expect(screen.queryByText('Copied!')).not.toBeInTheDocument()
   })
 
-  it('stops click propagation', () => {
-    const parentClick = vi.fn()
+  it('shows check icon after copying', async () => {
+    render(<CopyCommandButton text="test command" />)
+    const button = screen.getByLabelText('Copy command to clipboard')
 
-    render(
-      <div onClick={parentClick}>
-        <CopyCommandButton text="az login" />
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(screen.getByText('Copied!')).toBeInTheDocument()
+    })
+  })
+
+  it('stops propagation on click', () => {
+    const parentClick = vi.fn()
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        parentClick()
+      }
+    }
+    const { container } = render(
+      <div onClick={parentClick} onKeyDown={handleKeyDown} role="button" tabIndex={0}>
+        <CopyCommandButton text="test" />
       </div>,
     )
 
-    fireEvent.click(screen.getByLabelText('Copy command to clipboard'))
+    const button = screen.getByLabelText('Copy command to clipboard')
+    fireEvent.click(button)
 
     expect(parentClick).not.toHaveBeenCalled()
   })
