@@ -18,6 +18,8 @@ const POD_RESTART_TREND_MIN_VALUES = 2
 const CLUSTER_TREND_THRESHOLD_PERCENT = 5
 const POD_RESTART_WORSENING_DELTA = 1
 const POD_ISSUE_KEY_SEPARATOR = '\u0000'
+/** Initial delay before capturing first snapshot to allow data to load */
+const INITIAL_SNAPSHOT_DELAY_MS = 5000
 /**
  * Maximum consecutive snapshots whose empty GPU data will be carried-forward
  * from the last known non-empty gpuNodes list. Prevents a transient GPU fetch
@@ -355,7 +357,7 @@ export function useMetricsHistory() {
       if (clustersRef.current.length > 0 && lastSnapshotRef.current === 0) {
         captureSnapshot()
       }
-    }, 5000)
+    }, INITIAL_SNAPSHOT_DELAY_MS)
 
     // Set up stable interval — reads latest data from refs each tick
     const intervalId = setInterval(captureSnapshot, interval)

@@ -12,6 +12,9 @@ const COLORS = {
   background: "#0a0f1c",
 }
 
+// Animation timing constants
+const NODE_ACTIVATION_INTERVAL_MS = 3000
+
 // Cluster visualization with dynamic elements
 interface ClusterProps {
   position?: [number, number, number]
@@ -56,7 +59,7 @@ const Cluster = ({
         () => Math.floor(Math.random() * nodeCount)
       )
       setActiveNodes(randomNodes)
-    }, 3000)
+    }, NODE_ACTIVATION_INTERVAL_MS)
 
     return () => clearInterval(interval)
   }, [nodeCount])

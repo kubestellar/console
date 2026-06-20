@@ -41,6 +41,9 @@ import type { NamespaceDetails, NamespaceAccessEntry } from './types'
 type GroupByMode = 'cluster' | 'type'
 type ClusterNamespaceStatus = 'unavailable' | 'accessDenied'
 
+// Auto-refresh interval for namespace list
+const AUTO_REFRESH_INTERVAL_MS = 30000
+
 // Cache for namespace data per cluster - persists across filter changes
 const namespaceCache = new Map<string, NamespaceDetails[]>()
 
@@ -413,7 +416,7 @@ export function NamespaceManager() {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchNamespaces(true)
-    }, 30000)
+    }, AUTO_REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [fetchNamespaces])
 

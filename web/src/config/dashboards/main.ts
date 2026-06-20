@@ -7,6 +7,9 @@
 
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
+// Auto-refresh interval for dashboard
+const DEFAULT_AUTO_REFRESH_INTERVAL_MS = 30000
+
 export const mainDashboardConfig: UnifiedDashboardConfig = {
   id: 'main',
   name: 'Dashboard',
@@ -145,7 +148,7 @@ export const mainDashboardConfig: UnifiedDashboardConfig = {
   features: {
     dragDrop: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DEFAULT_AUTO_REFRESH_INTERVAL_MS,
     addCard: true,
     templates: true,
     recommendations: true,
