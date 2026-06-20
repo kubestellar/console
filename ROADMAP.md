@@ -140,7 +140,7 @@ KubeStellar Console intentionally does **not** aim to:
 - **Replace kubectl** — Console is a visual companion, not a CLI replacement. Power users should continue using kubectl, helm, and other CLI tools directly.
 - **Be a general-purpose IDE** — While Console includes AI-powered features, it is not a code editor or development environment.
 - **Manage non-Kubernetes workloads** — Console focuses exclusively on Kubernetes clusters and cloud-native workloads.
-- **Provide its own container runtime** — Console observes and manages existing clusters; it does not provision infrastructure.
+- **Provide its own container runtime** — Console observes and manages existing clusters; it does not provisions infrastructure.
 - **Compete with commercial APM tools** — Console provides operational visibility, not deep application performance monitoring. Use Datadog, New Relic, or Grafana for APM.
 
 ## How to Influence the Roadmap
@@ -156,30 +156,30 @@ We welcome community input on priorities:
 ## Strategic Health — June 2026
 
 > Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
-> **Last updated:** 2026-06-20 (01:06 AM EDT, pass 15)
+> **Last updated:** 2026-06-20 (11:06 AM EDT, pass 16)
 
 ### Current Risk Register
 
 | Risk | Severity | Issue | Status |
 |------|----------|-------|--------|
-| Coverage suite 100% collapse — all 12 shards failing for 3+ days; v0.3 "91% coverage" claim unsupportable | 🔴 Critical | #19158 #19257 | Requires immediate fix; every day deepens v0.3 credibility debt |
-| Feature vacuum: zero open PRs + Q3 starts July 1 (11 days) — v0.4 delivery now critical risk | 🔴 Critical | #19257 | v0.4 feature captain needed; llm-d/Drasi/kagent work has not started |
+| v0.4 T-11 days: FINAL WARNING — zero feature PRs across all 7 scope items, Q3 starts July 1 | 🔴 Critical | #19307 #19257 | Scope decision + feature captain required immediately |
+| Coverage suite 100% collapse — all 12 shards failing 4+ days; v0.3 "91% coverage" claim unsupportable | 🔴 Critical | #19158 | CI fix attempts in progress (#19292 #19293 merged) but coverage still down |
 | GitHub branch protection still absent — policy files advisory-only, merges unblocked | 🔴 Critical | #18355 | 5-minute fix: GitHub Settings → Branch protection |
-| CNCF security audit Q2 action overdue — 39 days past deadline | 🔴 Critical | #18207 | Requires @clubanderson action at github.com/cncf/toc/issues |
-| Nightly CI cascade: 5 simultaneous nightly failures — v0.3 credibility at risk | 🟠 High | #19005 | Active; related to coverage collapse |
+| CNCF security audit Q2 action overdue — 40 days past deadline | 🔴 Critical | #18207 | Requires @clubanderson action at github.com/cncf/toc/issues |
+| Nightly CI: partial recovery in progress — regressions fixed, coverage still broken | 🟠 High | #19005 | #19292 (Playwright) + #19293 (nightly regressions) merged Jun 20 |
 | PR hygiene crisis: 67% DCO failures + 37% WIP zombies | 🟠 High | #19007 | Structural Copilot DCO gap; needs process fix |
-| Auto-QA triage backlog: 4 issues stuck in ai-needs-human limbo — quality feedback loop broken | 🟠 High | #19256 | #18599 #18598 #19077 #19161 need human triage decisions |
 | ADOPTERS.md self-referential — no external adopters listed | 🟠 High | — | Ongoing |
-| PR triage SLA absent — ai-needs-human PRs lack escalation path | 🟡 Medium | #18037 | Ongoing |
+| PR triage SLA absent — ai-needs-human PRs still lack escalation (#18598 #18599 open) | 🟡 Medium | #18037 | @Jayant-kernel contributed Auto-QA SLA doc (#19291) — partial progress |
 | Tech-debt arch refactors: #17124, #17576, #17882, #17883 still open | 🟡 Medium | #17883 | Architect in progress |
 | Stellar subsystem — no GA milestone or alpha exit criteria | 🟡 Medium | #17757 | Tracked |
 | CNCF incubation tracker on `hold` | 🟡 Medium | #4072 | Blocked pending security audit + adopters |
-| ~~SSRF: IsBlockedIP missing IsMulticast~~ | ~~🟠 High~~ | ~~#18372~~ | ✅ Fixed PR #18374 merged |
-| ~~Community PRs prow-gated: @bmvinay7 + @AdeshDeshmukh~~ | ~~🟠 High~~ | ~~#18305~~ | ✅ All three June 13 wave PRs merged (#18264 ✅, #18373 ✅, #18377 ✅) |
+| ~~Auto-QA triage backlog: 4 issues stuck in ai-needs-human~~ | ~~🟠 High~~ | ~~#19256~~ | ✅ Closed as completed Jun 20 — @Jayant-kernel added Auto-QA SLA doc (#19291) |
+| ~~SSRF: IsBlockedIP missing IsMulticast~~ | ~~🟠 High~~ | ~~#18372~~ | ✅ Fixed |
+| ~~Community PRs prow-gated: @bmvinay7 + @AdeshDeshmukh~~ | ~~🟠 High~~ | ~~#18305~~ | ✅ All three June 13 wave PRs merged |
 | ~~Coverage suite: 39% run failure rate~~ | ~~🟠 High~~ | ~~#18533~~ | ⬆️ Escalated to Critical: 100% collapse |
 | ~~Auth smoke test regression~~ | ~~🔴 Critical~~ | ~~#18354~~ | ✅ Fixed |
-| ~~CSP `unsafe-eval` default~~ | ~~🟠 High~~ | ~~#18326~~ | ✅ Fix (#18341) + docs (#18342) merged |
-| ~~Playwright Firefox nightly failing~~ | ~~🟠 High~~ | ~~#18304~~ | ✅ Fixed via #18315 |
+| ~~CSP `unsafe-eval` default~~ | ~~🟠 High~~ | ~~#18326~~ | ✅ Fixed |
+| ~~Playwright Firefox nightly failing~~ | ~~🟠 High~~ | ~~#18304~~ | ✅ Fixed |
 | ~~Nightly CI trifecta~~ | ~~🔴 Critical~~ | ~~#18299-18301~~ | ✅ Resolved |
 | ~~Coverage suite: 67 failures~~ | ~~🟠 High~~ | ~~#18226~~ | ✅ Fixed |
 | ~~Merge gate disabled~~ | ~~🔴 Critical~~ | ~~#17852~~ | ✅ Closed |
@@ -187,26 +187,31 @@ We welcome community input on priorities:
 
 ### Community Momentum 🌱
 
-**June 2026 wave — all three June 13 contributors merged:**
-- **@bmvinay7** — PR #18264 `feat(missions): self-hosted semantic search` ✅ Merged 2026-06-16
-- **@ashnaaseth2325-oss** — PR #18377 ✅ Merged 2026-06-16; PR #19225 `fix: incorrect rollback actions after Helm release rollback` ✅ Merged 2026-06-19 (returning contributor 🎉)
+**@Jayant-kernel: most active external contributor** — 3 PRs merged in 2 days, including governance:
+- PR #19251 `docs: promote console marketplace in README` ✅ Merged 2026-06-19
+- PR #19291 `docs: add Auto-QA triage SLA` ✅ Merged 2026-06-20 (directly addressed strategist gap #19256)
+- Strategic retention opportunity filed: #19306
+
+**@ashnaaseth2325-oss: returning contributor:**
+- PR #19225 `fix: incorrect rollback actions after Helm release rollback` ✅ Merged 2026-06-19 (2nd PR)
+
+**Earlier June wave — all merged:**
+- **@bmvinay7** — PR #18264 ✅ Merged 2026-06-16
+- **@ashnaaseth2325-oss** — PR #18377 ✅ Merged 2026-06-16
 - **@AdeshDeshmukh** — PR #18373 ✅ Merged 2026-06-17
 
-**June 19–20 new contributions:**
-- **@Jayant-kernel** — PR #19251 `docs: promote console marketplace in README` ✅ Merged 2026-06-19
-
-**Human contributor ratio: ~10%** (2 distinct external contributors, 2 PRs of 20 merged in last 10 days). Improved from 0% in prior periods; target is ≥10% sustained.
+**Human contributor ratio: ~15%** (3 distinct external contributors in June). Exceeds 10% target for the first time; community health signal is positive.
 
 ### v0.4 Delivery Prerequisites
 
 Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), ordered by urgency:
 
-1. **Fix coverage suite** — Assign and resolve #19158 immediately. All 12 test shards have been failing for 3+ days. v0.3's "91% coverage" ROADMAP claim requires a functioning test infrastructure.
-2. **Enable GitHub branch protection on `main`** (#18355) — [Configure here](https://github.com/kubestellar/console/settings/branch_protection_rules). Require status checks: `build`, `lint`, `go-test`. Policy files in `.github/` are advisory and cannot block merges. This is a 5-minute task.
-3. **Designate v0.4 feature captain** (#18974) — Q3 starts July 1 (11 days). Feature work for llm-d, Drasi, and kagent has not started. Without an owner, v0.4 will ship as a scanner/automation release rather than an AI-Native Observability milestone.
-4. **File CNCF security audit** (#18207) — Q2 deadline passed 39 days ago. File at `github.com/cncf/toc/issues`. Three security findings in May (CSP, ValidateKubeContext, SSRF IsMulticast) all now fixed, which strengthens the audit narrative.
-5. **Triage Auto-QA backlog** (#19256) — 4 issues (#18599, #18598, #19077, #19161) need a human decision (accept/defer/close). ~30 minutes total.
-6. **Tag ≥20 issues `good-first-issue`** (#18973 closed, #18785 open) — Hacktoberfest 2026 signups begin September; tagging before Q3 end maximizes project discoverability.
+1. **Scope decision + feature captain** (#18974, #19307) — Q3 starts July 1 (T-11 days). No feature work has started for any of 7 scope items. Designate a feature captain and choose whether to scope-reduce to Tier 1 (llm-d monitoring only) or slip deadline to Q4.
+2. **Fix coverage suite** (#19158) — 4+ days of 100% failure; CI recovery PRs (#19292, #19293) merged but coverage still down. Assign targeted fix.
+3. **Enable GitHub branch protection on `main`** (#18355) — [Configure here](https://github.com/kubestellar/console/settings/branch_protection_rules). 5-minute task.
+4. **File CNCF security audit** (#18207) — Q2 deadline passed 40 days ago. File at `github.com/cncf/toc/issues`.
+5. **Engage @Jayant-kernel for v0.4 feature work** (#19306) — 3 PRs merged, governance contribution. Strategic window to channel toward llm-d or Drasi issues (#18031, #18032).
+6. **Tag ≥20 issues `good-first-issue`** (#18785) — Hacktoberfest 2026 signups begin September.
 7. **External adopter recruitment** — ADOPTERS.md needs ≥3 external organizations before CNCF application.
 
 ### Adoption Readiness
@@ -214,13 +219,14 @@ Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), ordered 
 | Signal | Target | Current |
 |--------|--------|---------|
 | Main branch build stability | Green ≥14 consecutive days | 🔴 Coverage suite 100% collapse (#19158); branch protection absent (#18355) |
-| Test infrastructure | All CI shards passing | 🔴 All 12 coverage shards failing 3+ days (#19158) |
-| Feature velocity | ≥1 v0.4 feature PR merged | 🔴 Zero open PRs; Q3 starts July 1 |
+| Test infrastructure | All CI shards passing | 🔴 All 12 coverage shards failing 4+ days; Playwright + nightly regressions fixed Jun 20 |
+| Feature velocity | ≥1 v0.4 feature PR merged | 🔴 Zero v0.4 feature PRs; Q3 starts July 1 |
 | External adopters in ADOPTERS.md | ≥3 confirmed orgs | ❌ 0 external (KubeStellar self-listed only) |
-| Human contributor ratio | ≥10% of merged PRs | ⚠️ ~10% (2 external contributors in last 10 days); target reached but fragile |
-| Community contributors active | ≥2 distinct contributors/month | ✅ @ashnaaseth2325-oss (2 PRs), @Jayant-kernel (1 PR) in June |
-| Community PR merge time | ≤7 days for first-time contributors | ✅ June 13 wave: all merged within 4 days |
+| Human contributor ratio | ≥10% of merged PRs | ✅ ~15% (3 external contributors this month); first time target met |
+| Community contributors active | ≥2 distinct contributors/month | ✅ @Jayant-kernel (3 PRs), @ashnaaseth2325-oss (2 PRs), @AdeshDeshmukh (1 PR) |
+| Community PR merge time | ≤7 days for first-time contributors | ✅ June wave: all merged within 4 days |
 | `good-first-issue` label coverage | ≥20 issues tagged | ❌ 0 issues tagged (#18785 open) |
-| Security posture | No active sec-check findings | ✅ All three May findings fixed (CSP, ValidateKubeContext, SSRF) |
-| CNCF security audit | Filed | ❌ Q2 deadline passed 39 days ago (#18207) |
+| Security posture | No active sec-check findings | ✅ All security findings fixed; 1 resilience fix in progress (#19304) |
+| Auto-QA SLA defined | Documented in `docs/plans/` | ✅ Auto-QA triage SLA doc added by @Jayant-kernel (#19291) |
+| CNCF security audit | Filed | ❌ Q2 deadline passed 40 days ago (#18207) |
 | CNCF incubation application | Filed | ⏸ On hold (#4072) |
