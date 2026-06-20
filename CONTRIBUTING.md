@@ -104,6 +104,11 @@ Starts backend on `:8080` and frontend on `:5174` with a mock `dev-user` account
 - Update documentation when changing behavior
 - Keep PRs focused on a single concern
 
+### Review and Auto-QA Triage
+
+The project tracks proposed review and triage expectations in [docs/plans/PR-TRIAGE-SLA.md](docs/plans/PR-TRIAGE-SLA.md).
+Issues or PRs labeled `ai-needs-human` need a human decision rather than more automation. For Auto-QA issues, the expected decision is to accept, defer, or close the finding so contributors know whether follow-up work, including PRs, is welcome.
+
 ### Netlify Functions parity for API changes
 
 If your PR changes shared API behavior, update both sides of the production architecture:
