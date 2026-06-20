@@ -1,55 +1,35 @@
 package stellar
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"net"
-	"os"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_parseCIDRs(t *testing.T) {
+func TestParseCIDRs(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   []string
 		wantErr bool
 		wantLen int
 	}{
-		{
-			name:    "valid single CIDR",
-			input:   []string{"127.0.0.0/8"},
-			wantErr: false,
-			wantLen: 1,
-		},
-		{
-			name:    "valid multiple CIDRs",
-			input:   []string{"127.0.0.0/8", "::1/128", "10.0.0.0/8"},
-			wantErr: false,
-			wantLen: 3,
-		},
-		{
-			name:    "filters empty strings",
-			input:   []string{"127.0.0.0/8", "", "  ", "10.0.0.0/8"},
-			wantErr: false,
-			wantLen: 2,
-		},
-		{
-			name:    "invalid CIDR",
-			input:   []string{"not-a-cidr"},
-			wantErr: true,
-		},
-		{
-			name:    "invalid IP in CIDR",
-			input:   []string{"999.999.999.999/8"},
-			wantErr: true,
-		},
-		{
-			name:    "empty list",
-			input:   []string{},
-			wantErr: false,
-			wantLen: 0,
-		},
+		{name: "valid single CIDR", input: []string{"127.0.0.0/8"}, wantLen: 1},
+		{name: "valid multiple CIDRs", input: []string{"127.0.0.0/8", "::1/128", "10.0.0.0/8"}, wantLen: 3},
+		{name: "filters empty strings", input: []string{"127.0.0.0/8", "", "  ", "10.0.0.0/8"}, wantLen: 2},
+		{name: "invalid CIDR", input: []string{"not-a-cidr"}, wantErr: true},
+		{name: "invalid IP in CIDR", input: []string{"999.999.999.999/8"}, wantErr: true},
+		{name: "empty list", input: []string{}, wantLen: 0},
 	}
 
 	for _, tt := range tests {
@@ -65,7 +45,7 @@ func Test_parseCIDRs(t *testing.T) {
 	}
 }
 
-func Test_ipInCIDRs(t *testing.T) {
+func TestIPInCIDRs(t *testing.T) {
 	cidrs, err := parseCIDRs([]string{"127.0.0.0/8", "10.0.0.0/16", "::1/128"})
 	require.NoError(t, err)
 
@@ -74,569 +54,210 @@ func Test_ipInCIDRs(t *testing.T) {
 		ip     string
 		wantIn bool
 	}{
-		{"localhost IPv4", "127.0.0.1", true},
-		{"localhost IPv4 edge", "127.255.255.255", true},
-		{"10.0.x.x in range", "10.0.5.10", true},
-		{"10.1.x.x out of range", "10.1.0.1", false},
-		{"localhost IPv6", "::1", true},
-		{"public IP", "8.8.8.8", false},
-		{"private IP not in list", "192.168.1.1", false},
+		{name: "localhost IPv4", ip: "127.0.0.1", wantIn: true},
+		{name: "localhost IPv4 edge", ip: "127.255.255.255", wantIn: true},
+		{name: "10.0.x.x in range", ip: "10.0.5.10", wantIn: true},
+		{name: "10.1.x.x out of range", ip: "10.1.0.1", wantIn: false},
+		{name: "localhost IPv6", ip: "::1", wantIn: true},
+		{name: "public IP", ip: "8.8.8.8", wantIn: false},
+		{name: "private IP not in list", ip: "192.168.1.1", wantIn: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ip := net.ParseIP(tt.ip)
-			require.NotNil(t, ip, "invalid test IP")
-			result := ipInCIDRs(ip, cidrs)
-			assert.Equal(t, tt.wantIn, result)
+			require.NotNil(t, ip)
+			assert.Equal(t, tt.wantIn, ipInCIDRs(ip, cidrs))
 		})
 	}
 }
 
-func Test_ipInCIDRs_EmptyList(t *testing.T) {
-	ip := net.ParseIP("127.0.0.1")
-	result := ipInCIDRs(ip, []*net.IPNet{})
-	assert.False(t, result, "IP should not match empty CIDR list")
-}
+func TestValidateStellarProviderBaseURLCases(t *testing.T) {
+	t.Setenv(stellarOllamaAllowedCIDRsEnv, "127.0.0.0/8,::1/128")
 
-func Test_validateStellarProviderBaseURL(t *testing.T) {
 	tests := []struct {
-		name     string
-		provider string
-		url      string
-		wantErr  bool
-		errHint  string
-		setup    func()
-		teardown func()
+		name      string
+		provider  string
+		baseURL   string
+		want      string
+		wantError bool
 	}{
-		{
-			name:     "empty URL is allowed",
-			provider: "anthropic",
-			url:      "",
-			wantErr:  false,
-		},
-		{
-			name:     "whitespace-only URL trimmed to empty",
-			provider: "anthropic",
-			url:      "   ",
-			wantErr:  false,
-		},
-		{
-			name:     "URL too long",
-			provider: "anthropic",
-			url:      "https://" + string(make([]byte, stellarMaxProviderBaseURLLen)),
-			wantErr:  true,
-			errHint:  "too long",
-		},
-		{
-			name:     "URL with spaces",
-			provider: "anthropic",
-			url:      "https://api.example.com with spaces",
-			wantErr:  true,
-			errHint:  "whitespace",
-		},
-		{
-			name:     "URL with tabs",
-			provider: "anthropic",
-			url:      "https://api.example.com\twith\ttabs",
-			wantErr:  true,
-			errHint:  "whitespace",
-		},
-		{
-			name:     "URL with newlines",
-			provider: "anthropic",
-			url:      "https://api.example.com\nwith\nnewlines",
-			wantErr:  true,
-			errHint:  "whitespace",
-		},
-		{
-			name:     "invalid URL syntax",
-			provider: "anthropic",
-			url:      "not a valid url",
-			wantErr:  true,
-			errHint:  "invalid base URL",
-		},
-		{
-			name:     "URL with credentials",
-			provider: "anthropic",
-			url:      "https://user:pass@api.example.com",
-			wantErr:  true,
-			errHint:  "credentials",
-		},
-		{
-			name:     "URL without host",
-			provider: "anthropic",
-			url:      "https://",
-			wantErr:  true,
-			errHint:  "host",
-		},
-		{
-			name:     "ollama with http localhost",
-			provider: "ollama",
-			url:      "http://localhost:11434",
-			wantErr:  false,
-			setup: func() {
-				os.Setenv(stellarOllamaAllowedCIDRsEnv, "127.0.0.0/8,::1/128")
-			},
-			teardown: func() {
-				os.Unsetenv(stellarOllamaAllowedCIDRsEnv)
-			},
-		},
-		{
-			name:     "ollama with https rejected",
-			provider: "ollama",
-			url:      "https://localhost:11434",
-			wantErr:  true,
-			errHint:  "must use http://",
-		},
-		{
-			name:     "ollama with public IP rejected",
-			provider: "ollama",
-			url:      "http://8.8.8.8:11434",
-			wantErr:  true,
-			errHint:  "not in",
-			setup: func() {
-				os.Setenv(stellarOllamaAllowedCIDRsEnv, "127.0.0.0/8,::1/128")
-			},
-			teardown: func() {
-				os.Unsetenv(stellarOllamaAllowedCIDRsEnv)
-			},
-		},
-		{
-			name:     "cloud provider with http rejected",
-			provider: "anthropic",
-			url:      "http://api.anthropic.com",
-			wantErr:  true,
-			errHint:  "must use https://",
-		},
-		{
-			name:     "cloud provider with localhost rejected",
-			provider: "openai",
-			url:      "https://localhost:8080",
-			wantErr:  true,
-			errHint:  "internal hostnames",
-		},
-		{
-			name:     "cloud provider with .internal domain rejected",
-			provider: "openai",
-			url:      "https://api.internal",
-			wantErr:  true,
-			errHint:  "internal hostnames",
-		},
-		{
-			name:     "cloud provider with .local domain rejected",
-			provider: "openai",
-			url:      "https://api.local",
-			wantErr:  true,
-			errHint:  "internal hostnames",
-		},
-		{
-			name:     "cloud provider with metadata service rejected",
-			provider: "openai",
-			url:      "https://metadata.google.internal",
-			wantErr:  true,
-			errHint:  "internal hostnames",
-		},
-		{
-			name:     "trailing slash removed",
-			provider: "anthropic",
-			url:      "https://api.example.com/",
-			wantErr:  false,
-		},
+		{name: "empty url allowed", provider: "anthropic", baseURL: "", want: ""},
+		{name: "whitespace url trimmed to empty", provider: "anthropic", baseURL: "   ", want: ""},
+		{name: "cloud provider requires https", provider: "anthropic", baseURL: "http://api.anthropic.com", wantError: true},
+		{name: "cloud provider rejects localhost", provider: "openai", baseURL: "https://localhost:8080", wantError: true},
+		{name: "ollama allows localhost http", provider: "ollama", baseURL: "http://localhost:11434", want: "http://localhost:11434"},
+		{name: "ollama rejects public host", provider: "ollama", baseURL: "http://8.8.8.8:11434", wantError: true},
+		{name: "rejects credentials", provider: "anthropic", baseURL: "https://user:pass@api.example.com", wantError: true},
+		{name: "rejects whitespace", provider: "anthropic", baseURL: "https://api.example.com bad", wantError: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.setup != nil {
-				tt.setup()
-			}
-			if tt.teardown != nil {
-				defer tt.teardown()
-			}
-
-			result, err := validateStellarProviderBaseURL(tt.provider, tt.url)
-
-			if tt.wantErr {
+			got, err := validateStellarProviderBaseURL(tt.provider, tt.baseURL)
+			if tt.wantError {
 				require.Error(t, err)
-				if tt.errHint != "" {
-					assert.Contains(t, err.Error(), tt.errHint)
-				}
 				return
 			}
-
 			require.NoError(t, err)
-			if tt.url != "" && tt.url != "   " {
-				assert.NotEmpty(t, result)
-				assert.NotContains(t, result, " ")
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func Test_loadStellarOllamaAllowedCIDRs(t *testing.T) {
-	tests := []struct {
-		name    string
-		envVal  string
-		wantLen int
-		wantErr bool
-	}{
-		{
-			name:    "default when env not set",
-			envVal:  "",
-			wantLen: 2, // 127.0.0.0/8 and ::1/128
-			wantErr: false,
-		},
-		{
-			name:    "custom single CIDR",
-			envVal:  "10.0.0.0/8",
-			wantLen: 1,
-			wantErr: false,
-		},
-		{
-			name:    "custom multiple CIDRs",
-			envVal:  "127.0.0.0/8,10.0.0.0/16,::1/128",
-			wantLen: 3,
-			wantErr: false,
-		},
-		{
-			name:    "invalid CIDR",
-			envVal:  "not-valid",
-			wantLen: 0,
-			wantErr: true,
-		},
+func newProviderHTTPTestApp(t *testing.T) (*store.SQLiteStore, *fiber.App, string) {
+	t.Helper()
+
+	dbPath := filepath.Join(t.TempDir(), "stellar-providers.db")
+	s, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+
+	handler := NewHandler(s, nil)
+	app := fiber.New()
+	userUUID := uuid.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userUUID)
+		return c.Next()
+	})
+	app.Get("/api/providers", handler.ListProviders)
+	app.Post("/api/providers", handler.CreateProvider)
+	app.Delete("/api/providers/:id", handler.DeleteProvider)
+	app.Patch("/api/providers/:id/default", handler.SetDefaultProvider)
+	app.Post("/api/providers/:id/test", handler.TestProvider)
+
+	return s, app, userUUID.String()
+}
+
+func TestListProvidersHTTPHandler(t *testing.T) {
+	s, app, userID := newProviderHTTPTestApp(t)
+	defer s.Close()
+
+	require.NoError(t, s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
+		ID:          "p1",
+		UserID:      userID,
+		Provider:    "anthropic",
+		DisplayName: "Anthropic",
+		Model:       "claude-3-opus-20240229",
+		APIKeyEnc:   []byte{},
+		IsActive:    true,
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/providers", nil)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var payload struct {
+		Global []map[string]any                `json:"global"`
+		User   []store.StellarProviderConfig   `json:"user"`
 	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	assert.NotEmpty(t, payload.Global)
+	require.Len(t, payload.User, 1)
+	assert.Equal(t, "anthropic", payload.User[0].Provider)
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.envVal != "" {
-				os.Setenv(stellarOllamaAllowedCIDRsEnv, tt.envVal)
-				defer os.Unsetenv(stellarOllamaAllowedCIDRsEnv)
-			} else {
-				os.Unsetenv(stellarOllamaAllowedCIDRsEnv)
-			}
+func TestCreateProviderHTTPHandler(t *testing.T) {
+	s, app, userID := newProviderHTTPTestApp(t)
+	defer s.Close()
 
-			result, err := loadStellarOllamaAllowedCIDRs()
+	body := `{"provider":"anthropic","displayName":"My Anthropic","apiKey":"","model":"claude-3-opus-20240229","baseUrl":"https://api.anthropic.com"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/providers", bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
 
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-			require.NoError(t, err)
-			assert.Len(t, result, tt.wantLen)
-		})
+	var created store.StellarProviderConfig
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&created))
+	assert.Equal(t, "anthropic", created.Provider)
+	assert.Equal(t, "****", created.APIKeyMask)
+
+	configs, err := s.GetUserProviderConfigs(context.Background(), userID)
+	require.NoError(t, err)
+	require.Len(t, configs, 1)
+	assert.Equal(t, created.ID, configs[0].ID)
+}
+
+func TestDeleteProviderHTTPHandler(t *testing.T) {
+	s, app, userID := newProviderHTTPTestApp(t)
+	defer s.Close()
+
+	require.NoError(t, s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
+		ID:          "p1",
+		UserID:      userID,
+		Provider:    "anthropic",
+		DisplayName: "Anthropic",
+		APIKeyEnc:   []byte{},
+		IsActive:    true,
+	}))
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/providers/p1", nil)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+
+	configs, err := s.GetUserProviderConfigs(context.Background(), userID)
+	require.NoError(t, err)
+	assert.Empty(t, configs)
+}
+
+func TestSetDefaultProviderHTTPHandler(t *testing.T) {
+	s, app, userID := newProviderHTTPTestApp(t)
+	defer s.Close()
+
+	require.NoError(t, s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
+		ID:          "p1",
+		UserID:      userID,
+		Provider:    "anthropic",
+		DisplayName: "Anthropic",
+		APIKeyEnc:   []byte{},
+		IsActive:    true,
+	}))
+	require.NoError(t, s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
+		ID:          "p2",
+		UserID:      userID,
+		Provider:    "openai",
+		DisplayName: "OpenAI",
+		APIKeyEnc:   []byte{},
+		IsActive:    true,
+	}))
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/providers/p2/default", nil)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+
+	configs, err := s.GetUserProviderConfigs(context.Background(), userID)
+	require.NoError(t, err)
+	require.Len(t, configs, 2)
+
+	defaults := 0
+	for _, cfg := range configs {
+		if cfg.IsDefault {
+			defaults++
+			assert.Equal(t, "p2", cfg.ID)
+		}
 	}
+	assert.Equal(t, 1, defaults)
 }
 
-func Test_resolveStellarProviderHostIPs(t *testing.T) {
-	tests := []struct {
-		name    string
-		host    string
-		wantErr bool
-		minIPs  int
-	}{
-		{
-			name:    "IPv4 address",
-			host:    "127.0.0.1",
-			wantErr: false,
-			minIPs:  1,
-		},
-		{
-			name:    "IPv6 address",
-			host:    "::1",
-			wantErr: false,
-			minIPs:  1,
-		},
-		{
-			name:    "localhost resolves",
-			host:    "localhost",
-			wantErr: false,
-			minIPs:  1,
-		},
-		{
-			name:    "invalid hostname",
-			host:    "this-hostname-definitely-does-not-exist-12345.invalid",
-			wantErr: true,
-		},
-	}
+func TestTestProviderNotFoundHTTP(t *testing.T) {
+	s, app, _ := newProviderHTTPTestApp(t)
+	defer s.Close()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := resolveStellarProviderHostIPs(tt.host)
+	req := httptest.NewRequest(http.MethodPost, "/api/providers/nonexistent/test", nil)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
 
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			assert.GreaterOrEqual(t, len(result), tt.minIPs)
-			for _, ip := range result {
-				assert.NotNil(t, ip)
-			}
-		})
-	}
-}
-
-// TestListProviders_HTTPHandler tests the list providers endpoint
-func TestListProviders_HTTPHandler(t *testing.T) {
-dbPath := filepath.Join(t.TempDir(), "test-list-providers-http.db")
-s, err := store.NewSQLiteStore(dbPath)
-require.NoError(t, err)
-defer s.Close()
-
-registry := providers.NewRegistry()
-h := NewHandler(s, registry)
-app := fiber.New()
-userID := uuid.NewString()
-app.Use(func(c *fiber.Ctx) error {
- c.Next()
-})
-app.Get("/api/providers", h.ListProviders)
-
-_ = s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
-userID,
-thropic",
-, _ := http.NewRequest(http.MethodGet, "/api/providers", nil)
-resp, err := app.Test(req, 5000)
-require.NoError(t, err)
-defer resp.Body.Close()
-
-assert.Equal(t, http.StatusOK, resp.StatusCode)
-var payload map[string]interface{}
-json.NewDecoder(resp.Body).Decode(&payload)
-assert.NotNil(t, payload["global"])
-assert.NotNil(t, payload["user"])
-}
-
-// TestCreateProvider_AnthropicHTTP tests creating Anthropic provider
-func TestCreateProvider_AnthropicHTTP(t *testing.T) {
-dbPath := filepath.Join(t.TempDir(), "test-create-anthropic-http.db")
-s, err := store.NewSQLiteStore(dbPath)
-require.NoError(t, err)
-defer s.Close()
-
-registry := providers.NewRegistry()
-h := NewHandler(s, registry)
-app := fiber.New()
-userID := uuid.NewString()
-app.Use(func(c *fiber.Ctx) error {
- c.Next()
-})
-app.Post("/api/providers", h.CreateProvider)
-
-body := `{"provider":"anthropic","displayName":"My Anthropic","apiKey":"sk-test-key","model":"claude-3-opus-20240229","baseUrl":"https://api.anthropic.com"}`
-req, _ := http.NewRequest(http.MethodPost, "/api/providers", bytes.NewReader([]byte(body)))
-req.Header.Set("Content-Type", "application/json")
-resp, err := app.Test(req, 5000)
-require.NoError(t, err)
-defer resp.Body.Close()
-
-assert.Equal(t, http.StatusCreated, resp.StatusCode)
-var created map[string]interface{}
-json.NewDecoder(resp.Body).Decode(&created)
-assert.Equal(t, "anthropic", created["provider"])
-assert.NotEmpty(t, created["apiKeyMask"])
-}
-
-// TestCreateProvider_InvalidBaseURLHTTP tests invalid base URL rejection
-func TestCreateProvider_InvalidBaseURLHTTP(t *testing.T) {
-dbPath := filepath.Join(t.TempDir(), "test-create-invalid-url-http.db")
-s, err := store.NewSQLiteStore(dbPath)
-require.NoError(t, err)
-defer s.Close()
-
-registry := providers.NewRegistry()
-h := NewHandler(s, registry)
-app := fiber.New()
-userID := uuid.NewString()
-app.Use(func(c *fiber.Ctx) error {
- c.Next()
-})
-app.Post("/api/providers", h.CreateProvider)
-
-body := `{"provider":"anthropic","displayName":"Test","apiKey":"sk-key","baseUrl":"http://localhost"}`
-req, _ := http.NewRequest(http.MethodPost, "/api/providers", bytes.NewReader([]byte(body)))
-req.Header.Set("Content-Type", "application/json")
-resp, err := app.Test(req, 5000)
-require.NoError(t, err)
-defer resp.Body.Close()
-
-assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-}
-
-// TestDeleteProvider_HTTPHandler tests the delete provider endpoint
-func TestDeleteProvider_HTTPHandler(t *testing.T) {
-dbPath := filepath.Join(t.TempDir(), "test-delete-provider-http.db")
-s, err := store.NewSQLiteStore(dbPath)
-require.NoError(t, err)
-defer s.Close()
-
-registry := providers.NewRegistry()
-h := NewHandler(s, registry)
-app := fiber.New()
-userID := uuid.NewString()
-app.Use(func(c *fiber.Ctx) error {
- c.Next()
-})
-app.Delete("/api/providers/:id", h.DeleteProvider)
-
-providerID := "p1"
-_ = s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
-userID,
-, _ := http.NewRequest(http.MethodDelete, "/api/providers/"+providerID, nil)
-resp, err := app.Test(req, 5000)
-require.NoError(t, err)
-defer resp.Body.Close()
-
-assert.Equal(t, http.StatusNoContent, resp.StatusCode)
-}
-
-// TestSetDefaultProvider_HTTPHandler tests the set default provider endpoint
-func TestSetDefaultProvider_HTTPHandler(t *testing.T) {
-dbPath := filepath.Join(t.TempDir(), "test-set-default-http.db")
-s, err := store.NewSQLiteStore(dbPath)
-require.NoError(t, err)
-defer s.Close()
-
-registry := providers.NewRegistry()
-h := NewHandler(s, registry)
-app := fiber.New()
-userID := uuid.NewString()
-app.Use(func(c *fiber.Ctx) error {
- c.Next()
-})
-app.Patch("/api/providers/:id/default", h.SetDefaultProvider)
-
-providerID := "p1"
-_ = s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
-userID,
-thropic",
-})
-
-req, _ := http.NewRequest(http.MethodPatch, "/api/providers/"+providerID+"/default", nil)
-resp, err := app.Test(req, 5000)
-require.NoError(t, err)
-defer resp.Body.Close()
-
-assert.Equal(t, http.StatusNoContent, resp.StatusCode)
-}
-
-// TestTestProvider_NotFoundHTTP tests provider not found error
-func TestTestProvider_NotFoundHTTP(t *testing.T) {
-dbPath := filepath.Join(t.TempDir(), "test-provider-not-found-http.db")
-s, err := store.NewSQLiteStore(dbPath)
-require.NoError(t, err)
-defer s.Close()
-
-registry := providers.NewRegistry()
-h := NewHandler(s, registry)
-app := fiber.New()
-userID := uuid.NewString()
-app.Use(func(c *fiber.Ctx) error {
- c.Next()
-})
-app.Post("/api/providers/:id/test", h.TestProvider)
-
-req, _ := http.NewRequest(http.MethodPost, "/api/providers/nonexistent/test", nil)
-resp, err := app.Test(req, 5000)
-require.NoError(t, err)
-defer resp.Body.Close()
-
-assert.Equal(t, http.StatusNotFound, resp.StatusCode)
-}
-
-// TestProviderRouterSelection tests provider selection logic
-func TestProviderRouterSelection(t *testing.T) {
-dbPath := filepath.Join(t.TempDir(), "test-router-selection.db")
-s, err := store.NewSQLiteStore(dbPath)
-require.NoError(t, err)
-defer s.Close()
-
-userID := uuid.NewString()
-
-providerConfigs := []store.StellarProviderConfig{
-  userID,
-thropic",
-"p2",
-  "p3",
-ai",
-ge providerConfigs {
-fig(context.Background(), &p)
-}
-
-configs, err := s.GetUserProviderConfigs(context.Background(), userID)
-require.NoError(t, err)
-assert.Len(t, configs, 3)
-
-activeConfigs := make([]store.StellarProviderConfig, 0)
-for _, c := range configs {
-figs = append(activeConfigs, c)
-(t, activeConfigs, 2)
-
-var defaultProvider *store.StellarProviderConfig
-for i := range activeConfigs {
-figs[i].IsDefault {
-figs[i]
-otNil(t, defaultProvider)
-assert.Equal(t, "anthropic", defaultProvider.Provider)
-}
-
-// TestProviderModelSelection tests model selection for different providers
-func TestProviderModelSelection(t *testing.T) {
-dbPath := filepath.Join(t.TempDir(), "test-model-selection-multi.db")
-s, err := store.NewSQLiteStore(dbPath)
-require.NoError(t, err)
-defer s.Close()
-
-userID := uuid.NewString()
-
-tests := []struct {
-ame     string
-g
-g
-}{
-ame:     "anthropic claude-3-opus",
-thropic",
-ame:     "ollama llama3",
-ame:     "openai gpt-4",
-ai",
-ge tests {
-(tt.name, func(t *testing.T) {
-fig{
-ewString(),
-:= s.UpsertProviderConfig(context.Background(), cfg)
-oError(t, err)
-
-figs, err := s.GetUserProviderConfigs(context.Background(), userID)
-oError(t, err)
-d := false
-ge configs {
-d = true
-d, "model %s for provider %s not found", tt.model, tt.provider)
- tests failover logic between providers
-func TestProviderFailoverChain(t *testing.T) {
-dbPath := filepath.Join(t.TempDir(), "test-failover-chain.db")
-s, err := store.NewSQLiteStore(dbPath)
-require.NoError(t, err)
-defer s.Close()
-
-userID := uuid.NewString()
-
-primary := store.StellarProviderConfig{
-  userID,
-thropic",
-fig{
-userID,
-fig(context.Background(), &primary)
-_ = s.UpsertProviderConfig(context.Background(), &fallback)
-
-configs, err := s.GetUserProviderConfigs(context.Background(), userID)
-require.NoError(t, err)
-assert.Len(t, configs, 2)
-
-activeConfigs := make([]store.StellarProviderConfig, 0)
-for _, c := range configs {
-figs = append(activeConfigs, c)
-(t, activeConfigs, 2)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }

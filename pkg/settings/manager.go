@@ -93,6 +93,10 @@ func (sm *SettingsManager) Load() error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
+	if err := sm.ensureKeyLoadedLocked(); err != nil {
+		return err
+	}
+
 	data, err := os.ReadFile(sm.settingsPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -373,6 +377,9 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 	if err := sm.pendingLoadErrorLocked(); err != nil {
 		return err
 	}
+	if err := sm.ensureKeyLoadedLocked(); err != nil {
+		return err
+	}
 	if sm.settings == nil {
 		sm.settings = DefaultSettings()
 	}
@@ -546,6 +553,9 @@ func (sm *SettingsManager) ImportEncrypted(data []byte) error {
 	if err := sm.pendingLoadErrorLocked(); err != nil {
 		return err
 	}
+	if err := sm.ensureKeyLoadedLocked(); err != nil {
+		return err
+	}
 	if sm.settings == nil {
 		sm.settings = DefaultSettings()
 	}
@@ -643,6 +653,18 @@ func (m *SettingsManager) SetKeyPath(path string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.keyPath = path
+}
+
+func (sm *SettingsManager) ensureKeyLoadedLocked() error {
+	if sm == nil || len(sm.key) > 0 || sm.keyPath == "" {
+		return nil
+	}
+	key, err := ensureKeyFile(sm.keyPath)
+	if err != nil {
+		return fmt.Errorf("failed to initialize encryption key: %w", err)
+	}
+	sm.key = key
+	return nil
 }
 
 // applyDefaults fills in zero-value fields in AllSettings with sensible defaults
