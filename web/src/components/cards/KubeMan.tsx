@@ -10,6 +10,7 @@ import { useGameKeys } from '../../hooks/useGameKeys'
 const CELL_SIZE = 16
 const MAZE_WIDTH = 19
 const MAZE_HEIGHT = 21
+const POWER_MODE_DURATION_MS = 5000
 
 // Ghost names and behaviors
 type GhostName = 'Blinky' | 'Pinky' | 'Inky' | 'Clyde'
@@ -445,7 +446,7 @@ export function KubeMan(_props: CardComponentProps) {
             powerTimerRef.current = setTimeout(() => {
               setPowerMode(false)
               setGhosts(gs => gs.map(g => ({ ...g, scared: false })))
-            }, 5000)
+            }, POWER_MODE_DURATION_MS)
           }
         }
       }

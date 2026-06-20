@@ -43,6 +43,7 @@ type ClusterNamespaceStatus = 'unavailable' | 'accessDenied'
 
 // Cache for namespace data per cluster - persists across filter changes
 const namespaceCache = new Map<string, NamespaceDetails[]>()
+const AUTO_REFRESH_INTERVAL_MS = 30000
 
 function buildFallbackNamespaces(namespaces: string[], cluster: string): NamespaceDetails[] {
   return Array.from(new Set(namespaces.filter(Boolean)))
@@ -413,7 +414,7 @@ export function NamespaceManager() {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchNamespaces(true)
-    }, 30000)
+    }, AUTO_REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [fetchNamespaces])
 
