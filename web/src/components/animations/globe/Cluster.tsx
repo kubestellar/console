@@ -10,8 +10,9 @@ const COLORS = {
   highlight: "#00C2FF",
   success: "#00E396",
   background: "#0a0f1c",
-const NODE_ACTIVATION_INTERVAL_MS = 3000
 }
+
+const NODE_ACTIVATION_INTERVAL_MS = 3000
 
 // Cluster visualization with dynamic elements
 interface ClusterProps {
