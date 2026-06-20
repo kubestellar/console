@@ -154,13 +154,17 @@ test.describe('Smoke Tests', () => {
     test('clicking navbar logo navigates to home from non-home route', async ({ page }) => {
       await setupDemoMode(page)
 
-      // Navigate to a non-home route
-      await page.goto('/settings')
-      
-      // Use regex-based URL assertion for cross-browser compatibility.
-      // Glob-based waitForURL('**/settings') fails on Firefox/WebKit. (#18588)
-      await expect(page).toHaveURL(/\/settings/, { timeout: 10000 })
-      await expect(page.locator('h1:has-text("Settings")')).toBeVisible({ timeout: 10000 })
+      // Navigate via the in-app sidebar instead of a deep-link goto().
+      // The nightly workflow runs against Vite preview, where direct sub-route
+      // entry can be flaky across Firefox/WebKit. In-app navigation exercises
+      // the actual router path without relying on preview-server rewrites.
+      await page.goto('/', { waitUntil: 'domcontentloaded' })
+      const settingsLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/settings"], [data-testid="sidebar"] a[href="/settings"]').first()
+      await expect(settingsLink).toBeVisible({ timeout: 10000 })
+      await settingsLink.click({ force: true })
+
+      await expect(page).toHaveURL(/\/settings(?:[?#].*)?$/, { timeout: 10000 })
+      await expect(page.locator('main [data-testid="settings-title"]').first()).toBeVisible({ timeout: 10000 })
 
       // Click the logo button (has aria-label "Go to home dashboard").
       // The navbar renders two such buttons — the logo and the wordmark —

@@ -2,20 +2,20 @@
 
 > Status: proposed
 > Horizon: v0.4 — AI-Native Observability (Q3 2026)
-> Related issue: #17587
+> Related issues: #17587, #19256
 
 ## Problem statement
 
-KubeStellar Console uses Claude Code GitHub Actions for AI-assisted PR review and issue triage. PRs labeled `ai-needs-human` indicate cases where the AI agent has identified issues that require human judgment, but without a defined service level agreement (SLA) or escalation path, these PRs can remain stuck indefinitely. This creates contributor friction, slows down the review pipeline, and undermines the effectiveness of the AI triage system.
+KubeStellar Console uses Claude Code GitHub Actions for AI-assisted PR review and issue triage. PRs and issues labeled `ai-needs-human` indicate cases where the AI agent has identified work that requires human judgment, but without a defined service level agreement (SLA) or escalation path, these items can remain stuck indefinitely. This creates contributor friction, slows down the review pipeline, and undermines the effectiveness of the AI triage system.
 
-Without clear expectations for human review latency, contributors cannot estimate when their PRs will be merged, and maintainers lack prioritization signals to focus their limited review bandwidth.
+Without clear expectations for human review latency, contributors cannot estimate when their PRs will be merged or when Auto-QA findings will be accepted, deferred, or closed. Maintainers also lack prioritization signals to focus their limited review bandwidth.
 
 ## Goals
 
 1. Establish measurable SLA targets for PR triage across all states (`needs-review`, `ai-needs-human`, `changes-requested`).
-2. Define a clear escalation path for `ai-needs-human` PRs that exceed the SLA threshold.
+2. Define a clear escalation path for `ai-needs-human` PRs and issues that exceed the SLA threshold.
 3. Automate SLA monitoring and alerting to surface stuck PRs before they become stale.
-4. Provide contributors with visibility into expected review timelines.
+4. Provide contributors with visibility into expected review and triage timelines.
 5. Generate weekly triage reports to track SLA adherence and identify bottlenecks.
 
 ## Non-goals
@@ -24,6 +24,7 @@ Without clear expectations for human review latency, contributors cannot estimat
 - Guaranteeing immediate reviews for all PRs — the SLA establishes targets, not hard commitments.
 - Auto-merging PRs without human approval, even when AI review passes.
 - Applying SLAs to draft PRs or PRs explicitly marked as work-in-progress.
+- Requiring maintainers to implement every Auto-QA finding. The SLA requires a clear decision, not automatic acceptance.
 
 ## Current foundation
 
@@ -68,6 +69,36 @@ When a PR receives the `ai-needs-human` label, the following escalation sequence
 3. **Day 3 (SLA breach)** — Escalation comment tags project lead; PR added to weekly triage agenda; Slack notification to `#kubestellar-dev`.
 4. **Day 7** — If still unreviewed, label added to bi-weekly contributor sync agenda; maintainer availability evaluated.
 5. **Day 14** — Project lead makes merge/close/defer decision; outcome documented in PR comment.
+
+## Auto-QA issue triage SLA
+
+Auto-QA issues can represent real quality gaps, noisy thresholds, or work that is too broad for a single PR. When an issue receives both `auto-qa` and `ai-needs-human`, the goal is to record a human decision within 14 days.
+
+### Required decision
+
+Each stuck Auto-QA issue should receive one of these outcomes:
+
+- **Accept**: confirm the finding is actionable, remove `ai-processing`, assign or decompose the work, and leave the issue open.
+- **Defer**: keep the finding but move it to a milestone, roadmap item, or child issues with a clear follow-up path.
+- **Close**: close as not planned when the finding is noisy, too broad, or not worth the maintenance cost.
+
+### Current backlog queue
+
+Issue #19256 tracks four Auto-QA items that need this decision path:
+
+| Issue | Decision needed |
+| --- | --- |
+| #18599 | Accept or defer the missing component test coverage work. If accepted, keep work in focused child issues. |
+| #18598 | Accept oversized test-file refactoring, tune the threshold, or close if large test files are acceptable. |
+| #19077 | Accept bundle-size work, tune the chunk-size threshold, or defer to a performance milestone. |
+| #19161 | Audit major dependency updates and decide whether to schedule, defer, or close each upgrade path. |
+
+### Escalation path
+
+1. **Day 0**: `ai-needs-human` is added; issue comment states the decision needed.
+2. **Day 7**: If no maintainer response, add the issue to the weekly triage agenda and tag a reviewer.
+3. **Day 14**: Maintainer records an accept/defer/close decision and removes `ai-processing`.
+4. **After Day 14**: If no owner exists to take the work, record **Defer** by closing as **not planned** with a short note to reopen when ownership exists.
 
 ## Automation implementation
 

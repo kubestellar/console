@@ -116,11 +116,13 @@ test.describe('Sidebar Navigation', () => {
     test('dashboard link navigates to home', async ({ page }) => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
 
-      // Navigate away first — clicking the home link while already on "/"
-      // would not exercise any real routing behavior.
-      await page.goto('/clusters')
+      // Navigate away first using the real sidebar link instead of a deep-link
+      // goto(). Firefox/WebKit nightly runs use Vite preview and can race on
+      // direct sub-route loads, whereas in-app navigation is deterministic.
+      const clustersLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/clusters"], [data-testid="sidebar"] a[href="/clusters"]').first()
+      await expect(clustersLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
+      await clustersLink.click({ force: true })
       await page.waitForLoadState('domcontentloaded')
-      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
       await expectDashboardNavigation(page, '/clusters', 'My Clusters')
 
       const dashboardLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/"], [data-testid="sidebar"] a[href="/"]').first()

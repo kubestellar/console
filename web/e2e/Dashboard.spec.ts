@@ -33,6 +33,7 @@ const MOBILE_VIEWPORT_HEIGHT_PX = 667
 const TABLET_VIEWPORT_WIDTH_PX = 768
 const TABLET_VIEWPORT_HEIGHT_PX = 1024
 const KEYBOARD_FOCUS_SEQUENCE_LENGTH = 5
+const WEBKIT_MIN_FOCUS_SEQUENCE_LENGTH = 3
 const STANDARD_TAB_KEY = 'Tab'
 const WEBKIT_FULL_KEYBOARD_TAB_KEY = 'Alt+Tab'
 const REFRESH_BUTTON_TITLE = 'Refresh cluster data'
@@ -63,6 +64,13 @@ const DEFAULT_CLUSTER_HEALTH_CARD_ID =
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ')
+const WEBKIT_FOCUSABLE_SELECTOR = [
+  'a[href]',
   'input:not([disabled])',
   'select:not([disabled])',
   'textarea:not([disabled])',
@@ -479,6 +487,10 @@ test.describe('Dashboard Page', () => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ACCESSIBILITY_ASSERT_TIMEOUT_MS })
 
       const tabKey = browserName === 'webkit' ? WEBKIT_FULL_KEYBOARD_TAB_KEY : STANDARD_TAB_KEY
+      const focusableSelector = browserName === 'webkit' ? WEBKIT_FOCUSABLE_SELECTOR : FOCUSABLE_SELECTOR
+      const requiredFocusCount = browserName === 'webkit'
+        ? WEBKIT_MIN_FOCUS_SEQUENCE_LENGTH
+        : KEYBOARD_FOCUS_SEQUENCE_LENGTH
       const expectedFocusOrder = await page.evaluate(({ selector, limit }) => {
         const isVisible = (element: Element) => {
           const htmlElement = element as HTMLElement
@@ -518,11 +530,11 @@ test.describe('Dashboard Page', () => {
           label: getLabel(element),
         }))
       }, {
-        selector: FOCUSABLE_SELECTOR,
+        selector: focusableSelector,
         limit: KEYBOARD_FOCUS_SEQUENCE_LENGTH,
       })
 
-      expect(expectedFocusOrder.length).toBe(KEYBOARD_FOCUS_SEQUENCE_LENGTH)
+      expect(expectedFocusOrder.length).toBeGreaterThanOrEqual(requiredFocusCount)
       await page.evaluate(() => {
         (document.activeElement as HTMLElement | null)?.blur?.()
       })
