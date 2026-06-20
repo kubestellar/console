@@ -62,7 +62,8 @@ func Quantize(v []float32) []uint64 {
 	code := make([]uint64, (len(v)+63)/64)
 	for i, x := range v {
 		if x >= 0 {
-			code[i/64] |= 1 << uint(i%64)
+			// Safe conversion: i%64 is always in [0,63], well within uint range.
+			code[i/64] |= 1 << uint(i%64) // #nosec G115
 		}
 	}
 	return code
