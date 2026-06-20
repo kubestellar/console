@@ -10,6 +10,7 @@ const COLORS = {
   highlight: "#00C2FF",
   success: "#00E396",
   background: "#0a0f1c",
+const NODE_ACTIVATION_INTERVAL_MS = 3000
 }
 
 // Cluster visualization with dynamic elements
@@ -56,7 +57,7 @@ const Cluster = ({
         () => Math.floor(Math.random() * nodeCount)
       )
       setActiveNodes(randomNodes)
-    }, 3000)
+    }, NODE_ACTIVATION_INTERVAL_MS)
 
     return () => clearInterval(interval)
   }, [nodeCount])
