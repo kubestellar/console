@@ -99,7 +99,7 @@ describe('ClusterCardList', () => {
   it('calls onRefreshCluster when refresh button is clicked', () => {
     const onRefreshCluster = vi.fn()
     render(<ClusterCardList {...defaultProps} onRefreshCluster={onRefreshCluster} />)
-    const refreshButton = screen.getByRole('button', { name: /refreshClusterData/i })
+    const refreshButton = screen.getByRole('button', { name: /common\.refresh/i })
     fireEvent.click(refreshButton)
     expect(onRefreshCluster).toHaveBeenCalledTimes(1)
   })
@@ -108,7 +108,7 @@ describe('ClusterCardList', () => {
     const cluster = createMockCluster({ healthy: false, reachable: false })
     const onRefreshCluster = vi.fn()
     render(<ClusterCardList {...defaultProps} cluster={cluster} onRefreshCluster={onRefreshCluster} />)
-    const refreshButton = screen.getByRole('button', { name: /cluster.controlsDisabledOffline/i })
+    const refreshButton = screen.getByRole('button', { name: /cluster\.controlsDisabledOffline/i })
     expect(refreshButton).toBeDisabled()
   })
 
@@ -138,7 +138,7 @@ describe('ClusterCardList', () => {
       loading: true,
     })
     render(<ClusterCardList {...defaultProps} cluster={cluster} />)
-    // Loading indicator should be present
-    expect(screen.queryByText('-')).toBeInTheDocument()
+    // Loading indicator should be present — multiple fields show '-'
+    expect(screen.getAllByText('-').length).toBeGreaterThanOrEqual(1)
   })
 })
