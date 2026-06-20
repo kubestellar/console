@@ -38,7 +38,7 @@ CARD_INSTALL_MAP_FILE="web/src/lib/cards/cardInstallMap.ts"
 VERBOSE=false
 LOCAL_DIR=""
 SCHEMA_FILE=""
-AJV_FORMATS_PLUGIN="ajv-formats"
+AJV_VALIDATOR=".github/kb-scripts/validate-json-schema.cjs"
 AJV_TMP_DIR=".validate-missions-ajv-${BASHPID}"
 
 require_option_value() {
@@ -249,10 +249,7 @@ ajv_formats_available() {
   local smoke_file
   smoke_file=$(write_ajv_input "plugin-check" '{"version":"kc-mission-v1","title":"AJV plugin check","steps":[{"title":"Step 1","description":"Schema smoke test"}]}')
 
-  ajv validate --spec=draft7 \
-    -s "$SCHEMA_FILE" \
-    -d "$smoke_file" \
-    -c "$AJV_FORMATS_PLUGIN" >/dev/null 2>&1
+  node "$AJV_VALIDATOR" "$SCHEMA_FILE" "$smoke_file" >/dev/null 2>&1
 }
 
 trap cleanup_ajv_tmp_dir EXIT
@@ -270,11 +267,14 @@ if [[ -n "$SCHEMA_FILE" ]]; then
     echo "ERROR: Schema file not found: $SCHEMA_FILE" >&2
     exit 2
   fi
-  if ! command -v ajv &>/dev/null; then
-    echo -e "${YELLOW:-}WARNING: --schema given but 'ajv' not found; schema validation skipped (run 'npm install -g ajv-cli ajv-formats').${RESET:-}"
+  if ! command -v node &>/dev/null; then
+    echo -e "${YELLOW:-}WARNING: --schema given but 'node' not found; schema validation skipped.${RESET:-}"
+    SCHEMA_FILE=""
+  elif [[ ! -f "$AJV_VALIDATOR" ]]; then
+    echo -e "${YELLOW:-}WARNING: --schema given but '$AJV_VALIDATOR' is missing; schema validation skipped.${RESET:-}"
     SCHEMA_FILE=""
   elif ! ajv_formats_available; then
-    echo -e "${YELLOW:-}WARNING: --schema given but '${AJV_FORMATS_PLUGIN}' is not available; schema validation skipped.${RESET:-}"
+    echo -e "${YELLOW:-}WARNING: --schema given but AJV helper dependencies are not available; schema validation skipped.${RESET:-}"
     SCHEMA_FILE=""
   fi
 fi
@@ -405,12 +405,12 @@ validate_mission() {
     mission_issues+=("INFO: Version references found: $(echo $version_refs | tr '\n' ' ')")
   fi
 
-  # ── JSON Schema validation via ajv-cli ────────────────────────
-  if [[ -n "$SCHEMA_FILE" ]] && command -v ajv &>/dev/null; then
+  # ── JSON Schema validation via AJV ────────────────────────
+  if [[ -n "$SCHEMA_FILE" ]] && command -v node &>/dev/null; then
     local schema_payload ajv_input_file ajv_out
     schema_payload=$(build_schema_validation_payload "$normalized")
     ajv_input_file=$(write_ajv_input "mission" "$schema_payload")
-    if ! ajv_out=$(ajv validate --spec=draft7 -s "$SCHEMA_FILE" -d "$ajv_input_file" -c "$AJV_FORMATS_PLUGIN" 2>&1); then
+    if ! ajv_out=$(node "$AJV_VALIDATOR" "$SCHEMA_FILE" "$ajv_input_file" 2>&1); then
       local ajv_err
       ajv_err=$(echo "$ajv_out" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g')
       mission_issues+=("CRITICAL: Schema validation failed after normalization — ${ajv_err}")

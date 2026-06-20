@@ -13,24 +13,23 @@ EXPECTED_VERSION_ERROR="must have required property 'version'"
 # AJV must be available for schema validation tests to be meaningful.
 # If AJV is missing or non-functional, exit with code 2 (configuration error)
 # rather than silently skipping schema checks and giving false positives.
-if ! command -v ajv &>/dev/null; then
-  echo "✗ CONFIGURATION ERROR: 'ajv' CLI not found in PATH."
-  echo "  Schema validation tests require ajv-cli. Install with:"
+if ! command -v node &>/dev/null; then
+  echo "✗ CONFIGURATION ERROR: 'node' not found in PATH."
+  echo "  Schema validation tests require Node.js. Install helper dependencies with:"
   echo "    npm ci --ignore-scripts --prefix .github/kb-scripts"
-  echo "  Then add to PATH:"
-  echo "    export PATH=\".github/kb-scripts/node_modules/.bin:\$PATH\""
   exit 2
 fi
 
 # Smoke-test that ajv can actually validate against the schema with formats
-SMOKE_FILE=$(mktemp)
+SMOKE_FILE=$(mktemp --suffix=.json)
 trap 'rm -f "$SMOKE_FILE"' EXIT
 echo '{"version":"kc-mission-v1","title":"AJV smoke test","steps":[{"title":"Step 1","description":"Smoke test"}]}' > "$SMOKE_FILE"
 
-if ! ajv validate --spec=draft7 -s "$SCHEMA_FILE" -d "$SMOKE_FILE" -c ajv-formats >/dev/null 2>&1; then
-  echo "✗ CONFIGURATION ERROR: ajv cannot validate against schema with ajv-formats plugin."
+if ! ajv_out=$(node .github/kb-scripts/validate-json-schema.cjs "$SCHEMA_FILE" "$SMOKE_FILE" 2>&1); then
+  echo "✗ CONFIGURATION ERROR: AJV cannot validate against schema with ajv-formats plugin."
   echo "  The schema file may have changed or the ajv-formats plugin is unavailable."
   echo "  Schema: $SCHEMA_FILE"
+  echo "$ajv_out"
   exit 2
 fi
 
