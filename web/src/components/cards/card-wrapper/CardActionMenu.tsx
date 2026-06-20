@@ -304,7 +304,7 @@ export const CardActionMenu = memo(function CardActionMenu({
           {onWidthChange && (
             <div className="relative" ref={menuContainerRef}>
               <button
-                onClick={() => { showResizeMenu ? closeResizeMenu() : openResizeMenu(); closeHeightMenu() }}
+                onClick={() => { if (showResizeMenu) { closeResizeMenu() } else { openResizeMenu() } closeHeightMenu() }}
                 className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
                 role="menuitem"
                 aria-haspopup="menu"
@@ -352,7 +352,7 @@ export const CardActionMenu = memo(function CardActionMenu({
           {onHeightChange && (
             <div className="relative" ref={heightMenuContainerRef}>
               <button
-                onClick={() => { showHeightMenu ? closeHeightMenu() : openHeightMenu(); closeResizeMenu() }}
+                onClick={() => { if (showHeightMenu) { closeHeightMenu() } else { openHeightMenu() } closeResizeMenu() }}
                 className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
                 role="menuitem"
                 aria-haspopup="menu"
