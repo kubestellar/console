@@ -124,14 +124,22 @@ export default defineConfig(({ mode }) => ({
             ['cards-workloads', ['/src/components/cards/workload-detection/', '/src/components/cards/workload-monitor/']],
             ['cards-storage', ['/src/components/cards/vitess_status/', '/src/components/cards/minio_status/', '/src/components/cards/etcd_status/']],
             ['cards-messaging', ['/src/components/cards/kafka_status/', '/src/components/cards/rabbitmq_status/', '/src/components/cards/redis_status/']],
+            // Split cards-misc further to reduce bundle size
+            ['cards-monitoring', ['/src/components/cards/prometheus_status/', '/src/components/cards/grafana_status/', '/src/components/cards/alertmanager_status/']],
+            ['cards-cluster', ['/src/components/cards/cluster_health/', '/src/components/cards/cluster_capacity/', '/src/components/cards/cluster_nodes/']],
+            ['cards-cost', ['/src/components/cards/cost/', '/src/components/cards/kubecost_status/']],
+            ['cards-data', ['/src/components/cards/postgresql_status/', '/src/components/cards/mysql_status/', '/src/components/cards/mongodb_status/']],
             ['cards-misc', ['/src/components/cards/']],
             // Split drilldown views by type to reduce chunk size
             ['drilldown-k8s', ['/src/components/drilldown/views/PodLogs', '/src/components/drilldown/views/PodEvents', '/src/components/drilldown/views/PodTerminal', '/src/components/drilldown/views/NamespaceDetails']],
             ['drilldown-data', ['/src/components/drilldown/views/LogViewer', '/src/components/drilldown/views/MetricsViewer', '/src/components/drilldown/views/EventTimeline']],
+            ['drilldown-ui', ['/src/components/drilldown/DrillDownModal', '/src/components/drilldown/DrillDownHeader', '/src/components/drilldown/DrillDownStack']],
             ['drilldown', ['/src/components/drilldown/']],
             // Dashboard and layout split by concern
             ['dashboard-customizer', ['/src/components/dashboard/customizer/', '/src/components/dashboard/shared/cardCatalog']],
+            ['dashboard-grid', ['/src/components/dashboard/CardGrid', '/src/components/dashboard/DashboardGrid']],
             ['dashboard-core', ['/src/components/dashboard/', '/src/lib/dashboards/', '/src/lib/unified/dashboard/']],
+            ['layout-header', ['/src/components/layout/Header', '/src/components/layout/TopBar', '/src/components/layout/UserMenu']],
             ['layout-sidebar', ['/src/components/layout/Sidebar', '/src/components/layout/Navigation', '/src/components/layout/MobileMenu']],
             ['layout-shell', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
@@ -141,8 +149,10 @@ export default defineConfig(({ mode }) => ({
             ['contexts-providers', ['/src/contexts/', '/src/hooks/useDrillDown', '/src/hooks/useRewards', '/src/hooks/useMissions', '/src/hooks/useGlobalFilters']],
             ['hooks-data', ['/src/hooks/useCached', '/src/hooks/useCache', '/src/hooks/useCluster', '/src/hooks/useDashboard']],
             ['lib-cache', ['/src/lib/cache/']],
+            ['lib-utils', ['/src/lib/utils', '/src/lib/cn.ts', '/src/lib/constants.ts']],
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
-            // Split app shell to reduce size
+            // Split app shell to reduce massive app-routes chunk
+            ['app-router', ['/src/components/router/', '/src/lib/router/']],
             ['app-routes', ['/src/App.tsx']],
             ['app-shell', ['/src/hooks/usePersistedSettings', '/src/hooks/useAppInit']],
             ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
@@ -153,25 +163,40 @@ export default defineConfig(({ mode }) => ({
           if (!id.includes('node_modules')) return
           // React core (split scheduler separately to reduce main react bundle)
           if (id.includes('/scheduler/')) return 'react-scheduler-vendor'
-          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router') || id.includes('/react-reconciler/')) return 'react-vendor'
-          // three.js ecosystem (split into smaller chunks)
+          if (id.includes('/react-dom/client')) return 'react-dom-client-vendor'
+          if (id.includes('/react-dom/')) return 'react-dom-vendor'
+          if (id.includes('/react-router-dom/')) return 'react-router-dom-vendor'
+          if (id.includes('/react-router/')) return 'react-router-vendor'
+          if (id.includes('/react-reconciler/')) return 'react-reconciler-vendor'
+          if (id.includes('/react/')) return 'react-vendor'
+          // three.js ecosystem (split into smaller chunks to reduce three-core and three-drei)
           if (id.includes('/three-stdlib/')) return 'three-stdlib-vendor'
           if (id.includes('/@react-three/fiber/')) return 'three-fiber-vendor'
-          if (id.includes('/@react-three/drei/')) return 'three-drei-vendor'
+          // Split drei into sub-chunks to reduce 304KB chunk
+          if (id.includes('/@react-three/drei/') && id.includes('/core/')) return 'drei-core-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/web/')) return 'drei-web-vendor'
+          if (id.includes('/@react-three/drei/')) return 'drei-helpers-vendor'
           if (id.includes('/@react-three/') || id.includes('/zustand/') || id.includes('/stats-gl/')) return 'three-react-vendor'
+          // Split three.js core modules to reduce 708KB chunk
           if (id.includes('/three/build/three.module.js')) return 'three-core-vendor'
+          if (id.includes('/three/src/math/')) return 'three-math-vendor'
+          if (id.includes('/three/src/loaders/')) return 'three-loaders-vendor'
           if (id.includes('/three/')) return 'three-extras-vendor'
           // Chart libraries
           if (id.includes('/zrender/')) return 'zrender-vendor'
           if (id.includes('/echarts-for-react/')) return 'echarts-react-vendor'
           if (id.includes('/echarts/')) return 'echarts-vendor'
           if (id.includes('/framer-motion/')) return 'motion-vendor'
-          // Terminal (split addons from core)
+          // Terminal (split addons from core to reduce xterm-core 336KB chunk)
+          if (id.includes('/@xterm/addon-fit/')) return 'xterm-addon-fit-vendor'
+          if (id.includes('/@xterm/addon-web-links/')) return 'xterm-addon-links-vendor'
           if (id.includes('/@xterm/addon-')) return 'xterm-addon-vendor'
           if (id.includes('/@xterm/xterm/')) return 'xterm-core-vendor'
           if (id.includes('/@xterm/')) return 'xterm-vendor'
           // UI libraries
           if (id.includes('/lucide-react/')) return 'lucide-vendor'
+          if (id.includes('/@dnd-kit/core/')) return 'dnd-core-vendor'
+          if (id.includes('/@dnd-kit/sortable/')) return 'dnd-sortable-vendor'
           if (id.includes('/@dnd-kit/')) return 'dnd-vendor'
           if (
             id.includes('/react-markdown/') ||
@@ -207,6 +232,19 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/dompurify/')) return 'sanitize-vendor'
           if (id.includes('/zod/')) return 'schema-vendor'
           if (id.includes('/@tanstack/react-virtual/')) return 'virtual-vendor'
+          // Split date/time libraries
+          if (id.includes('/date-fns/')) return 'date-vendor'
+          if (id.includes('/dayjs/')) return 'dayjs-vendor'
+          // Split utility libraries to reduce generic vendor chunk
+          if (id.includes('/lodash/') || id.includes('/lodash-es/')) return 'lodash-vendor'
+          if (id.includes('/axios/')) return 'axios-vendor'
+          if (id.includes('/clsx/') || id.includes('/classnames/')) return 'classnames-vendor'
+          if (id.includes('/uuid/')) return 'uuid-vendor'
+          // Split state management
+          if (id.includes('/jotai/')) return 'jotai-vendor'
+          if (id.includes('/immer/')) return 'immer-vendor'
+          // Split async utilities
+          if (id.includes('/p-limit/') || id.includes('/p-queue/')) return 'async-vendor'
           return 'vendor'
         },
       },

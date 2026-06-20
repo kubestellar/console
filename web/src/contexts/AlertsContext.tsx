@@ -41,10 +41,20 @@ import { createStateContext } from './createStateContext'
 import { applyMutations, createAlertRulesEngine, generateId, shallowEqualRecords } from './alertRulesEngine'
 
 const AlertsDataFetcher = safeLazy(() => import('./AlertsDataFetcher'), 'default')
+
+/** Fallback frame time (ms) for MCP update batching when requestAnimationFrame is unavailable (~60fps). */
 const MCP_UPDATE_BATCH_FRAME_FALLBACK_MS = 16
+
+/** Storage key for persisted alert rules */
 const ALERT_RULES_KEY = 'kc_alert_rules'
+
+/** Maximum time (ms) to wait for initial MCP data before timing out. */
 const LOADING_TIMEOUT_MS = 30_000
+
+/** Delay (ms) before first alert evaluation after mount to allow data fetching to settle. */
 const INITIAL_EVALUATION_DELAY_MS = 1000
+
+/** Interval (ms) between periodic alert rule evaluations. */
 const EVALUATION_INTERVAL_MS = 30000
 
 const {
