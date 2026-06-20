@@ -306,9 +306,11 @@ function useDemoDataHook<T>(demoData: T[]) {
 
   useEffect(() => {
     if (!demoMode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs loading state with mode change
       setIsLoading(false)
       return
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs loading state with mode change
     setIsLoading(true)
     const timer = setTimeout(() => setIsLoading(false), SHORT_DELAY_MS)
     return () => clearTimeout(timer)
@@ -824,9 +826,9 @@ function useRecentEvents(params?: Record<string, unknown>) {
   const cluster = params?.cluster as string | undefined
   const namespace = params?.namespace as string | undefined
   const result = useCachedEvents(cluster, namespace)
-
   const recentEvents = (() => {
     if (!result.data) return []
+    // eslint-disable-next-line react-hooks/purity -- time-based filtering of cached event data
     const oneHourAgo = Date.now() - MS_PER_HOUR
     return result.data.filter(e => {
       if (!e.lastSeen) return false
