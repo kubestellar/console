@@ -23,7 +23,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
-import { ConfirmDialog } from '../../lib/modals'
+import { ConfirmDialog, useModalState } from '../../lib/modals'
 import { useFederationAwareness, getProviderLabel } from '../../hooks/useFederation'
 import { useToast } from '../ui/Toast'
 import { formatTimeAgo } from '../../lib/formatters'
@@ -72,7 +72,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
   }))
 
   const groups = demoMode ? DEMO_GROUPS : [builtInGroup, ...federationGroups, ...liveGroups]
-  const [isCreating, setIsCreating] = useState(false)
+  const { isOpen: isCreating, open: openCreateForm, close: closeCreateForm } = useModalState()
   // Track which group is pending delete confirmation (#5197)
   const [deleteConfirmName, setDeleteConfirmName] = useState<string | null>(null)
 
@@ -125,7 +125,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
         </div>
         {!demoMode && (
           <button
-            onClick={() => setIsCreating(true)}
+            onClick={openCreateForm}
             className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
           >
             <Plus className="w-3 h-3" />
@@ -141,9 +141,9 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
           clusterHealthMap={clusterHealthMap}
           onSave={(group) => {
             createGroup(group)
-            setIsCreating(false)
+            closeCreateForm()
           }}
-          onCancel={() => setIsCreating(false)}
+          onCancel={closeCreateForm}
         />
       )}
 
