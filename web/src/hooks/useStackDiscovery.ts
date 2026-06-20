@@ -418,7 +418,7 @@ export function useStackDiscovery(clusters: string[]) {
             const filtered: LLMdStack[] = []
             for (const s of prev) {
               if (s.cluster === cluster) {
-cachedById.set(s.id, s)
+                cachedById.set(s.id, s)
               } else {
                 filtered.push(s)
               }
@@ -628,7 +628,7 @@ cachedById.set(s.id, s)
             const components = { prefill: prefillComponents, decode: decodeComponents, both: bothComponents, epp, gateway }
 
             const pool = poolsByNamespace.get(namespace)
-const totalReplicas = [...prefillComponents, ...decodeComponents, ...bothComponents].reduce((s, c) => s + c.replicas, 0)
+            const totalReplicas = [...prefillComponents, ...decodeComponents, ...bothComponents].reduce((s, c) => s + c.replicas, 0)
             const readyReplicas = [...prefillComponents, ...decodeComponents, ...bothComponents].reduce((s, c) => s + c.readyReplicas, 0)
 
             phase1Stacks.push({
