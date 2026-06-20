@@ -35,7 +35,7 @@ The hosted demo is a self-contained showcase: it serves canned demo data and int
 
 KubeStellar Console can be extended with community dashboard content from the [console-marketplace](https://github.com/kubestellar/console-marketplace). The marketplace hosts dashboards, card presets, and themes for Kubernetes operations, AI/ML, security, GitOps, networking, and CNCF project integrations without adding custom code to the core console bundle.
 
-- Browse 150+ ready-made card templates and dashboard presets in [kubestellar/console-marketplace](https://github.com/kubestellar/console-marketplace)
+- Browse community dashboards, card presets, and themes in [kubestellar/console-marketplace](https://github.com/kubestellar/console-marketplace)
 - Share your own dashboard cards or presets through the marketplace repository
 - Start from the [marketplace contribution guide](https://github.com/kubestellar/console-marketplace/blob/main/CONTRIBUTING.md) when adding new community content
 
