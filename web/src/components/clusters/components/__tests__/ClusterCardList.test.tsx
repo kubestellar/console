@@ -99,7 +99,7 @@ describe('ClusterCardList', () => {
   it('calls onRefreshCluster when refresh button is clicked', () => {
     const onRefreshCluster = vi.fn()
     render(<ClusterCardList {...defaultProps} onRefreshCluster={onRefreshCluster} />)
-    const refreshButton = screen.getByRole('button', { name: /common\.refresh/i })
+    const refreshButton = screen.getAllByRole('button', { name: /common\.refresh/i }).find(el => el.tagName === 'BUTTON')!
     fireEvent.click(refreshButton)
     expect(onRefreshCluster).toHaveBeenCalledTimes(1)
   })
@@ -108,7 +108,7 @@ describe('ClusterCardList', () => {
     const cluster = createMockCluster({ healthy: false, reachable: false })
     const onRefreshCluster = vi.fn()
     render(<ClusterCardList {...defaultProps} cluster={cluster} onRefreshCluster={onRefreshCluster} />)
-    const refreshButton = screen.getByRole('button', { name: /cluster\.controlsDisabledOffline/i })
+    const refreshButton = screen.getAllByRole('button', { name: /cluster\.controlsDisabledOffline/i }).find(el => el.tagName === 'BUTTON')!
     expect(refreshButton).toBeDisabled()
   })
 
