@@ -11,6 +11,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 - [Deployment guide](deploy.md) — `deploy.sh` reference and deployment flags
 - [Troubleshooting](troubleshooting.md) — operational troubleshooting reference
 - [Release process](RELEASING.md) — release workflow and packaging notes
+- [Console marketplace](https://github.com/kubestellar/console-marketplace) — community dashboards, card presets, and themes
 
 ## For developers
 
@@ -68,4 +69,5 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [HOMEBREW.md](HOMEBREW.md) | Explains Homebrew support status for the console and kc-agent. |
 | [RELEASING.md](RELEASING.md) | Release-process reference for maintainers packaging and publishing releases. |
 | [cncf-insights/2026-05-27.md](cncf-insights/2026-05-27.md) | Snapshot report of CNCF landscape intelligence from 2026-05-27. |
+| [console-marketplace](https://github.com/kubestellar/console-marketplace) | Community contribution hub for dashboard exports, card presets, and themes. |
 | [security/SELF-ASSESSMENT.md](security/SELF-ASSESSMENT.md) | Project security self-assessment and related review notes. |

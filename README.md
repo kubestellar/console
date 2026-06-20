@@ -31,6 +31,14 @@ The hosted demo is a self-contained showcase: it serves canned demo data and int
 
 > **Note**: `kc-agent` is **not** consumed by the hosted demo at [console.kubestellar.io](https://console.kubestellar.io). It bridges your **self-hosted** console (running at `localhost:8080`) to your kubeconfig contexts and to AI providers. If you want the convenience of the hosted UI plus your real cluster data, you currently have to run the console locally.
 
+## Extend with the Marketplace
+
+KubeStellar Console can be extended with community dashboard content from the [console-marketplace](https://github.com/kubestellar/console-marketplace). The marketplace hosts dashboards, card presets, and themes for Kubernetes operations, AI/ML, security, GitOps, networking, and CNCF project integrations without adding custom code to the core console bundle.
+
+- Browse community dashboards, card presets, and themes in [kubestellar/console-marketplace](https://github.com/kubestellar/console-marketplace)
+- Share your own dashboard cards or presets through the marketplace repository
+- Start from the [marketplace contribution guide](https://github.com/kubestellar/console-marketplace/blob/main/CONTRIBUTING.md) when adding new community content
+
 ## Local install (self-host)
 
 The quickest path to a working console with your own data. `start.sh` downloads the pre-built console binary and a pre-built `kc-agent`, starts both, and opens [http://localhost:8080](http://localhost:8080):
