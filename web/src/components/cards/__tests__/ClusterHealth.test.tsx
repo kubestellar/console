@@ -131,16 +131,31 @@ vi.mock('../../clusters/ClusterDetailModal', () => ({
   ),
 }))
 
-vi.mock('../../../lib/cards/CardComponents', () => ({
-  CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <input data-testid="search-input" value={value} onChange={(e) => onChange(e.target.value)} />
-  ),
-  CardControlsRow: () => <div data-testid="card-controls-row" />,
-  CardPaginationFooter: ({ needsPagination }: { needsPagination: boolean }) =>
-    needsPagination ? <div data-testid="pagination" /> : null,
-  CardAIActions: () => <div data-testid="ai-actions" />,
-  CardEmptyState: ({ title, message }: { title?: string; message?: string; icon?: unknown }) => <div data-testid="empty-state">{title}{message && <span>{message}</span>}</div>,
-}))
+vi.mock('../../../lib/cards/CardComponents', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/cards/CardComponents')>()
+
+  return {
+    ...actual,
+    CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+      <input data-testid="search-input" value={value} onChange={(e) => onChange(e.target.value)} />
+    ),
+    CardControlsRow: ({
+      clusterIndicator,
+    }: {
+      clusterIndicator?: { selectedCount: number; totalCount: number }
+    }) => (
+      <div data-testid="card-controls-row">
+        {clusterIndicator && (
+          <span>{clusterIndicator.selectedCount}/{clusterIndicator.totalCount}</span>
+        )}
+      </div>
+    ),
+    CardPaginationFooter: ({ needsPagination }: { needsPagination: boolean }) =>
+      needsPagination ? <div data-testid="pagination" /> : null,
+    CardAIActions: () => <div data-testid="ai-actions" />,
+    CardEmptyState: ({ title, message }: { title?: string; message?: string; icon?: unknown }) => <div data-testid="empty-state">{title}{message && <span>{message}</span>}</div>,
+  }
+})
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Info } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useModalState } from '../../../lib/modals'
 
 // #6227: shared Escape-key coordinator. Multiple InfoTooltips (one per
 // CardWrapper) used to each register their own document-level keydown
@@ -50,7 +51,7 @@ const TOOLTIP_EDGE_MARGIN_PX = 8
  */
 export function InfoTooltip({ text }: { text: string }) {
   const { t } = useTranslation('cards')
-  const [isVisible, setIsVisible] = useState(false)
+  const { isOpen: isVisible, open: show, close: hide, toggle } = useModalState()
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -109,27 +110,27 @@ export function InfoTooltip({ text }: { text: string }) {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       if (!triggerRef.current?.contains(target) && !tooltipRef.current?.contains(target)) {
-        setIsVisible(false)
+        hide()
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
-    const popEscape = pushEscapeHandler(() => setIsVisible(false))
+    const popEscape = pushEscapeHandler(hide)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       popEscape()
     }
-  }, [isVisible])
+  }, [isVisible, hide])
 
   return (
     <>
       <button
         ref={triggerRef}
-        onClick={() => setIsVisible(!isVisible)}
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
-        onFocus={() => setIsVisible(true)}
-        onBlur={() => setIsVisible(false)}
+        onClick={toggle}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
         className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
         aria-label={t('cardWrapper.cardInfo')}
         aria-describedby={isVisible ? tooltipId : undefined}
@@ -143,8 +144,8 @@ export function InfoTooltip({ text }: { text: string }) {
           role="tooltip"
           className="fixed z-dropdown max-w-xs px-3 py-2.5 text-xs leading-relaxed rounded-lg bg-background border border-border text-foreground shadow-xl animate-fade-in"
           style={{ top: position.top, left: position.left }}
-          onMouseEnter={() => setIsVisible(true)}
-          onMouseLeave={() => setIsVisible(false)}
+          onMouseEnter={show}
+          onMouseLeave={hide}
         >
           {text}
         </div>,

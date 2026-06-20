@@ -7,6 +7,7 @@ import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
 import { ConfirmMissionPromptDialog } from '../../missions/ConfirmMissionPromptDialog'
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { useModalState } from '../../../lib/modals'
 
 /** Timeout for fetching KB guide data (ms) */
 const KB_FETCH_TIMEOUT_MS = 10_000
@@ -31,7 +32,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
 
   const installInfo = CARD_INSTALL_MAP[cardType]
 
-  const [showClusterSelect, setShowClusterSelect] = useState(false)
+  const { isOpen: showClusterSelect, open: openClusterSelect, close: closeClusterSelect } = useModalState()
   const [showInstallGuide, setShowInstallGuide] = useState<{
     mission: { mission?: { title?: string; description?: string; steps?: { title?: string; description?: string }[] } }
   } | null>(null)
@@ -51,7 +52,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
     if (isPreparingInstall) return
     setInstallError(null)
     if (isAgentConnected && installInfo) {
-      setShowClusterSelect(true)
+      openClusterSelect()
     } else if (installInfo) {
       setIsPreparingInstall(true)
       try {
@@ -93,9 +94,9 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
       {showClusterSelect && installInfo && (
         <ClusterSelectionDialog
           open={showClusterSelect}
-          onCancel={() => setShowClusterSelect(false)}
+          onCancel={closeClusterSelect}
           onSelect={async (clusters) => {
-            setShowClusterSelect(false)
+            closeClusterSelect()
             setInstallError(null)
             setIsPreparingInstall(true)
             try {
