@@ -42,7 +42,7 @@ describe('ClusterCardCompact', () => {
 
   it('renders cluster name', () => {
     render(<ClusterCardCompact {...defaultProps} />)
-    expect(screen.getByText('test-cluster')).toBeInTheDocument()
+    expect(screen.getByText('test-context')).toBeInTheDocument()
   })
 
   it('renders cluster stats (nodes, CPU, pods, GPU)', () => {
@@ -123,7 +123,8 @@ describe('ClusterCardCompact', () => {
 
   it('displays remove button for unreachable kubeconfig clusters', () => {
     const cluster = createMockCluster({
-      unreachable: true,
+      reachable: false,
+      errorType: 'network',
       source: 'kubeconfig',
     })
     render(<ClusterCardCompact {...defaultProps} cluster={cluster} />)
