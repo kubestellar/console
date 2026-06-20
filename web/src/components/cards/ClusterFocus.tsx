@@ -9,6 +9,7 @@ import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { CardHeaderActions, CardHeaderRow, CardStatGrid, CardStatHeader } from '../../lib/cards/CardComponents'
 
 interface ClusterFocusProps {
   config?: {
@@ -109,7 +110,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   if (!clusterName) {
     return (
       <div className="h-full flex flex-col min-h-card overflow-hidden">
-        <div className="flex items-center justify-end mb-4">
+        <CardHeaderRow className="justify-end">
           <select
             value={internalCluster}
             onChange={(e) => setInternalCluster(e.target.value)}
@@ -120,7 +121,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
               <option key={c.name} value={c.name}>{c.name}</option>
             ))}
           </select>
-        </div>
+        </CardHeaderRow>
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
           {t('cards:clusterFocus.selectClusterToView')}
         </div>
@@ -131,8 +132,8 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+      <CardHeaderRow>
+        <CardHeaderActions className="min-w-0 flex-1">
           <span className="text-sm font-medium text-foreground truncate">{clusterName}</span>
           <div className={`w-2 h-2 rounded-full shrink-0 ${cluster?.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
           {/* #6217: freshness indicator using the OLDEST of the 4 cache
@@ -154,8 +155,8 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
             showLabel={true}
             staleThresholdMinutes={5}
           />
-        </div>
-        <div className="flex items-center gap-2">
+        </CardHeaderActions>
+        <CardHeaderActions>
           {!selectedCluster && (
             <select
               value={internalCluster}
@@ -167,11 +168,11 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
               ))}
             </select>
           )}
-        </div>
-      </div>
+        </CardHeaderActions>
+      </CardHeaderRow>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <CardStatGrid className="gap-3">
         <div
           className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors"
           onClick={() => cluster && drillToCluster(cluster.name, {
@@ -181,37 +182,37 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
             cpuCores: cluster.cpuCores,
             server: cluster.server })}
         >
-          <div className="flex items-center gap-2 mb-1">
+          <CardStatHeader>
             <Activity className="w-4 h-4 text-blue-400" />
             <span className="text-xs text-muted-foreground">{t('common:common.nodes')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-xl font-bold text-foreground">{cluster?.nodeCount || 0}</span>
         </div>
 
         <div className="p-3 rounded-lg bg-secondary/30">
-          <div className="flex items-center gap-2 mb-1">
+          <CardStatHeader>
             <Box className="w-4 h-4 text-green-400" />
             <span className="text-xs text-muted-foreground">{t('common:common.pods')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-xl font-bold text-foreground">{cluster?.podCount || 0}</span>
         </div>
 
         <div className="p-3 rounded-lg bg-secondary/30">
-          <div className="flex items-center gap-2 mb-1">
+          <CardStatHeader>
             <Cpu className="w-4 h-4 text-purple-400" />
             <span className="text-xs text-muted-foreground">{t('common:common.gpus')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-xl font-bold text-foreground">{clusterGPUs}</span>
         </div>
 
         <div className="p-3 rounded-lg bg-secondary/30">
-          <div className="flex items-center gap-2 mb-1">
+          <CardStatHeader>
             <HardDrive className="w-4 h-4 text-cyan-400" />
             <span className="text-xs text-muted-foreground">{t('common:common.cpuCores')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-xl font-bold text-foreground">{cluster?.cpuCores || 0}</span>
         </div>
-      </div>
+      </CardStatGrid>
 
       {/* Issues Summary */}
       <div className="space-y-2">

@@ -5,7 +5,7 @@ import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { formatStat, formatMemoryStat } from '../../lib/formatStats'
-import { CardClusterFilter } from '../../lib/cards/CardComponents'
+import { CardControlsRow, CardHeaderActions, CardHeaderRow, CardStatGrid, CardStatHeader } from '../../lib/cards/CardComponents'
 import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
@@ -161,42 +161,38 @@ export function ComputeOverview() {
       )}
 
       {/* Controls */}
-      <div className="flex items-center justify-end mb-4">
-        <div className="flex items-center gap-2">
-          {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
-
-          {/* Cluster filter dropdown */}
-          <CardClusterFilter
-            availableClusters={availableClusters}
-            selectedClusters={localClusterFilter}
-            onToggle={toggleClusterFilter}
-            onClear={clearClusterFilter}
-            isOpen={showClusterFilter}
-            setIsOpen={setShowClusterFilter}
-            containerRef={clusterFilterRef}
-            minClusters={1}
-          />
-
-        </div>
-      </div>
+      <CardHeaderRow className="justify-end">
+        <CardControlsRow
+          clusterIndicator={
+            localClusterFilter.length > 0
+              ? { selectedCount: localClusterFilter.length, totalCount: availableClusters.length }
+              : undefined
+          }
+          clusterFilter={{
+            availableClusters,
+            selectedClusters: localClusterFilter,
+            onToggle: toggleClusterFilter,
+            onClear: clearClusterFilter,
+            isOpen: showClusterFilter,
+            setIsOpen: setShowClusterFilter,
+            containerRef: clusterFilterRef,
+            minClusters: 1,
+          }}
+          className="mb-0"
+        />
+      </CardHeaderRow>
 
       {/* Main resources */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <CardStatGrid className="gap-3">
         <div
           className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-colors"
           onClick={drillToResources}
           title={hasRealData ? t('computeOverview.cpuCoresTitle', { count: stats.totalCPUs }) : t('computeOverview.noDataOffline')}
         >
-          <div className="flex items-center gap-2 mb-1">
+          <CardStatHeader>
             <Cpu className="w-4 h-4 text-blue-400" />
             <span className="text-xs text-blue-400">{t('computeOverview.cpuCores')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-2xl font-bold text-foreground">
             {hasRealData ? formatStat(stats.totalCPUs) : '-'}
           </span>
@@ -208,28 +204,28 @@ export function ComputeOverview() {
           onClick={drillToResources}
           title={hasRealData ? t('computeOverview.memoryTitle', { memory: formatMemoryStat(stats.totalMemoryGB) }) : t('computeOverview.noDataOffline')}
         >
-          <div className="flex items-center gap-2 mb-1">
+          <CardStatHeader>
             <MemoryStick className="w-4 h-4 text-green-400" />
             <span className="text-xs text-green-400">{t('common:common.memory')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-2xl font-bold text-foreground">
             {formatMemoryStat(stats.totalMemoryGB, hasRealData)}
           </span>
           <div className="text-xs text-muted-foreground mt-1">{t('computeOverview.allocatable')}</div>
         </div>
-      </div>
+      </CardStatGrid>
 
       {/* Infrastructure counts */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
+      <CardStatGrid className="gap-2">
         <div
           className="p-2 rounded-lg bg-secondary/50 cursor-pointer hover:bg-secondary/70 transition-colors"
           onClick={drillToResources}
           title={hasRealData ? t('computeOverview.nodesTitle', { count: stats.totalNodes }) : t('common:common.noData')}
         >
-          <div className="flex items-center gap-1.5 mb-1">
+          <CardStatHeader className="gap-1.5">
             <Server className="w-3 h-3 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">{t('common:common.nodes')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-lg font-bold text-foreground">
             {hasRealData ? formatStat(stats.totalNodes) : '-'}
           </span>
@@ -239,15 +235,15 @@ export function ComputeOverview() {
           onClick={drillToResources}
           title={hasRealData ? t('computeOverview.podsTitle', { count: stats.totalPods }) : t('common:common.noData')}
         >
-          <div className="flex items-center gap-1.5 mb-1">
+          <CardStatHeader className="gap-1.5">
             <Box className="w-3 h-3 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">{t('common:common.pods')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-lg font-bold text-foreground">
             {hasRealData ? formatStat(stats.totalPods) : '-'}
           </span>
         </div>
-      </div>
+      </CardStatGrid>
 
       {/* GPU Section */}
       <div
@@ -255,17 +251,17 @@ export function ComputeOverview() {
         onClick={() => stats.totalGPUs > 0 && drillToResources()}
         title={stats.totalGPUs > 0 ? t('computeOverview.gpuAllocatedTitle', { allocated: stats.allocatedGPUs, total: stats.totalGPUs, percent: stats.gpuUtilization }) : t('computeOverview.noGPUsInClusters')}
       >
-        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
-          <div className="flex items-center gap-2">
+        <CardHeaderRow className="mb-2">
+          <CardHeaderActions>
             <Zap className="w-4 h-4 text-purple-400" />
             <span className="text-xs text-purple-400">{t('computeOverview.gpus')}</span>
-          </div>
+          </CardHeaderActions>
           {stats.totalGPUs > 0 && (
             <span className="text-xs text-muted-foreground" title={t('computeOverview.gpuUtilizationTooltip', { percent: stats.gpuUtilization })}>
               {t('computeOverview.utilizedPercent', { percent: stats.gpuUtilization })}
             </span>
           )}
-        </div>
+        </CardHeaderRow>
 
         {stats.totalGPUs > 0 ? (
           <>
