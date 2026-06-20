@@ -1,3 +1,4 @@
+import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { StorageOverview } from '../StorageOverview'
@@ -45,9 +46,16 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
 }))
 
 vi.mock('../../../lib/cards/CardComponents', () => ({
-  CardClusterFilter: ({ availableClusters }: { availableClusters: Array<{ name: string }> }) => (
-    <div data-testid="cluster-filter" data-count={availableClusters.length} />
+  CardHeaderRow: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  CardControlsRow: ({ clusterFilter }: {
+    clusterFilter?: { availableClusters: Array<{ name: string }> }
+  }) => (
+    <div data-testid="controls-row">
+      {clusterFilter && <div data-testid="cluster-filter" data-count={clusterFilter.availableClusters.length} />}
+    </div>
   ),
+  CardStatGrid: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  CardStatHeader: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
 vi.mock('../../../lib/formatStats', () => ({
