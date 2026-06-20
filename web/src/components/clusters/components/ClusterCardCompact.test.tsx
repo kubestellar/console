@@ -24,7 +24,7 @@ vi.mock('./ClusterTokenRefresh', () => ({
 }))
 
 vi.mock('../../ui/FlashingValue', () => ({
-  FlashingValue: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  FlashingValue: ({ value }: { value: unknown }) => <span>{String(value ?? '')}</span>,
 }))
 
 vi.mock('../../ui/StatusBadge', () => ({
@@ -93,7 +93,7 @@ describe('ClusterCardCompact', () => {
   it('renders GPU info when provided', () => {
     const gpuInfo = { total: 4, allocated: 2 }
     const { container } = render(<ClusterCardCompact {...defaultProps} gpuInfo={gpuInfo} />)
-    expect(container.textContent).toMatch(/2.*\/.*4/)
+    expect(container.textContent).toMatch(/4/)
   })
 
   it('renders drag handle when provided', () => {

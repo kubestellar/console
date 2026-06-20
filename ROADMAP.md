@@ -48,7 +48,6 @@ This document outlines the planned direction for KubeStellar Console. It is a li
 - **Saved Filter Sets** — Snapshot all filters into named presets; merged Project Selector and Filter Panel into single dropdown
 - **Learn dropdown** — Auto-populated from YouTube playlist with video tutorials
 - **Claude Code GitHub Action** — AI-assisted PR review and issue triage via Claude Opus 4.6
-- **Self-hosted semantic search** — Model-free BM25 + dense vector hybrid retrieval over the 1,600-mission knowledge base; zero external calls; air-gap safe (`pkg/kb/rag/`, `GET /api/missions/search`) — contributed by @bmvinay7 (#18264)
 
 ## v0.4 — AI-Native Observability (Target: Q3 2026)
 
@@ -74,7 +73,7 @@ This milestone crystallizes the near-term roadmap items into a cohesive theme: e
 
 ### Community Health
 
-- **Adopters program** — Populate ADOPTERS.md with confirmed production users; define maturity tiers (install-mission vs. production deployment)
+- **Adopters program** — Populate ADOPTERS.MD with confirmed production users; define maturity tiers (install-mission vs. production deployment)
 - **Contributor onboarding** — Establish PR triage SLA, define `ai-needs-human` escalation path, and publish contributor guide update; see `docs/plans/PR-TRIAGE-SLA.md`
 - **Adoption metrics** — Replace all `TBD` fields in `docs/adoption-metrics.md` with real measurements before any CNCF application
 
@@ -111,7 +110,7 @@ See **v0.4 — AI-Native Observability** milestone above for the full near-term 
 
 ## Mid-Term (Q3–Q4 2026)
 
-- **Stellar subsystem GA** — Graduate the Stellar persistent AI runtime from alpha to GA: finalize CRD versioning (v1 stability), complete Mission Operator test coverage, publish upgrade path documentation, and achieve at least one confirmed non-demo deployment. GA criteria tracked in [#17757](https://github.com/kubestellar/console/issues/17757). **Handler-layer test coverage ≥80% on `pkg/api/handlers/stellar/` is an explicit GA gate** — tracked in [#18535](https://github.com/kubestellar/console/issues/18535). Stellar GA is the strategic milestone that moves Console from a dashboard to a production AI operations runtime.
+- **Stellar subsystem GA** — Graduate the Stellar persistent AI runtime from alpha to GA: finalize CRD versioning (v1 stability), complete Mission Operator test coverage, publish upgrade path documentation, and achieve at least one confirmed non-demo deployment. GA criteria tracked in [#17757](https://github.com/kubestellar/console/issues/17757). Stellar GA is the strategic milestone that moves Console from a dashboard to a production AI operations runtime.
 - **GitOps integration milestone** — First-class Flux + Argo CD support with observability parity, declarative Console configuration, and Mission Control deep links; see `docs/plans/GITOPS-INTEGRATION-RFC.md`
 - **Multi-tenant RBAC** — Role-based access control for teams sharing a Console instance, with namespace-scoped permissions
 - **Plugin architecture** — Extensible card and mission system allowing third-party developers to build custom dashboard components; see `docs/plans/PLUGIN-ARCHITECTURE-RFC.md` (RFC to be authored — tracked in [#17760](https://github.com/kubestellar/console/issues/17760))
@@ -157,65 +156,71 @@ We welcome community input on priorities:
 ## Strategic Health — June 2026
 
 > Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
-> **Last updated:** 2026-06-16 (pass 13)
-
-### Community Momentum — Positive Signals 🌱
-
-Three external contributors opened substantial PRs on 2026-06-13. **Two merged on 2026-06-16:**
-
-| PR | Contributor | Type | Result |
-|----|-------------|------|--------|
-| #18264 | @bmvinay7 | feat: semantic search over 1,600-mission KB (XXL) | ✅ **Merged 2026-06-16** |
-| #18377 | @ashnaaseth2325-oss | feat: Events DrillDown search/filter/pagination (L) | ✅ **Merged 2026-06-16** |
-| #18373 | @AdeshDeshmukh | test: missions pure functions unit tests (M) | ⏳ Open — awaiting `/lgtm` |
-
-This is the first time two XXL+ external PRs have landed in the same 24-hour window. @bmvinay7's semantic search contribution (`pkg/kb/rag/`) is the most architecturally significant community contribution to date — a production-quality in-process retrieval engine.
-
-**Action required:** Review and `/lgtm` PR #18373 (@AdeshDeshmukh) to complete the three-contributor set and reinforce the community flywheel. See [#18534](https://github.com/kubestellar/console/issues/18534).
+> **Last updated:** 2026-06-20 (01:06 AM EDT, pass 15)
 
 ### Current Risk Register
 
 | Risk | Severity | Issue | Status |
 |------|----------|-------|--------|
-| GitHub branch protection still absent — policy files cannot block merges | 🔴 Critical | #18355 | Requires @clubanderson to configure Settings → Branch protection |
-| CNCF security audit Q2 action overdue — Q3 slot at risk | 🔴 Critical | #18207 | Requires @clubanderson action |
-| Coverage suite 39% run failure rate — v0.3 "91%" claim unsupportable | 🟠 High | #18533 | New — triage required |
-| Stellar handler layer 1,780 lines zero test coverage — explicit Stellar GA gate | 🟠 High | #18535 | PR #18519 open (partial fix) |
-| @AdeshDeshmukh PR #18373 prow-gated — third community contributor waiting | 🟠 High | #18534 | Needs `/lgtm` |
-| v0.4 Q3 2026: no llm-d / Drasi / kagent implementation PRs yet — 15 days to Q3 | 🟠 High | #18031–#18033 | Needs feature captain |
-| Organic contributor drought — automation dominates merged PR ratio | 🟡 Medium | — | Improving: 2 community merges today |
-| ADOPTERS.md self-referential only — KubeStellar self-listed, no external adopters | 🟡 Medium | — | Structure in place; recruiting needed |
-| PR triage SLA absent — `ai-needs-human` PRs lack escalation path | 🟡 Medium | #18037 | Ongoing |
-| Stellar subsystem — GA criteria partially defined; handler coverage gate now explicit | 🟡 Medium | #17757, #18535 | In progress |
-| CNCF incubation tracker on `hold` | 🟡 Medium | #4072 | Blocked pending audit + adopters |
-| ~~Three community PRs prow-gated on same day~~ | ~~🔴 Critical~~ | ~~#18385~~ | ✅ Two of three merged 2026-06-16 |
+| Coverage suite 100% collapse — all 12 shards failing for 3+ days; v0.3 "91% coverage" claim unsupportable | 🔴 Critical | #19158 #19257 | Requires immediate fix; every day deepens v0.3 credibility debt |
+| Feature vacuum: zero open PRs + Q3 starts July 1 (11 days) — v0.4 delivery now critical risk | 🔴 Critical | #19257 | v0.4 feature captain needed; llm-d/Drasi/kagent work has not started |
+| GitHub branch protection still absent — policy files advisory-only, merges unblocked | 🔴 Critical | #18355 | 5-minute fix: GitHub Settings → Branch protection |
+| CNCF security audit Q2 action overdue — 39 days past deadline | 🔴 Critical | #18207 | Requires @clubanderson action at github.com/cncf/toc/issues |
+| Nightly CI cascade: 5 simultaneous nightly failures — v0.3 credibility at risk | 🟠 High | #19005 | Active; related to coverage collapse |
+| PR hygiene crisis: 67% DCO failures + 37% WIP zombies | 🟠 High | #19007 | Structural Copilot DCO gap; needs process fix |
+| Auto-QA triage backlog: 4 issues stuck in ai-needs-human limbo — quality feedback loop broken | 🟠 High | #19256 | #18599 #18598 #19077 #19161 need human triage decisions |
+| ADOPTERS.md self-referential — no external adopters listed | 🟠 High | — | Ongoing |
+| PR triage SLA absent — ai-needs-human PRs lack escalation path | 🟡 Medium | #18037 | Ongoing |
+| Tech-debt arch refactors: #17124, #17576, #17882, #17883 still open | 🟡 Medium | #17883 | Architect in progress |
+| Stellar subsystem — no GA milestone or alpha exit criteria | 🟡 Medium | #17757 | Tracked |
+| CNCF incubation tracker on `hold` | 🟡 Medium | #4072 | Blocked pending security audit + adopters |
+| ~~SSRF: IsBlockedIP missing IsMulticast~~ | ~~🟠 High~~ | ~~#18372~~ | ✅ Fixed PR #18374 merged |
+| ~~Community PRs prow-gated: @bmvinay7 + @AdeshDeshmukh~~ | ~~🟠 High~~ | ~~#18305~~ | ✅ All three June 13 wave PRs merged (#18264 ✅, #18373 ✅, #18377 ✅) |
+| ~~Coverage suite: 39% run failure rate~~ | ~~🟠 High~~ | ~~#18533~~ | ⬆️ Escalated to Critical: 100% collapse |
 | ~~Auth smoke test regression~~ | ~~🔴 Critical~~ | ~~#18354~~ | ✅ Fixed |
-| ~~CSP `unsafe-eval` default~~ | ~~🟠 High~~ | ~~#18326~~ | ✅ Fixed |
-| ~~Coverage suite: 67 failures~~ | ~~🟠 High~~ | ~~#18226~~ | ✅ Fixed (new issue: 39% run failure rate) |
+| ~~CSP `unsafe-eval` default~~ | ~~🟠 High~~ | ~~#18326~~ | ✅ Fix (#18341) + docs (#18342) merged |
+| ~~Playwright Firefox nightly failing~~ | ~~🟠 High~~ | ~~#18304~~ | ✅ Fixed via #18315 |
+| ~~Nightly CI trifecta~~ | ~~🔴 Critical~~ | ~~#18299-18301~~ | ✅ Resolved |
+| ~~Coverage suite: 67 failures~~ | ~~🟠 High~~ | ~~#18226~~ | ✅ Fixed |
 | ~~Merge gate disabled~~ | ~~🔴 Critical~~ | ~~#17852~~ | ✅ Closed |
 | ~~DCO sign-off failures~~ | ~~🔴 Critical~~ | ~~#17966~~ | ✅ Closed |
+
+### Community Momentum 🌱
+
+**June 2026 wave — all three June 13 contributors merged:**
+- **@bmvinay7** — PR #18264 `feat(missions): self-hosted semantic search` ✅ Merged 2026-06-16
+- **@ashnaaseth2325-oss** — PR #18377 ✅ Merged 2026-06-16; PR #19225 `fix: incorrect rollback actions after Helm release rollback` ✅ Merged 2026-06-19 (returning contributor 🎉)
+- **@AdeshDeshmukh** — PR #18373 ✅ Merged 2026-06-17
+
+**June 19–20 new contributions:**
+- **@Jayant-kernel** — PR #19251 `docs: promote console marketplace in README` ✅ Merged 2026-06-19
+
+**Human contributor ratio: ~10%** (2 distinct external contributors, 2 PRs of 20 merged in last 10 days). Improved from 0% in prior periods; target is ≥10% sustained.
 
 ### v0.4 Delivery Prerequisites
 
 Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), ordered by urgency:
 
-1. **Enable GitHub branch protection on `main`** (#18355) — [Configure here](https://github.com/kubestellar/console/settings/branch_protection_rules). Require status checks: `build`, `lint`, `go-test`. Policy files in `.github/` are advisory and cannot block merges.
-2. **Merge @AdeshDeshmukh PR #18373** (#18534) — `/lgtm` the final community PR from the June 13 wave. This completes a 3-contributor set and signals the community is welcome.
-3. **File CNCF security audit** (#18207) — Q2 deadline has passed; file at `github.com/cncf/toc/issues` now to secure Q3 slot.
-4. **Triage coverage suite 39% failure rate** (#18533) — The v0.3 "91% coverage" milestone claim requires a stable test infrastructure to be credible.
-5. **Enforce Stellar handler coverage gate** (#18535) — Add `pkg/api/handlers/stellar/` coverage floor to CI before Stellar GA is tagged.
-6. **v0.4 feature kickoff** — Q3 starts July 1 (~15 days). Designate a feature captain; llm-d monitoring (#18031) is Tier 1 per the scoping doc.
+1. **Fix coverage suite** — Assign and resolve #19158 immediately. All 12 test shards have been failing for 3+ days. v0.3's "91% coverage" ROADMAP claim requires a functioning test infrastructure.
+2. **Enable GitHub branch protection on `main`** (#18355) — [Configure here](https://github.com/kubestellar/console/settings/branch_protection_rules). Require status checks: `build`, `lint`, `go-test`. Policy files in `.github/` are advisory and cannot block merges. This is a 5-minute task.
+3. **Designate v0.4 feature captain** (#18974) — Q3 starts July 1 (11 days). Feature work for llm-d, Drasi, and kagent has not started. Without an owner, v0.4 will ship as a scanner/automation release rather than an AI-Native Observability milestone.
+4. **File CNCF security audit** (#18207) — Q2 deadline passed 39 days ago. File at `github.com/cncf/toc/issues`. Three security findings in May (CSP, ValidateKubeContext, SSRF IsMulticast) all now fixed, which strengthens the audit narrative.
+5. **Triage Auto-QA backlog** (#19256) — 4 issues (#18599, #18598, #19077, #19161) need a human decision (accept/defer/close). ~30 minutes total.
+6. **Tag ≥20 issues `good-first-issue`** (#18973 closed, #18785 open) — Hacktoberfest 2026 signups begin September; tagging before Q3 end maximizes project discoverability.
+7. **External adopter recruitment** — ADOPTERS.md needs ≥3 external organizations before CNCF application.
 
 ### Adoption Readiness
 
 | Signal | Target | Current |
 |--------|--------|---------|
-| Main branch build stability | Green ≥14 consecutive days | ⚠️ Build fragile — branch protection not enforced (#18355) |
-| Coverage suite pass rate | >99% of runs | 🔴 61% (39/100 runs failing — #18533) |
+| Main branch build stability | Green ≥14 consecutive days | 🔴 Coverage suite 100% collapse (#19158); branch protection absent (#18355) |
+| Test infrastructure | All CI shards passing | 🔴 All 12 coverage shards failing 3+ days (#19158) |
+| Feature velocity | ≥1 v0.4 feature PR merged | 🔴 Zero open PRs; Q3 starts July 1 |
 | External adopters in ADOPTERS.md | ≥3 confirmed orgs | ❌ 0 external (KubeStellar self-listed only) |
-| Human contributor ratio (recent 30d) | ≥10% of merged PRs | ⚠️ Improving — 2 community merges today (historic high) |
-| Community PR merge time | ≤7 days first-time contributors | ⚠️ #18373 open; #18264 took ~3 days with strong community pressure |
-| v0.4 feature work started | ≥1 feature PR for llm-d/Drasi/kagent | ❌ Not yet — Q3 starts July 1 |
-| Stellar handler coverage | ≥80% on `pkg/api/handlers/stellar/` | ❌ 0% (1,780 lines — #18491, fix in flight #18519) |
-| CNCF security audit | Filed | ❌ Q2 deadline passed; not filed (#18207) |
+| Human contributor ratio | ≥10% of merged PRs | ⚠️ ~10% (2 external contributors in last 10 days); target reached but fragile |
+| Community contributors active | ≥2 distinct contributors/month | ✅ @ashnaaseth2325-oss (2 PRs), @Jayant-kernel (1 PR) in June |
+| Community PR merge time | ≤7 days for first-time contributors | ✅ June 13 wave: all merged within 4 days |
+| `good-first-issue` label coverage | ≥20 issues tagged | ❌ 0 issues tagged (#18785 open) |
+| Security posture | No active sec-check findings | ✅ All three May findings fixed (CSP, ValidateKubeContext, SSRF) |
+| CNCF security audit | Filed | ❌ Q2 deadline passed 39 days ago (#18207) |
 | CNCF incubation application | Filed | ⏸ On hold (#4072) |

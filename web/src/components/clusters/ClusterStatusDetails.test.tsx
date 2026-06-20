@@ -12,6 +12,7 @@ describe('ClusterStatusDetails', () => {
   it('returns null when cluster has no diagnostic fields', () => {
     const cluster = {
       name: 'test-cluster',
+      healthy: true,
       reachable: true,
       errorType: undefined,
       errorMessage: undefined,

@@ -119,6 +119,14 @@ describe('NotFound', () => {
     expect(mockNavigate).toHaveBeenCalledWith(-1)
   })
 
+  it('calls activatePublicDemoMode when quick link is clicked', () => {
+    // activatePublicDemoMode imported at top level (mocked via vi.mock)
+    render(<BrowserRouter><NotFound /></BrowserRouter>)
+    const dashboardButton = screen.getByRole('button', { name: /Dashboard/ })
+    fireEvent.click(dashboardButton)
+    expect(demoMode.activatePublicDemoMode).toHaveBeenCalled()
+  })
+
   it('displays KubeStellar pitch messaging', () => {
     render(
       <BrowserRouter>
