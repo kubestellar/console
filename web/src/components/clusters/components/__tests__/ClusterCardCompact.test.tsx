@@ -67,6 +67,36 @@ describe('ClusterCardCompact', () => {
     expect(healthyIndicator).toBeInTheDocument()
   })
 
+  it('displays unreachable icon for offline cluster', () => {
+    const cluster = createMockCluster({ healthy: false, unreachable: true })
+    const { container } = render(<ClusterCardCompact {...defaultProps} cluster={cluster} />)
+    expect(container.querySelector('[class*="WifiOff"]')).toBeTruthy()
+  })
+
+  it('displays alert icon for unhealthy cluster', () => {
+    const cluster = createMockCluster({ healthy: false, unreachable: false })
+    const { container } = render(<ClusterCardCompact {...defaultProps} cluster={cluster} />)
+    expect(container.querySelector('[class*="AlertCircle"]')).toBeTruthy()
+  })
+
+  it('displays token expired icon when token is expired', () => {
+    const cluster = createMockCluster({ tokenExpiry: new Date('2020-01-01').toISOString() })
+    const { container } = render(<ClusterCardCompact {...defaultProps} cluster={cluster} />)
+    expect(container.querySelector('[class*="KeyRound"]')).toBeTruthy()
+  })
+
+  it('displays current cluster star icon', () => {
+    const cluster = createMockCluster({ isCurrent: true })
+    const { container } = render(<ClusterCardCompact {...defaultProps} cluster={cluster} />)
+    expect(container.querySelector('[class*="Star"]')).toBeTruthy()
+  })
+
+  it('displays alias badge when cluster has aliases', () => {
+    const cluster = createMockCluster({ aliases: ['alias1', 'alias2'] })
+    render(<ClusterCardCompact {...defaultProps} cluster={cluster} />)
+    expect(screen.getByText('+2')).toBeInTheDocument()
+  })
+
   it('calls onSelectCluster when card is clicked', () => {
     const onSelectCluster = vi.fn()
     render(<ClusterCardCompact {...defaultProps} onSelectCluster={onSelectCluster} />)
@@ -80,6 +110,14 @@ describe('ClusterCardCompact', () => {
     render(<ClusterCardCompact {...defaultProps} onSelectCluster={onSelectCluster} />)
     const card = screen.getByRole('button', { name: /Select cluster test-context/i })
     fireEvent.keyDown(card, { key: 'Enter' })
+    expect(onSelectCluster).toHaveBeenCalledTimes(1)
+  })
+
+  it('calls onSelectCluster when Space key is pressed', () => {
+    const onSelectCluster = vi.fn()
+    render(<ClusterCardCompact {...defaultProps} onSelectCluster={onSelectCluster} />)
+    const card = screen.getByRole('button', { name: /Select cluster test-context/i })
+    fireEvent.keyDown(card, { key: ' ' })
     expect(onSelectCluster).toHaveBeenCalledTimes(1)
   })
 
@@ -98,9 +136,26 @@ describe('ClusterCardCompact', () => {
     expect(screen.queryByTestId('remove-cluster-button')).not.toBeInTheDocument()
   })
 
+  it('displays dash for stats when cluster data is not loaded', () => {
+    const cluster = createMockCluster({
+      nodeCount: undefined,
+      cpuCores: undefined,
+      podCount: undefined,
+    })
+    render(<ClusterCardCompact {...defaultProps} cluster={cluster} />)
+    const dashes = screen.getAllByText('-')
+    expect(dashes.length).toBeGreaterThan(0)
+  })
+
   it('renders drag handle when provided', () => {
     const dragHandle = <div data-testid="drag-handle">Drag</div>
     render(<ClusterCardCompact {...defaultProps} dragHandle={dragHandle} />)
     expect(screen.getByTestId('drag-handle')).toBeInTheDocument()
+  })
+
+  it('displays GPU count of 0 when no GPUs are present', () => {
+    const cluster = createMockCluster({ nodeCount: 3, cpuCores: 12, podCount: 50 })
+    render(<ClusterCardCompact {...defaultProps} cluster={cluster} gpuInfo={undefined} />)
+    expect(screen.getByText('0')).toBeInTheDocument()
   })
 })

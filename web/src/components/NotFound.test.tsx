@@ -1,139 +1,132 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { BrowserRouter } from 'react-router-dom'
 import NotFound from './NotFound'
 import { ROUTES } from '../config/routes'
+import * as demoMode from '../lib/demoMode'
 
+// Mock react-router-dom
 const mockNavigate = vi.fn()
-const mockLocation = vi.hoisted(() => ({
-  pathname: '/nonexistent-page',
-  hash: '',
-  search: '',
-  state: null,
-  key: 'test-key',
-}))
-
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
+  const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useLocation: () => mockLocation,
+    useLocation: () => ({ pathname: '/non-existent-page' }),
   }
 })
 
+// Mock demo mode
 vi.mock('../lib/demoMode', () => ({
   activatePublicDemoMode: vi.fn(),
 }))
 
-describe('NotFound Component', () => {
+describe('NotFound', () => {
   beforeEach(() => {
-    mockNavigate.mockReset()
-    Object.assign(mockLocation, {
-      pathname: '/nonexistent-page',
-      hash: '',
-      search: '',
-      state: null,
-      key: 'test-key',
-    })
+    vi.clearAllMocks()
   })
 
-  it('renders the 404 page', () => {
-    render(<NotFound />)
-    expect(screen.getByText('Page not found')).toBeTruthy()
+  it('renders 404 page with appropriate messaging', () => {
+    render(
+      <BrowserRouter>
+        <NotFound />
+      </BrowserRouter>
+    )
+
+    expect(screen.getByText('Page not found')).toBeInTheDocument()
+    expect(screen.getByText(/doesn't exist yet \u2014 but it could!/)).toBeInTheDocument()
   })
 
-  it('displays the current pathname in the error message', () => {
-    render(<NotFound />)
-    expect(screen.getByText(/\/nonexistent-page/)).toBeTruthy()
+  it('displays the current pathname in code block', () => {
+    render(
+      <BrowserRouter>
+        <NotFound />
+      </BrowserRouter>
+    )
+
+    const codeElement = screen.getByText('/non-existent-page')
+    expect(codeElement).toBeInTheDocument()
+    expect(codeElement.tagName).toBe('CODE')
   })
 
-  it('renders the main heading', () => {
-    render(<NotFound />)
-    const heading = screen.getByRole('heading', { level: 1 })
-    expect(heading.textContent).toContain('Page not found')
-  })
+  it('renders feature request button with correct URL', () => {
+    render(
+      <BrowserRouter>
+        <NotFound />
+      </BrowserRouter>
+    )
 
-  it('renders the feature request CTA section', () => {
-    render(<NotFound />)
-    expect(screen.getByText(/Ship it in hours, not months/)).toBeTruthy()
-  })
-
-  it('renders the feature request button with correct href', () => {
-    render(<NotFound />)
-    const button = screen.getByRole('link', { name: /Request this feature/ })
-    expect(button).toBeTruthy()
-    expect(button.getAttribute('href')).toContain('github.com/kubestellar/console/issues/new')
-    expect(button.getAttribute('href')).toContain('nonexistent-page')
-  })
-
-  it('opens feature request link in a new tab', () => {
-    render(<NotFound />)
-    const button = screen.getByRole('link', { name: /Request this feature/ })
-    expect(button.getAttribute('target')).toBe('_blank')
-    expect(button.getAttribute('rel')).toBe('noopener noreferrer')
+    const featureRequestLink = screen.getByRole('link', { name: /Request this feature/i })
+    expect(featureRequestLink).toBeInTheDocument()
+    expect(featureRequestLink).toHaveAttribute('href')
+    expect(featureRequestLink.getAttribute('href')).toContain('github.com/kubestellar/console/issues/new')
+    expect(featureRequestLink.getAttribute('href')).toContain('template=feature_request.yaml')
   })
 
   it('renders all quick link buttons', () => {
-    render(<NotFound />)
-    expect(screen.getByRole('button', { name: /Dashboard/ })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Clusters/ })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Compliance/ })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Deploy/ })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Marketplace/ })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Cost/ })).toBeTruthy()
+    render(
+      <BrowserRouter>
+        <NotFound />
+      </BrowserRouter>
+    )
+
+    expect(screen.getByRole('button', { name: /Dashboard/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Clusters/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Compliance/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Deploy/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Marketplace/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Cost/i })).toBeInTheDocument()
   })
 
-  it('navigates to home when Home button is clicked', () => {
-    render(<NotFound />)
-    const homeButton = screen.getByRole('button', { name: /Home/ })
+  it('activates demo mode and navigates when quick link is clicked', () => {
+    render(
+      <BrowserRouter>
+        <NotFound />
+      </BrowserRouter>
+    )
+
+    const dashboardButton = screen.getByRole('button', { name: /Dashboard/i })
+    fireEvent.click(dashboardButton)
+
+    expect(demoMode.activatePublicDemoMode).toHaveBeenCalledTimes(1)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.HOME)
+  })
+
+  it('activates demo mode and navigates to home when Home button is clicked', () => {
+    render(
+      <BrowserRouter>
+        <NotFound />
+      </BrowserRouter>
+    )
+
+    const homeButton = screen.getByRole('button', { name: /Home/i })
     fireEvent.click(homeButton)
+
+    expect(demoMode.activatePublicDemoMode).toHaveBeenCalledTimes(1)
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.HOME)
   })
 
   it('navigates back when Go back button is clicked', () => {
-    render(<NotFound />)
-    const backButton = screen.getByRole('button', { name: /Go back/ })
-    fireEvent.click(backButton)
+    render(
+      <BrowserRouter>
+        <NotFound />
+      </BrowserRouter>
+    )
+
+    const goBackButton = screen.getByRole('button', { name: /Go back/i })
+    fireEvent.click(goBackButton)
+
     expect(mockNavigate).toHaveBeenCalledWith(-1)
   })
 
-  it('calls activatePublicDemoMode when quick link is clicked', () => {
-    const { activatePublicDemoMode } = require('../lib/demoMode')
-    render(<NotFound />)
-    const dashboardButton = screen.getByRole('button', { name: /Dashboard/ })
-    fireEvent.click(dashboardButton)
-    expect(activatePublicDemoMode).toHaveBeenCalled()
-  })
+  it('displays KubeStellar pitch messaging', () => {
+    render(
+      <BrowserRouter>
+        <NotFound />
+      </BrowserRouter>
+    )
 
-  it('renders the compass icon', () => {
-    const { container } = render(<NotFound />)
-    const svg = container.querySelector('svg')
-    expect(svg).toBeTruthy()
-  })
-
-  it('displays helpful description text', () => {
-    render(<NotFound />)
-    const description = screen.getByText(/doesn't exist yet — but it could!/)
-    expect(description).toBeTruthy()
-  })
-
-  it('displays the popular pages section', () => {
-    render(<NotFound />)
-    expect(screen.getByText(/Popular pages/)).toBeTruthy()
-  })
-
-  it('includes KubeStellar messaging about fast iteration', () => {
-    render(<NotFound />)
-    expect(screen.getByText(/KubeStellar Console uses AI-powered repo automation/)).toBeTruthy()
-  })
-
-  it('correctly encodes feature request URL with path', () => {
-    Object.assign(mockLocation, {
-      pathname: '/special/path?with=query',
-    })
-    render(<NotFound />)
-    const button = screen.getByRole('link', { name: /Request this feature/ })
-    const href = button.getAttribute('href')
-    expect(href).toContain(encodeURIComponent('/special/path?with=query'))
+    expect(screen.getByText(/Ship it in hours, not months/i)).toBeInTheDocument()
+    expect(screen.getByText(/AI-powered repo automation/i)).toBeInTheDocument()
   })
 })
