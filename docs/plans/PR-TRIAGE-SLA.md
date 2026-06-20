@@ -98,7 +98,7 @@ Issue #19256 tracks four Auto-QA items that need this decision path:
 1. **Day 0**: `ai-needs-human` is added; issue comment states the decision needed.
 2. **Day 7**: If no maintainer response, add the issue to the weekly triage agenda and tag a reviewer.
 3. **Day 14**: Maintainer records an accept/defer/close decision and removes `ai-processing`.
-4. **After Day 14**: If no decision is possible, close as deferred with a short note and reopen when ownership exists.
+4. **After Day 14**: If no owner exists to take the work, record **Defer** by closing as **not planned** with a short note to reopen when ownership exists.
 
 ## Automation implementation
 
