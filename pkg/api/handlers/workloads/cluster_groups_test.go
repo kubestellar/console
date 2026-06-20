@@ -31,7 +31,7 @@ func TestLoadPersistedClusterGroups_Success(t *testing.T) {
 	}, nil).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
-	h := NewWorkloadHandlers(env.K8sClient, mockStore, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
 
 	// Clear in-memory state
 	clusterGroupsMu.Lock()
@@ -63,7 +63,7 @@ func TestLoadPersistedClusterGroups_StoreError(t *testing.T) {
 	mockStore.On("ListClusterGroups", mock.Anything).Return(nil, assert.AnError).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
-	h := NewWorkloadHandlers(env.K8sClient, mockStore, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
 
 	// Should not panic, just log error
 	h.LoadPersistedClusterGroups()
@@ -79,7 +79,7 @@ func TestLoadPersistedClusterGroups_InvalidJSON(t *testing.T) {
 	}, nil).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
-	h := NewWorkloadHandlers(env.K8sClient, mockStore, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
 
 	clusterGroupsMu.Lock()
 	clusterGroups = make(map[string]ClusterGroup)
@@ -104,7 +104,7 @@ func TestPersistClusterGroup_Success(t *testing.T) {
 	mockStore.On("SaveClusterGroup", mock.Anything, "my-group", mock.AnythingOfType("[]uint8")).Return(nil).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
-	h := NewWorkloadHandlers(env.K8sClient, mockStore, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
 	group := ClusterGroup{Name: "my-group", Kind: "static", Clusters: []string{"c1"}}
 
 	h.persistClusterGroup(context.Background(), "my-group", group)
@@ -126,7 +126,7 @@ func TestPersistClusterGroup_StoreError(t *testing.T) {
 	mockStore.On("SaveClusterGroup", mock.Anything, "err-group", mock.Anything).Return(assert.AnError).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
-	h := NewWorkloadHandlers(env.K8sClient, mockStore, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
 	group := ClusterGroup{Name: "err-group", Kind: "static"}
 
 	// Should not panic, just log error
@@ -144,7 +144,7 @@ func TestDeletePersistedClusterGroup_Success(t *testing.T) {
 	mockStore.On("DeleteClusterGroup", mock.Anything, "del-group").Return(nil).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
-	h := NewWorkloadHandlers(env.K8sClient, mockStore, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
 	h.deletePersistedClusterGroup(context.Background(), "del-group")
 	mockStore.AssertExpectations(t)
 }
@@ -163,7 +163,7 @@ func TestDeletePersistedClusterGroup_StoreError(t *testing.T) {
 	mockStore.On("DeleteClusterGroup", mock.Anything, "err-group").Return(assert.AnError).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
-	h := NewWorkloadHandlers(env.K8sClient, mockStore, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
 	// Should not panic
 	h.deletePersistedClusterGroup(context.Background(), "err-group")
 	mockStore.AssertExpectations(t)

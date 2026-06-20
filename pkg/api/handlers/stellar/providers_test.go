@@ -395,9 +395,11 @@ app.Use(func(c *fiber.Ctx) error {
 app.Get("/api/providers", h.ListProviders)
 
 _ = s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
-userID,
-thropic",
-, _ := http.NewRequest(http.MethodGet, "/api/providers", nil)
+UserID:       userID,
+ProviderType: "anthropic",
+})
+
+req, _ := http.NewRequest(http.MethodGet, "/api/providers", nil)
 resp, err := app.Test(req, 5000)
 require.NoError(t, err)
 defer resp.Body.Close()
