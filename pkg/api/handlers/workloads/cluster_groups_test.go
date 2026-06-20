@@ -173,7 +173,7 @@ func TestDeletePersistedClusterGroup_StoreError(t *testing.T) {
 
 func TestListClusterGroups_IncludesBuiltIn(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Get("/api/cluster-groups", h.ListClusterGroups)
 
 	// Clear and add a custom group
@@ -203,7 +203,7 @@ func TestListClusterGroups_IncludesBuiltIn(t *testing.T) {
 
 func TestCreateClusterGroup_Success(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups", h.CreateClusterGroup)
 
 	// Clear in-memory state
@@ -226,7 +226,7 @@ func TestCreateClusterGroup_Success(t *testing.T) {
 
 func TestCreateClusterGroup_MissingName(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups", h.CreateClusterGroup)
 
 	payload := `{"name":"","kind":"static","clusters":["c1"]}`
@@ -239,7 +239,7 @@ func TestCreateClusterGroup_MissingName(t *testing.T) {
 
 func TestCreateClusterGroup_ReservedName(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups", h.CreateClusterGroup)
 
 	payload := `{"name":"all-healthy-clusters","kind":"static","clusters":["c1"]}`
@@ -252,7 +252,7 @@ func TestCreateClusterGroup_ReservedName(t *testing.T) {
 
 func TestCreateClusterGroup_StaticNoClusters(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups", h.CreateClusterGroup)
 
 	payload := `{"name":"empty-group","kind":"static","clusters":[]}`
@@ -265,7 +265,7 @@ func TestCreateClusterGroup_StaticNoClusters(t *testing.T) {
 
 func TestCreateClusterGroup_DynamicNoClusters(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups", h.CreateClusterGroup)
 
 	// Dynamic groups are allowed with no clusters
@@ -279,7 +279,7 @@ func TestCreateClusterGroup_DynamicNoClusters(t *testing.T) {
 
 func TestCreateClusterGroup_InvalidBody(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups", h.CreateClusterGroup)
 
 	req, _ := http.NewRequest("POST", "/api/cluster-groups", strings.NewReader("not json"))
@@ -293,7 +293,7 @@ func TestCreateClusterGroup_InvalidBody(t *testing.T) {
 
 func TestUpdateClusterGroup_Success(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Put("/api/cluster-groups/:name", h.UpdateClusterGroup)
 
 	// Seed existing group
@@ -318,7 +318,7 @@ func TestUpdateClusterGroup_Success(t *testing.T) {
 
 func TestUpdateClusterGroup_BuiltInReject(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Put("/api/cluster-groups/:name", h.UpdateClusterGroup)
 
 	payload := `{"kind":"static","clusters":["c1"]}`
@@ -331,7 +331,7 @@ func TestUpdateClusterGroup_BuiltInReject(t *testing.T) {
 
 func TestUpdateClusterGroup_InvalidBody(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Put("/api/cluster-groups/:name", h.UpdateClusterGroup)
 
 	req, _ := http.NewRequest("PUT", "/api/cluster-groups/test", strings.NewReader("bad json"))
@@ -345,7 +345,7 @@ func TestUpdateClusterGroup_InvalidBody(t *testing.T) {
 
 func TestDeleteClusterGroup_Success(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Delete("/api/cluster-groups/:name", h.DeleteClusterGroup)
 
 	clusterGroupsMu.Lock()
@@ -367,7 +367,7 @@ func TestDeleteClusterGroup_Success(t *testing.T) {
 
 func TestDeleteClusterGroup_BuiltInReject(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Delete("/api/cluster-groups/:name", h.DeleteClusterGroup)
 
 	req, _ := http.NewRequest("DELETE", "/api/cluster-groups/all-healthy-clusters", nil)
@@ -380,7 +380,7 @@ func TestDeleteClusterGroup_BuiltInReject(t *testing.T) {
 
 func TestSyncClusterGroups_Success(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups/sync", h.SyncClusterGroups)
 
 	clusterGroupsMu.Lock()
@@ -401,7 +401,7 @@ func TestSyncClusterGroups_Success(t *testing.T) {
 
 func TestSyncClusterGroups_FiltersReservedName(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups/sync", h.SyncClusterGroups)
 
 	// Include the reserved name — it should be filtered out
@@ -419,7 +419,7 @@ func TestSyncClusterGroups_FiltersReservedName(t *testing.T) {
 
 func TestSyncClusterGroups_InvalidJSON(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups/sync", h.SyncClusterGroups)
 
 	req, _ := http.NewRequest("POST", "/api/cluster-groups/sync", strings.NewReader("not json"))
@@ -431,7 +431,7 @@ func TestSyncClusterGroups_InvalidJSON(t *testing.T) {
 
 func TestSyncClusterGroups_BodyTooLarge(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups/sync", h.SyncClusterGroups)
 
 	// 1MB + 1 byte
@@ -452,7 +452,7 @@ func TestSyncClusterGroups_BodyTooLarge(t *testing.T) {
 
 func TestStopCacheRefresh_Idempotent(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 
 	// Calling StopCacheRefresh multiple times should not panic
 	h.StopCacheRefresh()
@@ -464,7 +464,7 @@ func TestStopCacheRefresh_Idempotent(t *testing.T) {
 
 func TestClusterGroupsConcurrentAccess(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewWorkloadHandlers(env.K8sClient, env.Store, env.Hub)
+	h := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Get("/api/cluster-groups", h.ListClusterGroups)
 	env.App.Post("/api/cluster-groups", h.CreateClusterGroup)
 
