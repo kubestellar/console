@@ -100,7 +100,9 @@ func (e *HashEmbedder) addFeature(vec []float32, feature string, weight float64)
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(feature))
 	sum := h.Sum64()
-	idx := int(sum % uint64(e.dim))
+	// Safe conversion: sum % uint64(e.dim) is always < e.dim (typically 512),
+	// well within int range even on 32-bit systems.
+	idx := int(sum % uint64(e.dim)) // #nosec G115
 	sign := float32(1)
 	if sum&(1<<63) != 0 {
 		sign = -1
