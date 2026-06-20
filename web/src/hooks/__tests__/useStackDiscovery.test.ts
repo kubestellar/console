@@ -541,13 +541,19 @@ describe('useStackDiscovery', () => {
   })
 
   it('handles malformed localStorage data without crashing', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     localStorage.setItem(CACHE_KEY, 'not-valid-json{{')
 
     const { result, unmount } = renderHook(() => useStackDiscovery([]))
 
     expect(result.current.stacks).toEqual([])
     expect(result.current.isLoading).toBe(true)
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[useStackDiscovery] Ignoring malformed JSON for stack cache:',
+      expect.any(SyntaxError),
+    )
     unmount()
+    warnSpy.mockRestore()
   })
 
   it('persists discovered stacks to localStorage', async () => {

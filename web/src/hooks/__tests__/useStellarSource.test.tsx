@@ -324,6 +324,16 @@ describe('useStellarSource — Initial state and SSE messages', () => {
     expect(result.current.solves).toEqual([])
   })
 
+  it('stores an error message when the initial refresh fails', async () => {
+    mockStellarApi.getState.mockRejectedValueOnce(new Error('Initial refresh failed'))
+
+    const { result } = renderHook(() => useStellarSource())
+
+    await waitFor(() => {
+      expect(result.current.connectionError).toBe('Initial refresh failed')
+    })
+  })
+
   it('parses incoming SSE notification event and appends to state', async () => {
     const { result } = renderHook(() => useStellarSource())
 
@@ -706,6 +716,22 @@ describe('useStellarSource — Batch refresh', () => {
     expect(spyClearTimeout).toHaveBeenCalled()
     spyClearTimeout.mockRestore()
   })
+
+  it('stores an error message when a batch refresh request fails', async () => {
+    const { result } = renderHook(() => useStellarSource())
+
+    await waitFor(() => {
+      expect(eventSourceInstances).toHaveLength(1)
+    })
+
+    mockStellarApi.getNotifications.mockRejectedValueOnce(new Error('Batch refresh failed'))
+
+    await act(async () => {
+      await result.current.runBatchNow()
+    })
+
+    expect(result.current.connectionError).toBe('Batch refresh failed')
+  })
 })
 
 describe('useStellarSource — Auto-solve trigger', () => {
@@ -787,5 +813,33 @@ describe('useStellarSource — Auto-solve trigger', () => {
 
     expect(mockStellarApi.startSolve).not.toHaveBeenCalled()
     expect(result.current.solveProgress['n-warning']).toBeUndefined()
+  })
+
+  it('stores an error message when auto-solve fails for a critical notification', async () => {
+    const { result } = renderHook(() => useStellarSource())
+
+    await waitFor(() => {
+      expect(eventSourceInstances).toHaveLength(1)
+    })
+
+    mockStellarApi.startSolve.mockRejectedValueOnce(new Error('Auto-solve failed'))
+
+    await act(async () => {
+      eventSourceInstances[0]._triggerEvent('notification', {
+        id: 'n-critical-fail',
+        type: 'event',
+        severity: 'critical',
+        title: 'Critical Alert',
+        body: 'Emergency!',
+        read: false,
+        createdAt: new Date().toISOString(),
+      })
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(result.current.connectionError).toBe('Auto-solve failed')
+    })
+    expect(result.current.solveProgress['n-critical-fail']).toBeUndefined()
   })
 })
