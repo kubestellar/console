@@ -38,7 +38,7 @@ export function CollapsibleSection({
         onClick={() => setIsOpen(!isOpen)}
         className="justify-between px-0 py-2 text-sm font-medium text-foreground hover:text-purple-400"
         aria-expanded={isOpen}
-        aria-label={title}
+        aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${title} section`}
         iconRight={badge !== undefined ? (
           <span className="rounded bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
             {badge}
@@ -246,6 +246,7 @@ export function QuickActionsSection({
             key={action.id}
             onClick={action.onClick}
             disabled={action.disabled}
+            aria-label={action.label}
             className={cn('flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50', TOUCH_TARGET_HEIGHT_CLASS, variantStyles[action.variant || 'default'])}
           >
             <Icon className="w-4 h-4" />
