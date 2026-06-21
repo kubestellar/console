@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-21T07:31:11.228Z",
-  "count": 1610,
+  "generatedAt": "2026-06-21T08:10:53.403Z",
+  "count": 1612,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -60149,6 +60149,47 @@
       "qualitySuggestions": []
     },
     {
+      "path": "fixes/cncf-generated/spire/spire-6876-skipped-event-id-spikes-after-full-cache-rebuild-delay-svid-issuance.json",
+      "title": "spire: Skipped event ID spikes after full cache rebuild delay SVID issuance",
+      "description": "Skipped event ID spikes after full cache rebuild delay SVID issuance. Community-requested feature.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "spire",
+        "graduated",
+        "security",
+        "feature"
+      ],
+      "cncfProjects": [
+        "spire"
+      ],
+      "targetResourceKinds": [
+        "Pod",
+        "Deployment"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
       "path": "fixes/cncf-generated/spire/spire-2182-smarter-authorized-entry-caching.json",
       "title": "spire: Smarter Authorized Entry Caching",
       "description": "Smarter Authorized Entry Caching. Requested by 6+ users.",
@@ -66110,6 +66151,46 @@
         "troubleshoot"
       ],
       "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "community",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/woodpecker-ci/woodpecker-ci-1461-ability-to-limit-concurrent-pipelines.json",
+      "title": "woodpecker-ci: Ability to limit concurrent pipelines",
+      "description": "Ability to limit concurrent pipelines. Requested by 18+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "woodpecker-ci",
+        "community",
+        "ci-cd",
+        "feature"
+      ],
+      "cncfProjects": [
+        "woodpecker-ci"
+      ],
+      "targetResourceKinds": [
+        "Deployment"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
       "installMethods": [],
       "maturity": "community",
       "qualityScore": 100,
