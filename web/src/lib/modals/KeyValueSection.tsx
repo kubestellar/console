@@ -133,6 +133,12 @@ function KeyValueItem({
           return (
             <button
               onClick={() => onNavigate(item.linkTo!)}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onNavigate(item.linkTo!)
+                }
+              }}
               className="text-purple-400 hover:text-purple-300 hover:underline flex items-center gap-1"
             >
               {String(value)}
@@ -163,8 +169,15 @@ function KeyValueItem({
           <Button
             variant="ghost"
             onClick={handleCopy}
+            onKeyDown={(e: React.KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                handleCopy()
+              }
+            }}
             className="p-1 rounded-md"
             title="Copy to clipboard"
+            aria-label="Copy to clipboard"
             icon={copied ? (
               <Check className="w-3 h-3 text-green-400" />
             ) : (
