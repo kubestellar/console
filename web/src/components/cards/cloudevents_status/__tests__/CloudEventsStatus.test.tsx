@@ -4,7 +4,10 @@ import { render, screen } from '@testing-library/react'
 import { CloudEventsStatus } from '../CloudEventsStatus'
 import type { UseCloudEventsStatusResult } from '../useCloudEventsStatus'
 
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => key,
     i18n: { language: 'en' },
@@ -14,6 +17,14 @@ vi.mock('react-i18next', () => ({
 vi.mock('../useCloudEventsStatus', () => ({
   useCloudEventsStatus: vi.fn(),
 }))
+
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../hooks/useDemoMode')>()
+  return {
+    ...actual,
+    useDemoMode: () => mockUseDemoMode(),
+  }
+})
 
 import { useCloudEventsStatus } from '../useCloudEventsStatus'
 
@@ -48,6 +59,14 @@ const BASE_RESULT: UseCloudEventsStatusResult = {
 }
 
 describe('CloudEventsStatus', () => {
+  it('subscribes to demo mode changes', () => {
+    mockedUseCloudEventsStatus.mockReturnValue(BASE_RESULT)
+
+    render(<CloudEventsStatus />)
+
+    expect(mockUseDemoMode).toHaveBeenCalled()
+  })
+
   it('renders skeleton state when loading', () => {
     mockedUseCloudEventsStatus.mockReturnValue({
       ...BASE_RESULT,

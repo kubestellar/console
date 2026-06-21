@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Activity, AlertTriangle, CheckCircle, CircleDashed, RadioTower, RefreshCw, Send } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle, CircleDashed, RadioTower, Send } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CardSearchInput, MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCloudEventsStatus } from './useCloudEventsStatus'
 import type { CloudEventResourceState } from './demoData'
-import { createCardSyncFormatter } from '../../../lib/formatters'
 import { getHealthBadgeClasses } from '../../../lib/cards/statusColors'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 const STATUS_STYLE: Record<CloudEventResourceState, { badge: string; icon: React.ReactNode }> = {
   ready: {
@@ -27,8 +27,8 @@ const STATUS_LABEL_KEY: Record<CloudEventResourceState, 'cloudevents.status_read
 
 export function CloudEventsStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = createCardSyncFormatter(t, 'cloudevents')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCloudEventsStatus()
+  useDemoMode()
+  const { data, error, showSkeleton, showEmptyState } = useCloudEventsStatus()
   const [search, setSearch] = useState('')
 
   const isHealthy = data.health === 'healthy'
@@ -87,11 +87,6 @@ export function CloudEventsStatus() {
         >
           {isHealthy ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
           {isHealthy ? t('cloudevents.healthy') : t('cloudevents.degraded')}
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
         </div>
       </div>
 
