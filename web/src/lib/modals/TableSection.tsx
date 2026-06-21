@@ -120,6 +120,7 @@ export function TableSection<T extends Record<string, unknown>>({
               }`}
               onClick={() => onRowClick?.(row)}
               {...(onRowClick ? {
+                role: 'button' as const,
                 tabIndex: 0,
                 onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row) } },
               } : {})}
