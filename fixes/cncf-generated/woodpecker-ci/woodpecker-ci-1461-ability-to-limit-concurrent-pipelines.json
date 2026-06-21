@@ -1,0 +1,77 @@
+{
+  "version": "kc-mission-v1",
+  "name": "woodpecker-ci-1461-ability-to-limit-concurrent-pipelines",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "woodpecker-ci: Ability to limit concurrent pipelines",
+    "description": "Ability to limit concurrent pipelines. Requested by 18+ users.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current woodpecker-ci deployment",
+        "description": "Verify your woodpecker-ci version and configuration:\n```bash\nkubectl get pods -n woodpecker-ci -l app.kubernetes.io/name=woodpecker-ci\nhelm list -n woodpecker-ci 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working woodpecker-ci installation."
+      },
+      {
+        "title": "Review woodpecker-ci configuration",
+        "description": "Inspect the relevant woodpecker-ci configuration:\n```bash\nkubectl get all -n woodpecker-ci -l app.kubernetes.io/name=woodpecker-ci\nkubectl get configmap -n woodpecker-ci -l app.kubernetes.io/part-of=woodpecker-ci\n```\n### Clear and concise description of the problem\n\nI remember that original CI had a feature called concurrency https://discourse.drone.io/t/how-to-limit-build-concurrency-per-project/3500\nThis helped a lot to prevent build run when other build"
+      },
+      {
+        "title": "Apply the fix for Ability to limit concurrent pipelines",
+        "description": "## What\n\nAdds an optional `concurrency` setting to the workflow YAML that limits how many instances of a workflow (or group) run at the same time, without cancelling running pipelines.\n\nSupports both shorthand and full form:\n```yaml\nconcurrency: 1\n# or\nconcurrency:\n  limit: 1\n  group:\n```yaml\nconcurrency: 1\n# or\nconcurrency:\n  limit: 1\n  group: deploy\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n woodpecker-ci -l app.kubernetes.io/name=woodpecker-ci\nkubectl get events -n woodpecker-ci --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Ability to limit concurrent pipelines\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "## What\n\nAdds an optional `concurrency` setting to the workflow YAML that limits how many instances of a workflow (or group) run at the same time, without cancelling running pipelines.\n\nSupports both shorthand and full form:\n```yaml\nconcurrency: 1\n# or\nconcurrency:\n  limit: 1\n  group: deploy\n```\n\n## Why\n\n\"Cancel previous pipeline\" isn't safe for deployments: it can abort an in-flight deploy.",
+      "codeSnippets": [
+        "concurrency: 1\n# or\nconcurrency:\n  limit: 1\n  group: deploy"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "woodpecker-ci",
+      "community",
+      "ci-cd",
+      "feature"
+    ],
+    "cncfProjects": [
+      "woodpecker-ci"
+    ],
+    "targetResourceKinds": [
+      "Deployment"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "community",
+    "sourceUrls": {
+      "issue": "https://github.com/woodpecker-ci/woodpecker/issues/1461",
+      "repo": "https://github.com/woodpecker-ci/woodpecker",
+      "pr": "https://github.com/woodpecker-ci/woodpecker/pull/6671"
+    },
+    "reactions": 18,
+    "comments": 12,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with woodpecker-ci installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-21T08:08:33.019Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
