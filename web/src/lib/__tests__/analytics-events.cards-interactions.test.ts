@@ -682,3 +682,4 @@ describe('analytics-events', () => {
       expect(mockSetProps).toHaveBeenCalledWith({ demo_mode: 'false' })
     })
 })
+})
