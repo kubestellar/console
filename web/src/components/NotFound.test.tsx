@@ -5,6 +5,33 @@ import NotFound from './NotFound'
 import { ROUTES } from '../config/routes'
 import * as demoMode from '../lib/demoMode'
 
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'notFound.title': 'Page not found',
+        'notFound.pathDoesNotExist': "doesn't exist yet — but it could!",
+        'notFound.shipFast': 'Ship it in hours, not months',
+        'notFound.aiAutomation': 'KubeStellar Console uses AI-powered repo automation to go from feature request to production in hours. Open an issue and watch the magic happen.',
+        'notFound.requestFeature': 'Request this feature',
+        'notFound.popularPages': 'Popular pages',
+        'notFound.goBack': 'Go back',
+        'notFound.home': 'Home',
+        'notFound.quickLinks.dashboard': 'Dashboard',
+        'notFound.quickLinks.clusters': 'Clusters',
+        'notFound.quickLinks.compliance': 'Compliance',
+        'notFound.quickLinks.deploy': 'Deploy',
+        'notFound.quickLinks.marketplace': 'Marketplace',
+        'notFound.quickLinks.cost': 'Cost',
+      }
+      return map[key] || key
+    },
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+}))
+
 // Mock react-router-dom
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
@@ -34,7 +61,7 @@ describe('NotFound', () => {
     )
 
     expect(screen.getByText('Page not found')).toBeInTheDocument()
-    expect(screen.getByText(/doesn't exist yet \u2014 but it could!/)).toBeInTheDocument()
+    expect(screen.getByText(/doesn't exist yet — but it could!/)).toBeInTheDocument()
   })
 
   it('displays the current pathname in code block', () => {
