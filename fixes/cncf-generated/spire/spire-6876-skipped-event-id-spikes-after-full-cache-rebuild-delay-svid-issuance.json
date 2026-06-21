@@ -1,0 +1,78 @@
+{
+  "version": "kc-mission-v1",
+  "name": "spire-6876-skipped-event-id-spikes-after-full-cache-rebuild-delay-svid-issuance",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "spire: Skipped event ID spikes after full cache rebuild delay SVID issuance",
+    "description": "Skipped event ID spikes after full cache rebuild delay SVID issuance. Community-requested feature.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current spire deployment",
+        "description": "Verify your spire version and configuration:\n```bash\nkubectl get pods -n spire -l app.kubernetes.io/name=spire\nhelm list -n spire 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working spire installation."
+      },
+      {
+        "title": "Review spire configuration",
+        "description": "Inspect the relevant spire configuration:\n```bash\nkubectl get all -n spire -l app.kubernetes.io/name=spire\nkubectl get configmap -n spire -l app.kubernetes.io/part-of=spire\n```\nWe observe periodic spikes in `spire_server_node_skipped_node_event_ids_count` and `spire_server_entry_skipped_entry_event_ids_count` that correlate with the `full_cache_reload_interval` cycle."
+      },
+      {
+        "title": "Apply the fix for Skipped event ID spikes after full cache rebuild delay SVID…",
+        "description": "We do care about that narrow window, so I don't think that's going to work, but I'll look into it some more. The events have a timestamp in the database for when they were created, which we could use to ensure we don't look at all the events, but just those in the \"transaction window\". That should\n```yaml\n{\n    \"time\": \"2026-04-01T10:51:37Z\",\n    \"msg\": \"Creating X509-SVID\",\n    \"method\": null\n},\n{\n    \"time\": \"2026-04-01T10:51:18Z\",\n    \"msg\": \"No identity issued\",\n    \"method\": \"FetchX509SVID\"\n},\n{\n    \"time\": \"2026-04-01T10:51:17Z\",\n    \"msg\": \"No identity issued\",\n    \"method\": \"FetchX509SVID\"\n},\n//... more logs...\n{\n    \"time\": \"2026-04-01T10:50:18Z\",\n    \"msg\": \"No identity issued\",\n    \"method\": \"FetchX509SVID\"\n},\n{\n    \"time\": \"2026-04-01T10:49:56Z\",\n    \"msg\": \"Starting Workload and SDS APIs\",\n    \"method\": null\n},\n{\n    \"time\": \"2026-04-01T10:49:56Z\",\n    \"msg\": \"Success after 244.936\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n spire -l app.kubernetes.io/name=spire\nkubectl get events -n spire --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Skipped event ID spikes after full cache rebuild delay SVID…\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "We do care about that narrow window, so I don't think that's going to work, but I'll look into it some more. The events have a timestamp in the database for when they were created, which we could use to ensure we don't look at all the events, but just those in the \"transaction window\". That should significantly lower the impact.",
+      "codeSnippets": [
+        "{\n    \"time\": \"2026-04-01T10:51:37Z\",\n    \"msg\": \"Creating X509-SVID\",\n    \"method\": null\n},\n{\n    \"time\": \"2026-04-01T10:51:18Z\",\n    \"msg\": \"No identity issued\",\n    \"method\": \"FetchX509SVID\"\n},\n{\n    \"time\": \"2026-04-01T10:51:17Z\",\n    \"msg\": \"No identity issued\",\n    \"method\": \"FetchX509SVID\"\n},\n//... more logs...\n{\n    \"time\": \"2026-04-01T10:50:18Z\",\n    \"msg\": \"No identity issued\",\n    \"method\": \"FetchX509SVID\"\n},\n{\n    \"time\": \"2026-04-01T10:49:56Z\",\n    \"msg\": \"Starting Workload and SDS APIs\",\n    \"method\": null\n},\n{\n    \"time\": \"2026-04-01T10:49:56Z\",\n    \"msg\": \"Success after 244.936071ms attempts=1\",\n    \"method\": null\n},\n{\n    \"time\": \"2026-04-01T10:49:56Z\",\n    \"msg\": \"Node attestation was successful\",\n    \"method\": null\n},\n{\n    \"time\": \"2026-04-01T10:49:56Z\",\n    \"msg\": \"Set"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "spire",
+      "graduated",
+      "security",
+      "feature"
+    ],
+    "cncfProjects": [
+      "spire"
+    ],
+    "targetResourceKinds": [
+      "Pod",
+      "Deployment"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/spiffe/spire/issues/6876",
+      "repo": "https://github.com/spiffe/spire",
+      "pr": "https://github.com/spiffe/spire/pull/6994"
+    },
+    "reactions": 4,
+    "comments": 14,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with spire installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-21T07:39:32.608Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
