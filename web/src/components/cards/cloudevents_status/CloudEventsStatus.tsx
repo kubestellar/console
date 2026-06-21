@@ -26,6 +26,8 @@ const STATUS_LABEL_KEY: Record<CloudEventResourceState, 'cloudevents.status_read
 
 export function CloudEventsStatus() {
   const { t } = useTranslation('cards')
+  // Demo mode subscription is handled in useCloudEventsStatus via useCache, which
+  // uses useSyncExternalStore(subscribeDemoMode, ...) to re-render on toggles.
   const { data, error, showSkeleton, showEmptyState } = useCloudEventsStatus()
   const [search, setSearch] = useState('')
 

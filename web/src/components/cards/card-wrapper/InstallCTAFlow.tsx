@@ -23,6 +23,9 @@ export interface InstallCTAFlowProps {
  * 2. ClusterSelectionDialog (when agent connected)
  * 3. ConfirmMissionPromptDialog (review/edit prompt)
  * 4. Manual install guide modal (when agent not connected)
+ *
+ * This component does not fetch card data or own demo-mode state. It is only
+ * rendered by cards that are already in a demo/live state decided upstream.
  */
 export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   const { t } = useTranslation(['cards', 'common'])
