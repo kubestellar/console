@@ -5504,5 +5504,23 @@
     "namespace": "Namespace",
     "selectNamespace": "Select a namespace",
     "applyToAllClusters": "Apply to all clusters"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "doesn't exist yet — but it could!",
+    "ctaTitle": "Ship it in hours, not months",
+    "ctaDescription": "KubeStellar Console uses AI-powered repo automation to go from feature request to production in hours. Open an issue and watch the magic happen.",
+    "ctaButton": "Request this feature",
+    "popularPages": "Popular pages",
+    "goBack": "Go back",
+    "home": "Home"
+  },
+  "quickLinks": {
+    "dashboard": "Dashboard",
+    "clusters": "Clusters",
+    "compliance": "Compliance",
+    "deploy": "Deploy",
+    "marketplace": "Marketplace",
+    "cost": "Cost"
   }
 }

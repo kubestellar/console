@@ -11,6 +11,7 @@
  *  - Highlights KubeStellar's fast iteration culture
  */
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Compass, Home, Rocket, MessageSquarePlus, ArrowLeft, Sparkles, LayoutDashboard, Shield, Server, Zap } from 'lucide-react'
 import { ROUTES } from '../config/routes'
 import { activatePublicDemoMode } from '../lib/demoMode'
@@ -22,17 +23,18 @@ const NOT_FOUND_COMPASS_STYLE_1: CSSProperties = { animationDuration: '8s' }
 
 
 const QUICK_LINKS = [
-  { label: 'Dashboard', path: ROUTES.HOME, icon: LayoutDashboard },
-  { label: 'Clusters', path: ROUTES.CLUSTERS, icon: Server },
-  { label: 'Compliance', path: ROUTES.COMPLIANCE, icon: Shield },
-  { label: 'Deploy', path: ROUTES.DEPLOY, icon: Zap },
-  { label: 'Marketplace', path: ROUTES.MARKETPLACE, icon: Rocket },
-  { label: 'Cost', path: ROUTES.COST, icon: Sparkles },
+  { labelKey: 'quickLinks.dashboard', path: ROUTES.HOME, icon: LayoutDashboard },
+  { labelKey: 'quickLinks.clusters', path: ROUTES.CLUSTERS, icon: Server },
+  { labelKey: 'quickLinks.compliance', path: ROUTES.COMPLIANCE, icon: Shield },
+  { labelKey: 'quickLinks.deploy', path: ROUTES.DEPLOY, icon: Zap },
+  { labelKey: 'quickLinks.marketplace', path: ROUTES.MARKETPLACE, icon: Rocket },
+  { labelKey: 'quickLinks.cost', path: ROUTES.COST, icon: Sparkles },
 ] as const
 
 export default function NotFound() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const path = location.pathname
 
   const featureRequestUrl =
@@ -61,11 +63,11 @@ export default function NotFound() {
         {/* Main message */}
         <div className="space-y-3">
           <h1 className="text-3xl font-bold text-zinc-100">
-            Page not found
+            {t('notFound.title')}
           </h1>
           <p className="text-muted-foreground text-base leading-relaxed">
             <code className="px-2 py-0.5 bg-zinc-800 rounded text-sm text-purple-300">{path}</code>
-            {' '}doesn&apos;t exist yet — but it could!
+            {' '}{t('notFound.description')}
           </p>
         </div>
 
@@ -73,11 +75,10 @@ export default function NotFound() {
         <div className="bg-linear-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-5 space-y-3">
           <div className="flex items-center justify-center gap-2 text-purple-300">
             <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-semibold">Ship it in hours, not months</span>
+            <span className="text-sm font-semibold">{t('notFound.ctaTitle')}</span>
           </div>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            KubeStellar Console uses AI-powered repo automation to go from feature
-            request to production in hours. Open an issue and watch the magic happen.
+            {t('notFound.ctaDescription')}
           </p>
           <a
             href={featureRequestUrl}
@@ -86,15 +87,15 @@ export default function NotFound() {
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors"
           >
             <MessageSquarePlus className="w-4 h-4" />
-            Request this feature
+            {t('notFound.ctaButton')}
           </a>
         </div>
 
         {/* Quick links */}
         <div className="space-y-3">
-          <p className="text-zinc-500 text-xs uppercase tracking-wider font-medium">Popular pages</p>
+          <p className="text-zinc-500 text-xs uppercase tracking-wider font-medium">{t('notFound.popularPages')}</p>
           <div className="grid grid-cols-3 gap-2">
-            {QUICK_LINKS.map(({ label, path: to, icon: Icon }) => (
+            {QUICK_LINKS.map(({ labelKey, path: to, icon: Icon }) => (
               <Button
                 key={to}
                 variant="ghost"
@@ -102,7 +103,7 @@ export default function NotFound() {
                 className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 hover:border-zinc-600 transition-colors group"
               >
                 <Icon className="w-4 h-4 text-muted-foreground group-hover:text-purple-400 transition-colors" />
-                <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
+                <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{t(labelKey)}</span>
               </Button>
             ))}
           </div>
@@ -116,7 +117,7 @@ export default function NotFound() {
             onClick={() => navigate(-1)}
             className="border border-zinc-700 hover:border-zinc-600"
           >
-            Go back
+            {t('notFound.goBack')}
           </Button>
           <Button
             variant="ghost"
@@ -124,7 +125,7 @@ export default function NotFound() {
             onClick={() => navigateToDemo(ROUTES.HOME)}
             className="border border-zinc-700 hover:border-zinc-600"
           >
-            Home
+            {t('notFound.home')}
           </Button>
         </div>
       </div>
