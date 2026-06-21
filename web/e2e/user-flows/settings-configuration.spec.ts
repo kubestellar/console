@@ -15,7 +15,8 @@ test.describe('Settings Configuration — "Change my preferences"', () => {
     const settingsPage = page.getByTestId('settings-page')
     await expect(settingsPage).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     const title = page.getByTestId('settings-title')
-    await expect(title).toBeVisible()
+      .or(page.getByTestId('settings-title-mobile'))
+    await expect(title.first()).toBeVisible()
   })
 
   test('settings page shows configuration groups', async ({ page }) => {
@@ -117,9 +118,11 @@ test.describe('Settings Configuration — "Change my preferences"', () => {
   test('mobile: settings layout at 375px', async ({ page }) => {
     await page.setViewportSize({ width: MOBILE_WIDTH, height: MOBILE_HEIGHT })
     await setupDemoAndNavigate(page, '/settings')
-    // Now that both desktop and mobile titles use the same testid,
-    // .filter({visible: true}) ensures we get the actually-visible one
+    // At mobile width, the desktop sidebar nav (hidden lg:block) is CSS-hidden, so
+    // settings-title is not visible even though it exists in the DOM.
+    // Use .filter({visible:true}) to pick whichever title variant is actually rendered.
     const title = page.getByTestId('settings-title')
+      .or(page.getByTestId('settings-title-mobile'))
       .filter({ visible: true })
       .first()
     await expect(title).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
