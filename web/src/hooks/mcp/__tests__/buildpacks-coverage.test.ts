@@ -177,7 +177,7 @@ describe('buildpacks coverage part 1', () => {
   })
 
   it('null images in response: defaults to empty array', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ images: null }) })
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ images: null }) })
     const { result, unmount } = renderHook(() => useBuildpackImages(uc()))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.images).toEqual([])

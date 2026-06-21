@@ -257,7 +257,7 @@ export function useBuildpackImages(cluster?: string) {
     const cacheAge = now - buildpackCache.timestamp
     const cacheValid =
       !cluster &&
-      buildpackCache.data.length > 0 &&
+      buildpackCache.timestamp > 0 &&
       cacheAge < BUILDPACK_CACHE_TTL_MS
 
     if (cacheValid) {
