@@ -23,12 +23,12 @@ const NOT_FOUND_COMPASS_STYLE_1: CSSProperties = { animationDuration: '8s' }
 
 
 const QUICK_LINKS = [
-  { labelKey: 'quickLinks.dashboard', path: ROUTES.HOME, icon: LayoutDashboard },
-  { labelKey: 'quickLinks.clusters', path: ROUTES.CLUSTERS, icon: Server },
-  { labelKey: 'quickLinks.compliance', path: ROUTES.COMPLIANCE, icon: Shield },
-  { labelKey: 'quickLinks.deploy', path: ROUTES.DEPLOY, icon: Zap },
-  { labelKey: 'quickLinks.marketplace', path: ROUTES.MARKETPLACE, icon: Rocket },
-  { labelKey: 'quickLinks.cost', path: ROUTES.COST, icon: Sparkles },
+  { labelKey: 'notFound.quickLinks.dashboard', path: ROUTES.HOME, icon: LayoutDashboard },
+  { labelKey: 'notFound.quickLinks.clusters', path: ROUTES.CLUSTERS, icon: Server },
+  { labelKey: 'notFound.quickLinks.compliance', path: ROUTES.COMPLIANCE, icon: Shield },
+  { labelKey: 'notFound.quickLinks.deploy', path: ROUTES.DEPLOY, icon: Zap },
+  { labelKey: 'notFound.quickLinks.marketplace', path: ROUTES.MARKETPLACE, icon: Rocket },
+  { labelKey: 'notFound.quickLinks.cost', path: ROUTES.COST, icon: Sparkles },
 ] as const
 
 export default function NotFound() {
@@ -67,7 +67,7 @@ export default function NotFound() {
           </h1>
           <p className="text-muted-foreground text-base leading-relaxed">
             <code className="px-2 py-0.5 bg-zinc-800 rounded text-sm text-purple-300">{path}</code>
-            {' '}{t('notFound.description')}
+            {' '}{t('notFound.pathDoesNotExist')}
           </p>
         </div>
 
@@ -75,10 +75,10 @@ export default function NotFound() {
         <div className="bg-linear-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-5 space-y-3">
           <div className="flex items-center justify-center gap-2 text-purple-300">
             <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-semibold">{t('notFound.ctaTitle')}</span>
+            <span className="text-sm font-semibold">{t('notFound.shipFast')}</span>
           </div>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            {t('notFound.ctaDescription')}
+            {t('notFound.aiAutomation')}
           </p>
           <a
             href={featureRequestUrl}
@@ -87,7 +87,7 @@ export default function NotFound() {
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors"
           >
             <MessageSquarePlus className="w-4 h-4" />
-            {t('notFound.ctaButton')}
+            {t('notFound.requestFeature')}
           </a>
         </div>
 
