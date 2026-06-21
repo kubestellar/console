@@ -173,13 +173,27 @@ export function BaseModal({
     <div
       ref={backdropRef}
       className="fixed inset-0 bg-black/60 backdrop-blur-xs z-modal isolate p-4 overflow-y-auto overscroll-contain"
+      role="presentation"
       onMouseDown={handleBackdropMouseDown}
       onClick={handleBackdropClick}
+      onKeyDown={(e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleBackdropClick(e as unknown as React.MouseEvent)
+        }
+      }}
     >
       <div
         className="min-h-full flex items-start justify-center py-4 sm:items-center"
+        role="presentation"
         onMouseDown={handleBackdropMouseDown}
         onClick={handleBackdropClick}
+        onKeyDown={(e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            handleBackdropClick(e as unknown as React.MouseEvent)
+          }
+        }}
       >
         <div
           ref={modalRef}
@@ -237,6 +251,12 @@ function ModalHeader({
           {showBack && onBack && (
             <button
               onClick={onBack}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onBack()
+                }
+              }}
               className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
               title="Go back (Backspace)"
               aria-label="Go back"
@@ -281,6 +301,12 @@ function ModalHeader({
           {onClose && (
             <button
               onClick={onClose}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onClose()
+                }
+              }}
               className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
               title={closeTitle}
               aria-label={closeAriaLabel}
