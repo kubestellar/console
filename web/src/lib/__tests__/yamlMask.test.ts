@@ -157,8 +157,8 @@ describe('maskKubernetesYamlData', () => {
     const input = [
       'data:',
       '  password: cGFzczEyMw==',
-      '  username: not closed "',
-      ': : : : invalid',
+      '  username: {unclosed',
+      '  invalid: [broken',
     ].join('\n')
 
     const masked = maskKubernetesYamlData(input)
