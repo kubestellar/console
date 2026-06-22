@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { maskKubernetesYamlData, YAML_MASK_PLACEHOLDER } from '../yamlMask'
+import * as yaml from 'js-yaml'
 
 /**
  * Pin behavior of the resource-agnostic Kubernetes YAML masker.
@@ -81,7 +82,6 @@ describe('maskKubernetesYamlData', () => {
     // The output must still be parseable as valid YAML — re-parse it
     // to prove no stray indented lines were emitted.
     expect(() => {
-      const yaml = require('js-yaml')
       yaml.load(masked)
     }).not.toThrow()
     // Key name preserved
