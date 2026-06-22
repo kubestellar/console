@@ -436,7 +436,9 @@ describe('DashboardPage', () => {
   it('configure card modal handles Escape key to close', () => {
     // ConfigureCardModal is mocked in this file, but we verify that real modals
     // support escape key handling via closeOnEscape prop
-    const { rerender } = render(<TestDashboardPage configuringCard="card-1" />)
+    const card = { id: 'c1', card_type: 'card_a', config: {}, title: 'Card A' }
+    mockUseDashboard.mockReturnValue(makeDashboardReturn({ configuringCard: card }))
+    renderPage()
     expect(screen.getByTestId('configure-card-modal')).toBeInTheDocument()
     // Simulate escape key press
     fireEvent.keyDown(document, { key: 'Escape' })

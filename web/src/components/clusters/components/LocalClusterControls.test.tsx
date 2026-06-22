@@ -25,8 +25,8 @@ describe('LocalClusterControls', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalClusters = [
-      { name: 'kubeflex', tool: 'kind', status: 'running' },
-      { name: 'minikube', tool: 'minikube', status: 'stopped' },
+      { name: 'kubeflex', tool: 'kind', status: 'running' as const },
+      { name: 'minikube', tool: 'minikube', status: 'stopped' as const },
     ]
     mockClusterLifecycle.mockResolvedValue(undefined)
   })
@@ -89,7 +89,7 @@ describe('LocalClusterControls', () => {
   })
 
   it('disables controls when cluster is unreachable and not locally detected', () => {
-    mockLocalClusters = [{ name: 'other', tool: 'kind', status: 'running' }]
+    mockLocalClusters = [{ name: 'other', tool: 'kind', status: 'running' as const }]
 
     render(
       <LocalClusterControls clusterName="kind-missing" provider="kind" unreachable={true} />,
