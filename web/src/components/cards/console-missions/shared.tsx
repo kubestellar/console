@@ -176,8 +176,19 @@ export function ApiKeyPromptModal({ isOpen, onDismiss, onGoToSettings, errorMess
 
   if (!isOpen) return null
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Prevent backdrop click from closing (modal safety requirement)
+    e.stopPropagation()
+  }
+
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-xs rounded-lg" role="dialog" aria-modal="true" aria-labelledby="api-key-prompt-title">
+    <div 
+      className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-xs rounded-lg" 
+      role="dialog" 
+      aria-modal="true" 
+      aria-labelledby="api-key-prompt-title"
+      onClick={handleBackdropClick}
+    >
       <div className="bg-card border border-border rounded-lg p-4 m-4 shadow-xl max-w-md">
         <div className="flex items-center gap-2 mb-3">
           <div className="p-1.5 rounded bg-purple-500/20">

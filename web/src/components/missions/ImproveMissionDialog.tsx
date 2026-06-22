@@ -104,7 +104,7 @@ export function ImproveMissionDialog({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="sm" closeOnBackdrop={false} closeOnEscape={true}>
       <BaseModal.Header title={t('missions.improve.title')} icon={MessageSquarePlus} onClose={onClose} />
 
       <BaseModal.Content noPadding>
