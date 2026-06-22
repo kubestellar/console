@@ -13,7 +13,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.68.1
+	github.com/prometheus/common v0.69.0
 	github.com/stretchr/testify v1.11.1
 	github.com/valyala/fasthttp v1.58.0
 	go.uber.org/goleak v1.3.0
