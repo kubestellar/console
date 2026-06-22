@@ -260,7 +260,7 @@ describe('TableVisualization', () => {
       renderTable({ pageSize: PAGE_SIZE })
       const buttons = screen.getAllByRole('button')
       const prevButton = buttons[0]
-      expect(prevButton).toHaveProperty('disabled', true)
+      expect(prevButton).toHaveAttribute('aria-disabled', 'true')
     })
 
     it('disables next button on last page', async () => {
@@ -277,7 +277,7 @@ describe('TableVisualization', () => {
       // Refresh buttons reference after re-renders
       const updatedButtons = screen.getAllByRole('button')
       const updatedNext = updatedButtons[updatedButtons.length - 1]
-      expect(updatedNext).toHaveProperty('disabled', true)
+      expect(updatedNext).toHaveAttribute('aria-disabled', 'true')
     })
 
     it('does not show pagination when all data fits on one page', () => {
