@@ -79,8 +79,9 @@ describe('heading components', () => {
       ['H5', components.h5],
       ['H6', components.h6],
     ] as const) {
-      render(<Comp>{`heading-${tag}`}</Comp>)
+      const { unmount } = render(<Comp>{`heading-${tag}`}</Comp>)
       expect(screen.getByText(`heading-${tag}`).tagName).toBe(tag)
+      unmount()
     }
   })
 })
