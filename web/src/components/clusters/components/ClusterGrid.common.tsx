@@ -53,6 +53,7 @@ export function ActionTooltipWrapper({
       onClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
       onKeyDown={handleKeyDown}
+      aria-label={tooltip}
     >
       <Tooltip content={tooltip}>{children}</Tooltip>
     </span>
