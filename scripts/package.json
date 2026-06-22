@@ -17,7 +17,7 @@
     "yaml": "^2.8.3"
   },
   "devDependencies": {
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.9"
   },
   "overrides": {
     "esbuild": ">=0.25.0",
