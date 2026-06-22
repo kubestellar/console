@@ -123,4 +123,12 @@ describe('ConfirmDialog', () => {
     const spinner = container.querySelector('.animate-spin')
     expect(spinner).not.toBeInTheDocument()
   })
+
+  it('handles Escape key press to close dialog', () => {
+    const onClose = vi.fn()
+    render(<ConfirmDialog {...defaultProps} onClose={onClose} />)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    // BaseModal is mocked, but we verify the onClose prop is passed
+    expect(onClose).toHaveBeenCalled()
+  })
 })
