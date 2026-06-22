@@ -514,7 +514,7 @@ Please proceed with applying this policy.`,
           onClose={() => setShowYamlEditor(false)}
           showBack={false}
         />
-        <BaseModal.Content className="overflow-visible!">
+        <BaseModal.Content className="overflow-visible">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
               <span className="text-muted-foreground">YAML will be applied to: <span className="text-foreground">{clusterName}</span></span>
