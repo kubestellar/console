@@ -7,12 +7,12 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
-let mockLocalClusters: Array<{ name: string; tool: string; status: 'running' | 'stopped' }> = [
-  { name: 'kubeflex', tool: 'kind', status: 'running' },
-  { name: 'minikube', tool: 'minikube', status: 'stopped' },
+let mockLocalClusters = [
+  { name: 'kubeflex', tool: 'kind', status: 'running' as const },
+  { name: 'minikube', tool: 'minikube', status: 'stopped' as const },
 ]
 
-const mockClusterLifecycle = vi.fn()
+const mockClusterLifecycle = vi.fn<(...args: [string, string, 'start' | 'stop' | 'restart']) => Promise<void>>()
 
 vi.mock('../../../hooks/useLocalClusterTools', () => ({
   useLocalClusterTools: () => ({
