@@ -319,6 +319,7 @@ describe('toggle-sensitive polling', () => {
     })
 
     afterEach(() => {
+        vi.clearAllTimers()
         vi.useRealTimers()
         vi.restoreAllMocks()
         vi.unstubAllGlobals()
@@ -419,5 +420,3 @@ describe('toggle-sensitive polling', () => {
         expect(callsAfterPoll).toBeGreaterThan(callsBeforePoll)
     })
 })
-
-
