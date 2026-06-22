@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, X, Shield, User } from 'lucide-react'
+import { Plus, X, Shield, User, Loader2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
@@ -19,21 +19,33 @@ export function TeamMemberManager({ members, currentUserId, onAddMember, onRemov
   const [newUserId, setNewUserId] = useState('')
   const [newRole, setNewRole] = useState<TeamRole>('member')
   const [removingUserId, setRemovingUserId] = useState<string | null>(null)
+  const [isRemoving, setIsRemoving] = useState(false)
+  const [isAdding, setIsAdding] = useState(false)
 
   const handleAdd = async () => {
     if (!newUserId.trim()) return
-    const ok = await onAddMember(newUserId.trim(), newRole)
-    if (ok) {
-      setNewUserId('')
-      setNewRole('member')
-      setShowAdd(false)
+    setIsAdding(true)
+    try {
+      const ok = await onAddMember(newUserId.trim(), newRole)
+      if (ok) {
+        setNewUserId('')
+        setNewRole('member')
+        setShowAdd(false)
+      }
+    } finally {
+      setIsAdding(false)
     }
   }
 
   const handleRemove = async () => {
     if (!removingUserId) return
-    await onRemoveMember(removingUserId)
-    setRemovingUserId(null)
+    setIsRemoving(true)
+    try {
+      await onRemoveMember(removingUserId)
+      setRemovingUserId(null)
+    } finally {
+      setIsRemoving(false)
+    }
   }
 
   const admins = members.filter(m => m.role === 'admin')
@@ -129,8 +141,8 @@ export function TeamMemberManager({ members, currentUserId, onAddMember, onRemov
           <BaseModal.Footer>
             <div className="flex-1" />
             <div className="flex gap-3">
-              <Button variant="ghost" size="lg" onClick={() => setShowAdd(false)}>{t('common.cancel')}</Button>
-              <Button variant="primary" size="lg" onClick={handleAdd} disabled={!newUserId.trim()}>{t('teams.addMember')}</Button>
+              <Button variant="ghost" size="lg" onClick={() => setShowAdd(false)} disabled={isAdding}>{t('common.cancel')}</Button>
+              <Button variant="primary" size="lg" onClick={handleAdd} disabled={!newUserId.trim() || isAdding} loading={isAdding}>{t('teams.addMember')}</Button>
             </div>
           </BaseModal.Footer>
         </BaseModal>
@@ -145,6 +157,7 @@ export function TeamMemberManager({ members, currentUserId, onAddMember, onRemov
         confirmLabel={t('teams.removeMember')}
         cancelLabel={t('common.cancel')}
         variant="danger"
+        isLoading={isRemoving}
       />
     </div>
   )
