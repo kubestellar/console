@@ -5449,7 +5449,10 @@
     "logoutTitle": "Log Out?",
     "logoutMessage": "You will be logged out and all session data will be cleared.",
     "clearTokensTitle": "Clear All Tokens?",
-    "clearTokensMessage": "This will remove all stored tokens including agent and authentication tokens. You will need to log in again."
+    "clearTokensMessage": "This will remove all stored tokens including agent and authentication tokens. You will need to log in again.",
+    "removeCardTitle": "Remove Card?",
+    "removeCardMessageWithTitle": "Are you sure you want to remove \"{{title}}\" from your dashboard? You can add it back later from the card catalog.",
+    "removeCardMessage": "Are you sure you want to remove this card from your dashboard? You can add it back later from the card catalog."
   },
   "saveResolution": "Save Resolution",
   "shareToOrg": "Share to Org",
