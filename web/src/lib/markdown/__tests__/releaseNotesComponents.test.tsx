@@ -71,16 +71,18 @@ describe('link component', () => {
 
 describe('heading components', () => {
   it('renders h1-h6 with children', () => {
-    for (const [tag, Comp] of [
-      ['H1', components.h1],
-      ['H2', components.h2],
-      ['H3', components.h3],
-      ['H4', components.h4],
-      ['H5', components.h5],
-      ['H6', components.h6],
+    for (const [level, Comp] of [
+      [1, components.h1],
+      [2, components.h2],
+      [3, components.h3],
+      [4, components.h4],
+      [5, components.h5],
+      [6, components.h6],
     ] as const) {
-      const { unmount } = render(<Comp>{`heading-${tag}`}</Comp>)
-      expect(screen.getByText(`heading-${tag}`).tagName).toBe(tag)
+      const { unmount } = render(<Comp>{`heading-${level}`}</Comp>)
+      const element = screen.getByText(`heading-${level}`)
+      expect(element.getAttribute('role')).toBe('heading')
+      expect(element.getAttribute('aria-level')).toBe(String(level))
       unmount()
     }
   })
