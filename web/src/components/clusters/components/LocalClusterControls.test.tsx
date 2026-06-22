@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import { LocalClusterControls } from './LocalClusterControls'
 
 vi.mock('react-i18next', () => ({
@@ -29,6 +29,10 @@ describe('LocalClusterControls', () => {
       { name: 'minikube', tool: 'minikube', status: 'stopped' },
     ]
     mockClusterLifecycle.mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    cleanup()
   })
 
   it('renders null for unsupported providers', () => {
