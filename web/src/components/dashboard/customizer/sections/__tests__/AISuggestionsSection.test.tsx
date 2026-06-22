@@ -38,7 +38,8 @@ describe('AISuggestionsSection', () => {
   })
 
   afterEach(() => {
-    vi.clearAllTimers()
+    vi.useRealTimers()
+    vi.clearAllMocks()
   })
 
   it('renders query input and generate button', () => {
