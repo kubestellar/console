@@ -57,7 +57,7 @@ interface AlertListItemProps {
   duplicateCount?: number
   onAlertClick: (alert: Alert) => void
   onAcknowledge: (e: React.MouseEvent, alertIds: string[]) => void
-  onAIDiagnose: (e: React.MouseEvent, alertId: string) => void
+  onAIDiagnose: (e: React.MouseEvent | React.KeyboardEvent<HTMLDivElement>, alertId: string) => void
   onOpenMission: (e: React.MouseEvent, alert: Alert) => void
 }
 
@@ -213,11 +213,6 @@ export function AlertListItem({
             </span>
           )}
           {snoozeMenuOpen && (
-            // Issue 9257 — use the themed `bg-card` token instead of the
-            // hardcoded dark hex `#1a1a2e`, which rendered as a dark blob in
-            // light mode. The token resolves to the correct surface color in
-            // both themes. (#5906 established `bg-card` as the convention
-            // because `bg-popover` is not defined in tailwind.config.js.)
             <div className="absolute left-0 bottom-full mb-1 z-50 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[100px]">
               {(Object.keys(SNOOZE_DURATIONS) as SnoozeDuration[]).map(duration => (
                 <button
