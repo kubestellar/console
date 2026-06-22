@@ -424,7 +424,13 @@ export function SubmitForm({
                 ))}
               </ul>
               <div className="text-muted-foreground text-xs mt-1.5 flex flex-wrap gap-1 items-center">
-                <a href={GITHUB_TOKEN_CREATE_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Create token on GitHub</a>
+                <button
+                  type="button"
+                  onClick={() => window.open(GITHUB_TOKEN_CREATE_URL, '_blank', 'noopener,noreferrer')}
+                  className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
+                >
+                  Create token on GitHub
+                </button>
                 <span>{' · '}</span>
                 <button
                   type="button"

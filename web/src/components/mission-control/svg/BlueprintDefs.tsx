@@ -3,6 +3,7 @@
  * Glow filters, gradient fills, particle gradients, drop shadows.
  */
 
+import { createElement } from 'react'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
 import {
   AMBER_500,
@@ -22,6 +23,29 @@ interface BlueprintDefsProps {
 }
 
 export function BlueprintDefs({ id }: BlueprintDefsProps) {
+  const renderLinearGradient = (
+    gradientId: string,
+    x2: string,
+    y2: string,
+    startColor: string,
+    endColor: string,
+    startOpacity = '1',
+    endOpacity = '1',
+    key?: string,
+  ) => createElement(
+    'linearGradient',
+    {
+      id: gradientId,
+      x1: '0%',
+      y1: '0%',
+      x2,
+      y2,
+      key,
+    },
+    createElement('stop', { offset: '0%', stopColor: startColor, stopOpacity: startOpacity }),
+    createElement('stop', { offset: '100%', stopColor: endColor, stopOpacity: endOpacity }),
+  )
+
   return (
     <defs>
       {/* ── Glow filter (for nodes & connections) ─────────────── */}
@@ -56,16 +80,10 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
       </radialGradient>
 
       {/* ── Cross-cluster dependency gradient ─────────────────── */}
-      <linearGradient id={`${id}-cross-dep`} x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor={AMBER_500} stopOpacity="0.8" />
-        <stop offset="100%" stopColor={RED_500} stopOpacity="0.8" />
-      </linearGradient>
+      {renderLinearGradient(`${id}-cross-dep`, '100%', '0%', AMBER_500, RED_500, '0.8', '0.8')}
 
       {/* ── Intra-cluster dependency gradient ─────────────────── */}
-      <linearGradient id={`${id}-intra-dep`} x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor={INDIGO_500} stopOpacity="0.6" />
-        <stop offset="100%" stopColor={PURPLE_500} stopOpacity="0.6" />
-      </linearGradient>
+      {renderLinearGradient(`${id}-intra-dep`, '100%', '0%', INDIGO_500, PURPLE_500, '0.6', '0.6')}
 
       {/* ── Background grid pattern ──────────────────────────── */}
       <pattern id={`${id}-grid`} width="20" height="20" patternUnits="userSpaceOnUse">
@@ -107,17 +125,14 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
       {Object.entries(CNCF_CATEGORY_GRADIENTS).map(([category, colors]) => {
         const [c1, c2] = colors as [string, string]
         return (
-          <linearGradient
-            key={category}
-            id={`${id}-cat-${category.toLowerCase().replace(/\s+/g, '-')}`}
-            x1="0%"
-            y1="0%"
-            x2="100%"
-            y2="100%"
-          >
-            <stop offset="0%" stopColor={c1} />
-            <stop offset="100%" stopColor={c2} />
-          </linearGradient>
+          renderLinearGradient(
+            `${id}-cat-${category.toLowerCase().replace(/\s+/g, '-')}`,
+            '100%',
+            '100%',
+            c1,
+            c2,
+            category,
+          )
         )
       })}
 

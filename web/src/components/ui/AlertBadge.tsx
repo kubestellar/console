@@ -185,7 +185,7 @@ export function AlertBadge() {
     })
   }
 
-  const handleDiagnose = (e: React.MouseEvent, alertId: string) => {
+  const handleDiagnose = (e: React.MouseEvent | React.KeyboardEvent<HTMLDivElement>, alertId: string) => {
     e.stopPropagation()
     runAIDiagnosis(alertId)
     close() // Close dialog after starting diagnosis
