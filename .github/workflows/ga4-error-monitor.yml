@@ -316,6 +316,17 @@ jobs:
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const timestamp = now.toISOString().replace('T', ' ').split('.')[0] + ' UTC';
 
+            // Sanitize GA4 dimensions to prevent prompt injection
+            const sanitize = (str) => {
+              if (!str || typeof str !== 'string') return 'unknown';
+              // Remove control chars, normalize whitespace, limit length
+              return str
+                .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, 200);
+            };
+
             for (const [key, count] of spikes) {
               if (created >= maxIssues) {
                 core.warning(`Rate limit: ${maxIssues} issues/run. ${spikes.length - created} spike(s) skipped.`);
@@ -323,10 +334,12 @@ jobs:
               }
 
               const [category, page] = key.split('::');
+              const sanitizedCategory = sanitize(category);
+              const sanitizedPage = sanitize(page);
               const users = userCounts.get(key) || 0;
               const density = users > 0 ? Math.round(count / users) : 0;
               const densitySuffix = density >= HIGH_DENSITY_ERRORS_PER_USER ? ` [${density}/user]` : '';
-              const title = `${prefix} ${count} ${category} errors on ${page} (last ${lookbackHours}h)${densitySuffix}`;
+              const title = `${prefix} ${count} ${sanitizedCategory} errors on ${sanitizedPage} (last ${lookbackHours}h)${densitySuffix}`;
 
               const dup = existingIssues.find(i => normalizeTitle(i.title) === normalizeTitle(title));
               if (dup) {
@@ -401,10 +414,10 @@ jobs:
                 : ['- *(error_detail not captured — check GA4 dashboard)*'];
 
               const body = [
-                `## GA4 Error Spike: ${category}`,
+                `## GA4 Error Spike: ${sanitizedCategory}`,
                 '',
                 `**Detected:** ${timestamp} | **Count:** ${count} errors | **Users:** ${users} | **Density:** ${density} errors/user | **Threshold:** ${threshold} | **Window:** ${lookbackHours}h`,
-                `**Page:** \`${page}\` | **Category:** \`${category}\``,
+                `**Page:** \`${sanitizedPage}\` | **Category:** \`${sanitizedCategory}\``,
                 density >= HIGH_DENSITY_ERRORS_PER_USER ? `\n> ⚠️ **High error density** (${density} errors/user) — this typically indicates a broken polling loop or retry cascade, not isolated errors.\n` : '',
                 '',
                 `**Run:** [View workflow run](${runUrl})`,
@@ -418,17 +431,17 @@ jobs:
                 category === 'uncaught_render' ? 'A React component crashed during render outside of card boundaries. Caught by `AppErrorBoundary` — shows "Something went wrong" fallback.' :
                 category === 'unhandled_rejection' ? 'A Promise rejection was not caught anywhere in the call chain. Logged by the global `unhandledrejection` handler.' :
                 category === 'runtime' ? 'A JavaScript runtime error occurred (window.onerror). Not a React render error — could be event handlers, timers, or third-party code.' :
-                `Error category: ${category}`,
+                `Error category: ${sanitizedCategory}`,
                 '',
                 '### How to Fix',
                 ...fixes.map(f => `- ${f}`),
                 '',
                 '### Investigation Steps',
                 '1. Check the [GA4 Error Tracking dashboard](https://analytics.google.com/) for this category',
-                `2. Search codebase for error-prone patterns on \`${page}\`:`,
+                `2. Search codebase for error-prone patterns on \`${sanitizedPage}\`:`,
                 '   ```bash',
                 '   # Find components rendered on this page',
-                `   grep -r "${page.replace('/', '')}" web/src/config/routes.ts`,
+                `   grep -r "${sanitizedPage.replace('/', '')}" web/src/config/routes.ts`,
                 '   # Find unguarded array operations',
                 '   grep -rn "\\.filter\\|.map\\|.join\\|.forEach" web/src/components/ | grep -v "|| \\[\\]"',
                 '   ```',

@@ -14,4 +14,5 @@ permissions:
 jobs:
   greet:
     uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@main
-    secrets: inherit
+    # Removed secrets: inherit to prevent secret exposure to fork PRs
+    # github.token is provided automatically by the runner
