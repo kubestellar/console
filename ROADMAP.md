@@ -156,44 +156,49 @@ We welcome community input on priorities:
 ## Strategic Health — June 2026
 
 > Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
-> **Last updated:** 2026-06-12
+> **Last updated:** 2026-06-22
 
 ### Current Risk Register
 
 | Risk | Severity | Issue | Status |
 |------|----------|-------|--------|
-| Merge gate disabled on `main` — no required status checks | 🔴 Critical | #17852 | Open |
-| Main branch build cascade — 8+ breaks on 2026-06-12, recovery SLA undefined | 🔴 Critical | #17756, #17969 | Escalating |
-| Auth smoke test regression | 🔴 Critical | #17824 | Open |
-| DCO sign-off failures on automation PRs — legal compliance risk | 🔴 Critical | #17966 | Open |
-| Coverage suite — 415 failures risk v0.3 "91% coverage" claim | 🟠 High | #17856 | Open |
-| v0.4 feature velocity at zero — all recent merges are maintenance | 🟠 High | #17968 | Ongoing |
-| Scanner PR backlog stalling v0.4 arch refactor | 🟠 High | #17853 | Open |
-| Stellar subsystem — no GA milestone or alpha exit criteria | 🟡 Medium | #17757 | Open |
-| Plugin architecture RFC exists (Draft) but issue tracker not closed | 🟡 Medium | #17760 | RFC exists |
-| Organic contributor drought — <4% human PR ratio | 🟡 Medium | #17967 | Ongoing |
-| Adoption metrics (`docs/ADOPTION-METRICS.md`) all TBD | 🟡 Medium | #17965 | Unresolved |
+| v0.4 T-9 days: zero feature PRs on all 3 Tier-1 scope items (llm-d, Drasi, kagent) | 🔴 Critical | #19307, #19326, #19406 | Decision required |
+| Coverage suite 54% failure rate / 11% success rate — v0.3 "91% coverage" claim invalidated | 🔴 Critical | #19257, #19384 | Open |
+| Auto-QA feedback loop creating unlimited scanner work, blocking v0.4 feature bandwidth | 🔴 Critical | #19385 | Open |
+| CNCF security audit Q2 2026 deadline passed — no audit scheduled | 🔴 Critical | #18207 | Overdue |
+| GitHub repository has zero topics — invisible to GitHub topic search | 🟠 High | #19404 | Open |
+| Dependency PRs accumulating without merge policy (6 open, actions/checkout 3 major versions behind) | 🟠 High | #19405 | Open |
+| Cache-test TTC threshold bumped 17 consecutive times — masking real CI regression | 🟠 High | #19348 | Open |
+| ADOPTERS.md contains only KubeStellar itself — no external production users documented | 🟡 Medium | #17965 | Open |
+| Branch protection: no required PR reviews, admins not enforced | 🟡 Medium | #18355 | Partial (build-gate only) |
+| Strategist-authored ROADMAP PRs merged without DCO sign-off (#19386, #19390) | 🟡 Medium | #19007 | Ongoing |
 | CNCF incubation tracker on `hold` | 🟡 Medium | #4072 | Blocked |
 
-### v0.4 Delivery Prerequisites
+### v0.4 Scope Status (T-9 days to Q3 2026)
 
-Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), the following blockers must be resolved:
+**Decision required from @clubanderson** — see #19406 for the three available paths (commit / scope-reduce / defer).
 
-1. **Merge gate enforcement** (#17852) — Must be enabled first; every other quality improvement depends on a stable merge pipeline.
-2. **Build stabilization** (#17756) — Main must stay green for at least 2 weeks before any v0.4 feature work is reliable.
-3. **Recovery SLA definition** (#17969) — Define build sheriff role, 4-hour SLA, and circuit breaker for automation agents when main is broken.
-4. **Coverage regression triage** (#17856) — Determine whether the 415-failure coverage suite is a build environment artifact or real test regression.
-5. **v0.4 feature work kickoff** (#17968) — Designate a feature captain and open at least one implementation PR for llm-d, Drasi, or kagent integration.
+| v0.4 Scope Item | Tier | Status |
+|---|---|---|
+| llm-d stack monitoring (#18031) | 1 — Core | ❌ Zero PRs |
+| Drasi reactive pipelines (#18032) | 1 — Core | ❌ Zero PRs |
+| kagent/kagenti lifecycle UI (#18033) | 1 — Core | ❌ Zero PRs |
+| Nightly E2E expansion (#18034) | 2 — Quality | ❌ Zero PRs |
+| Marketplace v2 (#18035) | 2 — Quality | ❌ Zero PRs |
+| i18n completeness | 3 — UX | ✅ In progress |
+| Accessibility audit (#18037) | 3 — UX | ✅ In progress |
 
 ### Adoption Readiness
 
 | Signal | Target | Current |
 |--------|--------|---------|
-| Main branch build stability | Green ≥14 consecutive days | ❌ Failing (8+ breaks on 2026-06-12) |
-| Coverage suite pass rate | >99% | ❌ 415 failures |
-| Human contributor ratio | ≥10% of merged PRs | ❌ <4% (1/30 recent merges) |
-| ADOPTERS.md confirmed entries | ≥3 production users | ⚠️ TBD |
-| Adoption metrics populated | All fields in `docs/ADOPTION-METRICS.md` | ❌ All TBD (#17965) |
-| DCO compliance on automation PRs | 100% of merged PRs signed | ⚠️ Gaps identified (#17966) |
+| Main branch build stability | Green ≥14 consecutive days | ✅ v0.3.31 released 2026-06-21 |
+| Nightly release freshness | Daily | ✅ Jun 19–21 nightlies present |
+| Weekly release cadence | Weekly | ✅ v0.3.31 (Jun 21), v0.3.30 (Jun 7) |
+| Coverage suite pass rate | >99% | ❌ 11% success rate (#19384) |
+| Human contributor ratio | ≥10% of merged PRs | ⚠️ ~1 human commit per 50 bot commits (30d window) |
+| ADOPTERS.md confirmed entries | ≥3 production users | ❌ Self-referential only (KubeStellar) |
+| GitHub repository topics | ≥8 relevant topics | ❌ Zero topics (#19404) |
+| CNCF security audit | Completed before incubation | ❌ Not scheduled — Q2 deadline passed |
 | CNCF incubation application | Filed | ⏸ On hold (#4072) |
 
