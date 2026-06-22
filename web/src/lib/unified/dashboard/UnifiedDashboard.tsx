@@ -444,7 +444,7 @@ export function UnifiedDashboard({
           <div>
             <h1 className="text-2xl font-bold text-white">{config.name}</h1>
             {config.subtitle && (
-              <div className="text-sm text-muted-foreground mt-1">{config.subtitle}</div>
+              <p className="text-sm text-muted-foreground mt-1">{config.subtitle}</p>
             )}
           </div>
           {/* Health indicator */}
