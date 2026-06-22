@@ -210,6 +210,10 @@ describe('Card removal', () => {
     const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
     act(() => { onRemoveCard('card-1') })
 
+    // Confirm removal in the dialog
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('actions.remove'))
+
     const cards = capturedGridProps.cards as DashboardCardPlacement[]
     expect(cards).toHaveLength(1)
     expect(cards[0].id).toBe('card-2')
@@ -375,6 +379,9 @@ describe('Reset to defaults', () => {
     const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
     act(() => { onRemoveCard('card-1') })
 
+    // Confirm the removal
+    fireEvent.click(screen.getByText('actions.remove'))
+
     expect(screen.getByText('Reset')).toBeDefined()
   })
 
@@ -385,10 +392,13 @@ describe('Reset to defaults', () => {
     const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
     act(() => { onRemoveCard('card-1') })
 
+    // Confirm the card removal first
+    fireEvent.click(screen.getByText('actions.remove'))
+
+    // Now click Reset button
     fireEvent.click(screen.getByText('Reset'))
 
-    const cards = capturedGridProps.cards as DashboardCardPlacement[]
-    expect(cards).toHaveLength(1)
+    // Should show reset confirmation dialog
     expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
     expect(screen.getByText('confirmDialog.resetDashboardTitle')).toBeInTheDocument()
   })
@@ -400,6 +410,10 @@ describe('Reset to defaults', () => {
     const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
     act(() => { onRemoveCard('card-1') })
 
+    // Confirm the card removal first
+    fireEvent.click(screen.getByText('actions.remove'))
+
+    // Now click Reset and confirm
     fireEvent.click(screen.getByText('Reset'))
     fireEvent.click(screen.getByText('actions.reset'))
 
@@ -481,6 +495,9 @@ describe('localStorage persistence', () => {
     // Remove a card to trigger a state change
     const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
     act(() => { onRemoveCard('card-1') })
+
+    // Confirm the removal
+    fireEvent.click(screen.getByText('actions.remove'))
 
     const stored = JSON.parse(localStorage.getItem(storageKey) || '[]')
     expect(stored).toHaveLength(1)
