@@ -37,7 +37,7 @@
  * by tests in `__tests__/yamlMask.test.ts`.
  */
 
-import yaml from 'js-yaml'
+import * as yaml from 'js-yaml'
 
 /** Sentinel string used in place of secret values when masking. Same
  * width as the per-key reveal placeholder on the Data tabs so masked
@@ -96,7 +96,7 @@ export function maskKubernetesYamlData(yamlInput: string): string {
   try {
     // loadAll handles multi-document YAML transparently — single docs
     // come back as a 1-element array. Use the safe loader (default in
-    // js-yaml v4) to avoid arbitrary code execution from custom tags.
+    // js-yaml v4+) to avoid arbitrary code execution from custom tags.
     docs = yaml.loadAll(yamlInput)
   } catch {
     // Parse failure on a security helper must never silently expose
