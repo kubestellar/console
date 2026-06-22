@@ -88,7 +88,7 @@ export function ConfirmDialog({
 
         {/* Content */}
         <h3 className="text-lg font-semibold text-foreground text-center mb-2">{title}</h3>
-        <p className="text-sm text-muted-foreground text-center mb-6">{message}</p>
+        <div className="text-sm text-muted-foreground text-center mb-6">{message}</div>
 
         {/* Actions */}
         <div className="flex gap-3">

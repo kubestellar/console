@@ -23,7 +23,7 @@ const DEFAULT_FONTS = new Set(['Inter', 'JetBrains Mono'])
 const loadedFonts = new Set<string>()
 
 /**
- * Lazy-load a Google Font by injecting a <link> tag.
+ * Lazy-load a Google Font by injecting a stylesheet link tag.
  * Only loads fonts not already in the default CSS @import.
  */
 function loadThemeFont(fontFamily: string) {

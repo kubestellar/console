@@ -259,9 +259,9 @@ function ModalHeader({
               {title}
             </h2>
             {description && (
-              <p className="text-sm text-muted-foreground truncate">
+              <div className="text-sm text-muted-foreground truncate">
                 {description}
-              </p>
+              </div>
             )}
           </div>
 

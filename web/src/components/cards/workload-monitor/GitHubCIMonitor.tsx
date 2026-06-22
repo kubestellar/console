@@ -491,7 +491,20 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
                 <span className="text-2xs text-muted-foreground truncate block flex items-center gap-1">
                   {w.repo.split('/')[1]} · {w.branch}
                   {w.prNumber && (
-                    <a href={sanitizeUrl(w.prUrl || `https://github.com/${w.repo}/pull/${w.prNumber}`)} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">#{w.prNumber}</a>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        window.open(
+                          sanitizeUrl(w.prUrl || `https://github.com/${w.repo}/pull/${w.prNumber}`),
+                          '_blank',
+                          'noopener,noreferrer',
+                        )
+                      }}
+                      className="text-blue-400 hover:underline"
+                    >
+                      #{w.prNumber}
+                    </button>
                   )}
                 </span>
               </div>

@@ -157,9 +157,9 @@ export function DependencyLabel({ midX, midY, label, crossCluster, fromName, toN
       <title>{tooltip}</title>
       {/* Connector line from label back to its path */}
       {showConnector && (
-        <line
-          x1={midX} y1={midY}
-          x2={anchorX} y2={anchorY}
+        <path
+          d={`M ${midX} ${midY} L ${anchorX} ${anchorY}`}
+          fill="none"
           stroke={lineColor}
           strokeWidth={0.3}
           strokeOpacity={0.5}

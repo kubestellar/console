@@ -65,10 +65,10 @@ export default function NotFound() {
           <h1 className="text-3xl font-bold text-zinc-100">
             {t('notFound.title')}
           </h1>
-          <p className="text-muted-foreground text-base leading-relaxed">
+          <div className="text-muted-foreground text-base leading-relaxed">
             <code className="px-2 py-0.5 bg-zinc-800 rounded text-sm text-purple-300">{path}</code>
             {' '}{t('notFound.description')}
-          </p>
+          </div>
         </div>
 
         {/* Feature request CTA */}
@@ -93,7 +93,7 @@ export default function NotFound() {
 
         {/* Quick links */}
         <div className="space-y-3">
-          <p className="text-zinc-500 text-xs uppercase tracking-wider font-medium">{t('notFound.popularPages')}</p>
+          <div className="text-zinc-500 text-xs uppercase tracking-wider font-medium">{t('notFound.popularPages')}</div>
           <div className="grid grid-cols-3 gap-2">
             {QUICK_LINKS.map(({ labelKey, path: to, icon: Icon }) => (
               <Button

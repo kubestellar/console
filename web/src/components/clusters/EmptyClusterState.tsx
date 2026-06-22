@@ -38,9 +38,9 @@ export function EmptyClusterState({ onAddCluster, agentConnected, agentDegraded,
         <h3 className="text-lg font-semibold text-foreground mb-2">
           {t('cluster.clusterModeNoDataTitle')}
         </h3>
-        <p className="text-sm text-muted-foreground mb-6 max-w-md">
+        <div className="text-sm text-muted-foreground mb-6 max-w-md">
           {t('cluster.clusterModeNoDataDesc')}
-        </p>
+        </div>
       </div>
     )
   }

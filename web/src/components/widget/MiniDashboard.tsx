@@ -393,11 +393,11 @@ export function MiniDashboard() {
         ) : !isInstalled ? (
           <div className="text-center text-xs text-muted-foreground space-y-1">
             {isSafariBrowser ? (
-              <p>{t('miniDashboard.safariInstall')}</p>
+              <div>{t('miniDashboard.safariInstall')}</div>
             ) : (
               <>
-                <p className="text-yellow-500/80">⚠️ {t('miniDashboard.installFromThisPage')}</p>
-                <p>{t('miniDashboard.installInstruction')}</p>
+                <div className="text-yellow-500/80">⚠️ {t('miniDashboard.installFromThisPage')}</div>
+                <div>{t('miniDashboard.installInstruction')}</div>
               </>
             )}
           </div>
