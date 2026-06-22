@@ -41,7 +41,12 @@ describe('ClusterGrid.common utilities', () => {
       const parentClick = vi.fn()
       
       const { container } = render(
-        <div onClick={parentClick}>
+        <div 
+          onClick={parentClick}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') parentClick() }}
+          role="button"
+          tabIndex={0}
+        >
           <RemoveClusterButton onRemove={onRemove} />
         </div>
       )
@@ -78,7 +83,12 @@ describe('ClusterGrid.common utilities', () => {
       const parentClick = vi.fn()
       
       render(
-        <div onClick={parentClick}>
+        <div 
+          onClick={parentClick}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') parentClick() }}
+          role="button"
+          tabIndex={0}
+        >
           <ActionTooltipWrapper tooltip="Test">
             <button>Click me</button>
           </ActionTooltipWrapper>

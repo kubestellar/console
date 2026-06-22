@@ -105,7 +105,12 @@ describe('LocalClusterControls', () => {
     const parentClick = vi.fn()
 
     render(
-      <div onClick={parentClick}>
+      <div 
+        onClick={parentClick}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') parentClick() }}
+        role="button"
+        tabIndex={0}
+      >
         <LocalClusterControls clusterName="kind-kubeflex" provider="kind" unreachable={false} />
       </div>,
     )

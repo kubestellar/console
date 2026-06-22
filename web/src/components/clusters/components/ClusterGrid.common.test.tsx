@@ -34,7 +34,12 @@ describe('ClusterGrid.common', () => {
       const onRemove = vi.fn()
       const onClick = vi.fn()
       const { getByTestId } = render(
-        <div onClick={onClick}>
+        <div 
+          onClick={onClick}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
+          role="button"
+          tabIndex={0}
+        >
           <RemoveClusterButton onRemove={onRemove} />
         </div>
       )
@@ -72,7 +77,12 @@ describe('ClusterGrid.common', () => {
     it('prevents event propagation on click', () => {
       const parentClick = vi.fn()
       const { getByText } = render(
-        <div onClick={parentClick}>
+        <div 
+          onClick={parentClick}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') parentClick() }}
+          role="button"
+          tabIndex={0}
+        >
           <ActionTooltipWrapper tooltip="Test">
             <button>Action</button>
           </ActionTooltipWrapper>
