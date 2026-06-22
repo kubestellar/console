@@ -200,7 +200,7 @@ describe('ListVisualization', () => {
       renderList({ pageSize: PAGE_SIZE })
       const buttons = screen.getAllByRole('button')
       const prevButton = buttons[buttons.length - 2]
-      expect(prevButton).toBeDisabled()
+      expect(prevButton).toHaveProperty('disabled', true)
     })
 
     it('disables next button on last page', async () => {
@@ -218,7 +218,7 @@ describe('ListVisualization', () => {
       // Re-query buttons after re-render
       const updatedButtons = screen.getAllByRole('button')
       const updatedNext = updatedButtons[updatedButtons.length - 1]
-      expect(updatedNext).toBeDisabled()
+      expect(updatedNext).toHaveProperty('disabled', true)
     })
 
     it('does not show pagination when all items fit on one page', () => {
