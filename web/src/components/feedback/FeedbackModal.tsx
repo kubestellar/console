@@ -632,6 +632,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                                   onClick={e => { e.stopPropagation(); void copyScreenshotToClipboard(s.preview, i) }}
                                   className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
                                   title="Copy to clipboard"
+                                  aria-label="Copy screenshot to clipboard"
                                 >
                                   {copiedIndex === i ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
                                 </button>
@@ -641,6 +642,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                                 onClick={e => { e.stopPropagation(); removeScreenshot(i) }}
                                 className="p-1.5 rounded-md bg-secondary/80 text-red-400 hover:bg-red-500/20 transition-colors"
                                 title="Remove attachment"
+                                aria-label="Remove screenshot"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
