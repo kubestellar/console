@@ -7,7 +7,7 @@
  * or returns an unstructured preview for AI-assisted conversion.
  */
 
-import yaml from 'js-yaml'
+import * as yaml from 'js-yaml'
 import type { MissionExport, MissionStep } from './types'
 import { validateMissionExport } from './types'
 import {
@@ -451,25 +451,21 @@ function stripCodeBlocks(text: string): string {
 
 /** Safely load all YAML documents from a multi-document string */
 function loadAllYamlDocuments(content: string): unknown[] {
-  const documents: unknown[] = []
   try {
-    yaml.loadAll(content, (doc: unknown) => {
-      if (doc !== null && doc !== undefined) {
-        documents.push(doc)
-      }
-    })
+    const docs = yaml.loadAll(content)
+    return (docs || []).filter((doc: unknown) => doc !== null && doc !== undefined)
   } catch {
     // If loadAll fails, try single document
     try {
       const single = yaml.load(content)
       if (single !== null && single !== undefined) {
-        documents.push(single)
+        return [single]
       }
     } catch {
       // Unparseable YAML
     }
   }
-  return documents
+  return []
 }
 
 // ============================================================================
