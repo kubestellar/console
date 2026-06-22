@@ -11,4 +11,3 @@ permissions:
 jobs:
   verify:
     uses: kubestellar/infra/.github/workflows/reusable-pr-verifier.yml@main
-    secrets: inherit
