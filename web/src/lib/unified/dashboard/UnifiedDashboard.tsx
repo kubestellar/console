@@ -159,6 +159,8 @@ export function UnifiedDashboard({
   const [isConfigureCardModalOpen, setIsConfigureCardModalOpen] = useState(false)
   const [cardToEdit, setCardToEdit] = useState<ConfigurableCard | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [showRemoveCardConfirm, setShowRemoveCardConfirm] = useState(false)
+  const [cardToRemove, setCardToRemove] = useState<{ id: string; title?: string } | null>(null)
 
   // Persist cards to localStorage when they change.
   //
@@ -228,9 +230,20 @@ export function UnifiedDashboard({
     mutateActiveCards(() => newCards)
   }
 
-  // Handle card removal
+  // Handle card removal - show confirmation first
   const handleRemoveCard = (cardId: string) => {
-    mutateActiveCards((prev) => prev.filter((c) => c.id !== cardId))
+    const card = activeCards.find((c) => c.id === cardId)
+    setCardToRemove({ id: cardId, title: card?.title })
+    setShowRemoveCardConfirm(true)
+  }
+
+  // Handle confirmed card removal
+  const handleRemoveCardConfirmed = () => {
+    if (cardToRemove) {
+      mutateActiveCards((prev) => prev.filter((c) => c.id !== cardToRemove.id))
+    }
+    setShowRemoveCardConfirm(false)
+    setCardToRemove(null)
   }
 
   // Handle card configuration
@@ -599,6 +612,22 @@ export function UnifiedDashboard({
         message={t('confirmDialog.resetDashboardMessage')}
         confirmLabel={t('actions.reset')}
         variant="warning"
+      />
+
+      {/* Remove Card Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showRemoveCardConfirm}
+        onClose={() => {
+          setShowRemoveCardConfirm(false)
+          setCardToRemove(null)
+        }}
+        onConfirm={handleRemoveCardConfirmed}
+        title={t('confirmDialog.removeCardTitle')}
+        message={cardToRemove?.title 
+          ? t('confirmDialog.removeCardMessageWithTitle', { title: cardToRemove.title })
+          : t('confirmDialog.removeCardMessage')}
+        confirmLabel={t('actions.remove')}
+        variant="danger"
       />
     </div>
   )
