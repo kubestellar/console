@@ -15,7 +15,7 @@ import {
   AlertTriangle,
   Shield,
   Loader2 } from 'lucide-react'
-import yaml from 'js-yaml'
+import * as yaml from 'js-yaml'
 import type { Resolution } from '../../hooks/useResolutions'
 import type { MissionExport, FileScanResult } from '../../lib/missions/types'
 import { fullScan } from '../../lib/missions/scanner/index'
