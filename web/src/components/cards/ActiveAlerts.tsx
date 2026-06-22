@@ -226,7 +226,7 @@ export function ActiveAlerts() {
     }
   }
 
-  const handleAIDiagnose = (e: React.MouseEvent, alertId: string) => {
+  const handleAIDiagnose = (e: React.MouseEvent | React.KeyboardEvent<HTMLDivElement>, alertId: string) => {
     e.stopPropagation()
     runAIDiagnosis(alertId)
   }
