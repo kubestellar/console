@@ -3,7 +3,7 @@
  * Shows GitHub avatar, maturity badge, category gradient, priority, and remove button.
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { X, Star, ChevronDown, ArrowLeftRight } from 'lucide-react'
