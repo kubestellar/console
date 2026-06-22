@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, X, Shield, User, Loader2 } from 'lucide-react'
+import { Plus, X, Shield, User } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
