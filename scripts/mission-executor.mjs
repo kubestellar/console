@@ -40,8 +40,9 @@ function getToken() {
 
 // Allowlist of permitted base commands for Kubernetes installation missions.
 // Every pipeline segment in LLM-provided commands must start with one of these.
+// NOTE: bash/sh removed to prevent shell -c injection bypass.
 const ALLOWED_BASE_COMMANDS = new Set([
-  'kubectl', 'helm', 'curl', 'bash', 'sh', 'cat', 'echo', 'grep',
+  'kubectl', 'helm', 'curl', 'cat', 'echo', 'grep',
   'awk', 'sed', 'jq', 'yq', 'kustomize', 'istioctl', 'date', 'ls',
   'sleep', 'timeout', 'base64', 'tr', 'cut', 'wc', 'head', 'tail',
   'printf', 'test', 'true', 'false', 'mkdir', 'rm', 'cp', 'mv',
@@ -56,6 +57,19 @@ const ALLOWED_BASE_COMMANDS = new Set([
  * child_process.execSync (CWE-078, CWE-088).
  */
 function validateCommand(cmd) {
+  // Block subshell expansion patterns
+  if (/\$\(/.test(cmd)) {
+    return { safe: false, reason: 'Subshell expansion $() is not allowed' }
+  }
+  if (/`/.test(cmd)) {
+    return { safe: false, reason: 'Backtick command substitution is not allowed' }
+  }
+
+  // Block bash/sh -c invocations
+  if (/\b(?:bash|sh)\b.*\s+-c\b/.test(cmd)) {
+    return { safe: false, reason: 'Shell -c execution is not allowed' }
+  }
+
   // Split on all shell delimiters to check each pipeline segment individually
   const segments = cmd.split(/\s*(?:;|&&|\|\||\|(?!\|)|\(|\))\s*/).filter(Boolean)
   for (const seg of segments) {

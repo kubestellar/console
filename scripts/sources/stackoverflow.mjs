@@ -169,12 +169,13 @@ export class StackOverflowSource extends BaseSource {
 function stripHtml(html) {
   return html
     .replace(/<pre><code[^>]*>[\s\S]*?<\/code><\/pre>/g, '[code block]')
-    .replace(/<[^>]+>/g, '')
+    .replace(/<[^>]+>/g, '')          // First pass: remove real HTML tags
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&amp;/g, '&')
+    .replace(/<[^>]+>/g, '')          // Second pass: remove tags revealed by entity decoding
     .replace(/\s+/g, ' ')
     .trim()
 }
