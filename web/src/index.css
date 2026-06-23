@@ -113,6 +113,29 @@ layer(base);
     --chart-color-7: #8b5cf6;
     --chart-color-8: #14b8a6;
 
+    /* Chart theme tokens (synced with CHART_THEME in lib/constants/ui.ts) */
+    --chart-tooltip-bg: #1a1a2e;
+    --chart-tooltip-border: #333;
+    --chart-tooltip-text: #e0e0e0;
+    --chart-tooltip-label: #ccc;
+    --chart-tooltip-gray-bg: #1f2937;
+    --chart-tooltip-gray-border: #374151;
+    --chart-grid-stroke: #333;
+    --chart-axis-stroke: #333;
+    --chart-axis-tick: #888;
+    --chart-datazoom-border: #444;
+    --chart-datazoom-bg: rgba(50, 50, 50, 0.3);
+    --chart-datazoom-filler: rgba(68, 114, 196, 0.15);
+    --chart-datazoom-handle: #666;
+    --chart-datazoom-text: #888;
+    --chart-datazoom-data-line: #555;
+    --chart-datazoom-data-area: rgba(100, 100, 100, 0.2);
+    --chart-mark-line-label: #888;
+    --chart-mark-line-stroke: #666;
+    --chart-text-white: #fff;
+    --chart-text-muted: #aaa;
+    --chart-emphasis-shadow: rgba(0, 0, 0, 0.5);
+
     /* CNCF category gradient colors */
     --cncf-observability-start: #3b82f6;
     --cncf-observability-end: #06b6d4;
