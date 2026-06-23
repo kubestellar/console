@@ -329,7 +329,7 @@ export function TourOverlay() {
         <>
           {/* Static dark backdrop — no animation so it never blinks */}
           <div
-            className="absolute rounded-lg pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.75)]"
+            className="absolute rounded-lg pointer-events-none shadow-tour-overlay"
             style={{
               top: overlay.rect.top - 8,
               left: overlay.rect.left - 8,

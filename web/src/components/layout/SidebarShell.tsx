@@ -590,7 +590,7 @@ export function SidebarShell({
             className={({ isActive }) => cn(
               'relative flex items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-200',
               isActive
-                ? 'bg-purple-500/15 text-purple-400 border-l-[3px] border-purple-500 shadow-[inset_0_0_12px_rgba(168,85,247,0.08)]'
+                ? 'bg-purple-500/15 text-purple-400 border-l-[3px] border-purple-500 shadow-purple-inset'
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50 border-l-[3px] border-transparent',
               isCollapsed ? 'justify-center p-3' : 'px-3 py-2'
             )}

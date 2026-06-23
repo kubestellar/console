@@ -99,6 +99,12 @@ layer(base);
     --glass-border: rgba(255, 255, 255, 0.04);
     --glass-shadow: rgba(0, 0, 0, 0.25);
 
+    /* Shadow design tokens for UI components */
+    --shadow-tour-overlay: 0 0 0 9999px rgba(0, 0, 0, 0.75);
+    --shadow-purple-glow: 0 0 12px rgba(139, 92, 246, 0.15);
+    --shadow-purple-glow-sm: 0 0 6px rgba(139, 92, 246, 0.2);
+    --shadow-purple-inset: inset 0 0 12px rgba(168, 85, 247, 0.08);
+
     /* Scrollbar - can be overridden by theme */
     --scrollbar-thumb: rgba(255, 255, 255, 0.15);
     --scrollbar-thumb-hover: rgba(255, 255, 255, 0.25);
@@ -198,6 +204,12 @@ layer(base);
     --glass-background: rgba(255, 255, 255, 0.95);
     --glass-border: rgba(0, 0, 0, 0.12);
     --glass-shadow: rgba(0, 0, 0, 0.08);
+
+    /* Shadow design tokens for UI components (light mode) */
+    --shadow-tour-overlay: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    --shadow-purple-glow: 0 0 12px rgba(139, 92, 246, 0.25);
+    --shadow-purple-glow-sm: 0 0 6px rgba(139, 92, 246, 0.3);
+    --shadow-purple-inset: inset 0 0 12px rgba(168, 85, 247, 0.12);
     --scrollbar-thumb: rgba(147, 51, 234, 0.25);
     --scrollbar-thumb-hover: rgba(147, 51, 234, 0.45);
   }

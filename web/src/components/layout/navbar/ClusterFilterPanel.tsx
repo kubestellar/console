@@ -252,7 +252,7 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
               'relative flex items-center rounded-lg transition-colors',
               showLabel ? 'gap-2 px-3 py-1.5 h-9' : 'justify-center w-9 h-9',
               isFiltered
-                ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_6px_rgba(139,92,246,0.2)]'
+                ? 'bg-purple-500/20 text-purple-400 shadow-purple-glow-sm'
                 : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
             )}
             aria-label={isFiltered ? t('layout.navbar.filtersActive') : t('layout.navbar.noFilters')}

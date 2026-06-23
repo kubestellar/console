@@ -137,6 +137,19 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      /**
+       * Box-Shadow Design Tokens:
+       * - shadow-tour-overlay  — Tour overlay dark backdrop (9999px spread)
+       * - shadow-purple-glow   — Purple glow for recommended cards
+       * - shadow-purple-glow-sm — Smaller purple glow for filter badges
+       * - shadow-purple-inset  — Purple inset glow for active sidebar items
+       */
+      boxShadow: {
+        'tour-overlay': 'var(--shadow-tour-overlay)',
+        'purple-glow': 'var(--shadow-purple-glow)',
+        'purple-glow-sm': 'var(--shadow-purple-glow-sm)',
+        'purple-inset': 'var(--shadow-purple-inset)',
+      },
       keyframes: {
         'roll-up': {
           '0%': { transform: 'translateY(0)', opacity: '1' },
