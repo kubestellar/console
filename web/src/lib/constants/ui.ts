@@ -15,60 +15,112 @@ export const CHART_HEIGHT_LG = 192
 export const CHART_MIN_HEIGHT_PX = 200
 export const CHART_MIN_HEIGHT_TALL_PX = 250
 
-// ── Recharts shared styles ──────────────────────────────────────────────
-export const CHART_TOOLTIP_BG = '#1a1a2e'
-export const CHART_TOOLTIP_BORDER = '#333'
+// ── Chart Theme (ECharts-compatible) ────────────────────────────────────
+/**
+ * Chart color theme organized as a structured object.
+ * 
+ * IMPORTANT: ECharts uses canvas-based rendering and does NOT support CSS variables.
+ * These values MUST remain as raw hex/rgb strings for ECharts compatibility.
+ * 
+ * Corresponding CSS custom properties are defined in index.css as --chart-*
+ * for use in non-ECharts contexts (DOM elements, Recharts, etc.).
+ * 
+ * To swap themes: update this object and the CSS variables together.
+ */
+export const CHART_THEME = {
+  tooltip: {
+    bg: '#1a1a2e',
+    border: '#333',
+    text: '#e0e0e0',
+    label: '#ccc',
+    fontSize: '12px',
+    fontSizeCompact: '11px',
+  },
+  tooltipGray: {
+    bg: '#1f2937',
+    border: '#374151',
+    radius: '0.375rem',
+  },
+  grid: {
+    stroke: '#333',
+  },
+  axis: {
+    stroke: '#333',
+    tick: '#888',
+  },
+  dataZoom: {
+    border: '#444',
+    bg: 'rgba(50,50,50,0.3)',
+    filler: 'rgba(68,114,196,0.15)',
+    handle: '#666',
+    text: '#888',
+    dataLine: '#555',
+    dataArea: 'rgba(100,100,100,0.2)',
+  },
+  markLine: {
+    label: '#888',
+    stroke: '#666',
+  },
+  text: {
+    white: '#fff',
+    muted: '#aaa',
+  },
+  emphasis: {
+    shadow: 'rgba(0,0,0,0.5)',
+  },
+} as const
+
+// ── Legacy exports (backward compatibility) ─────────────────────────────
+export const CHART_TOOLTIP_BG = CHART_THEME.tooltip.bg
+export const CHART_TOOLTIP_BORDER = CHART_THEME.tooltip.border
 /** Standard font size for chart tooltip text */
-export const CHART_TOOLTIP_FONT_SIZE = '12px'
+export const CHART_TOOLTIP_FONT_SIZE = CHART_THEME.tooltip.fontSize
 /** Compact font size for insight-card tooltips */
-export const CHART_TOOLTIP_FONT_SIZE_COMPACT = '11px'
+export const CHART_TOOLTIP_FONT_SIZE_COMPACT = CHART_THEME.tooltip.fontSizeCompact
 /** Shared tooltip content style — used to extract bg/border for echarts tooltip config */
 export const CHART_TOOLTIP_CONTENT_STYLE: React.CSSProperties = {
-  backgroundColor: CHART_TOOLTIP_BG,
-  border: `1px solid ${CHART_TOOLTIP_BORDER}`,
+  backgroundColor: CHART_THEME.tooltip.bg,
+  border: `1px solid ${CHART_THEME.tooltip.border}`,
   borderRadius: '8px',
-  fontSize: CHART_TOOLTIP_FONT_SIZE,
+  fontSize: CHART_THEME.tooltip.fontSize,
 }
 /** Tailwind-gray tooltip style for unified card system charts */
-const UNIFIED_CHART_TOOLTIP_BG = '#1f2937'
-const UNIFIED_CHART_TOOLTIP_BORDER = '#374151'
-const UNIFIED_CHART_TOOLTIP_RADIUS = '0.375rem'
 export const CHART_TOOLTIP_CONTENT_STYLE_GRAY: React.CSSProperties = {
-  backgroundColor: UNIFIED_CHART_TOOLTIP_BG,
-  border: `1px solid ${UNIFIED_CHART_TOOLTIP_BORDER}`,
-  borderRadius: UNIFIED_CHART_TOOLTIP_RADIUS,
+  backgroundColor: CHART_THEME.tooltipGray.bg,
+  border: `1px solid ${CHART_THEME.tooltipGray.border}`,
+  borderRadius: CHART_THEME.tooltipGray.radius,
 }
 /** Semi-transparent black used for chart emphasis shadows */
-export const EMPHASIS_SHADOW_COLOR = 'rgba(0,0,0,0.5)'
-export const CHART_GRID_STROKE = '#333'
-export const CHART_AXIS_STROKE = '#333'
-export const CHART_TICK_COLOR = '#888'
+export const EMPHASIS_SHADOW_COLOR = CHART_THEME.emphasis.shadow
+export const CHART_GRID_STROKE = CHART_THEME.grid.stroke
+export const CHART_AXIS_STROKE = CHART_THEME.axis.stroke
+export const CHART_TICK_COLOR = CHART_THEME.axis.tick
 /** DataZoom slider border color */
-export const CHART_DATAZOOM_BORDER = '#444'
+export const CHART_DATAZOOM_BORDER = CHART_THEME.dataZoom.border
 /** DataZoom slider background overlay */
-export const CHART_DATAZOOM_BG = 'rgba(50,50,50,0.3)'
+export const CHART_DATAZOOM_BG = CHART_THEME.dataZoom.bg
 /** DataZoom slider selected-range filler */
-export const CHART_DATAZOOM_FILLER = 'rgba(68,114,196,0.15)'
+export const CHART_DATAZOOM_FILLER = CHART_THEME.dataZoom.filler
 /** DataZoom slider handle color */
-export const CHART_DATAZOOM_HANDLE = '#666'
+export const CHART_DATAZOOM_HANDLE = CHART_THEME.dataZoom.handle
 /** DataZoom label text color */
-export const CHART_DATAZOOM_TEXT = '#888'
+export const CHART_DATAZOOM_TEXT = CHART_THEME.dataZoom.text
 /** DataZoom data-background line color */
-export const CHART_DATAZOOM_DATA_LINE = '#555'
+export const CHART_DATAZOOM_DATA_LINE = CHART_THEME.dataZoom.dataLine
 /** DataZoom data-background area color */
-export const CHART_DATAZOOM_DATA_AREA = 'rgba(100,100,100,0.2)'
+export const CHART_DATAZOOM_DATA_AREA = CHART_THEME.dataZoom.dataArea
 /** Chart mark-line label color (secondary text on dark background) */
-export const CHART_MARK_LINE_LABEL = '#888'
+export const CHART_MARK_LINE_LABEL = CHART_THEME.markLine.label
 /** Chart mark-line stroke color (dashed guide lines) */
-export const CHART_MARK_LINE_STROKE = '#666'
+export const CHART_MARK_LINE_STROKE = CHART_THEME.markLine.stroke
 /** Tooltip item/content text — verified 13:1 contrast on CHART_TOOLTIP_BG (#1a1a2e) */
-export const CHART_TOOLTIP_TEXT_COLOR = '#e0e0e0'
+export const CHART_TOOLTIP_TEXT_COLOR = CHART_THEME.tooltip.text
 /** Tooltip label text — verified 11:1 contrast on CHART_TOOLTIP_BG (#1a1a2e) */
-export const CHART_TOOLTIP_LABEL_COLOR = '#ccc'
+export const CHART_TOOLTIP_LABEL_COLOR = CHART_THEME.tooltip.label
 /** White text for high-contrast labels on dark chart elements (treemap tiles, legends) */
-export const CHART_TEXT_WHITE = '#fff'
+export const CHART_TEXT_WHITE = CHART_THEME.text.white
 /** Muted secondary text for chart labels and axis names */
-export const CHART_TEXT_MUTED = '#aaa'
+export const CHART_TEXT_MUTED = CHART_THEME.text.muted
 
 // ── ECharts numeric font sizes (number, not string — ECharts API) ──────
 /** Axis tick label font size (ECharts numeric) */
