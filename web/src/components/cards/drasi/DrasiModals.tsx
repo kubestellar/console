@@ -13,7 +13,7 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X, Download, Settings, Trash2, Plus, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import * as yaml from 'js-yaml'
+import { dump } from 'js-yaml'
 import { StreamLanguage } from '@codemirror/language'
 import { cypher } from '@codemirror/legacy-modes/mode/cypher'
 import { oneDark } from '@codemirror/theme-one-dark'
@@ -200,7 +200,7 @@ export function SourceConfigModal({
   const handleDownloadYaml = () => {
     if (!source) return
     const doc = { apiVersion: 'v1', kind: 'Source', name: source.name, spec: { kind: source.kind } }
-    downloadText(`${source.name}.yaml`, yaml.dump(doc), 'text/yaml')
+    downloadText(`${source.name}.yaml`, dump(doc), 'text/yaml')
   }
 
   return (
@@ -302,7 +302,7 @@ export function QueryConfigModal({
         sources: query.sourceIds.map(id => ({ id })),
       },
     }
-    downloadText(`${query.name}.yaml`, yaml.dump(doc), 'text/yaml')
+    downloadText(`${query.name}.yaml`, dump(doc), 'text/yaml')
   }
 
   return (

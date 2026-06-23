@@ -15,7 +15,7 @@ import {
   AlertTriangle,
   Shield,
   Loader2 } from 'lucide-react'
-import * as yaml from 'js-yaml'
+import { dump } from 'js-yaml'
 import type { Resolution } from '../../hooks/useResolutions'
 import type { MissionExport, FileScanResult } from '../../lib/missions/types'
 import { fullScan } from '../../lib/missions/scanner/index'
@@ -63,7 +63,7 @@ function resolutionToMissionExport(resolution: Resolution): MissionExport {
 const YAML_INDENT = 2
 
 function missionToYaml(mission: MissionExport): string {
-  return yaml.dump(mission, {
+  return dump(mission, {
     indent: YAML_INDENT,
     lineWidth: -1,
     noRefs: true,
