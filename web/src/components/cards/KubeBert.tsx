@@ -22,6 +22,19 @@ const LEVEL_TRANSITION_DELAY_MS = 1000
 /** Minimum enemy spawn interval in milliseconds — prevents the game from becoming unplayable at high levels */
 const MIN_ENEMY_SPAWN_INTERVAL_MS = 1000
 
+// ─── Canvas Colors (extracted from inline rgba/rgb strings) ─────────────────
+const KUBEBERT_TILE_STROKE = 'rgba(255,255,255,0.15)'
+const KUBEBERT_FACE_SHADOW = 'rgba(0,0,0,0.2)'
+const KUBEBERT_CHARACTER_OUTLINE = 'rgba(0,0,0,0.3)'
+const KUBEBERT_LABEL_TEXT = 'rgba(255,255,255,0.6)'
+const KUBEBERT_LEVEL_COMPLETE_FLASH = 'rgba(0, 212, 170, 0.15)'
+const KUBEBERT_LEVEL_COMPLETE_TEXT = '#00d4aa'
+const KUBEBERT_CHARACTER_EYES = '#000'
+const KUBEBERT_CHARACTER_NOSE = '#ff8800'
+const KUBEBERT_CHARACTER_CROWN_BG = '#326ce5'
+const KUBEBERT_CHARACTER_CROWN_OUTLINE = '#fff'
+const KUBEBERT_GAMEOVER_TEXT = '#fff'
+
 
 // Tile colors by state
 const TILE_COLORS = {
@@ -81,7 +94,7 @@ function drawTile(
   ctx.closePath()
   ctx.fillStyle = topColor
   ctx.fill()
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)'
+  ctx.strokeStyle = KUBEBERT_TILE_STROKE
   ctx.lineWidth = 1
   ctx.stroke()
 
@@ -94,7 +107,7 @@ function drawTile(
   ctx.closePath()
   ctx.fillStyle = leftColor
   ctx.fill()
-  ctx.strokeStyle = 'rgba(0,0,0,0.2)'
+  ctx.strokeStyle = KUBEBERT_FACE_SHADOW
   ctx.stroke()
 
   // Right face
@@ -106,12 +119,12 @@ function drawTile(
   ctx.closePath()
   ctx.fillStyle = rightColor
   ctx.fill()
-  ctx.strokeStyle = 'rgba(0,0,0,0.2)'
+  ctx.strokeStyle = KUBEBERT_FACE_SHADOW
   ctx.stroke()
 
   // Label on top face
   if (label) {
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'
+    ctx.fillStyle = KUBEBERT_LABEL_TEXT
     ctx.font = `${Math.max(8, tileW / 5)}px monospace`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
@@ -137,13 +150,13 @@ function drawCharacter(
     ctx.arc(x, charY, size * 0.7, 0, Math.PI * 2)
     ctx.fillStyle = color
     ctx.fill()
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)'
+    ctx.strokeStyle = KUBEBERT_CHARACTER_OUTLINE
     ctx.lineWidth = 1
     ctx.stroke()
 
     // Eyes
     const eyeSize = size * 0.15
-    ctx.fillStyle = '#000'
+    ctx.fillStyle = KUBEBERT_CHARACTER_EYES
     ctx.beginPath()
     ctx.arc(x - size * 0.25, charY - size * 0.15, eyeSize, 0, Math.PI * 2)
     ctx.fill()
@@ -156,15 +169,15 @@ function drawCharacter(
     ctx.moveTo(x, charY + size * 0.05)
     ctx.lineTo(x + size * 0.4, charY + size * 0.2)
     ctx.lineTo(x, charY + size * 0.35)
-    ctx.fillStyle = '#ff8800'
+    ctx.fillStyle = KUBEBERT_CHARACTER_NOSE
     ctx.fill()
 
     // Kubernetes wheel on top (little crown)
     ctx.beginPath()
     ctx.arc(x, charY - size * 0.7, size * 0.2, 0, Math.PI * 2)
-    ctx.fillStyle = '#326ce5'
+    ctx.fillStyle = KUBEBERT_CHARACTER_CROWN_BG
     ctx.fill()
-    ctx.strokeStyle = '#fff'
+    ctx.strokeStyle = KUBEBERT_CHARACTER_CROWN_OUTLINE
     ctx.lineWidth = 1
     ctx.stroke()
   } else {
@@ -176,13 +189,13 @@ function drawCharacter(
     ctx.closePath()
     ctx.fillStyle = color
     ctx.fill()
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)'
+    ctx.strokeStyle = KUBEBERT_CHARACTER_OUTLINE
     ctx.lineWidth = 1
     ctx.stroke()
 
     // Enemy eyes
     const eyeSize = size * 0.1
-    ctx.fillStyle = '#fff'
+    ctx.fillStyle = KUBEBERT_CHARACTER_CROWN_OUTLINE
     ctx.beginPath()
     ctx.arc(x - size * 0.15, charY, eyeSize, 0, Math.PI * 2)
     ctx.fill()
@@ -514,7 +527,7 @@ export function KubeBert() {
 
     // Draw "@#!?" speech bubble when hit (game over state)
     if (gameStateRef.current === 'gameover') {
-      ctx.fillStyle = '#fff'
+      ctx.fillStyle = KUBEBERT_GAMEOVER_TEXT
       ctx.font = `bold ${Math.max(12, tileW / 3)}px monospace`
       ctx.textAlign = 'center'
       ctx.fillText('@#!?', px, py - tileW * 0.8)
@@ -522,9 +535,9 @@ export function KubeBert() {
 
     // Level complete flash
     if (gameStateRef.current === 'levelComplete') {
-      ctx.fillStyle = 'rgba(0, 212, 170, 0.15)'
+      ctx.fillStyle = KUBEBERT_LEVEL_COMPLETE_FLASH
       ctx.fillRect(0, 0, w, h)
-      ctx.fillStyle = '#00d4aa'
+      ctx.fillStyle = KUBEBERT_LEVEL_COMPLETE_TEXT
       ctx.font = `bold ${Math.max(16, w / 15)}px monospace`
       ctx.textAlign = 'center'
       ctx.fillText(`Level ${levelRef.current} Complete!`, w / 2, h / 2)
