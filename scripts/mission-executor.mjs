@@ -38,7 +38,51 @@ function getToken() {
 
 // ── Shell execution ─────────────────────────────────────────────
 
+// Allowlist of permitted base commands for Kubernetes installation missions.
+// Every pipeline segment in LLM-provided commands must start with one of these.
+const ALLOWED_BASE_COMMANDS = new Set([
+  'kubectl', 'helm', 'curl', 'bash', 'sh', 'cat', 'echo', 'grep',
+  'awk', 'sed', 'jq', 'yq', 'kustomize', 'istioctl', 'date', 'ls',
+  'sleep', 'timeout', 'base64', 'tr', 'cut', 'wc', 'head', 'tail',
+  'printf', 'test', 'true', 'false', 'mkdir', 'rm', 'cp', 'mv',
+  'sort', 'uniq', 'xargs', 'find', 'which', 'env',
+])
+
+/**
+ * Validates that every pipeline segment in cmd starts with an allowed binary.
+ * Returns { safe: true } or { safe: false, reason: string }.
+ *
+ * Prevents command-line injection when LLM-provided commands are executed via
+ * child_process.execSync (CWE-078, CWE-088).
+ */
+function validateCommand(cmd) {
+  // Split on all shell delimiters to check each pipeline segment individually
+  const segments = cmd.split(/\s*(?:;|&&|\|\||\|(?!\|)|\(|\))\s*/).filter(Boolean)
+  for (const seg of segments) {
+    const trimmed = seg.trim()
+    if (!trimmed) continue
+    // Strip leading shell-style VAR=value env assignments (e.g. KUBECONFIG=/path kubectl ...)
+    const withoutEnv = trimmed.replace(/^(?:[A-Z_][A-Z0-9_]*=\S*\s+)*/i, '')
+    const firstWord = withoutEnv.split(/\s+/)[0]
+    if (firstWord && !ALLOWED_BASE_COMMANDS.has(firstWord)) {
+      return { safe: false, reason: `Disallowed command: '${firstWord}'` }
+    }
+  }
+  return { safe: true }
+}
+
 function execCommand(cmd, timeoutMs = STEP_TIMEOUT_MS) {
+  const check = validateCommand(cmd)
+  if (!check.safe) {
+    console.warn(`  ⚠️  [sec] Blocked unsafe command: ${check.reason}`)
+    console.warn(`  ⚠️  [sec] Command: ${cmd.slice(0, 200)}`)
+    return {
+      success: false,
+      output: `[BLOCKED] ${check.reason}`,
+      exitCode: 1,
+      error: `Security: ${check.reason}`,
+    }
+  }
   try {
     const output = execSync(cmd, {
       encoding: 'utf-8',
