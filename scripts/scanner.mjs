@@ -159,12 +159,14 @@ const MALICIOUS_PATTERNS = [
   { name: 'Crypto miner reference', pattern: /\b(?:xmrig|cryptonight|stratum\+tcp|minerd|coinhive)\b/gi },
 ];
 
-// Safe CLI commands that are expected inside $() in mission code snippets
+// Safe CLI commands that are expected inside $() in mission code snippets.
+// Shell interpreters (bash, sh, zsh, ksh) are intentionally excluded: they accept
+// a -c flag and can execute arbitrary strings, which would defeat injection detection.
+// Fenced code blocks (```bash, ```sh, etc.) are already handled by CODE_FENCE_LANGS.
 const SAFE_CLI_COMMANDS = new Set([
   'kubectl', 'helm', 'jq', 'awk', 'grep', 'sed', 'cut', 'tr', 'sort',
   'uniq', 'wc', 'head', 'tail', 'cat', 'echo', 'date', 'basename',
   'dirname', 'xargs', 'find', 'ls', 'yq', 'kustomize', 'istioctl',
-  'bash', 'sh', 'zsh', 'ksh',  // shell interpreters used in markdown code blocks
   'age', 'sops', 'systemd-run',  // encryption/secret management tools in CNCF docs
 ]);
 
