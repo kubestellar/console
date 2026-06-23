@@ -149,7 +149,9 @@
     "@react-three/drei": {
       "three-mesh-bvh": "^0.8.0"
     },
-    "js-yaml": ">=4.2.0",
+    "@istanbuljs/load-nyc-config": {
+      "js-yaml": "^5.0.0"
+    },
     "minimatch": "^10.2.3",
     "follow-redirects": "^1.15.12",
     "uuid": "^14.0.0",
