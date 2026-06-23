@@ -341,9 +341,9 @@ function cleanInput(text) {
     .replace(/## \[?Codecov[\s\S]*?(?=\n## |\n---|\Z)/gi, '')
     .replace(/\|[^|]*coverage[^|]*\|[\s\S]*?\n\n/gi, '')
     .replace(/!\[[^\]]*\]\([^)]+\)/g, '[image removed]')
-    .replace(/<!--[\s\S]*?-->/g, '')   // Remove well-formed comments
+    .replace(/<!--[\s\S]*?--!?>/g, '') // Remove all HTML comments (standard --> and variant --!>)
     .replace(/<!-->/g, '')              // Remove malformed <!--> opener
-    .replace(/-->/g, '')                // Remove any orphaned --> closers
+    .replace(/--!?>/g, '')              // Remove any orphaned --> or --!> closers
     .replace(/#{1,3}\s*(?:What this PR does|Release note|Changelog|Special notes)[\s\S]*?(?=\n#{1,3} |\n---|\Z)/gi, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim()

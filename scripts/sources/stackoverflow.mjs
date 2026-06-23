@@ -167,15 +167,18 @@ export class StackOverflowSource extends BaseSource {
 }
 
 function stripHtml(html) {
-  return html
-    .replace(/<pre><code[^>]*>[\s\S]*?<\/code><\/pre>/g, '[code block]')
-    .replace(/<[^>]+>/g, '')          // First pass: remove real HTML tags
+  // Decode all HTML entities FIRST to prevent interleaved bypass attacks
+  let decoded = html
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&amp;/g, '&')
-    .replace(/<[^>]+>/g, '')          // Second pass: remove tags revealed by entity decoding
+  
+  // Now strip all tags from fully-decoded text
+  return decoded
+    .replace(/<pre><code[^>]*>[\s\S]*?<\/code><\/pre>/g, '[code block]')
+    .replace(/<[^>]+>/g, '')
     .replace(/\s+/g, ' ')
     .trim()
 }

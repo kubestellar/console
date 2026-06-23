@@ -70,6 +70,16 @@ function validateCommand(cmd) {
     return { safe: false, reason: 'Shell -c execution is not allowed' }
   }
 
+  // Block kubectl exec/run/cp with -- separator (argument injection risk)
+  if (/\bkubectl\b.*\b(exec|run|cp)\b.*--\s+\S/.test(cmd)) {
+    return { safe: false, reason: 'kubectl exec/run/cp with -- is not allowed (argument injection risk)' }
+  }
+
+  // Block find/xargs -exec flags
+  if (/\b(?:find|xargs)\b.*-exec\b/.test(cmd)) {
+    return { safe: false, reason: 'find/xargs -exec is not allowed (arbitrary command execution risk)' }
+  }
+
   // Split on all shell delimiters to check each pipeline segment individually
   const segments = cmd.split(/\s*(?:;|&&|\|\||\|(?!\|)|\(|\))\s*/).filter(Boolean)
   for (const seg of segments) {
