@@ -51,7 +51,7 @@ func TestValidateWebSocketOrigin_Rejected(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/ws", nil)
 	req.Header.Set("Origin", "https://attacker.example.com")
-	req.Header.Set("Host", "console.kubestellar.io")
+	req.Host = "console.kubestellar.io"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode,
@@ -66,7 +66,7 @@ func TestValidateWebSocketOrigin_MatchesHost(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/ws", nil)
 	req.Header.Set("Origin", "http://console.kubestellar.io")
-	req.Header.Set("Host", "console.kubestellar.io")
+	req.Host = "console.kubestellar.io"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode,
@@ -147,7 +147,7 @@ func TestIsWSOriginAllowed_HTTPSFromXForwardedProto(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/ws", nil)
 	req.Header.Set("Origin", "https://console.kubestellar.io")
-	req.Header.Set("Host", "console.kubestellar.io")
+	req.Host = "console.kubestellar.io"
 	req.Header.Set("X-Forwarded-Proto", "https")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
