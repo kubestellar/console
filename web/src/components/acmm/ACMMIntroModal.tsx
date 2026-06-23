@@ -36,6 +36,7 @@ import {
   Link2,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 
 const STORAGE_KEY = 'kc-acmm-intro-dismissed'
 const PAPER_URL = 'https://arxiv.org/abs/2604.09388'
@@ -52,19 +53,11 @@ const LEVELS = [
 ] as const
 
 export function isACMMIntroDismissed(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === '1'
-  } catch {
-    return false
-  }
+  return safeGet(STORAGE_KEY) === '1'
 }
 
 function dismissACMMIntro() {
-  try {
-    localStorage.setItem(STORAGE_KEY, '1')
-  } catch {
-    // localStorage unavailable — silently ignore
-  }
+  safeSet(STORAGE_KEY, '1')
 }
 
 /** Source framework badge definitions */

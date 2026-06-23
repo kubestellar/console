@@ -3,6 +3,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import { BaseModal } from '../../lib/modals'
 import type { AgentInfo } from '../../types/agent'
 import { AgentIcon } from './AgentIcon'
+import { safeGet, safeSet, safeRemove } from '../../lib/safeLocalStorage'
 
 const APPROVED_KEY = 'kc_agents_approved'
 
@@ -11,30 +12,18 @@ let sessionApproved = false
 
 /** Check whether the user has already approved agent access. */
 export function hasApprovedAgents(): boolean {
-  try {
-    return localStorage.getItem(APPROVED_KEY) === 'true' || sessionApproved
-  } catch {
-    return sessionApproved
-  }
+  return safeGet(APPROVED_KEY) === 'true' || sessionApproved
 }
 
 /** Record that the user has approved agent access. */
 export function setAgentsApproved(): void {
   sessionApproved = true
-  try {
-    localStorage.setItem(APPROVED_KEY, 'true')
-  } catch {
-    // storage full — sessionApproved already set above as fallback
-  }
+  safeSet(APPROVED_KEY, 'true')
 }
 
 /** Clear approval (e.g. for testing or reset). */
 export function clearAgentsApproval(): void {
-  try {
-    localStorage.removeItem(APPROVED_KEY)
-  } catch {
-    // ignore
-  }
+  safeRemove(APPROVED_KEY)
 }
 
 interface AgentApprovalDialogProps {

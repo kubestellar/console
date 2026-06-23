@@ -6,6 +6,7 @@ import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
 import { isDemoMode } from '@/lib/demoMode'
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -77,7 +78,7 @@ export function KubePong() {
   const [winner, setWinner] = useState<'player' | 'ai' | null>(null)
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
   const [wins, setWins] = useState(() => {
-    const saved = localStorage.getItem('kubePongWins')
+    const saved = safeGet('kubePongWins')
     return saved ? parseInt(saved, 10) : 0
   })
 
@@ -225,7 +226,7 @@ export function KubePong() {
         setWinner('player')
         setWins(prev => {
           const newWins = prev + 1
-          localStorage.setItem('kubePongWins', newWins.toString())
+          safeSet('kubePongWins', newWins.toString())
           return newWins
         })
         setGameState('finished')

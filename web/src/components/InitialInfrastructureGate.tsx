@@ -75,13 +75,9 @@ const gateReducer = (state: GateState, action: GateAction): GateState => {
 }
 
 const clearStaleSessionAndRedirectToLogin = (): void => {
-  try {
-    localStorage.removeItem(LEGACY_STORAGE_KEY_KC_TOKEN)
-    clearStoredAuthToken()
-    localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
-  } catch {
-    // ignore localStorage access failures and continue to login
-  }
+  safeRemove(LEGACY_STORAGE_KEY_KC_TOKEN)
+  clearStoredAuthToken()
+  safeRemove(STORAGE_KEY_HAS_SESSION)
   window.location.href = LOGIN_PATH
 }
 

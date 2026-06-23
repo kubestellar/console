@@ -12,6 +12,7 @@ import { useCachedACMMScan, type UseACMMScanResult } from '../../hooks/useCached
 import { isACMMIntroDismissed } from './ACMMIntroModal'
 import { emitACMMScanned } from '../../lib/analytics'
 import { ALL_CRITERIA } from '../../lib/acmm/sources'
+import { safeGet, safeSet, safeGetJSON } from '../../lib/safeLocalStorage'
 
 const DEFAULT_REPO = 'kubestellar/console'
 const SELECTED_REPO_KEY = 'kubestellar-acmm-selected-repo'
@@ -81,17 +82,13 @@ function readInitialRepo(): string {
   } catch {
     // window unavailable (SSR)
   }
-  try {
-    return localStorage.getItem(SELECTED_REPO_KEY) || DEFAULT_REPO
-  } catch {
-    return DEFAULT_REPO
-  }
+  return safeGet(SELECTED_REPO_KEY) || DEFAULT_REPO
 }
 
 function readRecentRepos(): string[] {
+  const raw = safeGet(RECENT_REPOS_KEY)
+  if (!raw) return [DEFAULT_REPO]
   try {
-    const raw = localStorage.getItem(RECENT_REPOS_KEY)
-    if (!raw) return [DEFAULT_REPO]
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return [DEFAULT_REPO]
     return parsed.filter((x): x is string => typeof x === 'string').slice(0, MAX_RECENT_REPOS)
@@ -171,11 +168,7 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
     const trimmed = normalizeRepoInput(next)
     if (!trimmed) return
     setRepoState(trimmed)
-    try {
-      localStorage.setItem(SELECTED_REPO_KEY, trimmed)
-    } catch {
-      // ignore localStorage failures
-    }
+    safeSet(SELECTED_REPO_KEY, trimmed)
     // Sync the URL so the current scan is always shareable. replaceState
     // (not pushState) keeps the back button useful — picking a new repo
     // is dashboard interaction, not navigation.
@@ -188,22 +181,14 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
     }
     setRecentRepos((prev) => {
       const dedup = [trimmed, ...prev.filter((r) => r !== trimmed)].slice(0, MAX_RECENT_REPOS)
-      try {
-        localStorage.setItem(RECENT_REPOS_KEY, JSON.stringify(dedup))
-      } catch {
-        // ignore
-      }
+      safeSet(RECENT_REPOS_KEY, JSON.stringify(dedup))
       return dedup
     })
   }, [])
 
   const clearRepo = useCallback(() => {
     setRepoState(DEFAULT_REPO)
-    try {
-      localStorage.setItem(SELECTED_REPO_KEY, DEFAULT_REPO)
-    } catch {
-      // ignore
-    }
+    safeSet(SELECTED_REPO_KEY, DEFAULT_REPO)
     try {
       const url = new URL(window.location.href)
       url.searchParams.set('repo', DEFAULT_REPO)
