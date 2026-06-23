@@ -7,7 +7,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
-let mockLocalClusters = [
+const mockLocalClusters = [
   { name: 'kubeflex', tool: 'kind', status: 'running' as const },
   { name: 'minikube', tool: 'minikube', status: 'stopped' as const },
 ]
