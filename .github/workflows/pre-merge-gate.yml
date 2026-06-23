@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: pre-merge-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
