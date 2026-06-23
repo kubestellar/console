@@ -48,12 +48,10 @@ export function ActionTooltipWrapper({
   return (
     <span
       className="inline-flex"
-      role="button"
-      tabIndex={0}
+      role="presentation"
       onClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
       onKeyDown={handleKeyDown}
-      aria-label={tooltip}
     >
       <Tooltip content={tooltip}>{children}</Tooltip>
     </span>
