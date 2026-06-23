@@ -24,10 +24,11 @@ vi.mock('../../../hooks/useLocalClusterTools', () => ({
 describe('LocalClusterControls', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockLocalClusters = [
+    mockLocalClusters.length = 0
+    mockLocalClusters.push(
       { name: 'kubeflex', tool: 'kind', status: 'running' as const },
       { name: 'minikube', tool: 'minikube', status: 'stopped' as const },
-    ]
+    )
     mockClusterLifecycle.mockResolvedValue(undefined)
   })
 
@@ -75,7 +76,7 @@ describe('LocalClusterControls', () => {
   })
 
   it('maps k3s provider to k3d when no local cluster match exists', async () => {
-    mockLocalClusters = []
+    mockLocalClusters.length = 0
 
     render(
       <LocalClusterControls clusterName="k3s-cluster" provider="k3s" unreachable={false} />,
@@ -89,7 +90,8 @@ describe('LocalClusterControls', () => {
   })
 
   it('disables controls when cluster is unreachable and not locally detected', () => {
-    mockLocalClusters = [{ name: 'other', tool: 'kind', status: 'running' as const }]
+    mockLocalClusters.length = 0
+    mockLocalClusters.push({ name: 'other', tool: 'kind', status: 'running' as const })
 
     render(
       <LocalClusterControls clusterName="kind-missing" provider="kind" unreachable={true} />,

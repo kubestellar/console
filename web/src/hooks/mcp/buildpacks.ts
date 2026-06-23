@@ -206,6 +206,8 @@ export function useBuildpackImages(cluster?: string) {
           setConsecutiveFailures(0)
           setLastRefresh(Date.now())
           setIsDemoData(false)
+          setIsLoading(false)
+          setIsRefreshing(false)
           return
         }
         if (!response.ok) {
