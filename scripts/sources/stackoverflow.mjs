@@ -170,22 +170,22 @@ function stripHtml(html) {
   return html
     .replace(/<pre><code[^>]*>[\s\S]*?<\/code><\/pre>/g, '[code block]')
     .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim()
 }
 
 function cleanHtmlEntities(text) {
   return text
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
 }
 
 function extractHtmlCodeBlocks(html) {

@@ -342,7 +342,7 @@ export function formatScanResultAsMarkdown(filename, result) {
     lines.push('| Type | Value |');
     lines.push('|------|-------|');
     for (const f of result.scan.sensitive.findings) {
-      const escapedValue = f.value.replace(/\|/g, '\\|').replace(/`/g, '\\`');
+      const escapedValue = f.value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/`/g, '\\`');
       lines.push(`| ${f.type} | \`${escapedValue}\` |`);
     }
   }
@@ -358,7 +358,7 @@ export function formatScanResultAsMarkdown(filename, result) {
     lines.push('| Type | Match |');
     lines.push('|------|-------|');
     for (const f of result.scan.malicious.findings) {
-      const escapedValue = f.value.replace(/\|/g, '\\|').replace(/`/g, '\\`');
+      const escapedValue = f.value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/`/g, '\\`');
       lines.push(`| ${f.type} | \`${escapedValue}\` |`);
     }
   }

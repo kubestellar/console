@@ -17,8 +17,10 @@ const MIN_ENGLISH_STOPWORD_RATIO = 0.08
  * headers, emoji shortcodes, and other non-content noise from issue/PR text.
  */
 export function cleanText(text) {
-  return text
-    .replace(/<!--[\s\S]*?-->/g, '')
+  let t = text
+  let prev
+  do { prev = t; t = t.replace(/<!--[\s\S]*?-->/g, '') } while (t !== prev)
+  return t
     .replace(/# \[?Codecov\]?[\s\S]*?(?=\n#{1,4}\s|\n---|\n\n\n|$)/gi, '')
     .replace(/!\[.*?\]\(https?:\/\/[^)]+\)/g, '')
     .replace(/<img\s+[^>]*>/gi, '')
@@ -71,7 +73,8 @@ export function isGarbageSnippet(snippet) {
   if (lower.includes('for first time contributors') || lower.includes('please ensure your pull request')) return true
   if (lower.includes('query performance') && lower.includes('![image]')) return true
   if (lower.includes('"tag_name"') || lower.includes('"html_url"') || lower.includes('"created_at"')) return true
-  if (lower.includes('api.github.com')) return true
+  const urlMatches = snippet.match(/https?:\/\/[^\s"')>]+/g) || []
+  if (urlMatches.some(u => { try { return new URL(u).hostname === 'api.github.com' } catch { return false } })) return true
   const words = snippet.split(/\s+/)
   const englishWords = words.filter(w => ENGLISH_STOPWORDS.has(w.toLowerCase()))
   const PROSE_THRESHOLD = 0.25
@@ -160,7 +163,8 @@ export function extractFromBoldTemplate(text) {
 export function stripPRTemplate(text) {
   if (!text) return ''
   let cleaned = text
-  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '')
+  let prev
+  do { prev = cleaned; cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '') } while (cleaned !== prev)
   const templateHeaders = [
     /#{1,4}\s*What type of PR[\s\S]*?(?=\n#{1,4}\s|\n---|\Z)/gi,
     /#{1,4}\s*What this PR does[\s\S]*?(?=\n#{1,4}\s|\n---|\Z)/gi,
