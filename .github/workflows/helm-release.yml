@@ -17,9 +17,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: write
-      pages: write
       packages: write
-      id-token: write
     
     steps:
       - name: Checkout repository
