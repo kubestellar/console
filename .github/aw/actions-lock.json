@@ -15,10 +15,10 @@
       "version": "v9.0.0",
       "sha": "3a2844b7e9c422d3c10d287c895573f7108da1b3"
     },
-    "github/gh-aw-actions/setup@v0.79.8": {
+    "github/gh-aw-actions/setup@v0.80.9": {
       "repo": "github/gh-aw-actions/setup",
-      "version": "v0.79.8",
-      "sha": "e6b19c0e5f5a9e8d4c3b2a1f0e9d8c7b6a5f4e3"
+      "version": "v0.80.9",
+      "sha": "8c7d04ebf1ece56cd381446125da3e0f6896294a"
     },
     "github/gh-aw/actions/setup@v0.75.2": {
       "repo": "github/gh-aw/actions/setup",
