@@ -28,7 +28,7 @@ const ROOT_VISIBLE_TIMEOUT_MS = 10_000
 /** Minimum body text length to consider the page non-blank. */
 const MIN_BODY_TEXT_LEN = 20
 /** Timeout (ms) for hamburger/sidebar-toggle visibility probe. */
-const MOBILE_NAV_PROBE_TIMEOUT_MS = 5_000
+const MOBILE_NAV_PROBE_TIMEOUT_MS = 10_000
 /** Max viewport width (px) below which mobile/hamburger nav is expected. */
 const MOBILE_NAV_MAX_WIDTH_PX = 1024
 

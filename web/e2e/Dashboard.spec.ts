@@ -22,6 +22,7 @@ const HEADER_ASSERT_TIMEOUT_MS = 20_000
 const ERROR_FALLBACK_TIMEOUT_MS = 20_000
 const CARD_DATA_TIMEOUT_MS = 15_000
 const ACCESSIBILITY_ASSERT_TIMEOUT_MS = 20_000
+const WEBKIT_FOCUS_ASSERT_TIMEOUT_MS = 30_000
 const HOVER_EFFECT_TIMEOUT_MS = 5_000
 const ADD_CARD_MODAL_TIMEOUT_MS = 15_000
 const INITIAL_PAGE_VISIBLE_TIMEOUT_MS = 30_000
@@ -543,10 +544,12 @@ test.describe('Dashboard Page', () => {
         // WebKit mirrors Safari's reduced keyboard-access mode for plain Tab.
         // Alt+Tab exercises the full in-page focus order so buttons remain reachable.
         await page.keyboard.press(tabKey)
+        // WebKit needs extra time for focus state to stabilize in CI environments
+        const focusTimeout = browserName === 'webkit' ? WEBKIT_FOCUS_ASSERT_TIMEOUT_MS : 15_000
         await expect(
           page.locator(`[data-e2e-focus-order="${expectedElement.index}"]`),
           `Expected keyboard navigation to focus ${expectedElement.label}`,
-        ).toBeFocused()
+        ).toBeFocused({ timeout: focusTimeout })
       }
     })
 

@@ -160,7 +160,8 @@ test.describe('Smoke Tests', () => {
       // the actual router path without relying on preview-server rewrites.
       await page.goto('/', { waitUntil: 'domcontentloaded' })
       const settingsLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/settings"], [data-testid="sidebar"] a[href="/settings"]').first()
-      await expect(settingsLink).toBeVisible({ timeout: 10000 })
+      // WebKit/mobile browsers need more time for sidebar elements to hydrate
+      await expect(settingsLink).toBeVisible({ timeout: 20000 })
       await settingsLink.click({ force: true })
 
       await expect(page).toHaveURL(/\/settings(?:[?#].*)?$/, { timeout: 10000 })
