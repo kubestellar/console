@@ -17,7 +17,6 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { AlertTriangle, Eye, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
-import { AMBER_500, GREEN_500_BRIGHT, RED_500, SLATE_700 } from '../../lib/theme/chartColors'
 import type { ProjectHoverInfo } from './svg/ProjectNode'
 import type { ClusterHoverInfo } from './svg/ClusterZone'
 import type { DependencyEdge, DeployPhase, PayloadProject } from './types'
@@ -57,9 +56,9 @@ export function GaugeRow({ label, value, max, unit }: {
   const display = value != null
     ? max != null ? `${Math.round(value)} / ${max}${unit ?? ''}` : `${Math.round(value)}${unit ?? ''}`
     : max != null ? `— / ${max}${unit ?? ''}` : 'N/A'
-  const barColor = pctVal != null
-    ? pctVal >= 80 ? RED_500 : pctVal >= 50 ? AMBER_500 : GREEN_500_BRIGHT
-    : SLATE_700
+  const barColorClass = pctVal != null
+    ? pctVal >= 80 ? 'bg-red-500' : pctVal >= 50 ? 'bg-amber-500' : 'bg-green-500'
+    : 'bg-slate-700 dark:bg-slate-600'
 
   return (
     <div className="space-y-1">
@@ -67,9 +66,9 @@ export function GaugeRow({ label, value, max, unit }: {
         <span className="text-slate-400 font-medium">{label}</span>
         <span className="text-foreground tabular-nums">{display}{pctVal != null ? ` (${pctVal}%)` : ''}</span>
       </div>
-      <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+      <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
         {pctVal != null && (
-          <div className="h-full rounded-full transition-all" style={{ width: `${pctVal}%`, backgroundColor: barColor }} />
+          <div className={cn('h-full rounded-full transition-all', barColorClass)} style={{ width: `${pctVal}%` }} />
         )}
       </div>
     </div>
