@@ -10,6 +10,7 @@ import { getUserSafeErrorMessage } from '../lib/errors/handleError'
 import { stellarApi } from '../services/stellar'
 import { StatusBadge } from './ui/StatusBadge'
 import { Button } from './ui/Button'
+import { safeRemove } from '../lib/safeLocalStorage'
 
 const INITIAL_HANDSHAKE_TIMEOUT_MS = 15_000
 const INITIAL_HANDSHAKE_TIMEOUT_SECONDS = INITIAL_HANDSHAKE_TIMEOUT_MS / 1000

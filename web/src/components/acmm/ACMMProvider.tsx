@@ -12,7 +12,7 @@ import { useCachedACMMScan, type UseACMMScanResult } from '../../hooks/useCached
 import { isACMMIntroDismissed } from './ACMMIntroModal'
 import { emitACMMScanned } from '../../lib/analytics'
 import { ALL_CRITERIA } from '../../lib/acmm/sources'
-import { safeGet, safeSet, safeGetJSON } from '../../lib/safeLocalStorage'
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 
 const DEFAULT_REPO = 'kubestellar/console'
 const SELECTED_REPO_KEY = 'kubestellar-acmm-selected-repo'
