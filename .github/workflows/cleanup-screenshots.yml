@@ -15,7 +15,7 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
-permissions: {}
+permissions: read-all
 
 jobs:
   cleanup-screenshots:
