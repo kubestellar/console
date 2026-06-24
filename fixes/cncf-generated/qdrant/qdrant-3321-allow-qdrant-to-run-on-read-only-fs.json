@@ -1,0 +1,78 @@
+{
+  "version": "kc-mission-v1",
+  "name": "qdrant-3321-allow-qdrant-to-run-on-read-only-fs",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "qdrant: Allow Qdrant to run on read-only FS",
+    "description": "Allow Qdrant to run on read-only FS. Community-requested feature.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current qdrant deployment",
+        "description": "Verify your qdrant version and configuration:\n```bash\nkubectl get pods -n qdrant -l app.kubernetes.io/name=qdrant\nhelm list -n qdrant 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working qdrant installation."
+      },
+      {
+        "title": "Review qdrant configuration",
+        "description": "Inspect the relevant qdrant configuration:\n```bash\nkubectl get all -n qdrant -l app.kubernetes.io/name=qdrant\nkubectl get configmap -n qdrant -l app.kubernetes.io/part-of=qdrant\n```\nCurrently qdrant requires write access to storage directory, even if there are no write operations happening in the system.\nIt would be interesting in some scenarios to have an ability to run qdrant from read-only FS."
+      },
+      {
+        "title": "Apply the fix for Allow Qdrant to run on read-only FS",
+        "description": "### Proposed Solution\n\n**Analysis:**\nThe root cause of the issue is that Qdrant requires write access to the storage directory, even when there are no write operations happening in the system. This is a limitation in scenarios where Qdrant needs to run from a read-only file system, such as a\n```yaml\n* `qdrant/lib/readonly_mode.go`:\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n qdrant -l app.kubernetes.io/name=qdrant\nkubectl get events -n qdrant --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Allow Qdrant to run on read-only FS\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "### Proposed Solution\n\n**Analysis:**\nThe root cause of the issue is that Qdrant requires write access to the storage directory, even when there are no write operations happening in the system. This is a limitation in scenarios where Qdrant needs to run from a read-only file system, such as a mounted network file system.\n\n**Implementation Plan:**\n\n1.",
+      "codeSnippets": [
+        "* `qdrant/lib/readonly_mode.go`:",
+        "* `qdrant/lib/api/update.go`:",
+        "* `qdrant/lib/storage/wal_reader.go`:"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "qdrant",
+      "community",
+      "vector-db",
+      "feature"
+    ],
+    "cncfProjects": [
+      "qdrant"
+    ],
+    "targetResourceKinds": [
+      "Deployment"
+    ],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "community",
+    "sourceUrls": {
+      "issue": "https://github.com/qdrant/qdrant/issues/3321",
+      "repo": "https://github.com/qdrant/qdrant"
+    },
+    "reactions": 2,
+    "comments": 29,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with qdrant installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-24T07:37:32.459Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
