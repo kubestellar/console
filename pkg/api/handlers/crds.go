@@ -39,9 +39,11 @@ type CRDHandlers struct {
 // NewCRDHandlers creates a new CRD handlers instance.
 // Accepts *k8s.MultiClusterClient (or any crdClient implementation).
 func NewCRDHandlers(k8sClient *k8s.MultiClusterClient) *CRDHandlers {
-	return &CRDHandlers{
-		k8sClient: k8sClient,
+	h := &CRDHandlers{}
+	if k8sClient != nil {
+		h.k8sClient = k8sClient
 	}
+	return h
 }
 
 // CRDSummary represents a CRD as returned by the API

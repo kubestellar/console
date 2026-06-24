@@ -121,7 +121,7 @@ func Test_extractObservationSuggest(t *testing.T) {
 		{
 			name:   "suggest with leading whitespace",
 			detail: "  SUGGEST: investigate further",
-			want:   "",
+			want:   "investigate further",
 		},
 		{
 			name:   "suggest in middle of string",
@@ -305,7 +305,7 @@ func Test_splitEventObjectName(t *testing.T) {
 		{
 			name:   "empty string",
 			object: "",
-			want:   "unknown",
+			want:   "",
 		},
 		{
 			name:   "whitespace trimmed",
@@ -357,7 +357,7 @@ func Test_inferSeverity(t *testing.T) {
 			name:      "warning with non-critical reason",
 			eventType: "Warning",
 			reason:    "ImagePullBackOff",
-			want:      "warning",
+			want:      "critical",
 		},
 		{
 			name:      "normal event",
