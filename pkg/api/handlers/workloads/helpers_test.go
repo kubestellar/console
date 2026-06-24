@@ -86,8 +86,8 @@ func TestGetDemoWorkloads(t *testing.T) {
 		if w.Name == "nginx-ingress" {
 			foundNginx = true
 			assert.Equal(t, "ingress-system", w.Namespace)
-			assert.Equal(t, "Deployment", w.Type)
-			assert.Equal(t, "Running", w.Status)
+			assert.Equal(t, string("Deployment"), w.Type)
+			assert.Equal(t, string("Running"), w.Status)
 			break
 		}
 	}
