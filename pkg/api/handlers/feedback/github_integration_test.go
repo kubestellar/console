@@ -91,7 +91,7 @@ func TestPostGitHubIssue_InsufficientPermissions(t *testing.T) {
 
 	_, err := handler.postGitHubIssue(context.Background(), "kubestellar", "console", "Test", "body", nil, nil, "")
 	require.Error(t, err)
-	assert.ErrorIs(t, err, errGitHubInsufficientPermissions)
+	assert.Contains(t, err.Error(), "GitHub API returned 403")
 }
 
 func TestPostGitHubIssue_RateLimit(t *testing.T) {
@@ -380,7 +380,7 @@ func TestLinkIssueAsSubIssue_APIError(t *testing.T) {
 
 func TestHandleAIProcessingComplete_RequestNotFound(t *testing.T) {
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByIssueNumber", mock.Anything, 123).Return(nil, nil)
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(nil, nil)
 
 	handler := &FeedbackHandler{store: mockStore}
 	err := handler.handleAIProcessingComplete(context.Background(), 123, "https://github.com/test/issues/123", map[string]interface{}{})
@@ -394,7 +394,7 @@ func TestHandleAIProcessingComplete_AlreadyHasPR(t *testing.T) {
 		ID:       uuid.New(),
 		PRNumber: &prNum,
 	}
-	mockStore.On("GetFeatureRequestByIssueNumber", mock.Anything, 123).Return(request, nil)
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(request, nil)
 
 	handler := &FeedbackHandler{store: mockStore}
 	err := handler.handleAIProcessingComplete(context.Background(), 123, "https://github.com/test/issues/123", map[string]interface{}{})
@@ -410,10 +410,10 @@ func TestHandleAIProcessingComplete_UpdatesStatusAndNotifies(t *testing.T) {
 		UserID:     userID,
 		TargetRepo: models.TargetRepoConsole,
 	}
-	mockStore.On("GetFeatureRequestByIssueNumber", mock.Anything, 123).Return(request, nil)
-	mockStore.On("UpdateFeatureRequestStatus", mock.Anything, requestID, models.RequestStatusUnableToFix).Return(nil)
-	mockStore.On("UpdateFeatureRequestLatestComment", mock.Anything, requestID, mock.AnythingOfType("string")).Return(nil)
-	mockStore.On("CreateNotification", mock.Anything, mock.AnythingOfType("*models.Notification")).Return(nil)
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(request, nil)
+	mockStore.On("UpdateFeatureRequestStatus", requestID, models.RequestStatusUnableToFix).Return(nil)
+	mockStore.On("UpdateFeatureRequestLatestComment", requestID, mock.AnythingOfType("string")).Return(nil)
+	mockStore.On("CreateNotification", mock.AnythingOfType("*models.Notification")).Return(nil)
 
 	handler := &FeedbackHandler{
 		store:       mockStore,
@@ -432,7 +432,7 @@ func TestHandleAIProcessingComplete_UpdatesStatusAndNotifies(t *testing.T) {
 
 func TestHandleIssueClosed_RequestNotFound(t *testing.T) {
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByIssueNumber", mock.Anything, 123).Return(nil, nil)
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(nil, nil)
 
 	handler := &FeedbackHandler{store: mockStore}
 	err := handler.handleIssueClosed(context.Background(), 123, "https://github.com/test/issues/123", map[string]interface{}{})
@@ -445,7 +445,7 @@ func TestHandleIssueClosed_AlreadyClosed(t *testing.T) {
 		ID:     uuid.New(),
 		Status: models.RequestStatusClosed,
 	}
-	mockStore.On("GetFeatureRequestByIssueNumber", mock.Anything, 123).Return(request, nil)
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(request, nil)
 
 	handler := &FeedbackHandler{store: mockStore}
 	err := handler.handleIssueClosed(context.Background(), 123, "https://github.com/test/issues/123", map[string]interface{}{})
@@ -462,9 +462,9 @@ func TestHandleIssueClosed_CompletedReason(t *testing.T) {
 		UserID: userID,
 		Status: models.RequestStatusOpen,
 	}
-	mockStore.On("GetFeatureRequestByIssueNumber", mock.Anything, 123).Return(request, nil)
-	mockStore.On("CloseFeatureRequest", mock.Anything, requestID, false).Return(nil)
-	mockStore.On("CreateNotification", mock.Anything, mock.AnythingOfType("*models.Notification")).Return(nil)
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(request, nil)
+	mockStore.On("CloseFeatureRequest", requestID, false).Return(nil)
+	mockStore.On("CreateNotification", mock.AnythingOfType("*models.Notification")).Return(nil)
 
 	handler := &FeedbackHandler{store: mockStore}
 	issue := map[string]interface{}{
@@ -484,9 +484,9 @@ func TestHandleIssueClosed_NotPlannedReason(t *testing.T) {
 		UserID: userID,
 		Status: models.RequestStatusOpen,
 	}
-	mockStore.On("GetFeatureRequestByIssueNumber", mock.Anything, 123).Return(request, nil)
-	mockStore.On("CloseFeatureRequest", mock.Anything, requestID, false).Return(nil)
-	mockStore.On("CreateNotification", mock.Anything, mock.AnythingOfType("*models.Notification")).Return(nil)
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(request, nil)
+	mockStore.On("CloseFeatureRequest", requestID, false).Return(nil)
+	mockStore.On("CreateNotification", mock.AnythingOfType("*models.Notification")).Return(nil)
 
 	handler := &FeedbackHandler{store: mockStore}
 	issue := map[string]interface{}{
@@ -507,9 +507,9 @@ func TestHandleIssueEvent_PipelineLabel_UpdatesStatus(t *testing.T) {
 		ID:     requestID,
 		UserID: userID,
 	}
-	mockStore.On("GetFeatureRequestByIssueNumber", mock.Anything, 123).Return(request, nil)
-	mockStore.On("UpdateFeatureRequestStatus", mock.Anything, requestID, models.RequestStatusTriageAccepted).Return(nil)
-	mockStore.On("CreateNotification", mock.Anything, mock.AnythingOfType("*models.Notification")).Return(nil)
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(request, nil)
+	mockStore.On("UpdateFeatureRequestStatus", requestID, models.RequestStatusTriageAccepted).Return(nil)
+	mockStore.On("CreateNotification", mock.AnythingOfType("*models.Notification")).Return(nil)
 
 	handler := &FeedbackHandler{store: mockStore}
 	payload := map[string]interface{}{
@@ -530,7 +530,7 @@ func TestHandleIssueEvent_PipelineLabel_UpdatesStatus(t *testing.T) {
 
 func TestHandleIssueEvent_PipelineLabel_NoDB(t *testing.T) {
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequestByIssueNumber", mock.Anything, 123).Return(nil, nil)
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(nil, nil)
 
 	handler := &FeedbackHandler{store: mockStore}
 	payload := map[string]interface{}{
@@ -558,9 +558,9 @@ func TestHandleIssueEvent_ClosedAction_DispatchesToHandleIssueClosed(t *testing.
 		UserID: userID,
 		Status: models.RequestStatusOpen,
 	}
-	mockStore.On("GetFeatureRequestByIssueNumber", mock.Anything, 123).Return(request, nil)
-	mockStore.On("CloseFeatureRequest", mock.Anything, requestID, false).Return(nil)
-	mockStore.On("CreateNotification", mock.Anything, mock.AnythingOfType("*models.Notification")).Return(nil)
+	mockStore.On("GetFeatureRequestByIssueNumber", 123).Return(request, nil)
+	mockStore.On("CloseFeatureRequest", requestID, false).Return(nil)
+	mockStore.On("CreateNotification", mock.AnythingOfType("*models.Notification")).Return(nil)
 
 	handler := &FeedbackHandler{store: mockStore}
 	payload := map[string]interface{}{

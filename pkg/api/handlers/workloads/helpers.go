@@ -31,9 +31,9 @@ func handleK8sError(c *fiber.Ctx, err error) error {
 func getDemoWorkloads() []v1alpha1.Workload {
 	now := time.Now()
 	return []v1alpha1.Workload{
-		{Name: "nginx-ingress", Namespace: "ingress-system", Type: "Deployment", Status: "Running", Replicas: 3, ReadyReplicas: 3, Image: "nginx/nginx-ingress:3.4.0", Labels: map[string]string{"app": "nginx-ingress"}, CreatedAt: now.Add(-30 * 24 * time.Hour)},
-		{Name: "api-gateway", Namespace: "production", Type: "Deployment", Status: "Degraded", Replicas: 5, ReadyReplicas: 3, Image: "company/api-gateway:v2.5.1", Labels: map[string]string{"app": "api-gateway"}, CreatedAt: now.Add(-14 * 24 * time.Hour)},
-		{Name: "redis-cluster", Namespace: "data", Type: "StatefulSet", Status: "Running", Replicas: 3, ReadyReplicas: 3, Image: "redis:7.2-alpine", Labels: map[string]string{"app": "redis"}, CreatedAt: now.Add(-60 * 24 * time.Hour)},
-		{Name: "monitoring-agent", Namespace: "monitoring", Type: "DaemonSet", Status: "Running", Replicas: 4, ReadyReplicas: 4, Image: "prom/node-exporter:v1.7.0", Labels: map[string]string{"app": "node-exporter"}, CreatedAt: now.Add(-90 * 24 * time.Hour)},
+		{Name: "nginx-ingress", Namespace: "ingress-system", Type: v1alpha1.WorkloadTypeDeployment, Status: v1alpha1.WorkloadStatusRunning, Replicas: 3, ReadyReplicas: 3, Image: "nginx/nginx-ingress:3.4.0", Labels: map[string]string{"app": "nginx-ingress"}, CreatedAt: now.Add(-30 * 24 * time.Hour)},
+		{Name: "api-gateway", Namespace: "production", Type: v1alpha1.WorkloadTypeDeployment, Status: v1alpha1.WorkloadStatusDegraded, Replicas: 5, ReadyReplicas: 3, Image: "company/api-gateway:v2.5.1", Labels: map[string]string{"app": "api-gateway"}, CreatedAt: now.Add(-14 * 24 * time.Hour)},
+		{Name: "redis-cluster", Namespace: "data", Type: v1alpha1.WorkloadTypeStatefulSet, Status: v1alpha1.WorkloadStatusRunning, Replicas: 3, ReadyReplicas: 3, Image: "redis:7.2-alpine", Labels: map[string]string{"app": "redis"}, CreatedAt: now.Add(-60 * 24 * time.Hour)},
+		{Name: "monitoring-agent", Namespace: "monitoring", Type: v1alpha1.WorkloadTypeDaemonSet, Status: v1alpha1.WorkloadStatusRunning, Replicas: 4, ReadyReplicas: 4, Image: "prom/node-exporter:v1.7.0", Labels: map[string]string{"app": "node-exporter"}, CreatedAt: now.Add(-90 * 24 * time.Hour)},
 	}
 }

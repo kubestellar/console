@@ -17,6 +17,7 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 	teststore "github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,6 +28,9 @@ func newRouteRegistrationServer(t *testing.T) (*Server, *teststore.MockStore) {
 	t.Setenv("IGNORE_PERSISTED_OAUTH_CREDENTIALS", "true")
 
 	mockStore := &teststore.MockStore{}
+	mockStore.On("ListClusterGroups").Return(map[string][]byte{}, nil).Maybe()
+	mockStore.On("SaveClusterGroup", mock.Anything, mock.Anything).Return(nil).Maybe()
+	mockStore.On("DeleteClusterGroup", mock.Anything).Return(nil).Maybe()
 	server := &Server{
 		app: fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
 		store: mockStore,
