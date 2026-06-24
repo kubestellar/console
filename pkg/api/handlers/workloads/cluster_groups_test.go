@@ -100,7 +100,7 @@ func TestPersistClusterGroup_Success(t *testing.T) {
 	mockStore := env.Store.(*test.MockStore)
 
 	mockStore.ExpectedCalls = nil
-	mockStore.On("SaveClusterGroup", mock.Anything, "my-group", mock.AnythingOfType("[]uint8")).Return(nil).Once()
+	mockStore.On("SaveClusterGroup", "my-group", mock.AnythingOfType("[]uint8")).Return(nil).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
 	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
@@ -122,7 +122,7 @@ func TestPersistClusterGroup_StoreError(t *testing.T) {
 	mockStore := env.Store.(*test.MockStore)
 
 	mockStore.ExpectedCalls = nil
-	mockStore.On("SaveClusterGroup", mock.Anything, "err-group", mock.Anything).Return(assert.AnError).Once()
+	mockStore.On("SaveClusterGroup", "err-group", mock.Anything).Return(assert.AnError).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
 	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
