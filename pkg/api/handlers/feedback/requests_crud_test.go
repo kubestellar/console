@@ -1,7 +1,6 @@
 package feedback
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -50,7 +49,7 @@ func TestCloseRequest_NotFound(t *testing.T) {
 	requestID := uuid.New()
 	
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequest", context.Background(), requestID).Return(nil, nil)
+	mockStore.On("GetFeatureRequest", requestID).Return(nil, nil)
 	
 	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
@@ -71,7 +70,7 @@ func TestCloseRequest_AccessDenied(t *testing.T) {
 	otherUserID := uuid.New()
 	
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequest", context.Background(), requestID).Return(&models.FeatureRequest{
+	mockStore.On("GetFeatureRequest", requestID).Return(&models.FeatureRequest{
 		ID:     requestID,
 		UserID: otherUserID,
 	}, nil)
@@ -94,11 +93,11 @@ func TestCloseRequest_StoreError(t *testing.T) {
 	requestID := uuid.New()
 	
 	mockStore := &test.MockStore{}
-	mockStore.On("GetFeatureRequest", context.Background(), requestID).Return(&models.FeatureRequest{
+	mockStore.On("GetFeatureRequest", requestID).Return(&models.FeatureRequest{
 		ID:     requestID,
 		UserID: userID,
 	}, nil)
-	mockStore.On("CloseFeatureRequest", context.Background(), requestID, true).Return(errors.New("database error"))
+	mockStore.On("CloseFeatureRequest", requestID, true).Return(errors.New("database error"))
 	
 	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
