@@ -23,7 +23,7 @@
  */
 
 import { readFileSync, writeFileSync } from 'fs'
-import { execSync, spawnSync } from 'child_process'
+import { spawnSync } from 'child_process'
 
 const LLM_ENDPOINT = process.env.LLM_ENDPOINT || 'https://models.inference.ai.azure.com/chat/completions'
 const LLM_MODEL = process.env.LLM_MODEL || 'gpt-4o-mini'
@@ -101,39 +101,36 @@ function validateCommand(cmd) {
 }
 
 /**
- * Parses a validated command string into [binary, ...args].
- * Handles simple quoting (single and double quotes).
+ * Parses a shell command string into an argv array using basic tokenization.
+ * Handles quoted strings and escaped characters.
+ * Returns an array of strings: [binary, arg1, arg2, ...]
  */
 function parseCommand(cmd) {
   const args = []
   let current = ''
-  let inQuote = null
-  
-  for (let i = 0; i < cmd.length; i++) {
-    const char = cmd[i]
-    
-    if (inQuote) {
-      if (char === inQuote) {
-        inQuote = null
-      } else {
-        current += char
-      }
-    } else if (char === '"' || char === "'") {
-      inQuote = char
-    } else if (char === ' ' || char === '\t') {
-      if (current) {
-        args.push(current)
-        current = ''
-      }
+  let inSingle = false
+  let inDouble = false
+  let i = 0
+
+  while (i < cmd.length) {
+    const c = cmd[i]
+
+    if (c === '\\' && !inSingle) {
+      i++
+      if (i < cmd.length) current += cmd[i]
+    } else if (c === "'" && !inDouble) {
+      inSingle = !inSingle
+    } else if (c === '"' && !inSingle) {
+      inDouble = !inDouble
+    } else if (c === ' ' && !inSingle && !inDouble) {
+      if (current) { args.push(current); current = '' }
     } else {
-      current += char
+      current += c
     }
+    i++
   }
-  
-  if (current) {
-    args.push(current)
-  }
-  
+  if (current) args.push(current)
+
   return args
 }
 
@@ -163,7 +160,23 @@ function execCommand(cmd, timeoutMs = STEP_TIMEOUT_MS) {
     }
     
     const [binary, ...cmdArgs] = args
-    const result = spawnSync(binary, cmdArgs, {
+
+    // Resolve binary from ALLOWED_BASE_COMMANDS constant to break CodeQL taint flow
+    // (CWE-078: prevents user-controlled string from flowing directly to spawnSync)
+    let safeBinary = null
+    for (const allowed of ALLOWED_BASE_COMMANDS) {
+      if (allowed === binary) { safeBinary = allowed; break }
+    }
+    if (safeBinary === null) {
+      return {
+        success: false,
+        output: '[BLOCKED] Binary not in allowlist',
+        exitCode: 1,
+        error: 'Security: Binary not in allowed commands',
+      }
+    }
+
+    const result = spawnSync(safeBinary, cmdArgs, {
       encoding: 'utf-8',
       timeout: timeoutMs,
       shell: false,
