@@ -20,13 +20,13 @@ func TestWithDemoFallback(t *testing.T) {
 		demoData := map[string]string{"status": "demo"}
 
 		app.Get("/test", func(c *fiber.Ctx) error {
-			c.Locals("demoMode", true)
 			return handler.withDemoFallback(c, "test-data", demoData, func(client *k8s.MultiClusterClient) error {
 				return c.JSON(map[string]string{"status": "real"})
 			})
 		})
 
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("X-Demo-Mode", "true")
 		resp, err := app.Test(req, -1)
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)

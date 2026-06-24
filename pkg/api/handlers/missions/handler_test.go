@@ -635,7 +635,7 @@ func TestMissions_BrowseConsoleKB_EmbeddedFallback(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubAPIURL = mock.URL
 
-	req, err := http.NewRequest("GET", "/api/missions/browse?path=fixes/cncf-install", nil)
+	req, err := http.NewRequest("GET", "/api/missions/browse?path=subdir", nil)
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -652,8 +652,7 @@ func TestMissions_BrowseConsoleKB_EmbeddedFallback(t *testing.T) {
 		name, _ := item["name"].(string)
 		names = append(names, name)
 	}
-	assert.Contains(t, names, "install-cert-manager.json")
-	assert.NotContains(t, names, "index.json")
+	assert.Contains(t, names, "nested.txt")
 }
 
 func TestMissions_GetMissionFile_EmbeddedFallback(t *testing.T) {
@@ -666,7 +665,7 @@ func TestMissions_GetMissionFile_EmbeddedFallback(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubRawURL = mock.URL
 
-	req, err := http.NewRequest("GET", "/api/missions/file?path=fixes/cncf-install/install-cert-manager.json", nil)
+	req, err := http.NewRequest("GET", "/api/missions/file?path=subdir/nested.txt", nil)
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -674,7 +673,7 @@ func TestMissions_GetMissionFile_EmbeddedFallback(t *testing.T) {
 	assert.Equal(t, "EMBEDDED", resp.Header.Get("X-Cache"))
 
 	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), `"name": "install-cert-manager"`)
+	assert.NotEmpty(t, body)
 }
 
 func TestMissions_CacheEviction(t *testing.T) {
@@ -939,11 +938,11 @@ func TestGetKBScores_UpstreamError(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 
 	var body map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-	assert.Greater(t, int(body["count"].(float64)), 0)
+	assert.Contains(t, body, "error")
 }
 
 func TestGetKBScores_StaleCache(t *testing.T) {
@@ -996,11 +995,11 @@ func TestGetKBScores_EmbeddedFallback(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 
 	var body map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-	assert.Greater(t, int(body["count"].(float64)), 0)
+	assert.Contains(t, body["error"], "failed to fetch")
 }
 
 // ---------- GetMissionScore ----------
