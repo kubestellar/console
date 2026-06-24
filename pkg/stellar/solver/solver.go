@@ -159,7 +159,9 @@ func SolveLoop(
 		actionsTaken++
 		_ = storage.IncrementSolveActions(ctx, input.SolveID)
 		lastAction = actionType
-		lastOutcome = outcome
+		if outcome != "" {
+			lastOutcome = outcome
+		}
 		if err != nil {
 			broadcast("acting", fmt.Sprintf("%s failed: %s", actionType, err.Error()), actionsTaken)
 			slog.Warn("solver: action dispatch failed",

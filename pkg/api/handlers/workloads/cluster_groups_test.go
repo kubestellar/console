@@ -439,7 +439,8 @@ func TestSyncClusterGroups_BodyTooLarge(t *testing.T) {
 		// Ensure it's actually over 1MB
 		bigPayload = strings.Repeat("x", 1<<20+1)
 	}
-	req, _ := http.NewRequest("POST", "/api/cluster-groups/sync", strings.NewReader(bigPayload))
+	req, err := http.NewRequest("POST", "/api/cluster-groups/sync", strings.NewReader(bigPayload))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
