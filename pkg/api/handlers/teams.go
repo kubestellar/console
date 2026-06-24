@@ -70,7 +70,6 @@ func (h *TeamHandler) GetTeam(c *fiber.Ctx) error {
 
 	teamResp, err := h.svc.Get(c.UserContext(), teamID)
 	if err != nil {
-		// Now 'team' correctly refers to the imported package
 		if err == team.ErrNotFound {
 			return fiber.NewError(fiber.StatusNotFound, "Team not found")
 		}
