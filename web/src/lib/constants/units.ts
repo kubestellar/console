@@ -1,11 +1,11 @@
-/** Bytes per mebibyte (MiB) */
-export const BYTES_PER_MIB = 1024 * 1024
 /** Bytes per kibibyte (KiB) */
 export const BYTES_PER_KIB = 1024
+/** Bytes per mebibyte (MiB) */
+export const BYTES_PER_MIB = BYTES_PER_KIB * BYTES_PER_KIB
 /** Bytes per gibibyte (GiB) */
-export const BYTES_PER_GIB = 1024 * 1024 * 1024
+export const BYTES_PER_GIB = BYTES_PER_KIB * BYTES_PER_MIB
 /** Bytes per tebibyte (TiB) */
-export const BYTES_PER_TIB = 1024 * BYTES_PER_GIB
+export const BYTES_PER_TIB = BYTES_PER_KIB * BYTES_PER_GIB
 /** Mebibytes per gibibyte — Gi → Mi conversion factor */
 export const MIB_PER_GIB = 1024
 /** Kibibytes per mebibyte — Ki → Mi conversion factor */
