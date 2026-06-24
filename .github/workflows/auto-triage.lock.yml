@@ -52,7 +52,8 @@ on:
     types:
     - assigned
 
-permissions: {}
+permissions:
+  issues: write
 
 concurrency:
   group: "gh-aw-${{ github.workflow }}-${{ github.event.issue.number || github.run_id }}"
