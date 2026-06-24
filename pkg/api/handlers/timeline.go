@@ -86,7 +86,11 @@ type TimelineHandler struct {
 // Accepts the full *k8s.MultiClusterClient at the call-site but stores it as
 // the narrow timelineClient interface so tests can substitute a simple mock.
 func NewTimelineHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *TimelineHandler {
-	return &TimelineHandler{store: s, k8sClient: k8sClient}
+	h := &TimelineHandler{store: s}
+	if k8sClient != nil {
+		h.k8sClient = k8sClient
+	}
+	return h
 }
 
 // SetStellarEventSink wires Stellar's ProcessEvent into the collector loop.
