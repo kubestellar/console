@@ -4,6 +4,9 @@ on:
   issues:
     types: [assigned]
 
+permissions:
+  issues: write
+
 safe-outputs:
   report-failure-as-issue: false
   noop: false
