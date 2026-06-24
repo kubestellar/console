@@ -129,7 +129,7 @@ export function RecentFailures() {
       </div>
 
       {mutationMsg && (
-        <div className="text-[11px] text-muted-foreground px-1 py-0.5">{mutationMsg}</div>
+        <div className="text-xs text-muted-foreground px-1 py-0.5">{mutationMsg}</div>
       )}
 
       <div className="flex-1 min-h-0 overflow-auto">
@@ -154,7 +154,7 @@ export function RecentFailures() {
                 <tr key={`${r.repo}:${r.runId}`} className="border-t border-border/50">
                   <td className="py-1.5 pr-2">
                     <div className="font-medium text-foreground truncate">{r.workflow}</div>
-                    <div className="text-[10px] text-muted-foreground truncate">{r.repo}</div>
+                    <div className="text-xs text-muted-foreground truncate">{r.repo}</div>
                   </td>
                   <td className="py-1.5 pr-2 text-muted-foreground">
                     {r.failedStep ? (

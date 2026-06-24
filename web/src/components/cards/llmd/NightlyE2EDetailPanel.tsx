@@ -370,8 +370,8 @@ export function NightlySummaryPanel({ guides }: { guides: NightlyGuideStatus[] }
         <span className="text-xs font-semibold text-foreground uppercase tracking-wider">{t('cards:llmd.aiSummary')}</span>
       </div>
       <div className="flex-1 space-y-3">
-        <p className="text-[11px] text-muted-foreground leading-relaxed">{para1}</p>
-        {para2 && <p className="text-[11px] text-muted-foreground leading-relaxed">{para2}</p>}
+        <p className="text-xs text-muted-foreground leading-relaxed">{para1}</p>
+        {para2 && <p className="text-xs text-muted-foreground leading-relaxed">{para2}</p>}
       </div>
       <div className="mt-auto pt-3 border-t border-border/30">
         <p className="text-2xs text-muted-foreground text-center">{t('cards:llmd.hoverTestDetails')}</p>
@@ -506,45 +506,45 @@ export function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
             </span>
           </div>
         )}
-        <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
           <span className="text-muted-foreground">{t('cards:llmd.model')}</span>
           <span className={`font-mono text-2xs truncate max-w-[140px] ${hoveredRun ? 'text-foreground' : 'text-foreground'}`} title={displayModel}>{displayModel}</span>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
           <span className="text-muted-foreground">{t('cards:llmd.gpu')}</span>
           <span className={`font-mono text-2xs ${hoveredRun ? 'text-foreground' : 'text-foreground'}`}>
             {displayGpuCount > 0 ? `${displayGpuCount}× ${displayGpuType}` : displayGpuType}
           </span>
         </div>
         {hoveredRun && runDur !== null ? (
-          <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
             <span className="text-muted-foreground">{t('cards:llmd.duration')}</span>
             <span className="text-foreground font-mono">{formatDuration(runDur)}</span>
           </div>
         ) : avgDur !== null ? (
-          <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
             <span className="text-muted-foreground">{t('cards:llmd.avgDuration')}</span>
             <span className="text-foreground font-mono">{formatDuration(avgDur)}</span>
           </div>
         ) : null}
         <div className="h-px bg-border/30 my-0.5" />
         {lastSuccess && (
-          <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
             <span className="text-muted-foreground">{t('cards:llmd.lastPass')}</span>
             <span className="text-green-400 font-mono">{formatTimeAgo(lastSuccess.updatedAt)}</span>
           </div>
         )}
         {lastFailure && (
-          <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
             <span className="text-muted-foreground">{t('cards:llmd.lastFail')}</span>
             <span className="text-red-400 font-mono">{formatTimeAgo(lastFailure.updatedAt)}</span>
           </div>
         )}
-        <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
           <span className="text-muted-foreground">{t('cards:llmd.totalRuns')}</span>
           <span className="text-foreground font-mono">{guide.runs.length}</span>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
           <span className="text-muted-foreground">{t('cards:llmd.trend')}</span>
           <TrendIndicator trend={guide.trend} passRate={guide.passRate} />
         </div>

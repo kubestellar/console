@@ -695,12 +695,12 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         {/* Keyboard hints */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-t border-border/50 bg-secondary/20">
           <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-            <kbd className="px-1.5 py-0.5 rounded border border-border bg-secondary text-[10px] font-mono">Esc</kbd>
+            <kbd className="px-1.5 py-0.5 rounded border border-border bg-secondary text-xs font-mono">Esc</kbd>
             close
           </span>
           {!success && (
             <span className="inline-flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm">
-              <kbd className="px-1.5 py-0.5 rounded border border-purple-500/30 bg-background/80 text-[10px] font-mono">{submitShortcutLabel}</kbd>
+              <kbd className="px-1.5 py-0.5 rounded border border-purple-500/30 bg-background/80 text-xs font-mono">{submitShortcutLabel}</kbd>
               submit
             </span>
           )}

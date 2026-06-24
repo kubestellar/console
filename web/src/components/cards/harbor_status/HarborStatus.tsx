@@ -98,27 +98,27 @@ function VulnBadges({ vuln }: { vuln: HarborVulnSummary }) {
   return (
     <div className="flex flex-wrap gap-1">
       {vuln.critical > 0 && (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/15 text-red-400" title={t('harbor.vulnCritical', 'Critical format vulnerabilities')}>
+        <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-500/15 text-red-400" title={t('harbor.vulnCritical', 'Critical format vulnerabilities')}>
           C:{vuln.critical}
         </span>
       )}
       {vuln.high > 0 && (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-500/15 text-orange-400" title={t('harbor.vulnHigh', 'High format vulnerabilities')}>
+        <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-orange-500/15 text-orange-400" title={t('harbor.vulnHigh', 'High format vulnerabilities')}>
           H:{vuln.high}
         </span>
       )}
       {vuln.medium > 0 && (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-500/15 text-yellow-400" title={t('harbor.vulnMedium', 'Medium vulnerabilities')}>
+        <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-500/15 text-yellow-400" title={t('harbor.vulnMedium', 'Medium vulnerabilities')}>
           M:{vuln.medium}
         </span>
       )}
       {vuln.low > 0 && (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/15 text-blue-400" title={t('harbor.vulnLow', 'Low vulnerabilities')}>
+        <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/15 text-blue-400" title={t('harbor.vulnLow', 'Low vulnerabilities')}>
           L:{vuln.low}
         </span>
       )}
       {vuln.critical === 0 && vuln.high === 0 && vuln.medium === 0 && vuln.low === 0 && (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/15 text-green-400">
+        <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-green-500/15 text-green-400">
           {t('harbor.vulnClean', 'Clean')}
         </span>
       )}
@@ -153,13 +153,13 @@ function ProjectRow({
             <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           )}
           <span className="text-xs font-medium truncate">{project.name}</span>
-          <span className="text-[10px] bg-secondary px-1.5 rounded-sm ml-1">
+          <span className="text-xs bg-secondary px-1.5 rounded-sm ml-1">
             {project.repoCount} {t('harbor.repositoriesLabel', 'repos')}
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <VulnBadges vuln={project.vulnerabilities} />
-          <span className={`text-[10px] flex items-center gap-1 pt-0.5 ${cfg.color}`} title={cfg.label}>
+          <span className={`text-xs flex items-center gap-1 pt-0.5 ${cfg.color}`} title={cfg.label}>
             {cfg.icon}
           </span>
         </div>
@@ -212,7 +212,7 @@ function RepositoryRow({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-y-2 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1" title={t('harbor.artifacts', 'Artifacts')}>
             <Layers className="w-3 h-3" /> {repo.artifactCount}

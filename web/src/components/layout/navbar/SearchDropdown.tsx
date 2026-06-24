@@ -108,7 +108,7 @@ function SearchResultsPanel({
                 {/* Category header */}
                 <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
                   <CategoryIcon className="w-3.5 h-3.5 text-muted-foreground/60" />
-                  <span className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
+                  <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
                     {config.label}
                   </span>
                 </div>

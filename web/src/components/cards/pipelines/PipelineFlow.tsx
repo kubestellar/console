@@ -201,12 +201,12 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
       </svg>
 
       <div ref={triggerRef} className={cn(
-        'relative z-10 px-2 py-1 rounded border text-[11px] font-medium text-center capitalize',
+        'relative z-10 px-2 py-1 rounded border text-xs font-medium text-center capitalize',
         statusBg(run.run.status, run.run.conclusion),
       )}>
         {run.run.event}
         {(run.run.pullRequests?.length ?? 0) > 0 && run.run.pullRequests?.[0] && (
-          <a href={sanitizeUrl(run.run.pullRequests[0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests[0].number}`)} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline mt-0.5 block">
+          <a href={sanitizeUrl(run.run.pullRequests[0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests[0].number}`)} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline mt-0.5 block">
             #{run.run.pullRequests[0].number}
           </a>
         )}
@@ -217,8 +217,8 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
         statusBg(run.run.status, run.run.conclusion),
       )}>
         <div className="text-xs font-medium text-foreground truncate" title={run.run.name}>{run.run.name}</div>
-        <div className="text-[10px] text-muted-foreground truncate">{run.run.repo}</div>
-        <div className="text-[10px] text-muted-foreground truncate">
+        <div className="text-xs text-muted-foreground truncate">{run.run.repo}</div>
+        <div className="text-xs text-muted-foreground truncate">
           {run.run.headBranch}
           {(run.run.pullRequests?.length ?? 0) > 0 && (
             <a href={sanitizeUrl(run.run.pullRequests![0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests![0].number}`)} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{run.run.pullRequests![0].number}</a>
@@ -232,7 +232,7 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
             key={job.id}
             ref={(el) => { jobRefs.current[job.id] = el }}
             className={cn(
-              'px-2 py-1 rounded border text-[11px] truncate flex items-center gap-1',
+              'px-2 py-1 rounded border text-xs truncate flex items-center gap-1',
               statusBg(job.status, job.conclusion),
             )}
             title={`${job.name} — ${job.status}${job.conclusion ? ` (${job.conclusion})` : ''}`}
@@ -256,7 +256,7 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
           </div>
         ))}
         {hiddenJobCount > 0 && (
-          <div className="px-2 py-0.5 text-[10px] text-muted-foreground">+{hiddenJobCount} more jobs</div>
+          <div className="px-2 py-0.5 text-xs text-muted-foreground">+{hiddenJobCount} more jobs</div>
         )}
       </div>
 
@@ -269,7 +269,7 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
               key={`${job.id}:${step.number}`}
               ref={(el) => { stepRefs.current[`${job.id}:${step.number}`] = el }}
               className={cn(
-                'px-2 py-0.5 rounded border text-[10px] truncate',
+                'px-2 py-0.5 rounded border text-xs truncate',
                 statusBg(step.status, step.conclusion),
               )}
               title={`${step.name} — ${step.status}${step.conclusion ? ` (${step.conclusion})` : ''}`}
@@ -279,7 +279,7 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
           ))
           if (hidden > 0) {
             items.push(
-              <div key={`${job.id}:hidden`} className="px-2 py-0 text-[10px] text-muted-foreground">
+              <div key={`${job.id}:hidden`} className="px-2 py-0 text-xs text-muted-foreground">
                 +{hidden} more
               </div>
             )
@@ -308,7 +308,7 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
             disabled={!canMutate || mutating}
             onClick={() => onCancel(run.run.id, run.run.repo)}
             className={cn(
-              'flex items-center gap-1 px-2 py-0.5 rounded text-[11px]',
+              'flex items-center gap-1 px-2 py-0.5 rounded text-xs',
               canMutate
                 ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'
                 : 'text-muted-foreground/50 cursor-not-allowed border border-border',
@@ -430,7 +430,7 @@ export function PipelineFlow() {
       </div>
 
       {mutationMsg && (
-        <div className="text-[11px] text-muted-foreground px-1 py-0.5">{mutationMsg}</div>
+        <div className="text-xs text-muted-foreground px-1 py-0.5">{mutationMsg}</div>
       )}
 
       <div className="flex-1 min-h-0 overflow-auto">

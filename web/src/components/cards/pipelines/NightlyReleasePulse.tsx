@@ -212,7 +212,7 @@ function WorkflowRow({ wf }: { wf: MatrixWorkflow }) {
       <StatusIcon size={14} className={cn('shrink-0', iconColor)} />
       <div className="w-36 shrink-0 min-w-0">
         <div className="text-xs text-foreground font-medium truncate" title={wf.name}>{wf.name}</div>
-        <div className="text-[10px] text-muted-foreground truncate">{shortRepo}</div>
+        <div className="text-xs text-muted-foreground truncate">{shortRepo}</div>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         {dots.map((d, i) => <RunDot key={`${d.date}-${i}`} dot={d} />)}
@@ -396,18 +396,18 @@ export function NightlyReleasePulse() {
 
         <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
           <div className="rounded-lg bg-secondary/30 px-3 py-2">
-            <div className="text-[11px] text-muted-foreground">Streak</div>
+            <div className="text-xs text-muted-foreground">Streak</div>
             <div className={cn('text-sm font-medium mt-0.5',
               streakKind === 'success' && 'text-green-400', streakKind === 'failure' && 'text-red-400')}>
               {streak === 0 ? '—' : `${streak}${streakKind === 'success' ? ' pass' : ' fail'}`}
             </div>
           </div>
           <div className="rounded-lg bg-secondary/30 px-3 py-2">
-            <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Clock size={10} /> Next</div>
+            <div className="text-xs text-muted-foreground flex items-center gap-1"><Clock size={10} /> Next</div>
             <div className="text-sm font-medium mt-0.5 text-foreground">{formatCron(nextCron)}</div>
           </div>
           <div className="rounded-lg bg-secondary/30 px-3 py-2">
-            <div className="text-[11px] text-muted-foreground">Overall</div>
+            <div className="text-xs text-muted-foreground">Overall</div>
             <div className="mt-0.5"><TrendIndicator passRate={overallPassRate} trend={overallTrend} /></div>
           </div>
         </div>
@@ -451,14 +451,14 @@ export function NightlyReleasePulse() {
                   initialPrompt: `Audit all inactive or skipped workflows in ${repoLabel}.\n\nThe following workflows have not run successfully recently or are being skipped:\n${inactiveList}\n\nFor each workflow:\n1. Read the YAML file and determine why it's inactive\n2. Categorize: intentional / broken / obsolete / misconfigured\n3. After reviewing all of them, present a summary table and ask:\n   - "Should I create a PR to clean up the obsolete ones?"\n   - "Should I fix the broken ones?"\n   - "No changes needed"`,
                 })
               }}
-              className="text-[11px] text-muted-foreground hover:text-yellow-400 flex items-center gap-1"
+              className="text-xs text-muted-foreground hover:text-yellow-400 flex items-center gap-1"
             >
               <ClipboardCheck className="w-3 h-3" />
               Audit inactive
             </button>
           )}
           <button type="button" onClick={() => refetch()}
-            className="text-[11px] text-muted-foreground hover:text-foreground">
+            className="text-xs text-muted-foreground hover:text-foreground">
             Refresh
           </button>
         </div>

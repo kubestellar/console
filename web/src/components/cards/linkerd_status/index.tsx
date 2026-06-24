@@ -86,11 +86,11 @@ function DeploymentRow({ deployment }: { deployment: LinkerdMeshedDeployment }) 
             {deployment.namespace}/{deployment.deployment}
           </span>
         </div>
-        <span className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${statusClass}`}>
+        <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${statusClass}`}>
           {deployment.meshedPods}/{deployment.totalPods}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono">
+      <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
         <span className={successRateColorClass(deployment.successRatePct)}>
           {deployment.successRatePct.toFixed(SUCCESS_RATE_DECIMALS)}%
         </span>
@@ -221,7 +221,7 @@ export function LinkerdStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('linkerdStatus.sectionDeployments', 'Meshed deployments')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {t('linkerdStatus.controlPlane', 'control plane')}:{' '}
               <span className="text-foreground">{data.stats.controlPlaneVersion}</span>
             </span>

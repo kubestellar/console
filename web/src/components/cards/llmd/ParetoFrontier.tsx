@@ -566,7 +566,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
                 <button
                   key={hw}
                   onClick={() => toggleHw(hw)}
-                  className={`flex items-center gap-1.5 w-full text-left px-1 py-0.5 rounded text-[11px] hover:bg-secondary/60 transition-opacity ${
+                  className={`flex items-center gap-1.5 w-full text-left px-1 py-0.5 rounded text-xs hover:bg-secondary/60 transition-opacity ${
                     hidden ? 'opacity-25' : ''
                   }`}
                   title={`${hidden ? t('common:common.show') : t('common:common.hide')} ${hw}`}
@@ -634,7 +634,7 @@ function FilterDropdown({
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="bg-secondary border border-border rounded px-2 py-1 text-[11px] text-foreground min-w-[100px]"
+        className="bg-secondary border border-border rounded px-2 py-1 text-xs text-foreground min-w-[100px]"
       >
         {!noAllOption && <option value="all">{t('common:common.all')}</option>}
         {options.map(o => (

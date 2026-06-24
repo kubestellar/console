@@ -193,7 +193,7 @@ export function NodeCard({
         <span className="text-white text-xs font-semibold truncate flex-1">{title}</span>
         <StatusDot status={status} isStopped={isStopped} />
       </div>
-      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{subtitle}</div>
+      <div className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">{subtitle}</div>
       <NodeControls
         isStopped={isStopped}
         isPinned={isPinned}

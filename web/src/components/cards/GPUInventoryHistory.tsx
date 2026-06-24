@@ -650,7 +650,7 @@ export function GPUInventoryHistory() {
                 <button
                   onClick={() => setChartMode('aggregate')}
                   className={cn(
-                    'text-[10px] px-1.5 py-0.5 rounded transition-colors',
+                    'text-xs px-1.5 py-0.5 rounded transition-colors',
                     chartMode === 'aggregate' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
@@ -659,7 +659,7 @@ export function GPUInventoryHistory() {
                 <button
                   onClick={() => setChartMode('by-type')}
                   className={cn(
-                    'text-[10px] px-1.5 py-0.5 rounded transition-colors',
+                    'text-xs px-1.5 py-0.5 rounded transition-colors',
                     chartMode === 'by-type' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >

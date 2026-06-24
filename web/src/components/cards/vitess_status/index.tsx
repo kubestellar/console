@@ -226,7 +226,7 @@ export function VitessStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('vitessStatus.sectionKeyspaces', 'Keyspaces')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {t('vitessStatus.primaries', { count: data.summary.primaryTablets, defaultValue: '{{count}} primaries' })}
             </span>
           </div>
@@ -283,11 +283,11 @@ function KeyspaceRow({
           <span className="text-xs font-medium text-foreground truncate font-mono">
             {keyspace.name}
           </span>
-          <span className="text-[11px] text-muted-foreground truncate">{shardLabel}</span>
+          <span className="text-xs text-muted-foreground truncate">{shardLabel}</span>
         </div>
         <span
           className={cn(
-            'text-[11px] px-1.5 py-0.5 rounded-full shrink-0 flex items-center gap-1',
+            'text-xs px-1.5 py-0.5 rounded-full shrink-0 flex items-center gap-1',
             lagColor(keyspaceLag),
           )}
           title={t('vitessStatus.maxLagTooltip', 'Max replication lag in keyspace')}
@@ -296,7 +296,7 @@ function KeyspaceRow({
           {keyspaceLag}s
         </span>
       </div>
-      <div className="flex items-center gap-1.5 text-[11px]">
+      <div className="flex items-center gap-1.5 text-xs">
         {(typeEntries ?? []).map(type => (
           <span
             key={type}

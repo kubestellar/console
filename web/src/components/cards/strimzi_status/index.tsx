@@ -89,7 +89,7 @@ function brokerColorClass(ready: number, total: number): string {
 function ConsumerGroupChip({ group }: { group: StrimziConsumerGroup }) {
   return (
     <span
-      className={`text-[11px] px-1.5 py-0.5 rounded-full bg-secondary/40 ${lagColorClass(group.lag)}`}
+      className={`text-xs px-1.5 py-0.5 rounded-full bg-secondary/40 ${lagColorClass(group.lag)}`}
       title={`${group.groupId} • ${group.members} members • lag ${group.lag.toLocaleString()}`}
     >
       <span className="font-mono">{group.groupId}</span>
@@ -113,18 +113,18 @@ function ClusterRow({ cluster }: { cluster: StrimziKafkaCluster }) {
           <span className="text-xs font-medium text-foreground truncate font-mono">
             {cluster.name}
           </span>
-          <span className="text-[11px] text-muted-foreground shrink-0">
+          <span className="text-xs text-muted-foreground shrink-0">
             {cluster.namespace}
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${CLUSTER_HEALTH_CLASS[cluster.health]}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${CLUSTER_HEALTH_CLASS[cluster.health]}`}
         >
           {cluster.health}
         </span>
       </div>
 
-      <div className="grid grid-cols-2 grid-cols-2 gap-2 text-[11px]">
+      <div className="grid grid-cols-2 grid-cols-2 gap-2 text-xs">
         <div className="flex flex-col">
           <span className="text-muted-foreground">
             {t('strimziStatus.brokers', 'Brokers')}
@@ -279,7 +279,7 @@ export function StrimziStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('strimziStatus.sectionClusters', 'Kafka clusters')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {t('strimziStatus.operator', 'operator')}:{' '}
               <span className="text-foreground">{data.stats.operatorVersion}</span>
             </span>
@@ -301,7 +301,7 @@ export function StrimziStatus() {
           )}
         </section>
 
-        <section className="flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground pt-1">
+        <section className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1">
           <div className="flex items-center gap-1">
             <Users className="w-3 h-3" />
             <span>

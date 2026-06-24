@@ -173,7 +173,7 @@ function NatsStatusInternal() {
                       {style.icon}
                       <span className="text-xs font-medium truncate">{server.name}</span>
                     </div>
-                    <span className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${style.badge}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${style.badge}`}>
                       {server.state}
                     </span>
                   </div>
@@ -210,7 +210,7 @@ function NatsStatusInternal() {
                         {style.icon}
                         <span className="text-xs font-medium truncate">{stream.name}</span>
                       </div>
-                      <span className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${style.badge}`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${style.badge}`}>
                         {stream.state}
                       </span>
                     </div>

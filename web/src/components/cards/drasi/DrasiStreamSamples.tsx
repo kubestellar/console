@@ -206,7 +206,7 @@ export function StreamSampleDrawer({ endpoint, isDemoData, onClose }: StreamSamp
       </div>
 
       {isDemoData && (
-        <div className="px-3 py-1.5 bg-yellow-500/10 border-b border-yellow-500/30 text-[10px] text-yellow-200">
+        <div className="px-3 py-1.5 bg-yellow-500/10 border-b border-yellow-500/30 text-xs text-yellow-200">
           {t('drasi.streamDemoHint')}
         </div>
       )}
@@ -217,7 +217,7 @@ export function StreamSampleDrawer({ endpoint, isDemoData, onClose }: StreamSamp
             key={s.lang}
             type="button"
             onClick={() => setTab(s.lang)}
-            className={`shrink-0 px-2 py-1 text-[10px] rounded uppercase tracking-wider ${
+            className={`shrink-0 px-2 py-1 text-xs rounded uppercase tracking-wider ${
               tab === s.lang
                 ? 'bg-cyan-500/20 border border-cyan-500/50 text-cyan-200'
                 : 'border border-transparent text-slate-400 hover:text-cyan-300'
@@ -229,11 +229,11 @@ export function StreamSampleDrawer({ endpoint, isDemoData, onClose }: StreamSamp
       </div>
 
       <div className="px-3 py-1.5 flex flex-wrap items-center justify-between gap-y-2 border-b border-slate-800/60">
-        <code className="text-[10px] text-muted-foreground font-mono truncate flex-1 mr-2">{endpoint}</code>
+        <code className="text-xs text-muted-foreground font-mono truncate flex-1 mr-2">{endpoint}</code>
         <button
           type="button"
           onClick={handleCopy}
-          className="shrink-0 px-2 py-0.5 text-[10px] rounded bg-slate-800 hover:bg-slate-700 text-muted-foreground border border-slate-700 flex items-center gap-1"
+          className="shrink-0 px-2 py-0.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-muted-foreground border border-slate-700 flex items-center gap-1"
           aria-label={t('drasi.copySnippet')}
         >
           {copied ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}

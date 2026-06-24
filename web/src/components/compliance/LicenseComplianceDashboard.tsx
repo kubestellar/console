@@ -246,14 +246,14 @@ export default function LicenseComplianceDashboard() {
                       <tr key={i} className="border-b border-border/50 hover:bg-secondary/50">
                         <td className="p-3">
                           <div className="text-foreground font-mono text-xs">{pkg.name}</div>
-                          <div className="text-muted-foreground text-[10px]">v{pkg.version}</div>
+                          <div className="text-muted-foreground text-xs">v{pkg.version}</div>
                         </td>
                         <td className="p-3">
                           <div className="flex items-center gap-1.5">
                             <BookOpen className="w-3.5 h-3.5 text-muted-foreground" />
                             <span className="text-foreground text-xs">{pkg.license}</span>
                           </div>
-                          <div className="text-[10px] text-muted-foreground">{pkg.spdx_id}</div>
+                          <div className="text-xs text-muted-foreground">{pkg.spdx_id}</div>
                         </td>
                         <td className="p-3">
                           <div className="text-foreground">{pkg.workload}</div>
@@ -297,7 +297,7 @@ export default function LicenseComplianceDashboard() {
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {cat.examples.map((ex, j) => (
-                    <span key={j} className="px-1.5 py-0.5 bg-secondary/50 rounded text-[10px] font-mono">
+                    <span key={j} className="px-1.5 py-0.5 bg-secondary/50 rounded text-xs font-mono">
                       {ex}
                     </span>
                   ))}

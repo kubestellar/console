@@ -220,7 +220,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
   return (
     <div className="space-y-1.5 p-1">
       {/* Context description */}
-      <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5 mb-1">
+      <div className="flex items-start gap-1.5 text-xs text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5 mb-1">
         <Info className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground/60" />
         <span>{t('complianceDrift.driftDescription')}</span>
       </div>
@@ -263,7 +263,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
                 <span className="text-xs font-mono truncate">{d.cluster}</span>
                 <StatusBadge color={color} size="xs">{d.tool}</StatusBadge>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {d.tool === 'Kubescape'
                   ? `Score ${d.value}% vs fleet avg ${d.baseline}%`
                   : `${d.value} vs fleet avg ${d.baseline}`

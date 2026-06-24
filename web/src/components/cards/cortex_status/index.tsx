@@ -131,16 +131,16 @@ function ComponentRow({
         >
           {componentLabel(pod.name, t)}
         </span>
-        <span className="text-[11px] text-muted-foreground shrink-0 truncate">
+        <span className="text-xs text-muted-foreground shrink-0 truncate">
           {pod.namespace}
         </span>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[11px] font-mono text-muted-foreground">
+        <span className="text-xs font-mono text-muted-foreground">
           {pod.replicasReady}/{pod.replicasDesired}
         </span>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full ${statusClass}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full ${statusClass}`}
         >
           {pod.status}
         </span>
@@ -278,7 +278,7 @@ export function CortexStatus() {
         <div className="rounded-md bg-secondary/30 px-3 py-2 flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-amber-400 shrink-0" />
           <div className="min-w-0">
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">
               {t('cortexStatus.queryRate', 'Queries/s')}
             </div>
             <div className="text-sm font-semibold text-foreground">
@@ -289,7 +289,7 @@ export function CortexStatus() {
         <div className="rounded-md bg-secondary/30 px-3 py-2 flex items-center gap-2">
           <Layers className="w-4 h-4 text-rose-400 shrink-0" />
           <div className="min-w-0">
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">
               {t('cortexStatus.componentsHealthy', 'Components healthy')}
             </div>
             <div className="text-sm font-semibold text-foreground">

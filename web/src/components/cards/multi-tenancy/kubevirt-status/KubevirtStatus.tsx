@@ -269,16 +269,16 @@ export function KubevirtStatus() {
                   <span className="text-foreground truncate" title={vm.name}>
                     {vm.name}
                   </span>
-                  <span className="text-muted-foreground/70 text-[10px] truncate" title={`${vm.namespace} @ ${vm.cluster}`}>
+                  <span className="text-muted-foreground/70 text-xs truncate" title={`${vm.namespace} @ ${vm.cluster}`}>
                     {vm.namespace} @ {vm.cluster}
                   </span>
                 </div>
                 {vm.cpu && vm.memory && (
-                  <span className="text-muted-foreground/70 text-[10px] shrink-0">
+                  <span className="text-muted-foreground/70 text-xs shrink-0">
                     {vm.cpu} {t('kubevirtStatus.cpuCores')} / {vm.memory}
                   </span>
                 )}
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${vmStateColorClass(vm.state)}`}>
+                <span className={`px-1.5 py-0.5 rounded text-xs font-medium shrink-0 ${vmStateColorClass(vm.state)}`}>
                   {vm.state}
                 </span>
               </div>

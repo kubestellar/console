@@ -272,7 +272,7 @@ export function DeploymentRiskScore() {
                   style={{ width: `${row.score}%` }}
                 />
               </div>
-              <div className="mt-0.5 text-[10px] text-muted-foreground">
+              <div className="mt-0.5 text-xs text-muted-foreground">
                 {t('deploymentRiskScore.breakdown', {
                   argo: row.argoApps,
                   violations: row.violations,
@@ -288,7 +288,7 @@ export function DeploymentRiskScore() {
       </div>
 
       {hidden > 0 && (
-        <p className="text-[10px] text-muted-foreground italic">
+        <p className="text-xs text-muted-foreground italic">
           {t('deploymentRiskScore.more', { count: hidden })}
         </p>
       )}
