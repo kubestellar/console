@@ -452,10 +452,10 @@ Please:
 
             if (msg.id === requestId && msg.payload?.output) {
               output = msg.payload.output
+              clearTimeout(timeout)
+              ws.close()
+              resolve(output)
             }
-            clearTimeout(timeout)
-            ws.close()
-            resolve(output)
           }
           ws.onerror = () => {
             clearTimeout(timeout)

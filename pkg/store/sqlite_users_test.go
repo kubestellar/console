@@ -251,6 +251,7 @@ func TestSQLiteStore_UpdateLastLogin(t *testing.T) {
 
 	got, err := s.GetUser(ctx, user.ID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	require.NotNil(t, got.LastLogin)
 	assert.WithinDuration(t, time.Now(), *got.LastLogin, 5*time.Second)
 }

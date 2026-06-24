@@ -74,7 +74,9 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 		return existing, nil
 	}
 	m.clients[contextName] = client
-	m.configs[contextName] = config
+	if config != nil {
+		m.configs[contextName] = config
+	}
 	return client, nil
 }
 

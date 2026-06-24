@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { TEST_STRINGS } from '../../test-strings'
 
 // Mock deps used by the components
 vi.mock('../../../components/cards/cardRegistry', () => ({
@@ -95,8 +96,8 @@ describe('DashboardHeader', () => {
   })
 
   it('renders extra controls when provided', () => {
-    render(<DashboardHeader title="T" icon="Server" extra={<button>Custom</button>} />)
-    expect(screen.getByText('Custom')).toBeDefined()
+    render(<DashboardHeader title="T" icon="Server" extra={<button>{TEST_STRINGS.dashboard.custom}</button>} />)
+    expect(screen.getByText(TEST_STRINGS.dashboard.custom)).toBeDefined()
   })
 })
 

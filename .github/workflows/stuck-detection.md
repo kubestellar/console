@@ -10,6 +10,10 @@ on:
         required: false
         default: "false"
 
+permissions:
+  issues: write
+  pull-requests: write
+
 safe-outputs:
   report-failure-as-issue: false
   noop: false
