@@ -1,0 +1,80 @@
+{
+  "version": "kc-mission-v1",
+  "name": "antrea-5706-flowexporter-need-uniform-handling-for-external-to-pod-traffic",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "antrea: [FlowExporter] Need uniform handling for \"External-to-Pod\" traffic",
+    "description": "[FlowExporter] Need uniform handling for \"External-to-Pod\" traffic. Community-reported issue.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify antrea troubleshoot symptoms",
+        "description": "Check for the issue in your antrea deployment:\n```bash\nkubectl get pods -n antrea -l app.kubernetes.io/name=antrea\nkubectl logs -l app.kubernetes.io/name=antrea -n antrea --tail=100 | grep -i error\n```\nLook for errors or warnings in the logs that may indicate the issue."
+      },
+      {
+        "title": "Review antrea configuration",
+        "description": "Inspect the relevant antrea configuration:\n```bash\nkubectl get all -n antrea -l app.kubernetes.io/name=antrea\nkubectl get configmap -n antrea -l app.kubernetes.io/part-of=antrea\n```\nThe FlowExporter / FlowAggregator currently don't support \"External-to-Pod\" traffic, i.e. traffic coming from outside the cluster and targeting a NodePort or LoadBalancer Service."
+      },
+      {
+        "title": "Apply the fix for [FlowExporter] Need uniform handling for \"External-to-Pod\"…",
+        "description": "Apply the configuration change to resolve the issue:\n```yaml\nW1114 21:35:08.430174       1 exporter.go:615] Source IP: 192.168.77.1 doesn't exist in PodCIDRs\n```"
+      },
+      {
+        "title": "Confirm [FlowExporter] Need uniform handling for… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=antrea -n antrea --tail=50 --since=5m\nkubectl get events -n antrea --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that the issue symptoms are gone."
+      }
+    ],
+    "resolution": {
+      "summary": "See the source issue for the community-verified solution: https://github.com/antrea-io/antrea/issues/5706",
+      "codeSnippets": [
+        "W1114 21:35:08.430174       1 exporter.go:615] Source IP: 192.168.77.1 doesn't exist in PodCIDRs",
+        "I1114 21:19:37.036002       1 connections.go:128] \"Could not retrieve the Service info from antrea-agent-proxier\" serviceStr=\"192.0.2.1:31749/TCP\"\nW1114 21:19:37.141838       1 exporter.go:615] Source IP: 192.168.77.1 doesn't exist in PodCIDRs",
+        "1700000109,1700000114,10.10.1.6,10.10.1.5,37750,80,TCP,toolbox-pr96d,default,k8s-node-worker-1,nginx-hvhjs,default,k8s-node-worker-1,0.0.0.0,0,,,,,,,,,,,,,\n1700000109,1700000114,10.10.1.6,192.168.77.101,37750,30415,TCP,toolbox-pr96d,default,k8s-node-worker-1,antrea-agent-xwf6w,kube-system,k8s-node-worker-1,0.0.0.0,0,,,,,,,,,,,,,"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "antrea",
+      "sandbox",
+      "networking",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "antrea"
+    ],
+    "targetResourceKinds": [
+      "Pod",
+      "Node",
+      "Service"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "sandbox",
+    "sourceUrls": {
+      "issue": "https://github.com/antrea-io/antrea/issues/5706",
+      "repo": "https://github.com/antrea-io/antrea"
+    },
+    "reactions": 4,
+    "comments": 11,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with antrea installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-24T07:21:33.005Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
