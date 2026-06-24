@@ -201,6 +201,10 @@ func TestSSECacheEvictorRemovesExpiredEntries(t *testing.T) {
 	_, freshExists := sseCache["fresh-key"]
 	sseCacheMu.RUnlock()
 
+	// Verify the evictor removed the expired entry
+	assert.False(t, expiredExists, "expired entry should have been removed by evictor")
+	// Verify the evictor kept the fresh entry
+	assert.True(t, freshExists, "fresh entry should still exist")
 	_ = oldInterval
 }
 
