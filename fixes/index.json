@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-23T18:39:43.952Z",
-  "count": 1613,
+  "generatedAt": "2026-06-24T07:44:27.239Z",
+  "count": 1615,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -689,6 +689,48 @@
       "type": "feature",
       "installMethods": [],
       "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/antrea/antrea-5706-flowexporter-need-uniform-handling-for-external-to-pod-traffic.json",
+      "title": "antrea: [FlowExporter] Need uniform handling for \"External-to-Pod\" traffic",
+      "description": "[FlowExporter] Need uniform handling for \"External-to-Pod\" traffic. Community-reported issue.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "antrea",
+        "sandbox",
+        "networking",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "antrea"
+      ],
+      "targetResourceKinds": [
+        "Pod",
+        "Node",
+        "Service"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "sandbox",
       "qualityScore": 100,
       "qualityPass": true,
       "qualityBreakdown": {
@@ -57797,6 +57839,46 @@
         "troubleshoot"
       ],
       "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "community",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/qdrant/qdrant-3321-allow-qdrant-to-run-on-read-only-fs.json",
+      "title": "qdrant: Allow Qdrant to run on read-only FS",
+      "description": "Allow Qdrant to run on read-only FS. Community-requested feature.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "qdrant",
+        "community",
+        "vector-db",
+        "feature"
+      ],
+      "cncfProjects": [
+        "qdrant"
+      ],
+      "targetResourceKinds": [
+        "Deployment"
+      ],
+      "difficulty": "beginner",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
       "installMethods": [],
       "maturity": "community",
       "qualityScore": 100,
