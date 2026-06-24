@@ -23,7 +23,7 @@
  */
 
 import { readFileSync, writeFileSync } from 'fs'
-import { execSync, spawn } from 'child_process'
+import { execSync, spawnSync } from 'child_process'
 
 const LLM_ENDPOINT = process.env.LLM_ENDPOINT || 'https://models.inference.ai.azure.com/chat/completions'
 const LLM_MODEL = process.env.LLM_MODEL || 'gpt-4o-mini'
@@ -53,8 +53,8 @@ const ALLOWED_BASE_COMMANDS = new Set([
  * Validates that every pipeline segment in cmd starts with an allowed binary.
  * Returns { safe: true } or { safe: false, reason: string }.
  *
- * Prevents command-line injection when LLM-provided commands are executed via
- * child_process.execSync (CWE-078, CWE-088).
+ * Prevents command-line injection when LLM-provided commands are executed
+ * without shell interpolation (CWE-078, CWE-088).
  */
 function validateCommand(cmd) {
   // Block subshell expansion patterns
@@ -80,8 +80,13 @@ function validateCommand(cmd) {
     return { safe: false, reason: 'find/xargs -exec is not allowed (arbitrary command execution risk)' }
   }
 
-  // Split on all shell delimiters to check each pipeline segment individually
-  const segments = cmd.split(/\s*(?:;|&&|\|\||\|(?!\|)|\(|\))\s*/).filter(Boolean)
+  // Block pipes and redirections (require shell, cannot execute safely without shell)
+  if (/[|><&]/.test(cmd)) {
+    return { safe: false, reason: 'Pipes and redirections (|, >, <, &) are not allowed' }
+  }
+
+  // Split on shell delimiters to check each segment individually
+  const segments = cmd.split(/\s*(?:;|&&|\|\||\(|\))\s*/).filter(Boolean)
   for (const seg of segments) {
     const trimmed = seg.trim()
     if (!trimmed) continue
@@ -93,6 +98,43 @@ function validateCommand(cmd) {
     }
   }
   return { safe: true }
+}
+
+/**
+ * Parses a validated command string into [binary, ...args].
+ * Handles simple quoting (single and double quotes).
+ */
+function parseCommand(cmd) {
+  const args = []
+  let current = ''
+  let inQuote = null
+  
+  for (let i = 0; i < cmd.length; i++) {
+    const char = cmd[i]
+    
+    if (inQuote) {
+      if (char === inQuote) {
+        inQuote = null
+      } else {
+        current += char
+      }
+    } else if (char === '"' || char === "'") {
+      inQuote = char
+    } else if (char === ' ' || char === '\t') {
+      if (current) {
+        args.push(current)
+        current = ''
+      }
+    } else {
+      current += char
+    }
+  }
+  
+  if (current) {
+    args.push(current)
+  }
+  
+  return args
 }
 
 function execCommand(cmd, timeoutMs = STEP_TIMEOUT_MS) {
@@ -107,19 +149,53 @@ function execCommand(cmd, timeoutMs = STEP_TIMEOUT_MS) {
       error: `Security: ${check.reason}`,
     }
   }
+  
   try {
-    const output = execSync(cmd, {
+    // Parse command into [binary, ...args] and execute without shell
+    const args = parseCommand(cmd)
+    if (args.length === 0) {
+      return {
+        success: false,
+        output: '[ERROR] Empty command',
+        exitCode: 1,
+        error: 'Empty command after parsing',
+      }
+    }
+    
+    const [binary, ...cmdArgs] = args
+    const result = spawnSync(binary, cmdArgs, {
       encoding: 'utf-8',
       timeout: timeoutMs,
-      stdio: ['pipe', 'pipe', 'pipe'],
+      shell: false,
       env: { ...process.env, TERM: 'dumb' },
     })
-    return { success: true, output: output.trim(), exitCode: 0 }
+    
+    if (result.error) {
+      return {
+        success: false,
+        output: result.error.message,
+        exitCode: 1,
+        error: result.error.message,
+      }
+    }
+    
+    const output = (result.stdout || '') + (result.stderr || '')
+    
+    if (result.status === 0) {
+      return { success: true, output: output.trim(), exitCode: 0 }
+    } else {
+      return {
+        success: false,
+        output: output.trim(),
+        exitCode: result.status || 1,
+        error: `Command exited with code ${result.status}`,
+      }
+    }
   } catch (err) {
     return {
       success: false,
-      output: (err.stdout || '') + '\n' + (err.stderr || ''),
-      exitCode: err.status || 1,
+      output: err.message,
+      exitCode: 1,
       error: err.message,
     }
   }
