@@ -9,6 +9,11 @@ on:
         description: Issue number to work on
         required: true
 
+permissions:
+  issues: write
+  pull-requests: write
+  contents: write
+
 safe-outputs:
   report-failure-as-issue: false
   noop: false

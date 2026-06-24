@@ -62,7 +62,9 @@ on:
         description: Force check all items regardless of age
         required: false
 
-permissions: {}
+permissions:
+  issues: write
+  pull-requests: write
 
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
