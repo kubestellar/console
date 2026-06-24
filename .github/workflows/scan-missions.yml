@@ -15,7 +15,8 @@ on:
     - cron: '0 6 * * 1'  # Weekly Monday 6:00am UTC
   workflow_dispatch:
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 
 jobs:
   scan:

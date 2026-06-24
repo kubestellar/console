@@ -15,7 +15,8 @@ on:
     - cron: '30 5 * * 1'  # Weekly Monday 5:30am UTC
   workflow_dispatch:
 
-permissions: read-all  # default read; no writes needed
+permissions:
+  contents: read
 
 jobs:
   validate:

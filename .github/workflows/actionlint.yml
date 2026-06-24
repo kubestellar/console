@@ -5,7 +5,8 @@ on:
     paths:
       - '.github/workflows/**'
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   actionlint:
