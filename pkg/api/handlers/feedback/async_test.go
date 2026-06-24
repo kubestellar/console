@@ -73,9 +73,11 @@ func TestRunAsyncGitHubOp_MultipleOperations(t *testing.T) {
 	}
 
 	// Wait for all operations to complete
+	count := 0
 	for i := 0; i < numOps; i++ {
 		<-completed
+		count++
 	}
 
-	assert.Equal(t, numOps, len(completed), "all operations should complete")
+	assert.Equal(t, numOps, count, "all operations should complete")
 }

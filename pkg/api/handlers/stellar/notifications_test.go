@@ -194,7 +194,7 @@ func TestMarkNotificationRead_Success(t *testing.T) {
 func TestMarkNotificationRead_MissingID(t *testing.T) {
 	app, _, _ := newNotificationTestApp(t)
 
-	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/ /read", http.NoBody)
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/%20/read", http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
@@ -585,11 +585,13 @@ func TestUpdateNotificationState_WrongUser(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{
 		ID:          user1,
+		GitHubID:    "gh-user1",
 		GitHubLogin: "user1",
 		Role:        models.UserRoleEditor,
 	}))
 	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{
 		ID:          user2,
+		GitHubID:    "gh-user2",
 		GitHubLogin: "user2",
 		Role:        models.UserRoleEditor,
 	}))
