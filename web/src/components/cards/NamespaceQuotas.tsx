@@ -12,8 +12,7 @@ import {
 import { useCachedNamespaces } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
 import { StatusBadge } from '../ui/StatusBadge'
-import { useCardLoadingState } from './CardDataContext'
-import { useDemoMode } from '../../hooks/useDemoMode'
+import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { CardControlsRow } from '../../lib/cards/CardComponents'
 import { useCardData, type SortDirection } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
@@ -37,7 +36,7 @@ import {
 
 export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { isDemoMode } = useDemoMode()
+  const { showDemoBadge } = useCardDemoState({ requires: 'agent' })
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || 'all')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || 'all')
@@ -74,7 +73,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     isLoading: isInitialLoading || isFetchingData,
     isRefreshing: clustersRefreshing || namespacesRefreshing,
     hasAnyData: allClusters.length > 0 || resourceQuotas.length > 0 || limitRanges.length > 0,
-    isDemoData: isDemoMode || isDemoFallback,
+    isDemoData: showDemoBadge || isDemoFallback,
     isFailed: clustersFailed,
     consecutiveFailures: clustersFailures,
   })
