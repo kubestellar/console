@@ -175,6 +175,10 @@ func TestGetDeployStatus(t *testing.T) {
 // MultiClusterClient.DeleteWorkload.
 
 func TestClusterGroupsCRUD(t *testing.T) {
+	clusterGroupsMu.Lock()
+	clusterGroups = make(map[string]ClusterGroup)
+	clusterGroupsMu.Unlock()
+
 	env := setupTestEnv(t)
 	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 

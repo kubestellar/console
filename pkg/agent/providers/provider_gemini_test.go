@@ -12,6 +12,9 @@ import (
 )
 
 func TestGeminiProvider_Chat(t *testing.T) {
+	AllowLoopbackForTests = true
+	t.Cleanup(func() { AllowLoopbackForTests = false })
+
 	// 1. Mock Gemini server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Send mock response
@@ -88,6 +91,9 @@ func TestGeminiProvider_Basics(t *testing.T) {
 }
 
 func TestGeminiProvider_StreamChat(t *testing.T) {
+	AllowLoopbackForTests = true
+	t.Cleanup(func() { AllowLoopbackForTests = false })
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprintf(w, "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"Hello \"}]}}]}\n\n")

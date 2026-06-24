@@ -16,6 +16,15 @@ type MockStore struct {
 	mock.Mock
 }
 
+func (m *MockStore) hasExpectation(method string) bool {
+	for _, call := range m.ExpectedCalls {
+		if call.Method == method {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *MockStore) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
@@ -25,6 +34,9 @@ func (m *MockStore) GetUser(ctx context.Context, id uuid.UUID) (*models.User, er
 }
 
 func (m *MockStore) GetUserByGitHubID(ctx context.Context, githubID string) (*models.User, error) {
+	if !m.hasExpectation("GetUserByGitHubID") {
+		return nil, nil
+	}
 	args := m.Called(githubID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -41,6 +53,9 @@ func (m *MockStore) GetUserByGitHubLogin(ctx context.Context, login string) (*mo
 }
 
 func (m *MockStore) CreateUser(ctx context.Context, user *models.User) error {
+	if !m.hasExpectation("CreateUser") {
+		return nil
+	}
 	args := m.Called(user)
 	return args.Error(0)
 }
@@ -51,6 +66,9 @@ func (m *MockStore) UpdateUser(ctx context.Context, user *models.User) error {
 }
 
 func (m *MockStore) UpdateLastLogin(ctx context.Context, userID uuid.UUID) error {
+	if !m.hasExpectation("UpdateLastLogin") {
+		return nil
+	}
 	args := m.Called(userID)
 	return args.Error(0)
 }
@@ -513,6 +531,12 @@ func (m *MockStore) AddUserTokenDelta(ctx context.Context, userID string, catego
 // OAuth credentials — GitHub App Manifest one-click flow.
 func (m *MockStore) SaveOAuthCredentials(_ context.Context, _, _ string) error { return nil }
 func (m *MockStore) GetOAuthCredentials(_ context.Context) (string, string, error) {
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "GetOAuthCredentials" {
+			args := m.Called()
+			return args.String(0), args.String(1), args.Error(2)
+		}
+	}
 	return "", "", nil
 }
 
