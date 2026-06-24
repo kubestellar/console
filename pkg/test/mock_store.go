@@ -531,9 +531,11 @@ func (m *MockStore) AddUserTokenDelta(ctx context.Context, userID string, catego
 // OAuth credentials — GitHub App Manifest one-click flow.
 func (m *MockStore) SaveOAuthCredentials(_ context.Context, _, _ string) error { return nil }
 func (m *MockStore) GetOAuthCredentials(_ context.Context) (string, string, error) {
-	if len(m.ExpectedCalls) > 0 {
-		args := m.Called()
-		return args.String(0), args.String(1), args.Error(2)
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "GetOAuthCredentials" {
+			args := m.Called()
+			return args.String(0), args.String(1), args.Error(2)
+		}
 	}
 	return "", "", nil
 }
