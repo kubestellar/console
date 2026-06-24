@@ -18,7 +18,7 @@ const meta = {
     },
     variant: {
       control: 'select',
-      options: ['default', 'outline-solid', 'solid'],
+      options: ['default', 'outline', 'solid'],
     },
     rounded: {
       control: 'select',
