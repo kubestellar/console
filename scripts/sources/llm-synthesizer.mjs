@@ -10,6 +10,8 @@
  *   - LLM_TOKEN/GITHUB_TOKEN → models.github.ai (OpenAI models only)
  */
 
+import sanitizeHtml from 'sanitize-html'
+
 // --- Configuration ---
 const COPILOT_ENDPOINT = 'https://api.enterprise.githubcopilot.com/chat/completions'
 const COPILOT_MODEL = process.env.COPILOT_MODEL || 'claude-opus-4.6'
@@ -337,13 +339,22 @@ function buildPrompt(params) {
 
 function cleanInput(text) {
   if (!text) return ''
-  return text
+  
+  // First pass: remove specific unwanted sections
+  let result = text
     .replace(/## \[?Codecov[\s\S]*?(?=\n## |\n---|\Z)/gi, '')
     .replace(/\|[^|]*coverage[^|]*\|[\s\S]*?\n\n/gi, '')
     .replace(/!\[[^\]]*\]\([^)]+\)/g, '[image removed]')
-    .replace(/<!--[\s\S]*?--!?>/g, '') // Remove all HTML comments (standard --> and variant --!>)
-    .replace(/<!-->/g, '')              // Remove malformed <!--> opener
-    .replace(/--!?>/g, '')              // Remove any orphaned --> or --!> closers
+
+  // Use sanitize-html to remove all HTML tags and comments (satisfies CodeQL taint tracking)
+  result = sanitizeHtml(result, {
+    allowedTags: [],
+    allowedAttributes: {},
+    allowedIframeHostnames: []
+  })
+
+  // Final cleanup
+  return result
     .replace(/#{1,3}\s*(?:What this PR does|Release note|Changelog|Special notes)[\s\S]*?(?=\n#{1,3} |\n---|\Z)/gi, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
@@ -351,7 +362,7 @@ function cleanInput(text) {
 
 function isGarbageSnippet(snippet) {
   const lower = snippet.toLowerCase()
-  if (lower.includes('codecov') || lower.includes('coverage δ') || lower.includes('impacted files')) return true
+  if (lower.includes('codecov') || lower.includes('coverage \u03b4') || lower.includes('impacted files')) return true
   if (snippet.startsWith('diff --git') || /^[+-]{3} [ab]\//.test(snippet)) return true
   if (lower.includes('invalid pr title') || lower.includes('has been automatically marked as stale')) return true
   if ((snippet.match(/!\[.*?\]\(https?:\/\//g) || []).length > 2) return true

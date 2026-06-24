@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "js-yaml": "^5.0.0",
+    "sanitize-html": "^2.13.1",
     "yaml": "^2.8.3"
   },
   "devDependencies": {
