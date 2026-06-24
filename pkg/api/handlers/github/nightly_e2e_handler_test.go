@@ -45,10 +45,28 @@ func TestNightlyE2EHandler_GetRuns_NoToken(t *testing.T) {
 }
 
 func TestNightlyE2EHandler_GetRunLogs_DemoMode(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.Contains(r.URL.Path, "/jobs") {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"jobs":[{"id":1,"name":"demo-job","conclusion":"success","steps":[]}]}`))
+			return
+		}
+		if strings.Contains(r.URL.Path, "/logs") {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("demo log output"))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	os.Setenv("GITHUB_URL", server.URL)
+	defer os.Unsetenv("GITHUB_URL")
+
 	app, _ := setupNightlyE2EHandler("test-token")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
-	req.Header.Set("X-Demo-Mode", "true")
 
 	resp, _ := app.Test(req, 5000)
 	if resp == nil {

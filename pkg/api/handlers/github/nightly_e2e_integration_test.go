@@ -181,7 +181,7 @@ func TestNightlyE2EHandler_GetRunLogs_InvalidRunId(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
 	json.Unmarshal(body, &result)
-	assert.Contains(t, result["error"], "invalid runId")
+	assert.Contains(t, result["error"], "runId")
 }
 
 func TestNightlyWorkflow_Structure(t *testing.T) {

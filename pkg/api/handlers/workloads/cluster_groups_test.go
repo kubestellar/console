@@ -140,7 +140,7 @@ func TestDeletePersistedClusterGroup_Success(t *testing.T) {
 	mockStore := env.Store.(*test.MockStore)
 
 	mockStore.ExpectedCalls = nil
-	mockStore.On("DeleteClusterGroup", mock.Anything, "del-group").Return(nil).Once()
+	mockStore.On("DeleteClusterGroup", "del-group").Return(nil).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
 	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
@@ -159,7 +159,7 @@ func TestDeletePersistedClusterGroup_StoreError(t *testing.T) {
 	mockStore := env.Store.(*test.MockStore)
 
 	mockStore.ExpectedCalls = nil
-	mockStore.On("DeleteClusterGroup", mock.Anything, "err-group").Return(assert.AnError).Once()
+	mockStore.On("DeleteClusterGroup", "err-group").Return(assert.AnError).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
 	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
