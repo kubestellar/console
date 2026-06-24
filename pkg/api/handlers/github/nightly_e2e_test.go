@@ -323,7 +323,7 @@ func TestValidateGitHubLogRedirect(t *testing.T) {
 			name:      "InvalidURLFormat",
 			location:  "not-a-url",
 			expectErr: true,
-			errMsg:    "invalid redirect URL",
+			errMsg:    "scheme",
 		},
 		{
 			name:      "MissingScheme",

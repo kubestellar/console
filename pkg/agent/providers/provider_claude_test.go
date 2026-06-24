@@ -12,6 +12,9 @@ import (
 )
 
 func TestClaudeProvider_Chat(t *testing.T) {
+	AllowLoopbackForTests = true
+	t.Cleanup(func() { AllowLoopbackForTests = false })
+
 	// 1. Mock Claude server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Send mock response
@@ -74,6 +77,9 @@ func TestClaudeProvider_Basics(t *testing.T) {
 }
 
 func TestClaudeProvider_StreamChat(t *testing.T) {
+	AllowLoopbackForTests = true
+	t.Cleanup(func() { AllowLoopbackForTests = false })
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprintf(w, "data: {\"type\": \"message_start\", \"message\": {\"usage\": {\"input_tokens\": 10}}}\n\n")
