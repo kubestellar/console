@@ -333,7 +333,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         paginatedQuotas={paginatedQuotas as QuotaUsage[]}
         paginatedLimits={paginatedLimits as LimitRangeItem[]}
         uniqueQuotas={uniqueQuotas}
-        isDemoData={isDemoMode || isDemoFallback}
+        isDemoData={showDemoBadge || isDemoFallback}
         isFetchingData={isFetchingData}
         onEditQuota={openEditModal}
         onDeleteQuota={setDeleteConfirm}

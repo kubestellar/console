@@ -122,7 +122,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
             </span>
           )}
         </div>
-        {!demoMode && (
+        {!shouldUseDemoData && (
           <button
             onClick={openCreateForm}
             className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
