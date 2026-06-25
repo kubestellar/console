@@ -12,7 +12,7 @@
 
 import { useEffect, useLayoutEffect, useCallback, useRef, useState, Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
-import { useModalFocusTrap } from '../../lib/modals/useModalNavigation'
+import { useModalFocusTrap, useModalState } from '../../lib/modals/useModalNavigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
@@ -246,7 +246,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
     [handleClose]
   )
 
-  const [approvalModalOpen, setApprovalModalOpen] = useState(false)
+  const approvalModal = useModalState()
 
   useEffect(() => {
     if (!open || state.phase !== 'blueprint') {
@@ -701,7 +701,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => setApprovalModalOpen(true)}
+                        onClick={() => approvalModal.open()}
                         icon={<GitPullRequestArrow className="w-3.5 h-3.5" />}
                         title="Create a GitHub issue with the deployment plan for team approval"
                       >
@@ -758,8 +758,8 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
     </AnimatePresence>
 
     <RequestApprovalModal
-      isOpen={approvalModalOpen}
-      onClose={() => setApprovalModalOpen(false)}
+      isOpen={approvalModal.isOpen}
+      onClose={approvalModal.close}
       state={state}
       installedProjects={mc.installedProjects}
     />
