@@ -21,6 +21,7 @@ jobs:
   cleanup-screenshots:
     permissions:
       contents: write
+      # issues: write required to update issue comment URLs during cleanup
       issues: write
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest

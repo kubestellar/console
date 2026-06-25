@@ -20,6 +20,7 @@ jobs:
   process-screenshot:
     permissions:
       contents: write
+      # issues: write required to update issue comment with rendered screenshot
       issues: write
     # Only run on issue comments (not PR comments) with our marker
     # AND restrict to authorized actors (MEMBER/OWNER/COLLABORATOR)

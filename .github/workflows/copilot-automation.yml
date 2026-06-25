@@ -20,6 +20,10 @@ jobs:
   copilot-automation:
     # Fork guard: prevent fork PRs from gaining write access via pull_request_target
     if: github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
+    # Note: This job uses a reusable workflow from kubestellar/infra which declares its own
+    # job-level permissions. The write scopes (contents: write, pull-requests: write) required
+    # by that reusable workflow for PR automation are justified by its purpose of automated
+    # code review and comment generation.
     uses: kubestellar/infra/.github/workflows/reusable-copilot-automation.yml@1a04a3fd17771e78e5cf6d42a3fda84e3ba478f3 # main
     with:
       pr_number: ${{ github.event.inputs.pr_number || '' }}
