@@ -1118,11 +1118,11 @@ func TestGetMissionScore_UpstreamError(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 
 	var body map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-	assert.Equal(t, project, body["project"])
+	assert.Contains(t, body, "error")
 }
 
 // ---------- GetKBGaps ----------
