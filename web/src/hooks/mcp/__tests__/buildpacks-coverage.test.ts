@@ -71,6 +71,11 @@ vi.mock('../../../lib/constants', async (importOriginal) => {
   return { ...actual, STORAGE_KEY_TOKEN: 'token' }
 })
 
+vi.mock('../../../lib/authToken', () => ({
+  getStoredAuthToken: vi.fn().mockImplementation(async () => localStorage.getItem('token')),
+  getStoredAuthTokenSync: vi.fn().mockImplementation(() => localStorage.getItem('token')),
+}))
+
 import { useBuildpackImages } from '../buildpacks'
 
 let cnt = 0

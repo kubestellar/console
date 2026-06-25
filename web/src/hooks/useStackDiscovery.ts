@@ -23,7 +23,7 @@ function safeJsonParse<T>(value: string, fallback: T, context: string): T {
   try {
     return JSON.parse(value) as T
   } catch (err) {
-    console.error(`[useStackDiscovery] Ignoring malformed JSON for ${context}:`, err)
+    console.warn(`[useStackDiscovery] Ignoring malformed JSON for ${context}:`, err)
     return fallback
   }
 }
