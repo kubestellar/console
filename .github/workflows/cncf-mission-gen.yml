@@ -40,9 +40,9 @@ jobs:
   # Compute batch matrix from total project count
   plan:
     permissions:
-      contents: write
-      pull-requests: write
-      issues: write
+      contents: read
+      pull-requests: read
+      issues: read
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.calc.outputs.matrix }}

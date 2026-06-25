@@ -28,8 +28,8 @@ permissions:
 jobs:
   plan:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+      pull-requests: read
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.calc.outputs.matrix }}
@@ -123,8 +123,8 @@ jobs:
 
   generate:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+      pull-requests: read
     needs: plan
     runs-on: ubuntu-latest
     strategy:
@@ -159,8 +159,8 @@ jobs:
 
   collect:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+      pull-requests: read
     needs: [plan, generate]
     if: needs.plan.outputs.dry_run != 'true'
     runs-on: ubuntu-latest
