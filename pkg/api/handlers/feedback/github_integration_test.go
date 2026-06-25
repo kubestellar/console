@@ -91,7 +91,7 @@ func TestPostGitHubIssue_InsufficientPermissions(t *testing.T) {
 
 	_, err := handler.postGitHubIssue(context.Background(), "kubestellar", "console", "Test", "body", nil, nil, "")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "GitHub API returned 403")
+	assert.ErrorIs(t, err, errGitHubInsufficientPermissions)
 }
 
 func TestPostGitHubIssue_RateLimit(t *testing.T) {
@@ -423,9 +423,9 @@ func TestHandleAIProcessingComplete_UpdatesStatusAndNotifies(t *testing.T) {
 	}
 	err := handler.handleAIProcessingComplete(context.Background(), 123, "https://github.com/kubestellar/console/issues/123", map[string]interface{}{})
 	assert.NoError(t, err)
-	mockStore.AssertCalled(t, "UpdateFeatureRequestStatus", mock.Anything, requestID, models.RequestStatusUnableToFix)
-	mockStore.AssertCalled(t, "UpdateFeatureRequestLatestComment", mock.Anything, requestID, "AI analysis complete. A human developer will review this issue.")
-	mockStore.AssertCalled(t, "CreateNotification", mock.Anything, mock.AnythingOfType("*models.Notification"))
+	mockStore.AssertCalled(t, "UpdateFeatureRequestStatus", requestID, models.RequestStatusUnableToFix)
+	mockStore.AssertCalled(t, "UpdateFeatureRequestLatestComment", requestID, "AI analysis complete. A human developer will review this issue.")
+	mockStore.AssertCalled(t, "CreateNotification", mock.AnythingOfType("*models.Notification"))
 }
 
 // --- handleIssueClosed tests ---
@@ -450,7 +450,7 @@ func TestHandleIssueClosed_AlreadyClosed(t *testing.T) {
 	handler := &FeedbackHandler{store: mockStore}
 	err := handler.handleIssueClosed(context.Background(), 123, "https://github.com/test/issues/123", map[string]interface{}{})
 	assert.NoError(t, err, "should skip update when already closed")
-	mockStore.AssertNotCalled(t, "CloseFeatureRequest", mock.Anything, mock.Anything, mock.Anything)
+	mockStore.AssertNotCalled(t, "CloseFeatureRequest", mock.Anything, mock.Anything)
 }
 
 func TestHandleIssueClosed_CompletedReason(t *testing.T) {
@@ -472,7 +472,7 @@ func TestHandleIssueClosed_CompletedReason(t *testing.T) {
 	}
 	err := handler.handleIssueClosed(context.Background(), 123, "https://github.com/test/issues/123", issue)
 	assert.NoError(t, err)
-	mockStore.AssertCalled(t, "CloseFeatureRequest", mock.Anything, requestID, false)
+	mockStore.AssertCalled(t, "CloseFeatureRequest", requestID, false)
 }
 
 func TestHandleIssueClosed_NotPlannedReason(t *testing.T) {
@@ -494,7 +494,7 @@ func TestHandleIssueClosed_NotPlannedReason(t *testing.T) {
 	}
 	err := handler.handleIssueClosed(context.Background(), 123, "https://github.com/test/issues/123", issue)
 	assert.NoError(t, err)
-	mockStore.AssertCalled(t, "CloseFeatureRequest", mock.Anything, requestID, false)
+	mockStore.AssertCalled(t, "CloseFeatureRequest", requestID, false)
 }
 
 // --- handleIssueEvent pipeline label tests ---
@@ -525,7 +525,7 @@ func TestHandleIssueEvent_PipelineLabel_UpdatesStatus(t *testing.T) {
 
 	err := handler.handleIssueEvent(context.Background(), payload)
 	assert.NoError(t, err)
-	mockStore.AssertCalled(t, "UpdateFeatureRequestStatus", mock.Anything, requestID, models.RequestStatusTriageAccepted)
+	mockStore.AssertCalled(t, "UpdateFeatureRequestStatus", requestID, models.RequestStatusTriageAccepted)
 }
 
 func TestHandleIssueEvent_PipelineLabel_NoDB(t *testing.T) {
@@ -546,7 +546,7 @@ func TestHandleIssueEvent_PipelineLabel_NoDB(t *testing.T) {
 
 	err := handler.handleIssueEvent(context.Background(), payload)
 	assert.NoError(t, err, "should skip when no DB record exists")
-	mockStore.AssertNotCalled(t, "UpdateFeatureRequestStatus", mock.Anything, mock.Anything, mock.Anything)
+	mockStore.AssertNotCalled(t, "UpdateFeatureRequestStatus", mock.Anything, mock.Anything)
 }
 
 func TestHandleIssueEvent_ClosedAction_DispatchesToHandleIssueClosed(t *testing.T) {
@@ -574,7 +574,7 @@ func TestHandleIssueEvent_ClosedAction_DispatchesToHandleIssueClosed(t *testing.
 
 	err := handler.handleIssueEvent(context.Background(), payload)
 	assert.NoError(t, err)
-	mockStore.AssertCalled(t, "CloseFeatureRequest", mock.Anything, requestID, false)
+	mockStore.AssertCalled(t, "CloseFeatureRequest", requestID, false)
 }
 
 // --- getLatestBotComment tests ---

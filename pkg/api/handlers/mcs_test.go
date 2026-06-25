@@ -234,12 +234,13 @@ func TestListServiceExportsMock(t *testing.T) {
 	})
 
 	t.Run("Empty result set returns 200", func(t *testing.T) {
+		emptyApp := fiber.New()
 		mock := &mockMCSClient{}
 		handler := &MCSHandlers{k8sClient: mock, hub: env.Hub}
-		env.App.Get("/api/mcs/exports", handler.ListServiceExports)
+		emptyApp.Get("/api/mcs/exports", handler.ListServiceExports)
 
 		req, _ := http.NewRequest("GET", "/api/mcs/exports", nil)
-		resp, err := env.App.Test(req, 5000)
+		resp, err := emptyApp.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 

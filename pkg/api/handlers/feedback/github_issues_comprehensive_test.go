@@ -44,7 +44,7 @@ func TestCreateGitHubIssueInRepo_IssueBodyFormatting(t *testing.T) {
 			diagnostics:    nil,
 			expectedInBody: []string{
 				"User Request",
-				"Type:** Bug",
+				"Type:** bug",
 				"Target:** Console Application",
 				"Submitted by:** @testuser",
 				"Console Request ID:**",
@@ -87,7 +87,7 @@ func TestCreateGitHubIssueInRepo_IssueBodyFormatting(t *testing.T) {
 			failedApiCalls: nil,
 			diagnostics:    nil,
 			expectedInBody: []string{
-				"Type:** Feature",
+				"Type:** feature",
 				"Browser Console Errors (2 captured)",
 				"`[2024-01-01T10:00:00Z]` **error** (network): Failed to load resource",
 				"`[2024-01-01T10:00:01Z]` **warn**: Deprecated API usage",
