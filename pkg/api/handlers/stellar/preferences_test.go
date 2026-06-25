@@ -64,7 +64,7 @@ func TestGetPreferences(t *testing.T) {
 			app := fiber.New()
 			app.Use(func(c *fiber.Ctx) error {
 				if tt.userID != "" {
-					c.Locals("userID", tt.userID)
+					c.Locals("githubLogin", tt.userID)
 				}
 				return c.Next()
 			})
@@ -139,7 +139,7 @@ func TestUpdatePreferences(t *testing.T) {
 			app := fiber.New()
 			app.Use(func(c *fiber.Ctx) error {
 				if tt.userID != "" {
-					c.Locals("userID", tt.userID)
+					c.Locals("githubLogin", tt.userID)
 				}
 				return c.Next()
 			})
@@ -168,7 +168,7 @@ func TestUpdatePreferences_InvalidJSON(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
-		c.Locals("stellarUserID", "user-123")
+		c.Locals("githubLogin", "user-123")
 		return c.Next()
 	})
 	app.Put("/api/stellar/preferences", handler.UpdatePreferences)
