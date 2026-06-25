@@ -224,8 +224,16 @@ func newFakeDynamicClient(objects ...runtime.Object) *fake.FakeDynamicClient {
 	scheme := runtime.NewScheme()
 	return fake.NewSimpleDynamicClientWithCustomListKinds(scheme,
 		map[schema.GroupVersionResource]string{
-			AgentGVR:        "AgentList",
-			KagentiAgentGVR: "AgentList",
+			AgentGVR:               "AgentList",
+			KagentiAgentGVR:        "AgentList",
+			ToolServerGVR:          "ToolServerList",
+			RemoteMCPServerGVR:     "RemoteMCPServerList",
+			ModelConfigGVR:         "ModelConfigList",
+			ModelProviderConfigGVR: "ModelProviderConfigList",
+			MemoryGVR:              "MemoryList",
+			KagentiBuildGVR:        "AgentBuildList",
+			KagentiCardGVR:         "AgentCardList",
+			KagentiToolGVR:         "MCPServerList",
 		},
 		objects...)
 }
