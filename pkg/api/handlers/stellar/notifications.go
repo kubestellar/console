@@ -3,6 +3,7 @@ package stellar
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 	"strings"
 	"time"
 
@@ -39,12 +40,20 @@ func (h *Handler) ListNotifications(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"items": items, "limit": limit})
 }
 
+func readNotificationID(c *fiber.Ctx) string {
+	decodedID, err := url.PathUnescape(c.Params("id"))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(decodedID)
+}
+
 func (h *Handler) MarkNotificationRead(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
 	}
-	notificationID := strings.TrimSpace(c.Params("id"))
+	notificationID := readNotificationID(c)
 	if notificationID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
 	}
@@ -83,7 +92,7 @@ func (h *Handler) updateNotificationState(c *fiber.Ctx, status, note string) err
 	if err != nil {
 		return err
 	}
-	notificationID := strings.TrimSpace(c.Params("id"))
+	notificationID := readNotificationID(c)
 	if notificationID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
 	}
