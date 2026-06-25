@@ -193,7 +193,23 @@ func TestSSECacheEvictorRemovesExpiredEntries(t *testing.T) {
 
 	startSSECacheEvictor()
 
-	time.Sleep(testInterval + 50*time.Millisecond)
+	// Poll for eviction with a reasonable timeout instead of a fixed sleep.
+	// The evictor runs on a ticker, so we need to give it time to execute.
+	const pollInterval = 50 * time.Millisecond
+	const maxWait = time.Second
+	deadline := time.Now().Add(maxWait)
+	
+	expiredRemoved := false
+	for time.Now().Before(deadline) {
+		sseCacheMu.RLock()
+		_, exists := sseCache["expired-key"]
+		sseCacheMu.RUnlock()
+		if !exists {
+			expiredRemoved = true
+			break
+		}
+		time.Sleep(pollInterval)
+	}
 
 	sseCacheMu.RLock()
 	_, expiredExists := sseCache["expired-key"]
