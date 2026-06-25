@@ -11,6 +11,14 @@ vi.mock('../useMissionControl', () => ({
   consumePersistQuotaBanner: vi.fn(() => null),
 }))
 
+// Mock useMissions
+vi.mock('../../../hooks/useMissions', () => ({
+  useMissions: vi.fn(() => ({
+    startMission: vi.fn(() => 'mission-id'),
+    openSidebar: vi.fn(),
+  })),
+}))
+
 // Mock missionPlanCodec
 vi.mock('../missionPlanCodec', () => ({
   decodePlan: vi.fn(),

@@ -9,15 +9,24 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func setupNightlyE2EHandler(githubToken string) (*fiber.App, *NightlyE2EHandler) {
 	app := fiber.New()
-	handler := NewNightlyE2EHandler(githubToken)
+	// Create handler directly without prewarm to avoid background API calls in tests
+	handler := &NightlyE2EHandler{
+		githubToken: githubToken,
+		httpClient:  client.External,
+		logCache:    make(map[string]*RunLogsResponse),
+		logCacheExp: make(map[string]time.Time),
+		imgCache:    make(map[string]map[string]string),
+	}
 	app.Get("/api/nightly-e2e/runs", handler.GetRuns)
 	app.Get("/api/nightly-e2e/run-logs", handler.GetRunLogs)
 	return app, handler
