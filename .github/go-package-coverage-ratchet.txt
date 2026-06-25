@@ -13,16 +13,16 @@ pkg/k8s 68.5
 
 # --- Tier 2: Critical integrations ---
 pkg/notifications 75.0
-pkg/kagentiprovider 0.0
+pkg/kagentiprovider 83.5
 pkg/sanitize 85.0
-pkg/store 42.0
+pkg/store 75.1
 
 # --- Tier 3: Supporting packages ---
 pkg/kagent 85.0
 pkg/mcp 65.0
 pkg/models 0.0
 pkg/stellar 80.0
-pkg/watcher 70.0
+pkg/watcher 67.1
 pkg/settings 75.0
 pkg/rewards 95.0
 pkg/safego 65.0
@@ -30,12 +30,13 @@ pkg/fileutil 50.0
 
 # --- Tier 3: Previously untracked (have tests, need ratchet baseline) ---
 pkg/ai 0.0
-pkg/gpu 0.0
-pkg/kb 0.0
-pkg/ssrf 0.0
-pkg/services/stellar 0.0
-pkg/services/team 0.0
-pkg/services/user 0.0
+pkg/gpu 86.2
+pkg/kb 100.0
+pkg/kb/rag 93.6
+pkg/ssrf 95.7
+pkg/services/stellar 95.3
+pkg/services/team 83.9
+pkg/services/user 83.3
 
 # --- Compliance engines (start at 0, ratchet up as evaluation tests land) ---
 pkg/compliance/fedramp 65.0
