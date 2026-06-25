@@ -5,10 +5,11 @@ on:
     - cron: '0 0 * * *'  # Daily at midnight UTC
   workflow_dispatch:
 
-permissions:
-  issues: write
+permissions: {}
 
 jobs:
   stale:
+    permissions:
+      issues: write
     uses: kubestellar/infra/.github/workflows/reusable-stale.yml@1a04a3fd17771e78e5cf6d42a3fda84e3ba478f3  # main@2026-06-24
     secrets: inherit
