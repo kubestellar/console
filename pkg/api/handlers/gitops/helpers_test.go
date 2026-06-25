@@ -1,6 +1,7 @@
 package gitops
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 
