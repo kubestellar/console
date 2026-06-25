@@ -163,21 +163,12 @@ test.describe('Responsive Breakpoint Tests', () => {
             .or(page.locator('button[aria-label*="menu" i]'))
             .or(page.locator('[data-testid="sidebar-toggle"]'))
             .or(page.getByTestId('navbar-home-btn'))
+            .or(page.locator('nav a:visible, nav button:visible'))
 
-          const hasHamburger = await mobileNav.first().isVisible({ timeout: MOBILE_NAV_PROBE_TIMEOUT_MS }).catch(() => false)
-
-          // Either a primary navbar control is present OR nav items are visible.
-          // On narrow viewports the app can collapse into a compact header with
-          // a home button before the full nav items render, and that still
-          // satisfies "navigation is accessible" for this regression guard.
-          if (!hasHamburger) {
-            const navItems = page.locator('nav a, nav button')
-            const navCount = await navItems.count()
-            expect(
-              navCount,
-              `No navigation accessible at ${viewport.name} viewport`
-            ).toBeGreaterThan(0)
-          }
+          await expect(
+            mobileNav.first(),
+            `No navigation accessible at ${viewport.name} viewport`
+          ).toBeVisible({ timeout: MOBILE_NAV_PROBE_TIMEOUT_MS })
         } else {
           // On larger viewports, main nav should be visible
           const nav = page.locator('nav')
