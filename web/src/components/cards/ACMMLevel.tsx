@@ -3,6 +3,8 @@ import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton } from '../../lib/cards/CardComponents'
 import { useACMM } from '../acmm/ACMMProvider'
 import { acmmSource } from '../../lib/acmm/sources/acmm'
+import { LAYOUTS } from '../../lib/utils/layouts'
+import { cn } from '../../lib/cn'
 
 const MAX_LEVEL = 6
 const GAUGE_SIZE = 120
@@ -76,14 +78,14 @@ export function ACMMLevel() {
           href={PAPER_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors shrink-0 ml-2"
+          className={cn(LAYOUTS.CENTER_GAP_1, 'text-xs text-muted-foreground hover:text-primary transition-colors shrink-0 ml-2')}
         >
           <ExternalLink className="w-3 h-3" />
           Source
         </a>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className={cn(LAYOUTS.CENTER_GAP_2, 'gap-4')}>
         <div className="relative shrink-0">
           <LevelRing level={level.level} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -95,7 +97,7 @@ export function ACMMLevel() {
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-1">
+          <div className={cn(LAYOUTS.CENTER_GAP_1, 'gap-1.5 mb-1')}>
             <BarChart3 className="w-3.5 h-3.5 text-primary" />
             <div className="text-xs text-muted-foreground">
               Role: <span className="text-foreground font-medium">{level.role}</span>
@@ -109,7 +111,7 @@ export function ACMMLevel() {
 
       {/* Prerequisites soft indicator — not gating, just informational */}
       {level.prerequisites.total > 0 && (
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-muted/30 text-xs">
+        <div className={cn(LAYOUTS.CENTER_GAP_2, 'px-2 py-1.5 rounded bg-muted/30 text-xs')}>
           <span className="text-muted-foreground">Foundations:</span>
           <span className={`font-mono font-medium ${
             level.prerequisites.met === level.prerequisites.total
