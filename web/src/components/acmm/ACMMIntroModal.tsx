@@ -38,6 +38,7 @@ import {
 import { BaseModal } from '../../lib/modals'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 import { HStack } from '../ui/HStack'
+import { Button } from '../ui/Button'
 
 const STORAGE_KEY = 'kc-acmm-intro-dismissed'
 const PAPER_URL = 'https://arxiv.org/abs/2604.09388'
@@ -240,13 +241,14 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
             />
             {t('acmmIntro.dontShowAgain')}
           </label>
-          <button
+          <Button
             type="button"
             onClick={handleClose}
-            className="px-4 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 transition-colors"
+            variant="primary"
+            size="md"
           >
             {t('acmmIntro.gotIt')}
-          </button>
+          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>
