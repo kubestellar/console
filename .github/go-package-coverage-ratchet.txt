@@ -18,15 +18,15 @@ pkg/sanitize 85.0
 pkg/store 42.0
 
 # --- Tier 3: Supporting packages ---
-pkg/kagent 0.0
-pkg/mcp 0.0
+pkg/kagent 85.0
+pkg/mcp 65.0
 pkg/models 0.0
-pkg/stellar 0.0
+pkg/stellar 80.0
 pkg/watcher 70.0
-pkg/settings 0.0
-pkg/rewards 0.0
+pkg/settings 75.0
+pkg/rewards 95.0
 pkg/safego 65.0
-pkg/fileutil 0.0
+pkg/fileutil 50.0
 
 # --- Compliance engines (start at 0, ratchet up as evaluation tests land) ---
 pkg/compliance/fedramp 65.0
