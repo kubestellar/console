@@ -4,6 +4,7 @@ import { BaseModal } from '../../lib/modals'
 import type { AgentInfo } from '../../types/agent'
 import { AgentIcon } from './AgentIcon'
 import { safeGet, safeSet, safeRemove } from '../../lib/safeLocalStorage'
+import { Button } from '../ui/Button'
 
 const APPROVED_KEY = 'kc_agents_approved'
 
@@ -98,21 +99,23 @@ export function AgentApprovalDialog({ isOpen, agents, onApprove, onCancel }: Age
 
       <BaseModal.Footer showKeyboardHints={false}>
         <div className="flex items-center justify-end gap-3 w-full">
-          <button
+          <Button
             onClick={onCancel}
-            className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors"
+            variant="ghost"
+            size="md"
           >
             {t('agent.approval.cancel')}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => {
               setAgentsApproved()
               onApprove()
             }}
-            className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
+            variant="primary"
+            size="md"
           >
             {t('agent.approval.approveEnable')}
-          </button>
+          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>
