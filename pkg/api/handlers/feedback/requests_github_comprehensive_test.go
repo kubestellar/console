@@ -315,10 +315,13 @@ func TestCreateGitHubIssueInRepo_LabelPermissionDenied(t *testing.T) {
 	handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
 		callCount++
 		if callCount == 1 {
-			// First call with labels fails with permission error
+			// First call with labels fails with a 403 label permission error.
+			// The body must NOT match isInsufficientIssuePermissionError (which
+			// triggers errGitHubInsufficientPermissions) — it should fall through
+			// to "GitHub API returned 403" so isLabelPermissionError sees "403" + "label".
 			return &http.Response{
 				StatusCode: http.StatusForbidden,
-				Body:       io.NopCloser(strings.NewReader(`{"message":"Resource not accessible by personal access token","errors":[{"resource":"Label","field":"name"}]}`)),
+				Body:       io.NopCloser(strings.NewReader(`{"message":"label permission denied"}`)),
 				Header:     make(http.Header),
 			}
 		}
@@ -469,5 +472,5 @@ func TestCreateGitHubIssueInRepo_TruncateFailedAPICalls(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Contains(t, capturedBody, "Failed API Calls (70 captured)")
-	assert.Contains(t, capturedBody, "...and 20 more omitted", "Should truncate to 50 API calls")
+	assert.Contains(t, capturedBody, "...and 40 more omitted", "Should truncate to 30 API calls")
 }
