@@ -15,11 +15,16 @@ permissions: read-all
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    # Trust gate: only run for trusted contributors (org members, collaborators, owners).
+    # This prevents billing abuse (exhausting CLAUDE_CODE_OAUTH_TOKEN credits) and
+    # stops untrusted fork PRs from sending code to Anthropic's API before human review.
+    # External contributors still get a manual review when a trusted member approves the PR.
+    # See: https://github.com/kubestellar/console/issues/19603
+    if: |
+      contains(
+        fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+        github.event.pull_request.author_association
+      )
 
     runs-on: ubuntu-latest
     timeout-minutes: 30
