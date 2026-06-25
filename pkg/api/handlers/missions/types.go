@@ -182,13 +182,13 @@ type indexJsonFormat struct {
 		Path               string      `json:"path"`
 		Title              string      `json:"title"`
 		Description        string      `json:"description"`
-		QualityScore       *int        `json:"qualityScore"`
-		QualityPass        *bool       `json:"qualityPass"`
-		TestedOn           interface{} `json:"testedOn"`
-		QualityIssues      []string    `json:"qualityIssues"`
-		QualitySuggestions []string    `json:"qualitySuggestions"`
-		QualityBreakdown   interface{} `json:"qualityBreakdown"`
-		CncfProjects       []string    `json:"cncfProjects"`
+		QualityScore       *int        `json:"quality_score"`
+		QualityPass        *bool       `json:"quality_pass"`
+		TestedOn           interface{} `json:"tested_on"`
+		QualityIssues      []string    `json:"quality_issues"`
+		QualitySuggestions []string    `json:"quality_suggestions"`
+		QualityBreakdown   interface{} `json:"quality_breakdown"`
+		CncfProjects       []string    `json:"cncf_projects"`
 	} `json:"missions"`
 }
 

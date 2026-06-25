@@ -240,13 +240,25 @@ func TestMarkAllNotificationsRead_Unauthorized(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "should reject unauthenticated request")
 }
 
+// markAllNotifReadErrStub extends feedbackStoreStub to inject MarkAllNotificationsRead errors.
+type markAllNotifReadErrStub struct {
+	feedbackStoreStub
+	markAllReadErr error
+}
+
+func (s *markAllNotifReadErrStub) MarkAllNotificationsRead(_ context.Context, _ uuid.UUID) error {
+	return s.markAllReadErr
+}
+
 func TestMarkAllNotificationsRead_StoreError(t *testing.T) {
 	userID := uuid.New()
 	
-	mockStore := &test.MockStore{}
-	mockStore.On("MarkAllNotificationsRead", mock.Anything, userID).Return(errors.New("database error"))
+	stub := &markAllNotifReadErrStub{
+		feedbackStoreStub: feedbackStoreStub{MockStore: &test.MockStore{}},
+		markAllReadErr:    errors.New("database error"),
+	}
 	
-	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
+	app, handler := setupFeedbackTest(t, userID, "", stub)
 	app.Post("/api/feedback/notifications/read-all", handler.MarkAllNotificationsRead)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/notifications/read-all", nil)
