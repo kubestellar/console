@@ -222,7 +222,7 @@ export default function SigningStatusDashboard() {
                   <tr key={i} className="border-b border-border/50 hover:bg-secondary/50">
                     <td className="p-3">
                       <div className="text-foreground font-mono text-xs truncate max-w-[200px]">{img.image}</div>
-                      <div className="text-muted-foreground text-[10px] font-mono">{img.digest.substring(0, 20)}…</div>
+                      <div className="text-muted-foreground text-xs font-mono">{img.digest.substring(0, 20)}…</div>
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-1.5">
@@ -242,7 +242,7 @@ export default function SigningStatusDashboard() {
                         ? <Shield className="w-4 h-4 text-emerald-400" />
                         : <ShieldAlert className="w-4 h-4 text-orange-400" />}
                       {img.failure_reason && (
-                        <div className="text-[10px] text-red-400 mt-0.5">{img.failure_reason}</div>
+                        <div className="text-xs text-red-400 mt-0.5">{img.failure_reason}</div>
                       )}
                     </td>
                     <td className="p-3">

@@ -307,7 +307,7 @@ export function AlertRulesCard() {
                     title={pendingDeleteId === rule.id ? t('alertRules.confirmDelete') : t('alertRules.deleteRule')}
                   >
                     {pendingDeleteId === rule.id
-                      ? <span className="text-[10px] font-medium px-0.5">{t('alertRules.confirmDelete')}</span>
+                      ? <span className="text-xs font-medium px-0.5">{t('alertRules.confirmDelete')}</span>
                       : <Trash2 className="w-4 h-4" />}
                   </button>
                 </div>

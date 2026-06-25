@@ -271,7 +271,7 @@ export function ACMMFeedbackLoops() {
           <button
             key={m}
             onClick={() => setViewMode(m)}
-            className={`px-2 py-0.5 text-[10px] rounded-full transition-colors ${
+            className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
               viewMode === m
                 ? 'bg-purple-500/30 text-purple-300'
                 : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
@@ -286,7 +286,7 @@ export function ACMMFeedbackLoops() {
           <button
             key={s}
             onClick={() => setSourceFilter(s)}
-            className={`px-2 py-0.5 text-[10px] rounded-full transition-colors ${
+            className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
               sourceFilter === s
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
@@ -314,7 +314,7 @@ export function ACMMFeedbackLoops() {
           <button
             type="button"
             onClick={locksOverridden ? relock : overrideLocks}
-            className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full transition-colors ${
+            className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full transition-colors ${
               locksOverridden
                 ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
                 : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
@@ -328,7 +328,7 @@ export function ACMMFeedbackLoops() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-2 py-0.5 text-[10px] rounded-full transition-colors ${
+              className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
                 statusFilter === s
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
@@ -347,7 +347,7 @@ export function ACMMFeedbackLoops() {
           const prevDim = idx > 0 ? filtered[idx - 1].crossCutting : undefined
           const showDimHeader = viewMode === 'cross-cutting' && c.crossCutting && c.crossCutting !== prevDim
           const dimHeader = showDimHeader && c.crossCutting ? (
-            <div key={`dim-${c.crossCutting}`} className="text-[10px] uppercase tracking-wide text-purple-400 font-medium pt-2 pb-1 px-2 border-b border-purple-500/20">
+            <div key={`dim-${c.crossCutting}`} className="text-xs uppercase tracking-wide text-purple-400 font-medium pt-2 pb-1 px-2 border-b border-purple-500/20">
               {CROSS_CUTTING_LABELS[c.crossCutting]}
             </div>
           ) : null
@@ -471,12 +471,12 @@ export function ACMMFeedbackLoops() {
                   <X className="w-4 h-4 text-muted-foreground/40 shrink-0" />
                 )}
                 {/* Fixed-width level column for clean alignment */}
-                <span className="text-[10px] font-mono text-muted-foreground w-6 text-right shrink-0">
+                <span className="text-xs font-mono text-muted-foreground w-6 text-right shrink-0">
                   {c.level ? `L${c.level}` : ''}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium truncate">{c.name}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">{c.description}</div>
+                  <div className="text-xs text-muted-foreground truncate">{c.description}</div>
                 </div>
                 {c.crossCutting && (
                   <span
@@ -501,7 +501,7 @@ export function ACMMFeedbackLoops() {
                 </span>
               </button>
               {isLocked && isLockPromptOpen && (
-                <div className="px-8 pb-2 pt-1 text-[10px] border-t border-border/30 flex flex-wrap items-center justify-between gap-2">
+                <div className="px-8 pb-2 pt-1 text-xs border-t border-border/30 flex flex-wrap items-center justify-between gap-2">
                   <span className="text-muted-foreground">
                     Locked — reach <span className="font-mono text-foreground">L{nextLevel}</span> first
                     {missingForNext > 0 && (
@@ -535,7 +535,7 @@ export function ACMMFeedbackLoops() {
                 // is unambiguous and dismissable.
                 <div className="mx-2 mb-2 rounded-md border border-border/60 bg-background/60 shadow-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-b border-border/40 bg-muted/20 rounded-t-md">
-                    <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       Details — {c.name}
                     </div>
                     <button
@@ -544,7 +544,7 @@ export function ACMMFeedbackLoops() {
                         e.stopPropagation()
                         setExpandedId(null)
                       }}
-                      className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                       aria-label={t('actions.close')}
                       title={t('actions.close')}
                     >
@@ -552,10 +552,10 @@ export function ACMMFeedbackLoops() {
                       {t('actions.close')}
                     </button>
                   </div>
-                  <div className="px-3 pb-2 pt-1.5 text-[10px] space-y-1.5">
+                  <div className="px-3 pb-2 pt-1.5 text-xs space-y-1.5">
                   {/* Details blurb — what it is, why it matters, how a mission implements it */}
                   {c.details && (
-                    <p className="text-[11px] leading-relaxed text-muted-foreground/90 py-1">
+                    <p className="text-xs leading-relaxed text-muted-foreground/90 py-1">
                       {c.details}
                     </p>
                   )}

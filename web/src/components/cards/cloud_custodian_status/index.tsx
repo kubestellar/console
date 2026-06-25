@@ -140,7 +140,7 @@ function PolicyRow({
         <div className="flex items-center gap-1.5 shrink-0">
           <span
             className={cn(
-              'text-[11px] px-1.5 py-0.5 rounded-full',
+              'text-xs px-1.5 py-0.5 rounded-full',
               modeBadgeClass(policy.mode),
             )}
           >
@@ -148,7 +148,7 @@ function PolicyRow({
           </span>
           <span
             className={cn(
-              'text-[11px] px-1.5 py-0.5 rounded-full',
+              'text-xs px-1.5 py-0.5 rounded-full',
               policyStatusBadgeClass(policy),
             )}
           >
@@ -156,7 +156,7 @@ function PolicyRow({
           </span>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="truncate">
           <span className="text-foreground font-mono">{policy.resource}</span>
         </span>
@@ -181,8 +181,8 @@ function TopResourceRow({ resource }: { resource: CustodianTopResource }) {
         <span className="text-xs font-mono text-foreground truncate">{resource.id}</span>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[11px] text-muted-foreground">{resource.type}</span>
-        <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-secondary/50 text-cyan-400 font-mono">
+        <span className="text-xs text-muted-foreground">{resource.type}</span>
+        <span className="text-xs px-1.5 py-0.5 rounded-full bg-secondary/50 text-cyan-400 font-mono">
           {resource.actionCount}
         </span>
       </div>
@@ -345,7 +345,7 @@ export function CloudCustodianStatus() {
             <span className={cn('text-base font-semibold', severityClass('critical'))}>
               {violations.critical}
             </span>
-            <div className="text-[11px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('cloudCustodianStatus.severityCritical', 'Critical')}
             </div>
           </div>
@@ -353,7 +353,7 @@ export function CloudCustodianStatus() {
             <span className={cn('text-base font-semibold', severityClass('high'))}>
               {violations.high}
             </span>
-            <div className="text-[11px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('cloudCustodianStatus.severityHigh', 'High')}
             </div>
           </div>
@@ -361,7 +361,7 @@ export function CloudCustodianStatus() {
             <span className={cn('text-base font-semibold', severityClass('medium'))}>
               {violations.medium}
             </span>
-            <div className="text-[11px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('cloudCustodianStatus.severityMedium', 'Medium')}
             </div>
           </div>
@@ -369,7 +369,7 @@ export function CloudCustodianStatus() {
             <span className={cn('text-base font-semibold', severityClass('low'))}>
               {violations.low}
             </span>
-            <div className="text-[11px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('cloudCustodianStatus.severityLow', 'Low')}
             </div>
           </div>

@@ -181,7 +181,7 @@ export function K3sStatus() {
                   {pod.name}
                 </span>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="px-1.5 py-0.5 rounded bg-secondary text-muted-foreground text-[10px]">
+                  <span className="px-1.5 py-0.5 rounded bg-secondary text-muted-foreground text-xs">
                     {pod.version}
                   </span>
                   {pod.status === 'running' ? (

@@ -109,19 +109,19 @@ function QueueRow({ queue }: { queue: VolcanoQueue }) {
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${QUEUE_STATE_CLASS[queue.state]}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${QUEUE_STATE_CLASS[queue.state]}`}
         >
           {queue.state}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span>
           {queue.runningJobs} run · {queue.pendingJobs} pend
         </span>
         <span className="ml-auto shrink-0 font-mono">weight {queue.weight}</span>
       </div>
       <div className="space-y-1">
-        <div className="flex items-center gap-2 text-[11px]">
+        <div className="flex items-center gap-2 text-xs">
           <span className="text-muted-foreground w-8 shrink-0"><TechnicalAcronym term="CPU">CPU</TechnicalAcronym></span>
           <div className="flex-1 h-1.5 rounded bg-secondary/50 overflow-hidden">
             <div
@@ -133,7 +133,7 @@ function QueueRow({ queue }: { queue: VolcanoQueue }) {
             {queue.allocatedCpu}/{queue.capabilityCpu}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-[11px]">
+        <div className="flex items-center gap-2 text-xs">
           <span className="text-muted-foreground w-8 shrink-0">GPU</span>
           <div className="flex-1 h-1.5 rounded bg-secondary/50 overflow-hidden">
             <div
@@ -161,12 +161,12 @@ function JobRow({ job }: { job: VolcanoJob }) {
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${JOB_PHASE_CLASS[job.phase]}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${JOB_PHASE_CLASS[job.phase]}`}
         >
           {job.phase}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="truncate">
           queue {job.queue} · {job.runningPods}/{job.totalPods} pods
         </span>
@@ -308,12 +308,12 @@ export function VolcanoStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('volcanoStatus.sectionScheduler', 'Scheduler')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {t('volcanoStatus.version', 'version')}:{' '}
               <span className="text-foreground">{data.stats.schedulerVersion}</span>
             </span>
           </div>
-          <div className="grid grid-cols-2 @sm:grid-cols-3 gap-2 text-[11px]">
+          <div className="grid grid-cols-2 @sm:grid-cols-3 gap-2 text-xs">
             <div className="rounded-md bg-secondary/30 px-2 py-1.5">
               <div className="text-muted-foreground">
                 {t('volcanoStatus.podGroups', 'Pod groups')}
@@ -345,7 +345,7 @@ export function VolcanoStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('volcanoStatus.sectionQueues', 'Queues')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {queues.length}
             </span>
           </div>
@@ -369,7 +369,7 @@ export function VolcanoStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('volcanoStatus.sectionJobs', 'Recent jobs')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {jobs.length} · {podGroups.length} pg
             </span>
           </div>

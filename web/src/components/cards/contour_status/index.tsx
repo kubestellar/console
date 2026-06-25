@@ -46,7 +46,7 @@ function ProxySection({
                   <span className="text-xs font-medium truncate">{item.name}</span>
                 </div>
                 <span
-                  className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${
+                  className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${
                     item.status === 'Valid'
                       ? 'bg-green-500/20 text-green-400'
                       : 'bg-yellow-500/20 text-yellow-400'

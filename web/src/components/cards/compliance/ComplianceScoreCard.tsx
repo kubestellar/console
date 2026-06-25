@@ -115,7 +115,7 @@ export function ComplianceScoreCard({ config: _config }: CardConfig) {
         </div>
       )}
 
-      <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
+      <div className="flex items-start gap-1.5 text-xs text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
         <Info className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground/60" />
         <span>{CARD_DESCRIPTIONS.compliance_score.description}</span>
       </div>
@@ -178,7 +178,7 @@ export function ComplianceScoreCard({ config: _config }: CardConfig) {
 
           <div className="text-center">
             <span className={`text-xs font-semibold ${scoreContext.color}`}>{scoreContext.label}</span>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{scoreContext.description}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{scoreContext.description}</p>
           </div>
 
           <div className="space-y-1.5">

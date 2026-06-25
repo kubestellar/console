@@ -142,7 +142,7 @@ export function PerformanceTimeline() {
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            className="bg-secondary border border-border rounded px-2 py-1 text-[11px] text-white"
+            className="bg-secondary border border-border rounded px-2 py-1 text-xs text-white"
           >
             <option value="all">{t('selectors.allCategories')}</option>
             {filterOpts.categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -150,7 +150,7 @@ export function PerformanceTimeline() {
           <select
             value={qpsFilter}
             onChange={e => setQpsFilter(Number(e.target.value))}
-            className="bg-secondary border border-border rounded px-2 py-1 text-[11px] text-white"
+            className="bg-secondary border border-border rounded px-2 py-1 text-xs text-white"
           >
             <option value={0}>All QPS</option>
             {qpsValues.map(q => <option key={q} value={q}>QPS {q}</option>)}

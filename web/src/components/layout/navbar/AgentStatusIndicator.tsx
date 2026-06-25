@@ -632,14 +632,14 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
               <p className="text-xs text-muted-foreground mb-2">
                 {t('agent.localAgentDesc')}
               </p>
-              <div className="bg-black/50 rounded p-2 font-mono text-[11px] text-green-400 mb-2 space-y-1">
+              <div className="bg-black/50 rounded p-2 font-mono text-xs text-green-400 mb-2 space-y-1">
                 <div className="text-muted-foreground">
                   {t('agent.installViaHomebrewMacOS')}
                 </div>
                 <code className="block">{t('agent.tapKubestellar')}</code>
                 <code className="block">{t('agent.installKcAgent')}</code>
               </div>
-              <div className="bg-black/50 rounded p-2 font-mono text-[11px] text-green-400 mb-2 space-y-1">
+              <div className="bg-black/50 rounded p-2 font-mono text-xs text-green-400 mb-2 space-y-1">
                 <div className="text-muted-foreground">
                   {t('agent.installLinuxBuildFromSource')}
                 </div>

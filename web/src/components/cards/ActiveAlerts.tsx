@@ -286,7 +286,7 @@ export function ActiveAlerts() {
             >
               {dnd.isActive ? <BellOff className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
               {dnd.isActive && dnd.remaining > 0 && (
-                <span className="text-[10px]">{formatRemaining(dnd.remaining)}</span>
+                <span className="text-xs">{formatRemaining(dnd.remaining)}</span>
               )}
             </button>
             {showDNDMenu && !dnd.isActive && (

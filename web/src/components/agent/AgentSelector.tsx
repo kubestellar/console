@@ -653,7 +653,7 @@ export function AgentSelector({
                   {cliAgents.length > 0 && (
                     <>
                       <div className="px-3 pt-2 pb-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
                           CLI Agents
                         </span>
                       </div>
@@ -665,7 +665,7 @@ export function AgentSelector({
                   {clusterAgents.length > 0 && (
                     <>
                       <div className="px-3 pt-2 pb-1 border-t border-border/50 mt-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
                           Cluster Agents
                         </span>
                       </div>

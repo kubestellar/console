@@ -289,7 +289,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
               const other = edge.from === info.name ? edge.to : edge.from
               const direction = edge.from === info.name ? '→' : '←'
               return (
-                <div key={i} className="flex items-center gap-1.5 text-[11px]">
+                <div key={i} className="flex items-center gap-1.5 text-xs">
                   <span className={cn(
                     'w-1.5 h-1.5 rounded-full shrink-0',
                     edge.crossCluster ? 'bg-amber-500' : 'bg-indigo-500'
@@ -337,7 +337,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
               <div key={i} className="flex gap-1.5">
                 <span className="text-[10px] font-bold text-primary mt-0.5 shrink-0">{i + 1}.</span>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium text-foreground">{step.title || step.description?.slice(0, 60)}</p>
+                  <p className="text-xs font-medium text-foreground">{step.title || step.description?.slice(0, 60)}</p>
                   {step.command && (
                     <pre className="text-[10px] text-emerald-400 font-mono mt-0.5 bg-slate-800 rounded px-1.5 py-0.5 overflow-x-auto whitespace-pre-wrap break-all">
                       {step.command}

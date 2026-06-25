@@ -233,7 +233,7 @@ export function DragonflyStatus() {
                   </div>
                   <span
                     className={cn(
-                      'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+                      'text-xs px-1.5 py-0.5 rounded-full shrink-0',
                       COMPONENT_BADGE[row.component],
                     )}
                   >
@@ -261,7 +261,7 @@ export function DragonflyStatus() {
                 </div>
 
                 {row.version && (
-                  <div className="text-[11px] text-muted-foreground/80">v{row.version}</div>
+                  <div className="text-xs text-muted-foreground/80">v{row.version}</div>
                 )}
               </div>
             )

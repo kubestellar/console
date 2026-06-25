@@ -120,20 +120,20 @@ function ServiceRow({
           <span className="text-xs font-medium font-mono truncate text-foreground">
             {service.name}
           </span>
-          <span className="text-[11px] text-muted-foreground shrink-0">
+          <span className="text-xs text-muted-foreground shrink-0">
             {service.namespace}
           </span>
         </div>
         <span
           className={cn(
-            'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+            'text-xs px-1.5 py-0.5 rounded-full shrink-0',
             statusBadgeClass(service.status),
           )}
         >
           {statusLabel(service.status, t)}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Layers className="w-3 h-3" />
           {service.readyReplicas}/{service.desiredReplicas}{' '}
@@ -308,7 +308,7 @@ export function KServeStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('kserveStatus.sectionServices', 'Inference services')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {services.length}
             </span>
           </div>
@@ -326,7 +326,7 @@ export function KServeStatus() {
           )}
 
           {data.lastCheckTime ? (
-            <div className="text-[11px] text-muted-foreground text-right">
+            <div className="text-xs text-muted-foreground text-right">
               {formatTimeAgo(data.lastCheckTime)}
             </div>
           ) : null}

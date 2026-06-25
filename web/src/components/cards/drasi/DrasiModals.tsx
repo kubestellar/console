@@ -223,7 +223,7 @@ export function SourceConfigModal({
       </div>
       <div className="space-y-3">
         <div>
-          <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.nameLabel')}</label>
+          <label className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.nameLabel')}</label>
           <input
             type="text"
             value={name}
@@ -232,7 +232,7 @@ export function SourceConfigModal({
           />
         </div>
         <div>
-          <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.sourceTypeLabel')}</label>
+          <label className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.sourceTypeLabel')}</label>
           <select
             value={kind}
             onChange={e => setKind(e.target.value as SourceKind)}
@@ -325,7 +325,7 @@ export function QueryConfigModal({
       </div>
       <div className="space-y-3">
         <div>
-          <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.nameLabel')}</label>
+          <label className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.nameLabel')}</label>
           <input
             type="text"
             value={name}
@@ -334,7 +334,7 @@ export function QueryConfigModal({
           />
         </div>
         <div>
-          <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.queryTypeLabel')}</label>
+          <label className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.queryTypeLabel')}</label>
           <select
             value={language}
             onChange={e => setLanguage(e.target.value)}
@@ -344,7 +344,7 @@ export function QueryConfigModal({
           </select>
         </div>
         <div>
-          <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.queryLabel')}</label>
+          <label className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.queryLabel')}</label>
           <div className="rounded border border-slate-700 overflow-hidden text-xs">
             <LazyCodeMirror
               value={queryText}
@@ -486,7 +486,7 @@ export function ConnectionsModal({
                     {conn.id === activeId && <Check className="w-3 h-3 text-cyan-400 shrink-0" />}
                     <span className="text-xs font-semibold text-white truncate">{conn.name}</span>
                   </div>
-                  <div className="text-[10px] text-muted-foreground font-mono truncate">
+                  <div className="text-xs text-muted-foreground font-mono truncate">
                     {conn.mode === 'server' ? conn.url : `${t('drasi.clusterLabel')}: ${conn.cluster}`}
                   </div>
                 </button>
@@ -525,7 +525,7 @@ export function ConnectionsModal({
       ) : (
         <div className="space-y-3">
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.nameLabel')}</label>
+            <label className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.nameLabel')}</label>
             <input
               type="text"
               value={name}
@@ -535,7 +535,7 @@ export function ConnectionsModal({
             />
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.connectionModeLabel')}</label>
+            <label className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.connectionModeLabel')}</label>
             <select
               value={mode}
               onChange={e => setMode(e.target.value as 'server' | 'platform')}
@@ -547,7 +547,7 @@ export function ConnectionsModal({
           </div>
           {mode === 'server' ? (
             <div>
-              <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.serverUrlLabel')}</label>
+              <label className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.serverUrlLabel')}</label>
               <input
                 type="text"
                 value={url}
@@ -558,7 +558,7 @@ export function ConnectionsModal({
             </div>
           ) : (
             <div>
-              <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.clusterContextLabel')}</label>
+              <label className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.clusterContextLabel')}</label>
               <input
                 type="text"
                 value={cluster}

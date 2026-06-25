@@ -98,10 +98,10 @@ function ControlPlaneRow({ pod }: { pod: DaprControlPlanePod }) {
         <span className="text-xs text-muted-foreground shrink-0">{pod.namespace}</span>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[11px] font-mono text-muted-foreground">
+        <span className="text-xs font-mono text-muted-foreground">
           {pod.replicasReady}/{pod.replicasDesired}
         </span>
-        <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${statusClass}`}>
+        <span className={`text-xs px-1.5 py-0.5 rounded-full ${statusClass}`}>
           {pod.status}
         </span>
       </div>
@@ -124,11 +124,11 @@ function ComponentRow({
         <span className="text-xs text-muted-foreground shrink-0">{component.namespace}</span>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[11px] text-muted-foreground font-mono truncate max-w-[9rem]">
+        <span className="text-xs text-muted-foreground font-mono truncate max-w-[9rem]">
           {component.componentImpl}
         </span>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full bg-secondary/50 ${componentTypeColor(component.type)}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full bg-secondary/50 ${componentTypeColor(component.type)}`}
         >
           {componentTypeLabel(component.type, t)}
         </span>
@@ -269,7 +269,7 @@ export function DaprStatus() {
         <div className="rounded-md bg-secondary/30 px-3 py-2 flex items-center gap-2">
           <Database className="w-4 h-4 text-emerald-400 shrink-0" />
           <div className="min-w-0">
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">
               {t('daprStatus.stateStores', 'State stores')}
             </div>
             <div className="text-sm font-semibold text-foreground">
@@ -280,7 +280,7 @@ export function DaprStatus() {
         <div className="rounded-md bg-secondary/30 px-3 py-2 flex items-center gap-2">
           <Radio className="w-4 h-4 text-purple-400 shrink-0" />
           <div className="min-w-0">
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">
               {t('daprStatus.pubsubs', 'Pub/sub')}
             </div>
             <div className="text-sm font-semibold text-foreground">
@@ -291,7 +291,7 @@ export function DaprStatus() {
         <div className="rounded-md bg-secondary/30 px-3 py-2 flex items-center gap-2">
           <Link2 className="w-4 h-4 text-cyan-400 shrink-0" />
           <div className="min-w-0">
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">
               {t('daprStatus.bindings', 'Bindings')}
             </div>
             <div className="text-sm font-semibold text-foreground">

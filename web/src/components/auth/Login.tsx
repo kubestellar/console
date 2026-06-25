@@ -476,7 +476,7 @@ export function Login() {
                           <div className="ml-4 mt-1">
                             <span className="text-muted-foreground">{idx + 1}. {step.label}</span>
                             <div className="flex items-center gap-2 mt-1">
-                              <pre className="flex-1 rounded bg-muted px-3 py-1.5 font-mono text-foreground select-all overflow-x-auto whitespace-pre text-[11px]">
+                              <pre className="flex-1 rounded bg-muted px-3 py-1.5 font-mono text-foreground select-all overflow-x-auto whitespace-pre text-xs">
                                 {step.command}
                               </pre>
                               <button

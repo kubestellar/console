@@ -626,9 +626,9 @@ func TestTeamHandler_ListAllTeams(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			app, handler := setupTeamHandlerTest(uuid.New(), tt.service)
-			app.Get("/admin/teams", handler.ListAllTeams)
+			app.Get("/teams", handler.ListAllTeams)
 
-			resp := performTeamRequest(t, app, http.MethodGet, "/admin/teams"+tt.queryStr, "")
+			resp := performTeamRequest(t, app, http.MethodGet, "/teams"+tt.queryStr, "")
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 
 			if tt.assertBody != nil {
@@ -862,9 +862,9 @@ func TestTeamHandler_GetUserTeams(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			app, handler := setupTeamHandlerTest(userID, tt.service)
-			app.Get("/users/me/teams", handler.GetUserTeams)
+			app.Get("/teams/mine", handler.GetUserTeams)
 
-			resp := performTeamRequest(t, app, http.MethodGet, "/users/me/teams", "")
+			resp := performTeamRequest(t, app, http.MethodGet, "/teams/mine", "")
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 
 			if tt.assertBody != nil {
@@ -934,6 +934,14 @@ func TestTeamHandler_UpdateTeam(t *testing.T) {
 				return nil, team.ErrNotFound
 			}},
 			wantStatus: http.StatusNotFound,
+		},
+		{
+			name: "permission denied",
+			body: `{"name":"NewName"}`,
+			service: &mockTeamService{updateFunc: func(context.Context, uuid.UUID, uuid.UUID, models.UpdateTeamRequest) (*models.Team, error) {
+				return nil, team.ErrNoPermission
+			}},
+			wantStatus: http.StatusForbidden,
 		},
 		{
 			name: "service error",

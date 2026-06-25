@@ -103,7 +103,7 @@ function ComponentDetailCard({ component }: { component: ComponentStatus }) {
             {component.detected ? component.health : 'Not detected'}
           </span>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           {component.detected ? 'Detected and monitored' : 'Not installed on any cluster'}
         </p>
       </div>
