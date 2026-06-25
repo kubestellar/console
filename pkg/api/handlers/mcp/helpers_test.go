@@ -34,7 +34,9 @@ func TestWithDemoFallback(t *testing.T) {
 		var result map[string]interface{}
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		require.NoError(t, err)
-		assert.Equal(t, "demo", result["status"])
+		testData, ok := result["test-data"].(map[string]interface{})
+		require.True(t, ok, "test-data should be present in response")
+		assert.Equal(t, "demo", testData["status"])
 	})
 
 	t.Run("returns error when k8s client is nil in non-demo mode", func(t *testing.T) {

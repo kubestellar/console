@@ -89,7 +89,8 @@ func TestListAllFeatureRequests_CountOnly(t *testing.T) {
 	userID := uuid.New()
 	
 	mockStore := &test.MockStore{}
-	// Count-only mode should not require full request data
+	mockStore.On("GetUser", userID).Return(nil, nil).Once()
+	mockStore.On("GetUserFeatureRequests", userID, 0, 0).Return([]models.FeatureRequest{}, nil).Once()
 	
 	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
 	app.Get("/api/feedback/requests/all", handler.ListAllFeatureRequests)
