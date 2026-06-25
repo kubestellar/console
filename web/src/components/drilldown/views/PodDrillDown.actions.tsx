@@ -444,9 +444,6 @@ Please:
           ws.onmessage = (event: MessageEvent) => {
             const msg = parseWsMessage(event, 'related resources')
             if (!msg) {
-              clearTimeout(timeout)
-              ws.close()
-              resolve(output)
               return
             }
 

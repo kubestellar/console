@@ -379,7 +379,6 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
   const MODAL_TOP_INSET_PX = 80 // NAVBAR_HEIGHT_PX (64) + 16px breathing room
 
   return (
-    <>
     <AnimatePresence>
       {open && (
         <>
@@ -753,17 +752,16 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
               </footer>
             )}
           </motion.div>
+
+          <RequestApprovalModal
+            isOpen={approvalModal.isOpen}
+            onClose={approvalModal.close}
+            state={state}
+            installedProjects={mc.installedProjects}
+          />
         </>
       )}
     </AnimatePresence>
-
-    <RequestApprovalModal
-      isOpen={approvalModal.isOpen}
-      onClose={approvalModal.close}
-      state={state}
-      installedProjects={mc.installedProjects}
-    />
-    </>
   )
 }
 
