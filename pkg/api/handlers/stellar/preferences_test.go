@@ -92,14 +92,14 @@ func TestUpdatePreferences(t *testing.T) {
 			userID: "user-123",
 			body: putStellarPreferencesRequest{
 				DefaultProvider: "claude",
-				ExecutionMode:   "manual",
+				ExecutionMode:   "hybrid",
 				Timezone:        "UTC",
 				ProactiveMode:   true,
 				PinnedClusters:  []string{"cluster-1", "cluster-2"},
 			},
 			wantStatusCode: fiber.StatusOK,
 			wantProvider:   "claude",
-			wantMode:       "manual",
+			wantMode:       "hybrid",
 		},
 		{
 			name:   "empty values use defaults",

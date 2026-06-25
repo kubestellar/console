@@ -139,10 +139,12 @@ func TestGetUnreadCount_Unauthorized(t *testing.T) {
 func TestGetUnreadCount_StoreError(t *testing.T) {
 	userID := uuid.New()
 	
-	mockStore := &test.MockStore{}
-	mockStore.On("GetUnreadNotificationCount", userID).Return(0, errors.New("database error"))
+	stub := &feedbackStoreStub{
+		MockStore: &test.MockStore{},
+		unreadErr: errors.New("database error"),
+	}
 	
-	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
+	app, handler := setupFeedbackTest(t, userID, "", stub)
 	app.Get("/api/feedback/notifications/unread", handler.GetUnreadCount)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications/unread", nil)
@@ -241,7 +243,7 @@ func TestMarkAllNotificationsRead_StoreError(t *testing.T) {
 	userID := uuid.New()
 	
 	mockStore := &test.MockStore{}
-	mockStore.On("MarkAllNotificationsRead", userID).Return(errors.New("database error"))
+	mockStore.On("MarkAllNotificationsRead", context.Background(), userID).Return(errors.New("database error"))
 	
 	app, handler := setupFeedbackTest(t, userID, "", &feedbackStoreStub{MockStore: mockStore})
 	app.Post("/api/feedback/notifications/read-all", handler.MarkAllNotificationsRead)

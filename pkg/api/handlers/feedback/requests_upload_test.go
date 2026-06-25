@@ -101,7 +101,9 @@ func TestUploadScreenshotToGitHub_DetectsImageType(t *testing.T) {
 }
 
 func TestUploadScreenshotToGitHub_Base64Padding(t *testing.T) {
-	handler := &FeedbackHandler{}
+	handler := &FeedbackHandler{
+		httpClient: &http.Client{},
+	}
 	
 	// Test with various padding scenarios
 	testCases := []string{
