@@ -30,8 +30,6 @@ pkg/fileutil 50.0
 
 # --- Tier 3: Previously untracked (have tests, need ratchet baseline) ---
 pkg/ai 0.0
-pkg/apis 0.0
-pkg/client 0.0
 pkg/gpu 0.0
 pkg/kb 0.0
 pkg/ssrf 0.0
