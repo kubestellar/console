@@ -2,6 +2,7 @@ import { Component, Fragment, type ReactNode, type ErrorInfo } from 'react'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import i18next from 'i18next'
 import { emitError, markErrorReported } from '../lib/analytics'
+import { Button } from './ui/Button'
 
 interface Props {
   children: ReactNode
@@ -94,29 +95,32 @@ export class AppErrorBoundary extends Component<Props, State> {
               </p>
             )}
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <button
+              <Button
                 onClick={this.handleRecover}
-                className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors"
+                variant="secondary"
+                size="md"
                 aria-label={i18next.t('common:appError.tryAgain', 'Try again')}
               >
                 {i18next.t('common:appError.tryAgain', 'Try again')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={this.handleGoHome}
-                className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                variant="secondary"
+                size="md"
+                icon={<Home className="w-4 h-4" aria-hidden="true" />}
                 aria-label={i18next.t('common:appError.goHome', 'Go to dashboard')}
               >
-                <Home className="w-4 h-4" aria-hidden="true" />
                 {i18next.t('common:appError.goHome', 'Go to dashboard')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={this.handleReload}
-                className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                variant="accent"
+                size="md"
+                icon={<RefreshCw className="w-4 h-4" aria-hidden="true" />}
                 aria-label={i18next.t('common:appError.reloadPage', 'Reload page')}
               >
-                <RefreshCw className="w-4 h-4" aria-hidden="true" />
                 {i18next.t('common:appError.reloadPage', 'Reload page')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

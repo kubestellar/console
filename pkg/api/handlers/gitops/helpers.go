@@ -126,6 +126,9 @@ func jsonMarshal(v interface{}) ([]byte, error) {
 
 // replaceAll replaces all occurrences of old with new in s
 func replaceAll(s, old, new string) string {
+	if old == "" {
+		return s
+	}
 	result := ""
 	for len(s) > 0 {
 		idx := indexOf(s, old)

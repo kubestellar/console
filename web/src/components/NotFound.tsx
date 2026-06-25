@@ -16,6 +16,7 @@ import { Compass, Home, Rocket, MessageSquarePlus, ArrowLeft, Sparkles, LayoutDa
 import { ROUTES } from '../config/routes'
 import { activatePublicDemoMode } from '../lib/demoMode'
 import { Button } from './ui/Button'
+import { CompactErrorBoundary } from './CompactErrorBoundary'
 import type { CSSProperties } from 'react'
 
 // Inline style constants
@@ -32,6 +33,14 @@ const QUICK_LINKS = [
 ] as const
 
 export default function NotFound() {
+  return (
+    <CompactErrorBoundary context="NotFound" fallback={<div className="text-center p-8 text-muted-foreground">Unable to load page</div>}>
+      <NotFoundContent />
+    </CompactErrorBoundary>
+  )
+}
+
+function NotFoundContent() {
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useTranslation()
