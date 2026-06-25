@@ -20,6 +20,9 @@ jobs:
       issues: write
       # pull-requests: write required to post directions comment on pull requests
       pull-requests: write
+
+      issues: write  # post welcome comment on new issues
+      pull-requests: write  # post welcome comment on new PRs
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -55,8 +58,8 @@ jobs:
       contains(github.event.comment.body, '@kubestellar-hive')
     uses: ./.github/workflows/hive-trust-gate.yml
     permissions:
-      contents: read
-      issues: write
+      contents: read  # read repo config for trust evaluation
+      issues: write  # post trust gate results to issue thread
     with:
       actor: ${{ github.event.comment.user.login }}
       repository: ${{ github.repository }}
@@ -78,7 +81,7 @@ jobs:
       group: hive-interactive-${{ github.event.issue.number }}-${{ github.event.comment.id }}
       cancel-in-progress: false
     permissions:
-      issues: write
+      issues: write  # post acknowledgment comment and manage ai-processing labels
     outputs:
       active-run: ${{ steps.evaluate.outputs.active_run }}
       is-pull-request: ${{ steps.evaluate.outputs.is_pull_request }}
@@ -183,7 +186,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: read
+      contents: read  # NOTE: dispatching implement-fix.lock.yml may require actions: write
     steps:
       - name: Dispatch hive fix workflow
         env:

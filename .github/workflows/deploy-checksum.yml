@@ -10,7 +10,7 @@ permissions: read-all
 jobs:
   update-checksum:
     permissions:
-      contents: write
+      contents: write  # commit deploy.sh.sha256 to main
     runs-on: ubuntu-latest
     # contents: write required to commit updated checksum to repository
     steps:
