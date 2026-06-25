@@ -38,6 +38,7 @@ import {
 import { BaseModal } from '../../lib/modals'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 import { HStack } from '../ui/HStack'
+import { Button } from '../ui/Button'
 
 const STORAGE_KEY = 'kc-acmm-intro-dismissed'
 const PAPER_URL = 'https://arxiv.org/abs/2604.09388'
