@@ -206,8 +206,9 @@ func addClusterToRawConfig(client *k8s.MultiClusterClient, cluster string) {
 	cfg := client.GetRawConfig()
 	if cfg == nil {
 		cfg = &api.Config{
-			Clusters: map[string]*api.Cluster{},
-			Contexts: map[string]*api.Context{},
+			Clusters:  map[string]*api.Cluster{},
+			Contexts:  map[string]*api.Context{},
+			AuthInfos: map[string]*api.AuthInfo{},
 		}
 	}
 	if cfg.Clusters == nil {
@@ -215,6 +216,12 @@ func addClusterToRawConfig(client *k8s.MultiClusterClient, cluster string) {
 	}
 	if cfg.Contexts == nil {
 		cfg.Contexts = map[string]*api.Context{}
+	}
+	if cfg.AuthInfos == nil {
+		cfg.AuthInfos = map[string]*api.AuthInfo{}
+	}
+	if _, exists := cfg.AuthInfos["test-user"]; !exists {
+		cfg.AuthInfos["test-user"] = &api.AuthInfo{}
 	}
 	cfg.Clusters[cluster] = &api.Cluster{Server: "https://" + cluster + ":6443"}
 	cfg.Contexts[cluster] = &api.Context{Cluster: cluster, AuthInfo: "test-user"}
