@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"encoding/pem"
