@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, type ReactNode } from 'react'
 import { useDashboardHealth, type DashboardHealthInfo } from '../hooks/useDashboardHealth'
 import { createStateContext } from './createStateContext'
+import { useModalState } from '../lib/modals/useModalNavigation'
 
 /**
  * Dashboard Context
@@ -62,11 +63,11 @@ const {
 export { DashboardContext, useDashboardContext, useDashboardContextOptional }
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
-  const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false)
+  const addCardModal = useModalState()
+  const templatesModal = useModalState()
   const [studioInitialSection, setStudioInitialSection] = useState<StudioInitialSection | undefined>(undefined)
   const [studioWidgetCardType, setStudioWidgetCardType] = useState<string | undefined>(undefined)
   const [pendingOpenAddCardModal, setPendingOpenAddCardModalState] = useState(false)
-  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
   const [pendingRestoreCard, setPendingRestoreCardState] = useState<PendingRestoreCard | null>(null)
 
   const health = useDashboardHealth()
@@ -74,26 +75,26 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const openAddCardModal = useCallback((section?: StudioInitialSection, widgetCardType?: string) => {
     setStudioInitialSection(section)
     setStudioWidgetCardType(widgetCardType)
-    setIsAddCardModalOpen(true)
-  }, [])
+    addCardModal.open()
+  }, [addCardModal])
 
   const closeAddCardModal = useCallback(() => {
-    setIsAddCardModalOpen(false)
+    addCardModal.close()
     setStudioInitialSection(undefined)
     setStudioWidgetCardType(undefined)
-  }, [])
+  }, [addCardModal])
 
   const setPendingOpenAddCardModal = useCallback((pending: boolean) => {
     setPendingOpenAddCardModalState(pending)
   }, [])
 
   const openTemplatesModal = useCallback(() => {
-    setIsTemplatesModalOpen(true)
-  }, [])
+    templatesModal.open()
+  }, [templatesModal])
 
   const closeTemplatesModal = useCallback(() => {
-    setIsTemplatesModalOpen(false)
-  }, [])
+    templatesModal.close()
+  }, [templatesModal])
 
   const setPendingRestoreCard = useCallback((card: PendingRestoreCard | null) => {
     setPendingRestoreCardState(card)
@@ -104,14 +105,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(() => ({
-    isAddCardModalOpen,
+    isAddCardModalOpen: addCardModal.isOpen,
     openAddCardModal,
     closeAddCardModal,
     studioInitialSection,
     studioWidgetCardType,
     pendingOpenAddCardModal,
     setPendingOpenAddCardModal,
-    isTemplatesModalOpen,
+    isTemplatesModalOpen: templatesModal.isOpen,
     openTemplatesModal,
     closeTemplatesModal,
     pendingRestoreCard,
@@ -119,14 +120,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     clearPendingRestoreCard,
     health,
   }), [
-    isAddCardModalOpen,
+    addCardModal.isOpen,
     openAddCardModal,
     closeAddCardModal,
     studioInitialSection,
     studioWidgetCardType,
     pendingOpenAddCardModal,
     setPendingOpenAddCardModal,
-    isTemplatesModalOpen,
+    templatesModal.isOpen,
     openTemplatesModal,
     closeTemplatesModal,
     pendingRestoreCard,
