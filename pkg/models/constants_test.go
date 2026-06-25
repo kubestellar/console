@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCardType_Constants(t *testing.T) {
+func TestCardType_ConstantValues(t *testing.T) {
 	tests := []struct {
 		constant CardType
 		expected string
@@ -34,14 +34,14 @@ func TestCardType_Constants(t *testing.T) {
 	}
 }
 
-func TestSwapStatus_Constants(t *testing.T) {
+func TestSwapStatus_ConstantValues(t *testing.T) {
 	require.Equal(t, SwapStatus("pending"), SwapStatusPending)
 	require.Equal(t, SwapStatus("snoozed"), SwapStatusSnoozed)
 	require.Equal(t, SwapStatus("completed"), SwapStatusCompleted)
 	require.Equal(t, SwapStatus("cancelled"), SwapStatusCancelled)
 }
 
-func TestEventType_Constants(t *testing.T) {
+func TestEventType_ConstantValues(t *testing.T) {
 	require.Equal(t, EventType("card_focus"), EventTypeCardFocus)
 	require.Equal(t, EventType("card_expand"), EventTypeCardExpand)
 	require.Equal(t, EventType("card_action"), EventTypeCardAction)
