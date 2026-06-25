@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Cpu, HardDrive, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters, GPUNode } from '../../hooks/useMCP'
@@ -7,10 +7,10 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
-import { CardControls } from '../ui/CardControls'
-import { Pagination } from '../ui/Pagination'
+import { CardControls, SortDirection } from '../ui/CardControls'
+import { Pagination, usePagination } from '../ui/Pagination'
 import { ClusterFilterDropdown } from '../ui/ClusterFilterDropdown'
-import { useCardData, useChartFilters } from '../../lib/cards/cardHooks'
+import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { CardEmptyState } from '../../lib/cards/CardComponents'
 
@@ -46,6 +46,10 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected } = useGlobalFilters()
+
+  const [sortBy, setSortBy] = useState<SortByOption>('name')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [limit, setLimit] = useState<number | 'unlimited'>(10)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = allClusters.length > 0
@@ -121,7 +125,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   }, [clusters, filteredGPUNodes])
 
   // Build resource items list
-  const unsortedResourceItems = useMemo(() => {
+  const resourceItems = useMemo(() => {
     const formatGB = (v: number) => v >= 1024 ? `${(v / 1024).toFixed(1)} TB` : `${Math.round(v)} GB`
 
     const items: ResourceItem[] = []
@@ -164,35 +168,31 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         color: 'yellow' })
     }
 
-    return items
-  }, [totals])
-
-  // Use standardized card data hook for sorting and pagination
-  const {
-    items: resourceItems,
-    currentPage,
-    totalPages,
-    itemsPerPage,
-    goToPage,
-    needsPagination,
-    setItemsPerPage,
-    sorting: { sortBy, setSortBy, sortDirection, setSortDirection },
-  } = useCardData<ResourceItem, SortByOption>(unsortedResourceItems, {
-    filter: {
-      searchFields: [],
-      storageKey: 'resource-capacity' },
-    sort: {
-      defaultField: 'name',
-      defaultDirection: 'asc',
-      comparators: {
-        name: (a, b) => a.label.localeCompare(b.label),
-        requested: (a, b) => a.requested - b.requested,
-        percent: (a, b) => {
+    // Sort items
+    const sorted = [...items].sort((a, b) => {
+      let compare = 0
+      switch (sortBy) {
+        case 'name':
+          compare = a.label.localeCompare(b.label)
+          break
+        case 'requested':
+          compare = a.requested - b.requested
+          break
+        case 'percent': {
           const pctA = a.capacity > 0 ? (a.requested / a.capacity) * 100 : 0
           const pctB = b.capacity > 0 ? (b.requested / b.capacity) * 100 : 0
-          return pctA - pctB
-        } } },
-    defaultLimit: 10 })
+          compare = pctA - pctB
+          break
+        }
+      }
+      return sortDirection === 'asc' ? compare : -compare
+    })
+
+    return sorted
+  }, [totals, sortBy, sortDirection])
+
+  const effectivePerPage = limit === 'unlimited' ? 100 : limit
+  const pagination = usePagination(resourceItems, effectivePerPage)
 
   // Check if we have real data - need both clusters and at least some capacity data
   const hasCapacityData = totals.cpuCores > 0 || totals.memoryGB > 0 || totals.totalGPUs > 0
@@ -257,8 +257,8 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
           />
 
           <CardControls
-            limit={itemsPerPage}
-            onLimitChange={setItemsPerPage}
+            limit={limit}
+            onLimitChange={setLimit}
             sortBy={sortBy}
             sortOptions={SORT_OPTIONS}
             onSortChange={setSortBy}
@@ -271,7 +271,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
       {/* Resource metrics */}
       <div className="flex-1 space-y-2 overflow-y-auto">
         {hasCapacityData ? (
-          resourceItems.map((item) => {
+          pagination.paginatedItems.map((item) => {
             const percentage = item.capacity > 0 ? Math.round((item.requested / item.capacity) * 100) : 0
             const colorClasses: Record<string, string> = {
               blue: 'bg-blue-500',
@@ -329,15 +329,15 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         )}
       </div>
 
-      {/* Pagination — needsPagination already guarantees itemsPerPage is numeric */}
-      {needsPagination && (
+      {/* Pagination */}
+      {pagination.needsPagination && limit !== 'unlimited' && (
         <div className="pt-2 border-t border-border/50 mt-2">
           <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={unsortedResourceItems.length}
-            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : unsortedResourceItems.length}
-            onPageChange={goToPage}
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            itemsPerPage={pagination.itemsPerPage}
+            onPageChange={pagination.goToPage}
             showItemsPerPage={false}
           />
         </div>
