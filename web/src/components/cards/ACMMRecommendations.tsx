@@ -97,7 +97,7 @@ export function ACMMRecommendations() {
           curves — labeled in the sub-component as "Projected" so users
           don't read them as historical data. */}
       <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">
+        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
           Projected balance at L{targetLevel}
         </div>
         <TargetBalanceCharts level={targetLevel} />
@@ -106,7 +106,7 @@ export function ACMMRecommendations() {
       {/* Level slider — drag to explore other levels. Filters the
           Feedback Loops Inventory card via shared context. */}
       <div>
-        <div className="flex flex-wrap items-center justify-between gap-y-2 text-[10px] text-muted-foreground mb-1">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground mb-1">
           <span>Explore level <span className="italic text-muted-foreground/60">— drag to preview AI vs human balance</span></span>
           <span className="font-mono text-foreground">L{targetLevel}</span>
         </div>
@@ -133,7 +133,7 @@ export function ACMMRecommendations() {
       </div>
 
       <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
+        <div className="text-xs text-muted-foreground uppercase tracking-wide">
           You are {/^[aeiou]/i.test(displayedRole) ? 'an' : 'a'}
         </div>
         <div className="text-xl font-bold text-primary">{displayedRole}</div>
@@ -142,21 +142,21 @@ export function ACMMRecommendations() {
 
       {level.antiPattern && (
         <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-          <div className="text-[10px] text-yellow-400 uppercase tracking-wide">Anti-pattern</div>
+          <div className="text-xs text-yellow-400 uppercase tracking-wide">Anti-pattern</div>
           <div className="text-xs text-foreground mt-0.5">{level.antiPattern}</div>
         </div>
       )}
 
       {level.nextTransitionTrigger && (
         <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-          <div className="text-[10px] text-primary uppercase tracking-wide">Next transition</div>
+          <div className="text-xs text-primary uppercase tracking-wide">Next transition</div>
           <div className="text-xs text-foreground mt-0.5">{level.nextTransitionTrigger}</div>
         </div>
       )}
 
       <div>
         <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1.5">
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
+          <div className="text-xs text-muted-foreground uppercase tracking-wide">
             Top recommendations
           </div>
           {recommendations.length > 0 && (
@@ -166,7 +166,7 @@ export function ACMMRecommendations() {
               /* #8852 — previously bg-primary/20 + text-primary failed AA.
                  Use solid primary background with primary-foreground text
                  so the "Ask agent" CTA passes contrast in the action bar. */
-              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors"
+              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors"
               title={`Ask the selected agent to add all ${recommendations.length} missing criteria to ${repo}`}
             >
               <Sparkles className="w-2.5 h-2.5" />
@@ -205,10 +205,10 @@ export function ACMMRecommendations() {
                   })}
                 </div>
               </div>
-              <div className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+              <div className="text-xs text-muted-foreground mt-0.5 leading-snug">
                 {rec.criterion.description}
               </div>
-              <div className="text-[10px] text-muted-foreground/80 mt-1 italic leading-snug">
+              <div className="text-xs text-muted-foreground/80 mt-1 italic leading-snug">
                 {rec.reason}
               </div>
               <div className="mt-1.5 flex flex-wrap items-center justify-between gap-y-2 gap-2">
@@ -220,7 +220,7 @@ export function ACMMRecommendations() {
                   onClick={() => launchOne(rec)}
                   /* #8852 — bg-primary/10 against text-primary failed AA.
                      Raise to solid primary fill for legible action affordance. */
-                  className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors shrink-0"
+                  className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors shrink-0"
                   title={`Ask the selected agent to add the "${rec.criterion.name}" criterion to ${repo}`}
                 >
                   <Zap className="w-2.5 h-2.5" />

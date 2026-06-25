@@ -266,7 +266,7 @@ export const HIPAADashboardContent = memo(function HIPAADashboardContent() {
                     </div>
                     <div className="flex gap-1 mt-1">
                       {ns.labels.map(l => (
-                        <span key={l} className="px-1.5 py-0.5 bg-blue-500/10 text-blue-300 text-[10px] rounded">
+                        <span key={l} className="px-1.5 py-0.5 bg-blue-500/10 text-blue-300 text-xs rounded">
                           {l}
                         </span>
                       ))}

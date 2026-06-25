@@ -194,7 +194,7 @@ export function PipelineFilterBar() {
               <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-xl p-3 min-w-[220px]">
                 {hiddenRepos.length > 0 && (
                   <>
-                    <div className="text-[11px] text-muted-foreground font-medium mb-1">Hidden repos</div>
+                    <div className="text-xs text-muted-foreground font-medium mb-1">Hidden repos</div>
                     {hiddenRepos.map((repo) => (
                       <button
                         key={repo}
@@ -224,7 +224,7 @@ export function PipelineFilterBar() {
       </div>
 
       {addError && (
-        <span className="text-[11px] text-red-400">{addError}</span>
+        <span className="text-xs text-red-400">{addError}</span>
       )}
     </div>
   )

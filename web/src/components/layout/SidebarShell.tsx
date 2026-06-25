@@ -167,7 +167,7 @@ function isGroundControlItem(href: string): boolean {
 
 const SIDEBAR_AUTO_HIDE_MS = 2000
 const COLLAPSED_BADGE_MAX_COUNT = 99
-const COLLAPSED_BADGE_BASE_CLASS = 'absolute -top-1 -right-1 z-10 flex h-4 min-w-4 items-center justify-center rounded-full border border-background px-0.5 text-[10px] font-bold leading-none shadow-sm'
+const COLLAPSED_BADGE_BASE_CLASS = 'absolute -top-1 -right-1 z-10 flex h-4 min-w-4 items-center justify-center rounded-full border border-background px-0.5 text-xs font-bold leading-none shadow-sm'
 const COLLAPSED_BADGE_DEFAULT_COLOR_CLASS = 'bg-primary text-primary-foreground'
 
 // ---------------------------------------------------------------------------
@@ -617,7 +617,7 @@ export function SidebarShell({
                   )}
                   {navItemBadge.count != null && (
                     <span
-                      className="text-[10px] text-muted-foreground/40 tabular-nums ml-0.5 shrink-0"
+                      className="text-xs text-muted-foreground/40 tabular-nums ml-0.5 shrink-0"
                       title={t('sidebar.cardCount', { count: navItemBadge.count })}
                     >{navItemBadge.count}</span>
                   )}

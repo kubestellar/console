@@ -91,14 +91,14 @@ function ServerPodRow({
         </div>
         <span
           className={cn(
-            'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+            'text-xs px-1.5 py-0.5 rounded-full shrink-0',
             phaseBadgeClass(pod.phase, pod.ready),
           )}
         >
           {phaseLabel}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="truncate">{pod.node}</span>
         {pod.restarts > 0 ? (
           <span className="text-yellow-400 shrink-0">
@@ -264,7 +264,7 @@ export function SpireStatus() {
               {t('spireStatus.sectionServer', 'SPIRE Server')}
             </h3>
             {data.trustDomain ? (
-              <span className="text-[11px] text-muted-foreground ml-auto truncate max-w-[50%] font-mono">
+              <span className="text-xs text-muted-foreground ml-auto truncate max-w-[50%] font-mono">
                 {data.trustDomain}
               </span>
             ) : null}
@@ -304,7 +304,7 @@ export function SpireStatus() {
                 </span>
                 <span
                   className={cn(
-                    'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+                    'text-xs px-1.5 py-0.5 rounded-full shrink-0',
                     agent.numberReady === agent.desiredNumberScheduled &&
                       agent.numberMisscheduled === 0
                       ? 'bg-green-500/20 text-green-400'
@@ -316,7 +316,7 @@ export function SpireStatus() {
                 </span>
               </div>
               {agent.numberMisscheduled > 0 ? (
-                <div className="text-[11px] text-yellow-400">
+                <div className="text-xs text-yellow-400">
                   {t('spireStatus.misscheduled', '{{count}} misscheduled', {
                     count: agent.numberMisscheduled,
                   })}

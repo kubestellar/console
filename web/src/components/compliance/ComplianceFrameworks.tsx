@@ -53,7 +53,7 @@ function SeverityBadge({ severity }: { severity: string }) {
     low:      'bg-secondary text-muted-foreground border-border',
   }
   return (
-    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded border ${colors[severity] ?? colors.low}`}>
+    <span className={`px-1.5 py-0.5 text-xs font-medium rounded border ${colors[severity] ?? colors.low}`}>
       {severity.toUpperCase()}
     </span>
   )
@@ -99,9 +99,9 @@ function CheckRow({ check }: { check: ComplianceCheck }) {
           <span className="text-xs font-medium text-foreground truncate">{check.name}</span>
           <SeverityBadge severity={check.severity} />
         </div>
-        {check.message && <p className="text-[11px] text-muted-foreground mt-0.5">{check.message}</p>}
+        {check.message && <p className="text-xs text-muted-foreground mt-0.5">{check.message}</p>}
         {check.status !== 'pass' && check.remediation && (
-          <p className="text-[11px] text-blue-400 mt-0.5">💡 {check.remediation}</p>
+          <p className="text-xs text-blue-400 mt-0.5">💡 {check.remediation}</p>
         )}
       </div>
     </div>
@@ -153,7 +153,7 @@ function FrameworkCard({ fw, selected, onSelect }: { fw: Framework; selected: bo
         <span className="text-sm font-semibold text-foreground">{fw.name}</span>
       </div>
       <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{fw.description}</p>
-      <div className="flex gap-3 text-[11px] text-muted-foreground">
+      <div className="flex gap-3 text-xs text-muted-foreground">
         <span>{fw.controls} controls</span>
         <span>{fw.checks} checks</span>
         <span className="capitalize">{fw.category}</span>

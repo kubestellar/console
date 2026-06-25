@@ -145,7 +145,7 @@ export function AssignmentMatrix({
         Status legend matches the dot palette in STATUS_DOT. Mirrors the
         Flight Plan's legend pattern so users learn the colors once.
       */}
-      <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
+      <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
         <span className="font-medium uppercase tracking-wider text-[10px]">Status:</span>
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Already installed</span>
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /> Warning</span>

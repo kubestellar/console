@@ -73,7 +73,7 @@ export function RepoInput({ value, onChange, placeholder, className }: RepoInput
         </div>
       </div>
       {error && (
-        <div className="text-[10px] text-red-400 mt-0.5">{error}</div>
+        <div className="text-xs text-red-400 mt-0.5">{error}</div>
       )}
     </div>
   )

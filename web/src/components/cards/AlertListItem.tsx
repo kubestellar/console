@@ -146,7 +146,7 @@ export function AlertListItem({
               {duplicateCount > 1 && (
                 <span
                   className={cn(
-                    'shrink-0 rounded-full border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground'
+                    'shrink-0 rounded-full border border-border/60 bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground'
                   )}
                 >
                   {t('activeAlerts.duplicateCount', { count: duplicateCount })}

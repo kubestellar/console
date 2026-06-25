@@ -81,14 +81,14 @@ function StoreRow({ store }: { store: OpenfgaStore }) {
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${storeStatusClass(
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${storeStatusClass(
             store.status,
           )}`}
         >
           {store.status}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="truncate">
           {formatNumber(store.tupleCount)} tuples · {store.modelCount} models
         </span>
@@ -110,11 +110,11 @@ function ModelRow({ model }: { model: OpenfgaAuthorizationModel }) {
             {model.id}
           </span>
         </div>
-        <span className="text-[11px] px-1.5 py-0.5 rounded-full shrink-0 bg-purple-500/20 text-purple-400">
+        <span className="text-xs px-1.5 py-0.5 rounded-full shrink-0 bg-purple-500/20 text-purple-400">
           v{model.schemaVersion}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="truncate">
           {model.storeName} · {model.typeCount} types
         </span>
@@ -250,7 +250,7 @@ export function OpenfgaStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('openfgaStatus.sectionEndpoint', 'Endpoint')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {t('openfgaStatus.server', 'server')}:{' '}
               <span className="text-foreground">{data.stats.serverVersion}</span>
             </span>
@@ -269,19 +269,19 @@ export function OpenfgaStatus() {
           </div>
           <div className="grid grid-cols-2 @sm:grid-cols-3 gap-2">
             <div className="rounded-md bg-secondary/30 px-3 py-2 flex flex-col items-center">
-              <span className="text-[11px] text-muted-foreground">p50</span>
+              <span className="text-xs text-muted-foreground">p50</span>
               <span className="text-sm font-mono text-foreground">
                 {data.stats.latency.p50}
               </span>
             </div>
             <div className="rounded-md bg-secondary/30 px-3 py-2 flex flex-col items-center">
-              <span className="text-[11px] text-muted-foreground">p95</span>
+              <span className="text-xs text-muted-foreground">p95</span>
               <span className="text-sm font-mono text-foreground">
                 {data.stats.latency.p95}
               </span>
             </div>
             <div className="rounded-md bg-secondary/30 px-3 py-2 flex flex-col items-center">
-              <span className="text-[11px] text-muted-foreground">p99</span>
+              <span className="text-xs text-muted-foreground">p99</span>
               <span className="text-sm font-mono text-foreground">
                 {data.stats.latency.p99}
               </span>
@@ -295,7 +295,7 @@ export function OpenfgaStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('openfgaStatus.sectionStores', 'Stores')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {stores.length}
             </span>
           </div>
@@ -319,7 +319,7 @@ export function OpenfgaStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('openfgaStatus.sectionModels', 'Authorization models')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {models.length}
             </span>
           </div>

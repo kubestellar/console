@@ -426,17 +426,17 @@ function AuthorBadge({ author, github, compact }: { author: string; github?: str
                   </div>
                 </div>
                 {profile.loading ? (
-                  <div className="text-[11px] text-muted-foreground">Loading stats...</div>
+                  <div className="text-xs text-muted-foreground">Loading stats...</div>
                 ) : (
                   <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-xs">
                       <Coins className="w-3.5 h-3.5 text-yellow-400" />
                       <span className="text-yellow-300 font-medium">{profile.coins.toLocaleString()} coins</span>
                     </div>
-                    <div className="text-[11px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {profile.consolePRs} PR{profile.consolePRs !== 1 ? 's' : ''} to console
                     </div>
-                    <div className="text-[11px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {profile.marketplacePRs} PR{profile.marketplacePRs !== 1 ? 's' : ''} to marketplace
                     </div>
                   </div>
@@ -506,7 +506,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
             </span>
           )}
         </div>
-        <p className="text-[11px] text-muted-foreground truncate">{item.description}</p>
+        <p className="text-xs text-muted-foreground truncate">{item.description}</p>
       </div>
 
       {/* Author */}
@@ -535,7 +535,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
             href={validateExternalUrl(item.issueUrl) || ISSUES_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded transition-colors"
           >
             <Sparkles className="w-3 h-3" />
             Contribute
@@ -557,7 +557,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
           <button
             onClick={handleInstall}
             disabled={installing}
-            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded transition-colors disabled:opacity-50"
           >
             {installing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
             Install

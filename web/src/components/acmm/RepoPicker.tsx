@@ -56,7 +56,7 @@ function BadgePreview({ level, levelName, detected, total }: {
 }) {
   const rightColor = BADGE_COLORS[level] ?? BADGE_COLORS[1]
   return (
-    <span className="inline-flex items-stretch text-[11px] font-medium leading-none rounded overflow-hidden shadow-xs h-5">
+    <span className="inline-flex items-stretch text-xs font-medium leading-none rounded overflow-hidden shadow-xs h-5">
       <span className="px-1.5 flex items-center bg-neutral-600 text-white">ACMM</span>
       <span
         className="px-1.5 flex items-center text-white"
@@ -295,7 +295,7 @@ export function RepoPicker() {
                 {copied === 'md' ? 'Copied' : 'Copy'}
               </button>
             </div>
-            <code className="block font-mono bg-background/60 px-2 py-1 rounded text-[10px] break-all">
+            <code className="block font-mono bg-background/60 px-2 py-1 rounded text-xs break-all">
               {badgeMarkdown}
             </code>
           </div>
@@ -311,11 +311,11 @@ export function RepoPicker() {
                 {copied === 'html' ? 'Copied' : 'Copy'}
               </button>
             </div>
-            <code className="block font-mono bg-background/60 px-2 py-1 rounded text-[10px] break-all">
+            <code className="block font-mono bg-background/60 px-2 py-1 rounded text-xs break-all">
               {badgeHtml}
             </code>
           </div>
-          <div className="text-muted-foreground text-[10px]">
+          <div className="text-muted-foreground text-xs">
             Links back to the ACMM dashboard loaded with <code className="font-mono">{repo}</code>. Shields.io caches for ~5 minutes; use the refresh icon to force an in-dashboard re-scan.
           </div>
         </div>

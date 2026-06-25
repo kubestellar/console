@@ -178,7 +178,7 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
 
                 {/* Latency Analysis Section */}
                 <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50 uppercase tracking-widest font-bold px-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground/50 uppercase tracking-widest font-bold px-1">
                         <Clock className="w-3 h-3" />
                         <span>{t('jaeger.latencyAnalysis')}</span>
                     </div>
@@ -192,7 +192,7 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                 {/* Collectors List */}
                 <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-y-2 px-1">
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50 uppercase tracking-widest font-bold">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground/50 uppercase tracking-widest font-bold">
                             <ShieldCheck className="w-3 h-3" />
                             <span>{t('jaeger.collectors')}</span>
                         </div>
@@ -232,7 +232,7 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                             )
                         })}
                         {paginatedCollectors.length === 0 && (
-                            <div className="py-4 text-center text-[10px] text-muted-foreground italic">
+                            <div className="py-4 text-center text-xs text-muted-foreground italic">
                                 {t('common:labels.noData', 'No data available')}
                             </div>
                         )}
@@ -252,7 +252,7 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
             </div>
 
             <div className="p-3 bg-muted/10 border-t border-border/40 flex flex-wrap items-center justify-between gap-y-2 shrink-0">
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                     <span className="bg-secondary/50 px-1.5 py-0.5 rounded border border-border/20 font-mono opacity-60">
                         v{data.version}
                     </span>
@@ -267,7 +267,7 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                     href="https://www.jaegertracing.io/docs/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-bold uppercase tracking-tight transition-all group"
+                    className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-bold uppercase tracking-tight transition-all group"
                 >
                     {t('jaeger.viewDocs')}
                     <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -285,7 +285,7 @@ function KPIField({ icon, label, value, alert }: { icon: React.ReactNode, label:
         )}>
             <div className="flex items-center gap-2">
                 {icon}
-                <span className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-tight">{label}</span>
+                <span className="text-xs font-medium text-muted-foreground/70 uppercase tracking-tight">{label}</span>
             </div>
             <span className={cn("text-xs font-black tabular-nums", alert ? "text-red-400" : "text-foreground")}>
                 {value.toLocaleString()}
@@ -313,7 +313,7 @@ function LatencyInfo({ label, value, isMiddle }: { label: string, value: number,
         <div className={`text-center py-1 ${isMiddle ? 'border-x border-border/30' : ''}`}>
             <div className="text-[9px] text-muted-foreground/40 uppercase font-black mb-0.5 tracking-tighter">{label}</div>
             <div className="text-sm font-bold text-foreground tabular-nums">
-                {value}<span className="text-[10px] font-normal ml-0.5 opacity-30">ms</span>
+                {value}<span className="text-xs font-normal ml-0.5 opacity-30">ms</span>
             </div>
         </div>
     )

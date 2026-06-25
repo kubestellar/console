@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/audit"
@@ -46,7 +48,7 @@ func (h *TeamHandler) CreateTeam(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	if req.Name == "" {
+	if strings.TrimSpace(req.Name) == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Team name is required")
 	}
 
@@ -68,7 +70,6 @@ func (h *TeamHandler) GetTeam(c *fiber.Ctx) error {
 
 	teamResp, err := h.svc.Get(c.UserContext(), teamID)
 	if err != nil {
-        // Now 'team' correctly refers to the imported package
 		if err == team.ErrNotFound {
 			return fiber.NewError(fiber.StatusNotFound, "Team not found")
 		}
@@ -95,6 +96,9 @@ func (h *TeamHandler) UpdateTeam(c *fiber.Ctx) error {
 	if err != nil {
 		if err == team.ErrNotFound {
 			return fiber.NewError(fiber.StatusNotFound, "Team not found")
+		}
+		if err == team.ErrNoPermission {
+			return fiber.NewError(fiber.StatusForbidden, "Permission denied")
 		}
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -231,27 +235,36 @@ func (h *TeamHandler) ListAllTeams(c *fiber.Ctx) error {
 	}
 	return c.JSON(teams)
 }
+
 // Add the handler implementation
 func (h *TeamHandler) UpdateTeamMemberRole(c *fiber.Ctx) error {
-    teamID, err := uuid.Parse(c.Params("id"))
-    if err != nil { return fiber.NewError(fiber.StatusBadRequest, "Invalid team ID") }
+	teamID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid team ID")
+	}
 
-    memberID, err := uuid.Parse(c.Params("userId"))
-    if err != nil { return fiber.NewError(fiber.StatusBadRequest, "Invalid user ID") }
+	memberID, err := uuid.Parse(c.Params("userId"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid user ID")
+	}
 
-    var req struct {
-        Role models.TeamRole `json:"role"`
-    }
-    if err := c.BodyParser(&req); err != nil {
-        return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
-    }
+	var req struct {
+		Role models.TeamRole `json:"role"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
 
-    actorID := middleware.GetUserID(c)
-    if err := h.svc.UpdateMemberRole(c.UserContext(), teamID, memberID, actorID, req.Role); err != nil {
-        if err == team.ErrNotFound { return fiber.NewError(fiber.StatusNotFound, "Team not found") }
-        if err == team.ErrNoPermission { return fiber.NewError(fiber.StatusForbidden, "Permission denied") }
-        return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-    }
+	actorID := middleware.GetUserID(c)
+	if err := h.svc.UpdateMemberRole(c.UserContext(), teamID, memberID, actorID, req.Role); err != nil {
+		if err == team.ErrNotFound {
+			return fiber.NewError(fiber.StatusNotFound, "Team not found")
+		}
+		if err == team.ErrNoPermission {
+			return fiber.NewError(fiber.StatusForbidden, "Permission denied")
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
 
-    return c.SendStatus(fiber.StatusNoContent)
+	return c.SendStatus(fiber.StatusNoContent)
 }

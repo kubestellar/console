@@ -190,7 +190,7 @@ export function OtelStatus() {
         <div className="grid grid-cols-1 @md:grid-cols-2 gap-2">
           {receivers.length > 0 && (
             <div className="rounded-md bg-secondary/20 border border-border/40 px-3 py-2">
-              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+              <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground mb-1">
                 <Radio className="w-3 h-3" />
                 {t('otelStatus.receivers', 'Receivers')}
               </div>
@@ -198,13 +198,13 @@ export function OtelStatus() {
                 {receivers.map(r => (
                   <span
                     key={r}
-                    className="text-[11px] px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 font-mono"
+                    className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 font-mono"
                   >
                     {r}
                   </span>
                 ))}
                 {extraReceivers > 0 && (
-                  <span className="text-[11px] px-1.5 py-0.5 rounded bg-secondary/40 text-muted-foreground">
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-secondary/40 text-muted-foreground">
                     +{extraReceivers}
                   </span>
                 )}
@@ -214,7 +214,7 @@ export function OtelStatus() {
 
           {exporters.length > 0 && (
             <div className="rounded-md bg-secondary/20 border border-border/40 px-3 py-2">
-              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+              <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground mb-1">
                 <Send className="w-3 h-3" />
                 {t('otelStatus.exporters', 'Exporters')}
               </div>
@@ -222,13 +222,13 @@ export function OtelStatus() {
                 {exporters.map(e => (
                   <span
                     key={e}
-                    className="text-[11px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 font-mono"
+                    className="text-xs px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 font-mono"
                   >
                     {e}
                   </span>
                 ))}
                 {extraExporters > 0 && (
-                  <span className="text-[11px] px-1.5 py-0.5 rounded bg-secondary/40 text-muted-foreground">
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-secondary/40 text-muted-foreground">
                     +{extraExporters}
                   </span>
                 )}
@@ -267,14 +267,14 @@ export function OtelStatus() {
                       {collector.name}
                     </span>
                     {collector.cluster && (
-                      <span className="text-[11px] text-muted-foreground truncate">
+                      <span className="text-xs text-muted-foreground truncate">
                         {collector.cluster}
                       </span>
                     )}
                   </div>
                   <span
                     className={cn(
-                      'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+                      'text-xs px-1.5 py-0.5 rounded-full shrink-0',
                       healthy
                         ? 'bg-green-500/20 text-green-400'
                         : 'bg-yellow-500/20 text-yellow-400',
@@ -289,7 +289,7 @@ export function OtelStatus() {
                     <span
                       key={`${collector.name}:${p.name}`}
                       className={cn(
-                        'text-[10px] px-1.5 py-0.5 rounded font-mono',
+                        'text-xs px-1.5 py-0.5 rounded font-mono',
                         p.healthy
                           ? 'bg-secondary/50 text-foreground/80'
                           : 'bg-red-500/15 text-red-300',
@@ -299,7 +299,7 @@ export function OtelStatus() {
                     </span>
                   ))}
                   {extraPipelines > 0 && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary/40 text-muted-foreground">
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-secondary/40 text-muted-foreground">
                       +{extraPipelines}
                     </span>
                   )}

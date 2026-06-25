@@ -214,14 +214,14 @@ export function RookStatus() {
                       {cluster.namespace}/{cluster.name}
                     </span>
                     {cluster.cephVersion && (
-                      <span className="text-[11px] text-muted-foreground truncate">
+                      <span className="text-xs text-muted-foreground truncate">
                         {cluster.cephVersion}
                       </span>
                     )}
                   </div>
                   <span
                     className={cn(
-                      'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+                      'text-xs px-1.5 py-0.5 rounded-full shrink-0',
                       healthBadgeClasses(cluster.cephHealth),
                     )}
                   >

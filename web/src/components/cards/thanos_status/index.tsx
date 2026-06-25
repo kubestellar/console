@@ -150,7 +150,7 @@ export function ThanosStatus() {
                         </div>
                     ))}
                     {data.targets.length > MAX_VISIBLE_TARGETS && (
-                        <p className="text-[10px] text-muted-foreground italic">
+                        <p className="text-xs text-muted-foreground italic">
                             + {data.targets.length - MAX_VISIBLE_TARGETS} more targets
                         </p>
                     )}
