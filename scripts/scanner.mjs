@@ -154,6 +154,11 @@ const MALICIOUS_PATTERNS = [
   { name: 'Command injection: $() in string', pattern: /\$\([^)]{4,}\)/g, allowSafeCLI: true },
   { name: 'Suspicious curl pipe', pattern: /curl\s[^|]*\|\s*(?:ba)?sh/gi },
   { name: 'Suspicious wget pipe', pattern: /wget\s[^|]*\|\s*(?:ba)?sh/gi },
+  // env / xargs / find shell-interpreter escapes
+  // `env bash -c '...'` bypasses binary allowlists even when shell:false is set.
+  { name: 'Allowlist escape via env', pattern: /\benv\s+(?:-\S+\s+)*(?:bash|sh|zsh|ksh|dash|python\d*|ruby|perl|node)\b/gi },
+  { name: 'Allowlist escape via xargs', pattern: /\bxargs\s+(?:-\S+\s+)*(?:bash|sh|zsh|ksh|dash)\b/gi },
+  { name: 'Allowlist escape via find -exec', pattern: /\bfind\s[^;]*-exec\s+(?:bash|sh|zsh|ksh|dash)\b/gi },
 
   // Crypto mining indicators
   { name: 'Crypto miner reference', pattern: /\b(?:xmrig|cryptonight|stratum\+tcp|minerd|coinhive)\b/gi },

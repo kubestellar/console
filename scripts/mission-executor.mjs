@@ -40,13 +40,18 @@ function getToken() {
 
 // Allowlist of permitted base commands for Kubernetes installation missions.
 // Every pipeline segment in LLM-provided commands must start with one of these.
-// NOTE: bash/sh removed to prevent shell -c injection bypass.
+// NOTE: bash/sh removed to prevent `shell -c` injection bypass.
+// NOTE: `env` removed — `env <binary>` is a known allowlist escape (e.g.
+//   `env bash -c 'evil'` runs bash even though bash is not in this set).
+//   Environment variables should be set via spawnSync's `env:` option instead.
+// NOTE: `xargs` and `find` are retained but validated against shell-interpreter
+//   arguments in validateCommand() below.
 const ALLOWED_BASE_COMMANDS = new Set([
   'kubectl', 'helm', 'curl', 'cat', 'echo', 'grep',
   'awk', 'sed', 'jq', 'yq', 'kustomize', 'istioctl', 'date', 'ls',
   'sleep', 'timeout', 'base64', 'tr', 'cut', 'wc', 'head', 'tail',
   'printf', 'test', 'true', 'false', 'mkdir', 'rm', 'cp', 'mv',
-  'sort', 'uniq', 'xargs', 'find', 'which', 'env',
+  'sort', 'uniq', 'xargs', 'find', 'which',
 ])
 
 /**
