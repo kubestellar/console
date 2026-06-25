@@ -19,32 +19,26 @@ import { AuthCallback } from '../components/auth/AuthCallback'
 // Eagerly import key sidebar dashboards to prevent React Router's
 // startTransition from keeping the old route visible during lazy loading.
 import { Clusters } from '../components/clusters/Clusters'
-// Public deep links and 404 pages must render meaningful content immediately
-// after the first paint. Keeping these lightweight routes out of Suspense avoids
-// the blank full-screen placeholder that nightly UX tests caught on cold loads.
-import { MissionLandingPage } from '../components/missions/MissionLandingPage'
-import { EmbedCard } from '../pages/EmbedCard'
-import { FromLens } from '../pages/FromLens'
-import { FromHeadlamp } from '../pages/FromHeadlamp'
-import { FromHolmesGPT } from '../pages/FromHolmesGPT'
-import { FeatureInspektorGadget } from '../pages/FeatureInspektorGadget'
-import { FeatureKagent } from '../pages/FeatureKagent'
-import NotFound from '../components/NotFound'
 
 export {
   Dashboard,
   Login,
   AuthCallback,
   Clusters,
-  MissionLandingPage,
-  EmbedCard,
-  FromLens,
-  FromHeadlamp,
-  FromHolmesGPT,
-  FeatureInspektorGadget,
-  FeatureKagent,
-  NotFound,
 }
+
+// Lazy-load secondary page routes to reduce initial bundle size.
+// These pages are only visited on specific deep-link navigations or feature
+// discovery, not on typical dashboard workflows. Loading them on-demand
+// reduces the main chunk size while maintaining fast navigation via prefetch.
+export const MissionLandingPage = safeLazy(() => import('../components/missions/MissionLandingPage'), 'MissionLandingPage')
+export const EmbedCard = safeLazy(() => import('../pages/EmbedCard'), 'EmbedCard')
+export const FromLens = safeLazy(() => import('../pages/FromLens'), 'FromLens')
+export const FromHeadlamp = safeLazy(() => import('../pages/FromHeadlamp'), 'FromHeadlamp')
+export const FromHolmesGPT = safeLazy(() => import('../pages/FromHolmesGPT'), 'FromHolmesGPT')
+export const FeatureInspektorGadget = safeLazy(() => import('../pages/FeatureInspektorGadget'), 'FeatureInspektorGadget')
+export const FeatureKagent = safeLazy(() => import('../pages/FeatureKagent'), 'FeatureKagent')
+export const NotFound = safeLazy(() => import('../components/NotFound'), 'default')
 
 // Lazy-load Welcome (363 lines) and WhiteLabel (629 lines) — these are
 // non-critical public pages that benefit from code-splitting.
