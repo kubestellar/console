@@ -182,6 +182,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      actions: write
     steps:
       - name: Dispatch hive fix workflow
         env:
