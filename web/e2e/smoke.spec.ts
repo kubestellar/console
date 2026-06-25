@@ -16,6 +16,8 @@ const MIN_BODY_TEXT_LEN = 50
 const MIN_DASHBOARD_TEXT_LEN = 100
 /** Short timeout for optional UI probes (theme toggle, demo badge, etc.). */
 const OPTIONAL_PROBE_TIMEOUT_MS = 3_000
+const MOBILE_SIDEBAR_MAX_WIDTH_PX = 768
+const HAMBURGER_PROBE_TIMEOUT_MS = 2_000
 
 /**
  * Smoke Tests for KubeStellar Console
@@ -86,8 +88,6 @@ test.describe('Smoke Tests', () => {
         .or(page.locator('button[aria-label*="menu" i]'))
         .first()
       const viewportSize = page.viewportSize()
-      const MOBILE_SIDEBAR_MAX_WIDTH_PX = 768
-      const HAMBURGER_PROBE_TIMEOUT_MS = 2_000
       if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
         const hamburgerVisible = await hamburger
           .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
@@ -159,6 +159,22 @@ test.describe('Smoke Tests', () => {
       // entry can be flaky across Firefox/WebKit. In-app navigation exercises
       // the actual router path without relying on preview-server rewrites.
       await page.goto('/', { waitUntil: 'domcontentloaded' })
+      const sidebar = page.getByTestId('sidebar')
+      const viewportSize = page.viewportSize()
+      if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
+        const hamburger = page
+          .locator('[data-testid="mobile-menu-toggle"]')
+          .or(page.locator('button[aria-label*="menu" i]'))
+          .first()
+        const hamburgerVisible = await hamburger
+          .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
+          .catch(() => false)
+        if (hamburgerVisible) {
+          await hamburger.evaluate((el) => (el as HTMLElement).click())
+          await expect(sidebar).toBeVisible({ timeout: 3000 })
+        }
+      }
+
       const settingsLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/settings"], [data-testid="sidebar"] a[href="/settings"]').first()
       // WebKit/mobile browsers need more time for sidebar elements to hydrate
       await expect(settingsLink).toBeVisible({ timeout: 20000 })
