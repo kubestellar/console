@@ -38,7 +38,7 @@ type TeamMembership struct {
 type CreateTeamRequest struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description,omitempty"`
-	MemberIDs   []string `json:"memberIds,omitempty"`
+	MemberIDs   []string `json:"memberIds"`
 }
 
 // UpdateTeamRequest represents a request to update a team
