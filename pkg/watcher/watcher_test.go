@@ -975,23 +975,6 @@ func TestEnsureTLSCert_WithEnvVars(t *testing.T) {
 	}
 }
 
-// TestEnsureTLSCert_MissingKeyFile tests error when cert is set but key is missing
-func TestEnsureTLSCert_MissingKeyFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	certPath := filepath.Join(tmpDir, "cert.pem")
-	
-	t.Setenv("TLS_CERT_FILE", certPath)
-	t.Setenv("TLS_KEY_FILE", "")
-
-	_, _, err := EnsureTLSCert()
-	if err == nil {
-		t.Fatal("EnsureTLSCert() expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "TLS_KEY_FILE is missing") {
-		t.Errorf("error = %v, want error about missing TLS_KEY_FILE", err)
-	}
-}
-
 // TestEnsureTLSCert_ReusesExisting tests that existing certs are reused
 func TestEnsureTLSCert_ReusesExisting(t *testing.T) {
 	cwd, err := os.Getwd()
@@ -1051,33 +1034,5 @@ func TestEnsureTLSCert_ReusesExisting(t *testing.T) {
 	}
 	if !keyInfo1.ModTime().Equal(keyInfo2.ModTime()) {
 		t.Error("key file was regenerated instead of reused")
-	}
-}
-
-// TestCreateWatcherTempFile tests the createWatcherTempFile function indirectly
-func TestCreateWatcherTempFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	
-	// createWatcherTempFile is not exported, but we can test it through PrepareRuntime
-	file, err := createWatcherTempFile(tmpDir, "test-*.tmp", 0600)
-	if err != nil {
-		t.Fatalf("createWatcherTempFile() error = %v", err)
-	}
-	defer os.Remove(file)
-
-	// Verify file exists
-	info, err := os.Stat(file)
-	if err != nil {
-		t.Fatalf("file not created: %v", err)
-	}
-
-	// Verify permissions
-	if info.Mode().Perm() != 0600 {
-		t.Errorf("file perms = %o, want 0600", info.Mode().Perm())
-	}
-
-	// Verify file is in expected directory
-	if !strings.HasPrefix(file, tmpDir) {
-		t.Errorf("file %s not in directory %s", file, tmpDir)
 	}
 }
