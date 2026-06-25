@@ -240,13 +240,14 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
             />
             {t('acmmIntro.dontShowAgain')}
           </label>
-          <button
+          <Button
             type="button"
             onClick={handleClose}
-            className="px-4 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 transition-colors"
+            variant="primary"
+            size="md"
           >
             {t('acmmIntro.gotIt')}
-          </button>
+          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>

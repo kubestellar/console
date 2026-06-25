@@ -9,6 +9,7 @@ import { emitApiKeyConfigured, emitApiKeyRemoved, emitConversionStep } from '../
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
+import { Button } from '../ui/Button'
 
 const INSTALL_COMMAND = KC_AGENT.installCommand
 
@@ -384,22 +385,25 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                   <code className="flex-1 px-3 py-2 rounded bg-background font-mono text-sm text-foreground text-left overflow-x-auto">
                     {INSTALL_COMMAND}
                   </code>
-                  <button
+                  <Button
                     onClick={copyInstallCommand}
-                    className="shrink-0 flex items-center gap-1 px-3 py-2 rounded bg-primary text-primary-foreground text-sm hover:bg-primary/80"
+                    variant="primary"
+                    size="md"
+                    icon={<Copy className="w-4 h-4" />}
+                    className="shrink-0"
                   >
-                    <Copy className="w-4 h-4" />
                     {copied ? t('actions.copied') : t('actions.copy')}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
-              <button
+              <Button
                 onClick={fetchKeysStatus}
-                className="text-sm text-primary hover:underline"
+                variant="ghost"
+                size="sm"
               >
                 {t('agent.retryConnection')}
-              </button>
+              </Button>
             </div>
           ) : filteredKeys.length === 0 ? (
             <div className="text-center py-6">
@@ -423,12 +427,13 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                   {t('agent.envVarsHint')}
                 </p>
               </div>
-              <button
+              <Button
                 onClick={fetchKeysStatus}
-                className="text-sm text-primary hover:underline"
+                variant="ghost"
+                size="sm"
               >
                 {t('agent.retryConnection')}
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">
