@@ -32,12 +32,12 @@ done
 echo "Running Vitest unit tests..."
 
 # CI runners (ubuntu-latest, 7 GB RAM) can OOM when running 900+ test files.
-# 8192 MB (8 GB) is the new limit after test count grew to 1800+ files.
-# The previous 7168 MB limit caused environment setup slowdowns (17+ min
-# jsdom construction time) and intermittent worker crashes (nightly
-# regression 2026-05-28, issue #16250).
+# With 3 forked workers, each worker needs ~2 GB heap to stay within the 7 GB
+# physical RAM limit (leaving 1 GB for system overhead). The previous 8192 MB
+# limit exceeded physical RAM and caused "Worker exited unexpectedly" OOM
+# crashes (nightly regression 2026-06-25, issue #19580).
 if [ -n "${CI:-}" ]; then
-  export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=8192"
+  export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=2048"
 fi
 
 # Vitest may exit non-zero due to pool worker termination timeout on CI
