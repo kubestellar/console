@@ -175,6 +175,11 @@ describe('ClusterGroups', () => {
   it('opens CreateGroupForm when Clicking "New Group"', async () => {
     const user = userEvent.setup()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardDemoState.mockReturnValue({
+      shouldUseDemoData: false,
+      reason: null,
+      showDemoBadge: false,
+    })
     render(<ClusterGroups />)
     
     const newGroupButton = screen.getByRole('button', { name: 'cards:clusterGroups.newGroup' })
@@ -185,6 +190,11 @@ describe('ClusterGroups', () => {
 
   it('renders a list of groups with names and cluster counts', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardDemoState.mockReturnValue({
+      shouldUseDemoData: false,
+      reason: null,
+      showDemoBadge: false,
+    })
     mockUseClusterGroups.mockReturnValue({
       groups: [
         { name: 'Group A', kind: 'static', clusters: ['c1', 'c2'], color: 'blue' },
@@ -216,6 +226,11 @@ describe('ClusterGroups', () => {
     })
     
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardDemoState.mockReturnValue({
+      shouldUseDemoData: false,
+      reason: null,
+      showDemoBadge: false,
+    })
     render(<ClusterGroups />)
     
     const editButton = screen.getByRole('button', { name: 'cards:clusterGroups.editGroup' })
@@ -236,6 +251,11 @@ describe('ClusterGroups', () => {
     })
     
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardDemoState.mockReturnValue({
+      shouldUseDemoData: false,
+      reason: null,
+      showDemoBadge: false,
+    })
     render(<ClusterGroups />)
     
     const deleteButton = screen.getByRole('button', { name: 'cards:clusterGroups.deleteGroup' })

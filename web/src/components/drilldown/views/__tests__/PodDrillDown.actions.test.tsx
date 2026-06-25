@@ -121,8 +121,9 @@ describe('PodDrillDown.actions - runKubectl WebSocket race condition fix', () =>
     it('resolves with correct output when matching requestId message arrives', async () => {
       const { result } = renderHook(() => usePodActions(defaultProps))
       
+      let fetchPromise: Promise<void> | undefined
       await act(async () => {
-        result.current.fetchRelatedResources(true)
+        fetchPromise = result.current.fetchRelatedResources(true)
         await flushMicrotasks()
       })
 
@@ -143,6 +144,7 @@ describe('PodDrillDown.actions - runKubectl WebSocket race condition fix', () =>
         })
         await flushMicrotasks()
         vi.runAllTimers()
+        await fetchPromise
       })
 
       expect(mockWs.close).toHaveBeenCalled()
@@ -153,8 +155,9 @@ describe('PodDrillDown.actions - runKubectl WebSocket race condition fix', () =>
     it('does NOT resolve when message with different id arrives', async () => {
       const { result } = renderHook(() => usePodActions(defaultProps))
       
+      let fetchPromise: Promise<void> | undefined
       await act(async () => {
-        result.current.fetchRelatedResources(true)
+        fetchPromise = result.current.fetchRelatedResources(true)
         await flushMicrotasks()
       })
 
@@ -181,6 +184,7 @@ describe('PodDrillDown.actions - runKubectl WebSocket race condition fix', () =>
           payload: { output: 'correct output' }
         })
         await flushMicrotasks()
+        await fetchPromise
       })
 
       expect(mockWs.close).toHaveBeenCalled()
@@ -189,8 +193,9 @@ describe('PodDrillDown.actions - runKubectl WebSocket race condition fix', () =>
     it('waits for matching message even after receiving multiple unrelated messages', async () => {
       const { result } = renderHook(() => usePodActions(defaultProps))
       
+      let fetchPromise: Promise<void> | undefined
       await act(async () => {
-        result.current.fetchRelatedResources(true)
+        fetchPromise = result.current.fetchRelatedResources(true)
         await flushMicrotasks()
       })
 
@@ -225,6 +230,7 @@ describe('PodDrillDown.actions - runKubectl WebSocket race condition fix', () =>
           payload: { output: 'correct output' }
         })
         await flushMicrotasks()
+        await fetchPromise
       })
 
       expect(mockWs.close).toHaveBeenCalled()
@@ -235,8 +241,9 @@ describe('PodDrillDown.actions - runKubectl WebSocket race condition fix', () =>
     it('resolves with empty output when timeout expires before matching message', async () => {
       const { result } = renderHook(() => usePodActions(defaultProps))
       
+      let fetchPromise: Promise<void> | undefined
       await act(async () => {
-        result.current.fetchRelatedResources(true)
+        fetchPromise = result.current.fetchRelatedResources(true)
         await flushMicrotasks()
       })
 
@@ -250,6 +257,7 @@ describe('PodDrillDown.actions - runKubectl WebSocket race condition fix', () =>
       await act(async () => {
         vi.advanceTimersByTime(10_001)
         await flushMicrotasks()
+        await fetchPromise
       })
 
       expect(mockWs.close).toHaveBeenCalled()
@@ -258,8 +266,9 @@ describe('PodDrillDown.actions - runKubectl WebSocket race condition fix', () =>
     it('clears timeout when matching message arrives before expiration', async () => {
       const { result } = renderHook(() => usePodActions(defaultProps))
       
+      let fetchPromise: Promise<void> | undefined
       await act(async () => {
-        result.current.fetchRelatedResources(true)
+        fetchPromise = result.current.fetchRelatedResources(true)
         await flushMicrotasks()
       })
 
@@ -279,6 +288,7 @@ describe('PodDrillDown.actions - runKubectl WebSocket race condition fix', () =>
           payload: { output: 'data arrived in time' }
         })
         await flushMicrotasks()
+        await fetchPromise
       })
 
       const closeCallCount = mockWs.close.mock.calls.length
