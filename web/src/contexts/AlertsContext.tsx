@@ -15,6 +15,7 @@ import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
 import type { AlertsMCPData } from './AlertsDataFetcher'
 import type { AlertsContextValue, AlertNotificationBatch, MutationAccumulator } from './AlertsContext.types'
 import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS, NIGHTLY_E2E_POLL_INTERVAL_MS } from '../lib/constants/network'
+import { MS_PER_SECOND } from '../lib/constants/time'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 import { safeGet } from '../lib/safeLocalStorage'
 import {
@@ -43,9 +44,9 @@ import { applyMutations, createAlertRulesEngine, generateId, shallowEqualRecords
 const AlertsDataFetcher = safeLazy(() => import('./AlertsDataFetcher'), 'default')
 const MCP_UPDATE_BATCH_FRAME_FALLBACK_MS = 16
 const ALERT_RULES_KEY = 'kc_alert_rules'
-const LOADING_TIMEOUT_MS = 30_000
-const INITIAL_EVALUATION_DELAY_MS = 1000
-const EVALUATION_INTERVAL_MS = 30000
+const ALERTS_LOADING_TIMEOUT_MS = 30 * MS_PER_SECOND
+const INITIAL_EVALUATION_DELAY_MS = MS_PER_SECOND
+const EVALUATION_INTERVAL_MS = 30 * MS_PER_SECOND
 
 const {
   Context: AlertsContext,
@@ -260,7 +261,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     }
     const timer = setTimeout(() => {
       setLoadingTimedOut(true)
-    }, LOADING_TIMEOUT_MS)
+    }, ALERTS_LOADING_TIMEOUT_MS)
     return () => clearTimeout(timer)
   }, [mcpData.isLoading])
 

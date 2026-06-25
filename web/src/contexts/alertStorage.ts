@@ -10,7 +10,7 @@
 import type { Alert } from '../types/alerts'
 import { safeGet, safeSet, safeRemove, safeGetJSON } from '../lib/safeLocalStorage'
 import { STORAGE_KEY_NOTIFIED_ALERT_KEYS } from '../lib/constants'
-import { MS_PER_MINUTE, MS_PER_HOUR } from '../lib/constants/time'
+import { DAYS_PER_MONTH, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../lib/constants/time'
 
 /** Storage key for alerts */
 export const ALERTS_KEY = 'kc_alerts'
@@ -24,7 +24,7 @@ export const MAX_RESOLVED_ALERTS_AFTER_PRUNE = 50
 /** Maximum age (ms) for dedup entries — evict stale entries older than this.
  *  30 days: persistent-condition keys (certificate_error, cluster_unreachable)
  *  must survive across sessions until the cluster recovers; 24 h was too short. */
-export const NOTIFICATION_DEDUP_MAX_AGE_MS = 30 * 24 * MS_PER_HOUR // 30 days
+export const NOTIFICATION_DEDUP_MAX_AGE_MS = DAYS_PER_MONTH * MS_PER_DAY
 
 /** Hard cap on stored dedup keys to prevent unbounded localStorage growth.
  *  When exceeded, the oldest entries (by timestamp) are evicted first. */
@@ -44,7 +44,7 @@ export const NOTIFICATION_COOLDOWN_BY_SEVERITY: Record<string, number> = {
   info: 4 * MS_PER_HOUR,   // 4 hours — informational, minimal interruption
 }
 /** Fallback cooldown when severity is unknown */
-export const DEFAULT_NOTIFICATION_COOLDOWN_MS = 30 * MS_PER_MINUTE // 30 min
+export const DEFAULT_NOTIFICATION_COOLDOWN_MS = NOTIFICATION_COOLDOWN_BY_SEVERITY.warning
 
 /** Legacy DOMException error code for QuotaExceededError (used by older browsers). */
 const DOM_EXCEPTION_QUOTA_EXCEEDED_CODE = 22
