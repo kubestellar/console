@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -86,8 +87,8 @@ func TestGetDemoWorkloads(t *testing.T) {
 		if w.Name == "nginx-ingress" {
 			foundNginx = true
 			assert.Equal(t, "ingress-system", w.Namespace)
-			assert.Equal(t, string("Deployment"), w.Type)
-			assert.Equal(t, string("Running"), w.Status)
+			assert.Equal(t, v1alpha1.WorkloadTypeDeployment, w.Type)
+			assert.Equal(t, v1alpha1.WorkloadStatusRunning, w.Status)
 			break
 		}
 	}
