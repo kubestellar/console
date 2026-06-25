@@ -64,6 +64,9 @@ type ClusterHealth struct {
 }
 
 func (m *MultiClusterClient) ListClusters(ctx context.Context) ([]ClusterInfo, error) {
+	if m == nil {
+		return nil, ErrNoClusterConfigured
+	}
 	m.mu.RLock()
 	rawConfig := m.rawConfig
 	inClusterConfig := m.inClusterConfig
@@ -158,6 +161,9 @@ func (m *MultiClusterClient) ListClusters(ctx context.Context) ([]ClusterInfo, e
 // via multiple kubeconfig contexts (e.g. "vllm-d" and
 // "default/api-fmaas-vllm-d-fmaas-res-ibm-com:6443/...").
 func (m *MultiClusterClient) DeduplicatedClusters(ctx context.Context) ([]ClusterInfo, error) {
+	if m == nil {
+		return nil, ErrNoClusterConfigured
+	}
 	clusters, err := m.ListClusters(ctx)
 	if err != nil {
 		return nil, err
