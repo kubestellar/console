@@ -228,13 +228,13 @@ export function TikvStatus() {
                     <span className="text-xs font-medium truncate font-mono">
                       store-{storeId}
                     </span>
-                    <span className="text-[11px] text-muted-foreground truncate">
+                    <span className="text-xs text-muted-foreground truncate">
                       {address}
                     </span>
                   </div>
                   <span
                     className={cn(
-                      'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+                      'text-xs px-1.5 py-0.5 rounded-full shrink-0',
                       stateUp
                         ? 'bg-green-500/20 text-green-400'
                         : 'bg-red-500/20 text-red-400',

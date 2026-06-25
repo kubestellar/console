@@ -75,7 +75,7 @@ const QualityDashboard: React.FC = () => {
           <span className="text-xl font-bold text-emerald-400 mt-1">{t('quality.synced')}</span>
           <div className="mt-2 flex items-center space-x-1">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] text-slate-500 uppercase tracking-tight">{t('quality.digest_active')}</span>
+            <span className="text-xs text-slate-500 uppercase tracking-tight">{t('quality.digest_active')}</span>
           </div>
         </div>
 
@@ -84,7 +84,7 @@ const QualityDashboard: React.FC = () => {
           <TrendingUp className="w-5 h-5 text-blue-400 mb-1 group-hover:scale-110 transition-transform" />
           <span className="text-xs text-slate-400 font-medium">{t('quality.remediation_progress')}</span>
           <span className="text-xl font-bold text-blue-400 mt-1">{stats.progressPct}</span>
-          <span className="text-[10px] text-slate-500 mt-1 italic">{t('quality.fixed', { count: stats.remediationsFixed })}</span>
+          <span className="text-xs text-slate-500 mt-1 italic">{t('quality.fixed', { count: stats.remediationsFixed })}</span>
         </div>
       </div>
 
@@ -109,11 +109,11 @@ const QualityDashboard: React.FC = () => {
           <div className="space-y-2 pt-1 border-t border-slate-800/40">
             <div className="flex items-start space-x-2">
               <CheckCircle className="w-3 h-3 text-emerald-500 mt-0.5 flex-shrink-0" />
-              <span className="text-[10px] text-slate-400">{t('quality.fix_guards_applied')}</span>
+              <span className="text-xs text-slate-400">{t('quality.fix_guards_applied')}</span>
             </div>
             <div className="flex items-start space-x-2">
               <AlertTriangle className="w-3 h-3 text-amber-500 mt-0.5 flex-shrink-0" />
-              <span className="text-[10px] text-slate-400">
+              <span className="text-xs text-slate-400">
                 <span className="text-amber-400 font-medium mr-1">{stats.driftEventsCount}</span>
                 {t('quality.paths_flagged')}
               </span>

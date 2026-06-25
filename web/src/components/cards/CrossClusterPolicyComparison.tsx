@@ -201,7 +201,7 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
   return (
     <div className="space-y-2 p-1">
       {/* Context description */}
-      <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
+      <div className="flex items-start gap-1.5 text-xs text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
         <Info className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground/60" />
         <span>{t('crossClusterPolicy.contextDescription')}</span>
       </div>
@@ -228,7 +228,7 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
             <button
               key={cluster}
               onClick={() => toggleCluster(cluster)}
-              className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-colors ${
+              className={`px-2 py-0.5 rounded text-xs font-mono border transition-colors ${
                 isSelected
                   ? 'bg-blue-500/20 border-blue-500/40 text-blue-400'
                   : 'bg-card/50 border-border/50 text-muted-foreground hover:border-border'
@@ -290,7 +290,7 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
       )}
 
       {/* Summary */}
-      <div className="text-[10px] text-muted-foreground border-t border-border/50 pt-1">
+      <div className="text-xs text-muted-foreground border-t border-border/50 pt-1">
         {policyRows.length} policies across {clustersToCompare.length} clusters
         {policyRows.filter(r => r.discrepancies > 0).length > 0 && (
           <span className="text-yellow-400 ml-1">

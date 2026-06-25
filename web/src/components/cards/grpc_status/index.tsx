@@ -77,11 +77,11 @@ function ServiceRow({ service }: { service: GrpcService }) {
             {service.name}
           </span>
         </div>
-        <span className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${statusClass}`}>
+        <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${statusClass}`}>
           {service.status}
         </span>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span className="truncate">
           {service.namespace} · {service.endpoints} endpoints
         </span>
@@ -214,7 +214,7 @@ export function GrpcStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('grpcStatus.sectionServices', 'gRPC services')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {t('grpcStatus.avgErrorRate', 'avg err')}:{' '}
               <span className={errorColor(data.stats.avgErrorRatePct)}>
                 {data.stats.avgErrorRatePct.toFixed(ERROR_RATE_DECIMALS)}%

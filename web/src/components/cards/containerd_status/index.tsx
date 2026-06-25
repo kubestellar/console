@@ -52,7 +52,7 @@ function ContainerRow({ item }: { item: ContainerdContainer }) {
           <span className="text-xs font-mono truncate">{item.id}</span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${STATE_BADGE[item.state]}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${STATE_BADGE[item.state]}`}
         >
           {item.state}
         </span>
@@ -63,7 +63,7 @@ function ContainerRow({ item }: { item: ContainerdContainer }) {
         <span className="truncate shrink-0 ml-2">{item.uptime}</span>
       </div>
 
-      <div className="text-[11px] text-muted-foreground/80 flex flex-wrap items-center justify-between gap-2">
+      <div className="text-xs text-muted-foreground/80 flex flex-wrap items-center justify-between gap-2">
         <span className="truncate">{item.namespace}</span>
         <span className="truncate shrink-0 ml-2">{item.node}</span>
       </div>

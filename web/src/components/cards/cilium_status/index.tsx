@@ -160,7 +160,7 @@ export const CiliumStatus: React.FC<CardComponentProps> = () => {
                 {/* Node Status List */}
                 <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-y-2 px-1">
-                        <div className="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-widest">
+                        <div className="text-xs uppercase font-bold text-muted-foreground/60 tracking-widest">
                             {t('ciliumStatus.nodes')}
                         </div>
                         <CardControls
@@ -197,7 +197,7 @@ export const CiliumStatus: React.FC<CardComponentProps> = () => {
                                         <span className="text-sm font-medium truncate tracking-tight">{node.name}</span>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
-                                        <span className="text-[10px] font-mono text-muted-foreground bg-black/20 px-1.5 py-0.5 rounded border border-border/20">
+                                        <span className="text-xs font-mono text-muted-foreground bg-black/20 px-1.5 py-0.5 rounded border border-border/20">
                                             {node.version}
                                         </span>
                                         <div className={cn(
@@ -229,7 +229,7 @@ export const CiliumStatus: React.FC<CardComponentProps> = () => {
 
             {/* Footer link */}
             <div className="p-3 bg-muted/10 border-t border-border/40 flex flex-wrap items-center justify-between gap-y-2">
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-tighter">
                     <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
                         {t('ciliumStatus.hubbleEnabled')}
@@ -260,7 +260,7 @@ const MetricTile = ({ icon, label, value, suffix }: { icon: React.ReactNode, lab
         </div>
         <div className="text-lg font-bold text-foreground leading-none tabular-nums truncate w-full px-1">
             {value}
-            {suffix && <span className="text-[10px] font-normal ml-0.5 text-muted-foreground">{suffix}</span>}
+            {suffix && <span className="text-xs font-normal ml-0.5 text-muted-foreground">{suffix}</span>}
         </div>
         <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-tight mt-0.5 truncate w-full px-1">
             {label}

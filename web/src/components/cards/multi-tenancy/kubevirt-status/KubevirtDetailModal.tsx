@@ -93,26 +93,26 @@ function VmRow({ vm }: { vm: VmInfo }) {
           <span className="text-foreground truncate font-medium block" title={vm.name}>
             {vm.name}
           </span>
-          <span className="text-[10px] text-muted-foreground truncate block" title={`${vm.namespace} @ ${vm.cluster}`}>
+          <span className="text-xs text-muted-foreground truncate block" title={`${vm.namespace} @ ${vm.cluster}`}>
             {vm.namespace} @ {vm.cluster}
           </span>
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {vm.cpu && (
-          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground" title={`${vm.cpu} CPU cores`}>
+          <span className="flex items-center gap-0.5 text-xs text-muted-foreground" title={`${vm.cpu} CPU cores`}>
             <Cpu className="w-3 h-3" />
             {vm.cpu}
           </span>
         )}
         {vm.memory && (
-          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground" title={vm.memory}>
+          <span className="flex items-center gap-0.5 text-xs text-muted-foreground" title={vm.memory}>
             <HardDrive className="w-3 h-3" />
             {vm.memory}
           </span>
         )}
         {age && (
-          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground" title={vm.creationTime}>
+          <span className="flex items-center gap-0.5 text-xs text-muted-foreground" title={vm.creationTime}>
             <Clock className="w-3 h-3" />
             {age}
           </span>
@@ -238,28 +238,28 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
                     <CheckCircle className="w-3 h-3 text-green-400" />
                   </div>
                   <p className="text-sm font-bold text-green-400">{stateCounts['running'] || 0}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('kubevirtStatus.runningVMs', 'Running')}</p>
+                  <p className="text-xs text-muted-foreground">{t('kubevirtStatus.runningVMs', 'Running')}</p>
                 </div>
                 <div className="p-2 rounded bg-zinc-500/10 text-center">
                   <div className="flex items-center justify-center gap-1 mb-0.5">
                     <XCircle className="w-3 h-3 text-zinc-400" />
                   </div>
                   <p className="text-sm font-bold text-zinc-400">{stateCounts['stopped'] || 0}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('kubevirtStatus.stoppedVMs', 'Stopped')}</p>
+                  <p className="text-xs text-muted-foreground">{t('kubevirtStatus.stoppedVMs', 'Stopped')}</p>
                 </div>
                 <div className="p-2 rounded bg-amber-500/10 text-center">
                   <div className="flex items-center justify-center gap-1 mb-0.5">
                     <Pause className="w-3 h-3 text-amber-400" />
                   </div>
                   <p className="text-sm font-bold text-amber-400">{stateCounts['paused'] || 0}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('kubevirtStatus.pausedVMs', 'Paused')}</p>
+                  <p className="text-xs text-muted-foreground">{t('kubevirtStatus.pausedVMs', 'Paused')}</p>
                 </div>
                 <div className="p-2 rounded bg-blue-500/10 text-center">
                   <div className="flex items-center justify-center gap-1 mb-0.5">
                     <RefreshCw className="w-3 h-3 text-blue-400" />
                   </div>
                   <p className="text-sm font-bold text-blue-400">{stateCounts['migrating'] || 0}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('kubevirtStatus.migratingVMs', 'Migrating')}</p>
+                  <p className="text-xs text-muted-foreground">{t('kubevirtStatus.migratingVMs', 'Migrating')}</p>
                 </div>
                 <div className="p-2 rounded bg-red-500/10 text-center">
                   <div className="flex items-center justify-center gap-1 mb-0.5">
@@ -268,7 +268,7 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
                   <p className="text-sm font-bold text-red-400">
                     {(stateCounts['failed'] || 0) + (stateCounts['pending'] || 0)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">{t('kubevirtStatus.failedPending', 'Failed/Pending')}</p>
+                  <p className="text-xs text-muted-foreground">{t('kubevirtStatus.failedPending', 'Failed/Pending')}</p>
                 </div>
               </div>
 
@@ -303,7 +303,7 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
                 {(tenantDistribution || []).map((td) => (
                   <div key={td.namespace} className="p-2 rounded bg-secondary/30 text-center">
                     <p className="text-sm font-bold text-foreground">{td.vmCount}</p>
-                    <p className="text-[10px] text-muted-foreground truncate" title={td.namespace}>
+                    <p className="text-xs text-muted-foreground truncate" title={td.namespace}>
                       {td.namespace}
                     </p>
                   </div>

@@ -64,7 +64,7 @@ function ListenerRow({ listener }: { listener: EnvoyListener }) {
           {listener.address}:{listener.port}
         </span>
       </div>
-      <span className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${statusClass}`}>
+      <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${statusClass}`}>
         {listener.status}
       </span>
     </div>
@@ -88,7 +88,7 @@ function ClusterRow({ cluster }: { cluster: EnvoyUpstreamCluster }) {
           <Server className={`w-3.5 h-3.5 shrink-0 ${ringClass}`} />
           <span className="text-xs font-medium text-foreground truncate">{cluster.name}</span>
         </div>
-        <span className={`text-[11px] font-mono shrink-0 ${ringClass}`}>
+        <span className={`text-xs font-mono shrink-0 ${ringClass}`}>
           {cluster.endpointsHealthy}/{cluster.endpointsTotal}
         </span>
       </div>
@@ -215,7 +215,7 @@ export function EnvoyStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('envoyStatus.sectionListeners', 'Listeners')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {t('envoyStatus.http5xx', '5xx rate')}:{' '}
               <span className={data.stats.http5xxRate > 0 ? 'text-yellow-400' : 'text-green-400'}>
                 {data.stats.http5xxRate.toFixed(HTTP_5XX_PERCENT_DECIMALS)}%

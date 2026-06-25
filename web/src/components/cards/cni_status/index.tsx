@@ -70,14 +70,14 @@ function NodeRow({ node }: { node: CniNodeStatus }) {
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${nodeStateClass(
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${nodeStateClass(
             node.state,
           )}`}
         >
           {node.state}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="truncate font-mono">{node.podCidr}</span>
         <span className="ml-auto shrink-0">
           {node.plugin} {node.pluginVersion}
@@ -219,7 +219,7 @@ export function CniStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('cniStatus.sectionPodCidr', 'Pod network CIDR')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {t('cniStatus.version', 'version')}:{' '}
               <span className="text-foreground">{data.summary.pluginVersion}</span>
             </span>
@@ -235,7 +235,7 @@ export function CniStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('cniStatus.sectionNodes', 'Nodes')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {nodes.length}
             </span>
           </div>

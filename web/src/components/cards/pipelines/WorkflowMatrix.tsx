@@ -146,7 +146,7 @@ export function WorkflowMatrix() {
               <div key={`${wf.repo}:${wf.name}`} className="flex items-center gap-2">
                 <div className="w-48 shrink-0 min-w-0">
                   <div className="text-xs font-medium text-foreground truncate" title={wf.name}>{wf.name}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">{wf.repo}</div>
+                  <div className="text-xs text-muted-foreground truncate">{wf.repo}</div>
                 </div>
                 <div
                   className="flex-1 grid gap-0.5"
@@ -182,7 +182,7 @@ export function WorkflowMatrix() {
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-3 text-[10px] text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-3 text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <Legend className="bg-green-500/70" label="success" />
           <Legend className="bg-red-500/80" label="failure" />

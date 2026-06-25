@@ -188,7 +188,7 @@ export function ThroughputComparison() {
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            className="bg-secondary border border-border rounded px-2 py-1 text-[11px] text-white"
+            className="bg-secondary border border-border rounded px-2 py-1 text-xs text-white"
           >
             <option value="all">{t('selectors.allCategories')}</option>
             {filterOpts.categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -196,7 +196,7 @@ export function ThroughputComparison() {
           <select
             value={islFilter}
             onChange={e => setIslFilter(Number(e.target.value))}
-            className="bg-secondary border border-border rounded px-2 py-1 text-[11px] text-white"
+            className="bg-secondary border border-border rounded px-2 py-1 text-xs text-white"
           >
             <option value={0}>All ISL</option>
             {filterOpts.islValues.map(v => <option key={v} value={v}>ISL {v}</option>)}
@@ -204,7 +204,7 @@ export function ThroughputComparison() {
           <select
             value={oslFilter}
             onChange={e => setOslFilter(Number(e.target.value))}
-            className="bg-secondary border border-border rounded px-2 py-1 text-[11px] text-white"
+            className="bg-secondary border border-border rounded px-2 py-1 text-xs text-white"
           >
             <option value={0}>All OSL</option>
             {filterOpts.oslValues.map(v => <option key={v} value={v}>OSL {v}</option>)}

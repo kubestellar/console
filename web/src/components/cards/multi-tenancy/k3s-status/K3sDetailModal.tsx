@@ -54,7 +54,7 @@ function ServerPodRow({ pod }: { pod: K3sServerPodInfo }) {
           <span className="text-foreground truncate font-medium block" title={pod.name}>
             {pod.name}
           </span>
-          <span className="text-[10px] text-muted-foreground truncate block" title={pod.namespace}>
+          <span className="text-xs text-muted-foreground truncate block" title={pod.namespace}>
             {pod.namespace}
           </span>
         </div>

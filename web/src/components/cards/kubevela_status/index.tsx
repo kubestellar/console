@@ -168,7 +168,7 @@ function WorkflowProgress({
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-[11px] tabular-nums text-muted-foreground">
+      <span className="text-xs tabular-nums text-muted-foreground">
         {completed}/{total}
       </span>
     </div>
@@ -199,19 +199,19 @@ function ApplicationRow({
           <span className="text-xs font-medium text-foreground truncate">
             {app.name}
           </span>
-          <span className="text-[11px] text-muted-foreground truncate">
+          <span className="text-xs text-muted-foreground truncate">
             {app.namespace}
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${APP_STATUS_BG[app.status]}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${APP_STATUS_BG[app.status]}`}
         >
           {appStatusLabel(t, app.status)}
         </span>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground min-w-0">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
           <span className="shrink-0">
             <Cpu className="inline w-3 h-3 mr-0.5 text-blue-400" />
             {app.componentCount}{' '}
@@ -233,13 +233,13 @@ function ApplicationRow({
       </div>
 
       {traitsSummary && (
-        <div className="text-[11px] text-muted-foreground/80 truncate">
+        <div className="text-xs text-muted-foreground/80 truncate">
           {t('kubeVela.traits', 'Traits')}: {traitsSummary}
         </div>
       )}
 
       {currentStep && currentStep.phase !== 'succeeded' && (
-        <div className="text-[11px] text-muted-foreground truncate">
+        <div className="text-xs text-muted-foreground truncate">
           <span className={APP_STATUS_COLOR[app.status]}>
             {t('kubeVela.currentStep', 'Step')}:
           </span>{' '}
@@ -251,7 +251,7 @@ function ApplicationRow({
       )}
 
       {app.message && !currentStep?.message && (
-        <div className="text-[11px] text-red-400/80 truncate">{app.message}</div>
+        <div className="text-xs text-red-400/80 truncate">{app.message}</div>
       )}
     </div>
   )
@@ -388,7 +388,7 @@ export function KubeVelaStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('kubeVela.applications', 'Applications')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {applications.length}
             </span>
           </div>

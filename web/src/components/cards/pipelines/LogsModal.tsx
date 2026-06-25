@@ -97,7 +97,7 @@ export function LogsModal({ repo, jobId, title, onClose }: LogsModalProps) {
         <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 px-4 py-3 border-b border-border shrink-0">
           <div className="min-w-0">
             <div className="text-sm font-medium text-foreground truncate">{title}</div>
-            <div className="text-[11px] text-muted-foreground truncate">{repo} • job #{jobId}</div>
+            <div className="text-xs text-muted-foreground truncate">{repo} • job #{jobId}</div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -133,7 +133,7 @@ export function LogsModal({ repo, jobId, title, onClose }: LogsModalProps) {
 
         <pre
           ref={preRef}
-          className="flex-1 min-h-0 overflow-auto bg-black/60 text-[11px] leading-relaxed font-mono text-muted-foreground p-3 whitespace-pre"
+          className="flex-1 min-h-0 overflow-auto bg-black/60 text-xs leading-relaxed font-mono text-muted-foreground p-3 whitespace-pre"
         >
           {isLoading && 'Loading log…'}
           {error && <span className="text-red-400">{error}</span>}

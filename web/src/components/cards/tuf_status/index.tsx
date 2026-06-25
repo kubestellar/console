@@ -112,18 +112,18 @@ function RoleRow({
             <AlertTriangle className={cn('w-3.5 h-3.5 shrink-0', statusTextColor(role.status))} />
           )}
           <span className="text-xs font-medium font-mono truncate">{role.name}</span>
-          <span className="text-[11px] text-muted-foreground shrink-0">v{role.version}</span>
+          <span className="text-xs text-muted-foreground shrink-0">v{role.version}</span>
         </div>
         <span
           className={cn(
-            'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+            'text-xs px-1.5 py-0.5 rounded-full shrink-0',
             statusBadgeClass(role.status),
           )}
         >
           {statusLabel}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
           <span className={statusTextColor(role.status)}>{formatExpiration(role.expiresAt)}</span>
@@ -291,7 +291,7 @@ export function TufStatus() {
               {t('tufStatus.sectionRoles', 'Top-level roles')}
             </h3>
             {data.repository ? (
-              <span className="text-[11px] text-muted-foreground ml-auto truncate max-w-[50%]">
+              <span className="text-xs text-muted-foreground ml-auto truncate max-w-[50%]">
                 {data.repository}
               </span>
             ) : null}

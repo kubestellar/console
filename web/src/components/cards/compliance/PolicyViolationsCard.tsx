@@ -180,7 +180,7 @@ export function PolicyViolationsCard({ config: _config }: CardConfig) {
         </div>
       )}
 
-      <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
+      <div className="flex items-start gap-1.5 text-xs text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
         <Info className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground/60" />
         <span>{CARD_DESCRIPTIONS.policy_violations.description}</span>
       </div>

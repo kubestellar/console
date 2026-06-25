@@ -13,31 +13,34 @@ import (
 // mockTeamStore is a minimal mock that satisfies store.TeamStore for the
 // methods used by Service. Unused interface methods panic if called.
 type mockTeamStore struct {
-	team              *models.Team
-	teamWithMembers   *models.TeamWithMembers
-	teams             []models.Team
-	members           []models.TeamMemberInfo
-	userTeams         []models.Team
-	createErr         error
-	getErr            error
-	getWithMembersErr error
-	updateErr         error
-	deleteErr         error
-	listErr           error
-	addMemberErr      error
-	removeMemberErr   error
-	updateMemberErr   error
-	listMembersErr    error
-	getUserTeamsErr   error
-	createdTeam       *models.Team
-	createdMemberIDs  []uuid.UUID
-	updatedTeam       *models.Team
-	deletedTeamID     uuid.UUID
-	addedTeamID       uuid.UUID
-	addedUserID       uuid.UUID
-	addedRole         models.TeamRole
-	removedTeamID     uuid.UUID
-	removedUserID     uuid.UUID
+	team                *models.Team
+	teamWithMembers     *models.TeamWithMembers
+	teams               []models.Team
+	members             []models.TeamMemberInfo
+	userTeams           []models.Team
+	createErr           error
+	getErr              error
+	getWithMembersErr   error
+	updateErr           error
+	deleteErr           error
+	listErr             error
+	addMemberErr        error
+	removeMemberErr     error
+	updateMemberErr     error
+	listMembersErr      error
+	getUserTeamsErr     error
+	createdTeam         *models.Team
+	createdMemberIDs    []uuid.UUID
+	updatedTeam         *models.Team
+	deletedTeamID       uuid.UUID
+	addedTeamID         uuid.UUID
+	addedUserID         uuid.UUID
+	addedRole           models.TeamRole
+	removedTeamID       uuid.UUID
+	removedUserID       uuid.UUID
+	updatedMemberTeamID uuid.UUID
+	updatedMemberUserID uuid.UUID
+	updatedMemberRole   models.TeamRole
 }
 
 func (m *mockTeamStore) CreateTeam(_ context.Context, team *models.Team, memberIDs []uuid.UUID) error {
@@ -81,7 +84,10 @@ func (m *mockTeamStore) RemoveTeamMember(_ context.Context, teamID, userID uuid.
 	return m.removeMemberErr
 }
 
-func (m *mockTeamStore) UpdateTeamMemberRole(_ context.Context, _, _ uuid.UUID, _ models.TeamRole) error {
+func (m *mockTeamStore) UpdateTeamMemberRole(_ context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
+	m.updatedMemberTeamID = teamID
+	m.updatedMemberUserID = userID
+	m.updatedMemberRole = role
 	return m.updateMemberErr
 }
 
@@ -538,5 +544,85 @@ func TestUpdate_NoPermission(t *testing.T) {
 	_, err := svc.Update(context.Background(), teamID, regularUserID, models.UpdateTeamRequest{Name: &newName})
 	if !errors.Is(err, ErrNoPermission) {
 		t.Fatalf("expected ErrNoPermission, got %v", err)
+	}
+}
+
+// TestUpdateMemberRole_NotFound tests that UpdateMemberRole returns ErrNotFound
+// when the team does not exist.
+func TestUpdateMemberRole_NotFound(t *testing.T) {
+	svc := New(&mockTeamStore{team: nil}, &mockUserStore{})
+	err := svc.UpdateMemberRole(context.Background(), uuid.New(), uuid.New(), uuid.New(), models.TeamRoleAdmin)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+// TestUpdateMemberRole_ByCreator tests that team creators can update member roles.
+func TestUpdateMemberRole_ByCreator(t *testing.T) {
+	creatorID := uuid.New()
+	teamID := uuid.New()
+	memberID := uuid.New()
+	mock := &mockTeamStore{team: &models.Team{ID: teamID, CreatedBy: creatorID}}
+	svc := New(mock, &mockUserStore{})
+
+	err := svc.UpdateMemberRole(context.Background(), teamID, memberID, creatorID, models.TeamRoleAdmin)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.updatedMemberTeamID != teamID {
+		t.Fatalf("expected UpdateTeamMemberRole called with team %v, got %v", teamID, mock.updatedMemberTeamID)
+	}
+	if mock.updatedMemberUserID != memberID {
+		t.Fatalf("expected UpdateTeamMemberRole called with user %v, got %v", memberID, mock.updatedMemberUserID)
+	}
+	if mock.updatedMemberRole != models.TeamRoleAdmin {
+		t.Fatalf("expected role %v, got %v", models.TeamRoleAdmin, mock.updatedMemberRole)
+	}
+}
+
+// TestUpdateMemberRole_ByAdmin tests that team admins can update member roles.
+func TestUpdateMemberRole_ByAdmin(t *testing.T) {
+	creatorID := uuid.New()
+	adminID := uuid.New()
+	teamID := uuid.New()
+	memberID := uuid.New()
+	mock := &mockTeamStore{
+		team: &models.Team{ID: teamID, CreatedBy: creatorID},
+		members: []models.TeamMemberInfo{
+			{UserID: adminID, Role: models.TeamRoleAdmin},
+		},
+	}
+	svc := New(mock, &mockUserStore{})
+
+	err := svc.UpdateMemberRole(context.Background(), teamID, memberID, adminID, models.TeamRoleMember)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.updatedMemberRole != models.TeamRoleMember {
+		t.Fatalf("expected role %v, got %v", models.TeamRoleMember, mock.updatedMemberRole)
+	}
+}
+
+// TestUpdateMemberRole_NoPermission tests that regular members cannot update
+// another member's role.
+func TestUpdateMemberRole_NoPermission(t *testing.T) {
+	creatorID := uuid.New()
+	regularUserID := uuid.New()
+	teamID := uuid.New()
+	memberID := uuid.New()
+	mock := &mockTeamStore{
+		team: &models.Team{ID: teamID, CreatedBy: creatorID},
+		members: []models.TeamMemberInfo{
+			{UserID: regularUserID, Role: models.TeamRoleMember},
+		},
+	}
+	svc := New(mock, &mockUserStore{})
+
+	err := svc.UpdateMemberRole(context.Background(), teamID, memberID, regularUserID, models.TeamRoleAdmin)
+	if !errors.Is(err, ErrNoPermission) {
+		t.Fatalf("expected ErrNoPermission, got %v", err)
+	}
+	if mock.updatedMemberUserID != uuid.Nil {
+		t.Fatal("UpdateTeamMemberRole should not be called without permission")
 	}
 }

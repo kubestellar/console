@@ -102,7 +102,7 @@ function VolumeRow({ volume }: { volume: LonghornVolume }) {
         </div>
         <span
           className={cn(
-            'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+            'text-xs px-1.5 py-0.5 rounded-full shrink-0',
             ROBUSTNESS_BADGE_CLASSES[volume.robustness],
           )}
         >
@@ -159,12 +159,12 @@ function NodeRow({ node }: { node: LonghornNode }) {
             {node.name}
           </span>
           {node.cluster && (
-            <span className="text-[11px] text-muted-foreground truncate">
+            <span className="text-xs text-muted-foreground truncate">
               {node.cluster}
             </span>
           )}
         </div>
-        <span className={cn('text-[11px] px-1.5 py-0.5 rounded-full shrink-0', statusClass)}>
+        <span className={cn('text-xs px-1.5 py-0.5 rounded-full shrink-0', statusClass)}>
           {statusLabel}
         </span>
       </div>
@@ -339,7 +339,7 @@ export function LonghornStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('longhornStatus.sectionVolumes', 'Volumes')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {data.summary.totalVolumes}
             </span>
           </div>
@@ -365,7 +365,7 @@ export function LonghornStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('longhornStatus.sectionNodes', 'Storage nodes')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {data.summary.totalNodes}
             </span>
           </div>

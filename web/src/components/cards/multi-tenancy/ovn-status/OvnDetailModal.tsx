@@ -175,19 +175,19 @@ export function OvnDetailModal({ isOpen, onClose, data, isDemoData }: OvnDetailM
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="p-2 rounded bg-secondary/30 text-center">
                   <p className="text-sm font-bold text-foreground">{udns.length}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('ovnStatus.totalUdns', 'Total')}</p>
+                  <p className="text-xs text-muted-foreground">{t('ovnStatus.totalUdns', 'Total')}</p>
                 </div>
                 <div className="p-2 rounded bg-secondary/30 text-center">
                   <p className="text-sm font-bold text-cyan-400">{layer3Count}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('ovnStatus.layer3Networks', 'Layer 3')}</p>
+                  <p className="text-xs text-muted-foreground">{t('ovnStatus.layer3Networks', 'Layer 3')}</p>
                 </div>
                 <div className="p-2 rounded bg-secondary/30 text-center">
                   <p className="text-sm font-bold text-teal-400">{layer2Count}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('ovnStatus.layer2Networks', 'Layer 2')}</p>
+                  <p className="text-xs text-muted-foreground">{t('ovnStatus.layer2Networks', 'Layer 2')}</p>
                 </div>
                 <div className="p-2 rounded bg-secondary/30 text-center">
                   <p className="text-sm font-bold text-purple-400">{primaryCount}</p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {t('ovnStatus.primaryNetworks', 'Primary')}
                     {secondaryCount > 0 && ` / ${secondaryCount} sec`}
                   </p>

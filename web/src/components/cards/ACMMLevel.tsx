@@ -76,7 +76,7 @@ export function ACMMLevel() {
           href={PAPER_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors shrink-0 ml-2"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors shrink-0 ml-2"
         >
           <ExternalLink className="w-3 h-3" />
           Source
@@ -88,7 +88,7 @@ export function ACMMLevel() {
           <LevelRing level={level.level} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="text-2xl font-bold leading-none">L{level.level}</div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5 max-w-[90px] text-center leading-tight">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5 max-w-[90px] text-center leading-tight">
               {level.levelName.split(' / ')[0]}
             </div>
           </div>
@@ -101,7 +101,7 @@ export function ACMMLevel() {
               Role: <span className="text-foreground font-medium">{level.role}</span>
             </div>
           </div>
-          <p className="text-[11px] leading-snug text-muted-foreground line-clamp-3">
+          <p className="text-xs leading-snug text-muted-foreground line-clamp-3">
             {level.characteristic}
           </p>
         </div>
@@ -120,7 +120,7 @@ export function ACMMLevel() {
           }`}>
             {level.prerequisites.met}/{level.prerequisites.total}
           </span>
-          <span className="text-[10px] text-muted-foreground ml-auto">prerequisites</span>
+          <span className="text-xs text-muted-foreground ml-auto">prerequisites</span>
         </div>
       )}
 
@@ -128,11 +128,11 @@ export function ACMMLevel() {
           one quoted sentence + what the next level unlocks. */}
       {nextLevel && nextLevelDef && (
         <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
-          <div className="text-[10px] text-primary uppercase tracking-wide mb-1">Why move to L{nextLevel}?</div>
-          <p className="text-[11px] text-muted-foreground leading-relaxed italic mb-1.5">
+          <div className="text-xs text-primary uppercase tracking-wide mb-1">Why move to L{nextLevel}?</div>
+          <p className="text-xs text-muted-foreground leading-relaxed italic mb-1.5">
             {level.nextTransitionTrigger}
           </p>
-          <p className="text-[11px] text-foreground leading-relaxed">
+          <p className="text-xs text-foreground leading-relaxed">
             At <span className="font-mono">L{nextLevel} {nextLevelDef.name}</span> you become {/^[aeiou]/i.test(nextLevelDef.role) ? 'an' : 'a'} <span className="font-medium">{nextLevelDef.role}</span> — {nextLevelDef.characteristic.split('.')[0].toLowerCase()}.
           </p>
         </div>
@@ -140,8 +140,8 @@ export function ACMMLevel() {
 
       {/* How to level up — practical pointers to the other two cards. */}
       {nextLevel && (
-        <div className="text-[11px] text-muted-foreground leading-relaxed space-y-1.5">
-          <div className="text-[10px] uppercase tracking-wide text-foreground/70">How to level up</div>
+        <div className="text-xs text-muted-foreground leading-relaxed space-y-1.5">
+          <div className="text-xs uppercase tracking-wide text-foreground/70">How to level up</div>
           <p>
             Check the <span className="text-foreground font-medium">Feedback Loop Inventory</span> below for missing criteria at L{nextLevel}.
             Click <span className="text-primary">Ask agent for help</span> on any item to have an AI agent add it, or use the
@@ -170,7 +170,7 @@ export function ACMMLevel() {
             >
               <span className="font-mono w-5 text-right shrink-0">L{lvl.n}</span>
               <span className="truncate">{lvl.name}</span>
-              <span className="ml-auto text-[10px] truncate">{lvl.role}</span>
+              <span className="ml-auto text-xs truncate">{lvl.role}</span>
             </div>
           )
         })}

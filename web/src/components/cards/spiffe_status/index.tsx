@@ -78,11 +78,11 @@ function EntryRow({ entry }: { entry: SpiffeRegistrationEntry }) {
             {entry.spiffeId}
           </span>
         </div>
-        <span className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${svidClass}`}>
+        <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${svidClass}`}>
           {entry.svidType.toUpperCase()}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="truncate">{entry.selector}</span>
         <span className="ml-auto shrink-0 font-mono">
           ttl {formatDuration(entry.ttlSeconds)}
@@ -103,14 +103,14 @@ function FederatedRow({ domain }: { domain: SpiffeFederatedDomain }) {
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${federationStatusClass(
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${federationStatusClass(
             domain.status,
           )}`}
         >
           {domain.status}
         </span>
       </div>
-      <div className="text-[11px] text-muted-foreground truncate">
+      <div className="text-xs text-muted-foreground truncate">
         {domain.bundleEndpoint}
       </div>
     </div>
@@ -232,7 +232,7 @@ export function SpiffeStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('spiffeStatus.sectionTrustDomain', 'Trust domain')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {t('spiffeStatus.server', 'server')}:{' '}
               <span className="text-foreground">{data.stats.serverVersion}</span>
             </span>
@@ -248,7 +248,7 @@ export function SpiffeStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('spiffeStatus.sectionEntries', 'Registration entries')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {entries.length}
             </span>
           </div>
@@ -275,7 +275,7 @@ export function SpiffeStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('spiffeStatus.sectionFederated', 'Federated trust domains')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {federatedDomains.length}
             </span>
           </div>

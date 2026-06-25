@@ -754,7 +754,7 @@ export function KubeBert() {
             <ArrowDown className="w-4 h-4 text-orange-400 rotate-45" />
           </button>
         </div>
-        <div className="ml-3 text-[10px] text-muted-foreground leading-tight">
+        <div className="ml-3 text-xs text-muted-foreground leading-tight">
           <div>↑ up-left &nbsp; → up-right</div>
           <div>← down-left &nbsp; ↓ down-right</div>
         </div>

@@ -90,7 +90,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
           {isPreparingInstall ? <Loader2 className="h-3 w-3 shrink-0 animate-spin" /> : <Sparkles className="h-3 w-3 shrink-0" />}
           <span className="min-w-0 whitespace-normal break-words">{installCtaLabel}</span>
         </button>
-        {installError && <p className="mt-2 text-[11px] text-red-300">{installError} <button type="button" className="underline underline-offset-2" onClick={() => void handleClick()}>{t('common:actions.retry')}</button></p>}
+        {installError && <p className="mt-2 text-xs text-red-300">{installError} <button type="button" className="underline underline-offset-2" onClick={() => void handleClick()}>{t('common:actions.retry')}</button></p>}
       </div>
 
       {/* Cluster selection dialog (agent available) */}

@@ -355,7 +355,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
   return (
     <div className="space-y-2 p-1">
       {/* Context description */}
-      <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
+      <div className="flex items-start gap-1.5 text-xs text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
         <Info className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground/60" />
         <span>{t('fleetCompliance.contextDescription')}</span>
       </div>
@@ -427,7 +427,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       ))}
 
       {/* Legend */}
-      <div className="flex gap-3 pt-1 text-[10px] text-muted-foreground border-t border-border/50 mt-1">
+      <div className="flex gap-3 pt-1 text-xs text-muted-foreground border-t border-border/50 mt-1">
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-0.5" /> Good</span>
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-400 mr-0.5" /> Warning</span>
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400 mr-0.5" /> Critical</span>

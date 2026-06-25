@@ -73,7 +73,7 @@ export function DrasiHeaderControls({
       <select
         value={activeConnection?.id ?? ''}
         onChange={e => onSelectConnection(e.target.value)}
-        className="min-w-[160px] max-w-[260px] px-2 py-1 text-[11px] bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
+        className="min-w-[160px] max-w-[260px] px-2 py-1 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
         aria-label={t('drasi.connectionsTitle')}
       >
         <option value="">{t('drasi.noActiveConnection')}</option>
@@ -95,11 +95,11 @@ export function DrasiHeaderControls({
       </button>
       {(flows.length > 1 || selectedFlowId !== FLOW_ID_ALL) && (
         <>
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0 ml-1">{t('drasi.flowLabel')}</span>
+          <span className="text-xs uppercase tracking-wider text-muted-foreground shrink-0 ml-1">{t('drasi.flowLabel')}</span>
           <select
             value={selectedFlowId}
             onChange={e => onSelectFlow(e.target.value)}
-            className="shrink-0 min-w-[140px] max-w-[220px] px-2 py-1 text-[11px] bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
+            className="shrink-0 min-w-[140px] max-w-[220px] px-2 py-1 text-xs bg-slate-950 border border-slate-700 rounded text-white focus:border-cyan-500 focus:outline-hidden"
             aria-label={t('drasi.flowLabel')}
           >
             <option value={FLOW_ID_ALL}>{t('drasi.flowAllResources')}</option>
@@ -112,7 +112,7 @@ export function DrasiHeaderControls({
       <button
         type="button"
         onClick={onOpenStreamSamples}
-        className="shrink-0 ml-auto px-2 py-1 text-[10px] rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-muted-foreground hover:text-cyan-300 flex items-center gap-1.5"
+        className="shrink-0 ml-auto px-2 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-muted-foreground hover:text-cyan-300 flex items-center gap-1.5"
         aria-label={t('drasi.consumeStreamTitle')}
         title={t('drasi.consumeStreamTitle')}
       >
@@ -133,12 +133,12 @@ export function DrasiInstallBanner({ isLive }: { isLive: boolean }) {
     <div className="shrink-0 mb-2 p-2 rounded border border-cyan-500/30 bg-cyan-500/5 flex flex-wrap items-center justify-between gap-y-2 gap-3">
       <div className="min-w-0">
         <div className="text-xs font-semibold text-cyan-300 truncate">{t('drasi.installDrasiTitle')}</div>
-        <div className="text-[10px] text-muted-foreground truncate">{t('drasi.installDrasiDescription')}</div>
+        <div className="text-xs text-muted-foreground truncate">{t('drasi.installDrasiDescription')}</div>
       </div>
       <button
         type="button"
         onClick={() => navigate(getMissionRoute('install-drasi'))}
-        className="shrink-0 px-2.5 py-1 text-[11px] rounded bg-cyan-600 hover:bg-cyan-500 text-white flex items-center gap-1.5"
+        className="shrink-0 px-2.5 py-1 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white flex items-center gap-1.5"
       >
         <Rocket className="w-3 h-3" />
         {t('drasi.installDrasiButton')}
@@ -282,7 +282,7 @@ export function DrasiPipelineCanvas({
         }}
       >
         <div className="flex items-center gap-1.5" style={DRASI_REACTIVE_GRAPH_SOURCE_HEADER_STYLE}>
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sources</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sources</span>
           <button
             type="button"
             onClick={() => onConfigureSource('new')}
@@ -294,7 +294,7 @@ export function DrasiPipelineCanvas({
           </button>
         </div>
         <div className="flex items-center gap-1.5" style={DRASI_REACTIVE_GRAPH_QUERY_HEADER_STYLE}>
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Continuous Queries</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Continuous Queries</span>
           <button
             type="button"
             onClick={() => onConfigureQuery('new')}
@@ -306,7 +306,7 @@ export function DrasiPipelineCanvas({
           </button>
         </div>
         <div className="flex items-center gap-1.5" style={DRASI_REACTIVE_GRAPH_REACTION_HEADER_STYLE}>
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Reactions</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Reactions</span>
           <button
             type="button"
             onClick={onCreateDefaultReaction}
@@ -392,7 +392,7 @@ export function DrasiPipelineCanvas({
                           <button
                             type="button"
                             onClick={event => { event.stopPropagation(); onCreateResultReactionForQuery(query.id) }}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-600/20 hover:bg-cyan-600/40 border border-cyan-500/40 text-cyan-300 flex items-center gap-1"
+                            className="text-xs px-1.5 py-0.5 rounded bg-cyan-600/20 hover:bg-cyan-600/40 border border-cyan-500/40 text-cyan-300 flex items-center gap-1"
                             title={t('drasi.enableLiveResultsHint')}
                           >
                             <Zap className="w-2.5 h-2.5" />
@@ -402,7 +402,7 @@ export function DrasiPipelineCanvas({
                         <button
                           type="button"
                           onClick={event => { event.stopPropagation(); onOpenStreamSamples() }}
-                          className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-muted-foreground hover:text-cyan-300 flex items-center gap-1"
+                          className="text-xs px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-muted-foreground hover:text-cyan-300 flex items-center gap-1"
                           title={t('drasi.consumeStreamTitle')}
                         >
                           <Code2 className="w-2.5 h-2.5" />

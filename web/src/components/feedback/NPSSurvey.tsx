@@ -130,7 +130,7 @@ export function NPSSurvey() {
             aria-label={t(option.labelKey)}
           >
             <span className="text-2xl" role="img" aria-hidden="true">{option.emoji}</span>
-            <span className="text-[10px] text-muted-foreground leading-tight">{t(option.labelKey)}</span>
+            <span className="text-xs text-muted-foreground leading-tight">{t(option.labelKey)}</span>
           </button>
         ))}
       </div>
@@ -150,7 +150,7 @@ export function NPSSurvey() {
           />
           {selectedOption.category === 'detractor' && (
             <div className="mt-3 rounded-lg border border-border bg-secondary/20 p-3">
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {t('nps.publicIssueDisclosure', { minLength: MIN_NPS_PUBLIC_ISSUE_FEEDBACK_LENGTH })}
               </p>
               <label htmlFor={publicIssueConsentId} className="mt-2 flex items-start gap-2 cursor-pointer select-none">
