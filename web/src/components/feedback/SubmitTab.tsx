@@ -425,7 +425,7 @@ export function SubmitForm({
               </ul>
               <div className="text-muted-foreground text-xs mt-1.5 flex flex-wrap gap-1 items-center">
                 <a
-                  href={sanitizeUrl(buildDirectIssueUrl(targetRepo, description))}
+                  href={sanitizeUrl(directIssueUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
