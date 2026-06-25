@@ -40,9 +40,11 @@ vi.mock('react-i18next', async () => {
 })
 
 const mockUseCardLoadingState = vi.fn()
+const mockUseCardDemoState = vi.fn()
 vi.mock('../CardDataContext', () => ({
   useReportCardDataState: vi.fn(),
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+  useCardDemoState: (opts: unknown) => mockUseCardDemoState(opts),
 }))
 
 const mockGPUNodes = vi.fn()
@@ -75,6 +77,11 @@ describe('ResourceCapacity', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardDemoState.mockReturnValue({
+      shouldUseDemoData: true,
+      reason: 'global-demo-mode',
+      showDemoBadge: true,
+    })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })

@@ -63,9 +63,11 @@ vi.mock('react-i18next', async () => {
 })
 
 const mockUseCardLoadingState = vi.fn()
+const mockUseCardDemoState = vi.fn()
 vi.mock('../CardDataContext', () => ({
   useReportCardDataState: vi.fn(),
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+  useCardDemoState: (opts: unknown) => mockUseCardDemoState(opts),
 }))
 
 const mockUseClusters = vi.fn()
@@ -115,6 +117,11 @@ describe('ClusterGroups', () => {
       isPersisted: false,
     })
     mockUseFederationAwareness.mockReturnValue({ groups: [] })
+    mockUseCardDemoState.mockReturnValue({
+      shouldUseDemoData: true,
+      reason: 'global-demo-mode',
+      showDemoBadge: true,
+    })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockUseClusters.mockReturnValue({
       clusters: [],

@@ -9,7 +9,7 @@ vi.mock('../../../../hooks/useMissions', () => ({
 vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDown: () => ({
     drillTo: vi.fn(),
-    closeDrillDown: vi.fn()
+    close: vi.fn()
   })
 }))
 
