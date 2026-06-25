@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { CheckCircle, AlertTriangle, XCircle, Info, Clock, Zap } from 'lucide-react'
 import { StatusBadge } from './StatusBadge'
+import { TEST_STRINGS } from '@/lib/test-strings'
 
 const meta = {
   title: 'UI/StatusBadge',
@@ -17,7 +18,7 @@ const meta = {
     },
     variant: {
       control: 'select',
-      options: ['default', 'outline-solid', 'solid'],
+      options: ['default', 'outline', 'solid'],
     },
     rounded: {
       control: 'select',
@@ -48,14 +49,14 @@ export const AllColors: Story = {
   args: { color: 'green' },
   render: () => (
     <div className="flex flex-wrap gap-2">
-      <StatusBadge color="green">Green</StatusBadge>
-      <StatusBadge color="red">Red</StatusBadge>
-      <StatusBadge color="yellow">Yellow</StatusBadge>
-      <StatusBadge color="blue">Blue</StatusBadge>
-      <StatusBadge color="purple">Purple</StatusBadge>
-      <StatusBadge color="orange">Orange</StatusBadge>
-      <StatusBadge color="cyan">Cyan</StatusBadge>
-      <StatusBadge color="gray">Gray</StatusBadge>
+      <StatusBadge color="green">{TEST_STRINGS.statusBadge.green}</StatusBadge>
+      <StatusBadge color="red">{TEST_STRINGS.statusBadge.red}</StatusBadge>
+      <StatusBadge color="yellow">{TEST_STRINGS.statusBadge.yellow}</StatusBadge>
+      <StatusBadge color="blue">{TEST_STRINGS.statusBadge.blue}</StatusBadge>
+      <StatusBadge color="purple">{TEST_STRINGS.statusBadge.purple}</StatusBadge>
+      <StatusBadge color="orange">{TEST_STRINGS.statusBadge.orange}</StatusBadge>
+      <StatusBadge color="cyan">{TEST_STRINGS.statusBadge.cyan}</StatusBadge>
+      <StatusBadge color="gray">{TEST_STRINGS.statusBadge.gray}</StatusBadge>
     </div>
   ),
 }
@@ -64,14 +65,14 @@ export const AllColorsOutline: Story = {
   args: { color: 'green' },
   render: () => (
     <div className="flex flex-wrap gap-2">
-      <StatusBadge color="green" variant="outline">Green</StatusBadge>
-      <StatusBadge color="red" variant="outline">Red</StatusBadge>
-      <StatusBadge color="yellow" variant="outline">Yellow</StatusBadge>
-      <StatusBadge color="blue" variant="outline">Blue</StatusBadge>
-      <StatusBadge color="purple" variant="outline">Purple</StatusBadge>
-      <StatusBadge color="orange" variant="outline">Orange</StatusBadge>
-      <StatusBadge color="cyan" variant="outline">Cyan</StatusBadge>
-      <StatusBadge color="gray" variant="outline">Gray</StatusBadge>
+      <StatusBadge color="green" variant="outline">{TEST_STRINGS.statusBadge.green}</StatusBadge>
+      <StatusBadge color="red" variant="outline">{TEST_STRINGS.statusBadge.red}</StatusBadge>
+      <StatusBadge color="yellow" variant="outline">{TEST_STRINGS.statusBadge.yellow}</StatusBadge>
+      <StatusBadge color="blue" variant="outline">{TEST_STRINGS.statusBadge.blue}</StatusBadge>
+      <StatusBadge color="purple" variant="outline">{TEST_STRINGS.statusBadge.purple}</StatusBadge>
+      <StatusBadge color="orange" variant="outline">{TEST_STRINGS.statusBadge.orange}</StatusBadge>
+      <StatusBadge color="cyan" variant="outline">{TEST_STRINGS.statusBadge.cyan}</StatusBadge>
+      <StatusBadge color="gray" variant="outline">{TEST_STRINGS.statusBadge.gray}</StatusBadge>
     </div>
   ),
 }
@@ -80,14 +81,14 @@ export const AllColorsSolid: Story = {
   args: { color: 'green' },
   render: () => (
     <div className="flex flex-wrap gap-2">
-      <StatusBadge color="green" variant="solid">Green</StatusBadge>
-      <StatusBadge color="red" variant="solid">Red</StatusBadge>
-      <StatusBadge color="yellow" variant="solid">Yellow</StatusBadge>
-      <StatusBadge color="blue" variant="solid">Blue</StatusBadge>
-      <StatusBadge color="purple" variant="solid">Purple</StatusBadge>
-      <StatusBadge color="orange" variant="solid">Orange</StatusBadge>
-      <StatusBadge color="cyan" variant="solid">Cyan</StatusBadge>
-      <StatusBadge color="gray" variant="solid">Gray</StatusBadge>
+      <StatusBadge color="green" variant="solid">{TEST_STRINGS.statusBadge.green}</StatusBadge>
+      <StatusBadge color="red" variant="solid">{TEST_STRINGS.statusBadge.red}</StatusBadge>
+      <StatusBadge color="yellow" variant="solid">{TEST_STRINGS.statusBadge.yellow}</StatusBadge>
+      <StatusBadge color="blue" variant="solid">{TEST_STRINGS.statusBadge.blue}</StatusBadge>
+      <StatusBadge color="purple" variant="solid">{TEST_STRINGS.statusBadge.purple}</StatusBadge>
+      <StatusBadge color="orange" variant="solid">{TEST_STRINGS.statusBadge.orange}</StatusBadge>
+      <StatusBadge color="cyan" variant="solid">{TEST_STRINGS.statusBadge.cyan}</StatusBadge>
+      <StatusBadge color="gray" variant="solid">{TEST_STRINGS.statusBadge.gray}</StatusBadge>
     </div>
   ),
 }

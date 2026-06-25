@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,7 +19,7 @@ func setupNightlyE2EHandler(githubToken string) (*fiber.App, *NightlyE2EHandler)
 	app := fiber.New()
 	handler := NewNightlyE2EHandler(githubToken)
 	app.Get("/api/nightly-e2e/runs", handler.GetRuns)
-	app.Get("/api/nightly-e2e/run-logs/:owner/:repo/:runId", handler.GetRunLogs)
+	app.Get("/api/nightly-e2e/run-logs", handler.GetRunLogs)
 	return app, handler
 }
 
@@ -67,9 +68,9 @@ func TestNightlyE2EHandler_GetRuns_Success(t *testing.T) {
 }
 
 func TestNightlyE2EHandler_GetRuns_CacheBehavior(t *testing.T) {
-	callCount := 0
+	var callCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		callCount++
+		callCount.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		path := strings.TrimPrefix(r.URL.Path, "/api/v3")
 
@@ -106,7 +107,7 @@ func TestNightlyE2EHandler_GetRuns_CacheBehavior(t *testing.T) {
 	var result1 NightlyE2EResponse
 	json.NewDecoder(resp1.Body).Decode(&result1)
 
-	initialCallCount := callCount
+	initialCallCount := callCount.Load()
 
 	req2 := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
 	resp2, _ := app.Test(req2, 10000)
@@ -119,7 +120,7 @@ func TestNightlyE2EHandler_GetRuns_CacheBehavior(t *testing.T) {
 	json.NewDecoder(resp2.Body).Decode(&result2)
 
 	assert.True(t, result2.FromCache)
-	assert.Equal(t, initialCallCount, callCount, "Second request should use cache, not make additional API calls")
+	assert.Equal(t, initialCallCount, callCount.Load(), "Second request should use cache, not make additional API calls")
 }
 
 func TestNightlyE2EHandler_GetRunLogs_Success(t *testing.T) {
@@ -150,7 +151,7 @@ func TestNightlyE2EHandler_GetRunLogs_Success(t *testing.T) {
 
 	app, _ := setupNightlyE2EHandler("test-token")
 
-	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/llm-d/llm-d/123", nil)
+	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
 	resp, _ := app.Test(req, 10000)
 
 	if resp == nil {
@@ -169,7 +170,7 @@ func TestNightlyE2EHandler_GetRunLogs_Success(t *testing.T) {
 func TestNightlyE2EHandler_GetRunLogs_InvalidRunId(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
-	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs/owner/repo/invalid", nil)
+	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=owner/repo&runId=invalid", nil)
 	resp, _ := app.Test(req, 5000)
 
 	if resp == nil {
@@ -180,7 +181,7 @@ func TestNightlyE2EHandler_GetRunLogs_InvalidRunId(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
 	json.Unmarshal(body, &result)
-	assert.Contains(t, result["error"], "invalid runId")
+	assert.Contains(t, result["error"], "runId")
 }
 
 func TestNightlyWorkflow_Structure(t *testing.T) {

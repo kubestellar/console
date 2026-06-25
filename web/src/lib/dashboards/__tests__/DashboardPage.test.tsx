@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import type { DragEndEvent } from '@dnd-kit/core'
+import { TEST_STRINGS } from '../../test-strings'
 
 // ---------------------------------------------------------------------------
 // Mocks — declared before component import
@@ -87,12 +88,12 @@ vi.mock('../../../components/dashboard/customizer/DashboardCustomizer', () => ({
   }) => (
     isOpen ? (
       <div data-testid="dashboard-customizer">
-        <button data-testid="customizer-close" onClick={onClose}>Close</button>
+        <button data-testid="customizer-close" onClick={onClose}>{TEST_STRINGS.dashboard.close}</button>
         <button
           data-testid="customizer-add-card"
           onClick={() => onAddCards([{ type: 'new_card', title: 'New Card', config: {} }])}
         >
-          Add
+          {TEST_STRINGS.dashboard.add}
         </button>
         <button
           data-testid="customizer-apply-template"
@@ -103,7 +104,7 @@ vi.mock('../../../components/dashboard/customizer/DashboardCustomizer', () => ({
             ],
           })}
         >
-          Apply Template
+          {TEST_STRINGS.dashboard.apply} Template
         </button>
       </div>
     ) : null

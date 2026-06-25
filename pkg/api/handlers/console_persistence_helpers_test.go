@@ -12,7 +12,6 @@ import (
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -37,7 +36,7 @@ func TestRequireAdminHelpers(t *testing.T) {
 			name: "admin user is allowed",
 			userStore: func(uid uuid.UUID) *test.MockStore {
 				ms := new(test.MockStore)
-				ms.On("GetUser", mock.Anything, uid).Return(&models.User{
+				ms.On("GetUser", uid).Return(&models.User{
 					ID:   uid,
 					Role: "admin",
 				}, nil)
@@ -50,7 +49,7 @@ func TestRequireAdminHelpers(t *testing.T) {
 			name: "non admin user is forbidden",
 			userStore: func(uid uuid.UUID) *test.MockStore {
 				ms := new(test.MockStore)
-				ms.On("GetUser", mock.Anything, uid).Return(&models.User{
+				ms.On("GetUser", uid).Return(&models.User{
 					ID:   uid,
 					Role: "viewer",
 				}, nil)
@@ -62,7 +61,7 @@ func TestRequireAdminHelpers(t *testing.T) {
 			name: "nil user is forbidden",
 			userStore: func(uid uuid.UUID) *test.MockStore {
 				ms := new(test.MockStore)
-				ms.On("GetUser", mock.Anything, uid).Return(nil, nil)
+				ms.On("GetUser", uid).Return(nil, nil)
 				return ms
 			},
 			wantStatus: 403,
@@ -71,7 +70,7 @@ func TestRequireAdminHelpers(t *testing.T) {
 			name: "store error returns 500",
 			userStore: func(uid uuid.UUID) *test.MockStore {
 				ms := new(test.MockStore)
-				ms.On("GetUser", mock.Anything, uid).Return(nil, errors.New("db down"))
+				ms.On("GetUser", uid).Return(nil, errors.New("db down"))
 				return ms
 			},
 			wantStatus: 500,

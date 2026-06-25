@@ -100,7 +100,7 @@ func TestPersistClusterGroup_Success(t *testing.T) {
 	mockStore := env.Store.(*test.MockStore)
 
 	mockStore.ExpectedCalls = nil
-	mockStore.On("SaveClusterGroup", mock.Anything, "my-group", mock.AnythingOfType("[]uint8")).Return(nil).Once()
+	mockStore.On("SaveClusterGroup", "my-group", mock.AnythingOfType("[]uint8")).Return(nil).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
 	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
@@ -122,7 +122,7 @@ func TestPersistClusterGroup_StoreError(t *testing.T) {
 	mockStore := env.Store.(*test.MockStore)
 
 	mockStore.ExpectedCalls = nil
-	mockStore.On("SaveClusterGroup", mock.Anything, "err-group", mock.Anything).Return(assert.AnError).Once()
+	mockStore.On("SaveClusterGroup", "err-group", mock.Anything).Return(assert.AnError).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
 	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
@@ -140,7 +140,7 @@ func TestDeletePersistedClusterGroup_Success(t *testing.T) {
 	mockStore := env.Store.(*test.MockStore)
 
 	mockStore.ExpectedCalls = nil
-	mockStore.On("DeleteClusterGroup", mock.Anything, "del-group").Return(nil).Once()
+	mockStore.On("DeleteClusterGroup", "del-group").Return(nil).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
 	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
@@ -159,7 +159,7 @@ func TestDeletePersistedClusterGroup_StoreError(t *testing.T) {
 	mockStore := env.Store.(*test.MockStore)
 
 	mockStore.ExpectedCalls = nil
-	mockStore.On("DeleteClusterGroup", mock.Anything, "err-group").Return(assert.AnError).Once()
+	mockStore.On("DeleteClusterGroup", "err-group").Return(assert.AnError).Once()
 	mockStore.On("GetUser", mock.Anything).Return(nil, nil).Maybe()
 
 	h := NewWorkloadHandlers(env.K8sClient, env.Hub, mockStore)
@@ -215,7 +215,7 @@ func TestCreateClusterGroup_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
-	assert.Equal(t, 201, resp.StatusCode)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
 	clusterGroupsMu.RLock()
 	_, exists := clusterGroups["new-group"]
@@ -307,7 +307,7 @@ func TestUpdateClusterGroup_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	clusterGroupsMu.RLock()
 	updated := clusterGroups["existing"]
@@ -356,7 +356,7 @@ func TestDeleteClusterGroup_Success(t *testing.T) {
 	req, _ := http.NewRequest("DELETE", "/api/cluster-groups/del-me", nil)
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	clusterGroupsMu.RLock()
 	_, exists := clusterGroups["del-me"]
@@ -439,7 +439,8 @@ func TestSyncClusterGroups_BodyTooLarge(t *testing.T) {
 		// Ensure it's actually over 1MB
 		bigPayload = strings.Repeat("x", 1<<20+1)
 	}
-	req, _ := http.NewRequest("POST", "/api/cluster-groups/sync", strings.NewReader(bigPayload))
+	req, err := http.NewRequest("POST", "/api/cluster-groups/sync", strings.NewReader(bigPayload))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)

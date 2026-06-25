@@ -14,7 +14,7 @@ on:
   issue_comment:
     types: [created]
 
-permissions: {}
+permissions: read-all
 
 jobs:
   process-screenshot:

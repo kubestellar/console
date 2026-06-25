@@ -118,6 +118,12 @@ func (h *FeedbackHandler) handlePREvent(ctx context.Context, payload map[string]
 				fmt.Sprintf("PR #%d Created", prNumber),
 				fmt.Sprintf("A fix for '%s' is ready for review.", request.Title),
 				prURL)
+			
+			// Comment on the linked GitHub issue to help problem reporters understand feature availability
+			linkedIssues := extractLinkedIssueNumbers(body)
+			if len(linkedIssues) > 0 {
+				h.addIssueAvailabilityComment(ctx, linkedIssues[0], prNumber, prURL)
+			}
 		}
 
 	case "closed":
@@ -201,6 +207,56 @@ func (h *FeedbackHandler) addPRComment(ctx context.Context, request *models.Feat
 			body = []byte("(failed to read response body)")
 		}
 		slog.Warn("[Feedback] GitHub API error adding PR comment", "status", resp.StatusCode, "body", string(body))
+	}
+}
+
+// addIssueAvailabilityComment posts a comment on a GitHub issue explaining
+// how problem reporters can access the fix proposed in a PR
+func (h *FeedbackHandler) addIssueAvailabilityComment(ctx context.Context, issueNumber, prNumber int, prURL string) {
+	var commentBody strings.Builder
+	commentBody.WriteString("## Fix Available\n\n")
+	commentBody.WriteString(fmt.Sprintf("A fix for this issue has been proposed in [PR #%d](%s).\n\n", prNumber, prURL))
+	commentBody.WriteString("### How to get the fix:\n\n")
+	commentBody.WriteString("1. **After merge**: The fix will be available in the next release once PR #" + fmt.Sprintf("%d", prNumber) + " is merged to main\n")
+	commentBody.WriteString("2. **Preview deployment**: A preview of the fix may be available at the preview URL linked in the PR checks\n")
+	commentBody.WriteString("3. **Check PR status**: Monitor the PR for reviews, CI status, and merge timing\n\n")
+	commentBody.WriteString("If you have any questions or concerns about this fix, please comment on the PR.\n")
+
+	payload := map[string]string{"body": commentBody.String()}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		slog.Error("[Feedback] failed to marshal issue comment payload", "error", err)
+		return
+	}
+
+	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d/comments",
+		resolveGitHubAPIBase(), h.repoOwner, h.repoName, issueNumber)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		slog.Error("[Feedback] failed to create issue comment request", "error", err)
+		return
+	}
+
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		slog.Error("[Feedback] failed to add issue comment", "error", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
+		slog.Warn("[Feedback] GitHub API error adding issue comment", "status", resp.StatusCode, "body", string(body), "issue", issueNumber, "pr", prNumber)
+	} else {
+		slog.Info("[Feedback] Successfully added issue availability comment", "issue", issueNumber, "pr", prNumber)
 	}
 }
 

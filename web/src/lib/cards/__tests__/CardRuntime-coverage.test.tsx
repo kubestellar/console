@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 import type { CardDefinition } from '../types'
+import { TEST_STRINGS } from '../../test-strings'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be defined before importing the module under test
@@ -64,7 +65,7 @@ vi.mock('../../../components/ui/CardControls', () => ({
 // Mock RefreshIndicator
 vi.mock('../../../components/ui/RefreshIndicator', () => ({
   RefreshButton: ({ onRefresh, isRefreshing }: { onRefresh?: () => void; isRefreshing?: boolean }) => (
-    <button data-testid="refresh-btn" data-refreshing={isRefreshing} onClick={onRefresh}>Refresh</button>
+    <button data-testid="refresh-btn" data-refreshing={isRefreshing} onClick={onRefresh}>{TEST_STRINGS.card.refresh}</button>
   ),
 }))
 

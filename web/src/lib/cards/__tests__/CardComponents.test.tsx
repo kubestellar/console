@@ -15,6 +15,7 @@ import type {
 } from '../CardComponents'
 import { CheckCircle, AlertTriangle, Info, Server } from 'lucide-react'
 import React from 'react'
+import { TEST_STRINGS } from '../../test-strings'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -382,7 +383,7 @@ describe('CardHeader', () => {
   })
 
   it('renders controls content', () => {
-    render(<CardHeader title="Test" controls={<button data-testid="ctrl">Ctrl</button>} />)
+    render(<CardHeader title="Test" controls={<button data-testid="ctrl">{TEST_STRINGS.card.ctrl}</button>} />)
     expect(screen.getByTestId('ctrl')).toBeTruthy()
   })
 
