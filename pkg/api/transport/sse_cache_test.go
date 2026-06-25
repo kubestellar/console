@@ -172,11 +172,15 @@ func TestSSECacheEvictorRemovesExpiredEntries(t *testing.T) {
 	sseCacheOnce = sync.Once{}
 	
 	testInterval := 100 * time.Millisecond
+	originalInterval := sseCacheEvictInterval
+	sseCacheEvictInterval = testInterval
+	
 	defer func() {
 		StopSSECacheEvictor()
 		sseCacheEvictDoneMu.Lock()
 		sseCacheEvictDone = originalEvictDone
 		sseCacheEvictDoneMu.Unlock()
+		sseCacheEvictInterval = originalInterval
 		sseCacheOnce = sync.Once{}
 	}()
 
@@ -199,13 +203,11 @@ func TestSSECacheEvictorRemovesExpiredEntries(t *testing.T) {
 	const maxWait = time.Second
 	deadline := time.Now().Add(maxWait)
 	
-	expiredRemoved := false
 	for time.Now().Before(deadline) {
 		sseCacheMu.RLock()
 		_, exists := sseCache["expired-key"]
 		sseCacheMu.RUnlock()
 		if !exists {
-			expiredRemoved = true
 			break
 		}
 		time.Sleep(pollInterval)
