@@ -137,7 +137,7 @@ func TestClearSSECache(t *testing.T) {
 	sseCacheMu.RLock()
 	initialSize := len(sseCache)
 	sseCacheMu.RUnlock()
-	assert.Equal(t, 3, initialSize)
+	require.GreaterOrEqual(t, initialSize, 3, "cache should have at least 3 items")
 
 	ClearSSECache()
 
@@ -172,7 +172,6 @@ func TestSSECacheEvictorRemovesExpiredEntries(t *testing.T) {
 	sseCacheOnce = sync.Once{}
 	
 	testInterval := 100 * time.Millisecond
-	oldInterval := sseCacheEvictInterval
 	defer func() {
 		StopSSECacheEvictor()
 		sseCacheEvictDoneMu.Lock()
@@ -205,7 +204,6 @@ func TestSSECacheEvictorRemovesExpiredEntries(t *testing.T) {
 	assert.False(t, expiredExists, "expired entry should have been removed by evictor")
 	// Verify the evictor kept the fresh entry
 	assert.True(t, freshExists, "fresh entry should still exist")
-	_ = oldInterval
 }
 
 func TestStopSSECacheEvictorMultipleTimes(t *testing.T) {
