@@ -4,7 +4,7 @@ import React from 'react'
 import { SpiffeStatus } from './index'
 
 const mockUseCachedSpiffe = vi.fn()
-const mockUseCardLoadingState = vi.fn()
+const mockUseReportCardDataState = vi.fn()
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -18,7 +18,7 @@ vi.mock('../../../hooks/useCachedSpiffe', () => ({
 }))
 
 vi.mock('../CardDataContext', () => ({
-  useCardLoadingState: (opts: Record<string, unknown>) => mockUseCardLoadingState(opts),
+  useReportCardDataState: (opts: Record<string, unknown>) => mockUseReportCardDataState(opts),
 }))
 
 vi.mock('../../ui/Skeleton', () => ({
@@ -43,7 +43,7 @@ function setup(overrides?: Record<string, unknown>) {
     refetch: vi.fn(),
     ...overrides,
   })
-  mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false })
+  mockUseReportCardDataState.mockReturnValue({ showSkeleton: false, showEmptyState: false })
 }
 
 describe('SpiffeStatus', () => {
@@ -53,7 +53,7 @@ describe('SpiffeStatus', () => {
 
   it('renders skeleton when loading', () => {
     setup({ isLoading: true })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false })
+    mockUseReportCardDataState.mockReturnValue({ showSkeleton: true, showEmptyState: false })
     render(<SpiffeStatus />)
 
     expect(screen.getByTestId('skeleton-stats')).toBeTruthy()
