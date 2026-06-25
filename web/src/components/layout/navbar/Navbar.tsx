@@ -105,7 +105,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         <button
           data-testid="mobile-menu-toggle"
           onClick={toggleMobileSidebar}
-          className="p-2 min-w-[44px] min-h-[44px] flex md:hidden items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+          className="p-2 min-w-[44px] min-h-[44px] flex lg:hidden items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
           aria-label={config.isMobileOpen ? t('navbar.closeMenu') : t('navbar.openMenu')}
         >
           {config.isMobileOpen ? (
@@ -163,8 +163,8 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
            negotiation with the search bar, preventing overlap when the AI Mission
            button is visible (#4409). Individual critical items use shrink-0. */}
       <div className="flex items-center gap-1 md:gap-3 min-w-0">
-        {/* Core desktop items: md+ (768px) */}
-        <div className="hidden md:flex items-center gap-2">
+        {/* Core desktop items: lg+ (1024px) */}
+        <div className="hidden lg:flex items-center gap-2">
           {/* Unified Filter */}
           <ClusterFilterPanel />
 
