@@ -12,7 +12,7 @@ pkg/api 60.5
 pkg/k8s 68.5
 
 # --- Tier 2: Critical integrations ---
-pkg/notifications 0.0
+pkg/notifications 75.0
 pkg/kagentiprovider 0.0
 pkg/sanitize 85.0
 pkg/store 42.0
@@ -22,10 +22,10 @@ pkg/kagent 0.0
 pkg/mcp 0.0
 pkg/models 0.0
 pkg/stellar 0.0
-pkg/watcher 0.0
+pkg/watcher 70.0
 pkg/settings 0.0
 pkg/rewards 0.0
-pkg/safego 0.0
+pkg/safego 65.0
 pkg/fileutil 0.0
 
 # --- Compliance engines (start at 0, ratchet up as evaluation tests land) ---
