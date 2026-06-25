@@ -4,7 +4,7 @@ import { RotateCcw, Trophy, Pause, Play } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
-import { useReportCardDataState } from './CardDataContext'
+import { useReportCardDataState, useCardDemoState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
@@ -99,7 +99,8 @@ function getPlatformY(platform: Platform, x: number): number {
 
 export function KubeKong(_props: CardComponentProps) {
   const { t } = useTranslation('cards')
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
+  const { showDemoBadge } = useCardDemoState({ requires: 'none' })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: showDemoBadge })
   const { isExpanded } = useCardExpanded()
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
