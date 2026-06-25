@@ -98,7 +98,10 @@ func (h *GitHubPipelinesHandler) ghGetWithRetry(ctx context.Context, path string
 			return nil, ctx.Err()
 		}
 	}
-	return lastResp, lastErr
+	if lastResp != nil {
+		lastResp.Body.Close()
+	}
+	return nil, lastErr
 }
 
 func (h *GitHubPipelinesHandler) fetchRuns(ctx context.Context, repo, query string) ([]ghpWorkflowRun, error) {
