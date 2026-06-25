@@ -411,3 +411,564 @@ func TestHandleKagentiAgents_Success(t *testing.T) {
 	assert.Equal(t, "kagenti-agent", agent["name"])
 	assert.Equal(t, "langchain", agent["framework"])
 }
+
+// --- HandleCRDTools tests ---
+
+func TestHandleCRDTools_OPTIONS(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("OPTIONS", "/api/kagent/tools", nil)
+	h.HandleCRDTools(w, r)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func TestHandleCRDTools_Unauthorized(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/tools", nil)
+	h.HandleCRDTools(w, r)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestHandleCRDTools_NilClient(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/tools", nil)
+	h.HandleCRDTools(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Empty(t, resp["tools"])
+}
+
+func TestHandleCRDTools_MissingCluster(t *testing.T) {
+	dynClient := newFakeDynamicClient()
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/tools", nil)
+	h.HandleCRDTools(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestHandleCRDTools_Success(t *testing.T) {
+	toolServerObj := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "kagent.dev/v1alpha1",
+		"kind":       "ToolServer",
+		"metadata":   map[string]any{"name": "my-tool", "namespace": "default"},
+		"spec": map[string]any{
+			"url":    "http://toolserver:8080",
+			"config": "some-config",
+		},
+		"status": map[string]any{
+			"discoveredTools": []any{
+				map[string]any{"name": "calc", "description": "calculator"},
+			},
+		},
+	}}
+	dynClient := newFakeDynamicClient(toolServerObj)
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/tools?cluster=test", nil)
+	h.HandleCRDTools(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "agent", resp["source"])
+	tools := resp["tools"].([]any)
+	require.Len(t, tools, 1)
+	tool := tools[0].(map[string]any)
+	assert.Equal(t, "my-tool", tool["name"])
+	assert.Equal(t, "ToolServer", tool["kind"])
+	assert.Equal(t, "http://toolserver:8080", tool["url"])
+}
+
+// --- HandleCRDModels tests ---
+
+func TestHandleCRDModels_OPTIONS(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("OPTIONS", "/api/kagent/models", nil)
+	h.HandleCRDModels(w, r)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func TestHandleCRDModels_Unauthorized(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/models", nil)
+	h.HandleCRDModels(w, r)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestHandleCRDModels_NilClient(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/models", nil)
+	h.HandleCRDModels(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Empty(t, resp["models"])
+}
+
+func TestHandleCRDModels_MissingCluster(t *testing.T) {
+	dynClient := newFakeDynamicClient()
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/models", nil)
+	h.HandleCRDModels(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestHandleCRDModels_Success(t *testing.T) {
+	modelConfigObj := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "kagent.dev/v1alpha2",
+		"kind":       "ModelConfig",
+		"metadata":   map[string]any{"name": "gpt4-config", "namespace": "default"},
+		"spec": map[string]any{
+			"provider": "openai",
+			"model":    "gpt-4",
+		},
+	}}
+	dynClient := newFakeDynamicClient(modelConfigObj)
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/models?cluster=test", nil)
+	h.HandleCRDModels(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "agent", resp["source"])
+	models := resp["models"].([]any)
+	require.Len(t, models, 1)
+	model := models[0].(map[string]any)
+	assert.Equal(t, "gpt4-config", model["name"])
+	assert.Equal(t, "ModelConfig", model["kind"])
+	assert.Equal(t, "openai", model["provider"])
+}
+
+// --- HandleCRDMemories tests ---
+
+func TestHandleCRDMemories_OPTIONS(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("OPTIONS", "/api/kagent/memories", nil)
+	h.HandleCRDMemories(w, r)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func TestHandleCRDMemories_Unauthorized(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/memories", nil)
+	h.HandleCRDMemories(w, r)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestHandleCRDMemories_NilClient(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/memories", nil)
+	h.HandleCRDMemories(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Empty(t, resp["memories"])
+}
+
+func TestHandleCRDMemories_MissingCluster(t *testing.T) {
+	dynClient := newFakeDynamicClient()
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/memories", nil)
+	h.HandleCRDMemories(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestHandleCRDMemories_Success(t *testing.T) {
+	memoryObj := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "kagent.dev/v1alpha1",
+		"kind":       "Memory",
+		"metadata":   map[string]any{"name": "my-memory", "namespace": "default"},
+		"spec": map[string]any{
+			"provider": "pgvector",
+		},
+	}}
+	dynClient := newFakeDynamicClient(memoryObj)
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/memories?cluster=test", nil)
+	h.HandleCRDMemories(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "agent", resp["source"])
+	memories := resp["memories"].([]any)
+	require.Len(t, memories, 1)
+	memory := memories[0].(map[string]any)
+	assert.Equal(t, "my-memory", memory["name"])
+	assert.Equal(t, "pgvector", memory["provider"])
+}
+
+// --- HandleCRDSummary tests ---
+
+func TestHandleCRDSummary_OPTIONS(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("OPTIONS", "/api/kagent/summary", nil)
+	h.HandleCRDSummary(w, r)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func TestHandleCRDSummary_Unauthorized(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/summary", nil)
+	h.HandleCRDSummary(w, r)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestHandleCRDSummary_NilClient(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/summary", nil)
+	h.HandleCRDSummary(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, float64(0), resp["agentCount"])
+}
+
+func TestHandleCRDSummary_MissingCluster(t *testing.T) {
+	dynClient := newFakeDynamicClient()
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/summary", nil)
+	h.HandleCRDSummary(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestHandleCRDSummary_Success(t *testing.T) {
+	dynClient := newFakeDynamicClient()
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagent/summary?cluster=test", nil)
+	h.HandleCRDSummary(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "agent", resp["source"])
+	assert.Contains(t, resp, "agentCount")
+	assert.Contains(t, resp, "byCluster")
+}
+
+// --- HandleKagentiBuilds tests ---
+
+func TestHandleKagentiBuilds_OPTIONS(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("OPTIONS", "/api/kagenti/builds", nil)
+	h.HandleKagentiBuilds(w, r)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func TestHandleKagentiBuilds_Unauthorized(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/builds", nil)
+	h.HandleKagentiBuilds(w, r)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestHandleKagentiBuilds_NilClient(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/builds", nil)
+	h.HandleKagentiBuilds(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Empty(t, resp["builds"])
+}
+
+func TestHandleKagentiBuilds_MissingCluster(t *testing.T) {
+	dynClient := newFakeDynamicClient()
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/builds", nil)
+	h.HandleKagentiBuilds(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestHandleKagentiBuilds_Success(t *testing.T) {
+	buildObj := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "agent.kagenti.dev/v1alpha1",
+		"kind":       "AgentBuild",
+		"metadata":   map[string]any{"name": "build-1", "namespace": "default"},
+		"spec": map[string]any{
+			"source":   "git://repo",
+			"pipeline": "docker",
+			"mode":     "fast",
+		},
+		"status": map[string]any{
+			"phase":          "Succeeded",
+			"startTime":      "2024-01-01T00:00:00Z",
+			"completionTime": "2024-01-01T00:05:00Z",
+		},
+	}}
+	dynClient := newFakeDynamicClient(buildObj)
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/builds?cluster=test", nil)
+	h.HandleKagentiBuilds(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "agent", resp["source"])
+	builds := resp["builds"].([]any)
+	require.Len(t, builds, 1)
+	build := builds[0].(map[string]any)
+	assert.Equal(t, "build-1", build["name"])
+	assert.Equal(t, "Succeeded", build["status"])
+}
+
+// --- HandleKagentiCards tests ---
+
+func TestHandleKagentiCards_OPTIONS(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("OPTIONS", "/api/kagenti/cards", nil)
+	h.HandleKagentiCards(w, r)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func TestHandleKagentiCards_Unauthorized(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/cards", nil)
+	h.HandleKagentiCards(w, r)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestHandleKagentiCards_NilClient(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/cards", nil)
+	h.HandleKagentiCards(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Empty(t, resp["cards"])
+}
+
+func TestHandleKagentiCards_MissingCluster(t *testing.T) {
+	dynClient := newFakeDynamicClient()
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/cards", nil)
+	h.HandleKagentiCards(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestHandleKagentiCards_Success(t *testing.T) {
+	cardObj := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "agent.kagenti.dev/v1alpha1",
+		"kind":       "AgentCard",
+		"metadata":   map[string]any{"name": "card-1", "namespace": "default"},
+		"spec": map[string]any{
+			"agentName":       "my-agent",
+			"skills":          []any{"coding", "debugging"},
+			"capabilities":    []any{"web", "cli"},
+			"syncPeriod":      "5m",
+			"identityBinding": "sa-agent",
+		},
+	}}
+	dynClient := newFakeDynamicClient(cardObj)
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/cards?cluster=test", nil)
+	h.HandleKagentiCards(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "agent", resp["source"])
+	cards := resp["cards"].([]any)
+	require.Len(t, cards, 1)
+	card := cards[0].(map[string]any)
+	assert.Equal(t, "card-1", card["name"])
+	assert.Equal(t, "my-agent", card["agentName"])
+}
+
+// --- HandleKagentiTools tests ---
+
+func TestHandleKagentiTools_OPTIONS(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("OPTIONS", "/api/kagenti/tools", nil)
+	h.HandleKagentiTools(w, r)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func TestHandleKagentiTools_Unauthorized(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/tools", nil)
+	h.HandleKagentiTools(w, r)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestHandleKagentiTools_NilClient(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/tools", nil)
+	h.HandleKagentiTools(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Empty(t, resp["tools"])
+}
+
+func TestHandleKagentiTools_MissingCluster(t *testing.T) {
+	dynClient := newFakeDynamicClient()
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/tools", nil)
+	h.HandleKagentiTools(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestHandleKagentiTools_Success(t *testing.T) {
+	toolObj := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "mcp.kagenti.com/v1alpha1",
+		"kind":       "MCPServer",
+		"metadata":   map[string]any{"name": "tool-1", "namespace": "default"},
+		"spec": map[string]any{
+			"toolPrefix": "mcp_",
+			"targetRef":  "service/mcp-server",
+			"credential": map[string]any{"type": "token"},
+		},
+	}}
+	dynClient := newFakeDynamicClient(toolObj)
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/tools?cluster=test", nil)
+	h.HandleKagentiTools(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "agent", resp["source"])
+	tools := resp["tools"].([]any)
+	require.Len(t, tools, 1)
+	tool := tools[0].(map[string]any)
+	assert.Equal(t, "tool-1", tool["name"])
+	assert.Equal(t, "mcp_", tool["toolPrefix"])
+	assert.Equal(t, true, tool["hasCredential"])
+}
+
+// --- HandleKagentiSummary tests ---
+
+func TestHandleKagentiSummary_OPTIONS(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("OPTIONS", "/api/kagenti/summary", nil)
+	h.HandleKagentiSummary(w, r)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func TestHandleKagentiSummary_Unauthorized(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/summary", nil)
+	h.HandleKagentiSummary(w, r)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestHandleKagentiSummary_NilClient(t *testing.T) {
+	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/summary", nil)
+	h.HandleKagentiSummary(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, float64(0), resp["agentCount"])
+}
+
+func TestHandleKagentiSummary_MissingCluster(t *testing.T) {
+	dynClient := newFakeDynamicClient()
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/summary", nil)
+	h.HandleKagentiSummary(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestHandleKagentiSummary_Success(t *testing.T) {
+	dynClient := newFakeDynamicClient()
+	h := &Handlers{
+		Ctx:    &mockHandlerContext{tokenValid: true},
+		Client: &mockDynamicClientGetter{client: dynClient},
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api/kagenti/summary?cluster=test", nil)
+	h.HandleKagentiSummary(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "agent", resp["source"])
+	assert.Contains(t, resp, "agentCount")
+	assert.Contains(t, resp, "frameworks")
+}
