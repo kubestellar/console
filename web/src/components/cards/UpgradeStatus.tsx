@@ -11,6 +11,7 @@ import { useCardData } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
+import { CardEmptyState } from '../ui/CardEmptyState'
 import { useCardLoadingState } from './CardDataContext'
 import { useDrillDownWebSocket } from '../../hooks/useDrillDownWebSocket'
 import { useTranslation } from 'react-i18next'
@@ -253,10 +254,9 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
-        <AlertTriangle className="w-6 h-6 text-red-400" />
+      <CardEmptyState icon={<AlertTriangle className="w-6 h-6 text-red-400" />}>
         <p className="text-sm text-red-400">{t('common.fetchFailed', 'Failed to fetch upgrade status')}</p>
-      </div>
+      </CardEmptyState>
     )
   }
 

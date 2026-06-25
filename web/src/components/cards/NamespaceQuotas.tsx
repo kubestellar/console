@@ -12,6 +12,7 @@ import {
 import { useCachedNamespaces } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
 import { StatusBadge } from '../ui/StatusBadge'
+import { CardEmptyState } from '../ui/CardEmptyState'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { CardControlsRow } from '../../lib/cards/CardComponents'
@@ -252,10 +253,9 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
-        <AlertTriangle className="w-6 h-6 text-red-400" />
+      <CardEmptyState icon={<AlertTriangle className="w-6 h-6 text-red-400" />}>
         <p className="text-sm text-red-400">{t('common.fetchFailed', 'Failed to fetch data')}</p>
-      </div>
+      </CardEmptyState>
     )
   }
 

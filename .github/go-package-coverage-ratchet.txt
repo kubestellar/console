@@ -14,7 +14,7 @@ pkg/k8s 68.5
 # --- Tier 2: Critical integrations ---
 pkg/notifications 0.0
 pkg/kagentiprovider 0.0
-pkg/sanitize 0.0
+pkg/sanitize 85.0
 pkg/store 42.0
 
 # --- Tier 3: Supporting packages ---
@@ -29,19 +29,19 @@ pkg/safego 0.0
 pkg/fileutil 0.0
 
 # --- Compliance engines (start at 0, ratchet up as evaluation tests land) ---
-pkg/compliance/fedramp 0.0
-pkg/compliance/hipaa 0.0
-pkg/compliance/nist80053 0.0
-pkg/compliance/slsa 0.0
-pkg/compliance/sbom 0.0
-pkg/compliance/signing 0.0
-pkg/compliance/licenses 0.0
-pkg/compliance/stig 0.0
-pkg/compliance/baa 0.0
-pkg/compliance/airgap 0.0
-pkg/compliance/sod 0.0
-pkg/compliance/gxp 0.0
-pkg/compliance/changecontrol 0.0
-pkg/compliance/residency 0.0
-pkg/compliance/frameworks 0.0
-pkg/compliance/reports 0.0
+pkg/compliance/fedramp 65.0
+pkg/compliance/hipaa 70.0
+pkg/compliance/nist80053 65.0
+pkg/compliance/slsa 60.0
+pkg/compliance/sbom 60.0
+pkg/compliance/signing 60.0
+pkg/compliance/licenses 55.0
+pkg/compliance/stig 65.0
+pkg/compliance/baa 65.0
+pkg/compliance/airgap 65.0
+pkg/compliance/sod 60.0
+pkg/compliance/gxp 60.0
+pkg/compliance/changecontrol 60.0
+pkg/compliance/residency 65.0
+pkg/compliance/frameworks 70.0
+pkg/compliance/reports 75.0

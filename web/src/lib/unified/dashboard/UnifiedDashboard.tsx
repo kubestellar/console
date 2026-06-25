@@ -24,7 +24,7 @@ import { AddCardModal } from '../../../components/dashboard/AddCardModal'
 import { ConfigureCardModal } from '../../../components/dashboard/ConfigureCardModal'
 import { prefetchCardChunks } from '../../../components/cards/cardRegistry'
 import { SHORT_DELAY_MS } from '../../constants/network'
-import { ConfirmDialog } from '../../modals/ConfirmDialog'
+import { ConfirmDialog, useModalState } from '../../modals'
 import { useTranslation } from 'react-i18next'
 
 /** Card suggestion type from AddCardModal */
@@ -155,8 +155,9 @@ export function UnifiedDashboard({
   const hasInitializedTabPersistence = useRef(false)
 
   // Modal state
-  const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false)
-  const [isConfigureCardModalOpen, setIsConfigureCardModalOpen] = useState(false)
+  // Modal state
+  const addCardModal = useModalState()
+  const configureCardModal = useModalState()
   const [cardToEdit, setCardToEdit] = useState<ConfigurableCard | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [showRemoveCardConfirm, setShowRemoveCardConfirm] = useState(false)
@@ -255,7 +256,7 @@ export function UnifiedDashboard({
         card_type: card.cardType,
         config: card.config || {},
         title: card.title })
-      setIsConfigureCardModalOpen(true)
+      configureCardModal.open()
     }
   }
 
@@ -270,7 +271,7 @@ export function UnifiedDashboard({
 
   // Handle add card
   const handleAddCard = () => {
-    setIsAddCardModalOpen(true)
+    addCardModal.open()
   }
 
   // Handle adding cards from AddCardModal
@@ -289,7 +290,7 @@ export function UnifiedDashboard({
         } }))
       return [...prev, ...additions]
     })
-    setIsAddCardModalOpen(false)
+    addCardModal.close()
   }
 
   // Handle saving card configuration
@@ -304,8 +305,8 @@ export function UnifiedDashboard({
           : card
       )
     )
-    setIsConfigureCardModalOpen(false)
     setCardToEdit(null)
+    configureCardModal.close()
   }
 
   // Handle reset to defaults
@@ -586,18 +587,18 @@ export function UnifiedDashboard({
 
       {/* Add Card Modal */}
       <AddCardModal
-        isOpen={isAddCardModalOpen}
-        onClose={() => setIsAddCardModalOpen(false)}
+        isOpen={addCardModal.isOpen}
+        onClose={addCardModal.close}
         onAddCards={handleAddCards}
         existingCardTypes={activeCards.map((c) => c.cardType)}
       />
 
       {/* Configure Card Modal */}
       <ConfigureCardModal
-        isOpen={isConfigureCardModalOpen}
+        isOpen={configureCardModal.isOpen}
         card={cardToEdit}
         onClose={() => {
-          setIsConfigureCardModalOpen(false)
+          configureCardModal.close()
           setCardToEdit(null)
         }}
         onSave={handleSaveCardConfig}
