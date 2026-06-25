@@ -72,6 +72,7 @@ const FOCUSABLE_SELECTOR = [
 ].join(', ')
 const WEBKIT_FOCUSABLE_SELECTOR = [
   'a[href]',
+  'button:not([disabled])',
   'input:not([disabled])',
   'select:not([disabled])',
   'textarea:not([disabled])',
