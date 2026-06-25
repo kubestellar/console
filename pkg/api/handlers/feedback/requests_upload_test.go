@@ -2,10 +2,19 @@ package feedback
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// screenshotErrorTransport is an http.RoundTripper that always returns an error.
+type screenshotErrorTransport struct{}
+
+func (screenshotErrorTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, errors.New("no GitHub access configured")
+}
 
 func TestFormatScreenshotProcessingComment(t *testing.T) {
 	dataURI := "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
@@ -63,8 +72,10 @@ func TestUploadScreenshotToGitHub_InvalidDataURI(t *testing.T) {
 
 func TestUploadScreenshotToGitHub_DetectsImageType(t *testing.T) {
 	handler := &FeedbackHandler{
-		githubToken: "", // Will fail early due to no token, but we can test URI parsing
+		githubToken: "",
+		httpClient:  &http.Client{Transport: screenshotErrorTransport{}},
 	}
+
 	
 	testCases := []struct {
 		name     string
@@ -90,7 +101,9 @@ func TestUploadScreenshotToGitHub_DetectsImageType(t *testing.T) {
 }
 
 func TestUploadScreenshotToGitHub_Base64Padding(t *testing.T) {
-	handler := &FeedbackHandler{}
+	handler := &FeedbackHandler{
+		httpClient: &http.Client{},
+	}
 	
 	// Test with various padding scenarios
 	testCases := []string{

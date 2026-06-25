@@ -300,12 +300,13 @@ func TestListGatewaysMock(t *testing.T) {
 	})
 
 	t.Run("Empty result set returns 200", func(t *testing.T) {
+		emptyApp := fiber.New()
 		mock := &mockGatewayClient{}
 		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
-		env.App.Get("/api/gateway/gateways", handler.ListGateways)
+		emptyApp.Get("/api/gateway/gateways", handler.ListGateways)
 
 		req, _ := http.NewRequest("GET", "/api/gateway/gateways", nil)
-		resp, err := env.App.Test(req, 5000)
+		resp, err := emptyApp.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 
