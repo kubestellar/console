@@ -80,7 +80,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   mockWs = createMockWs()
   mockOpenTrackedWs.mockResolvedValue(mockWs)
-  mockParseWsMessage.mockImplementation((event: MessageEvent) => {
+  mockParseWsMessage.mockImplementation((event: MessageEvent, _context: string) => {
     try {
       return JSON.parse(event.data)
     } catch {
