@@ -2,13 +2,10 @@
   "missions": [
     {
       "path": "fixes/coredns/coredns-123.json",
-      "cncf_projects": ["coredns"],
-      "quality_score": {
-        "total": 100,
-        "completeness": 100,
-        "clarity": 100,
-        "technical_accuracy": 100
-      }
+      "title": "CoreDNS Test Mission",
+      "cncfProjects": ["coredns"],
+      "qualityScore": 100,
+      "qualityPass": true
     }
   ]
 }
