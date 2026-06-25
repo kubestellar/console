@@ -189,6 +189,7 @@ func TestNightlyE2EHandler_GetRunLogs_CacheBehavior(t *testing.T) {
 	}
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
 
+	// Cache should be used, so call count should not increase
 	assert.Equal(t, initialCallCount, callCount.Load(), "Second request should use cache")
 }
 
