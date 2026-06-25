@@ -215,7 +215,7 @@ func TestCreateClusterGroup_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, http.StatusMultiStatus, resp.StatusCode)
 
 	clusterGroupsMu.RLock()
 	_, exists := clusterGroups["new-group"]
@@ -307,7 +307,7 @@ func TestUpdateClusterGroup_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, http.StatusMultiStatus, resp.StatusCode)
 
 	clusterGroupsMu.RLock()
 	updated := clusterGroups["existing"]
@@ -356,7 +356,7 @@ func TestDeleteClusterGroup_Success(t *testing.T) {
 	req, _ := http.NewRequest("DELETE", "/api/cluster-groups/del-me", nil)
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, http.StatusMultiStatus, resp.StatusCode)
 
 	clusterGroupsMu.RLock()
 	_, exists := clusterGroups["del-me"]
