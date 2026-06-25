@@ -19,8 +19,7 @@ import {
   type ClusterGroup,
   type ClusterGroupKind } from '../../hooks/useClusterGroups'
 import { useClusters } from '../../hooks/useMCP'
-import { useCardLoadingState } from './CardDataContext'
-import { useDemoMode } from '../../hooks/useDemoMode'
+import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { ConfirmDialog, useModalState } from '../../lib/modals'
@@ -50,7 +49,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
   const { showToast } = useToast()
   const { groups: liveGroups, createGroup, updateGroup, deleteGroup, isPersisted } = useClusterGroups()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
-  const { isDemoMode: demoMode } = useDemoMode()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
   const federation = useFederationAwareness()
 
   // Build the built-in "all-healthy-clusters" group from current cluster state for live mode
@@ -71,7 +70,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
     icon: fg.kind,
   }))
 
-  const groups = demoMode ? DEMO_GROUPS : [builtInGroup, ...federationGroups, ...liveGroups]
+  const groups = shouldUseDemoData ? DEMO_GROUPS : [builtInGroup, ...federationGroups, ...liveGroups]
   const { isOpen: isCreating, open: openCreateForm, close: closeCreateForm } = useModalState()
   // Track which group is pending delete confirmation (#5197)
   const [deleteConfirmName, setDeleteConfirmName] = useState<string | null>(null)
@@ -82,7 +81,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: demoMode,
+    isDemoData: shouldUseDemoData,
     isFailed,
     consecutiveFailures })
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
@@ -123,7 +122,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
             </span>
           )}
         </div>
-        {!demoMode && (
+        {!shouldUseDemoData && (
           <button
             onClick={openCreateForm}
             className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
