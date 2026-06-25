@@ -884,7 +884,7 @@ func TestStripDrasiControlQuery(t *testing.T) {
 		{
 			name:  "params without values",
 			input: []byte("foo&target&bar"),
-			want:  "bar&foo",
+			want:  "bar=&foo=",
 		},
 	}
 
