@@ -12,7 +12,7 @@ const sseCacheTTL = 15 * time.Second
 
 // sseCacheEvictInterval is how often the background goroutine sweeps the cache
 // to remove expired entries and prevent unbounded memory growth.
-const sseCacheEvictInterval = 30 * time.Second
+var sseCacheEvictInterval = 30 * time.Second
 
 // SSE response cache — avoids re-fetching when the user navigates away and back.
 var (
