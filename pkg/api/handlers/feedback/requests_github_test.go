@@ -136,10 +136,10 @@ func TestNotifyUpstream_CallsCreateGitHubIssue(t *testing.T) {
 		RequestType: "feature",
 	}
 
-	issueNumber, issueURL, _, _, err := handler.notifyUpstream(context.Background(), request, user, "console", input, "")
+	issueNumber, warning, _, _, err := handler.notifyUpstream(context.Background(), request, user, "console", input, "")
 	assert.NoError(t, err, "should successfully create GitHub issue")
 	assert.Equal(t, 456, issueNumber)
-	assert.Equal(t, "https://github.com/kubestellar/console/issues/456", issueURL)
+	assert.Empty(t, warning, "should not have warning for successful issue creation")
 }
 
 func TestExtractClientAuth_FromCookie(t *testing.T) {

@@ -938,11 +938,15 @@ func TestGetKBScores_UpstreamError(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var body map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-	assert.Contains(t, body, "error")
+	assert.Contains(t, body, "scores")
+	assert.Contains(t, body, "count")
+	assert.Contains(t, body, "hasMore")
+	assert.Contains(t, body, "limit")
+	assert.Contains(t, body, "offset")
 }
 
 func TestGetKBScores_StaleCache(t *testing.T) {
@@ -995,11 +999,15 @@ func TestGetKBScores_EmbeddedFallback(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var body map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-	assert.Contains(t, body["error"], "failed to fetch")
+	assert.Contains(t, body, "scores")
+	assert.Contains(t, body, "count")
+	assert.Contains(t, body, "hasMore")
+	assert.Contains(t, body, "limit")
+	assert.Contains(t, body, "offset")
 }
 
 // ---------- GetMissionScore ----------
@@ -1118,11 +1126,12 @@ func TestGetMissionScore_UpstreamError(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var body map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-	assert.Contains(t, body, "error")
+	assert.Contains(t, body, "project")
+	assert.Contains(t, body, "qualityScore")
 }
 
 // ---------- GetKBGaps ----------
