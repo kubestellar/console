@@ -329,14 +329,14 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         )}
       </div>
 
-      {/* Pagination */}
-      {needsPagination && itemsPerPage !== 'unlimited' && (
+      {/* Pagination — needsPagination already guarantees itemsPerPage is numeric */}
+      {needsPagination && (
         <div className="pt-2 border-t border-border/50 mt-2">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={unsortedResourceItems.length}
-            itemsPerPage={itemsPerPage === 'unlimited' ? unsortedResourceItems.length : itemsPerPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : unsortedResourceItems.length}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />
