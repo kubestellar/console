@@ -434,16 +434,13 @@ Please:
             resolve(output || '')
           }, 10000)
 
-          ws.onopen = () => {
-            ws.send(JSON.stringify({
-              id: requestId,
-              type: 'kubectl',
-              payload: { context: cluster, args }
-            }))
-          }
+          // Set up handlers before sending so no messages are missed
           ws.onmessage = (event: MessageEvent) => {
             const msg = parseWsMessage(event, 'related resources')
             if (!msg) {
+              clearTimeout(timeout)
+              ws.close()
+              resolve(output || '')
               return
             }
 
@@ -459,6 +456,13 @@ Please:
             ws.close()
             resolve(output || '')
           }
+
+          // openTrackedWs resolves with an already-open connection; send immediately
+          ws.send(JSON.stringify({
+            id: requestId,
+            type: 'kubectl',
+            payload: { context: cluster, args }
+          }))
         })
       }
 
