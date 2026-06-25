@@ -17,6 +17,7 @@ import type { Mission } from '../../hooks/useMissions'
 import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
 import { MS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../../lib/constants/time'
 import { cn } from '../../lib/cn'
+import { LAYOUTS } from '../../lib/utils/layouts'
 
 // Severity color map — defined at module level to avoid re-creation on each render
 const SEVERITY_COLORS: Record<AlertSeverity, string> = {
@@ -135,10 +136,10 @@ export function AlertListItem({
         onKeyDown={handleKeyDown}
         className="cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400 rounded"
       >
-        <div className="flex items-start gap-2">
+        <div className={LAYOUTS.START_GAP_2}>
           <span className="text-lg">{getSeverityIcon(alert.severity)}</span>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className={cn(LAYOUTS.CENTER_GAP_2, 'mb-1')}>
               <span className="text-sm font-medium text-foreground truncate">
                 {alert.ruleName}
               </span>
@@ -156,19 +157,19 @@ export function AlertListItem({
             <p className="text-xs text-muted-foreground line-clamp-2">
               {alert.message}
             </p>
-            <div className="flex items-center gap-3 mt-1.5">
+            <div className={cn(LAYOUTS.CENTER_GAP_3, 'mt-1.5')}>
               {alert.cluster && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <span className={cn('text-xs text-muted-foreground', LAYOUTS.CENTER_GAP_1)}>
                   <Server className="w-3 h-3" />
                   {alert.cluster}
                 </span>
               )}
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <span className={cn('text-xs text-muted-foreground', LAYOUTS.CENTER_GAP_1)}>
                 <Clock className="w-3 h-3" />
                 {formatRelativeTime(alert.firedAt, t)}
               </span>
               {mission && (
-                <span className="text-xs text-purple-400 flex items-center gap-1">
+                <span className={cn('text-xs text-purple-400', LAYOUTS.CENTER_GAP_1)}>
                   <Bot className="w-3 h-3" />
                   AI
                 </span>
@@ -183,7 +184,7 @@ export function AlertListItem({
       </div>
 
       {/* Quick Actions — outside the role="button" region to avoid nested interactive elements */}
-      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+      <div className={cn(LAYOUTS.CENTER_GAP_2, 'mt-2 pt-2 border-t border-border/30')}>
         {/* Snooze button */}
         <div className="relative" ref={snoozeRef}>
           {alertSnoozed ? (
@@ -192,7 +193,7 @@ export function AlertListItem({
               tabIndex={0}
               onClick={(e) => { e.stopPropagation(); unsnoozeAlert(alert.id) }}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); unsnoozeAlert(alert.id) } }}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30 transition-colors cursor-pointer"
+              className={cn(LAYOUTS.CENTER_GAP_1, 'px-2 py-1 text-xs rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30 transition-colors cursor-pointer')}
               title="Snoozed — click to unsnooze"
               aria-label={t('activeAlerts.unsnoozeAlertAria')}
             >
