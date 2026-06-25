@@ -24,9 +24,7 @@ func TestHandleK8sError(t *testing.T) {
 			err:        k8s.ErrNoClusterConfigured,
 			wantStatus: fiber.StatusServiceUnavailable,
 			wantJSON: map[string]string{
-				"clusterStatus": "no_cluster",
-				"errorType":     "no_cluster",
-				"errorMessage":  "No cluster configured — configure a cluster before using this feature",
+				"error": "No cluster access",
 			},
 		},
 		{
