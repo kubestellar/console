@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { hardwareHealthConfig } from '../hardware-health'
 import * as moduleExports from '../hardware-health'

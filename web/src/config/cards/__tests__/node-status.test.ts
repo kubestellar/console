@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { nodeStatusConfig } from '../node-status'
 import * as moduleExports from '../node-status'

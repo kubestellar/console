@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { namespaceOverviewConfig } from '../namespace-overview'
 import * as moduleExports from '../namespace-overview'

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { namespaceQuotasConfig } from '../namespace-quotas'
 import * as moduleExports from '../namespace-quotas'

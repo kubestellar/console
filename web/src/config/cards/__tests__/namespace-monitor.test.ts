@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { namespaceMonitorConfig } from '../namespace-monitor'
 import * as moduleExports from '../namespace-monitor'
