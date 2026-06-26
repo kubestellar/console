@@ -171,6 +171,7 @@ aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
             )}
             {hasCachedData && lastUpdated && (
               <span className="text-2xs text-muted-foreground">
+                {/* eslint-disable-next-line react-hooks/purity */}
                 {formatTimeAgo(lastUpdated)}
               </span>
             )}

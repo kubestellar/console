@@ -272,6 +272,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
               )}
               {lastUpdated && clusterInfo && clusterInfo.nodeCount && clusterInfo.nodeCount > 0 && (
                 <div className="text-xs text-muted-foreground mt-0.5">
+                  {/* eslint-disable-next-line react-hooks/purity */}
                   Last updated {formatTimeAgo(lastUpdated)}
                 </div>
               )}

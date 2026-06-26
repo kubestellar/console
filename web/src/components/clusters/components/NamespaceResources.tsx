@@ -323,6 +323,7 @@ export function NamespaceResources({ clusterName, namespace, onClose, lastUpdate
           )}
           {!isPartiallyLoading && lastUpdated && hasResources && (
             <div className="text-xs text-muted-foreground">
+              {/* eslint-disable-next-line react-hooks/purity */}
               Last updated {formatTimeAgo(lastUpdated)}
             </div>
           )}
