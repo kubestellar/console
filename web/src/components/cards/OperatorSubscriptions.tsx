@@ -1,0 +1,300 @@
+import { Clock, AlertTriangle, AlertCircle, Settings, RefreshCw, ChevronRight } from 'lucide-react'
+import { cn } from '../../lib/cn'
+import { OperatorSubscription } from '../../hooks/useMCP'
+import { useCachedOperatorSubscriptions } from '../../hooks/useCachedData'
+import { Skeleton } from '../ui/Skeleton'
+import { ClusterBadge } from '../ui/ClusterBadge'
+import { StatusBadge } from '../ui/StatusBadge'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useCardLoadingState } from './CardDataContext'
+import { useCardData, useCardFilters, commonComparators, type SortDirection } from '../../lib/cards/cardHooks'
+import {
+  CardSearchInput,
+  CardControlsRow,
+  CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useTranslation } from 'react-i18next'
+
+interface OperatorSubscriptionsProps {
+  config?: {
+    cluster?: string
+  }
+}
+
+type SortByOption = 'pending' | 'name' | 'approval' | 'channel'
+
+const SORT_OPTIONS_KEYS = [
+  { value: 'pending' as const, labelKey: 'operatorSubscriptions.pendingFirst' as const },
+  { value: 'name' as const, labelKey: 'common:common.name' as const },
+  { value: 'approval' as const, labelKey: 'operatorSubscriptions.approval' as const },
+  { value: 'channel' as const, labelKey: 'operatorSubscriptions.channel' as const },
+]
+
+const SUBSCRIPTION_SORT_COMPARATORS = {
+  pending: (a: OperatorSubscription, b: OperatorSubscription) =>
+    (a.pendingUpgrade ? 0 : 1) - (b.pendingUpgrade ? 0 : 1),
+  name: commonComparators.string<OperatorSubscription>('name'),
+  approval: commonComparators.string<OperatorSubscription>('installPlanApproval'),
+  channel: commonComparators.string<OperatorSubscription>('channel') }
+
+// Shared filter config for counting and display
+const FILTER_CONFIG = {
+  searchFields: ['name', 'namespace', 'channel', 'currentCSV'] as (keyof OperatorSubscription)[],
+  clusterField: 'cluster' as keyof OperatorSubscription,
+  storageKey: 'operator-subscriptions' }
+
+export function OperatorSubscriptions({ config: _config }: OperatorSubscriptionsProps) {
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
+  const { drillToOperator } = useDrillDownActions()
+
+  // Fetch subscriptions - pass undefined to get all clusters
+  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, retryFetch } = useCachedOperatorSubscriptions(undefined)
+
+  const rawSubscriptionsArray = rawSubscriptions || []
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = rawSubscriptionsArray.length > 0
+  const { showSkeleton, showEmptyState, loadingTimedOut } = useCardLoadingState({
+    isLoading: subscriptionsLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
+    isFailed: isFailed && !hasData,
+    consecutiveFailures,
+    isDemoData })
+
+  // Use useCardFilters for summary counts (globally filtered, before local search/pagination)
+  const { filtered: globalFilteredSubscriptions } = useCardFilters(rawSubscriptionsArray, FILTER_CONFIG)
+
+  // Use shared card data hook for filtering, sorting, and pagination
+  const {
+    items: subscriptions,
+    totalItems,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    goToPage,
+    needsPagination,
+    setItemsPerPage,
+    filters: {
+      search: searchQuery,
+      setSearch: setSearchQuery,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection },
+    containerRef,
+    containerStyle } = useCardData<OperatorSubscription, SortByOption>(rawSubscriptionsArray, {
+    filter: {
+      searchFields: ['name', 'namespace', 'channel', 'currentCSV'] as (keyof OperatorSubscription)[],
+      clusterField: 'cluster',
+      storageKey: 'operator-subscriptions' },
+    sort: {
+      defaultField: 'pending',
+      defaultDirection: 'asc' as SortDirection,
+      comparators: SUBSCRIPTION_SORT_COMPARATORS },
+    defaultLimit: 5 })
+
+  // Summary counts from globally filtered data (before local search/pagination)
+  const { autoCount, manualCount, pendingCount } = {
+    autoCount: globalFilteredSubscriptions.filter(s => s.installPlanApproval === 'Automatic').length,
+    manualCount: globalFilteredSubscriptions.filter(s => s.installPlanApproval === 'Manual').length,
+    pendingCount: globalFilteredSubscriptions.filter(s => s.pendingUpgrade).length }
+
+  if (showSkeleton) {
+    return (
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
+          <Skeleton variant="text" width={150} height={20} />
+          <Skeleton variant="rounded" width={120} height={32} />
+        </div>
+        <div className="space-y-2">
+          <Skeleton variant="rounded" height={60} />
+          <Skeleton variant="rounded" height={60} />
+          <Skeleton variant="rounded" height={60} />
+        </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    // When fetching failed or timed out, show error state instead of misleading "No subscriptions"
+    if (isFailed || loadingTimedOut) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-3">
+          <AlertCircle className="w-8 h-8 text-red-400" />
+          <p className="text-sm">{t('operatorSubscriptions.errorLoading', 'Unable to load subscriptions')}</p>
+          <p className="text-xs">{t('operatorSubscriptions.errorLoadingHint', 'Failed after {{count}} attempts', { count: consecutiveFailures })}</p>
+          <button
+            onClick={() => retryFetch()}
+            disabled={isRefreshing}
+            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
+            {t('common:common.retry', 'Retry')}
+          </button>
+        </div>
+      )
+    }
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">{t('operatorSubscriptions.noSubscriptions')}</p>
+        <p className="text-xs mt-1">{t('operatorSubscriptions.noSubscriptionsHint')}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="h-full flex flex-col min-h-card content-loaded">
+      {/* Controls - single row */}
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
+        <div className="flex items-center gap-2">
+          {pendingCount > 0 && (
+            <StatusBadge color="orange">
+              {t('operatorSubscriptions.nPending', { count: pendingCount })}
+            </StatusBadge>
+          )}
+        </div>
+        <CardControlsRow
+          clusterIndicator={localClusterFilter.length > 0 ? {
+            selectedCount: localClusterFilter.length,
+            totalCount: availableClusters.length } : undefined}
+          clusterFilter={{
+            availableClusters,
+            selectedClusters: localClusterFilter,
+            onToggle: toggleClusterFilter,
+            onClear: clearClusterFilter,
+            isOpen: showClusterFilter,
+            setIsOpen: setShowClusterFilter,
+            containerRef: clusterFilterRef,
+            minClusters: 1 }}
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => setSortBy(v as SortByOption),
+            sortDirection,
+            onSortDirectionChange: setSortDirection }}
+        />
+      </div>
+
+      {availableClusters.length > 0 && (
+        <>
+          {/* Scope badge */}
+          <div className="flex items-center gap-2 mb-4">
+            {localClusterFilter.length === 1 ? (
+              <ClusterBadge cluster={localClusterFilter[0]} />
+            ) : localClusterFilter.length > 1 ? (
+              <StatusBadge color="blue" size="md" rounded="full">
+                {t('operatorSubscriptions.nClustersSelected', { count: localClusterFilter.length })}
+              </StatusBadge>
+            ) : (
+              <StatusBadge color="blue" size="md" rounded="full">
+                {t('operatorSubscriptions.allClusters', { count: availableClusters.length })}
+              </StatusBadge>
+            )}
+          </div>
+
+          {/* Local Search */}
+          <CardSearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={t('operatorSubscriptions.searchSubscriptions')}
+            className="mb-4"
+          />
+
+          {/* Summary badges */}
+          <div className="flex gap-2 mb-4 text-xs">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-400">
+              <Settings className="w-3 h-3" />
+              <span>{t('operatorSubscriptions.nAuto', { count: autoCount })}</span>
+            </div>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-400">
+              <Clock className="w-3 h-3" />
+              <span>{t('operatorSubscriptions.nManual', { count: manualCount })}</span>
+            </div>
+            {pendingCount > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-500/10 text-orange-400">
+                <AlertTriangle className="w-3 h-3" />
+                <span>{t('operatorSubscriptions.nPending', { count: pendingCount })}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Subscriptions list */}
+          <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
+            {subscriptions.map((sub) => (
+              <div
+                key={`${sub.cluster || 'unknown'}-${sub.namespace}-${sub.name}`}
+                onClick={() => sub.cluster && drillToOperator(sub.cluster, sub.namespace, sub.name, {
+                  channel: sub.channel,
+                  currentCSV: sub.currentCSV,
+                  installPlanApproval: sub.installPlanApproval,
+                  pendingUpgrade: sub.pendingUpgrade })}
+                className={`p-3 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors group ${sub.pendingUpgrade ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-secondary/30'}`}
+                title={`Click to view operator ${sub.name} details`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
+                  <div className="flex items-center gap-2">
+                    {sub.cluster && (
+                      <ClusterBadge cluster={sub.cluster} size="sm" />
+                    )}
+                    <span className="text-sm text-foreground font-medium">{sub.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${
+                      sub.installPlanApproval === 'Automatic'
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-blue-500/20 text-blue-400'
+                    }`}>
+                      {sub.installPlanApproval}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  <div className="flex flex-wrap items-center justify-between gap-y-2">
+                    <span>{t('operatorSubscriptions.channelLabel')}: {sub.channel}</span>
+                    <span>{sub.namespace}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-y-2">
+                    <span className="truncate">{sub.currentCSV}</span>
+                  </div>
+                  {sub.pendingUpgrade && (
+                    <div className="flex items-center gap-1 text-orange-400 mt-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>{t('operatorSubscriptions.upgradePending')}: {sub.pendingUpgrade}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          <CardPaginationFooter
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
+            onPageChange={goToPage}
+            needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
+          />
+
+          {/* Footer */}
+          <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+            {t('operatorSubscriptions.footer', { count: totalItems, scope: localClusterFilter.length === 1 ? localClusterFilter[0] : t('operatorSubscriptions.nClustersScope', { count: availableClusters.length }) })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}

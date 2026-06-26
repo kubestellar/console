@@ -1,0 +1,78 @@
+# Tier classifier rules — path globs per tier.
+#
+# Used by .github/workflows/tier-classifier.yml. Patterns are glob-style
+# with `*` (non-slash wildcard) and `**` (any path depth). Matched
+# against `paths` from the GitHub `pulls.listFiles` API — which are
+# repo-relative POSIX paths.
+#
+# Classification logic:
+#  - If ANY file matches a tier/3-restricted pattern → the PR is tier 3.
+#    (Tier 3 wins over everything — a PR that accidentally edits
+#    CODEOWNERS in addition to harmless files still requires multi-
+#    maintainer approval.)
+#  - Otherwise, if EVERY file matches a tier/0-automatic pattern → tier 0.
+#  - Otherwise, if EVERY file matches a tier/0 or tier/1-lightweight
+#    pattern → tier 1.
+#  - Otherwise → tier/2-standard (the default, no special handling).
+#
+# Tweak these patterns to tune what counts as "safe" or "sensitive." Keep
+# tier/0 narrow — mistakes here let unsafe changes skip review once
+# auto-merge is wired up in a follow-up PR.
+
+tier/0-automatic:
+  # Dependency manifests maintained by tooling
+  - "package-lock.json"
+  - "web/package-lock.json"
+  - "go.sum"
+  - "go.mod"
+  - "deploy/helm/console/Chart.lock"
+  # Docs-only changes
+  - "docs/**"
+  - "README.md"
+  - "CHANGELOG.md"
+  - "**/*.md"
+  # Generated artifacts
+  - "web/src/locales/**/*.json"
+  - "**/__snapshots__/**"
+  - "**/*.snap"
+
+tier/1-lightweight:
+  # Tests only
+  - "**/__tests__/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+  - "**/*_test.go"
+  - "web/e2e/**"
+  # Small surface-area config files
+  - ".editorconfig"
+  - ".gitignore"
+  - ".prettierrc*"
+  - ".eslintrc*"
+
+# tier/2-standard is the default and has no patterns — any PR that
+# doesn't fit tier/0, tier/1, or tier/3 lands here.
+
+tier/3-restricted:
+  # Governance
+  - "CODEOWNERS"
+  - ".github/CODEOWNERS"
+  # CI / automation (workflows can exfiltrate secrets)
+  - ".github/workflows/**"
+  - ".github/actions/**"
+  # Authentication and authorization
+  - "pkg/auth/**"
+  - "pkg/api/middleware/**"
+  - "pkg/api/handlers/auth*.go"
+  - "pkg/api/handlers/oauth*.go"
+  # RBAC and cluster-facing Helm values
+  - "deploy/helm/console/templates/rbac*.yaml"
+  - "deploy/helm/console/templates/clusterrole*.yaml"
+  - "deploy/helm/console/templates/role*.yaml"
+  - "deploy/helm/console/values.yaml"
+  # Security documentation — changes here need security-reviewer approval
+  - "docs/security/**"
+  # Release pipeline + signing keys
+  - ".goreleaser*.yaml"
+  - ".goreleaser*.yml"

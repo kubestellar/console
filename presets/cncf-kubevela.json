@@ -1,0 +1,10 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "kubevela_status",
+  "title": "KubeVela",
+  "description": "KubeVela controller health and installation status across clusters.",
+  "category": "Workloads",
+  "project": "kubevela",
+  "cncf_status": "incubating",
+  "config": {}
+}

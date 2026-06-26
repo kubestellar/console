@@ -1,0 +1,161 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clustergroups.console.kubestellar.io
+  labels:
+    app.kubernetes.io/part-of: kubestellar-console
+spec:
+  group: console.kubestellar.io
+  names:
+    kind: ClusterGroup
+    listKind: ClusterGroupList
+    plural: clustergroups
+    singular: clustergroup
+    shortNames:
+      - cg
+      - cgs
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Description
+          type: string
+          jsonPath: .spec.description
+          priority: 1
+        - name: Static Members
+          type: integer
+          jsonPath: .spec.staticMembers
+          priority: 1
+        - name: Matched
+          type: integer
+          jsonPath: .status.matchedClusterCount
+        - name: Last Evaluated
+          type: date
+          jsonPath: .status.lastEvaluated
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: ClusterGroup represents a logical grouping of clusters for deployment targeting
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              properties:
+                description:
+                  type: string
+                  description: Human-readable description of this cluster group
+                color:
+                  type: string
+                  description: Color for UI display (hex format, e.g., "#22c55e")
+                  pattern: '^#[0-9a-fA-F]{6}$'
+                icon:
+                  type: string
+                  description: Icon name for UI display
+                staticMembers:
+                  type: array
+                  description: Explicit list of cluster names in this group
+                  items:
+                    type: string
+                dynamicFilters:
+                  type: array
+                  description: Filters for dynamic cluster membership
+                  items:
+                    type: object
+                    required:
+                      - field
+                      - operator
+                      - value
+                    properties:
+                      field:
+                        type: string
+                        description: Cluster field to filter on
+                        enum:
+                          - name
+                          - healthy
+                          - gpuCount
+                          - cpuCount
+                          - memoryGB
+                          - nodeCount
+                          - region
+                          - zone
+                          - provider
+                          - version
+                          - label
+                      operator:
+                        type: string
+                        description: Comparison operator
+                        enum:
+                          - eq
+                          - neq
+                          - gt
+                          - gte
+                          - lt
+                          - lte
+                          - in
+                          - notin
+                          - contains
+                          - regex
+                      value:
+                        type: string
+                        description: Value to compare against
+                      labelKey:
+                        type: string
+                        description: Label key when field is 'label'
+                priority:
+                  type: integer
+                  description: Priority for deployment ordering (higher = first)
+                  default: 0
+                  minimum: 0
+                  maximum: 1000
+            status:
+              type: object
+              properties:
+                matchedClusters:
+                  type: array
+                  description: List of clusters currently matching this group
+                  items:
+                    type: string
+                matchedClusterCount:
+                  type: integer
+                  description: Number of matched clusters
+                lastEvaluated:
+                  type: string
+                  format: date-time
+                  description: Last time the group membership was evaluated
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: The generation observed by the controller
+                conditions:
+                  type: array
+                  description: Current conditions of the cluster group
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string

@@ -1,0 +1,1 @@
+export { IntotoSupplyChain } from './IntotoSupplyChain'

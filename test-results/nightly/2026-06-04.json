@@ -1,0 +1,177 @@
+{
+  "timestamp": "2026-06-04T08:57:24Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 27,
+    "failed": 5,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "suite": "consistency-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "helm-lint-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "license-compliance-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "mission-security-test",
+      "status": "pass",
+      "duration": 14
+    },
+    {
+      "suite": "card-registry-integrity-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "unit-test",
+      "status": "fail",
+      "duration": 1300,
+      "failure_reason": "      Tests  355 failed | 29119 passed | 4 skipped (29558)\n     Errors  6 errors\n   Start at  07:32:39\n   Duration  1297.82s (transform 79.99s, setup 333.18s, import 536.19s, tests 432.78s, environment 1944.74s)\n======================================\n"
+    },
+    {
+      "suite": "auth-lifecycle-test",
+      "status": "pass",
+      "duration": 74
+    },
+    {
+      "suite": "settings-migration-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "update-lifecycle-test",
+      "status": "pass",
+      "duration": 64
+    },
+    {
+      "suite": "websocket-resilience-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "gosec-test",
+      "status": "fail",
+      "duration": 63,
+      "failure_reason": "  ⚠️  /home/runner/work/console/console/pkg/agent/provider_bob.go:104  Subprocess launched with variable\n  ... and 255 more (see full report)\nReports:\n  JSON:     /tmp/gosec-report.json\n  Summary:  /tmp/gosec-summary.md\n"
+    },
+    {
+      "suite": "dependency-audit-test",
+      "status": "pass",
+      "duration": 13
+    },
+    {
+      "suite": "secret-scan-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "ts-sast-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "container-scan-test",
+      "status": "pass",
+      "duration": 19
+    },
+    {
+      "suite": "security-headers-test",
+      "status": "pass",
+      "duration": 2
+    },
+    {
+      "suite": "api-contract-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-fuzz-test",
+      "status": "pass",
+      "duration": 154
+    },
+    {
+      "suite": "error-boundary-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "console-error-scan",
+      "status": "pass",
+      "duration": 123
+    },
+    {
+      "suite": "cache-test",
+      "status": "fail",
+      "duration": 771,
+      "failure_reason": "    Usage:\n        npx playwright show-trace e2e/test-results/compliance/card-cache-compliance-card-a1949-nce-—-storage-and-retrieval-chromium-retry1/trace.zip\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n  1 failed\n    [chromium] › e2e/compliance/"
+    },
+    {
+      "suite": "nav-test",
+      "status": "pass",
+      "duration": 616
+    },
+    {
+      "suite": "perf-test",
+      "status": "pass",
+      "duration": 1026
+    },
+    {
+      "suite": "ui-compliance-test",
+      "status": "fail",
+      "duration": 1,
+      "failure_reason": "> 1007 |   test('aggregate report + cross-batch assertions', async (_fixtures, testInfo) => {\n       |   ^\n  1008 |     testInfo.setTimeout(IS_CI ? PER_BATCH_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : PER_BATCH_TIMEOUT_MS)\n  1009 |     if (!complianceState.setupDone) test.skip(true, 'setup did not complete')\n  1010 |\n"
+    },
+    {
+      "suite": "deploy-test",
+      "status": "fail",
+      "duration": 244,
+      "failure_reason": "        npx playwright show-trace e2e/test-results/deploy/deploy-dashboard-Deploy-Da-ee4c2--listing-shows-correct-data-chromium-retry1/trace.zip\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n  1 failed\n    [chromium] › e2e/deploy/deploy-dashboard.spec"
+    },
+    {
+      "suite": "benchmark-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "ai-ml-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "a11y-test",
+      "status": "pass",
+      "duration": 87
+    },
+    {
+      "suite": "error-resilience-test",
+      "status": "pass",
+      "duration": 33
+    },
+    {
+      "suite": "i18n-test",
+      "status": "pass",
+      "duration": 60
+    },
+    {
+      "suite": "interaction-test",
+      "status": "pass",
+      "duration": 40
+    },
+    {
+      "suite": "security-e2e-test",
+      "status": "pass",
+      "duration": 31
+    }
+  ]
+}

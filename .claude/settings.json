@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build)",
+      "Bash(npm run lint)",
+      "Bash(npm run dev*)",
+      "Bash(go build*)",
+      "Bash(go test*)",
+      "Bash(go run*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git checkout*)",
+      "Bash(git branch*)",
+      "Bash(git worktree*)",
+      "Bash(git pull*)",
+      "Bash(git push*)",
+      "Bash(curl*)",
+      "Bash(lsof*)",
+      "Bash(kill*)",
+      "Bash(cat*)",
+      "Bash(ls*)",
+      "Bash(jq*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(git push --force origin main)",
+      "Bash(git push --force origin master)"
+    ]
+  }
+}

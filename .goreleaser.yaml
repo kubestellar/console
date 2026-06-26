@@ -1,0 +1,109 @@
+# GoReleaser config for kc-agent and console
+# Run: goreleaser release --clean
+# Test: goreleaser build --snapshot --clean
+
+version: 2
+
+project_name: kubestellar-console
+
+before:
+  hooks:
+    - go mod tidy
+    - bash -c "cd web && npm ci && npm run build"
+
+builds:
+  - id: kc-agent
+    main: ./cmd/kc-agent
+    binary: kc-agent
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/kubestellar/console/pkg/agent.Version={{.Version}}
+      - -X github.com/kubestellar/console/pkg/agent.CommitSHA={{.FullCommit}}
+      - -X github.com/kubestellar/console/pkg/agent.BuildTime={{.Date}}
+
+  - id: console
+    main: ./cmd/console
+    binary: console
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/kubestellar/console/pkg/api.Version={{.Version}}
+
+archives:
+  - id: kc-agent
+    builds:
+      - kc-agent
+    formats:
+      - tar.gz
+    name_template: "kc-agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+  - id: console
+    builds:
+      - console
+    formats:
+      - tar.gz
+    name_template: "console_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - src: "web/dist/*"
+        dst: "web/dist"
+      - src: "web/dist/**/*"
+        dst: "web/dist"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  # Use local git log for changelog generation instead of the GitHub compare
+  # API. The GitHub API hits secondary rate limits when there are many commits
+  # between nightly releases (#10574, #10575).
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+# Homebrew tap - only runs if HOMEBREW_TAP_TOKEN is set
+brews:
+  - name: kc-agent
+    # Skip if token is not set
+    skip_upload: '{{ if .Env.HOMEBREW_TAP_TOKEN }}false{{ else }}true{{ end }}'
+    ids:
+      - kc-agent
+    repository:
+      owner: kubestellar
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/kubestellar/console"
+    description: "Local agent for KubeStellar Console: browser to kubeconfig"
+    license: "Apache-2.0"
+    test: |
+      system bin/"kc-agent", "--version"
+    install: |
+      bin.install "kc-agent"
+
+release:
+  github:
+    owner: kubestellar
+    name: console
+  # Use RELEASE_NAME env var if set, otherwise fall back to tag
+  name_template: "{{ if .Env.RELEASE_NAME }}{{ .Env.RELEASE_NAME }}{{ else }}{{ .Tag }}{{ end }}"
+  draft: false
+  prerelease: auto

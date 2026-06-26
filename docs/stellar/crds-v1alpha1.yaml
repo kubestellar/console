@@ -1,0 +1,210 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: missions.ai.kubestellar.io
+spec:
+  group: ai.kubestellar.io
+  scope: Namespaced
+  names:
+    plural: missions
+    singular: mission
+    kind: Mission
+    shortNames: [sm]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                schedule: { type: string }
+                triggerRef: { type: string }
+                providerPolicy: { type: string }
+                memoryStoreRef: { type: string }
+                toolBindingRef: { type: string }
+                task: { type: string }
+                concurrencyPolicy: { type: string }
+                retryPolicy:
+                  type: object
+                  properties:
+                    maxRetries: { type: integer, minimum: 0 }
+                    backoff: { type: string }
+            status:
+              type: object
+              properties:
+                phase: { type: string }
+                lastExecutionRef: { type: string }
+                nextScheduledAt: { type: string, format: date-time }
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: missionexecutions.ai.kubestellar.io
+spec:
+  group: ai.kubestellar.io
+  scope: Namespaced
+  names:
+    plural: missionexecutions
+    singular: missionexecution
+    kind: MissionExecution
+    shortNames: [smx]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                missionRef: { type: string }
+                triggerType: { type: string }
+                triggerPayload:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+            status:
+              type: object
+              properties:
+                phase: { type: string }
+                startedAt: { type: string, format: date-time }
+                finishedAt: { type: string, format: date-time }
+                summary: { type: string }
+                error: { type: string }
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: agents.ai.kubestellar.io
+spec:
+  group: ai.kubestellar.io
+  scope: Namespaced
+  names:
+    plural: agents
+    singular: agent
+    kind: Agent
+    shortNames: [sag]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                identity: { type: string }
+                role: { type: string }
+                providerPolicy: { type: string }
+                memoryStoreRef: { type: string }
+                checkpointInterval: { type: string }
+            status:
+              type: object
+              properties:
+                phase: { type: string }
+                lastCheckpointAt: { type: string, format: date-time }
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: memorystores.ai.kubestellar.io
+spec:
+  group: ai.kubestellar.io
+  scope: Namespaced
+  names:
+    plural: memorystores
+    singular: memorystore
+    kind: MemoryStore
+    shortNames: [sms]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                backend: { type: string }
+                connectionSecretRef: { type: string }
+                vectorIndex: { type: string }
+                retentionDays: { type: integer, minimum: 1 }
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: toolbindings.ai.kubestellar.io
+spec:
+  group: ai.kubestellar.io
+  scope: Namespaced
+  names:
+    plural: toolbindings
+    singular: toolbinding
+    kind: ToolBinding
+    shortNames: [stb]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                allow:
+                  type: array
+                  items: { type: string }
+                deny:
+                  type: array
+                  items: { type: string }
+                namespaceScope:
+                  type: array
+                  items: { type: string }
+                rateLimitPerMinute: { type: integer, minimum: 1 }
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: triggers.ai.kubestellar.io
+spec:
+  group: ai.kubestellar.io
+  scope: Namespaced
+  names:
+    plural: triggers
+    singular: trigger
+    kind: Trigger
+    shortNames: [str]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                type: { type: string }
+                schedule: { type: string }
+                eventSelector:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                alertSelector:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                webhook:
+                  type: object
+                  properties:
+                    secretRef: { type: string }

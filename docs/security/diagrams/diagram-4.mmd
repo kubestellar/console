@@ -1,0 +1,13 @@
+%%{init: {'flowchart': {'htmlLabels': false, 'padding': 25, 'nodeSpacing': 60, 'rankSpacing': 60}, 'themeVariables': {'fontSize': '13px'}}}%%
+flowchart LR
+    KA[kc-agent] -->|provider: groq<br/>GROQ_BASE_URL=...| SLOT[Groq provider slot<br/>pkg/agent/provider_groq.go]
+    SLOT -.default.-> GRQ[api.groq.com/v1]
+    SLOT -->|override| OLLA[Ollama<br/>localhost:11434/v1]
+    SLOT -->|override| VLLM[vLLM<br/>local:8000/v1]
+    SLOT -->|override| LM[LM Studio<br/>local:1234/v1]
+    SLOT -->|override| GW[Corporate LLM gateway<br/>llm.internal/v1]
+
+    classDef default_path stroke:#888,stroke-width:1px
+    classDef override_path stroke:#0f0,stroke-width:2px
+    class GRQ default_path
+    class OLLA,VLLM,LM,GW override_path

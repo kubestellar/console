@@ -1,0 +1,10 @@
+{
+    "format": "kc-card-preset-v1",
+    "card_type": "cilium_status",
+    "title": "Cilium",
+    "description": "Cilium eBPF networking, network policy enforcement, and Hubble flow visibility.",
+    "category": "Network",
+    "project": "cilium",
+    "cncf_status": "graduated",
+    "config": {}
+}

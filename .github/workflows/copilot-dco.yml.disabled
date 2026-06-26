@@ -1,0 +1,9 @@
+name: Copilot DCO
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  copilot-dco:
+    uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@5c7fdcdde035388fa2df43d860d2372c2dd3e3ed # pin to main 2026-05-21

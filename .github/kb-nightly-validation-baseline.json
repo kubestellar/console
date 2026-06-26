@@ -1,0 +1,6 @@
+{
+  "minPassRate": 90,
+  "maxValidationCriticalIssues": 0,
+  "maxCriticalGaps": 3,
+  "maxPreflightUncovered": 0
+}

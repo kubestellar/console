@@ -1,0 +1,236 @@
+package settings
+
+import (
+	"encoding/json"
+	"os"
+)
+
+// SettingsFile is the top-level structure for ~/.kc/settings.json
+type SettingsFile struct {
+	Version        int               `json:"version"`
+	LastModified   string            `json:"lastModified"`
+	Settings       PlaintextSettings `json:"settings"`
+	Encrypted      EncryptedSettings `json:"encrypted"`
+	KeyFingerprint string            `json:"keyFingerprint"`
+}
+
+// PlaintextSettings holds non-sensitive user preferences
+type PlaintextSettings struct {
+	AIMode      string             `json:"aiMode"`
+	Predictions PredictionSettings `json:"predictions"`
+	TokenUsage  TokenUsageSettings `json:"tokenUsage"`
+	Theme       string             `json:"theme"`
+	// CustomThemes holds the full JSON of marketplace themes installed by the user.
+	// Stored as raw JSON to avoid defining the full theme schema in Go.
+	CustomThemes  json.RawMessage       `json:"customThemes,omitempty"`
+	Accessibility AccessibilitySettings `json:"accessibility"`
+	Profile       ProfileSettings       `json:"profile"`
+	Widget        WidgetSettings        `json:"widget"`
+
+	// Auto-update configuration — persisted so user changes survive restarts (#7571).
+	AutoUpdateEnabled bool   `json:"autoUpdateEnabled"`
+	AutoUpdateChannel string `json:"autoUpdateChannel"`
+}
+
+// PredictionSettings mirrors the frontend PredictionSettings type
+type PredictionSettings struct {
+	AIEnabled      bool                 `json:"aiEnabled"`
+	Interval       int                  `json:"interval"`
+	MinConfidence  int                  `json:"minConfidence"`
+	MaxPredictions int                  `json:"maxPredictions"`
+	ConsensusMode  bool                 `json:"consensusMode"`
+	Thresholds     PredictionThresholds `json:"thresholds"`
+}
+
+// PredictionThresholds holds the threshold values for heuristic predictions
+type PredictionThresholds struct {
+	HighRestartCount  int `json:"highRestartCount"`
+	CPUPressure       int `json:"cpuPressure"`
+	MemoryPressure    int `json:"memoryPressure"`
+	GPUMemoryPressure int `json:"gpuMemoryPressure"`
+}
+
+// TokenUsageSettings holds token limit and threshold configuration
+type TokenUsageSettings struct {
+	Limit             int     `json:"limit"`
+	WarningThreshold  float64 `json:"warningThreshold"`
+	CriticalThreshold float64 `json:"criticalThreshold"`
+	StopThreshold     float64 `json:"stopThreshold"`
+}
+
+// AccessibilitySettings holds UI accessibility preferences
+type AccessibilitySettings struct {
+	ColorBlindMode bool `json:"colorBlindMode"`
+	ReduceMotion   bool `json:"reduceMotion"`
+	HighContrast   bool `json:"highContrast"`
+}
+
+// ProfileSettings holds basic user profile info
+type ProfileSettings struct {
+	Email   string `json:"email"`
+	SlackID string `json:"slackId"`
+}
+
+// WidgetSettings holds desktop widget preferences
+type WidgetSettings struct {
+	SelectedWidget string `json:"selectedWidget"`
+}
+
+// EncryptedField holds AES-256-GCM encrypted data
+type EncryptedField struct {
+	Ciphertext string `json:"ciphertext"` // base64-encoded ciphertext (includes GCM tag)
+	IV         string `json:"iv"`         // base64-encoded 12-byte nonce
+}
+
+// EncryptedSettings groups all sensitive fields (stored encrypted on disk)
+type EncryptedSettings struct {
+	APIKeys *EncryptedField `json:"apiKeys,omitempty"`
+	// GitHubToken is the legacy field — migrated to FeedbackGitHubToken at startup.
+	// Kept for JSON deserialization of old settings files; always nil after migration.
+	GitHubToken         *EncryptedField `json:"githubToken,omitempty"`
+	FeedbackGitHubToken *EncryptedField `json:"feedbackGithubToken,omitempty"`
+	Notifications       *EncryptedField `json:"notifications,omitempty"`
+}
+
+// AllSettings is the combined decrypted view sent to/from the frontend
+type AllSettings struct {
+	// Non-sensitive (plaintext)
+	AIMode      string             `json:"aiMode"`
+	Predictions PredictionSettings `json:"predictions"`
+	TokenUsage  TokenUsageSettings `json:"tokenUsage"`
+	Theme       string             `json:"theme"`
+	// CustomThemes holds the full JSON of marketplace themes installed by the user.
+	CustomThemes  json.RawMessage       `json:"customThemes,omitempty"`
+	Accessibility AccessibilitySettings `json:"accessibility"`
+	Profile       ProfileSettings       `json:"profile"`
+	Widget        WidgetSettings        `json:"widget"`
+
+	// Auto-update configuration
+	AutoUpdateEnabled bool   `json:"autoUpdateEnabled"`
+	AutoUpdateChannel string `json:"autoUpdateChannel"`
+
+	// Sensitive fields remain encrypted at rest. The raw GitHub PAT is internal
+	// only and must never be returned to browser clients; use HasFeedbackToken to
+	// expose configuration state without disclosing the credential.
+	APIKeys map[string]APIKeyEntry `json:"apiKeys"`
+	// FeedbackGitHubToken is the single consolidated GitHub PAT used for all
+	// GitHub operations: API proxy (activity card, CI), feedback/issue creation,
+	// missions, and rewards.
+	FeedbackGitHubToken string              `json:"feedbackGithubToken,omitempty"`
+	HasFeedbackToken    bool                `json:"hasFeedbackToken"`
+	Notifications       NotificationSecrets `json:"notifications"`
+
+	// FeedbackGitHubTokenSource indicates where the GitHub token came from:
+	// "settings" = user-configured via UI (encrypted in settings file),
+	// "env" = auto-detected from FEEDBACK_GITHUB_TOKEN (or GITHUB_TOKEN alias),
+	// "" = no token available.
+	FeedbackGitHubTokenSource string `json:"feedbackGithubTokenSource,omitempty"`
+}
+
+// ClientSafeCopy returns a copy suitable for browser clients: the token itself
+// is removed, while HasFeedbackToken preserves whether a credential exists.
+func (a *AllSettings) ClientSafeCopy() *AllSettings {
+	if a == nil {
+		return nil
+	}
+	clone := *a
+	clone.HasFeedbackToken = clone.FeedbackGitHubToken != ""
+	clone.FeedbackGitHubToken = ""
+	return &clone
+}
+
+// PreserveFeedbackTokenFrom keeps the effective GitHub token and its source
+// when callers submit settings payloads that intentionally omit the secret.
+func (a *AllSettings) PreserveFeedbackTokenFrom(existing *AllSettings) {
+	if a == nil || existing == nil {
+		return
+	}
+	a.FeedbackGitHubToken = existing.FeedbackGitHubToken
+	a.FeedbackGitHubTokenSource = existing.FeedbackGitHubTokenSource
+	a.HasFeedbackToken = existing.FeedbackGitHubToken != ""
+}
+
+// GitHubTokenSource constants
+const (
+	// GitHubTokenSourceSettings means the token was saved by the user via UI.
+	GitHubTokenSourceSettings = "settings"
+	// GitHubTokenSourceEnv means the token was auto-detected from FEEDBACK_GITHUB_TOKEN.
+	GitHubTokenSourceEnv = "env"
+)
+
+// ResolveGitHubTokenEnv returns the GitHub token from environment variables.
+// It checks FEEDBACK_GITHUB_TOKEN first (canonical), then GITHUB_TOKEN (alias).
+func ResolveGitHubTokenEnv() string {
+	if token := os.Getenv("FEEDBACK_GITHUB_TOKEN"); token != "" {
+		return token
+	}
+	return os.Getenv("GITHUB_TOKEN")
+}
+
+// APIKeyEntry holds a provider's API key and optional model override
+type APIKeyEntry struct {
+	APIKey string `json:"apiKey"`
+	Model  string `json:"model,omitempty"`
+}
+
+// NotificationSecrets holds sensitive notification configuration
+type NotificationSecrets struct {
+	SlackWebhookURL string `json:"slackWebhookUrl,omitempty"`
+	SlackChannel    string `json:"slackChannel,omitempty"`
+	EmailSMTPHost   string `json:"emailSMTPHost,omitempty"`
+	EmailSMTPPort   int    `json:"emailSMTPPort,omitempty"`
+	EmailFrom       string `json:"emailFrom,omitempty"`
+	EmailTo         string `json:"emailTo,omitempty"`
+	EmailUsername   string `json:"emailUsername,omitempty"`
+	EmailPassword   string `json:"emailPassword,omitempty"`
+}
+
+// DefaultSettings returns a SettingsFile with sensible defaults
+func DefaultSettings() *SettingsFile {
+	return &SettingsFile{
+		Version: 1,
+		Settings: PlaintextSettings{
+			AIMode: "medium",
+			Predictions: PredictionSettings{
+				AIEnabled:      true,
+				Interval:       60,
+				MinConfidence:  60,
+				MaxPredictions: 10,
+				Thresholds: PredictionThresholds{
+					HighRestartCount:  3,
+					CPUPressure:       80,
+					MemoryPressure:    85,
+					GPUMemoryPressure: 90,
+				},
+			},
+			TokenUsage: TokenUsageSettings{
+				Limit:             500000000,
+				WarningThreshold:  0.7,
+				CriticalThreshold: 0.9,
+				StopThreshold:     1.0,
+			},
+			Theme:         "kubestellar",
+			Accessibility: AccessibilitySettings{},
+			Profile:       ProfileSettings{},
+			Widget:        WidgetSettings{SelectedWidget: "browser"},
+		},
+		Encrypted: EncryptedSettings{},
+	}
+}
+
+// DefaultAllSettings returns an AllSettings with sensible defaults
+func DefaultAllSettings() *AllSettings {
+	d := DefaultSettings()
+	return &AllSettings{
+		AIMode:        d.Settings.AIMode,
+		Predictions:   d.Settings.Predictions,
+		TokenUsage:    d.Settings.TokenUsage,
+		Theme:         d.Settings.Theme,
+		CustomThemes:  nil,
+		Accessibility: d.Settings.Accessibility,
+		Profile:       d.Settings.Profile,
+		Widget:        d.Settings.Widget,
+		APIKeys:       make(map[string]APIKeyEntry),
+		Notifications: NotificationSecrets{},
+	}
+}

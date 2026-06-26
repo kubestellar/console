@@ -1,0 +1,175 @@
+{
+  "timestamp": "2026-05-16T07:47:08Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 29,
+    "failed": 3,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "suite": "consistency-test",
+      "status": "pass",
+      "duration": 2
+    },
+    {
+      "suite": "helm-lint-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "license-compliance-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "mission-security-test",
+      "status": "pass",
+      "duration": 6
+    },
+    {
+      "suite": "card-registry-integrity-test",
+      "status": "pass",
+      "duration": 2
+    },
+    {
+      "suite": "unit-test",
+      "status": "fail",
+      "duration": 953,
+      "failure_reason": " Test Files  8 failed | 1269 passed (1278)\n      Tests  17 failed | 23555 passed | 4 skipped (23655)\n     Errors  2 errors\n   Start at  06:43:25\n   Duration  952.18s (transform 43.44s, setup 160.92s, import 172.47s, tests 260.40s, environment 904.55s)\n"
+    },
+    {
+      "suite": "auth-lifecycle-test",
+      "status": "pass",
+      "duration": 29
+    },
+    {
+      "suite": "settings-migration-test",
+      "status": "pass",
+      "duration": 2
+    },
+    {
+      "suite": "update-lifecycle-test",
+      "status": "pass",
+      "duration": 60
+    },
+    {
+      "suite": "websocket-resilience-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "gosec-test",
+      "status": "fail",
+      "duration": 46,
+      "failure_reason": "  ⚠️  /home/runner/work/console/console/pkg/agent/server_http.go:395  Subprocess launched with variable\n  ... and 254 more (see full report)\nReports:\n  JSON:     /tmp/gosec-report.json\n  Summary:  /tmp/gosec-summary.md\n"
+    },
+    {
+      "suite": "dependency-audit-test",
+      "status": "pass",
+      "duration": 12
+    },
+    {
+      "suite": "secret-scan-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "ts-sast-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "container-scan-test",
+      "status": "pass",
+      "duration": 16
+    },
+    {
+      "suite": "security-headers-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-contract-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-fuzz-test",
+      "status": "pass",
+      "duration": 152
+    },
+    {
+      "suite": "error-boundary-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "console-error-scan",
+      "status": "pass",
+      "duration": 107
+    },
+    {
+      "suite": "nav-test",
+      "status": "pass",
+      "duration": 555
+    },
+    {
+      "suite": "perf-test",
+      "status": "pass",
+      "duration": 914
+    },
+    {
+      "suite": "ui-compliance-test",
+      "status": "pass",
+      "duration": 94
+    },
+    {
+      "suite": "deploy-test",
+      "status": "pass",
+      "duration": 70
+    },
+    {
+      "suite": "cache-test",
+      "status": "fail",
+      "duration": 337,
+      "failure_reason": "    Usage:\n        npx playwright show-trace e2e/test-results/compliance/card-cache-compliance-card-a1949-nce-—-storage-and-retrieval-chromium-retry1/trace.zip\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n  1 failed\n    [chromium] › e2e/compliance/"
+    },
+    {
+      "suite": "benchmark-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "ai-ml-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "a11y-test",
+      "status": "pass",
+      "duration": 79
+    },
+    {
+      "suite": "error-resilience-test",
+      "status": "pass",
+      "duration": 30
+    },
+    {
+      "suite": "i18n-test",
+      "status": "pass",
+      "duration": 63
+    },
+    {
+      "suite": "interaction-test",
+      "status": "pass",
+      "duration": 36
+    },
+    {
+      "suite": "security-e2e-test",
+      "status": "pass",
+      "duration": 36
+    }
+  ]
+}

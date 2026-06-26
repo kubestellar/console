@@ -1,0 +1,406 @@
+package k8s
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
+	"github.com/kubestellar/console/pkg/safego"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
+// isCRDNotInstalled reports whether the given error indicates that the MCS
+// CRD (ServiceExport / ServiceImport) is not installed on the target cluster,
+// as opposed to a real failure (auth, network, server error). Only this
+// specific case should be treated as an empty-list success — everything else
+// must be surfaced to the caller so the handler can report per-cluster
+// failures rather than silently hiding them (#6510).
+func isCRDNotInstalled(err error) bool {
+	if err == nil {
+		return false
+	}
+	if apimeta.IsNoMatchError(err) {
+		return true
+	}
+	// Discovery returns a NotFound status error for the resource type when
+	// the CRD is absent. We also accept a plain error with the same message
+	// so cluster variants that surface the error via Writer/Transport still
+	// get recognized. Object-level NotFounds (`"foo" not found`) must NOT
+	// match, so we key off the resource-type wording specifically.
+	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, "the server could not find the requested resource") {
+		return true
+	}
+	return false
+}
+
+// ListServiceExports lists all ServiceExport resources across all clusters.
+// Uses DeduplicatedClusters (not the lazy m.clients snapshot) so newly-added
+// kubeconfig contexts are picked up immediately on hot-reload, matching the
+// fix landed in argocd.go (#6476). Without this, freshly-loaded contexts
+// whose clients had not yet been lazily created were silently dropped (#6662).
+func (m *MultiClusterClient) ListServiceExports(ctx context.Context) (*v1alpha1.ServiceExportList, error) {
+	dedupClusters, err := m.DeduplicatedClusters(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clusters: %w", err)
+	}
+	clusters := make([]string, 0, len(dedupClusters))
+	for _, c := range dedupClusters {
+		clusters = append(clusters, c.Name)
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	exports := make([]v1alpha1.ServiceExport, 0)
+	// Per-cluster error accumulator — must not silently drop whole clusters
+	// on a real error now that ListServiceExportsForCluster correctly returns
+	// non-CRD-missing errors (#6547). Mirrors the handler-level ClusterErrors
+	// pattern used by /api/service-exports (#6483).
+	clusterErrors := make([]v1alpha1.MCSClusterError, 0)
+
+	for _, clusterName := range clusters {
+		cluster := clusterName
+		wg.Add(1)
+		safego.GoWith("mcs/"+cluster, func() {
+			defer wg.Done()
+
+			clusterExports, err := m.ListServiceExportsForCluster(ctx, cluster, "")
+			if err != nil {
+				errType := classifyError(err.Error())
+				mu.Lock()
+				clusterErrors = append(clusterErrors, v1alpha1.MCSClusterError{
+					Cluster:   cluster,
+					ErrorType: errType,
+					Message:   redactedMessage(errType),
+				})
+				mu.Unlock()
+				return
+			}
+
+			mu.Lock()
+			exports = append(exports, clusterExports...)
+			mu.Unlock()
+		})
+	}
+
+	wg.Wait()
+
+	return &v1alpha1.ServiceExportList{
+		Items:         exports,
+		TotalCount:    len(exports),
+		ClusterErrors: clusterErrors,
+	}, nil
+}
+
+// ListServiceExportsForCluster lists ServiceExport resources in a specific cluster
+func (m *MultiClusterClient) ListServiceExportsForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.ServiceExport, error) {
+	dynamicClient, err := m.GetDynamicClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	var list interface{}
+	if namespace == "" {
+		list, err = dynamicClient.Resource(v1alpha1.ServiceExportGVR).List(ctx, metav1.ListOptions{})
+	} else {
+		list, err = dynamicClient.Resource(v1alpha1.ServiceExportGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	}
+
+	if err != nil {
+		// Only treat "CRD is not installed on this cluster" as a benign empty
+		// list. Real failures (auth, network, server errors) are returned to
+		// the caller so the handler can report per-cluster errors (#6510).
+		if isCRDNotInstalled(err) {
+			return []v1alpha1.ServiceExport{}, nil
+		}
+		return nil, err
+	}
+
+	return m.parseServiceExportsFromList(list, contextName)
+}
+
+// parseServiceExportsFromList parses ServiceExports from an unstructured list
+func (m *MultiClusterClient) parseServiceExportsFromList(list interface{}, contextName string) ([]v1alpha1.ServiceExport, error) {
+	exports := make([]v1alpha1.ServiceExport, 0)
+	// The dynamic client returns *unstructured.UnstructuredList
+	if uList, ok := list.(*unstructured.UnstructuredList); ok {
+		for i := range uList.Items {
+			item := &uList.Items[i]
+			export := v1alpha1.ServiceExport{
+				Name:        item.GetName(),
+				Namespace:   item.GetNamespace(),
+				Cluster:     contextName,
+				ServiceName: item.GetName(),
+				Status:      v1alpha1.ServiceExportStatusUnknown,
+				CreatedAt:   item.GetCreationTimestamp().Time,
+			}
+
+			// Parse conditions from the unstructured content
+			content := item.UnstructuredContent()
+			if conditions, found, _ := unstructuredNestedSlice(content, "status", "conditions"); found {
+				export.Conditions = parseConditions(conditions)
+				export.Status = determineServiceExportStatus(export.Conditions)
+			}
+
+			exports = append(exports, export)
+		}
+	}
+
+	return exports, nil
+}
+
+// ListServiceImports lists all ServiceImport resources across all clusters.
+// See ListServiceExports for the DeduplicatedClusters rationale (#6662).
+func (m *MultiClusterClient) ListServiceImports(ctx context.Context) (*v1alpha1.ServiceImportList, error) {
+	dedupClusters, err := m.DeduplicatedClusters(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clusters: %w", err)
+	}
+	clusters := make([]string, 0, len(dedupClusters))
+	for _, c := range dedupClusters {
+		clusters = append(clusters, c.Name)
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	imports := make([]v1alpha1.ServiceImport, 0)
+	// Per-cluster error accumulator — see ListServiceExports for rationale (#6547).
+	clusterErrors := make([]v1alpha1.MCSClusterError, 0)
+
+	for _, clusterName := range clusters {
+		cluster := clusterName
+		wg.Add(1)
+		safego.GoWith("mcs/"+cluster, func() {
+			defer wg.Done()
+
+			clusterImports, err := m.ListServiceImportsForCluster(ctx, cluster, "")
+			if err != nil {
+				errType := classifyError(err.Error())
+				mu.Lock()
+				clusterErrors = append(clusterErrors, v1alpha1.MCSClusterError{
+					Cluster:   cluster,
+					ErrorType: errType,
+					Message:   redactedMessage(errType),
+				})
+				mu.Unlock()
+				return
+			}
+
+			mu.Lock()
+			imports = append(imports, clusterImports...)
+			mu.Unlock()
+		})
+	}
+
+	wg.Wait()
+
+	return &v1alpha1.ServiceImportList{
+		Items:         imports,
+		TotalCount:    len(imports),
+		ClusterErrors: clusterErrors,
+	}, nil
+}
+
+// ListServiceImportsForCluster lists ServiceImport resources in a specific cluster
+func (m *MultiClusterClient) ListServiceImportsForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.ServiceImport, error) {
+	dynamicClient, err := m.GetDynamicClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	var list interface{}
+	if namespace == "" {
+		list, err = dynamicClient.Resource(v1alpha1.ServiceImportGVR).List(ctx, metav1.ListOptions{})
+	} else {
+		list, err = dynamicClient.Resource(v1alpha1.ServiceImportGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	}
+
+	if err != nil {
+		// Only treat "CRD is not installed on this cluster" as a benign empty
+		// list. Real failures (auth, network, server errors) are returned to
+		// the caller so the handler can report per-cluster errors (#6510).
+		if isCRDNotInstalled(err) {
+			return []v1alpha1.ServiceImport{}, nil
+		}
+		return nil, err
+	}
+
+	return m.parseServiceImportsFromList(list, contextName)
+}
+
+// parseServiceImportsFromList parses ServiceImports from an unstructured list
+func (m *MultiClusterClient) parseServiceImportsFromList(list interface{}, contextName string) ([]v1alpha1.ServiceImport, error) {
+	imports := make([]v1alpha1.ServiceImport, 0)
+
+	if uList, ok := list.(*unstructured.UnstructuredList); ok {
+		for i := range uList.Items {
+			item := &uList.Items[i]
+			imp := v1alpha1.ServiceImport{
+				Name:      item.GetName(),
+				Namespace: item.GetNamespace(),
+				Cluster:   contextName,
+				Type:      v1alpha1.ServiceImportTypeClusterSetIP,
+				CreatedAt: item.GetCreationTimestamp().Time,
+			}
+
+			content := item.UnstructuredContent()
+
+			// Parse spec
+			if spec, found, _ := unstructuredNestedMap(content, "spec"); found {
+				if t, ok := spec["type"].(string); ok {
+					imp.Type = v1alpha1.ServiceImportType(t)
+				}
+				if ports, found, _ := unstructuredNestedSlice(content, "spec", "ports"); found {
+					imp.Ports = parsePorts(ports)
+				}
+			}
+
+			// Parse status for source cluster
+			if clusters, found, _ := unstructuredNestedSlice(content, "status", "clusters"); found {
+				if len(clusters) > 0 {
+					if cluster, ok := clusters[0].(map[string]interface{}); ok {
+						if name, ok := cluster["cluster"].(string); ok {
+							imp.SourceCluster = name
+						}
+					}
+				}
+			}
+
+			// Generate DNS name
+			imp.DNSName = imp.Name + "." + imp.Namespace + ".svc.clusterset.local"
+
+			// Parse conditions
+			if conditions, found, _ := unstructuredNestedSlice(content, "status", "conditions"); found {
+				imp.Conditions = parseConditions(conditions)
+			}
+
+			imports = append(imports, imp)
+		}
+	}
+
+	return imports, nil
+}
+
+// CreateServiceExport creates a new ServiceExport to export an existing service
+func (m *MultiClusterClient) CreateServiceExport(ctx context.Context, contextName, namespace, serviceName string) error {
+	dynamicClient, err := m.GetDynamicClient(contextName)
+	if err != nil {
+		return err
+	}
+
+	// Create the ServiceExport with the same name as the service being exported
+	serviceExport := map[string]interface{}{
+		"apiVersion": v1alpha1.ServiceExportGVR.Group + "/" + v1alpha1.ServiceExportGVR.Version,
+		"kind":       "ServiceExport",
+		"metadata": map[string]interface{}{
+			"name":      serviceName,
+			"namespace": namespace,
+		},
+	}
+
+	// Convert to unstructured and create
+	unstructuredObj := &unstructured.Unstructured{Object: serviceExport}
+	_, err = dynamicClient.Resource(v1alpha1.ServiceExportGVR).Namespace(namespace).Create(ctx, unstructuredObj, metav1.CreateOptions{})
+	return err
+}
+
+// DeleteServiceExport deletes a ServiceExport by name
+func (m *MultiClusterClient) DeleteServiceExport(ctx context.Context, contextName, namespace, name string) error {
+	dynamicClient, err := m.GetDynamicClient(contextName)
+	if err != nil {
+		return err
+	}
+
+	return dynamicClient.Resource(v1alpha1.ServiceExportGVR).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+// IsMCSAvailable checks if MCS CRDs are installed in a cluster
+func (m *MultiClusterClient) IsMCSAvailable(ctx context.Context, contextName string) bool {
+	dynamicClient, err := m.GetDynamicClient(contextName)
+	if err != nil {
+		return false
+	}
+
+	// Try to list ServiceExports - if it works, MCS is available
+	_, err = dynamicClient.Resource(v1alpha1.ServiceExportGVR).List(ctx, metav1.ListOptions{Limit: 1})
+	return err == nil
+}
+
+// parseConditions converts unstructured conditions to typed Condition slice
+func parseConditions(conditions []interface{}) []v1alpha1.Condition {
+	result := make([]v1alpha1.Condition, 0, len(conditions))
+	for _, cond := range conditions {
+		if condMap, ok := cond.(map[string]interface{}); ok {
+			c := v1alpha1.Condition{}
+			if t, ok := condMap["type"].(string); ok {
+				c.Type = t
+			}
+			if status, ok := condMap["status"].(string); ok {
+				c.Status = status
+			}
+			if reason, ok := condMap["reason"].(string); ok {
+				c.Reason = reason
+			}
+			if message, ok := condMap["message"].(string); ok {
+				c.Message = message
+			}
+			if lastTransition, ok := condMap["lastTransitionTime"].(string); ok {
+				if t, err := time.Parse(time.RFC3339, lastTransition); err == nil {
+					c.LastTransitionTime = t
+				}
+			}
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
+// determineServiceExportStatus determines the overall status from conditions
+func determineServiceExportStatus(conditions []v1alpha1.Condition) v1alpha1.ServiceExportStatus {
+	for _, c := range conditions {
+		if c.Type == "Valid" || c.Type == "Ready" {
+			if c.Status == "True" {
+				return v1alpha1.ServiceExportStatusReady
+			} else if c.Status == "False" {
+				return v1alpha1.ServiceExportStatusFailed
+			}
+		}
+	}
+	if len(conditions) == 0 {
+		return v1alpha1.ServiceExportStatusPending
+	}
+	return v1alpha1.ServiceExportStatusUnknown
+}
+
+// parsePorts converts unstructured ports to typed ServicePort slice
+func parsePorts(ports []interface{}) []v1alpha1.ServicePort {
+	result := make([]v1alpha1.ServicePort, 0, len(ports))
+	for _, p := range ports {
+		if portMap, ok := p.(map[string]interface{}); ok {
+			port := v1alpha1.ServicePort{
+				Protocol: "TCP", // default
+			}
+			if name, ok := portMap["name"].(string); ok {
+				port.Name = name
+			}
+			if protocol, ok := portMap["protocol"].(string); ok {
+				port.Protocol = protocol
+			}
+			if portNum, ok := portMap["port"].(int64); ok {
+				port.Port = safeInt32(portNum)
+			} else if portNum, ok := portMap["port"].(float64); ok {
+				port.Port = safeFloat64ToInt32(portNum)
+			}
+			if appProtocol, ok := portMap["appProtocol"].(string); ok {
+				port.AppProtocol = appProtocol
+			}
+			result = append(result, port)
+		}
+	}
+	return result
+}

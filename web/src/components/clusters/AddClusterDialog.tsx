@@ -1,0 +1,412 @@
+import { useState, useRef, useEffect } from 'react'
+import { X, Terminal, Upload, FormInput, AlertTriangle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { agentFetch } from '../../hooks/mcp/shared'
+import { emitClusterCreated } from '../../lib/analytics'
+import { isAgentConnected } from '../../hooks/useLocalAgent'
+import { CommandLineTab } from './add-cluster/CommandLineTab'
+import { ImportTab } from './add-cluster/ImportTab'
+import { ConnectTab } from './add-cluster/ConnectTab'
+import { ConnectTabProvider } from './add-cluster/ConnectTabContext'
+import { useConnectTabState } from './add-cluster/useConnectTabState'
+import type { TabId, ImportState, ConnectStep, ConnectState, PreviewContext, CloudProvider, CloudCLIInfo } from './add-cluster/types'
+
+interface AddClusterDialogProps {
+  open: boolean
+  onClose: () => void
+}
+
+export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
+  const { t } = useTranslation()
+  const [activeTab, setActiveTab] = useState<TabId>('command-line')
+  const [kubeconfigYaml, setKubeconfigYaml] = useState('')
+  const [importState, setImportState] = useState<ImportState>('idle')
+  const [previewContexts, setPreviewContexts] = useState<PreviewContext[]>([])
+  const [errorMessage, setErrorMessage] = useState('')
+  const [importedCount, setImportedCount] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Connect tab state
+  const [connectStep, setConnectStep] = useState<ConnectStep>(1)
+  const [connectState, setConnectState] = useState<ConnectState>('idle')
+  const [serverUrl, setServerUrl] = useState('')
+  const [authType, setAuthType] = useState<'token' | 'certificate' | 'cloud-iam'>('token')
+  const [token, setToken] = useState('')
+  const [certData, setCertData] = useState('')
+  const [keyData, setKeyData] = useState('')
+  const [caData, setCaData] = useState('')
+  const [skipTls, setSkipTls] = useState(false)
+  const [contextName, setContextName] = useState('')
+  const [clusterName, setClusterName] = useState('')
+  const [namespace, setNamespace] = useState('')
+  const [testResult, setTestResult] = useState<{ reachable: boolean; serverVersion?: string; error?: string } | null>(null)
+  const [connectError, setConnectError] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [selectedCloudProvider, setSelectedCloudProvider] = useState<CloudProvider>('eks')
+  const [cloudCLIs, setCloudCLIs] = useState<CloudCLIInfo[]>([])
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== undefined) clearTimeout(closeTimerRef.current)
+    }
+  }, [])
+
+  // Fetch cloud CLI status from the agent
+  useEffect(() => {
+    if (!open) return
+    agentFetch(`${LOCAL_AGENT_HTTP_URL}/cloud-cli-status`, { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      .then(res => res.json())
+      .then(data => setCloudCLIs(data.clis || []))
+      .catch(() => { /* non-critical — just won't show cloud quick connect */ })
+  }, [open])
+
+  // Derived loading state — true while any async operation is in progress
+  const isLoading = importState === 'previewing' || importState === 'importing' ||
+    connectState === 'testing' || connectState === 'adding'
+
+    useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && !isLoading) {
+      onClose()
+    }
+  }
+  if (open) {
+    document.addEventListener('keydown', handleKeyDown)
+  }
+  return () => document.removeEventListener('keydown', handleKeyDown)
+}, [open, isLoading, onClose])
+
+  const resetConnectState = () => {
+    setConnectStep(1)
+    setConnectState('idle')
+    setServerUrl(''); setAuthType('token'); setToken(''); setCertData(''); setKeyData('')
+    setCaData(''); setSkipTls(false); setContextName(''); setClusterName('')
+    setNamespace(''); setTestResult(null); setConnectError(''); setShowAdvanced(false)
+  }
+
+  const resetImportState = (initialYaml = '') => {
+    setKubeconfigYaml(initialYaml)
+    setImportState('idle')
+    setPreviewContexts([])
+    setErrorMessage('')
+    setImportedCount(0)
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      resetImportState(ev.target?.result as string)
+    }
+    reader.readAsText(file)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handlePreview = async () => {
+    setImportState('previewing')
+    setErrorMessage('')
+    try {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: res.statusText }))
+        throw new Error(body.error || res.statusText)
+      }
+      const data = await res.json()
+      setPreviewContexts(data.contexts || [])
+      setImportState('previewed')
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : String(err))
+      setImportState('error')
+    }
+  }
+
+  const handleImport = async () => {
+    setImportState('importing')
+    setErrorMessage('')
+    try {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: res.statusText }))
+        throw new Error(body.error || res.statusText)
+      }
+      const data = await res.json()
+      const count = data.importedCount ?? previewContexts.filter((c) => c.isNew).length
+      setImportedCount(count)
+      setImportState('done')
+      if (closeTimerRef.current !== undefined) clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = setTimeout(() => {
+        resetImportState()
+        onClose()
+      }, 1500)
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : String(err))
+      setImportState('error')
+    }
+  }
+
+  const handleTestConnection = async () => {
+    setConnectState('testing')
+    setTestResult(null)
+    setConnectError('')
+    try {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({
+          serverUrl,
+          authType,
+          token: authType === 'token' ? token : undefined,
+          certData: authType === 'certificate' ? btoa(certData) : undefined,
+          keyData: authType === 'certificate' ? btoa(keyData) : undefined,
+          caData: caData ? btoa(caData) : undefined,
+          skipTlsVerify: skipTls }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      const data = await res.json()
+      setTestResult(data)
+      setConnectState('tested')
+    } catch (err: unknown) {
+      setConnectError(err instanceof Error ? err.message : String(err))
+      setConnectState('error')
+    }
+  }
+
+  const handleAddCluster = async () => {
+    setConnectState('adding')
+    setConnectError('')
+    try {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({
+          contextName,
+          clusterName,
+          serverUrl,
+          authType,
+          token: authType === 'token' ? token : undefined,
+          certData: authType === 'certificate' ? btoa(certData) : undefined,
+          keyData: authType === 'certificate' ? btoa(keyData) : undefined,
+          caData: caData ? btoa(caData) : undefined,
+          skipTlsVerify: skipTls,
+          namespace: namespace || undefined }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: res.statusText }))
+        throw new Error(body.error || res.statusText)
+      }
+      setConnectState('done')
+      emitClusterCreated(clusterName, authType)
+      if (closeTimerRef.current !== undefined) clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = setTimeout(() => {
+        resetConnectState()
+        onClose()
+      }, 1500)
+    } catch (err: unknown) {
+      setConnectError(err instanceof Error ? err.message : String(err))
+      setConnectState('error')
+    }
+  }
+
+  // Validate server URL has a valid scheme and host
+  const isValidServerUrl = (urlStr: string): boolean => {
+    try {
+      const parsed = new URL(urlStr)
+      return (parsed.protocol === 'https:' || parsed.protocol === 'http:') && parsed.hostname !== ''
+    } catch {
+      return false
+    }
+  }
+
+  const goToConnectStep = (step: ConnectStep) => {
+    // Validate URL before advancing past step 1
+    if (step >= 2 && !isValidServerUrl(serverUrl)) {
+      setConnectError('Server URL must be a valid URL with scheme (e.g. https://api.example.com:6443)')
+      return
+    }
+    setConnectError('')
+    if (step === 3) {
+      try {
+        const url = new URL(serverUrl)
+        const host = url.hostname.replace(/\./g, '-')
+        if (!contextName) setContextName(host)
+        if (!clusterName) setClusterName(host)
+      } catch { /* fallback: auto-name won't be set, user can type manually */ }
+    }
+    setConnectStep(step)
+  }
+
+  const connectTabState = useConnectTabState({
+    connectStep,
+    setConnectStep,
+    connectState,
+    serverUrl,
+    setServerUrl,
+    authType,
+    setAuthType,
+    token,
+    setToken,
+    certData,
+    setCertData,
+    keyData,
+    setKeyData,
+    caData,
+    setCaData,
+    skipTls,
+    setSkipTls,
+    contextName,
+    setContextName,
+    clusterName,
+    setClusterName,
+    namespace,
+    setNamespace,
+    testResult,
+    resetTestResult: () => setTestResult(null),
+    connectError,
+    showAdvanced,
+    setShowAdvanced,
+    selectedCloudProvider,
+    setSelectedCloudProvider,
+    goToConnectStep,
+    handleTestConnection,
+    handleAddCluster,
+  })
+
+  // Clear stale close timers when the dialog is closed (#7593)
+  // Also reset per-tab form state on close so the next open starts fresh.
+  // (During a single open session, state is preserved across tab switches — see #8913.)
+  useEffect(() => {
+    if (!open) {
+      if (closeTimerRef.current !== undefined) clearTimeout(closeTimerRef.current)
+      resetConnectState()
+      resetImportState()
+    }
+  }, [open])
+
+  if (!open) return null
+
+  const tabs: { id: TabId; label: string; icon: React.ReactNode; disabled?: boolean }[] = [
+    { id: 'command-line', label: t('cluster.addClusterCommandLine'), icon: <Terminal className="w-4 h-4" /> },
+    { id: 'import', label: t('cluster.addClusterImport'), icon: <Upload className="w-4 h-4" /> },
+    { id: 'connect', label: t('cluster.addClusterConnect'), icon: <FormInput className="w-4 h-4" /> },
+  ]
+
+  return (
+    <div className="fixed inset-0 z-modal flex items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+        aria-hidden="true"
+      />
+
+      {/* Dialog */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-cluster-dialog-title"
+        className="relative w-full max-w-2xl mx-4 bg-card border border-border dark:border-white/10 rounded-xl shadow-2xl"
+        aria-busy={isLoading}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border dark:border-white/10">
+          <h2 id="add-cluster-dialog-title" className="text-lg font-semibold text-foreground">{t('cluster.addClusterTitle')}</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-border dark:border-white/10 px-6">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                if (!tab.disabled) {
+                  // Preserve each tab's form state when switching tabs so users
+                  // don't lose work if they click the wrong tab by mistake (#8913).
+                  // State is still cleared on dialog close (handleClose) and on
+                  // successful import/add via resetImportState / resetConnectState.
+                  setActiveTab(tab.id)
+                }
+              }}
+              disabled={tab.disabled}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                activeTab === tab.id
+                  ? 'border-purple-500 text-foreground'
+                  : tab.disabled
+                    ? 'border-transparent opacity-50 cursor-not-allowed text-muted-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content — fixed min-height so tabs don't resize the dialog */}
+        <div className="px-6 py-5 max-h-[60vh] min-h-[340px] overflow-y-auto">
+          {!isAgentConnected() && (
+            <div className="flex items-start gap-3 mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+              <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-yellow-400">{t('cluster.agentRequired')}</p>
+                <p className="text-muted-foreground mt-1">
+                  {t('cluster.agentRequiredDesc')}{' '}
+                  <a
+                    href="https://github.com/kubestellar/console#install-kc-agent"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-400 hover:text-purple-300 underline"
+                  >
+                    {t('cluster.agentInstallLink')}
+                  </a>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'command-line' && (
+            <CommandLineTab cloudCLIs={cloudCLIs} />
+          )}
+
+          {activeTab === 'import' && (
+            <ImportTab
+              kubeconfigYaml={kubeconfigYaml}
+              setKubeconfigYaml={setKubeconfigYaml}
+              importState={importState}
+              setImportState={setImportState}
+              previewContexts={previewContexts}
+              setPreviewContexts={setPreviewContexts}
+              errorMessage={errorMessage}
+              setErrorMessage={setErrorMessage}
+              importedCount={importedCount}
+              fileInputRef={fileInputRef}
+              handleFileUpload={handleFileUpload}
+              handlePreview={handlePreview}
+              handleImport={handleImport}
+            />
+          )}
+
+          {activeTab === 'connect' && (
+            <ConnectTabProvider state={connectTabState}>
+              <ConnectTab />
+            </ConnectTabProvider>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

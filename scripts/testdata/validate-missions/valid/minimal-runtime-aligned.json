@@ -1,0 +1,10 @@
+{
+  "version": "kc-mission-v1",
+  "title": "Minimal runtime-aligned mission",
+  "steps": [
+    {
+      "title": "Inspect cluster",
+      "description": "Review the current cluster state before making changes."
+    }
+  ]
+}

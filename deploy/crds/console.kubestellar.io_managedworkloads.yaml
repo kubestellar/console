@@ -1,0 +1,178 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: managedworkloads.console.kubestellar.io
+  labels:
+    app.kubernetes.io/part-of: kubestellar-console
+spec:
+  group: console.kubestellar.io
+  names:
+    kind: ManagedWorkload
+    listKind: ManagedWorkloadList
+    plural: managedworkloads
+    singular: managedworkload
+    shortNames:
+      - mw
+      - mws
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Source Cluster
+          type: string
+          jsonPath: .spec.sourceCluster
+        - name: Kind
+          type: string
+          jsonPath: .spec.workloadRef.kind
+        - name: Workload
+          type: string
+          jsonPath: .spec.workloadRef.name
+        - name: Targets
+          type: integer
+          jsonPath: .spec.targetClusters
+          priority: 1
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: ManagedWorkload represents a workload to be deployed across clusters
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - sourceCluster
+                - sourceNamespace
+                - workloadRef
+              properties:
+                sourceCluster:
+                  type: string
+                  description: The cluster where the workload is defined
+                sourceNamespace:
+                  type: string
+                  description: The namespace in the source cluster
+                workloadRef:
+                  type: object
+                  required:
+                    - kind
+                    - name
+                  properties:
+                    apiVersion:
+                      type: string
+                      description: API version of the workload (e.g., apps/v1)
+                      default: apps/v1
+                    kind:
+                      type: string
+                      description: Kind of workload (Deployment, StatefulSet, DaemonSet, etc.)
+                      enum:
+                        - Deployment
+                        - StatefulSet
+                        - DaemonSet
+                        - Job
+                        - CronJob
+                        - ReplicaSet
+                    name:
+                      type: string
+                      description: Name of the workload resource
+                targetClusters:
+                  type: array
+                  description: List of target clusters for deployment
+                  items:
+                    type: string
+                targetGroups:
+                  type: array
+                  description: List of ClusterGroup names to target
+                  items:
+                    type: string
+                replicas:
+                  type: integer
+                  description: Override replica count for deployment
+                  minimum: 0
+                overrides:
+                  type: object
+                  description: Field overrides to apply when deploying
+                  x-kubernetes-preserve-unknown-fields: true
+                suspend:
+                  type: boolean
+                  description: Suspend the workload deployment
+                  default: false
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  description: Current phase of the managed workload
+                  enum:
+                    - Pending
+                    - Deploying
+                    - Deployed
+                    - Failed
+                    - Suspended
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: The generation observed by the controller
+                lastSyncTime:
+                  type: string
+                  format: date-time
+                  description: Last time the workload was synced
+                deployedClusters:
+                  type: array
+                  description: Status of deployment in each target cluster
+                  items:
+                    type: object
+                    properties:
+                      cluster:
+                        type: string
+                        description: Cluster name
+                      status:
+                        type: string
+                        enum:
+                          - Pending
+                          - Running
+                          - Degraded
+                          - Failed
+                      replicas:
+                        type: string
+                        description: Ready/desired replicas (e.g., "3/3")
+                      message:
+                        type: string
+                        description: Status message or error details
+                      lastUpdateTime:
+                        type: string
+                        format: date-time
+                conditions:
+                  type: array
+                  description: Current conditions of the managed workload
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string

@@ -1,0 +1,358 @@
+{
+  "schema_version": 1,
+  "last_updated": "2026-06-17T04:31:06Z",
+  "rolling_window_days": 30,
+  "categories": {
+    "performance": {
+      "merged": 16,
+      "closed": 10,
+      "acceptance_rate": 0.62,
+      "status": "normal",
+      "last_evaluated": "2026-06-11T04:30:46Z"
+    },
+    "security": {
+      "merged": 82,
+      "closed": 68,
+      "acceptance_rate": 0.55,
+      "status": "normal",
+      "last_evaluated": "2026-06-17T04:31:06Z"
+    },
+    "a11y": {
+      "merged": 53,
+      "closed": 27,
+      "acceptance_rate": 0.66,
+      "status": "normal",
+      "last_evaluated": "2026-06-13T04:30:06Z"
+    },
+    "operator": {
+      "merged": 525,
+      "closed": 256,
+      "acceptance_rate": 0.67,
+      "status": "normal",
+      "last_evaluated": "2026-06-17T04:31:06Z"
+    },
+    "sre": {
+      "merged": 284,
+      "closed": 80,
+      "acceptance_rate": 0.78,
+      "status": "normal",
+      "last_evaluated": "2026-06-17T04:31:06Z"
+    },
+    "features": {
+      "merged": 19,
+      "closed": 9,
+      "acceptance_rate": 0.68,
+      "status": "normal",
+      "last_evaluated": "2026-06-17T04:31:06Z"
+    },
+    "resilience": {
+      "merged": 73,
+      "closed": 65,
+      "acceptance_rate": 0.53,
+      "status": "normal",
+      "last_evaluated": "2026-06-17T04:31:06Z"
+    },
+    "consistency": {
+      "merged": 29,
+      "closed": 21,
+      "acceptance_rate": 0.58,
+      "status": "normal",
+      "last_evaluated": "2026-06-11T04:30:46Z"
+    }
+  },
+  "weekly_insights": {
+    "best_pr_size": "XXL",
+    "size_acceptance": {},
+    "type_acceptance": {},
+    "common_rejection_reasons": [],
+    "best_change_type": "bug_fix",
+    "last_report_date": "2026-06-14"
+  },
+  "cncf_insights": {
+    "last_scan_date": "2026-06-17",
+    "suggested_checks": [
+      {
+        "pattern": "loading_ux",
+        "count": 5,
+        "added": "2026-06-17",
+        "priority": "medium"
+      },
+      {
+        "pattern": "navigation_ux",
+        "count": 15,
+        "added": "2026-06-17",
+        "priority": "medium"
+      },
+      {
+        "pattern": "data_viz",
+        "count": 5,
+        "added": "2026-06-17",
+        "priority": "medium"
+      },
+      {
+        "pattern": "form_ux",
+        "count": 25,
+        "added": "2026-06-17",
+        "priority": "medium"
+      },
+      {
+        "pattern": "realtime_ux",
+        "count": 16,
+        "added": "2026-06-17",
+        "priority": "medium"
+      }
+    ]
+  },
+  "history": [
+    {
+      "date": "2026-04-06",
+      "total_merged": 131,
+      "total_closed": 228,
+      "categories_blocked": [
+        "operator",
+        "sre"
+      ],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-04-07",
+      "total_merged": 131,
+      "total_closed": 278,
+      "categories_blocked": [
+        "operator",
+        "sre"
+      ],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-04-08",
+      "total_merged": 131,
+      "total_closed": 288,
+      "categories_blocked": [
+        "operator",
+        "sre"
+      ],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-04-13",
+      "total_merged": 131,
+      "total_closed": 289,
+      "categories_blocked": [
+        "operator",
+        "sre"
+      ],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-09",
+      "total_merged": 132,
+      "total_closed": 289,
+      "categories_blocked": [
+        "operator",
+        "sre"
+      ],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-20",
+      "total_merged": 182,
+      "total_closed": 297,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-21",
+      "total_merged": 232,
+      "total_closed": 322,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-22",
+      "total_merged": 282,
+      "total_closed": 345,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-23",
+      "total_merged": 315,
+      "total_closed": 349,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-24",
+      "total_merged": 331,
+      "total_closed": 349,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-25",
+      "total_merged": 370,
+      "total_closed": 352,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-26",
+      "total_merged": 420,
+      "total_closed": 359,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-27",
+      "total_merged": 457,
+      "total_closed": 365,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-28",
+      "total_merged": 479,
+      "total_closed": 369,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-29",
+      "total_merged": 509,
+      "total_closed": 381,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-30",
+      "total_merged": 535,
+      "total_closed": 390,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-05-31",
+      "total_merged": 571,
+      "total_closed": 397,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-01",
+      "total_merged": 616,
+      "total_closed": 403,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-02",
+      "total_merged": 662,
+      "total_closed": 409,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-03",
+      "total_merged": 712,
+      "total_closed": 417,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-04",
+      "total_merged": 762,
+      "total_closed": 467,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-06",
+      "total_merged": 774,
+      "total_closed": 468,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-07",
+      "total_merged": 775,
+      "total_closed": 468,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-09",
+      "total_merged": 806,
+      "total_closed": 486,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-10",
+      "total_merged": 853,
+      "total_closed": 490,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-11",
+      "total_merged": 892,
+      "total_closed": 493,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-12",
+      "total_merged": 942,
+      "total_closed": 503,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-13",
+      "total_merged": 992,
+      "total_closed": 531,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-14",
+      "total_merged": 1031,
+      "total_closed": 532,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-17",
+      "total_merged": 1081,
+      "total_closed": 536,
+      "categories_blocked": [],
+      "categories_boosted": []
+    }
+  ],
+  "rotation_weights": {
+    "performance": 0.93,
+    "security": 0.83,
+    "a11y": 0.99,
+    "operator": 1.01,
+    "sre": 1.17,
+    "features": 1.02,
+    "resilience": 0.8,
+    "consistency": 0.87
+  },
+  "max_issues_override": 3,
+  "pr_guidance": "Keep PRs small and focused. Smaller PRs have higher acceptance rates.",
+  "regression_insights": {
+    "focus_overrides": [],
+    "repeat_issue_patterns": [
+      "[nightly:ttfi] Time-To-First-Interactive (TTFI) failed — N-N-N",
+      "[nightly:security] Security Compliance failed — N-N-N",
+      "[nightly:interaction] Interaction Compliance failed — N-N-N",
+      "[nightly:iNn] iNn Compliance failed — N-N-N",
+      "[nightly:error-resilience] Error Resilience failed — N-N-N"
+    ],
+    "total_issues_7d": 73,
+    "repeat_pattern_count": 18,
+    "last_analyzed": "2026-06-17T04:31:07Z"
+  }
+}

@@ -1,0 +1,14 @@
+# DCO App configuration
+# https://github.com/dcoapp/app
+
+# Allow certain bots to bypass DCO check
+allowedBots:
+  - copilot-swe-agent
+  - copilot-swe-agent[bot]
+  - Copilot
+  - dependabot[bot]
+  - github-actions[bot]
+
+# Require DCO signoff for all other commits
+require:
+  members: true

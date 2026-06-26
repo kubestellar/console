@@ -1,0 +1,44 @@
+%%{init: {'flowchart': {'htmlLabels': false, 'padding': 25, 'nodeSpacing': 60, 'rankSpacing': 60}, 'themeVariables': {'fontSize': '13px'}}}%%
+flowchart LR
+    subgraph User["User machine"]
+        B[Browser]
+        KA[kc-agent<br/>127.0.0.1:8585<br/>loopback only]
+        KC[~/.kube/config]
+        CFG[~/.kc/config.yaml<br/>AI keys, mode 0600]
+    end
+
+    subgraph Console["Console deployment<br/>(self-hosted cluster or SaaS)"]
+        GB[Go backend<br/>:8080]
+        POD[(Pod SA)]
+    end
+
+    subgraph Clusters["Your managed clusters"]
+        K8S[Kubernetes API servers]
+    end
+
+    subgraph AI["AI providers (optional)"]
+        ANTH[Anthropic]
+        OAI[OpenAI]
+        GEM[Gemini]
+        GRQ[Groq / OpenRouter /<br/>Open WebUI]
+    end
+
+    B -->|HTTP/WS :8080<br/>serves UI, OAuth| GB
+    B -->|HTTP/WS :8585<br/>all cluster ops| KA
+    KA -->|reads on disk| KC
+    KA -->|reads on disk| CFG
+    KA -->|kubectl as<br/>user identity| K8S
+    KA -.->|HTTPS chat<br/>prompts only| ANTH
+    KA -.->|HTTPS chat<br/>prompts only| OAI
+    KA -.->|HTTPS chat<br/>prompts only| GEM
+    KA -.->|HTTPS chat<br/>prompts only| GRQ
+    GB -->|bootstrap /<br/>GPU reserve /<br/>self-upgrade ONLY| POD
+
+    classDef userbox fill:#0b3d0b,stroke:#0f0,color:#fff
+    classDef consolebox fill:#0a2a4a,stroke:#08f,color:#fff
+    classDef clusterbox fill:#3d0b0b,stroke:#f44,color:#fff
+    classDef aibox fill:#3d2a0b,stroke:#fa0,color:#fff
+    class User userbox
+    class Console consolebox
+    class Clusters clusterbox
+    class AI aibox

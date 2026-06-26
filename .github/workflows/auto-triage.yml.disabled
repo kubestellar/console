@@ -1,0 +1,47 @@
+name: Auto-Triage on Copilot Assignment
+
+on:
+  issues:
+    types: [assigned]
+
+permissions:
+  issues: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    if: github.event.assignee.login == 'Copilot' || contains(github.event.assignee.login, 'copilot')
+    steps:
+      - name: Add triage labels
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(l => l.name);
+            
+            // Only process if has ai-fix-requested
+            if (!labels.includes('ai-fix-requested')) {
+              core.info('Issue does not have ai-fix-requested label, skipping');
+              return;
+            }
+            
+            core.info(`Copilot assigned to issue #${issue.number}`);
+            
+            // Add triage/accepted and ai-processing labels
+            const labelsToAdd = [];
+            if (!labels.includes('triage/accepted')) {
+              labelsToAdd.push('triage/accepted');
+            }
+            if (!labels.includes('ai-processing')) {
+              labelsToAdd.push('ai-processing');
+            }
+            
+            if (labelsToAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: labelsToAdd
+              });
+              core.info(`Added labels: ${labelsToAdd.join(', ')}`);
+            }

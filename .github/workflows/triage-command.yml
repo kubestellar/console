@@ -1,0 +1,424 @@
+name: Triage Command
+# Handles triage/accepted via two paths:
+#   Path A: "/triage accepted" comment on an issue
+#   Path B: "triage/accepted" label added to an issue
+# Both paths add labels, assign Copilot, and kick off the automated pipeline.
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [labeled]
+
+permissions: read-all  # default read; writes scoped to job below
+
+jobs:
+  # ── Path A: /triage accepted comment ──────────────────────────────────
+  handle-triage-comment:
+    permissions:
+      issues: write
+    if: |
+      github.event_name == 'issue_comment' &&
+      !github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/triage accepted')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check commenter permissions
+        id: check_perms
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+        run: |
+          PERMISSION=$(gh api "repos/${{ github.repository }}/collaborators/$COMMENTER/permission" \
+            --jq '.permission' 2>/dev/null || echo "none")
+
+          if [[ "$PERMISSION" == "admin" || "$PERMISSION" == "maintain" || "$PERMISSION" == "write" ]]; then
+            echo "authorized=true" >> $GITHUB_OUTPUT
+            echo "User $COMMENTER has $PERMISSION access - authorized"
+          else
+            echo "authorized=false" >> $GITHUB_OUTPUT
+            echo "::warning::User $COMMENTER lacks write permission (has: $PERMISSION)"
+          fi
+
+      - name: React to command
+        if: steps.check_perms.outputs.authorized == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
+            -X POST -f content='+1'
+
+      - name: Add triage and AI labels
+        if: steps.check_perms.outputs.authorized == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+
+          # Create labels if they don't exist
+          gh label create "triage/accepted" --repo "$REPO" --color "0e8a16" \
+            --description "Issue has been triaged and accepted" 2>/dev/null || true
+          gh label create "ai-fix-requested" --repo "$REPO" --color "d4c5f9" \
+            --description "AI fix has been requested" 2>/dev/null || true
+          # Remove triage-needed labels (set by backend when creating issues)
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "needs-triage" 2>/dev/null || true
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "help wanted" 2>/dev/null || true
+
+          # Add triage/accepted and ai-fix-requested (scanner picks up from here)
+          gh issue edit "$ISSUE" --repo "$REPO" \
+            --add-label "triage/accepted" \
+            --add-label "ai-fix-requested"
+
+          echo "Triaged issue #$ISSUE: removed needs-triage, added triage/accepted + ai-fix-requested"
+
+      - name: Add rocket reaction to issue
+        if: steps.check_perms.outputs.authorized == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/reactions \
+            -X POST -f content='rocket'
+
+      - name: Assign Copilot to issue
+        if: false # Copilot disabled — issues handled by Claude Code scanner
+        id: assign_copilot
+        env:
+          GH_TOKEN: ${{ secrets.CONSOLE_AUTO }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+
+          # Use the REST API to assign Copilot coding agent
+          RESPONSE=$(gh api --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/$REPO/issues/$ISSUE/assignees \
+            --input - <<< '{
+              "assignees": ["copilot-swe-agent[bot]"],
+              "agent_assignment": {
+                "target_repo": "'"$REPO"'",
+                "base_branch": "main"
+              }
+            }' 2>&1) && {
+            echo "success=true" >> $GITHUB_OUTPUT
+            echo "Copilot assigned to issue #$ISSUE"
+          } || {
+            echo "success=false" >> $GITHUB_OUTPUT
+            echo "::warning::REST assign failed, trying GraphQL fallback..."
+
+            # GraphQL fallback with required feature header
+            BOT_ID=$(gh api graphql \
+              -H "GraphQL-Features: issues_copilot_assignment_api_support,coding_agent_model_selection" \
+              -f query='query { repository(owner: "'"${REPO%%/*}"'", name: "'"${REPO##*/}"'") { suggestedActors(first: 1, capabilities: [COPILOT_CHAT_AGENT]) { nodes { id login } } } }' \
+              --jq '.data.repository.suggestedActors.nodes[0].id' 2>/dev/null || echo "")
+
+            if [ -n "$BOT_ID" ]; then
+              ISSUE_ID=$(gh api graphql \
+                -f query='query { repository(owner: "'"${REPO%%/*}"'", name: "'"${REPO##*/}"'") { issue(number: '"$ISSUE"') { id } } }' \
+                --jq '.data.repository.issue.id')
+
+              gh api graphql \
+                -H "GraphQL-Features: issues_copilot_assignment_api_support,coding_agent_model_selection" \
+                -f query='mutation { addAssigneesToAssignable(input: { assignableId: "'"$ISSUE_ID"'", assigneeIds: ["'"$BOT_ID"'"] }) { assignable { ... on Issue { assignees(first: 5) { nodes { login } } } } } }' && {
+                echo "success=true" >> $GITHUB_OUTPUT
+                echo "Copilot assigned via GraphQL"
+              } || {
+                echo "success=false" >> $GITHUB_OUTPUT
+                echo "::error::Both REST and GraphQL assignment failed"
+              }
+            else
+              echo "success=false" >> $GITHUB_OUTPUT
+              echo "::error::Could not find Copilot bot ID"
+            fi
+          }
+
+      - name: Update labels on assignment success
+        if: false # Copilot disabled — issues handled by Claude Code scanner
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+
+          # Transition: ai-processing -> ai-awaiting-fix
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "ai-processing" 2>/dev/null || true
+          gh issue edit "$ISSUE" --repo "$REPO" --add-label "ai-awaiting-fix"
+
+          echo "Copilot assigned to issue #$ISSUE, status: ai-awaiting-fix"
+
+      - name: Post instructions comment
+        if: false # Copilot disabled — issues handled by Claude Code scanner
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE="${{ github.event.issue.number }}"
+          ASSIGN_SUCCESS="${{ steps.assign_copilot.outputs.success }}"
+
+          if [ "$ASSIGN_SUCCESS" == "true" ]; then
+            HEADER="## 🤖 AI Fix Triggered via /triage accepted"
+          else
+            HEADER="## 🤖 AI Fix Requested (fallback: @Copilot mention)"
+          fi
+
+          gh issue comment "$ISSUE" --repo "${{ github.repository }}" --body "$(cat <<EOF
+          $HEADER
+
+          @Copilot Please analyze this issue and create a fix.
+
+          ### Instructions:
+          1. Read the issue description carefully
+          2. Explore the codebase to understand the context
+          3. Implement the requested changes
+          4. Create a PR with \`Fixes #$ISSUE\` in the description
+          5. Ensure the code follows existing patterns and style
+
+          ### Build & Lint:
+          - Your environment has Node.js 20, Go 1.23, and all dependencies pre-installed
+          - Run \`cd web && npm run build\` to verify TypeScript compilation
+          - Run \`cd web && npm run lint\` to check for lint errors
+          - A local preview server is running at \`http://localhost:4173\`
+
+          ### Testing:
+          - Use Playwright to test the Netlify preview deployment
+          - Get the Deploy Preview URL from the \`netlify[bot]\` comment
+          - Post screenshots as proof that your fix works
+
+          ### Guidelines:
+          - Use TypeScript for frontend code
+          - Use Go for backend code
+          - Follow the patterns in existing code
+          EOF
+          )"
+
+      - name: Handle assignment failure
+        if: false # Copilot disabled — issues handled by Claude Code scanner
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+
+          # Create label if it doesn't exist
+          gh label create "ai-needs-human" --repo "$REPO" --color "d93f0b" \
+            --description "AI automation unavailable - needs human intervention" 2>/dev/null || true
+
+          # Keep ai-processing but also flag as needing attention
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "ai-processing" 2>/dev/null || true
+          gh issue edit "$ISSUE" --repo "$REPO" --add-label "ai-needs-human"
+
+          echo "::warning::Copilot assignment failed for issue #$ISSUE"
+
+      - name: Reject unauthorized user
+        if: steps.check_perms.outputs.authorized == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Thumbs-down reaction
+          gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
+            -X POST -f content='-1'
+
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" \
+            --body "The \`/triage accepted\` command requires write access to this repository."
+
+  # ── Path B: triage/accepted label added ───────────────────────────────
+  handle-triage-label:
+    permissions:
+      issues: write
+    if: |
+      github.event_name == 'issues' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'triage/accepted' &&
+      !github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Skip if Copilot is already assigned
+        if: false # Copilot disabled — issues handled by Claude Code scanner
+        id: check_existing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ASSIGNEES=$(gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }} \
+            --jq '[.assignees[].login] | join(",")' 2>/dev/null || echo "")
+
+          if echo "$ASSIGNEES" | grep -qi "copilot"; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Copilot already assigned, skipping"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check actor permissions
+        id: check_perms
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.event.sender.login }}
+        run: |
+          PERMISSION=$(gh api "repos/${{ github.repository }}/collaborators/$ACTOR/permission" \
+            --jq '.permission' 2>/dev/null || echo "none")
+
+          if [[ "$PERMISSION" == "admin" || "$PERMISSION" == "maintain" || "$PERMISSION" == "write" ]]; then
+            echo "authorized=true" >> $GITHUB_OUTPUT
+            echo "User $ACTOR has $PERMISSION access - authorized"
+          else
+            echo "authorized=false" >> $GITHUB_OUTPUT
+            echo "::warning::User $ACTOR lacks write permission (has: $PERMISSION)"
+          fi
+
+      - name: Add AI labels
+        if: steps.check_perms.outputs.authorized == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+
+          # Create labels if they don't exist
+          gh label create "ai-fix-requested" --repo "$REPO" --color "d4c5f9" \
+            --description "AI fix has been requested" 2>/dev/null || true
+
+          # Remove triage-needed labels
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "needs-triage" 2>/dev/null || true
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "help wanted" 2>/dev/null || true
+
+          # Add ai-fix-requested (scanner picks up from here)
+          gh issue edit "$ISSUE" --repo "$REPO" \
+            --add-label "ai-fix-requested"
+
+          echo "Label-triggered triage for issue #$ISSUE: added ai-fix-requested"
+
+      - name: Add rocket reaction to issue
+        if: steps.check_perms.outputs.authorized == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/reactions \
+            -X POST -f content='rocket'
+
+      - name: Assign Copilot to issue
+        if: false # Copilot disabled — issues handled by Claude Code scanner
+        id: assign_copilot
+        env:
+          GH_TOKEN: ${{ secrets.CONSOLE_AUTO }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+
+          RESPONSE=$(gh api --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/$REPO/issues/$ISSUE/assignees \
+            --input - <<< '{
+              "assignees": ["copilot-swe-agent[bot]"],
+              "agent_assignment": {
+                "target_repo": "'"$REPO"'",
+                "base_branch": "main"
+              }
+            }' 2>&1) && {
+            echo "success=true" >> $GITHUB_OUTPUT
+            echo "Copilot assigned to issue #$ISSUE"
+          } || {
+            echo "success=false" >> $GITHUB_OUTPUT
+            echo "::warning::REST assign failed, trying GraphQL fallback..."
+
+            BOT_ID=$(gh api graphql \
+              -H "GraphQL-Features: issues_copilot_assignment_api_support,coding_agent_model_selection" \
+              -f query='query { repository(owner: "'"${REPO%%/*}"'", name: "'"${REPO##*/}"'") { suggestedActors(first: 1, capabilities: [COPILOT_CHAT_AGENT]) { nodes { id login } } } }' \
+              --jq '.data.repository.suggestedActors.nodes[0].id' 2>/dev/null || echo "")
+
+            if [ -n "$BOT_ID" ]; then
+              ISSUE_ID=$(gh api graphql \
+                -f query='query { repository(owner: "'"${REPO%%/*}"'", name: "'"${REPO##*/}"'") { issue(number: '"$ISSUE"') { id } } }' \
+                --jq '.data.repository.issue.id')
+
+              gh api graphql \
+                -H "GraphQL-Features: issues_copilot_assignment_api_support,coding_agent_model_selection" \
+                -f query='mutation { addAssigneesToAssignable(input: { assignableId: "'"$ISSUE_ID"'", assigneeIds: ["'"$BOT_ID"'"] }) { assignable { ... on Issue { assignees(first: 5) { nodes { login } } } } } }' && {
+                echo "success=true" >> $GITHUB_OUTPUT
+                echo "Copilot assigned via GraphQL"
+              } || {
+                echo "success=false" >> $GITHUB_OUTPUT
+                echo "::error::Both REST and GraphQL assignment failed"
+              }
+            else
+              echo "success=false" >> $GITHUB_OUTPUT
+              echo "::error::Could not find Copilot bot ID"
+            fi
+          }
+
+      - name: Update labels on assignment success
+        if: false # Copilot disabled — issues handled by Claude Code scanner
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "ai-processing" 2>/dev/null || true
+          gh issue edit "$ISSUE" --repo "$REPO" --add-label "ai-awaiting-fix"
+
+          echo "Copilot assigned to issue #$ISSUE, status: ai-awaiting-fix"
+
+      - name: Post instructions comment
+        if: false # Copilot disabled — issues handled by Claude Code scanner
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE="${{ github.event.issue.number }}"
+          ASSIGN_SUCCESS="${{ steps.assign_copilot.outputs.success }}"
+
+          if [ "$ASSIGN_SUCCESS" == "true" ]; then
+            HEADER="## 🤖 AI Fix Triggered via triage/accepted label"
+          else
+            HEADER="## 🤖 AI Fix Requested (fallback: @Copilot mention)"
+          fi
+
+          gh issue comment "$ISSUE" --repo "${{ github.repository }}" --body "$(cat <<EOF
+          $HEADER
+
+          @Copilot Please analyze this issue and create a fix.
+
+          ### Instructions:
+          1. Read the issue description carefully
+          2. Explore the codebase to understand the context
+          3. Implement the requested changes
+          4. Create a PR with \`Fixes #$ISSUE\` in the description
+          5. Ensure the code follows existing patterns and style
+
+          ### Build & Lint:
+          - Your environment has Node.js 20, Go 1.23, and all dependencies pre-installed
+          - Run \`cd web && npm run build\` to verify TypeScript compilation
+          - Run \`cd web && npm run lint\` to check for lint errors
+          - A local preview server is running at \`http://localhost:4173\`
+
+          ### Testing:
+          - Use Playwright to test the Netlify preview deployment
+          - Get the Deploy Preview URL from the \`netlify[bot]\` comment
+          - Post screenshots as proof that your fix works
+
+          ### Guidelines:
+          - Use TypeScript for frontend code
+          - Use Go for backend code
+          - Follow the patterns in existing code
+          EOF
+          )"
+
+      - name: Handle assignment failure
+        if: false # Copilot disabled — issues handled by Claude Code scanner
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          ISSUE="${{ github.event.issue.number }}"
+
+          gh label create "ai-needs-human" --repo "$REPO" --color "d93f0b" \
+            --description "AI automation unavailable - needs human intervention" 2>/dev/null || true
+
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "ai-processing" 2>/dev/null || true
+          gh issue edit "$ISSUE" --repo "$REPO" --add-label "ai-needs-human"
+
+          echo "::warning::Copilot assignment failed for issue #$ISSUE"

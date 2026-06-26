@@ -1,0 +1,1 @@
+export const CONSECUTIVE_FAILURE_THRESHOLD = 3

@@ -1,0 +1,148 @@
+package handlers
+
+import (
+	"log/slog"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/audit"
+	"github.com/kubestellar/console/pkg/settings"
+	"github.com/kubestellar/console/pkg/store"
+)
+
+// SettingsHandler handles persistent settings API endpoints
+type SettingsHandler struct {
+	manager *settings.SettingsManager
+	store   store.Store
+}
+
+// NewSettingsHandler creates a new settings handler
+func NewSettingsHandler(manager *settings.SettingsManager, s store.Store) *SettingsHandler {
+	return &SettingsHandler{manager: manager, store: s}
+}
+
+// requireAdmin verifies the current user has the admin role. It MUST be the
+// first call in every settings handler — no configuration, secrets, or
+// request body may be loaded until this check passes (#6000). Without this
+// invariant, an attacker can trigger side effects (decryption, disk I/O,
+// manager lookups) before being told they are forbidden.
+func (h *SettingsHandler) RequireAdmin(c *fiber.Ctx) error {
+	return RequireAdmin(c, h.store)
+}
+
+// GetSettings returns browser-safe settings metadata without exposing secrets.
+// GET /api/settings
+func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
+	// RBAC MUST be the very first operation — do not read any settings
+	// until the caller has been authorized (#6000).
+	if err := h.RequireAdmin(c); err != nil {
+		return err
+	}
+
+	all, err := h.manager.GetAll()
+	if err != nil {
+		slog.Error("[settings] GetAll error", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to load settings",
+		})
+	}
+	return c.JSON(all.ClientSafeCopy())
+}
+
+// SaveSettings persists all settings, encrypting sensitive fields
+// PUT /api/settings
+func (h *SettingsHandler) SaveSettings(c *fiber.Ctx) error {
+	// RBAC MUST be the very first operation — do not parse the body or
+	// touch the settings manager until the caller has been authorized
+	// (#6000).
+	if err := h.RequireAdmin(c); err != nil {
+		return err
+	}
+
+	var all settings.AllSettings
+	if err := c.BodyParser(&all); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	current, err := h.manager.GetAll()
+	if err != nil {
+		slog.Error("[settings] GetAll error", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to load current settings",
+		})
+	}
+	all.PreserveFeedbackTokenFrom(current)
+
+	if err := h.manager.SaveAll(&all); err != nil {
+		slog.Error("[settings] SaveAll error", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to save settings",
+		})
+	}
+
+	audit.Log(c, audit.ActionSaveSettings, "settings", "all")
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Settings saved",
+	})
+}
+
+// ExportSettings returns the encrypted settings file for backup
+// POST /api/settings/export
+func (h *SettingsHandler) ExportSettings(c *fiber.Ctx) error {
+	// RBAC MUST be the very first operation — the encrypted export
+	// contains secrets and must never be produced for unauthorized callers
+	// (#6000).
+	if err := h.RequireAdmin(c); err != nil {
+		return err
+	}
+
+	data, err := h.manager.ExportEncrypted()
+	if err != nil {
+		slog.Error("[settings] Export error", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to export settings",
+		})
+	}
+
+	audit.Log(c, audit.ActionExportSettings, "settings", "backup")
+
+	c.Set("Content-Type", "application/json")
+	c.Set("Content-Disposition", "attachment; filename=kc-settings-backup.json")
+	return c.Send(data)
+}
+
+// ImportSettings imports a settings backup file
+// POST /api/settings/import
+func (h *SettingsHandler) ImportSettings(c *fiber.Ctx) error {
+	// RBAC MUST be the very first operation — do not read the request
+	// body or hand it to the settings manager until the caller has been
+	// authorized (#6000).
+	if err := h.RequireAdmin(c); err != nil {
+		return err
+	}
+
+	body := c.Body()
+	if len(body) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Empty request body",
+		})
+	}
+
+	if err := h.manager.ImportEncrypted(body); err != nil {
+		slog.Error("[settings] Import error", "error", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Failed to import settings",
+			"message": "invalid settings data",
+		})
+	}
+
+	audit.Log(c, audit.ActionImportSettings, "settings", "backup")
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Settings imported",
+	})
+}

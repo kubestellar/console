@@ -1,0 +1,29 @@
+%%{init: {'flowchart': {'htmlLabels': false, 'padding': 25, 'nodeSpacing': 60, 'rankSpacing': 60}, 'themeVariables': {'fontSize': '13px'}}}%%
+flowchart TB
+    subgraph A["Posture A — fully online (default)"]
+        direction LR
+        A_KA[kc-agent] --> A_K8S[Kubernetes]
+        A_KA --> A_AI[Public AI provider]
+        A_GB[Go backend] --> A_GH[GitHub OAuth]
+        A_GB --> A_UP[Update checks]
+    end
+
+    subgraph B["Posture B — restricted egress (no AI)"]
+        direction LR
+        B_KA[kc-agent] --> B_K8S[Kubernetes]
+        B_KA -.blocked.-> B_AI[Public AI provider]
+        B_GB[Go backend] --> B_GH[GitHub OAuth]
+    end
+
+    subgraph C["Posture C — fully air-gapped"]
+        direction LR
+        C_KA[kc-agent] --> C_K8S[Kubernetes]
+        C_KA --> C_LLM[Local LLM<br/>optional]
+        C_KA -.blocked.-> C_AI[Public AI provider]
+        C_GB[Go backend] -.blocked.-> C_GH[GitHub OAuth]
+    end
+
+    classDef allowed stroke:#0f0,stroke-width:2px
+    classDef blocked stroke:#f44,stroke-width:2px,color:#f88
+    class A_KA,A_K8S,A_AI,A_GB,A_GH,A_UP,B_KA,B_K8S,B_GB,B_GH,C_KA,C_K8S,C_LLM allowed
+    class B_AI,C_AI,C_GH blocked

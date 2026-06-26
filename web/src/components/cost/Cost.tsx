@@ -1,0 +1,205 @@
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { AlertCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES } from '../../lib/constants'
+import { useClusters, useGPUNodes } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { StatBlockValue } from '../ui/StatsOverview'
+import { DashboardPage } from '../../lib/dashboards/DashboardPage'
+import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
+import { TICK_INTERVAL_MS } from '../../lib/constants/network'
+import { HOURS_PER_MONTH } from '../../lib/constants/time'
+import { safeGetJSON } from '../../lib/utils/localStorage'
+import { formatMemoryStat } from '../../lib/formatStats'
+
+/** GiB per TiB — used for storage unit display in cost blocks */
+
+type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
+
+const COST_CARDS_KEY = 'kubestellar-cost-cards'
+const STORAGE_COST_PER_GB_MONTH = 0.10
+const CLOUD_PRICING: Record<CloudProvider, { cpu: number; memory: number; gpu: number }> = {
+  estimate: { cpu: 0.05, memory: 0.01, gpu: 2.50 },
+  aws: { cpu: 0.048, memory: 0.012, gpu: 3.06 },
+  gcp: { cpu: 0.0475, memory: 0.0064, gpu: 2.48 },
+  azure: { cpu: 0.05, memory: 0.011, gpu: 2.07 },
+  oci: { cpu: 0.025, memory: 0.0015, gpu: 2.95 },
+  openshift: { cpu: 0.048, memory: 0.012, gpu: 3.00 },
+}
+const COST_EMPTY_STATE = {
+  title: 'Cost Dashboard',
+  description: 'Add cards to monitor and optimize resource costs across your clusters.',
+}
+
+// Default cards for the Cost dashboard
+const DEFAULT_COST_CARDS = getDefaultCards('cost')
+
+function formatCurrencyStat(value: number | undefined, emptyValue: string): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return emptyValue
+  }
+  return `$${Math.round(Math.max(value, 0)).toLocaleString()}`
+}
+
+export function Cost() {
+  const { t } = useTranslation()
+  const emptyValue = t('labels.emptyValue')
+  const { deduplicatedClusters: clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
+  const { nodes: gpuNodes } = useGPUNodes()
+  const { drillToCost } = useDrillDownActions()
+  const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
+
+  // Filter clusters based on global selection
+  const filteredClusters = clusters.filter(c =>
+    isAllClustersSelected || globalSelectedClusters.includes(c.name)
+  )
+  const reachableClusters = filteredClusters.filter(c => c.reachable !== false)
+
+  // Read provider overrides from localStorage (same key as ClusterCosts card)
+  const [providerOverrides, setProviderOverrides] = useState<Record<string, CloudProvider>>(
+    () => safeGetJSON<Record<string, CloudProvider>>(STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES) ?? {}
+  )
+
+  // Listen for localStorage changes (when user changes provider in ClusterCosts card)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setProviderOverrides(safeGetJSON<Record<string, CloudProvider>>(STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES) ?? {})
+    }
+    window.addEventListener('storage', handleStorageChange)
+    // Also poll for changes since storage event doesn't fire for same-tab changes
+    const interval = setInterval(handleStorageChange, TICK_INTERVAL_MS)
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      clearInterval(interval)
+    }
+  }, [])
+
+  // Detect cloud provider from cluster name (matches ClusterCosts logic)
+  const detectClusterProvider = useCallback((name: string, context?: string): CloudProvider => {
+    // Check for manual override first
+    if (providerOverrides[name]) {
+      return providerOverrides[name]
+    }
+    const searchStr = `${name} ${context || ''}`.toLowerCase()
+    if (searchStr.includes('openshift') || searchStr.includes('ocp') || searchStr.includes('rosa') || searchStr.includes('aro')) return 'openshift'
+    if (searchStr.includes('eks') || searchStr.includes('aws') || searchStr.includes('amazon')) return 'aws'
+    if (searchStr.includes('gke') || searchStr.includes('gcp') || searchStr.includes('google')) return 'gcp'
+    if (searchStr.includes('aks') || searchStr.includes('azure') || searchStr.includes('microsoft')) return 'azure'
+    if (searchStr.includes('oke') || searchStr.includes('oci') || searchStr.includes('oracle') || name.toLowerCase() === 'prow') return 'oci'
+    return 'estimate'
+  }, [providerOverrides])
+
+  // Count GPUs from GPU nodes
+  const gpuByCluster = useMemo(() => {
+    const map: Record<string, number> = {}
+    ;(gpuNodes || []).forEach(node => {
+      const clusterKey = node.cluster.split('/')[0]
+      map[clusterKey] = (map[clusterKey] || 0) + node.gpuCount
+    })
+    return map
+  }, [gpuNodes])
+
+  // Calculate per-cluster costs (matches ClusterCosts card exactly)
+  const costStats = useMemo(() => {
+    let totalCPU = 0
+    let totalMemoryGB = 0
+    let totalGPUs = 0
+    let totalMonthly = 0
+    let cpuMonthly = 0
+    let memoryMonthly = 0
+    let gpuMonthly = 0
+
+    reachableClusters.forEach(cluster => {
+      const cpus = cluster.cpuCores || 0
+      const memory = 32 * (cluster.nodeCount || 0) // Estimate 32GB per node (matches ClusterCosts)
+      const gpus = gpuByCluster[cluster.name] || 0
+
+      // Get per-cluster pricing based on detected provider
+      const provider = detectClusterProvider(cluster.name, cluster.context)
+      const pricing = CLOUD_PRICING[provider]
+
+      const clusterHourly = (cpus * pricing.cpu) + (memory * pricing.memory) + (gpus * pricing.gpu)
+      const clusterMonthly = clusterHourly * HOURS_PER_MONTH
+
+      totalCPU += cpus
+      totalMemoryGB += memory
+      totalGPUs += gpus
+      totalMonthly += clusterMonthly
+      cpuMonthly += cpus * pricing.cpu * HOURS_PER_MONTH
+      memoryMonthly += memory * pricing.memory * HOURS_PER_MONTH
+      gpuMonthly += gpus * pricing.gpu * HOURS_PER_MONTH
+    })
+
+    const totalStorageGB = reachableClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0)
+    const storageMonthly = totalStorageGB * STORAGE_COST_PER_GB_MONTH
+
+    return {
+      totalCPU,
+      totalMemoryGB,
+      totalGPUs,
+      totalStorageGB,
+      totalMonthly: totalMonthly + storageMonthly,
+      cpuMonthly,
+      memoryMonthly,
+      gpuMonthly,
+      storageMonthly }
+  }, [detectClusterProvider, gpuByCluster, reachableClusters])
+
+  // Stats value getter for the configurable StatsOverview component
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+    const drillToCostType = (type: string) => {
+      drillToCost('all', { costType: type, totalMonthly: costStats.totalMonthly })
+    }
+
+    switch (blockId) {
+      case 'total_cost':
+        return reachableClusters.length === 0
+          ? { value: emptyValue, sublabel: 'est. monthly', isClickable: false }
+          : { value: formatCurrencyStat(costStats.totalMonthly, emptyValue), sublabel: 'est. monthly', onClick: () => drillToCostType('total'), isClickable: costStats.totalMonthly > 0 }
+      case 'cpu_cost':
+        return { value: formatCurrencyStat(costStats.cpuMonthly, emptyValue), sublabel: `${costStats.totalCPU} cores`, onClick: () => drillToCostType('cpu'), isClickable: costStats.cpuMonthly > 0 }
+      case 'memory_cost':
+        return { value: formatCurrencyStat(costStats.memoryMonthly, emptyValue), sublabel: formatMemoryStat(costStats.totalMemoryGB), onClick: () => drillToCostType('memory'), isClickable: costStats.memoryMonthly > 0 }
+      case 'storage_cost':
+        return { value: formatCurrencyStat(costStats.storageMonthly, emptyValue), sublabel: formatMemoryStat(costStats.totalStorageGB), onClick: () => drillToCostType('storage'), isClickable: costStats.storageMonthly > 0 }
+      case 'network_cost':
+        return { value: '$0', sublabel: 'not tracked', isClickable: false }
+      case 'gpu_cost':
+        return { value: formatCurrencyStat(costStats.gpuMonthly, emptyValue), sublabel: `${costStats.totalGPUs} GPUs`, onClick: () => drillToCostType('gpu'), isClickable: costStats.gpuMonthly > 0 }
+      default:
+        return { value: 0 }
+    }
+  }, [costStats, drillToCost, emptyValue])
+
+  return (
+    <DashboardPage
+      title="Cost Management"
+      subtitle="Monitor and optimize resource costs across clusters"
+      icon="DollarSign"
+      rightExtra={<RotatingTip page="cost" />}
+      storageKey={COST_CARDS_KEY}
+      defaultCards={DEFAULT_COST_CARDS}
+      statsType="cost"
+      getStatValue={getDashboardStatValue}
+      onRefresh={refetch}
+      isLoading={isLoading}
+      isRefreshing={dataRefreshing}
+      lastUpdated={lastUpdated}
+      hasData={reachableClusters.length > 0}
+      emptyState={COST_EMPTY_STATE}
+    >
+      {/* Error Display */}
+      {error && (
+        <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-400">Error loading cost data</p>
+            <p className="text-xs text-muted-foreground mt-1">{error}</p>
+          </div>
+        </div>
+      )}
+    </DashboardPage>
+  )
+}

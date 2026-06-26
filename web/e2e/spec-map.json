@@ -1,0 +1,41 @@
+{
+  "$comment": "Maps issue labels and changed file paths to Playwright spec files for post-merge verification. Used by .github/workflows/post-merge-verify.yml to select targeted tests.",
+
+  "always_run": [
+    "smoke.spec.ts"
+  ],
+
+  "label_map": {
+    "area/dashboard":  ["Dashboard.spec.ts"],
+    "area/clusters":   ["Clusters.spec.ts"],
+    "area/cards":      ["Dashboard.spec.ts"],
+    "area/missions":   ["mission-import.spec.ts", "Missions.spec.ts"],
+    "area/deploy":     ["spa-routes.spec.ts"],
+    "area/security":   ["RBACExplorer.spec.ts"],
+    "area/settings":   ["Settings.spec.ts"],
+    "area/sidebar":    ["Sidebar.spec.ts"],
+    "area/events":     ["Events.spec.ts"],
+    "area/gpu":        ["GPUOverview.spec.ts"],
+    "area/namespaces": ["NamespaceOverview.spec.ts"],
+    "area/login":      ["Login.spec.ts"],
+    "area/a11y":       ["a11y.spec.ts"],
+    "area/navbar":     ["navbar-responsive.spec.ts"]
+  },
+
+  "path_map": {
+    "web/src/components/dashboard/":     ["Dashboard.spec.ts"],
+    "web/src/components/clusters/":      ["Clusters.spec.ts"],
+    "web/src/components/layout/":        ["smoke.spec.ts", "navbar-responsive.spec.ts"],
+    "web/src/components/missions/":      ["mission-import.spec.ts", "Missions.spec.ts"],
+    "web/src/components/settings/":      ["Settings.spec.ts"],
+    "web/src/components/events/":        ["Events.spec.ts"],
+    "web/src/components/gpu/":           ["GPUOverview.spec.ts"],
+    "web/src/components/cards/":         ["Dashboard.spec.ts"],
+    "web/src/components/auth/":          ["Login.spec.ts"],
+    "web/src/components/drilldown/":     ["DrillDown.spec.ts"],
+    "web/src/components/namespaces/":    ["NamespaceOverview.spec.ts"],
+    "web/src/hooks/useMissions":         ["mission-import.spec.ts"],
+    "web/src/lib/dynamic-cards/":        ["Dashboard.spec.ts"],
+    "pkg/api/handlers/":                 ["smoke.spec.ts"]
+  }
+}

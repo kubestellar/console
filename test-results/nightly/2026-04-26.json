@@ -1,0 +1,178 @@
+{
+  "timestamp": "2026-04-26T08:00:55Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 26,
+    "failed": 6,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "suite": "consistency-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "helm-lint-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "license-compliance-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "mission-security-test",
+      "status": "pass",
+      "duration": 6
+    },
+    {
+      "suite": "card-registry-integrity-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "unit-test",
+      "status": "fail",
+      "duration": 1065,
+      "failure_reason": " Test Files  1 failed | 912 passed (917)\n      Tests  5 failed | 17564 passed | 6 skipped (17637)\n     Errors  6 errors\n   Start at  06:35:12\n   Duration  1063.55s (transform 42.88s, setup 126.62s, import 132.00s, tests 247.99s, environment 721.27s)\n"
+    },
+    {
+      "suite": "auth-lifecycle-test",
+      "status": "pass",
+      "duration": 38
+    },
+    {
+      "suite": "settings-migration-test",
+      "status": "pass",
+      "duration": 2
+    },
+    {
+      "suite": "update-lifecycle-test",
+      "status": "pass",
+      "duration": 62
+    },
+    {
+      "suite": "websocket-resilience-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "gosec-test",
+      "status": "fail",
+      "duration": 43,
+      "failure_reason": "  ⚠️  /home/runner/work/console/console/pkg/agent/update_checker.go:740  Subprocess launched with variable\n  ... and 398 more (see full report)\nReports:\n  JSON:     /tmp/gosec-report.json\n  Summary:  /tmp/gosec-summary.md\n"
+    },
+    {
+      "suite": "dependency-audit-test",
+      "status": "pass",
+      "duration": 12
+    },
+    {
+      "suite": "secret-scan-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "ts-sast-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "container-scan-test",
+      "status": "pass",
+      "duration": 14
+    },
+    {
+      "suite": "security-headers-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "api-contract-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-fuzz-test",
+      "status": "pass",
+      "duration": 146
+    },
+    {
+      "suite": "error-boundary-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "console-error-scan",
+      "status": "pass",
+      "duration": 122
+    },
+    {
+      "suite": "nav-test",
+      "status": "pass",
+      "duration": 649
+    },
+    {
+      "suite": "perf-test",
+      "status": "fail",
+      "duration": 900,
+      "failure_reason": "  Pods (live+cache): cards=6 first=2262ms avg=2299ms api_reqs=7\n  ✓  28 [chromium] › e2e/perf/dashboard-perf.spec.ts:343:5 › Pods (live+cache) — card loading performance (3.0s)\n  Deployments (demo): cards=6 first=2126ms avg=2126ms api_reqs=0\n  ✓  29 [chromium] › e2e/perf/dashboard-perf.spec.ts:343:5 › Deployments (demo) — card loading performance (2.8s)\nSuite killed after 900s wall-clock timeout\n"
+    },
+    {
+      "suite": "ui-compliance-test",
+      "status": "pass",
+      "duration": 119
+    },
+    {
+      "suite": "deploy-test",
+      "status": "pass",
+      "duration": 120
+    },
+    {
+      "suite": "cache-test",
+      "status": "pass",
+      "duration": 121
+    },
+    {
+      "suite": "benchmark-test",
+      "status": "fail",
+      "duration": 375,
+      "failure_reason": "    [chromium] › e2e/benchmarks/benchmark-dashboard.spec.ts:225:3 › LLM-d Benchmarks Dashboard — live data › Hardware Leaderboard shows configuration rankings \n    [chromium] › e2e/benchmarks/benchmark-dashboard.spec.ts:244:3 › LLM-d Benchmarks Dashboard — live data › Latency Breakdown shows TTFT and TPOT metrics \n    [chromium] › e2e/benchmarks/benchmark-dashboard.spec.ts:287:3 › LLM-d Benchmarks Dashboard — live data › Throughput Comparison shows tokens-per-second data "
+    },
+    {
+      "suite": "ai-ml-test",
+      "status": "fail",
+      "duration": 900,
+      "failure_reason": "  ✘   2 [chromium] › e2e/ai-ml/ai-ml-dashboard.spec.ts:131:3 › AI/ML Dashboard — page structure › page loads with all 13 AI/ML cards (retry #1) (1.4m)\n  ✘   3 [chromium] › e2e/ai-ml/ai-ml-dashboard.spec.ts:147:3 › AI/ML Dashboard — page structure › hero row has LLM-d visualization cards (5.1m)\n  ✘   4 [chromium] › e2e/ai-ml/ai-ml-dashboard.spec.ts:147:3 › AI/ML Dashboard — page structure › hero row has LLM-d visualization cards (retry #1) (5.1m)\n  -   5 [chromium] �"
+    },
+    {
+      "suite": "a11y-test",
+      "status": "pass",
+      "duration": 87
+    },
+    {
+      "suite": "error-resilience-test",
+      "status": "fail",
+      "duration": 64,
+      "failure_reason": "        npx playwright show-trace e2e/test-results/compliance/error-resilience-Error-Resilience-generate-report-chromium-retry1/trace.zip\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n  1 failed\n    [chromium] › e2e/compliance/error-resilience.spec.ts"
+    },
+    {
+      "suite": "i18n-test",
+      "status": "pass",
+      "duration": 62
+    },
+    {
+      "suite": "interaction-test",
+      "status": "pass",
+      "duration": 36
+    },
+    {
+      "suite": "security-e2e-test",
+      "status": "pass",
+      "duration": 42
+    }
+  ]
+}
