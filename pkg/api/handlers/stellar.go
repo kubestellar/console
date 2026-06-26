@@ -642,7 +642,9 @@ func (h *StellarHandler) ApproveAction(c *fiber.Ctx) error {
 	var req struct {
 		ConfirmToken string `json:"confirmToken"`
 	}
-	_ = c.BodyParser(&req)
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON body"})
+	}
 	destructive := isDestructiveAction(item.ActionType)
 	if destructive {
 		if req.ConfirmToken == "" || req.ConfirmToken != item.ConfirmToken {
@@ -1165,7 +1167,7 @@ type quickAskRequest struct {
 	Cluster  string              `json:"cluster"`
 	Provider string              `json:"provider"`
 	Model    string              `json:"model"`
-	History  []providers.Message  `json:"history"`
+	History  []providers.Message `json:"history"`
 }
 
 type watchSuggestion struct {
@@ -1654,15 +1656,15 @@ func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
 	if err := c.BodyParser(&event); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid event"})
 	}
-	
+
 	// Validate required fields
 	if event.Cluster == "" || event.Namespace == "" || event.Name == "" || event.Type == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing required fields"})
 	}
-	
+
 	// Process event asynchronously (non-blocking)
 	go h.ProcessEvent(context.Background(), event)
-	
+
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{"status": "accepted"})
 }
 
@@ -2397,7 +2399,6 @@ func truncateString(s string, n int) string {
 	}
 	return s[:n] + "..."
 }
-
 
 // Watch handlers
 func (h *StellarHandler) ListWatches(c *fiber.Ctx) error {
@@ -3261,4 +3262,3 @@ func (h *StellarHandler) autoCreateWatch(ctx context.Context, e IncomingEvent) {
 		}})
 	}
 }
-

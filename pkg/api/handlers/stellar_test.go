@@ -158,6 +158,42 @@ func TestStellarMissionAndActionFlow(t *testing.T) {
 	require.Equal(t, http.StatusOK, approveResp.StatusCode)
 }
 
+func TestStellarApproveActionMalformedJSON(t *testing.T) {
+	app, _ := newStellarTestApp(t)
+
+	scheduledAt := time.Now().UTC().Add(-1 * time.Minute).Format(time.RFC3339)
+	createActionBody := map[string]any{
+		"description": "Scale worker deployment",
+		"actionType":  "ScaleDeployment",
+		"parameters": map[string]any{
+			"deployment": "worker",
+			"replicas":   5,
+		},
+		"cluster":     "prod-a",
+		"namespace":   "default",
+		"scheduledAt": scheduledAt,
+	}
+	rawAction, _ := json.Marshal(createActionBody)
+	createActionReq, err := http.NewRequest(http.MethodPost, "/api/stellar/actions", bytes.NewReader(rawAction))
+	require.NoError(t, err)
+	createActionReq.Header.Set("Content-Type", "application/json")
+	createActionResp, err := app.Test(createActionReq, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, createActionResp.StatusCode)
+	var createdAction map[string]any
+	require.NoError(t, json.NewDecoder(createActionResp.Body).Decode(&createdAction))
+	actionID, ok := createdAction["id"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, actionID)
+
+	approveReq, err := http.NewRequest(http.MethodPost, "/api/stellar/actions/"+actionID+"/approve", bytes.NewReader([]byte(`{invalid json}`)))
+	require.NoError(t, err)
+	approveReq.Header.Set("Content-Type", "application/json")
+	approveResp, err := app.Test(approveReq, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusBadRequest, approveResp.StatusCode)
+}
+
 func TestStellarAskStateDigestAndNotifications(t *testing.T) {
 	app, _ := newStellarTestApp(t)
 
