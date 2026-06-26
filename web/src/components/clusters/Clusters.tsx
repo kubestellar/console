@@ -460,6 +460,7 @@ export function Clusters() {
                   onRefreshCluster={refreshSingleCluster}
                   onRemoveCluster={setRemovingCluster}
                   onReorder={handleReorder}
+                  lastUpdated={lastUpdated}
                 />
               )}
             </>
