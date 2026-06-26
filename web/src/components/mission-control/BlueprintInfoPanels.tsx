@@ -24,6 +24,8 @@ import { fetchMissionContent } from '../../lib/missions/missionCache'
 import { fetchKubaraValues } from '../../lib/kubara'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
+import { formatTimeAgo } from '../../lib/formatters'
+import { Skeleton } from '../ui/Skeleton'
 
 // ---------------------------------------------------------------------------
 // Status display maps (shared with the main component)
@@ -142,6 +144,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
   const [loadingSteps, setLoadingSteps] = useState(false)
   const [stepsError, setStepsError] = useState<string | null>(null)
   const [stepsRetryNonce, setStepsRetryNonce] = useState(0)
+  const [lastFetched, setLastFetched] = useState<number | null>(null)
   const fetchedRef = useRef<string>('')
 
   // Fetch mission steps — try multiple KB path variants for fuzzy matching
@@ -195,6 +198,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
                 metadata: { source: `kubara/${chartName}` },
               }
               setMission(generatedMission)
+              setLastFetched(Date.now())
               setLoadingSteps(false)
             })
             .catch(() => failSteps())
@@ -216,6 +220,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
         .then(({ mission: m }) => {
           if (m.steps && m.steps.length > 0) {
             setMission(m)
+            setLastFetched(Date.now())
             setLoadingSteps(false)
           } else {
             tryNext(idx + 1)
@@ -309,12 +314,16 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
 
       {/* Install steps */}
       <div>
-        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Install Steps</h4>
+        <div className="flex items-center justify-between mb-1.5">
+          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Install Steps</h4>
+          {lastFetched && !loadingSteps && (
+            <span className="text-[9px] text-muted-foreground/60" title={`Last updated ${new Date(lastFetched).toLocaleString()}`}>
+              {formatTimeAgo(lastFetched, { compact: true })}
+            </span>
+          )}
+        </div>
         {loadingSteps ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            Loading...
-          </div>
+          <Skeleton variant="rounded" height={60} showRefresh />
         ) : stepsError ? (
           <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-2 text-[10px] text-red-300">
             <div className="flex items-start gap-1.5">

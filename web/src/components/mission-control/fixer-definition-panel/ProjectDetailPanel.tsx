@@ -5,6 +5,8 @@ import { fetchMissionContent } from '../../../lib/missions/missionCache'
 import type { PayloadProject } from '../types'
 import { cn } from '../../../lib/cn'
 import { ALTERNATIVES, ALTERNATIVES_DISPLAY, type ProjectAlternative } from './fixerDefinitionPanel.constants'
+import { formatTimeAgo } from '../../../lib/formatters'
+import { Skeleton } from '../../ui/Skeleton'
 
 interface AlternativeOption extends ProjectAlternative {
   existingProject?: PayloadProject
@@ -23,6 +25,7 @@ interface ProjectDetailPanelProps {
 export function ProjectDetailPanel({ project, allProjects, onAddAlternative, onReplace, onSelectAlternative }: ProjectDetailPanelProps) {
   const [mission, setMission] = useState<MissionExport | null>(null)
   const [loadingSteps, setLoadingSteps] = useState(false)
+  const [lastFetched, setLastFetched] = useState<number | null>(null)
   const fetchedRef = useRef('')
 
   useEffect(() => {
@@ -47,6 +50,7 @@ export function ProjectDetailPanel({ project, allProjects, onAddAlternative, onR
       .then(({ mission: nextMission }) => {
         if (!controller.signal.aborted) {
           setMission(nextMission)
+          setLastFetched(Date.now())
         }
       })
       .catch((error) => {
@@ -119,12 +123,16 @@ export function ProjectDetailPanel({ project, allProjects, onAddAlternative, onR
 
       {project.kbPath && (
         <div>
-          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Install Steps</h4>
+          <div className="flex items-center justify-between mb-1">
+            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Install Steps</h4>
+            {lastFetched && !loadingSteps && (
+              <span className="text-[9px] text-muted-foreground/60" title={`Last updated ${new Date(lastFetched).toLocaleString()}`}>
+                {formatTimeAgo(lastFetched, { compact: true })}
+              </span>
+            )}
+          </div>
           {loadingSteps ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Loading mission...
-            </div>
+            <Skeleton variant="rounded" height={60} showRefresh />
           ) : mission?.steps && mission.steps.length > 0 ? (
             <div className="space-y-2">
               {mission.steps.map((step, index) => (

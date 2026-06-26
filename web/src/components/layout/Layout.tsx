@@ -51,6 +51,13 @@ type LayoutProps = {
   children?: ReactNode
 }
 
+/**
+ * Layout — main app shell with navigation, banners, and dialogs.
+ * 
+ * Note: Layout orchestrates cache cleanup (useStaleCacheCleanup) but doesn't
+ * display cached data directly. Freshness indicators are shown in child
+ * components (cards, sidebars, panels) that render cached content.
+ */
 export function Layout({ children: _children }: LayoutProps) {
   const { t } = useTranslation()
   const { config } = useSidebarConfig()

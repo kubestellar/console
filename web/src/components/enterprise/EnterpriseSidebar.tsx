@@ -12,13 +12,15 @@
  * amplifying into a React #185 "too many re-renders" loop on enterprise
  * compliance pages (#9753, #9754).
  */
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useState, useEffect } from 'react'
 import { Building2 } from 'lucide-react'
 import { SidebarShell } from '../layout/SidebarShell'
 import type { NavSection } from '../layout/SidebarShell'
 import { ENTERPRISE_NAV_SECTIONS } from './enterpriseNav'
 import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 import { SIDEBAR_DEFAULT_WIDTH_PX } from '../../hooks/useSidebarConfig'
+import { useClusters } from '../../hooks/mcp/clusters'
+import { formatTimeAgo } from '../../lib/formatters'
 
 /** Stable features config — created once outside the component */
 const SIDEBAR_FEATURES = {
@@ -33,6 +35,14 @@ const SIDEBAR_FEATURES = {
 
 export default function EnterpriseSidebar() {
   const dashboardContext = useDashboardContextOptional()
+  const { lastUpdated } = useClusters()
+  
+  // Re-render every 30s to update freshness indicator
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 30_000)
+    return () => clearInterval(interval)
+  }, [])
 
   const navSections: NavSection[] = useMemo(() =>
     ENTERPRISE_NAV_SECTIONS.map(section => ({
@@ -52,8 +62,15 @@ export default function EnterpriseSidebar() {
   const branding = useMemo(() => ({
     title: 'Enterprise',
     logo: <Building2 className="w-5 h-5 text-purple-400" />,
-    subtitle: 'Compliance Portal',
-  }), [])
+    subtitle: lastUpdated ? (
+      <div className="flex items-center gap-1">
+        <span>Compliance Portal</span>
+        <span className="text-[9px] text-muted-foreground/60" title={`Cluster data updated ${lastUpdated.toLocaleString()}`}>
+          • {formatTimeAgo(lastUpdated, { compact: true })}
+        </span>
+      </div>
+    ) : 'Compliance Portal',
+  }), [lastUpdated])
 
   const handleAddCard = useCallback(() => {
     dashboardContext?.openAddCardModal()

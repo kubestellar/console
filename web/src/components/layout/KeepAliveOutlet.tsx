@@ -9,12 +9,13 @@
  *
  * Caps at MAX_CACHED routes to bound memory. Least-recently-used eviction.
  */
-import { Suspense, useRef, useEffect } from 'react'
+import { Suspense, useRef, useEffect, useState } from 'react'
 import { useLocation, useOutlet } from 'react-router-dom'
 import { ContentLoadingSkeleton } from './Layout'
 import { ChunkErrorBoundary } from '../ChunkErrorBoundary'
 import { PageErrorBoundary } from '../PageErrorBoundary'
 import { KeepAliveActiveContext } from '../../hooks/useKeepAliveActive'
+import { formatTimeAgo } from '../../lib/formatters'
 
 const MAX_CACHED = 8
 
@@ -69,6 +70,13 @@ export function KeepAliveOutlet() {
     }
   }, [currentPath])
 
+  // Re-render every 30s to update freshness indicators
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 30_000)
+    return () => clearInterval(interval)
+  }, [])
+
   // Build the rendered output — all cached routes, only active one visible
   const entries = (() => {
     const result: Array<{ path: string; element: React.ReactNode; active: boolean }> = []
@@ -81,24 +89,36 @@ export function KeepAliveOutlet() {
 
   return (
     <>
-      {entries.map(({ path, element, active }) => (
-        <div
-          key={path}
-          data-keepalive-route={path}
-          data-keepalive-active={active ? 'true' : 'false'}
-          style={{ display: active ? 'contents' : 'none' }}
-        >
-          <KeepAliveActiveContext.Provider value={active}>
-            <ChunkErrorBoundary>
-              <PageErrorBoundary>
-                <Suspense fallback={<ContentLoadingSkeleton />}>
-                  {element}
-                </Suspense>
-              </PageErrorBoundary>
-            </ChunkErrorBoundary>
-          </KeepAliveActiveContext.Provider>
-        </div>
-      ))}
+      {entries.map(({ path, element, active }) => {
+        const entry = cache.get(path)
+        const lastAccessed = entry?.lastAccessed
+        return (
+          <div
+            key={path}
+            data-keepalive-route={path}
+            data-keepalive-active={active ? 'true' : 'false'}
+            style={{ display: active ? 'contents' : 'none' }}
+          >
+            <KeepAliveActiveContext.Provider value={active}>
+              <ChunkErrorBoundary>
+                <PageErrorBoundary>
+                  <Suspense fallback={<ContentLoadingSkeleton />}>
+                    {!active && lastAccessed && (
+                      <div
+                        className="fixed bottom-4 right-4 z-50 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-2 py-1 rounded border border-border"
+                        title={`Route cached at ${new Date(lastAccessed).toLocaleString()}`}
+                      >
+                        Cached {formatTimeAgo(lastAccessed, { compact: true })}
+                      </div>
+                    )}
+                    {element}
+                  </Suspense>
+                </PageErrorBoundary>
+              </ChunkErrorBoundary>
+            </KeepAliveActiveContext.Provider>
+          </div>
+        )
+      })}
     </>
   )
 }

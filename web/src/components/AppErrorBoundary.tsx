@@ -28,6 +28,9 @@ interface State {
  * chunk errors specifically (auto-reload). This boundary catches everything
  * else — null references, bad API response shapes, rendering bugs — and
  * shows a recovery UI instead of a white screen.
+ * 
+ * Note: No lastUpdated/timestamp tracking needed — this handles JS runtime
+ * errors at the browser level, not user-visible data freshness.
  */
 export class AppErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
