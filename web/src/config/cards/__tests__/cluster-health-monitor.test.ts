@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { clusterHealthMonitorConfig } from '../cluster-health-monitor'
 import * as moduleExports from '../cluster-health-monitor'

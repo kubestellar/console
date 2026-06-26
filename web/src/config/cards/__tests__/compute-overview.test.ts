@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { computeOverviewConfig } from '../compute-overview'
 import * as moduleExports from '../compute-overview'

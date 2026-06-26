@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { clusterResourceTreeConfig } from '../cluster-resource-tree'
 import * as moduleExports from '../cluster-resource-tree'

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { clusterGroupsConfig } from '../cluster-groups'
 import * as moduleExports from '../cluster-groups'

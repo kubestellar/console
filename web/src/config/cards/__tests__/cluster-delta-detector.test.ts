@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { clusterDeltaDetectorConfig } from '../cluster-delta-detector'
 import * as moduleExports from '../cluster-delta-detector'

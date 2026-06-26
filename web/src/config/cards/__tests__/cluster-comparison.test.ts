@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { clusterComparisonConfig } from '../cluster-comparison'
 import * as moduleExports from '../cluster-comparison'

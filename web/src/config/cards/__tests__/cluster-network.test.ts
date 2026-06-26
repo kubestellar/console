@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { clusterNetworkConfig } from '../cluster-network'
 import * as moduleExports from '../cluster-network'

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { AMBER_500, BLUE_500, GREEN_500 } from '../../../lib/theme/chartColors'
 import { clusterCostsConfig } from '../cluster-costs'

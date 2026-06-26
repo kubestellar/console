@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { CYAN_500, PURPLE_400 } from '../../../lib/theme/chartColors'
 import { clusterMetricsConfig } from '../cluster-metrics'

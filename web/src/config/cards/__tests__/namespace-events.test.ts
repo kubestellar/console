@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { namespaceEventsConfig } from '../namespace-events'
 import * as moduleExports from '../namespace-events'
