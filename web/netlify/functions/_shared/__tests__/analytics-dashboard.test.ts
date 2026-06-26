@@ -190,7 +190,8 @@ describe("analytics-dashboard shared module", () => {
 
   it("sanitizes upstream API errors before throwing", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const fetchMock = vi.fn().mockResolvedValue(new Response(`${"bad\n".repeat(200)}done`, {
+    const errorBody = `${"bad\n".repeat(200)}done`;
+    const fetchMock = vi.fn().mockResolvedValue(new Response(errorBody, {
       status: 502,
     }));
     vi.stubGlobal("fetch", fetchMock);
