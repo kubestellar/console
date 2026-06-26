@@ -128,29 +128,29 @@ if (isBrowserEnvironment) {
       dispatchEvent: vi.fn(),
     })),
   })
+
+  // Mock IntersectionObserver
+  Object.defineProperty(globalThis, 'IntersectionObserver', {
+    writable: true,
+    value: class IntersectionObserver {
+      constructor() {}
+      disconnect() {}
+      observe() {}
+      takeRecords() {
+        return []
+      }
+      unobserve() {}
+    },
+  })
+
+  // Mock ResizeObserver
+  Object.defineProperty(globalThis, 'ResizeObserver', {
+    writable: true,
+    value: class ResizeObserver {
+      constructor() {}
+      disconnect() {}
+      observe() {}
+      unobserve() {}
+    },
+  })
 }
-
-// Mock IntersectionObserver
-Object.defineProperty(globalThis, 'IntersectionObserver', {
-  writable: true,
-  value: class IntersectionObserver {
-    constructor() {}
-    disconnect() {}
-    observe() {}
-    takeRecords() {
-      return []
-    }
-    unobserve() {}
-  },
-})
-
-// Mock ResizeObserver
-Object.defineProperty(globalThis, 'ResizeObserver', {
-  writable: true,
-  value: class ResizeObserver {
-    constructor() {}
-    disconnect() {}
-    observe() {}
-    unobserve() {}
-  },
-})
