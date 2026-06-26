@@ -60,7 +60,27 @@ if ! command -v trivy &>/dev/null; then
   if command -v brew &>/dev/null; then
     brew install trivy 2>/dev/null
   else
-    echo -e "${RED}ERROR: Cannot install trivy — install manually: brew install trivy${NC}"
+    # Install trivy binary from GitHub releases
+    TRIVY_VERSION="0.58.2"
+    TRIVY_OS="Linux"
+    TRIVY_ARCH="64bit"
+    TRIVY_TAR="trivy_${TRIVY_VERSION}_${TRIVY_OS}-${TRIVY_ARCH}.tar.gz"
+    TRIVY_URL="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${TRIVY_TAR}"
+    
+    INSTALL_DIR="${HOME}/.local/bin"
+    mkdir -p "$INSTALL_DIR"
+    
+    echo -e "${DIM}Downloading trivy v${TRIVY_VERSION}...${NC}"
+    curl -sfL "$TRIVY_URL" | tar xz -C "$INSTALL_DIR" trivy 2>/dev/null || {
+      echo -e "${RED}ERROR: Cannot install trivy — install manually: brew install trivy${NC}"
+      exit 1
+    }
+    
+    export PATH="$INSTALL_DIR:$PATH"
+  fi
+  
+  if ! command -v trivy &>/dev/null; then
+    echo -e "${RED}ERROR: trivy installation failed — binary not found after install${NC}"
     exit 1
   fi
 fi
