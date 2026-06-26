@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { shouldShowFailureBanner } from './card-wrapper/badgeVisibility'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 // Pure error boundary component — no data fetching or cache subscription, so
 // demo mode does not apply here.
@@ -18,6 +19,7 @@ export interface CardErrorFallbackProps {
 
 export function CardErrorFallback({ cardId, children }: CardErrorFallbackProps) {
   const { t } = useTranslation('cards')
+  const { isDemoMode } = useDemoMode()
   const getRetryLabel = useCallback<RetryLabelFactory>(
     (retriesLeft) => t('cardWrapper.renderRetryLeft', { count: retriesLeft }),
     [t]
@@ -60,6 +62,7 @@ export function CardFailureBanner({
   isVisuallySpinning,
 }: CardFailureBannerProps) {
   const { t } = useTranslation('cards')
+  const { isDemoMode } = useDemoMode()
   const [showFailureLogs, setShowFailureLogs] = useState(false)
 
   useEffect(() => {
