@@ -1,0 +1,1 @@
+$(cat jwt-validation.test.ts)
