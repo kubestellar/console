@@ -360,7 +360,7 @@ jobs:
             if [ "$VERSION" != "latest" ] && [ -n "$REPO" ]; then
               CHECKED=$((CHECKED + 1))
               LATEST_JSON=$(curl -sL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null)
-              LATEST=$(echo "$LATEST_JSON" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).tag_name||'')}catch{console.log('')}})" 2>/dev/null)
+              LATEST=$(echo "$LATEST_JSON" | jq -r '.tag_name // empty' 2>/dev/null || true)
               if [ -n "$LATEST" ] && [ "$LATEST" != "$VERSION" ]; then
                 echo "  ⚠️ $(basename $f): has $VERSION, latest is $LATEST" | tee -a install-report.md
                 STALE=$((STALE + 1))
