@@ -33,4 +33,5 @@ export interface ClusterCardProps {
   onRefreshCluster?: () => void
   onRemoveCluster?: () => void
   dragHandle?: ReactNode
+  lastUpdated?: Date | null
 }

@@ -199,7 +199,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   // so that health badges are always consistent (#5487).
   const isUnreachable = clusterInfo ? isClusterUnreachable(clusterInfo) : false
   const isHealthy = clusterInfo ? isClusterHealthy(clusterInfo) : (!isLoading && health?.healthy !== false)
-  const lastUpdated = clusterInfo?.lastUpdated ? new Date(clusterInfo.lastUpdated) : null
+  const lastUpdated = null // ClusterInfo doesn't provide lastUpdated timestamp
   const isRefreshing = clusterInfo?.refreshing === true
   
   // Effective loading state: override to false after timeout

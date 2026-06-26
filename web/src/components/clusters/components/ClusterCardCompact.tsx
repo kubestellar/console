@@ -20,6 +20,7 @@ export const ClusterCardCompact = memo(function ClusterCardCompact({
   onSelectCluster,
   onRemoveCluster,
   dragHandle,
+  lastUpdated,
 }: ClusterCardCompactProps) {
   const { t } = useTranslation()
   const unreachable = isClusterUnreachable(cluster)
@@ -28,7 +29,6 @@ export const ClusterCardCompact = memo(function ClusterCardCompact({
   const provider = (cluster.distribution as ReturnType<typeof detectCloudProvider>) ||
     detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
   const providerColor = getProviderColor(provider)
-  const lastUpdated = cluster.lastUpdated ? new Date(cluster.lastUpdated) : null
 
   return (
     <div

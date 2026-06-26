@@ -26,6 +26,7 @@ export const ClusterCardFull = memo(function ClusterCardFull({
   onRefreshCluster,
   onRemoveCluster,
   dragHandle,
+  lastUpdated,
 }: ClusterCardProps) {
   const { t } = useTranslation()
   const loading = isClusterLoading(cluster)
@@ -39,7 +40,6 @@ export const ClusterCardFull = memo(function ClusterCardFull({
   const providerLabel = getProviderLabel(provider)
   const providerColor = getProviderColor(provider)
   const consoleUrl = getConsoleUrl(provider, cluster.name, cluster.server)
-  const lastUpdated = cluster.lastUpdated ? new Date(cluster.lastUpdated) : null
 
   return (
     <div

@@ -26,6 +26,7 @@ export const ClusterCardList = memo(function ClusterCardList({
   onRefreshCluster,
   onRemoveCluster,
   dragHandle,
+  lastUpdated,
 }: ClusterCardListProps) {
   const { t } = useTranslation()
   const loading = isClusterLoading(cluster)
@@ -37,7 +38,6 @@ export const ClusterCardList = memo(function ClusterCardList({
   const provider = (cluster.distribution as ReturnType<typeof detectCloudProvider>) ||
     detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
   const providerColor = getProviderColor(provider)
-  const lastUpdated = cluster.lastUpdated ? new Date(cluster.lastUpdated) : null
 
   return (
     <div
