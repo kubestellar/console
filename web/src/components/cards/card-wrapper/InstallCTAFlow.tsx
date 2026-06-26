@@ -8,7 +8,6 @@ import { ConfirmMissionPromptDialog } from '../../missions/ConfirmMissionPromptD
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useModalState } from '../../../lib/modals'
-import { useDemoMode } from '../../../hooks/useDemoMode'
 
 /** Timeout for fetching KB guide data (ms) */
 const KB_FETCH_TIMEOUT_MS = 10_000
@@ -32,7 +31,6 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { startMission, openSidebar } = useMissions()
   const { status: agentStatus } = useLocalAgent()
-  const { isDemoMode } = useDemoMode()
   const isAgentConnected = agentStatus === 'connected'
 
   const installInfo = CARD_INSTALL_MAP[cardType]
