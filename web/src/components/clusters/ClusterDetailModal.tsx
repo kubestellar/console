@@ -16,6 +16,7 @@ import { CloudProviderIcon, detectCloudProvider as detectCloudProviderShared, ge
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import { ClusterStatusDetails } from './ClusterStatusDetails'
 import { formatMemoryPromptStat } from '../../lib/formatStats'
@@ -198,6 +199,8 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   // so that health badges are always consistent (#5487).
   const isUnreachable = clusterInfo ? isClusterUnreachable(clusterInfo) : false
   const isHealthy = clusterInfo ? isClusterHealthy(clusterInfo) : (!isLoading && health?.healthy !== false)
+  const lastUpdated = clusterInfo?.lastUpdated ? new Date(clusterInfo.lastUpdated) : null
+  const isRefreshing = clusterInfo?.refreshing === true
   
   // Effective loading state: override to false after timeout
   // This ensures the modal shows partial data rather than hanging indefinitely
@@ -306,6 +309,15 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
                 </>
               )
             })()}
+            {lastUpdated && !isUnreachable && (
+              <RefreshIndicator
+                isRefreshing={isRefreshing}
+                lastUpdated={lastUpdated}
+                size="sm"
+                showLabel={true}
+                staleThresholdMinutes={5}
+              />
+            )}
             {onRename && (
               <button
                 onClick={() => onRename(clusterName)}

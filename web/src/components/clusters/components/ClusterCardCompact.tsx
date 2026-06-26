@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { FlashingValue } from '../../ui/FlashingValue'
 import { CloudProviderIcon, detectCloudProvider, getProviderColor } from '../../ui/CloudProviderIcon'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { isClusterHealthy, isClusterUnreachable } from '../utils'
 import type { ClusterCardProps } from './ClusterGrid.types'
 import { RemoveClusterButton, handleCardKeyDown } from './ClusterGrid.common'
@@ -27,6 +28,7 @@ export const ClusterCardCompact = memo(function ClusterCardCompact({
   const provider = (cluster.distribution as ReturnType<typeof detectCloudProvider>) ||
     detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
   const providerColor = getProviderColor(provider)
+  const lastUpdated = cluster.lastUpdated ? new Date(cluster.lastUpdated) : null
 
   return (
     <div
@@ -73,6 +75,18 @@ aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
             <RemoveClusterButton onRemove={onRemoveCluster} size="xs" />
           )}
         </div>
+
+        {hasCachedData && lastUpdated && (
+          <div className="mb-1 flex justify-end">
+            <RefreshIndicator
+              isRefreshing={refreshing}
+              lastUpdated={lastUpdated}
+              size="xs"
+              showLabel={true}
+              staleThresholdMinutes={5}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-1 text-center">
           <div className="p-1 rounded bg-secondary/30" title={unreachable ? 'Nodes: Cluster offline' : hasCachedData ? `Nodes: ${cluster.nodeCount} worker nodes` : 'Nodes: Loading...'}>

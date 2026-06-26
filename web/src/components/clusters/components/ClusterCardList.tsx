@@ -5,6 +5,7 @@ import { FlashingValue } from '../../ui/FlashingValue'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { CloudProviderIcon, detectCloudProvider, getProviderColor } from '../../ui/CloudProviderIcon'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { isClusterHealthy, isClusterLoading, isClusterUnreachable } from '../utils'
 import type { ClusterCardProps } from './ClusterGrid.types'
 import { ActionTooltipWrapper, RemoveClusterButton, handleCardKeyDown } from './ClusterGrid.common'
@@ -36,6 +37,7 @@ export const ClusterCardList = memo(function ClusterCardList({
   const provider = (cluster.distribution as ReturnType<typeof detectCloudProvider>) ||
     detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
   const providerColor = getProviderColor(provider)
+  const lastUpdated = cluster.lastUpdated ? new Date(cluster.lastUpdated) : null
 
   return (
     <div
@@ -104,6 +106,18 @@ aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
           </div>
 
           <ClusterIAMRefreshHint cluster={cluster} className="hidden md:flex items-center gap-1 text-2xs text-muted-foreground shrink-0" label={null} />
+
+          {hasCachedData && lastUpdated && (
+            <div className="hidden md:flex shrink-0">
+              <RefreshIndicator
+                isRefreshing={refreshing}
+                lastUpdated={lastUpdated}
+                size="xs"
+                showLabel={true}
+                staleThresholdMinutes={5}
+              />
+            </div>
+          )}
 
           <div className="flex items-center gap-4 text-sm shrink-0">
             <div className="flex items-center gap-1.5" title={unreachable ? 'Nodes: Cluster offline' : hasCachedData ? `Nodes: ${cluster.nodeCount} worker nodes in cluster` : 'Nodes: Loading...'}>

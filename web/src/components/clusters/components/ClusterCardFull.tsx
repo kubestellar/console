@@ -5,6 +5,7 @@ import { FlashingValue } from '../../ui/FlashingValue'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { CloudProviderIcon, detectCloudProvider, getConsoleUrl, getProviderColor, getProviderLabel } from '../../ui/CloudProviderIcon'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { isClusterHealthy, isClusterLoading, isClusterUnreachable } from '../utils'
 import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 import type { ClusterCardProps } from './ClusterGrid.types'
@@ -38,6 +39,7 @@ export const ClusterCardFull = memo(function ClusterCardFull({
   const providerLabel = getProviderLabel(provider)
   const providerColor = getProviderColor(provider)
   const consoleUrl = getConsoleUrl(provider, cluster.name, cluster.server)
+  const lastUpdated = cluster.lastUpdated ? new Date(cluster.lastUpdated) : null
 
   return (
     <div
@@ -178,6 +180,18 @@ aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
             )}
           </div>
         </div>
+
+        {hasCachedData && lastUpdated && (
+          <div className="mt-2 flex justify-end relative z-10">
+            <RefreshIndicator
+              isRefreshing={refreshing}
+              lastUpdated={lastUpdated}
+              size="sm"
+              showLabel={true}
+              staleThresholdMinutes={5}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-4 gap-4 text-center relative z-10 cursor-default">
           <div title={unreachable ? 'Nodes: Cluster offline' : hasCachedData && cluster.nodeCount !== undefined ? `Nodes: ${cluster.nodeCount} worker nodes in cluster` : 'Nodes: Loading...'}>

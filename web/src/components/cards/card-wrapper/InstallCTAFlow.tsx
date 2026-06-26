@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2, Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_INSTALL_MAP } from '../../../lib/cards/cardInstallMap'
@@ -8,6 +8,7 @@ import { ConfirmMissionPromptDialog } from '../../missions/ConfirmMissionPromptD
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useModalState } from '../../../lib/modals'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 /** Timeout for fetching KB guide data (ms) */
 const KB_FETCH_TIMEOUT_MS = 10_000
@@ -31,6 +32,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { startMission, openSidebar } = useMissions()
   const { status: agentStatus } = useLocalAgent()
+  const { isDemoMode } = useDemoMode()
   const isAgentConnected = agentStatus === 'connected'
 
   const installInfo = CARD_INSTALL_MAP[cardType]
@@ -45,6 +47,17 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   } | null>(null)
   const [isPreparingInstall, setIsPreparingInstall] = useState(false)
   const [installError, setInstallError] = useState<string | null>(null)
+
+  // React to demo mode changes - clear any pending install flows
+  useEffect(() => {
+    if (isDemoMode) {
+      setShowInstallGuide(null)
+      setPendingMission(null)
+      setIsPreparingInstall(false)
+      setInstallError(null)
+      closeClusterSelect()
+    }
+  }, [isDemoMode, closeClusterSelect])
 
   const installProjectName = installInfo?.project ?? t('cards:installFlow.componentsFallback', 'components')
   const installCtaLabel = isPreparingInstall
