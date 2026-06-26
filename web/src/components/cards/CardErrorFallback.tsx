@@ -19,7 +19,7 @@ export interface CardErrorFallbackProps {
 
 export function CardErrorFallback({ cardId, children }: CardErrorFallbackProps) {
   const { t } = useTranslation('cards')
-  useDemoMode() // subscribe to demo-mode re-renders
+  const {} = useDemoMode() // subscribe to demo-mode re-renders
   const getRetryLabel = useCallback<RetryLabelFactory>(
     (retriesLeft) => t('cardWrapper.renderRetryLeft', { count: retriesLeft }),
     [t]
@@ -62,7 +62,7 @@ export function CardFailureBanner({
   isVisuallySpinning,
 }: CardFailureBannerProps) {
   const { t } = useTranslation('cards')
-  useDemoMode() // subscribe to demo-mode re-renders
+  const {} = useDemoMode() // subscribe to demo-mode re-renders
   const [showFailureLogs, setShowFailureLogs] = useState(false)
 
   useEffect(() => {

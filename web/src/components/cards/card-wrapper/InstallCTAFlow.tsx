@@ -30,7 +30,7 @@ export interface InstallCTAFlowProps {
  */
 export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   const { t } = useTranslation(['cards', 'common'])
-  useDemoMode() // subscribe to demo-mode re-renders
+  const {} = useDemoMode() // subscribe to demo-mode re-renders
   const { startMission, openSidebar } = useMissions()
   const { status: agentStatus } = useLocalAgent()
   const isAgentConnected = agentStatus === 'connected'
