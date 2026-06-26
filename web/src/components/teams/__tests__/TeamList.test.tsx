@@ -26,7 +26,7 @@ describe('TeamList', () => {
   })
 
   afterAll(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it('renders loading skeleton when isLoading is true', () => {

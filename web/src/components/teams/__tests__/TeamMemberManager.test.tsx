@@ -29,7 +29,7 @@ describe('TeamMemberManager', () => {
   })
 
   afterAll(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it('renders member count correctly', () => {
