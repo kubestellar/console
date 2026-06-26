@@ -19,10 +19,6 @@ permissions: read-all
 jobs:
   process-screenshot:
     permissions:
-      contents: write
-      # issues: write required to update issue comment with rendered screenshot
-      issues: write
-
       contents: write  # commit screenshot image to .github/screenshots/
       issues: write  # replace comment body with rendered image URL
     # Only run on issue comments (not PR comments) with our marker

@@ -20,10 +20,6 @@ permissions: read-all
 jobs:
   cleanup-screenshots:
     permissions:
-      contents: write
-      # issues: write required to update issue comment URLs during cleanup
-      issues: write
-
       contents: write  # delete expired screenshot files from .github/screenshots/
       issues: write  # rewrite branch-based URLs to commit-SHA URLs in issue comments
     if: github.repository == 'kubestellar/console'

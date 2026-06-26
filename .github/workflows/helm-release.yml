@@ -16,10 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
-      # packages: write required for Helm chart OCI registry publish
-      packages: write
-
       contents: write  # push chart to gh-pages branch
       packages: write  # push OCI chart to ghcr.io/kubestellar/charts
     
