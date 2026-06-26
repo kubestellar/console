@@ -71,7 +71,7 @@ export function KeepAliveOutlet() {
   }, [currentPath])
 
   // Re-render every 30s to update freshness indicators
-  const [, setTick] = useState(0)
+  const [tick, setTick] = useState(0)
   useEffect(() => {
     const interval = setInterval(() => setTick(t => t + 1), 30_000)
     return () => clearInterval(interval)
@@ -103,7 +103,7 @@ export function KeepAliveOutlet() {
               <ChunkErrorBoundary>
                 <PageErrorBoundary>
                   <Suspense fallback={<ContentLoadingSkeleton />}>
-                    {!active && lastAccessed && (
+                    {!active && lastAccessed && tick >= 0 && (
                       <div
                         className="fixed bottom-4 right-4 z-50 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-2 py-1 rounded border border-border"
                         title={`Route cached at ${new Date(lastAccessed).toLocaleString()}`}

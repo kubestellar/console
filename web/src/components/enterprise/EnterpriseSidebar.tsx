@@ -38,7 +38,7 @@ export default function EnterpriseSidebar() {
   const { lastUpdated } = useClusters()
   
   // Re-render every 30s to update freshness indicator
-  const [, setTick] = useState(0)
+  const [tick, setTick] = useState(0)
   useEffect(() => {
     const interval = setInterval(() => setTick(t => t + 1), 30_000)
     return () => clearInterval(interval)
@@ -65,7 +65,7 @@ export default function EnterpriseSidebar() {
     subtitle: lastUpdated
       ? `Compliance Portal • ${formatTimeAgo(lastUpdated, { compact: true })}`
       : 'Compliance Portal',
-  }), [lastUpdated])
+  }), [lastUpdated, tick])
 
   const handleAddCard = useCallback(() => {
     dashboardContext?.openAddCardModal()
