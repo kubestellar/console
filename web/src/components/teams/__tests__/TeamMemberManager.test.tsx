@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TeamMemberManager } from '../TeamMemberManager'
 import type { TeamMemberInfo, TeamRole } from '../../../types/teams'
@@ -26,6 +26,10 @@ describe('TeamMemberManager', () => {
     mockT.mockImplementation((key: string) => key)
     mockOnAddMember.mockResolvedValue(true)
     mockOnRemoveMember.mockResolvedValue(true)
+  })
+
+  afterAll(() => {
+    vi.restoreAllMocks()
   })
 
   it('renders member count correctly', () => {

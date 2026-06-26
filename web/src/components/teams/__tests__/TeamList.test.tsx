@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TeamList } from '../TeamList'
 import type { Team } from '../../../types/teams'
@@ -23,6 +23,10 @@ describe('TeamList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockT.mockImplementation((key: string) => key)
+  })
+
+  afterAll(() => {
+    vi.restoreAllMocks()
   })
 
   it('renders loading skeleton when isLoading is true', () => {

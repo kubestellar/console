@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TeamDetail } from '../TeamDetail'
 import type { TeamWithMembers, TeamRole } from '../../../types/teams'
@@ -53,6 +53,10 @@ describe('TeamDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockT.mockImplementation((key: string) => key)
+  })
+
+  afterAll(() => {
+    vi.restoreAllMocks()
   })
 
   it('renders team name and description', () => {
