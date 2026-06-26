@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { AlertTriangle, Eye, Loader2 } from 'lucide-react'
+import { AlertTriangle, Eye } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import type { ProjectHoverInfo } from './svg/ProjectNode'
