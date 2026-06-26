@@ -24,7 +24,10 @@ func acquireFileLock(path string) (release func(), err error) {
 		return nil, fmt.Errorf("open lock file: %w", err)
 	}
 
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+	// Store fd as int to avoid unsafe uintptr -> int conversion (gosec G115)
+	fd := int(f.Fd())
+
+	if err := syscall.Flock(fd, syscall.LOCK_EX); err != nil {
 		f.Close()
 		return nil, fmt.Errorf("flock: %w", err)
 	}
@@ -32,7 +35,7 @@ func acquireFileLock(path string) (release func(), err error) {
 	release = func() {
 		// Errors on unlock/close are non-fatal — the OS releases the lock
 		// when the fd is closed regardless.
-		_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+		_ = syscall.Flock(fd, syscall.LOCK_UN)
 		_ = f.Close()
 	}
 	return release, nil
