@@ -10,6 +10,7 @@ import {
   LB_STATUS_PROVISIONING,
 } from '../../../lib/constants/network'
 import { TechnicalAcronym } from '../../shared/TechnicalAcronym'
+import { formatTimeAgo } from '../../../lib/formatTimeAgo'
 
 /** Service type string emitted by the backend for LoadBalancer services.
  * Defined as a constant to avoid magic strings. */
@@ -21,9 +22,10 @@ interface NamespaceResourcesProps {
   clusterName: string
   namespace: string
   onClose?: () => void
+  lastUpdated?: Date | null
 }
 
-export function NamespaceResources({ clusterName, namespace, onClose }: NamespaceResourcesProps) {
+export function NamespaceResources({ clusterName, namespace, onClose, lastUpdated }: NamespaceResourcesProps) {
   const { t } = useTranslation()
   const { pods, isLoading: podsLoading } = usePods(clusterName, namespace, 'name', 100)
   const { deployments, isLoading: deploymentsLoading } = useDeployments(clusterName, namespace)
@@ -312,13 +314,19 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
     <div className="pt-2">
       {/* View toggle */}
       <div className="flex justify-between items-center pb-2">
-        {isPartiallyLoading && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            <span>{t('common.loadingMore')}</span>
-          </div>
-        )}
-        {!isPartiallyLoading && <div />}
+        <div className="flex items-center gap-2">
+          {isPartiallyLoading && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>{t('common.loadingMore')}</span>
+            </div>
+          )}
+          {!isPartiallyLoading && lastUpdated && hasResources && (
+            <div className="text-xs text-muted-foreground">
+              Last updated {formatTimeAgo(lastUpdated)}
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-1 p-0.5 rounded bg-secondary/50">
           <button
             onClick={() => setViewMode('list')}

@@ -20,6 +20,7 @@ import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import { ClusterStatusDetails } from './ClusterStatusDetails'
 import { formatMemoryPromptStat } from '../../lib/formatStats'
 import { buildDiagnosePrompt, buildRepairPrompt } from './diagnosePrompt'
+import { formatTimeAgo } from '../../lib/formatTimeAgo'
 
 // Cloud provider types
 type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'unknown'
@@ -63,7 +64,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   const { t } = useTranslation()
   
   // Get cluster info early to check if unreachable
-  const { deduplicatedClusters, clusters: rawClusters } = useClusters()
+  const { deduplicatedClusters, clusters: rawClusters, lastUpdated } = useClusters()
   const clusterInfo = (() => {
     // Direct match in deduplicated clusters
     let found = deduplicatedClusters.find(c => c.name === clusterName)
@@ -267,6 +268,11 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
                 >
                   <Server className="w-3 h-3 shrink-0" />
                   <span className="truncate max-w-xs">{serverAddress}</span>
+                </div>
+              )}
+              {lastUpdated && clusterInfo && clusterInfo.nodeCount && clusterInfo.nodeCount > 0 && (
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Last updated {formatTimeAgo(lastUpdated)}
                 </div>
               )}
             </div>
@@ -665,6 +671,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
                             clusterName={clusterName}
                             namespace={ns.name}
                             onClose={onClose}
+                            lastUpdated={lastUpdated}
                           />
                         </div>
                       )}

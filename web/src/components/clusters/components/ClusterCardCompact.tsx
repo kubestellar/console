@@ -9,6 +9,7 @@ import type { ClusterCardProps } from './ClusterGrid.types'
 import { RemoveClusterButton, handleCardKeyDown } from './ClusterGrid.common'
 import { THEME_COLOR } from './ClusterGrid.constants'
 import { isTokenExpired } from './ClusterTokenRefresh'
+import { formatTimeAgo } from '../../../lib/formatTimeAgo'
 
 type ClusterCardCompactProps = Omit<ClusterCardProps, 'permissionsLoading' | 'isClusterAdmin' | 'onRenameCluster' | 'onRefreshCluster'>
 
@@ -19,6 +20,7 @@ export const ClusterCardCompact = memo(function ClusterCardCompact({
   onSelectCluster,
   onRemoveCluster,
   dragHandle,
+  lastUpdated,
 }: ClusterCardCompactProps) {
   const { t } = useTranslation()
   const unreachable = isClusterUnreachable(cluster)
@@ -100,6 +102,14 @@ aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
             <div className="text-2xs text-muted-foreground">{t('common.gpus')}</div>
           </div>
         </div>
+
+        {hasCachedData && lastUpdated && (
+          <div className="mt-2 text-center">
+            <span className="text-2xs text-muted-foreground">
+              Last updated {formatTimeAgo(lastUpdated)}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -12,6 +12,7 @@ import { CLUSTER_GRID_DIV_STYLE_2, DISABLED_CLUSTER_ACTION_CLASS, LOCAL_PLATFORM
 import { ClusterAuthBadges, ClusterIAMRefreshHint } from './ClusterAuthBadges'
 import { LocalClusterControls } from './LocalClusterControls'
 import { isTokenExpired, useClusterRefreshSpin } from './ClusterTokenRefresh'
+import { formatTimeAgo } from '../../../lib/formatTimeAgo'
 
 type ClusterCardListProps = Omit<ClusterCardProps, 'onRenameCluster'>
 
@@ -25,6 +26,7 @@ export const ClusterCardList = memo(function ClusterCardList({
   onRefreshCluster,
   onRemoveCluster,
   dragHandle,
+  lastUpdated,
 }: ClusterCardListProps) {
   const { t } = useTranslation()
   const loading = isClusterLoading(cluster)
@@ -165,6 +167,11 @@ aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
             {!permissionsLoading && !isClusterAdmin && !unreachable && (
               <span title={t('common.limitedPermissions')}>
                 <ShieldAlert className="w-3.5 h-3.5 text-blue-400" />
+              </span>
+            )}
+            {hasCachedData && lastUpdated && (
+              <span className="text-2xs text-muted-foreground">
+                {formatTimeAgo(lastUpdated)}
               </span>
             )}
             <ChevronRight className="w-4 h-4 text-primary" />

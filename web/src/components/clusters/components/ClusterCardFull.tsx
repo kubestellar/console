@@ -13,6 +13,7 @@ import { CLUSTER_GRID_DIV_STYLE_1, DISABLED_CLUSTER_ACTION_CLASS, LOCAL_PLATFORM
 import { ClusterAuthBadges, ClusterIAMRefreshHint } from './ClusterAuthBadges'
 import { LocalClusterControls } from './LocalClusterControls'
 import { isTokenExpired, useClusterRefreshSpin } from './ClusterTokenRefresh'
+import { formatTimeAgo } from '../../../lib/formatTimeAgo'
 
 export const ClusterCardFull = memo(function ClusterCardFull({
   cluster,
@@ -25,6 +26,7 @@ export const ClusterCardFull = memo(function ClusterCardFull({
   onRefreshCluster,
   onRemoveCluster,
   dragHandle,
+  lastUpdated,
 }: ClusterCardProps) {
   const { t } = useTranslation()
   const loading = isClusterLoading(cluster)
@@ -231,6 +233,13 @@ aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
               <span title={t('common.viewDetails')}><ChevronRight className="w-4 h-4 text-primary" /></span>
             </div>
           </div>
+          {hasCachedData && lastUpdated && (
+            <div className="mt-2 text-center">
+              <span className="text-2xs text-muted-foreground">
+                Last updated {formatTimeAgo(lastUpdated)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

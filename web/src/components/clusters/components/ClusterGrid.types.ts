@@ -20,6 +20,7 @@ export interface ClusterGridProps {
   onRemoveCluster?: (clusterName: string) => void
   onReorder?: (clusterNames: string[]) => void
   layoutMode?: ClusterLayoutMode
+  lastUpdated?: Date | null
 }
 
 export interface ClusterCardProps {
@@ -33,4 +34,5 @@ export interface ClusterCardProps {
   onRefreshCluster?: () => void
   onRemoveCluster?: () => void
   dragHandle?: ReactNode
+  lastUpdated?: Date | null
 }

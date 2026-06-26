@@ -21,6 +21,7 @@ export const ClusterGrid = memo(function ClusterGrid({
   onRemoveCluster,
   onReorder,
   layoutMode = 'grid',
+  lastUpdated,
 }: ClusterGridProps) {
   const { t } = useTranslation()
   const safeClusters = clusters || []
@@ -57,6 +58,7 @@ export const ClusterGrid = memo(function ClusterGrid({
                       onRefreshCluster={onRefreshCluster ? () => onRefreshCluster(cluster.name) : undefined}
                       onRemoveCluster={removeHandler}
                       dragHandle={dragHandle}
+                      lastUpdated={lastUpdated}
                     />
                   )
                 }
@@ -70,6 +72,7 @@ export const ClusterGrid = memo(function ClusterGrid({
                       onSelectCluster={() => onSelectCluster(cluster.name)}
                       onRemoveCluster={removeHandler}
                       dragHandle={dragHandle}
+                      lastUpdated={lastUpdated}
                     />
                   )
                 }
@@ -86,6 +89,7 @@ export const ClusterGrid = memo(function ClusterGrid({
                     onRefreshCluster={onRefreshCluster ? () => onRefreshCluster(cluster.name) : undefined}
                     onRemoveCluster={removeHandler}
                     dragHandle={dragHandle}
+                    lastUpdated={lastUpdated}
                   />
                 )
               }}
