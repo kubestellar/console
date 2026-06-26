@@ -181,7 +181,7 @@ test.describe('Smoke Tests', () => {
       await settingsLink.click({ force: true })
 
       await expect(page).toHaveURL(/\/settings(?:[?#].*)?$/, { timeout: 10000 })
-      await expect(page.locator('main [data-testid="settings-title"]').first()).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('[data-testid="settings-page"] [data-testid="settings-title"]').first()).toBeVisible({ timeout: 10000 })
 
       // Click the logo button (has aria-label "Go to home dashboard").
       // The navbar renders two such buttons — the logo and the wordmark —
