@@ -13,7 +13,7 @@
  * Time constants imported from lib/constants/time.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { registerDataHook } from './card/hooks/useDataSource'
 import { SHORT_DELAY_MS } from '../constants/network'
@@ -825,14 +825,14 @@ function useRecentEvents(params?: Record<string, unknown>) {
   const namespace = params?.namespace as string | undefined
   const result = useCachedEvents(cluster, namespace)
 
-  const recentEvents = (() => {
+  const recentEvents = useMemo(() => {
     if (!result.data) return []
     const oneHourAgo = Date.now() - MS_PER_HOUR
     return result.data.filter(e => {
       if (!e.lastSeen) return false
       return new Date(e.lastSeen).getTime() >= oneHourAgo
     })
-  })()
+  }, [result.data])
 
   return {
     data: recentEvents,
