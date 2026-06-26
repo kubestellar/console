@@ -5,11 +5,11 @@ export const mockGetDemoMode = vi.fn(() => false)
 export const mockExec = vi.fn()
 
 vi.mock('../useDemoMode', () => ({
-  getDemoMode: (...args: unknown[]) => mockGetDemoMode(...args),
+  getDemoMode: (...args: readonly unknown[]) => mockGetDemoMode(...args),
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({
-  kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },
+  kubectlProxy: { exec: (...args: readonly unknown[]) => mockExec(...args) },
 }))
 
 // ── Constants mirrored from source ───────────────────────────────────────────

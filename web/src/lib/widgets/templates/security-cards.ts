@@ -2,7 +2,7 @@ import type { TemplateParts, WidgetCardLike } from './types'
 
 export function getSecurityCardRender(
   cardType: string,
-  card: WidgetCardLike,
+  _card: WidgetCardLike,
   { parseBlock, wrapOpen, wrapClose, issueButton }: TemplateParts,
 ): string | undefined {
   switch (cardType) {

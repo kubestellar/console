@@ -26,7 +26,6 @@ export const mockFetchLLMdServers = vi.fn()
 export const mockFetchLLMdModels = vi.fn()
 
 vi.mock('../../lib/cache', () => ({
-    createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCache(...args),
   createCachedHook: (_config: unknown) => () => mockUseCache(_config),
   REFRESH_RATES: {
