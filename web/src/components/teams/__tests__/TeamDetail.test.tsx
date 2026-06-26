@@ -56,7 +56,7 @@ describe('TeamDetail', () => {
   })
 
   afterAll(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it('renders team name and description', () => {
