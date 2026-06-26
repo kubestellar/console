@@ -42,7 +42,7 @@ describe('TeamAccessGrants', () => {
   })
 
   afterAll(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it('renders grants list when grants are provided', () => {
