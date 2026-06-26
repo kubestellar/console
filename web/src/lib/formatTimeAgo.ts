@@ -2,6 +2,10 @@
  * Format a timestamp as a relative time string (e.g., "2m ago", "just now").
  * Used for freshness indicators showing when cached data was last updated.
  *
+ * Note: This function reads the current time via `new Date()`, which is
+ * non-deterministic. When called during render, this intentionally produces
+ * output that changes over time. Purity warnings are suppressed at call sites.
+ *
  * @param date - ISO string or Date object to format
  * @returns Human-readable relative time string
  */
