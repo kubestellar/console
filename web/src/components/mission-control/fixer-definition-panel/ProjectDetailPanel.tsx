@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+
 import type { MissionExport } from '../../../lib/missions/types'
 import { fetchMissionContent } from '../../../lib/missions/missionCache'
 import type { PayloadProject } from '../types'

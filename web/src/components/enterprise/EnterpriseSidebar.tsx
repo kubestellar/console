@@ -62,14 +62,9 @@ export default function EnterpriseSidebar() {
   const branding = useMemo(() => ({
     title: 'Enterprise',
     logo: <Building2 className="w-5 h-5 text-purple-400" />,
-    subtitle: lastUpdated ? (
-      <div className="flex items-center gap-1">
-        <span>Compliance Portal</span>
-        <span className="text-[9px] text-muted-foreground/60" title={`Cluster data updated ${lastUpdated.toLocaleString()}`}>
-          • {formatTimeAgo(lastUpdated, { compact: true })}
-        </span>
-      </div>
-    ) : 'Compliance Portal',
+    subtitle: lastUpdated
+      ? `Compliance Portal • ${formatTimeAgo(lastUpdated, { compact: true })}`
+      : 'Compliance Portal',
   }), [lastUpdated])
 
   const handleAddCard = useCallback(() => {
