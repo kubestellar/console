@@ -215,6 +215,7 @@ func TestCreateClusterGroup_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, http.StatusMultiStatus, resp.StatusCode)
 
 	clusterGroupsMu.RLock()
@@ -233,6 +234,7 @@ func TestCreateClusterGroup_MissingName(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, 400, resp.StatusCode)
 }
 
@@ -246,6 +248,7 @@ func TestCreateClusterGroup_ReservedName(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, 400, resp.StatusCode)
 }
 
@@ -259,6 +262,7 @@ func TestCreateClusterGroup_StaticNoClusters(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, 400, resp.StatusCode)
 }
 
@@ -273,6 +277,7 @@ func TestCreateClusterGroup_DynamicNoClusters(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, 201, resp.StatusCode)
 }
 
@@ -285,6 +290,7 @@ func TestCreateClusterGroup_InvalidBody(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, 400, resp.StatusCode)
 }
 
@@ -307,6 +313,7 @@ func TestUpdateClusterGroup_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, http.StatusMultiStatus, resp.StatusCode)
 
 	clusterGroupsMu.RLock()
@@ -325,6 +332,7 @@ func TestUpdateClusterGroup_BuiltInReject(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, 400, resp.StatusCode)
 }
 
@@ -337,6 +345,7 @@ func TestUpdateClusterGroup_InvalidBody(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, 400, resp.StatusCode)
 }
 
@@ -391,6 +400,7 @@ func TestSyncClusterGroups_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, 200, resp.StatusCode)
 
 	var body map[string]int
@@ -409,6 +419,7 @@ func TestSyncClusterGroups_FiltersReservedName(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, 200, resp.StatusCode)
 
 	var body map[string]int
@@ -425,6 +436,7 @@ func TestSyncClusterGroups_InvalidJSONClusterGroups(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
+	require.NotNil(t, resp, "response is nil")
 	assert.Equal(t, 400, resp.StatusCode)
 }
 
