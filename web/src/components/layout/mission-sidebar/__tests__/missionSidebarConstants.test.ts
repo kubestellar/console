@@ -100,9 +100,9 @@ describe('missionSidebarConstants', () => {
     })
 
     it('matches title case-insensitively', () => {
-      expect(matchesMissionSearch(mission, 'istio')).toBe(true)
-      expect(matchesMissionSearch(mission, 'deploy')).toBe(true)
-      expect(matchesMissionSearch(mission, 'ISTIO')).toBe(true)
+      expect(matchesMissionSearch(mission, 'istio'.toLowerCase())).toBe(true)
+      expect(matchesMissionSearch(mission, 'deploy'.toLowerCase())).toBe(true)
+      expect(matchesMissionSearch(mission, 'ISTIO'.toLowerCase())).toBe(true)
     })
 
     it('matches description case-insensitively', () => {

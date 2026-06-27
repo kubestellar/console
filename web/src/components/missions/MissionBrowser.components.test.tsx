@@ -36,16 +36,35 @@ describe('MissionBrowserFilterPanel', () => {
     const { MissionBrowserFilterPanel } = await import('./MissionBrowserFilterPanel')
     const { container } = render(
       <MissionBrowserFilterPanel
-        activeTab="installers"
-        installerFilters={{
-          categories: [],
-          maturity: [],
-          difficulty: [],
-          installMethods: [],
+        activeFilterCount={0}
+        onClearAllFilters={vi.fn()}
+        minMatchPercent={0}
+        onMinMatchPercentChange={vi.fn()}
+        matchSourceFilter="all"
+        onMatchSourceFilterChange={vi.fn()}
+        categoryFilter=""
+        onCategoryFilterChange={vi.fn()}
+        missionClassFilter=""
+        onMissionClassFilterChange={vi.fn()}
+        maturityFilter=""
+        onMaturityFilterChange={vi.fn()}
+        difficultyFilter=""
+        onDifficultyFilterChange={vi.fn()}
+        cncfFilter=""
+        onCncfFilterChange={vi.fn()}
+        selectedTags={new Set()}
+        onTagToggle={vi.fn()}
+        onClearTags={vi.fn()}
+        facetCounts={{
+          clusterMatched: 0,
+          community: 0,
+          missionClass: new Map(),
+          maturity: new Map(),
+          difficulty: new Map(),
+          topTags: [],
         }}
-        onInstallerFiltersChange={vi.fn()}
-        fixerFilters={{ types: [], categories: [], tags: [] }}
-        onFixerFiltersChange={vi.fn()}
+        recommendationsTotal={0}
+        filteredRecommendationsCount={0}
       />
     )
     expect(container).toBeTruthy()
@@ -57,11 +76,20 @@ describe('MissionBrowserFixesTab', () => {
     const { MissionBrowserFixesTab } = await import('./MissionBrowserFixesTab')
     const { container } = render(
       <MissionBrowserFixesTab
-        missions={[]}
-        onImport={vi.fn()}
-        onSelect={vi.fn()}
+        fixerMissions={[]}
+        filteredFixers={[]}
+        loadingFixers={false}
+        missionFetchError={null}
+        fixerSearch=""
+        onFixerSearchChange={vi.fn()}
+        globalSearchActive={false}
+        globalSearchQuery=""
+        fixerTypeFilter=""
+        onFixerTypeFilterChange={vi.fn()}
         viewMode="grid"
-        searchQuery=""
+        onSelectMission={vi.fn()}
+        onImportMission={vi.fn()}
+        onCopyLink={vi.fn()}
       />
     )
     expect(container).toBeTruthy()
@@ -73,11 +101,22 @@ describe('MissionBrowserInstallersTab', () => {
     const { MissionBrowserInstallersTab } = await import('./MissionBrowserInstallersTab')
     const { container } = render(
       <MissionBrowserInstallersTab
-        missions={[]}
-        onImport={vi.fn()}
-        onSelect={vi.fn()}
+        installerMissions={[]}
+        filteredInstallers={[]}
+        loadingInstallers={false}
+        missionFetchError={null}
+        installerSearch=""
+        onInstallerSearchChange={vi.fn()}
+        globalSearchActive={false}
+        globalSearchQuery=""
+        installerCategoryFilter=""
+        onInstallerCategoryFilterChange={vi.fn()}
+        installerMaturityFilter=""
+        onInstallerMaturityFilterChange={vi.fn()}
         viewMode="grid"
-        searchQuery=""
+        onSelectMission={vi.fn()}
+        onImportMission={vi.fn()}
+        onCopyLink={vi.fn()}
       />
     )
     expect(container).toBeTruthy()

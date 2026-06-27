@@ -126,7 +126,7 @@ export function savedMissionToExport(m: Mission): MissionExport {
     title: m.importedFrom?.title || m.title,
     description: m.importedFrom?.description || m.description,
     type: m.type,
-    tags: m.importedFrom?.tags || [],
+    tags: m.importedFrom?.tags,
     missionClass: m.importedFrom?.missionClass as MissionExport['missionClass'],
     cncfProject: m.importedFrom?.cncfProject,
     steps: (m.importedFrom?.steps || []).map(s => ({
