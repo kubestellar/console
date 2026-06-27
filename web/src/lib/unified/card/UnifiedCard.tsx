@@ -346,7 +346,7 @@ function EmptyState({
   const title = config?.title ?? 'No data'
   const message = config?.message
   const variant = config?.variant ?? 'neutral'
-  const IconComponent = getIconComponent(config?.icon)
+  const IconComponent = useMemo(() => getIconComponent(config?.icon), [config?.icon])
 
   const variantColors = {
     success: 'text-green-400',
@@ -396,7 +396,7 @@ function ErrorState({
 
 /**
  * Inline stats displayed at top of card
- * 
+ *
  * Note: Value resolution is intentionally left as placeholder ("--") until the stats
  * feature design is finalized. Stats config includes valueField/valueResolver for future
  * implementation to compute values from card data.
