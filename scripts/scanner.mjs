@@ -160,6 +160,16 @@ const MALICIOUS_PATTERNS = [
   { name: 'Allowlist escape via xargs', pattern: /\bxargs\s+(?:-\S+\s+)*(?:bash|sh|zsh|ksh|dash)\b/gi },
   { name: 'Allowlist escape via find -exec', pattern: /\bfind\s[^;]*-exec\s+(?:bash|sh|zsh|ksh|dash)\b/gi },
 
+  // Obfuscation bypass techniques (issue #2693)
+  // Base64 decode piped to shell execution
+  { name: 'Obfuscation: base64 decode pipe to shell', pattern: /\b(?:base64|openssl\s+(?:enc|base64))\s+(?:-d|-D|--decode)[^|]*\|\s*(?:ba)?sh\b/gi },
+  { name: 'Obfuscation: echo base64 pipe', pattern: /\becho\s+[^|]*\|\s*base64\s+(?:-d|-D|--decode)[^|]*\|\s*(?:ba)?sh\b/gi },
+  // Printf with escape sequences piped to shell
+  { name: 'Obfuscation: printf escape sequences', pattern: /\bprintf\s+["'][^"']*\\x[0-9a-fA-F]{2}[^"']*["'][^|]*\|\s*(?:ba)?sh\b/gi },
+  // Shell variable construction of interpreter names (e.g., VAR=ba; ${VAR}sh or $VARsh)
+  { name: 'Obfuscation: variable shell interpreter', pattern: /(?:\$\{[A-Za-z_][A-Za-z0-9_]*\}|\$[A-Za-z_][A-Za-z0-9_]*)(?:bash|sh|zsh|ksh|dash)\b/g },
+  { name: 'Obfuscation: concatenated interpreter name', pattern: /["'](?:ba|z|k|da)?["']\s*\+\s*["']sh["']/gi },
+
   // Crypto mining indicators
   { name: 'Crypto miner reference', pattern: /\b(?:xmrig|cryptonight|stratum\+tcp|minerd|coinhive)\b/gi },
 ];
@@ -230,6 +240,45 @@ function isSafeCLIMatch(value) {
 }
 
 /**
+ * Decodes base64 content and scans for malicious patterns.
+ * Returns findings from decoded content.
+ */
+function scanBase64DecodedContent(text) {
+  const findings = [];
+  // Find base64-like strings that might contain encoded commands
+  const base64Pattern = /\b[A-Za-z0-9+/]{20,}={0,2}\b/g;
+  let match;
+  
+  while ((match = base64Pattern.exec(text)) !== null) {
+    try {
+      const decoded = Buffer.from(match[0], 'base64').toString('utf-8');
+      // Check if decoded content contains shell commands or suspicious patterns
+      const suspiciousPatterns = [
+        /\b(?:curl|wget|bash|sh|eval|exec|nc|netcat|chmod|chown)\b/gi,
+        /\$\([^)]+\)/g,
+        /`[^`]+`/g,
+      ];
+      
+      for (const pattern of suspiciousPatterns) {
+        pattern.lastIndex = 0;
+        if (pattern.test(decoded)) {
+          findings.push({
+            type: 'Obfuscation: base64-encoded command',
+            value: `${match[0].slice(0, 40)}... → ${decoded.slice(0, 60)}...`,
+            context: text.substring(Math.max(0, match.index - 30), match.index + match[0].length + 30).trim(),
+          });
+          break;
+        }
+      }
+    } catch {
+      // Not valid base64 or not UTF-8 — ignore
+    }
+  }
+  
+  return findings;
+}
+
+/**
  * Scans a parsed mission object for malicious content (XSS, privileged YAML, injection).
  * Returns { findings: Array<{ type, value, context }> }
  */
@@ -250,6 +299,10 @@ export function scanForMaliciousContent(mission) {
       });
     }
   }
+
+  // Add base64 decode + re-scan for mission fields that execute commands
+  const base64Findings = scanBase64DecodedContent(text);
+  findings.push(...base64Findings);
 
   return { findings };
 }
@@ -307,8 +360,52 @@ function tryParseYamlSimple(content) {
   if (content.trim().startsWith('{') || content.trim().startsWith('[')) return null;
   if (!content.includes(':')) return null;
 
-  // Return null to signal the caller should use js-yaml
-  return null;
+  try {
+    // Try to import and use js-yaml if available
+    // Dynamic import is async, so this is a best-effort sync approach
+    // For production use, the caller should handle YAML parsing
+    const lines = content.split('\n');
+    const result = {};
+    let currentKey = null;
+    let currentValue = '';
+    let indent = 0;
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      
+      const colonIndex = trimmed.indexOf(':');
+      if (colonIndex > 0) {
+        // Save previous key-value if exists
+        if (currentKey !== null) {
+          result[currentKey] = currentValue.trim() || null;
+        }
+        
+        currentKey = trimmed.substring(0, colonIndex).trim();
+        const afterColon = trimmed.substring(colonIndex + 1).trim();
+        
+        if (afterColon) {
+          // Inline value
+          currentValue = afterColon;
+        } else {
+          // Multi-line value
+          currentValue = '';
+        }
+      } else if (currentKey !== null && line.startsWith('  ')) {
+        // Continuation of multi-line value
+        currentValue += (currentValue ? '\n' : '') + trimmed;
+      }
+    }
+    
+    // Save last key-value
+    if (currentKey !== null) {
+      result[currentKey] = currentValue.trim() || null;
+    }
+    
+    return Object.keys(result).length > 0 ? result : null;
+  } catch {
+    return null;
+  }
 }
 
 // ─── Markdown formatting ─────────────────────────────────────────────
