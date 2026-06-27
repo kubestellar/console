@@ -109,6 +109,7 @@ useDefault = true
   description = "Ignore test fixtures, examples, vendor, and CI docs"
 
 # PCI vendor IDs (15b3=Mellanox, 10de=NVIDIA) flagged as generic-api-key
+# Port numbers and URL paths in comments flagged as generic-api-key
 [[rules]]
   id = "generic-api-key"
   description = "Generic API Key"
@@ -116,6 +117,11 @@ useDefault = true
     regexTarget = "match"
     regexes = [
       '''pci-[0-9a-f]{4}''',
+      '''8080/v1/continuousQueries''',
+    ]
+    fingerprints = [
+      '''Makefile:generic-api-key:17''',
+      '''pkg/api/handlers/mcp/drasi_proxy.go:generic-api-key:188''',
     ]
 TOML
 
