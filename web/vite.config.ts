@@ -337,6 +337,8 @@ export default defineConfig(({ mode }) => ({
     // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency
     maxWorkers: process.env.CI ? 1 : undefined,
     minWorkers: process.env.CI ? 1 : undefined,
+    // Force cache clear to resolve module resolution after codeGenerator.templates.ts monolithic restore (#19791)
+    cache: false,
     // poolOptions.forks removed — deprecated in Vitest 4 (#5860).
     // maxWorkers/minWorkers above handle fork limits; teardownTimeout
     // above handles worker termination timeout.
