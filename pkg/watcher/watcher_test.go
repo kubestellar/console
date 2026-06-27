@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"encoding/pem"
@@ -751,5 +752,189 @@ func TestWritePidFile(t *testing.T) {
 	}
 	if info.Mode().Perm() != PidFilePerms {
 		t.Errorf("PID file perms = %o, want %o", info.Mode().Perm(), PidFilePerms)
+	}
+}
+
+// TestPeekedConn tests the peekedConn Read method
+func TestPeekedConn(t *testing.T) {
+	server, client := net.Pipe()
+	defer server.Close()
+	defer client.Close()
+
+	// Write test data to the server side
+	go func() {
+		server.Write([]byte("test data"))
+		server.Close()
+	}()
+
+	// Create a buffered reader and peek at the data
+	br := bufio.NewReader(client)
+	firstByte, err := br.Peek(1)
+	if err != nil {
+		t.Fatalf("Peek failed: %v", err)
+	}
+	if firstByte[0] != 't' {
+		t.Errorf("Peek() = %c, want 't'", firstByte[0])
+	}
+
+	// Create peekedConn and read through it
+	pc := newPeekedConn(client, br)
+	buf := make([]byte, 4)
+	n, err := pc.Read(buf)
+	if err != nil {
+		t.Fatalf("Read failed: %v", err)
+	}
+	if n != 4 {
+		t.Errorf("Read() n = %d, want 4", n)
+	}
+	if string(buf[:n]) != "test" {
+		t.Errorf("Read() = %q, want %q", string(buf[:n]), "test")
+	}
+}
+
+// TestSingleConnListener tests the singleConnListener methods
+func TestSingleConnListener(t *testing.T) {
+	server, client := net.Pipe()
+	defer server.Close()
+	defer client.Close()
+
+	listener := newSingleConnListener(server)
+
+	// Test Addr
+	addr := listener.Addr()
+	if addr != server.LocalAddr() {
+		t.Errorf("Addr() = %v, want %v", addr, server.LocalAddr())
+	}
+
+	// Test first Accept
+	conn, err := listener.Accept()
+	if err != nil {
+		t.Fatalf("first Accept() error = %v", err)
+	}
+	if conn != server {
+		t.Error("first Accept() returned wrong connection")
+	}
+
+	// Test second Accept (should block until Close)
+	doneCh := make(chan error, 1)
+	go func() {
+		_, err := listener.Accept()
+		doneCh <- err
+	}()
+
+	// Give the goroutine time to block
+	time.Sleep(100 * time.Millisecond)
+
+	// Close the listener
+	if err := listener.Close(); err != nil {
+		t.Errorf("Close() error = %v", err)
+	}
+
+	// Second Accept should now return with ErrClosed
+	select {
+	case err := <-doneCh:
+		if err != net.ErrClosed {
+			t.Errorf("second Accept() error = %v, want %v", err, net.ErrClosed)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("second Accept() did not return after Close()")
+	}
+
+	// Test Close is idempotent
+	if err := listener.Close(); err != nil {
+		t.Errorf("second Close() error = %v", err)
+	}
+}
+
+// TestEnsureTLSCert_WithEnvVars tests EnsureTLSCert with environment variables
+func TestEnsureTLSCert_WithEnvVars(t *testing.T) {
+	tmpDir := t.TempDir()
+	
+	// Create dummy cert and key files
+	certPath := filepath.Join(tmpDir, "custom-cert.pem")
+	keyPath := filepath.Join(tmpDir, "custom-key.pem")
+	
+	if err := os.WriteFile(certPath, []byte("cert"), 0600); err != nil {
+		t.Fatalf("write cert: %v", err)
+	}
+	if err := os.WriteFile(keyPath, []byte("key"), 0600); err != nil {
+		t.Fatalf("write key: %v", err)
+	}
+
+	t.Setenv("TLS_CERT_FILE", certPath)
+	t.Setenv("TLS_KEY_FILE", keyPath)
+
+	gotCert, gotKey, err := EnsureTLSCert()
+	if err != nil {
+		t.Fatalf("EnsureTLSCert() error = %v", err)
+	}
+
+	if gotCert != certPath {
+		t.Errorf("certFile = %q, want %q", gotCert, certPath)
+	}
+	if gotKey != keyPath {
+		t.Errorf("keyFile = %q, want %q", gotKey, keyPath)
+	}
+}
+
+// TestEnsureTLSCert_ReusesExisting tests that existing certs are reused
+func TestEnsureTLSCert_ReusesExisting(t *testing.T) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+
+	workDir := t.TempDir()
+	if err := os.Chdir(workDir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	defer os.Chdir(cwd)
+
+	t.Setenv("TLS_CERT_FILE", "")
+	t.Setenv("TLS_KEY_FILE", "")
+
+	// First call generates cert
+	certFile1, keyFile1, err := EnsureTLSCert()
+	if err != nil {
+		t.Fatalf("first EnsureTLSCert() error = %v", err)
+	}
+
+	// Get file modification times
+	certInfo1, err := os.Stat(certFile1)
+	if err != nil {
+		t.Fatalf("stat cert file: %v", err)
+	}
+	keyInfo1, err := os.Stat(keyFile1)
+	if err != nil {
+		t.Fatalf("stat key file: %v", err)
+	}
+	
+	time.Sleep(10 * time.Millisecond)
+
+	// Second call should reuse existing cert
+	certFile2, keyFile2, err := EnsureTLSCert()
+	if err != nil {
+		t.Fatalf("second EnsureTLSCert() error = %v", err)
+	}
+
+	if certFile2 != certFile1 || keyFile2 != keyFile1 {
+		t.Errorf("cert/key paths changed: %s/%s -> %s/%s", certFile1, keyFile1, certFile2, keyFile2)
+	}
+
+	// Verify files were not regenerated
+	certInfo2, err := os.Stat(certFile2)
+	if err != nil {
+		t.Fatalf("stat cert file: %v", err)
+	}
+	keyInfo2, err := os.Stat(keyFile2)
+	if err != nil {
+		t.Fatalf("stat key file: %v", err)
+	}
+	
+	if !certInfo1.ModTime().Equal(certInfo2.ModTime()) {
+		t.Error("cert file was regenerated instead of reused")
+	}
+	if !keyInfo1.ModTime().Equal(keyInfo2.ModTime()) {
+		t.Error("key file was regenerated instead of reused")
 	}
 }

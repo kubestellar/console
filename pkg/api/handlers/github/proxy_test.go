@@ -302,6 +302,8 @@ func TestProxy_ScopesSearchRequestsToAllowedRepos(t *testing.T) {
 
 func TestProxy_AllowsAllowlistedRepoRequest(t *testing.T) {
 	setupGitHubProxyTestSettings(t)
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("FEEDBACK_GITHUB_TOKEN", "")
 	app := fiber.New()
 	h := NewGitHubProxyHandler("test-token", nil)
 	h.allowedRepos = map[string]struct{}{"kubestellar/console": {}}
@@ -365,6 +367,8 @@ func TestDeleteToken_RejectsNonAdmin(t *testing.T) {
 
 func TestDeleteToken_AllowsAdmin(t *testing.T) {
 	setupGitHubProxyTestSettings(t)
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("FEEDBACK_GITHUB_TOKEN", "")
 
 	app := fiber.New()
 	mockStore := new(test.MockStore)

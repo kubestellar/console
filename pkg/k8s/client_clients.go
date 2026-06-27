@@ -92,7 +92,11 @@ func (m *MultiClusterClient) GetRestConfig(contextName string) (*rest.Config, er
 	if !ok {
 		return nil, fmt.Errorf("no config for context %s", contextName)
 	}
-	return rest.CopyConfig(config), nil
+	copiedConfig := rest.CopyConfig(config)
+	if copiedConfig == nil {
+		return nil, fmt.Errorf("failed to copy REST config for context %s", contextName)
+	}
+	return copiedConfig, nil
 }
 
 // GetDynamicClient returns a dynamic kubernetes client for the specified context.

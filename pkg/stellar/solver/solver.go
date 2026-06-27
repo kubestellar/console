@@ -157,7 +157,9 @@ func SolveLoop(
 		broadcast("planning", fmt.Sprintf("Trying %s — safest reversible action.", actionType), actionsTaken)
 		actionID, outcome, err := dispatchAction(ctx, storage, k8sClient, input, actionType, dedupeKey)
 		actionsTaken++
-		_ = storage.IncrementSolveActions(ctx, input.SolveID)
+		if storage != nil {
+			_ = storage.IncrementSolveActions(ctx, input.SolveID)
+		}
 		lastAction = actionType
 		if outcome != "" {
 			lastOutcome = outcome

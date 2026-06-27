@@ -75,7 +75,7 @@ export function TabbedDeploySection({
         {title}{' '}
         <span className={accent.text}>60 seconds</span>
       </h2>
-      <p className="text-slate-400 text-center mb-12">
+      <p className="text-slate-300 text-center mb-12">
         {subtitle}
       </p>
 
@@ -86,36 +86,36 @@ export function TabbedDeploySection({
             className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
               activeTab === 'localhost'
                 ? accent.tabActive
-                : 'bg-slate-800/30 text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+                : 'bg-slate-800/30 text-slate-300 hover:text-slate-300 hover:bg-slate-800/50'
             }`}
           >
             <Monitor className="w-4 h-4" />
             Localhost
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">curl | bash</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-300">curl | bash</span>
           </button>
           <button
             onClick={() => switchTab('cluster-portforward')}
             className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
               activeTab === 'cluster-portforward'
                 ? accent.tabActive
-                : 'bg-slate-800/30 text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+                : 'bg-slate-800/30 text-slate-300 hover:text-slate-300 hover:bg-slate-800/50'
             }`}
           >
             <Terminal className="w-4 h-4" />
             Cluster
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">port-forward</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-300">port-forward</span>
           </button>
           <button
             onClick={() => switchTab('cluster-ingress')}
             className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
               activeTab === 'cluster-ingress'
                 ? accent.tabActive
-                : 'bg-slate-800/30 text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+                : 'bg-slate-800/30 text-slate-300 hover:text-slate-300 hover:bg-slate-800/50'
             }`}
           >
             <Globe className="w-4 h-4" />
             Cluster
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">ingress / route</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-300">ingress / route</span>
           </button>
         </div>
       </div>
@@ -139,7 +139,7 @@ export function TabbedDeploySection({
       <div className="mt-8 max-w-3xl mx-auto">
         {!isCluster ? (
           <div className="text-center">
-            <p className="text-slate-400 text-sm">
+            <p className="text-slate-300 text-sm">
               The agent auto-detects your standard <code className={`${accent.text300} bg-slate-800 px-1.5 py-0.5 rounded`}>~/.kube/config</code> and discovers all contexts.
               No manual cluster registration needed.
             </p>
@@ -152,7 +152,7 @@ export function TabbedDeploySection({
                 <Lock className={`w-4 h-4 ${accent.text} mt-0.5 shrink-0`} />
                 <div>
                   <p className="text-sm font-medium text-foreground">TLS</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-300 mt-0.5">
                     Add a TLS certificate to your ingress for HTTPS. Required for secure WebSocket connections to the kc-agent.
                   </p>
                 </div>
@@ -161,7 +161,7 @@ export function TabbedDeploySection({
                 <KeyRound className={`w-4 h-4 ${accent.text} mt-0.5 shrink-0`} />
                 <div>
                   <p className="text-sm font-medium text-foreground">OAuth</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-300 mt-0.5">
                     Configure GitHub OAuth for multi-user authentication. Set{' '}
                     <code className={`${accent.text300_80} bg-slate-800 px-1 rounded`}>GITHUB_CLIENT_ID</code> and{' '}
                     <code className={`${accent.text300_80} bg-slate-800 px-1 rounded`}>GITHUB_CLIENT_SECRET</code> in the Helm values.
@@ -172,7 +172,7 @@ export function TabbedDeploySection({
                 <Wifi className={`w-4 h-4 ${accent.text} mt-0.5 shrink-0`} />
                 <div>
                   <p className="text-sm font-medium text-foreground">CORS</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-300 mt-0.5">
                     Set{' '}
                     <code className={`${accent.text300_80} bg-slate-800 px-1 rounded`}>KC_ALLOWED_ORIGINS</code> on the kc-agent to your console&apos;s URL so cross-origin requests work from the browser.
                   </p>

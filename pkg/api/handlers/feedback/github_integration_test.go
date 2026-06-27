@@ -417,9 +417,18 @@ func TestHandleAIProcessingComplete_UpdatesStatusAndNotifies(t *testing.T) {
 
 	handler := &FeedbackHandler{
 		store:       mockStore,
-		githubToken: "", // No token = getLatestBotComment returns ""
+		githubToken: "",
 		repoOwner:   "kubestellar",
 		repoName:    "console",
+		httpClient: &http.Client{
+			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`[]`)),
+					Header:     make(http.Header),
+				}
+			}),
+		},
 	}
 	err := handler.handleAIProcessingComplete(context.Background(), 123, "https://github.com/kubestellar/console/issues/123", map[string]interface{}{})
 	assert.NoError(t, err)

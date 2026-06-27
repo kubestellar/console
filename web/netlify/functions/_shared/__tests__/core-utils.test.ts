@@ -252,7 +252,8 @@ describe("shared core utilities", () => {
       windowMs: RATE_LIMIT_WINDOW_MS,
     });
 
-    expect(result).toEqual({ limited: true, retryAfterSeconds: 60 });
+    expect(result.limited).toBe(true);
+    expect(result.retryAfterSeconds).toBe(60);
   });
 
   it("passes AbortSignal timeouts through fetchWithTimeout", async () => {

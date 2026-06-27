@@ -36,7 +36,7 @@ function parseStellarEvent<T>(event: Event, eventName: string): T | null {
   try {
     return JSON.parse((event as MessageEvent).data) as T
   } catch (err) {
-    console.warn(`stellar: malformed ${eventName} event JSON`, err)
+    console.error(`stellar: malformed ${eventName} event JSON`, err)
     return null
   }
 }
@@ -145,7 +145,7 @@ export function useStellarSource() {
       setConnectionError(null)
       return
     }
-    console.warn('stellar: refreshState partial failure —', failures.length, 'of', STELLAR_REFRESH_REQUEST_COUNT, 'calls failed')
+    console.error('stellar: refreshState partial failure —', failures.length, 'of', STELLAR_REFRESH_REQUEST_COUNT, 'calls failed')
     const firstFailure = failures[0]
     setOperationalError(
       firstFailure.status === 'rejected' ? firstFailure.reason : null,
@@ -164,7 +164,7 @@ export function useStellarSource() {
     try {
       await refreshState()
     } catch (err) {
-      console.warn('stellar: batch refresh failed:', err)
+      console.error('stellar: batch refresh failed:', err)
       setOperationalError(err, 'Failed to refresh Stellar state')
     } finally {
       batchRefreshInFlightRef.current = false
@@ -214,7 +214,7 @@ export function useStellarSource() {
         [notif.id]: { solveId: 'pending', eventId: notif.id, step: 'reading', message: 'Auto-solve triggered — Stellar is investigating…', actionsTaken: 0, status: 'running' },
       })
       stellarApi.startSolve(notif.id).catch(err => {
-        console.warn('stellar: auto-solve for critical event failed:', notif.id, err)
+        console.error('stellar: auto-solve for critical event failed:', notif.id, err)
         setOperationalError(err, 'Failed to auto-solve critical event')
         setSolveProgress(prev => {
           const copy = { ...prev }
@@ -330,7 +330,7 @@ export function useStellarSource() {
       try {
         await refreshState()
       } catch (err) {
-        console.warn('stellar: init failed:', err)
+        console.error('stellar: init failed:', err)
         setOperationalError(err, 'Failed to initialize Stellar state')
       }
       scheduleNextBatch()

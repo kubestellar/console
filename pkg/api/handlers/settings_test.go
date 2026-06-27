@@ -60,6 +60,8 @@ func TestGetSettings(t *testing.T) {
 }
 
 func TestSaveSettings(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("FEEDBACK_GITHUB_TOKEN", "")
 	env := setupTestEnv(t)
 	handler := NewSettingsHandler(env.Settings, env.Store)
 	env.App.Put("/api/settings", handler.SaveSettings)

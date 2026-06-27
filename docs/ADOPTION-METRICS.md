@@ -174,7 +174,7 @@ Projects that have endorsed or integrated KubeStellar Console missions:
 | Microcks | Sandbox | [microcks/community#125](https://github.com/microcks/community/pull/125) | Contributed |
 | kcp | Sandbox | [kcp-dev/kcp#3923](https://github.com/kcp-dev/kcp/issues/3923) | Engaged |
 
-> See [ADOPTERS.MD](../ADOPTERS.MD) for the full adopter list.
+> See [ADOPTERS.md](../ADOPTERS.md) for the full adopter list.
 
 ### Community Contributions
 
@@ -250,5 +250,5 @@ Where possible, metrics should be collected via automated scripts:
 
 - [CNCF Incubation Criteria](https://github.com/cncf/toc/blob/main/process/graduation_criteria.md)
 - [CNCF Due Diligence Guidelines](https://github.com/cncf/toc/blob/main/process/due-diligence-guidelines.md)
-- [KubeStellar Console Adopters](../ADOPTERS.MD)
+- [KubeStellar Console Adopters](../ADOPTERS.md)
 - [KubeStellar Community](COMMUNITY.md)

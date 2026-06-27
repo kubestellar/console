@@ -60,7 +60,7 @@ describe('AdopterNudge Component', () => {
     render(<AdopterNudge />)
     fireEvent.click(screen.getByText('Add your organization'))
     expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining('ADOPTERS.MD'),
+      expect.stringContaining('ADOPTERS.md'),
       '_blank',
       expect.any(String),
     )

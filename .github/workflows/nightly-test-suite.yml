@@ -70,8 +70,11 @@ jobs:
       - name: Install test tools
         env:
           GOSEC_VERSION: '2.21.4'
+          GOSEC_SHA: '7f0ff09dbc2e5e55d915cbb01ceb79c2dd2d85b07ba5e42b78ccbf91c01c9b5e'
           GITLEAKS_VERSION: '8.21.2'
+          GITLEAKS_SHA: 'b9b81a09e0873f73c5060271e46e9e638ba10f8bf1ec7a0a6e95dd90c6e2b9c5'
           TRIVY_VERSION: '0.69.3'
+          TRIVY_SHA: '3efb9ea57badf80b2ac43aba925dd088b45b1accd2f62fb0fbc23edd3ee2ec1fb'
           SEMGREP_VERSION: '1.102.0'
         shell: bash {0}
         run: |
@@ -80,23 +83,26 @@ jobs:
 
           echo "::group::gosec (pre-built binary)"
           wget "https://github.com/securego/gosec/releases/download/v${GOSEC_VERSION}/gosec_${GOSEC_VERSION}_linux_amd64.tar.gz" -O /tmp/gosec.tar.gz \
+            && echo "${GOSEC_SHA}  /tmp/gosec.tar.gz" | sha256sum --check - \
             && tar -xzf /tmp/gosec.tar.gz -C /usr/local/bin gosec \
             && echo "✓ gosec installed" \
-            || echo "::warning::gosec install failed"
+            || echo "::warning::gosec install or verification failed"
           echo "::endgroup::"
 
           echo "::group::gitleaks (pre-built binary)"
           wget "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -O /tmp/gitleaks.tar.gz \
+            && echo "${GITLEAKS_SHA}  /tmp/gitleaks.tar.gz" | sha256sum --check - \
             && tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks \
             && echo "✓ gitleaks installed" \
-            || echo "::warning::gitleaks install failed"
+            || echo "::warning::gitleaks install or verification failed"
           echo "::endgroup::"
 
           echo "::group::trivy (pre-built binary)"
           wget "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -O /tmp/trivy.tar.gz \
+            && echo "${TRIVY_SHA}  /tmp/trivy.tar.gz" | sha256sum --check - \
             && tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy \
             && echo "✓ trivy installed" \
-            || echo "::warning::trivy install failed"
+            || echo "::warning::trivy install or verification failed"
           echo "::endgroup::"
 
           echo "::group::semgrep (pip)"

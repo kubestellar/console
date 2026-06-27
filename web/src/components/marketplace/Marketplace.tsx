@@ -872,9 +872,10 @@ export function Marketplace() {
           <p className="text-xs text-muted-foreground/70 mb-4">{error}</p>
           <button
             onClick={refresh}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors"
+            disabled={isLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors disabled:opacity-50"
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
             Try again
           </button>
         </div>

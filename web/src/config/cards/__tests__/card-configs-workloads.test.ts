@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { deploymentIssuesConfig } from '../deployment-issues'
 import { deploymentMissionsConfig } from '../deployment-missions'
 import { deploymentProgressConfig } from '../deployment-progress'
+import { deploymentRiskScoreConfig } from '../deployment-risk-score'
 import { deploymentStatusConfig } from '../deployment-status'
 import { deploymentRolloutTrackerConfig } from '../deployment-rollout-tracker'
 import { workloadDeploymentConfig } from '../workload-deployment'
@@ -21,6 +22,7 @@ const workloadCards = [
   { name: 'deploymentIssues', config: deploymentIssuesConfig },
   { name: 'deploymentMissions', config: deploymentMissionsConfig },
   { name: 'deploymentProgress', config: deploymentProgressConfig },
+  { name: 'deploymentRiskScore', config: deploymentRiskScoreConfig },
   { name: 'deploymentStatus', config: deploymentStatusConfig },
   { name: 'deploymentRolloutTracker', config: deploymentRolloutTrackerConfig },
   { name: 'workloadDeployment', config: workloadDeploymentConfig },

@@ -63,9 +63,11 @@ vi.mock('react-i18next', async () => {
 })
 
 const mockUseCardLoadingState = vi.fn()
+const mockUseCardDemoState = vi.fn()
 vi.mock('../CardDataContext', () => ({
   useReportCardDataState: vi.fn(),
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+  useCardDemoState: (opts: unknown) => mockUseCardDemoState(opts),
 }))
 
 const mockUseClusters = vi.fn()
@@ -115,6 +117,11 @@ describe('ClusterGroups', () => {
       isPersisted: false,
     })
     mockUseFederationAwareness.mockReturnValue({ groups: [] })
+    mockUseCardDemoState.mockReturnValue({
+      shouldUseDemoData: true,
+      reason: 'global-demo-mode',
+      showDemoBadge: true,
+    })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockUseClusters.mockReturnValue({
       clusters: [],
@@ -168,6 +175,11 @@ describe('ClusterGroups', () => {
   it('opens CreateGroupForm when Clicking "New Group"', async () => {
     const user = userEvent.setup()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardDemoState.mockReturnValue({
+      shouldUseDemoData: false,
+      reason: null,
+      showDemoBadge: false,
+    })
     render(<ClusterGroups />)
     
     const newGroupButton = screen.getByRole('button', { name: 'cards:clusterGroups.newGroup' })
@@ -178,6 +190,11 @@ describe('ClusterGroups', () => {
 
   it('renders a list of groups with names and cluster counts', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardDemoState.mockReturnValue({
+      shouldUseDemoData: false,
+      reason: null,
+      showDemoBadge: false,
+    })
     mockUseClusterGroups.mockReturnValue({
       groups: [
         { name: 'Group A', kind: 'static', clusters: ['c1', 'c2'], color: 'blue' },
@@ -209,6 +226,11 @@ describe('ClusterGroups', () => {
     })
     
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardDemoState.mockReturnValue({
+      shouldUseDemoData: false,
+      reason: null,
+      showDemoBadge: false,
+    })
     render(<ClusterGroups />)
     
     const editButton = screen.getByRole('button', { name: 'cards:clusterGroups.editGroup' })
@@ -229,6 +251,11 @@ describe('ClusterGroups', () => {
     })
     
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardDemoState.mockReturnValue({
+      shouldUseDemoData: false,
+      reason: null,
+      showDemoBadge: false,
+    })
     render(<ClusterGroups />)
     
     const deleteButton = screen.getByRole('button', { name: 'cards:clusterGroups.deleteGroup' })

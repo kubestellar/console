@@ -143,7 +143,7 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      <span className="ml-3 text-gray-300">Loading threat intelligence…</span>
+      <span className="ml-3 text-gray-200">Loading threat intelligence…</span>
     </div>
   )
 
@@ -234,7 +234,7 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
                   const pct = Math.round((iocType.count / total) * 100)
                   return (
                     <div key={iocType.type} className="flex items-center gap-3">
-                      <span className="w-16 text-sm text-gray-300 uppercase">{iocType.type}</span>
+                      <span className="w-16 text-sm text-gray-200 uppercase">{iocType.type}</span>
                       <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
                         <div className="h-full bg-purple-500 rounded-full" style={{ width: `${pct}%` }} />
                       </div>
@@ -284,8 +284,8 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
               {feeds.map(feed => (
                 <tr key={feed.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                   <td className="p-3 text-white font-medium">{feed.name}</td>
-                  <td className="p-3 text-gray-300">{feed.provider}</td>
-                  <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 text-xs">{feed.category}</span></td>
+                  <td className="p-3 text-gray-200">{feed.provider}</td>
+                  <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-200 text-xs">{feed.category}</span></td>
                   <td className="p-3">
                     <span className={`flex items-center gap-1.5 ${FEED_STATUS_COLORS[feed.status]}`}>
                       {feed.status === 'active' ? <CheckCircle2 className="w-4 h-4" /> :
@@ -295,7 +295,7 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
                     </span>
                   </td>
                   <td className="p-3 text-white">{feed.indicators_count.toLocaleString()}</td>
-                  <td className="p-3 text-gray-300 text-xs">{new Date(feed.last_updated).toLocaleString()}</td>
+                  <td className="p-3 text-gray-200 text-xs">{new Date(feed.last_updated).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -322,9 +322,9 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
             <tbody>
               {iocs.map(ioc => (
                 <tr key={ioc.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                  <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 text-xs uppercase">{ioc.ioc_type}</span></td>
+                  <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-200 text-xs uppercase">{ioc.ioc_type}</span></td>
                   <td className="p-3 font-mono text-blue-300 text-xs">{ioc.indicator}</td>
-                  <td className="p-3 text-gray-300">{ioc.feed_name}</td>
+                  <td className="p-3 text-gray-200">{ioc.feed_name}</td>
                   <td className="p-3">
                     <span className={`px-2 py-0.5 rounded text-xs border ${SEVERITY_BG[ioc.severity]} ${SEVERITY_COLORS[ioc.severity]}`}>
                       {ioc.severity}
@@ -333,12 +333,12 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
                   <td className="p-3">
                     <span className="flex items-center gap-1.5">
                       {IOC_STATUS_ICON[ioc.status]}
-                      <span className="text-gray-300 capitalize">{(ioc.status ?? '').replace('_', ' ')}</span>
+                      <span className="text-gray-200 capitalize">{(ioc.status ?? '').replace('_', ' ')}</span>
                     </span>
                   </td>
                   <td className="p-3 text-white">{ioc.matched_resource}</td>
-                  <td className="p-3 text-gray-300">{ioc.cluster}</td>
-                  <td className="p-3 text-gray-300 text-xs">{new Date(ioc.detected_at).toLocaleString()}</td>
+                  <td className="p-3 text-gray-200">{ioc.cluster}</td>
+                  <td className="p-3 text-gray-200 text-xs">{new Date(ioc.detected_at).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

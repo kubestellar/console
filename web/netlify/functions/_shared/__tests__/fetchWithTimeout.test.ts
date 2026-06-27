@@ -66,8 +66,7 @@ describe("fetchWithTimeout", () => {
     const testCases = [200, 201, 204, 400, 404, 500, 503];
 
     for (const statusCode of testCases) {
-      const mockResponse = new Response("test", { status: statusCode });
-      const mockFetch = vi.fn().mockResolvedValueOnce(mockResponse);
+      const mockFetch = vi.fn().mockResolvedValueOnce(new Response("test", { status: statusCode }));
       global.fetch = mockFetch;
 
       const result = await fetchWithTimeout("http://example.com", { timeoutMs: 5000 });

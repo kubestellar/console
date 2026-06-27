@@ -58,8 +58,10 @@ vi.mock('../../hooks/useDemoMode', async (importOriginal) => {
 })
 
 const mockUseCardLoadingState = vi.fn()
+const mockUseCardDemoState = vi.fn()
 vi.mock('./CardDataContext', () => ({
   useCardLoadingState: (opts: Record<string, unknown>) => mockUseCardLoadingState(opts),
+  useCardDemoState: (opts: Record<string, unknown>) => mockUseCardDemoState(opts),
 }))
 
 vi.mock('../ui/Skeleton', () => ({
@@ -143,6 +145,12 @@ function setupMocks(overrides: {
 
   mockUseDemoMode.mockReturnValue({
     isDemoMode: overrides.isDemoMode ?? false,
+  })
+
+  mockUseCardDemoState.mockReturnValue({
+    shouldUseDemoData: overrides.isDemoMode ?? false,
+    reason: overrides.isDemoMode ? 'global-demo-mode' : null,
+    showDemoBadge: overrides.isDemoMode ?? false,
   })
 
   mockUseCardLoadingState.mockReturnValue({

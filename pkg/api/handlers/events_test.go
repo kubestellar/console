@@ -137,8 +137,7 @@ func TestEventRecordEvent_StoreError(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
-	// Handler returns 200 for graceful degradation even on store error
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 }
 func TestEventGetEvents_Success(t *testing.T) {
 	env := setupTestEnv(t)

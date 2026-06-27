@@ -155,7 +155,6 @@ export function UnifiedDashboard({
   const hasInitializedTabPersistence = useRef(false)
 
   // Modal state
-  // Modal state
   const addCardModal = useModalState()
   const configureCardModal = useModalState()
   const [cardToEdit, setCardToEdit] = useState<ConfigurableCard | null>(null)
@@ -491,6 +490,7 @@ export function UnifiedDashboard({
               onClick={handleResetRequest}
               className="px-3 py-1.5 text-xs rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
               title="Reset to default layout"
+              aria-label="Reset to default layout"
             >
               Reset
             </button>
