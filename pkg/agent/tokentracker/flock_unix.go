@@ -7,6 +7,7 @@ package tokentracker
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"syscall"
 )
@@ -24,8 +25,13 @@ func acquireFileLock(path string) (release func(), err error) {
 		return nil, fmt.Errorf("open lock file: %w", err)
 	}
 
-	// Store fd as int to avoid unsafe uintptr -> int conversion (gosec G115)
-	fd := int(f.Fd())
+	// Safe conversion: validate uintptr fits in int (gosec G115)
+	uintptrVal := f.Fd()
+	if uintptrVal > uintptr(math.MaxInt) {
+		f.Close()
+		return nil, fmt.Errorf("file descriptor out of range: %v", uintptrVal)
+	}
+	fd := int(uintptrVal)
 
 	if err := syscall.Flock(fd, syscall.LOCK_EX); err != nil {
 		f.Close()
