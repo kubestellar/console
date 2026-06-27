@@ -111,6 +111,23 @@ vi.mock('../../lib/cache', () => {
     createCachedHook: ({ fetcher, initialData }: {
       fetcher: () => Promise<unknown>; initialData: unknown; [k: string]: unknown
     }) => () => useCacheMock({ fetcher, initialData }),
+    CONSECUTIVE_FAILURE_THRESHOLD: 3,
+    REFRESH_RATES: {
+      realtime: 15_000,
+      pods: 30_000,
+      clusters: 60_000,
+      deployments: 60_000,
+      services: 60_000,
+      metrics: 45_000,
+      gpu: 45_000,
+      helm: 120_000,
+      gitops: 120_000,
+      namespaces: 180_000,
+      rbac: 300_000,
+      operators: 300_000,
+      costs: 600_000,
+      default: 120_000,
+    },
   }
 })
 
