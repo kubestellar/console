@@ -72,7 +72,7 @@ export function ConnectTab() {
       {connectState === 'done' ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <Check className="w-10 h-10 text-green-400 mb-3" />
-          <p className="text-sm text-green-400">{t('cluster.connectSuccess')}</p>
+          <div className="text-sm text-green-400">{t('cluster.connectSuccess')}</div>
         </div>
       ) : (
         <>
@@ -205,7 +205,7 @@ export function ConnectTab() {
 
               {authType === 'cloud-iam' && (
                 <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">{t('cluster.cloudIAMDesc')}</p>
+                  <div className="text-xs text-muted-foreground">{t('cluster.cloudIAMDesc')}</div>
 
                   {/* Provider selector */}
                   <div className="grid grid-cols-4 gap-2">
