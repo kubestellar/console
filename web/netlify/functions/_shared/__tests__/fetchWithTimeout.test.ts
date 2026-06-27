@@ -2,14 +2,23 @@
  * Unit tests for fetchWithTimeout.ts (#16109).
  * Tests timeout enforcement and signal propagation.
  */
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchWithTimeout } from "../fetchWithTimeout";
 
 describe("fetchWithTimeout", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it("should return response on successful fetch", async () => {
     const mockResponse = new Response("success", { status: 200 });
     const mockFetch = vi.fn().mockResolvedValueOnce(mockResponse);
-    global.fetch = mockFetch;
+    vi.stubGlobal("fetch", mockFetch);
 
     const result = await fetchWithTimeout("http://example.com", { timeoutMs: 5000 });
 
@@ -21,7 +30,7 @@ describe("fetchWithTimeout", () => {
       expect(options.signal).toBeDefined();
       return Promise.resolve(new Response("success", { status: 200 }));
     });
-    global.fetch = mockFetch;
+    vi.stubGlobal("fetch", mockFetch);
 
     await fetchWithTimeout("http://example.com");
 
@@ -33,7 +42,7 @@ describe("fetchWithTimeout", () => {
       expect(options.signal).toBeDefined();
       return Promise.resolve(new Response("success", { status: 200 }));
     });
-    global.fetch = mockFetch;
+    vi.stubGlobal("fetch", mockFetch);
 
     await fetchWithTimeout("http://example.com", { timeoutMs: 3000 });
 
@@ -42,7 +51,7 @@ describe("fetchWithTimeout", () => {
 
   it("should pass through fetch options", async () => {
     const mockFetch = vi.fn().mockResolvedValue(new Response("success", { status: 200 }));
-    global.fetch = mockFetch;
+    vi.stubGlobal("fetch", mockFetch);
 
     await fetchWithTimeout("http://example.com", {
       timeoutMs: 5000,
@@ -67,7 +76,7 @@ describe("fetchWithTimeout", () => {
 
     for (const statusCode of testCases) {
       const mockFetch = vi.fn().mockResolvedValueOnce(new Response("test", { status: statusCode }));
-      global.fetch = mockFetch;
+      vi.stubGlobal("fetch", mockFetch);
 
       const result = await fetchWithTimeout("http://example.com", { timeoutMs: 5000 });
       expect(result.status).toBe(statusCode);
@@ -76,7 +85,7 @@ describe("fetchWithTimeout", () => {
 
   it("should propagate fetch errors", async () => {
     const mockFetch = vi.fn().mockRejectedValueOnce(new Error("Network error"));
-    global.fetch = mockFetch;
+    vi.stubGlobal("fetch", mockFetch);
 
     await expect(fetchWithTimeout("http://example.com", { timeoutMs: 5000 }))
       .rejects.toThrow("Network error");
@@ -85,7 +94,7 @@ describe("fetchWithTimeout", () => {
   it("should handle timeout abort errors", async () => {
     const timeoutError = new DOMException("The operation was aborted.", "AbortError");
     const mockFetch = vi.fn().mockRejectedValueOnce(timeoutError);
-    global.fetch = mockFetch;
+    vi.stubGlobal("fetch", mockFetch);
 
     await expect(fetchWithTimeout("http://example.com", { timeoutMs: 100 }))
       .rejects.toThrow();
@@ -94,7 +103,7 @@ describe("fetchWithTimeout", () => {
   it("should handle empty options", async () => {
     const mockResponse = new Response("success", { status: 200 });
     const mockFetch = vi.fn().mockResolvedValueOnce(mockResponse);
-    global.fetch = mockFetch;
+    vi.stubGlobal("fetch", mockFetch);
 
     const result = await fetchWithTimeout("http://example.com");
 
@@ -108,7 +117,7 @@ describe("fetchWithTimeout", () => {
       expect(options.signal).toBeDefined();
       return Promise.resolve(new Response("success", { status: 200 }));
     });
-    global.fetch = mockFetch;
+    vi.stubGlobal("fetch", mockFetch);
 
     await fetchWithTimeout("http://example.com", {
       timeoutMs: 5000,
