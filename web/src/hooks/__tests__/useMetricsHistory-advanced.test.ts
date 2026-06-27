@@ -455,4 +455,3 @@ describe('useMetricsHistory', () => {
     })
   })
 })
-})
