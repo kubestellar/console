@@ -25,7 +25,7 @@ export const gitopsDriftConfig: UnifiedCardConfig = {
     {
       id: 'drifted',
       icon: 'AlertTriangle',
-      color: 'yellow',
+      color: 'text-yellow-400',
       label: 'Drifted',
       bgColor: 'bg-yellow-500',
       valueSource: { type: 'count' },
@@ -65,7 +65,7 @@ export const gitopsDriftConfig: UnifiedCardConfig = {
     icon: 'GitMerge',
     title: 'No drift detected',
     message: 'All resources are in sync',
-    variant: 'success',
+    variant: 'neutral',
   },
 
   drillDown: {

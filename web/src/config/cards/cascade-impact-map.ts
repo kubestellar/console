@@ -10,7 +10,7 @@ export const cascadeImpactMapConfig: UnifiedCardConfig = {
   defaultWidth: 12,
   defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'useMultiClusterInsights' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'CascadeImpactMap' },
   emptyState: {
     icon: 'Workflow',
     title: 'No cascade patterns detected',

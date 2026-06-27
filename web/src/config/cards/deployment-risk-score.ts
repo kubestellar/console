@@ -38,7 +38,7 @@ export const deploymentRiskScoreConfig: UnifiedCardConfig = {
     icon: 'ShieldCheck',
     title: 'No deployment risk detected',
     message: 'Argo CD, Kyverno, and pod restart signals all clean.',
-    variant: 'success',
+    variant: 'neutral',
   },
 
   // Loading state

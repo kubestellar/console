@@ -14,7 +14,7 @@ export const recentFailuresConfig: UnifiedCardConfig = {
   defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'usePipelineFailures' },
   content: { type: 'custom', component: 'RecentFailures' },
-  emptyState: { icon: 'CheckCircle2', title: 'No recent failures', message: 'All workflows green', variant: 'success' },
+  emptyState: { icon: 'CheckCircle2', title: 'No recent failures', message: 'All workflows green', variant: 'neutral' },
   loadingState: { type: 'custom' },
   isDemoData: true,
   isLive: true,

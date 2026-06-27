@@ -13,7 +13,7 @@ export const drasiReactiveGraphConfig: UnifiedCardConfig = {
   defaultWidth: 12,
   defaultHeight: 8,
   dataSource: { type: 'hook', hook: 'useDrasiResources' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'DrasiReactiveGraph' },
   emptyState: { icon: 'GitBranch', title: 'No Drasi Pipelines', message: 'No Drasi sources, queries, or reactions found', variant: 'info' },
   loadingState: { type: 'custom' },
   isDemoData: false,

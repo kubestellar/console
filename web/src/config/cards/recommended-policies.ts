@@ -13,7 +13,7 @@ export const recommendedPoliciesConfig: UnifiedCardConfig = {
   defaultWidth: 6,
   defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'useRecommendedPolicies' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'RecommendedPolicies' },
   emptyState: { icon: 'Shield', title: 'No Compliance Tools', message: 'Install Kyverno, Kubescape, or Trivy to get recommendations', variant: 'info' },
   loadingState: { type: 'table', count: 4 },
   isDemoData: false,

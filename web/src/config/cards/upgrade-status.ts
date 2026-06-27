@@ -23,7 +23,7 @@ export const upgradeStatusConfig: UnifiedCardConfig = {
       { field: 'status', header: 'Status', render: 'status-badge', width: 80 },
     ],
   },
-  emptyState: { icon: 'ArrowUpCircle', title: 'All Current', message: 'All clusters are up to date', variant: 'success' },
+  emptyState: { icon: 'ArrowUpCircle', title: 'All Current', message: 'All clusters are up to date', variant: 'neutral' },
   loadingState: { type: 'list', rows: 4 },
   isDemoData: false,
   isLive: true,

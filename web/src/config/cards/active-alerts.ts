@@ -27,7 +27,7 @@ export const activeAlertsConfig: UnifiedCardConfig = {
     {
       id: 'critical',
       icon: 'AlertTriangle',
-      color: 'red',
+      color: 'text-red-400',
       label: 'Critical',
       bgColor: 'bg-red-500',
       valueSource: { type: 'count', filter: 'severity=critical' },
@@ -35,7 +35,7 @@ export const activeAlertsConfig: UnifiedCardConfig = {
     {
       id: 'warning',
       icon: 'AlertCircle',
-      color: 'yellow',
+      color: 'text-yellow-400',
       label: 'Warning',
       bgColor: 'bg-yellow-500',
       valueSource: { type: 'count', filter: 'severity=warning' },
@@ -70,7 +70,7 @@ export const activeAlertsConfig: UnifiedCardConfig = {
     icon: 'BellOff',
     title: 'No active alerts',
     message: 'All systems operating normally',
-    variant: 'success',
+    variant: 'neutral',
   },
 
   footer: {

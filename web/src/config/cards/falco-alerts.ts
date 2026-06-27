@@ -21,7 +21,7 @@ export const falcoAlertsConfig: UnifiedCardConfig = {
       { field: 'notice', label: 'Notice', color: 'blue' },
     ],
   },
-  emptyState: { icon: 'AlertTriangle', title: 'No Alerts', message: 'No Falco alerts', variant: 'success' },
+  emptyState: { icon: 'AlertTriangle', title: 'No Alerts', message: 'No Falco alerts', variant: 'neutral' },
   loadingState: { type: 'stats', count: 3 },
   isDemoData: true,
   isLive: false,

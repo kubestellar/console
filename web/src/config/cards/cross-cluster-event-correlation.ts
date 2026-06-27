@@ -10,7 +10,7 @@ export const crossClusterEventCorrelationConfig: UnifiedCardConfig = {
   defaultWidth: 12,
   defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'useMultiClusterInsights' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'CrossClusterEventCorrelation' },
   emptyState: {
     icon: 'Activity',
     title: 'No cross-cluster event correlations detected',

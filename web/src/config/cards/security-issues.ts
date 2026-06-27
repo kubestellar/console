@@ -72,7 +72,7 @@ export const securityIssuesConfig: UnifiedCardConfig = {
     icon: 'ShieldCheck',
     title: 'No security issues',
     message: 'All resources are secure',
-    variant: 'success',
+    variant: 'neutral',
   },
 
   drillDown: {

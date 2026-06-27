@@ -523,7 +523,7 @@ describe('EmptyState validation', () => {
 
       it('has valid variant if specified', () => {
         if (emptyState.variant !== undefined) {
-          expect(['info', 'warning', 'error', 'neutral']).toContain(emptyState.variant)
+          expect(['success', 'info', 'warning', 'neutral']).toContain(emptyState.variant)
         }
       })
     })

@@ -23,7 +23,7 @@ export const policyViolationsConfig: UnifiedCardConfig = {
       { field: 'timestamp', header: 'Time', render: 'relative-time', width: 80 },
     ],
   },
-  emptyState: { icon: 'AlertOctagon', title: 'No Violations', message: 'No policy violations found', variant: 'success' },
+  emptyState: { icon: 'AlertOctagon', title: 'No Violations', message: 'No policy violations found', variant: 'neutral' },
   loadingState: { type: 'list', rows: 5 },
   isDemoData: true,
   isLive: false,
