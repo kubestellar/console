@@ -39,10 +39,11 @@ vi.mock('../useGlobalFilters', () => ({
 
 // Stateful useCache mock — calls the real fetcher, tracks consecutive failures,
 // and exposes error/isFailed so the ArgoCD hook's fallback logic works correctly.
-vi.mock('../../lib/cache', () => {
+vi.mock('../../lib/cache', async (importOriginal) => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const React = require('react')
   const FAILURE_THRESHOLD = 3
+  const actual = await importOriginal<typeof import('../../lib/cache')>()
 
   const useCacheMock = ({
     fetcher,
@@ -105,6 +106,7 @@ vi.mock('../../lib/cache', () => {
   }
 
   return {
+    ...actual,
     useCache: useCacheMock,
     createCachedHook: ({ fetcher, initialData }: {
       fetcher: () => Promise<unknown>; initialData: unknown; [k: string]: unknown

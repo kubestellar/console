@@ -23,30 +23,17 @@ const {
 // Module mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('../lib/cache', () => ({
-  useCache: (...args: unknown[]) => mockUseCache(...args),
-  // createCachedHook is a factory that returns a React hook. Hooks that use it
-  // are re-exported through useCachedData.ts; this stub prevents load failures
-  // when the module is imported in tests that only mock useCache.
-  createCachedHook: (_config: unknown) => () => mockUseCache(_config),
-  CONSECUTIVE_FAILURE_THRESHOLD: 3,
-  REFRESH_RATES: {
-    realtime: 15_000,
-    pods: 30_000,
-    clusters: 60_000,
-    deployments: 60_000,
-    services: 60_000,
-    metrics: 45_000,
-    gpu: 45_000,
-    helm: 120_000,
-    gitops: 120_000,
-    namespaces: 180_000,
-    rbac: 300_000,
-    operators: 300_000,
-    costs: 600_000,
-    default: 120_000,
-  },
-}))
+vi.mock('../lib/cache', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/cache')>()
+  return {
+    ...actual,
+    useCache: (...args: unknown[]) => mockUseCache(...args),
+    // createCachedHook is a factory that returns a React hook. Hooks that use it
+    // are re-exported through useCachedData.ts; this stub prevents load failures
+    // when the module is imported in tests that only mock useCache.
+    createCachedHook: (_config: unknown) => () => mockUseCache(_config),
+  }
+})
 
 vi.mock('../lib/api', () => ({
   isBackendUnavailable: () => mockIsBackendUnavailable(),
