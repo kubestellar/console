@@ -841,6 +841,9 @@ func buildLLMContext(state *OperationalState, memories []store.StellarMemoryEntr
 	if len(state.RecentEvents) > 0 {
 		sb.WriteString("\nRecent warning events:\n")
 		for _, event := range state.RecentEvents {
+			if event.LastSeen == "" {
+				continue
+			}
 			eventTime, _ := time.Parse(time.RFC3339, event.LastSeen)
 			age := "unknown"
 			if !eventTime.IsZero() {

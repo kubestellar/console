@@ -294,6 +294,7 @@ func TestSQLiteStore_SetUserOnboarded(t *testing.T) {
 
 	got, err := s.GetUser(ctx, user.ID)
 	require.NoError(t, err)
+	require.NotNil(t, got, "GetUser returned nil")
 	assert.True(t, got.Onboarded)
 }
 
