@@ -454,4 +454,3 @@ describe('useMetricsHistory', () => {
       // re-rendering, but this ensures no errors from stale callbacks
     })
   })
-})

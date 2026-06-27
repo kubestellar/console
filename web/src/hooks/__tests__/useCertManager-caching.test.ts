@@ -616,4 +616,3 @@ describe('useCertManager', () => {
       expect(result.current.certificates[0].dnsNames).toEqual([])
     })
   })
-})

@@ -29,9 +29,8 @@ const mockFetchLLMdModels = vi.fn()
 const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }> }))
 
 vi.mock('../../lib/cache', () => ({
-    createCachedHook: vi.fn(),
-  useCache: (...args: unknown[]) => mockUseCache(...args),
   createCachedHook: (_config: unknown) => () => mockUseCache(_config),
+  useCache: (...args: unknown[]) => mockUseCache(...args),
   REFRESH_RATES: {
     realtime: 15_000, pods: 30_000, clusters: 60_000,
     deployments: 60_000, services: 60_000, metrics: 45_000,
@@ -42,7 +41,6 @@ vi.mock('../../lib/cache', () => ({
 }))
 
 vi.mock('../../lib/api', () => ({
-    createCachedHook: vi.fn(),
   isBackendUnavailable: () => mockIsBackendUnavailable(),
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),
 }))
@@ -380,4 +378,3 @@ describe('useCachedData', () => {
       await expect(fetcher()).rejects.toThrow('No data source available')
     })
   })
-})
