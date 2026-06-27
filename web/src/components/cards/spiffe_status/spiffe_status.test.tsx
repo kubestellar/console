@@ -36,7 +36,7 @@ function setup(overrides?: Record<string, unknown>) {
     },
     isLoading: false,
     isRefreshing: false,
-    isDemoData: false,
+    isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: Date.now(),
