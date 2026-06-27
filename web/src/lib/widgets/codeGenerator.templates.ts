@@ -6,13 +6,1058 @@
 import { WIDGET_CARDS, WIDGET_STATS, WIDGET_TEMPLATES } from './widgetRegistry'
 import { generateWidgetStyles, generateWidgetShell } from './styleConverter'
 import { resolveWidgetEndpoint, generateWidgetCommand } from './codeGenerator.utils'
-import { generateCardRenderFunction } from './templates/cardRenderFunction'
 
-export * from './templates/shared'
-export * from './templates/clusterCards'
-export * from './templates/infrastructureCards'
-export * from './templates/cicdCards'
-export * from './templates/cardRenderFunction'
+// Generate render function for specific card type
+export function generateCardRenderFunction(cardType: string, displayName?: string): string {
+  const card = WIDGET_CARDS[cardType]
+  const title = displayName || card?.displayName || cardType
+
+  // All render functions use ({ output }) pattern — Übersicht passes curl stdout as output string
+  const parseBlock = `
+  let data = null;
+  let error = null;
+  try {
+    const trimmed = (output || '').trim();
+    if (!trimmed) {
+      error = 'No response';
+    } else if (trimmed.startsWith('<!') || trimmed.startsWith('<html')) {
+      error = 'Endpoint not available';
+    } else if (trimmed.includes('"error"')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        error = parsed.error || 'Load failed';
+      } catch {
+        error = 'Load failed';
+      }
+    } else {
+      data = JSON.parse(trimmed);
+    }
+  } catch (e) {
+    error = 'Parse error';
+  }
+
+  const containerStyle = {
+    ...styles.card,
+    position: 'absolute',
+    top: widgetPosition.top + 'px',
+    left: widgetPosition.left + 'px',
+    pointerEvents: 'auto',
+  };`
+
+  // Wrap card content in the draggable container
+  const wrapOpen = `
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div className="widget-container" style={containerStyle}>
+        <div className="drag-handle" style={styles.dragHandle} onMouseDown={handleDragStart} title="Drag to move">
+          <span style={styles.dragIndicator}>⋮⋮</span>
+        </div>`
+
+  const wrapClose = `
+      </div>
+    </div>
+  );`
+
+  const issueButton = `
+        <div style={{marginTop: '8px'}}><button style={styles.issueBtn} onClick={() => openIssue(error)}>Report Issue</button></div>`
+
+  switch (cardType) {
+    case 'cluster_health':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}>
+          <span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />
+          ${card.displayName}
+        </div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const clusters = data?.clusters || [];
+  const healthy = clusters.filter(c => c.healthy !== false).length;
+  const unhealthy = clusters.length - healthy;
+${wrapOpen}
+        <div style={styles.cardTitle}>
+          <span style={{...styles.statusDot, backgroundColor: unhealthy > 0 ? styles.colors.warning : styles.colors.healthy}} />
+          ${card.displayName}
+        </div>
+        <div style={styles.row}>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.healthy}\`}}>
+            <span style={{...styles.statValue, color: styles.colors.healthy}}>{healthy}</span>
+            <span style={styles.statLabel}>Healthy</span>
+          </div>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.error}\`}}>
+            <span style={{...styles.statValue, color: unhealthy > 0 ? styles.colors.error : styles.colors.info}}>{unhealthy}</span>
+            <span style={styles.statLabel}>Unhealthy</span>
+          </div>
+        </div>${wrapClose}
+};`
+
+    case 'pod_issues':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}>
+          <span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />
+          ${card.displayName}
+        </div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const rawIssues = data?.issues || data || [];
+  const issues = Array.isArray(rawIssues) ? rawIssues : [];
+  const crashLoop = issues.filter(i => i.reason === 'CrashLoopBackOff').length;
+  const oomKilled = issues.filter(i => i.reason === 'OOMKilled').length;
+  const other = issues.length - crashLoop - oomKilled;
+${wrapOpen}
+        <div style={styles.cardTitle}>
+          <span style={{...styles.statusDot, backgroundColor: issues.length > 0 ? styles.colors.warning : styles.colors.healthy}} />
+          ${card.displayName}
+        </div>
+        <div style={{fontSize: '12px', color: '#9ca3af', marginBottom: '8px'}}>
+          {issues.length} total issues
+        </div>
+        <div style={styles.column}>
+          {crashLoop > 0 && (
+            <div style={{...styles.row, padding: '4px 8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '4px'}}>
+              <span style={{color: styles.colors.error, fontWeight: 600}}>{crashLoop}</span>
+              <span style={{color: '#9ca3af', fontSize: '12px'}}>CrashLoopBackOff</span>
+            </div>
+          )}
+          {oomKilled > 0 && (
+            <div style={{...styles.row, padding: '4px 8px', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderRadius: '4px'}}>
+              <span style={{color: styles.colors.warning, fontWeight: 600}}>{oomKilled}</span>
+              <span style={{color: '#9ca3af', fontSize: '12px'}}>OOMKilled</span>
+            </div>
+          )}
+          {other > 0 && (
+            <div style={{...styles.row, padding: '4px 8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderRadius: '4px'}}>
+              <span style={{color: styles.colors.info, fontWeight: 600}}>{other}</span>
+              <span style={{color: '#9ca3af', fontSize: '12px'}}>Other</span>
+            </div>
+          )}
+          {issues.length === 0 && (
+            <div style={{color: styles.colors.healthy, fontSize: '14px'}}>No issues detected</div>
+          )}
+        </div>${wrapClose}
+};`
+
+    case 'nightly_e2e_status':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}>
+          <span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />
+          Nightly E2E Status
+        </div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const guides = data?.guides || [];
+  const platforms = ['OCP', 'GKE', 'CKS'];
+  const platformColors = { OCP: '#f97316', GKE: '#3b82f6', CKS: '#a855f7' };
+  const conclusionColors = { success: '#22c55e', failure: '#ef4444', cancelled: '#6b7280', skipped: '#6b7280' };
+  const totalGuides = guides.length;
+  const failing = guides.filter(g => g.latestConclusion === 'failure').length;
+  const allRuns = guides.flatMap(g => g.runs || []);
+  const completedRuns = allRuns.filter(r => r.status === 'completed');
+  const passedRuns = completedRuns.filter(r => r.conclusion === 'success');
+  const passRate = completedRuns.length > 0 ? Math.round((passedRuns.length / completedRuns.length) * 100) : 0;
+${wrapOpen}
+        <div style={styles.cardTitle}>
+          <span style={{...styles.statusDot, backgroundColor: failing > 0 ? '#ef4444' : '#22c55e'}} />
+          Nightly E2E Status
+        </div>
+        <div style={{display: 'flex', gap: '16px', marginBottom: '8px'}}>
+          <div>
+            <div style={{fontSize: '20px', fontWeight: 700, color: '#a855f7'}}>{passRate}%</div>
+            <div style={{fontSize: '10px', color: '#9ca3af'}}>Pass Rate</div>
+          </div>
+          <div>
+            <div style={{fontSize: '20px', fontWeight: 700}}>{totalGuides}</div>
+            <div style={{fontSize: '10px', color: '#9ca3af'}}>Guides</div>
+          </div>
+          <div>
+            <div style={{fontSize: '20px', fontWeight: 700, color: failing > 0 ? '#ef4444' : '#22c55e'}}>{failing}</div>
+            <div style={{fontSize: '10px', color: '#9ca3af'}}>Failing</div>
+          </div>
+        </div>
+        {platforms.map(platform => {
+          const platGuides = guides.filter(g => g.platform === platform);
+          if (platGuides.length === 0) return null;
+          return (
+            <div key={platform} style={{marginBottom: '8px'}}>
+              <div style={{color: platformColors[platform], fontWeight: 600, fontSize: '10px', marginBottom: '4px'}}>{platform}</div>
+              {platGuides.map(g => {
+                const workflowUrl = 'https://github.com/' + g.repo + '/actions/workflows/' + g.workflowFile;
+                const runs = (g.runs || []).slice(0, 7);
+                const completed = runs.filter(r => r.status === 'completed');
+                const passed = completed.filter(r => r.conclusion === 'success').length;
+                const failedAll = completed.filter(r => r.conclusion === 'failure');
+                const gpuFails = failedAll.filter(r => r.failureReason === 'gpu_unavailable').length;
+                const failed = failedAll.length;
+                const lastRun = runs[0];
+                const timeAgo = (ts) => {
+                  if (!ts) return '';
+                  const ms = Date.now() - new Date(ts).getTime();
+                  const h = Math.floor(ms / 3600000);
+                  if (h < 1) return Math.floor(ms / 60000) + 'm ago';
+                  if (h < 24) return h + 'h ago';
+                  return Math.floor(h / 24) + 'd ago';
+                };
+                const tooltip = g.guide + ' (' + platform + ')\\\\n' +
+                  'Pass rate: ' + g.passRate + '% (' + passed + '/' + completed.length + ')\\\\n' +
+                  (failed > 0 ? 'Failed: ' + failed + '\\\\n' : '') +
+                  (lastRun ? 'Last run: ' + (lastRun.conclusion || lastRun.status) + ' ' + timeAgo(lastRun.updatedAt || lastRun.createdAt) : '');
+                return (
+                <div key={g.guide + g.platform} style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px'}}>
+                  <span className="tip-wrap" style={{width: '28px', fontSize: '10px', fontWeight: 600, color: '#94a3b8', cursor: 'pointer'}} onClick={() => run(\`open "\${workflowUrl}"\`)}>
+                    <span className="tip">{tooltip}</span>
+                    {g.acronym}
+                  </span>
+                  <span className="spark-tip-wrap" style={{width: '90px', cursor: 'default'}}>
+                    <span className="spark-tip">
+                      <div style={{fontWeight: 600, color: '#f1f5f9', marginBottom: 3}}>{g.guide}</div>
+                      <div style={{color: platformColors[platform], fontSize: '8px', marginBottom: 4}}>{platform}</div>
+                      <div style={{marginBottom: 2}}>Pass rate: <span style={{color: g.passRate >= 80 ? '#22c55e' : g.passRate >= 50 ? '#eab308' : '#ef4444', fontWeight: 600}}>{g.passRate}%</span> ({passed}/{completed.length})</div>
+                      {failed > 0 && <div style={{marginBottom: 2}}>
+                        <span style={{color: '#ef4444'}}>Failed: {failed - gpuFails}</span>
+                        {gpuFails > 0 && <span style={{color: '#f59e0b', marginLeft: 6}}>GPU: {gpuFails}</span>}
+                      </div>}
+                      {lastRun && <div style={{marginBottom: 4}}>Last: {lastRun.conclusion || lastRun.status} {timeAgo(lastRun.updatedAt || lastRun.createdAt)}</div>}
+                      {runs.length > 1 && (() => {
+                        const sw = 150, sh = 28, sp = 10;
+                        const pts = runs.map((rr, ii) => {
+                          const isGpuFail = rr.conclusion === 'failure' && rr.failureReason === 'gpu_unavailable';
+                          return {
+                            x: sp + (runs.length > 1 ? ii * (sw - 2 * sp) / (runs.length - 1) : sw / 2),
+                            y: rr.conclusion === 'success' ? 6 : rr.conclusion === 'failure' ? 22 : 14,
+                            c: rr.status !== 'completed' ? '#60a5fa' : rr.conclusion === 'success' ? '#22c55e' : isGpuFail ? '#f59e0b' : rr.conclusion === 'failure' ? '#ef4444' : '#6b7280',
+                          };
+                        });
+                        return (
+                          <svg width={sw} height={sh} style={{display: 'block'}}>
+                            <polyline points={pts.map(p => p.x + ',' + p.y).join(' ')} fill="none" stroke="#334155" strokeWidth="1.5" strokeLinejoin="round" />
+                            {pts.map((p, pi) => <circle key={pi} cx={p.x} cy={p.y} r={3} fill={p.c} />)}
+                            <text x={sp} y={sh} textAnchor="start" fontSize="6" fill="#475569">new</text>
+                            <text x={sw - sp} y={sh} textAnchor="end" fontSize="6" fill="#475569">old</text>
+                          </svg>
+                        );
+                      })()}
+                      {runs.length === 1 && <div style={{fontSize: '8px', color: '#64748b'}}>Only 1 run — no trend yet</div>}
+                      {g.llmdImages && Object.keys(g.llmdImages).length > 0 && (
+                        <div style={{marginTop: 4, paddingTop: 4, borderTop: '1px solid #334155'}}>
+                          <div style={{fontSize: '8px', fontWeight: 600, color: '#64748b', marginBottom: 2}}>llm-d components</div>
+                          {Object.entries(g.llmdImages).map(([name, tag]) => (
+                            <div key={name} style={{display: 'flex', gap: 4, whiteSpace: 'nowrap'}}>
+                              <span style={{color: '#94a3b8'}}>{name}</span>
+                              <span style={{color: '#22d3ee', fontFamily: 'monospace'}}>:{String(tag)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {g.otherImages && Object.keys(g.otherImages).length > 0 && (
+                        <div style={{marginTop: 4, paddingTop: 4, borderTop: '1px solid #334155'}}>
+                          <div style={{fontSize: '8px', fontWeight: 600, color: '#64748b', marginBottom: 2}}>other images</div>
+                          {Object.entries(g.otherImages).map(([name, tag]) => (
+                            <div key={name} style={{display: 'flex', gap: 4, whiteSpace: 'nowrap'}}>
+                              <span style={{color: '#94a3b8'}}>{name}</span>
+                              <span style={{color: '#fb923c', fontFamily: 'monospace'}}>:{String(tag)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </span>
+                    <span style={{fontSize: '10px', color: '#cbd5e1', display: 'inline-block', width: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{g.guide}</span>
+                  </span>
+                  <div style={{display: 'flex', gap: '2px', alignItems: 'center'}}>
+                    {runs.map((r, i) => {
+                      const isGpu = r.conclusion === 'failure' && r.failureReason === 'gpu_unavailable';
+                      const isFailed = r.conclusion === 'failure';
+                      const isRunning = r.status !== 'completed';
+                      const statusColor = isRunning ? '#60a5fa' : r.conclusion === 'success' ? '#22c55e' : isGpu ? '#f59e0b' : isFailed ? '#ef4444' : '#94a3b8';
+                      const statusText = isRunning ? 'running' : isGpu ? 'GPU unavailable' : isFailed ? 'failed' : r.conclusion === 'success' ? 'passed' : (r.conclusion || r.status);
+                      const dotColor = isRunning ? '#60a5fa' : isGpu ? '#f59e0b' : (conclusionColors[r.conclusion] || '#6b7280');
+                      const dotLLMD = r.llmdImages || g.llmdImages;
+                      const dotOther = r.otherImages || g.otherImages;
+                      const hasLLMD = dotLLMD && Object.keys(dotLLMD).length > 0;
+                      const hasOther = dotOther && Object.keys(dotOther).length > 0;
+                      return (
+                      <span key={i} className={'dot-tip-wrap' + ((isFailed || hasLLMD) ? ' has-links' : '')} onClick={() => r.htmlUrl && run(\`open "\${r.htmlUrl}"\`)}>
+                        <span className="tip">
+                          <div style={{color: '#cbd5e1', marginBottom: hasLLMD || hasOther ? 3 : 0}}>
+                            {r.runNumber ? 'Run #' + r.runNumber + ' · ' : ''}
+                            <span style={{color: statusColor}}>{statusText}</span>
+                            {' · '}{timeAgo(r.updatedAt || r.createdAt)}
+                          </div>
+                          {hasLLMD && (
+                            <div style={{borderTop: '1px solid #334155', paddingTop: 3, marginTop: 2}}>
+                              <div style={{fontSize: '8px', fontWeight: 600, color: '#64748b', marginBottom: 1}}>llm-d components</div>
+                              {Object.entries(dotLLMD).map(([name, tag]) => (
+                                <div key={name} style={{display: 'flex', gap: 4}}>
+                                  <span style={{color: '#94a3b8'}}>{name}</span>
+                                  <span style={{color: '#22d3ee', fontFamily: 'monospace'}}>:{String(tag)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {hasOther && (
+                            <div style={{borderTop: '1px solid #334155', paddingTop: 3, marginTop: 2}}>
+                              <div style={{fontSize: '8px', fontWeight: 600, color: '#64748b', marginBottom: 1}}>other images</div>
+                              {Object.entries(dotOther).map(([name, tag]) => (
+                                <div key={name} style={{display: 'flex', gap: 4}}>
+                                  <span style={{color: '#94a3b8'}}>{name}</span>
+                                  <span style={{color: '#fb923c', fontFamily: 'monospace'}}>:{String(tag)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {r.htmlUrl && <div style={{borderTop: '1px solid #334155', paddingTop: 3, marginTop: 2}}><a href={r.htmlUrl + '#logs'} onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}#logs"\`); }} style={{color: '#60a5fa', fontSize: '9px'}}>View Logs</a></div>}
+                        </span>
+                        <span style={{
+                          width: 7, height: 7, borderRadius: '50%', display: 'inline-block', cursor: 'pointer',
+                          backgroundColor: dotColor,
+                          animation: r.status !== 'completed' ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
+                        }} />
+                      </span>
+                    )})}
+                    {runs.length === 0 && <span style={{color: '#4b5563', fontSize: '9px'}}>no runs</span>}
+                  </div>
+                  <span style={{fontSize: '9px', color: '#9ca3af', marginLeft: 'auto'}}>{g.passRate}%</span>
+                </div>
+                );
+              })}
+            </div>
+          );
+        })}${wrapClose}
+};`
+
+    case 'gpu_overview':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}>
+          <span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />
+          ${card.displayName}
+        </div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const rawNodes = data?.nodes || data || [];
+  const nodes = Array.isArray(rawNodes) ? rawNodes : [];
+  const totalGPUs = nodes.reduce((sum, n) => sum + (n.gpuCount || 0), 0);
+  const allocatedGPUs = nodes.reduce((sum, n) => sum + (n.gpuAllocated || 0), 0);
+  const utilization = totalGPUs > 0 ? Math.round((allocatedGPUs / totalGPUs) * 100) : 0;
+${wrapOpen}
+        <div style={styles.cardTitle}>
+          <span style={{...styles.statusDot, backgroundColor: styles.colors.purple}} />
+          ${card.displayName}
+        </div>
+        <div style={{textAlign: 'center', marginBottom: '12px'}}>
+          <div style={{fontSize: '32px', fontWeight: 700, color: styles.colors.purple}}>{utilization}%</div>
+          <div style={{fontSize: '12px', color: '#9ca3af'}}>Utilization</div>
+        </div>
+        <div style={styles.row}>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{totalGPUs}</span>
+            <span style={styles.statLabel}>Total</span>
+          </div>
+          <div style={styles.statBlock}>
+            <span style={{...styles.statValue, color: styles.colors.purple}}>{allocatedGPUs}</span>
+            <span style={styles.statLabel}>Allocated</span>
+          </div>
+        </div>${wrapClose}
+};`
+
+    case 'cluster_metrics':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Cluster Metrics</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const clusters = data?.clusters || [];
+  const totalNodes = clusters.reduce((s, c) => s + (c.nodeCount || 0), 0);
+  const totalPods = clusters.reduce((s, c) => s + (c.podCount || 0), 0);
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />Cluster Metrics</div>
+        <div style={styles.row}>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{clusters.length}</span>
+            <span style={styles.statLabel}>Clusters</span>
+          </div>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{totalNodes}</span>
+            <span style={styles.statLabel}>Nodes</span>
+          </div>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{totalPods}</span>
+            <span style={styles.statLabel}>Pods</span>
+          </div>
+        </div>${wrapClose}
+};`
+
+    case 'workload_status':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Workload Status</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const workloads = data?.workloads || [];
+  const running = workloads.filter(w => w.status === 'Running' || w.readyReplicas > 0).length;
+  const degraded = workloads.length - running;
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: degraded > 0 ? styles.colors.warning : styles.colors.healthy}} />Workload Status</div>
+        <div style={styles.row}>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.healthy}\`}}>
+            <span style={{...styles.statValue, color: styles.colors.healthy}}>{running}</span>
+            <span style={styles.statLabel}>Running</span>
+          </div>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.error}\`}}>
+            <span style={{...styles.statValue, color: degraded > 0 ? styles.colors.error : styles.colors.info}}>{degraded}</span>
+            <span style={styles.statLabel}>Degraded</span>
+          </div>
+        </div>
+        <div style={{fontSize: '11px', color: '#9ca3af', marginTop: '4px'}}>{workloads.length} total workloads</div>${wrapClose}
+};`
+
+    case 'security_issues':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Security Issues</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const issues = data?.issues || [];
+  const high = issues.filter(i => i.severity === 'high' || i.severity === 'critical').length;
+  const medium = issues.filter(i => i.severity === 'medium').length;
+  const low = issues.filter(i => i.severity === 'low').length;
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: high > 0 ? styles.colors.error : styles.colors.healthy}} />Security Issues</div>
+        <div style={{fontSize: '12px', color: '#9ca3af', marginBottom: '8px'}}>{issues.length} total</div>
+        <div style={styles.column}>
+          {high > 0 && <div style={{...styles.row, padding: '4px 8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '4px'}}>
+            <span style={{color: styles.colors.error, fontWeight: 600}}>{high}</span>
+            <span style={{color: '#9ca3af', fontSize: '12px'}}>High/Critical</span>
+          </div>}
+          {medium > 0 && <div style={{...styles.row, padding: '4px 8px', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderRadius: '4px'}}>
+            <span style={{color: styles.colors.warning, fontWeight: 600}}>{medium}</span>
+            <span style={{color: '#9ca3af', fontSize: '12px'}}>Medium</span>
+          </div>}
+          {low > 0 && <div style={{...styles.row, padding: '4px 8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderRadius: '4px'}}>
+            <span style={{color: styles.colors.info, fontWeight: 600}}>{low}</span>
+            <span style={{color: '#9ca3af', fontSize: '12px'}}>Low</span>
+          </div>}
+          {issues.length === 0 && <div style={{color: styles.colors.healthy, fontSize: '14px'}}>No issues found</div>}
+        </div>${wrapClose}
+};`
+
+    case 'app_status':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Application Status</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const workloads = data?.workloads || [];
+  const running = workloads.filter(w => w.status === 'Running').length;
+  const total = workloads.length;
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: running === total && total > 0 ? styles.colors.healthy : styles.colors.warning}} />Application Status</div>
+        <div style={styles.row}>
+          <div style={styles.statBlock}>
+            <span style={{...styles.statValue, color: styles.colors.healthy}}>{running}</span>
+            <span style={styles.statLabel}>Running</span>
+          </div>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{total}</span>
+            <span style={styles.statLabel}>Total</span>
+          </div>
+        </div>${wrapClose}
+};`
+
+    case 'top_pods':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Top Pods</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const pods = (data?.pods || []).slice(0, 8);
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />Top Pods</div>
+        <div style={styles.column}>
+          {pods.map((p, i) => (
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+              <span style={{color: '#e2e8f0', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{p.name}</span>
+              <span style={{color: p.status === 'Running' ? styles.colors.healthy : styles.colors.warning, fontSize: '10px'}}>{p.status}</span>
+            </div>
+          ))}
+          {pods.length === 0 && <div style={{color: '#9ca3af', fontSize: '12px'}}>No pods found</div>}
+        </div>${wrapClose}
+};`
+
+    case 'console_ai_offline_detection':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />AI Node Offline Detection</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const nodes = data?.nodes || [];
+  const offline = nodes.filter(n => n.status !== 'Ready').length;
+  const online = nodes.length - offline;
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: offline > 0 ? styles.colors.error : styles.colors.healthy}} />AI Node Offline Detection</div>
+        <div style={styles.row}>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.healthy}\`}}>
+            <span style={{...styles.statValue, color: styles.colors.healthy}}>{online}</span>
+            <span style={styles.statLabel}>Online</span>
+          </div>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.error}\`}}>
+            <span style={{...styles.statValue, color: offline > 0 ? styles.colors.error : styles.colors.info}}>{offline}</span>
+            <span style={styles.statLabel}>Offline</span>
+          </div>
+        </div>${wrapClose}
+};`
+
+    case 'console_ai_health_check':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />AI Health Check</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const clusters = data?.clusters || [];
+  const healthy = clusters.filter(c => c.healthy !== false).length;
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: healthy === clusters.length && clusters.length > 0 ? styles.colors.healthy : styles.colors.warning}} />AI Health Check</div>
+        <div style={styles.row}>
+          <div style={styles.statBlock}>
+            <span style={{...styles.statValue, color: styles.colors.healthy}}>{healthy}</span>
+            <span style={styles.statLabel}>Healthy</span>
+          </div>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{clusters.length}</span>
+            <span style={styles.statLabel}>Total</span>
+          </div>
+        </div>${wrapClose}
+};`
+
+    case 'namespace_overview':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Namespace Overview</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const namespaces = data?.namespaces || [];
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />Namespace Overview</div>
+        <div style={{textAlign: 'center', marginBottom: '8px'}}>
+          <div style={{fontSize: '28px', fontWeight: 700}}>{namespaces.length}</div>
+          <div style={{fontSize: '12px', color: '#9ca3af'}}>Namespaces</div>
+        </div>${wrapClose}
+};`
+
+    case 'event_summary':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Event Summary</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const events = data?.events || [];
+  const warnings = events.filter(e => e.type === 'Warning').length;
+  const normal = events.filter(e => e.type === 'Normal').length;
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: warnings > 0 ? styles.colors.warning : styles.colors.healthy}} />Event Summary</div>
+        <div style={styles.row}>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.healthy}\`}}>
+            <span style={{...styles.statValue, color: styles.colors.healthy}}>{normal}</span>
+            <span style={styles.statLabel}>Normal</span>
+          </div>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.warning}\`}}>
+            <span style={{...styles.statValue, color: warnings > 0 ? styles.colors.warning : styles.colors.info}}>{warnings}</span>
+            <span style={styles.statLabel}>Warning</span>
+          </div>
+        </div>
+        <div style={{fontSize: '11px', color: '#9ca3af', marginTop: '4px'}}>{events.length} total events</div>${wrapClose}
+};`
+
+    case 'warning_events':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Warning Events</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const events = (data?.events || []).slice(0, 6);
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: events.length > 0 ? styles.colors.warning : styles.colors.healthy}} />Warning Events</div>
+        <div style={styles.column}>
+          {events.map((ev, i) => (
+            <div key={i} style={{fontSize: '11px', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+              <div style={{color: styles.colors.warning, fontWeight: 600}}>{ev.reason}</div>
+              <div style={{color: '#9ca3af', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '230px'}}>{ev.message}</div>
+            </div>
+          ))}
+          {events.length === 0 && <div style={{color: styles.colors.healthy, fontSize: '14px'}}>No warnings</div>}
+        </div>${wrapClose}
+};`
+
+    case 'storage_overview':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Storage Overview</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const pvcs = data?.pvcs || [];
+  const bound = pvcs.filter(p => p.status === 'Bound').length;
+  const pending = pvcs.length - bound;
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: pending > 0 ? styles.colors.warning : styles.colors.healthy}} />Storage Overview</div>
+        <div style={styles.row}>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.healthy}\`}}>
+            <span style={{...styles.statValue, color: styles.colors.healthy}}>{bound}</span>
+            <span style={styles.statLabel}>Bound</span>
+          </div>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.warning}\`}}>
+            <span style={{...styles.statValue, color: pending > 0 ? styles.colors.warning : styles.colors.info}}>{pending}</span>
+            <span style={styles.statLabel}>Pending</span>
+          </div>
+        </div>
+        <div style={{fontSize: '11px', color: '#9ca3af', marginTop: '4px'}}>{pvcs.length} PVCs</div>${wrapClose}
+};`
+
+    case 'pvc_status':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />PVC Status</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const pvcs = (data?.pvcs || []).slice(0, 6);
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />PVC Status</div>
+        <div style={styles.column}>
+          {pvcs.map((p, i) => (
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+              <span style={{color: '#e2e8f0', maxWidth: '55%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{p.name}</span>
+              <span style={{color: p.status === 'Bound' ? styles.colors.healthy : styles.colors.warning, fontSize: '10px'}}>{p.status} {p.capacity}</span>
+            </div>
+          ))}
+          {pvcs.length === 0 && <div style={{color: '#9ca3af', fontSize: '12px'}}>No PVCs found</div>}
+        </div>${wrapClose}
+};`
+
+    case 'network_overview':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Network Overview</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const policies = data?.networkpolicies || [];
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />Network Overview</div>
+        <div style={{textAlign: 'center', marginBottom: '8px'}}>
+          <div style={{fontSize: '28px', fontWeight: 700}}>{policies.length}</div>
+          <div style={{fontSize: '12px', color: '#9ca3af'}}>Network Policies</div>
+        </div>
+        <div style={styles.column}>
+          {policies.slice(0, 4).map((p, i) => (
+            <div key={i} style={{fontSize: '11px', padding: '2px 0', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+              {p.name} <span style={{color: '#64748b'}}>({p.cluster})</span>
+            </div>
+          ))}
+        </div>${wrapClose}
+};`
+
+    case 'service_status':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Service Status</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const services = data?.services || [];
+  const clusterCounts = data?.clusterCounts || [];
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />Service Status</div>
+        <div style={{textAlign: 'center', marginBottom: '8px'}}>
+          <div style={{fontSize: '28px', fontWeight: 700}}>{services.length}</div>
+          <div style={{fontSize: '12px', color: '#9ca3af'}}>Services</div>
+        </div>
+        <div style={styles.column}>
+          {clusterCounts.slice(0, 4).map((cc, i) => (
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '2px 0'}}>
+              <span style={{color: '#94a3b8'}}>{cc.cluster}</span>
+              <span style={{color: '#e2e8f0', fontWeight: 600}}>{cc.services}</span>
+            </div>
+          ))}
+        </div>${wrapClose}
+};`
+
+    case 'operator_status':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Operator Status</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const operators = data?.operators || [];
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />Operator Status</div>
+        <div style={styles.column}>
+          {operators.slice(0, 6).map((op, i) => (
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+              <span style={{color: '#e2e8f0', maxWidth: '55%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{op.displayName || op.name}</span>
+              <span style={{color: '#9ca3af', fontSize: '10px'}}>{op.version}</span>
+            </div>
+          ))}
+          {operators.length === 0 && <div style={{color: '#9ca3af', fontSize: '12px'}}>No operators found</div>}
+        </div>
+        <div style={{fontSize: '11px', color: '#9ca3af', marginTop: '4px'}}>{operators.length} operators</div>${wrapClose}
+};`
+
+    case 'opencost_overview':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />OpenCost Overview</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const costs = data?.costs || data || {};
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />OpenCost Overview</div>
+        <div style={{fontSize: '12px', color: '#9ca3af'}}>Cost data from cluster</div>
+        <pre style={{fontSize: '10px', color: '#94a3b8', overflow: 'auto', maxHeight: '80px', margin: '8px 0 0 0'}}>
+          {JSON.stringify(costs, null, 2)}
+        </pre>${wrapClose}
+};`
+
+    case 'active_alerts':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Active Alerts</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const alerts = data?.events || data?.alerts || [];
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: alerts.length > 0 ? styles.colors.warning : styles.colors.healthy}} />Active Alerts</div>
+        <div style={{textAlign: 'center', marginBottom: '8px'}}>
+          <div style={{fontSize: '28px', fontWeight: 700, color: alerts.length > 0 ? styles.colors.warning : styles.colors.healthy}}>{alerts.length}</div>
+          <div style={{fontSize: '12px', color: '#9ca3af'}}>Warning Events</div>
+        </div>
+        <div style={styles.column}>
+          {alerts.slice(0, 4).map((a, i) => (
+            <div key={i} style={{fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+              <div style={{color: styles.colors.warning, fontWeight: 600}}>{a.reason}</div>
+              <div style={{color: '#9ca3af', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px'}}>{a.message}</div>
+            </div>
+          ))}
+          {alerts.length === 0 && <div style={{color: styles.colors.healthy}}>No active alerts</div>}
+        </div>${wrapClose}
+};`
+
+    case 'helm_releases':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Helm Releases</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const releases = data?.releases || [];
+  const deployed = releases.filter(r => r.status === 'deployed').length;
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />Helm Releases</div>
+        <div style={styles.column}>
+          {releases.slice(0, 6).map((r, i) => (
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+              <span style={{color: '#e2e8f0', maxWidth: '50%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{r.name}</span>
+              <span style={{color: r.status === 'deployed' ? styles.colors.healthy : styles.colors.warning, fontSize: '10px'}}>{r.status} {r.app_version || ''}</span>
+            </div>
+          ))}
+          {releases.length === 0 && <div style={{color: '#9ca3af', fontSize: '12px'}}>No releases found</div>}
+        </div>
+        <div style={{fontSize: '11px', color: '#9ca3af', marginTop: '4px'}}>{deployed}/{releases.length} deployed</div>${wrapClose}
+};`
+
+    case 'provider_health':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Provider Health</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const providers = data?.providers || [];
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />Provider Health</div>
+        <div style={styles.column}>
+          {providers.map((p, i) => (
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '3px 0'}}>
+              <span style={{color: '#e2e8f0'}}>{p.name}</span>
+              <span style={{color: p.healthy ? styles.colors.healthy : styles.colors.error}}>{p.healthy ? 'Healthy' : 'Unhealthy'}</span>
+            </div>
+          ))}
+          {providers.length === 0 && <div style={{color: '#9ca3af', fontSize: '12px'}}>No provider data</div>}
+        </div>${wrapClose}
+};`
+
+    case 'nightly_release_pulse':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Nightly Release Pulse</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const repos = data?.repos || [];
+  const runs = data?.runs || [];
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.purple}} />Nightly Release Pulse</div>
+        <div style={styles.row}>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{repos.length}</span>
+            <span style={styles.statLabel}>Repos</span>
+          </div>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{runs.length}</span>
+            <span style={styles.statLabel}>Runs</span>
+          </div>
+        </div>${wrapClose}
+};`
+
+    case 'workflow_matrix':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Workflow Matrix</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const workflows = data?.workflows || [];
+  const repos = data?.repos || [];
+  const days = data?.days || 0;
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />Workflow Matrix</div>
+        <div style={styles.row}>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{workflows.length}</span>
+            <span style={styles.statLabel}>Workflows</span>
+          </div>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{repos.length}</span>
+            <span style={styles.statLabel}>Repos</span>
+          </div>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{days}</span>
+            <span style={styles.statLabel}>Days</span>
+          </div>
+        </div>${wrapClose}
+};`
+
+    case 'pipeline_flow':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Pipeline Flow</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const runs = data?.runs || [];
+  const repos = data?.repos || [];
+  const succeeded = runs.filter(r => r.conclusion === 'success').length;
+  const failed = runs.filter(r => r.conclusion === 'failure').length;
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: failed > 0 ? styles.colors.warning : styles.colors.healthy}} />Pipeline Flow</div>
+        <div style={styles.row}>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.healthy}\`}}>
+            <span style={{...styles.statValue, color: styles.colors.healthy}}>{succeeded}</span>
+            <span style={styles.statLabel}>Passed</span>
+          </div>
+          <div style={{...styles.statBlock, borderLeft: \`3px solid \${styles.colors.error}\`}}>
+            <span style={{...styles.statValue, color: failed > 0 ? styles.colors.error : styles.colors.info}}>{failed}</span>
+            <span style={styles.statLabel}>Failed</span>
+          </div>
+        </div>
+        <div style={{fontSize: '11px', color: '#9ca3af', marginTop: '4px'}}>{runs.length} runs across {repos.length} repos</div>${wrapClose}
+};`
+
+    case 'recent_failures':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Recent Failures</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const runs = (data?.runs || []).filter(r => r.conclusion === 'failure').slice(0, 6);
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: runs.length > 0 ? styles.colors.error : styles.colors.healthy}} />Recent Failures</div>
+        <div style={styles.column}>
+          {runs.map((r, i) => (
+            <div key={i} style={{fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+              <div style={{color: styles.colors.error}}>{r.name || r.workflow || 'Unknown'}</div>
+              <div style={{color: '#64748b', fontSize: '10px'}}>{r.repo || ''}</div>
+            </div>
+          ))}
+          {runs.length === 0 && <div style={{color: styles.colors.healthy, fontSize: '14px'}}>No recent failures</div>}
+        </div>${wrapClose}
+};`
+
+    case 'issue_activity_chart':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />Issue Activity</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const runs = data?.runs || [];
+  const repos = data?.repos || [];
+  const recent = runs.slice(0, 6);
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />Daily Issues & PRs</div>
+        <div style={styles.row}>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{runs.length}</span>
+            <span style={styles.statLabel}>Runs</span>
+          </div>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{repos.length}</span>
+            <span style={styles.statLabel}>Repos</span>
+          </div>
+        </div>
+        <div style={styles.column}>
+          {recent.map((r, i) => (
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+              <span style={{color: '#e2e8f0', maxWidth: '55%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{r.name || r.workflow || 'Run'}</span>
+              <span style={{color: r.conclusion === 'success' ? styles.colors.healthy : r.conclusion === 'failure' ? styles.colors.error : '#9ca3af', fontSize: '10px'}}>{r.conclusion || r.status || ''}</span>
+            </div>
+          ))}
+          {runs.length === 0 && <div style={{color: '#9ca3af', fontSize: '12px'}}>No recent activity</div>}
+        </div>${wrapClose}
+};`
+
+    case 'github_ci_monitor':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />GitHub CI Monitor</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const workflows = data?.workflows || [];
+  const repos = data?.repos || [];
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />GitHub CI Monitor</div>
+        <div style={styles.row}>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{workflows.length}</span>
+            <span style={styles.statLabel}>Workflows</span>
+          </div>
+          <div style={styles.statBlock}>
+            <span style={styles.statValue}>{repos.length}</span>
+            <span style={styles.statLabel}>Repos</span>
+          </div>
+        </div>${wrapClose}
+};`
+
+    case 'github_activity':
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />GitHub Activity</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+
+  const repos = data?.repos || [];
+  const runs = data?.runs || [];
+${wrapOpen}
+        <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />GitHub Activity</div>
+        <div style={styles.column}>
+          {repos.slice(0, 6).map((r, i) => (
+            <div key={i} style={{fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+              {typeof r === 'string' ? r : (r.name || r.repo)}
+            </div>
+          ))}
+          {repos.length === 0 && <div style={{color: '#9ca3af', fontSize: '12px'}}>No activity data</div>}
+        </div>
+        <div style={{fontSize: '11px', color: '#9ca3af', marginTop: '4px'}}>{runs.length} recent runs</div>${wrapClose}
+};`
+
+    default: {
+      const safeTitleExpr = `{${JSON.stringify(title)}}`
+      return `
+export const render = ({ output }) => {${parseBlock}
+
+  if (error) {${wrapOpen}
+        <div style={styles.cardTitle}>${safeTitleExpr}</div>
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
+  }
+${wrapOpen}
+        <div style={styles.cardTitle}>${safeTitleExpr}</div>
+        <pre style={{fontSize: '10px', overflow: 'auto', maxHeight: '100px'}}>
+          {JSON.stringify(data, null, 2)}
+        </pre>${wrapClose}
+};`
+    }
+  }
+}
 
 // Generate Übersicht widget code for a single card
 export function generateCardWidget(
