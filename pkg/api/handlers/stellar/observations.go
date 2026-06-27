@@ -318,9 +318,13 @@ func (h *Handler) Ask(c *fiber.Ctx) error {
 	if err := h.store.CreateStellarExecution(c.UserContext(), execution); err != nil {
 		slog.Warn("stellar: quick-ask execution persist failed", "userID", userID, "error", err)
 	}
+	clusterName := "unknown"
+	if state != nil && len(state.ClustersWatching) > 0 {
+		clusterName = state.ClustersWatching[0]
+	}
 	if err := h.store.CreateStellarMemoryEntry(c.UserContext(), &store.StellarMemoryEntry{
 		UserID:     userID,
-		Cluster:    firstOrUnknown(state.ClustersWatching),
+		Cluster:    clusterName,
 		Category:   "quick-ask",
 		Summary:    summarizeQuickAsk(body.Prompt, generated.Content),
 		RawContent: generated.Content,
