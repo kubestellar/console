@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests that insight cards don't crash (React Error #31) when
  * relatedResources contains objects instead of plain strings.

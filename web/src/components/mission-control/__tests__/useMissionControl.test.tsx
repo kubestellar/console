@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Unit tests for useMissionControl exports:
  *  - #6379 prompt-injection hardening (isSafeProjectName, buildInstallPromptForProject)

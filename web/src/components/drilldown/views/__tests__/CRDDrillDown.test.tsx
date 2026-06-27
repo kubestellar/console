@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * RTL interaction tests for CRDDrillDown (#15406, Part of #4189).
  * 

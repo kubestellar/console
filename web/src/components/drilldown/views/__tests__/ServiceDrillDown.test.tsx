@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * RTL interaction tests for ServiceDrillDown (#15406, Part of #4189).
  */

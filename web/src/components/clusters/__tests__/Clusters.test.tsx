@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Clusters Page Component Tests
  */

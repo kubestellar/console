@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 

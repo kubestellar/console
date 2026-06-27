@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Render tests for MissionBrowser and MissionBrowserSidebar
  */

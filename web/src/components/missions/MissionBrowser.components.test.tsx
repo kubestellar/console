@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Comprehensive render tests for remaining Mission Browser components
  */

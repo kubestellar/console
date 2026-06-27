@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Test: critical stat value returned by getStatValue('critical') matches
  * filteredDeploymentIssues.length — regression guard for bug #15906.

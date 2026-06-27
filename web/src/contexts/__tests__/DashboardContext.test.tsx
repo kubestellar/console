@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for DashboardContext — covers DashboardProvider state management.
  * useDashboardHealth is mocked; all state interactions tested via renderHook.

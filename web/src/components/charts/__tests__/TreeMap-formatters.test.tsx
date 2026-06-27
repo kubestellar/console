@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for TreeMap and NestedTreeMap ECharts formatter callbacks.
  *

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * AgenticDetectionRuns card — Vitest RTL (#15355, Part of #4189).
  *

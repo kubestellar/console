@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Deep coverage tests for useIntoto.ts — internal cache helpers,
  * demo data generators, and emptyStatus via module re-import.

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Regression tests for compliance card refresh/failure visibility.
  *

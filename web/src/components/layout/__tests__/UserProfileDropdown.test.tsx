@@ -1,3 +1,4 @@
+import React from 'react'
 /// <reference types="@testing-library/jest-dom/vitest" />
 import type { ComponentProps, ReactNode } from 'react'
 import { render, screen, waitFor, within } from '@testing-library/react'

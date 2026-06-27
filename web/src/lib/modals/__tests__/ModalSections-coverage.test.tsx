@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * ModalSections-coverage — tests for uncovered branches
  *

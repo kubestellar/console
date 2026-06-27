@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import type { ComponentProps, ReactNode } from 'react'
 import { render, screen, within } from '@testing-library/react'

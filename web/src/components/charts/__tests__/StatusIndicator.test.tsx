@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Branch-coverage tests for StatusIndicator.tsx — covers all 4 exports:
  * StatusIndicator, StatusDot, BooleanSwitch, StateMachine.

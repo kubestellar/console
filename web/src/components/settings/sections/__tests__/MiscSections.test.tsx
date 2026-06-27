@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Miscellaneous Settings Section Export Tests
  */

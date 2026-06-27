@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * StellarMissionBridge must not open its own EventSource (#14220).
  * Mission triggers arrive via the shared useStellar SSE + CustomEvent bridge.

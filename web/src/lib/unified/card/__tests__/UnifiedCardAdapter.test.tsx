@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for the pure helper functions in UnifiedCardAdapter.tsx.
  *

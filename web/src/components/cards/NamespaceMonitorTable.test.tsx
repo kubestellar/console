@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * NamespaceMonitorTable — Vitest RTL (Issue #15726, Part of #4189).
  *

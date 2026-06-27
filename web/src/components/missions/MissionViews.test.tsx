@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Render tests for Orbit and Mission view components
  */

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for releaseNotesComponents.tsx — the custom markdown component map.
  * Renders each component to verify it produces valid JSX without crashing.

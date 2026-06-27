@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * AuthCallback CONTRACT tests (#6590)
  *

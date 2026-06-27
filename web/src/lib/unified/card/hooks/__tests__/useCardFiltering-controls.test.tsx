@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for FilterControl rendering — the internal component returned by
  * useCardFiltering's filterControls. Covers lines 126 and 150-199.

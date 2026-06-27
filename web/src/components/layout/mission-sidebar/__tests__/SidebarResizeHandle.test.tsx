@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { SidebarResizeHandle } from '../SidebarResizeHandle'

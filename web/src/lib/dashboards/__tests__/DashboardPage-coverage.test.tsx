@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * DashboardPage-coverage — tests for uncovered branches in DashboardPage.tsx
  *

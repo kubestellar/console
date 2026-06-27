@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * CubeFS Status Card Tests
  *

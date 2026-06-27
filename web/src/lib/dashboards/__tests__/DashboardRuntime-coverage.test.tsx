@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * DashboardRuntime-coverage — tests for uncovered branches
  *

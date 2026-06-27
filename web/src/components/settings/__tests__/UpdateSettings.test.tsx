@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * UpdateSettings Component Tests
  */

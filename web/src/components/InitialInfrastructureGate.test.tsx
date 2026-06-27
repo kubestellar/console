@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { STORAGE_KEY_HAS_SESSION, STORAGE_KEY_TOKEN } from '../lib/constants'

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Coverage-focused tests for StatsRuntime.tsx component rendering
  *

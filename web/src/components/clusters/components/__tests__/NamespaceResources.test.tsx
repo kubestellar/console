@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * NamespaceResources Component Tests
  */

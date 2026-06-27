@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Comprehensive tests for Console Studio components.
  * Tests exports, data structures, and integration points.

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * ImportTab component smoke tests
  */

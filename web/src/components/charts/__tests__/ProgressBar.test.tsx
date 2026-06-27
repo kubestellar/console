@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Branch-coverage tests for ProgressBar.tsx.
  *

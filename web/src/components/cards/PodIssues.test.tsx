@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Unit tests for PodIssues card component.
  *

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * MissionBrowser unit tests
  *

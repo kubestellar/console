@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * DashboardPage-handlers — tests for card handler callbacks not covered elsewhere.
  *

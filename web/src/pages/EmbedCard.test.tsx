@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * EmbedCard.test.tsx — Vitest RTL tests (Issue #15737, Part of #4189).
  *

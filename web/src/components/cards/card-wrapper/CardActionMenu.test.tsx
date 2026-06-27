@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * CardActionMenu — comprehensive Vitest + RTL tests (#15539).
  *

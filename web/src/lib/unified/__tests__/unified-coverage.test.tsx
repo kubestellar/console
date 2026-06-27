@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * unified-coverage — tests for uncovered branches in UnifiedCardAdapter and DashboardGrid
  *

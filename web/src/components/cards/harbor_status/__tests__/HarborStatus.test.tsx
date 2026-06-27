@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Harbor Registry Status Card Tests
  *

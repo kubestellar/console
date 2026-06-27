@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * MissionSidebarDialogs ARIA Accessibility Tests
  * Tests for ARIA attributes on the modal dialog element

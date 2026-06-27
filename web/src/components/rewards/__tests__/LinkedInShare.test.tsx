@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * LinkedInShare component smoke tests
  */

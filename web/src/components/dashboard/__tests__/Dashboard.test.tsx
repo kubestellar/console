@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Deep branch-coverage tests for Dashboard.tsx logic
  *

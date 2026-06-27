@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for agent connectivity detection and loopback failure paths.
  *

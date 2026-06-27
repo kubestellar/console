@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Vitest unit tests for CardToolbar (#15513).
  *

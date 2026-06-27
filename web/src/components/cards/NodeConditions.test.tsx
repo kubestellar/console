@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Unit tests for NodeConditions card component.
  *

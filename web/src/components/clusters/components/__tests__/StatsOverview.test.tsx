@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * StatsOverview Component Tests
  * 

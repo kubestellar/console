@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for DashboardComponents.tsx — the simpler exported components
  * (DragPreviewCard, DashboardHeader, DashboardCardsSection,

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for the useIntoto() hook.
  * The existing useIntoto.test.ts only covers computeIntotoStats.
