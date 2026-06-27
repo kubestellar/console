@@ -48,17 +48,14 @@ vi.mock('../../lib/api', () => ({
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({
-    createCachedHook: vi.fn(),
   kubectlProxy: mockKubectlProxy,
 }))
 
 vi.mock('../../lib/sseClient', () => ({
-    createCachedHook: vi.fn(),
   fetchSSE: (...args: unknown[]) => mockFetchSSE(...args),
 }))
 
 vi.mock('../mcp/shared', () => ({
-    createCachedHook: vi.fn(),
   clusterCacheRef: mockClusterCacheRef,
   deduplicateClustersByServer: (clusters: unknown[]) => clusters,
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
@@ -70,7 +67,6 @@ vi.mock('../mcp/clusterCacheRef', () => ({
 }))
 
 vi.mock('../useLocalAgent', () => ({
-    createCachedHook: vi.fn(),
   isAgentUnavailable: () => mockIsAgentUnavailable(),
 }))
 
@@ -90,7 +86,6 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 } })
 
 vi.mock('../../lib/utils/concurrency', () => ({
-    createCachedHook: vi.fn(),
   settledWithConcurrency: async (...args: unknown[]) => {
     const result = await mockSettledWithConcurrency(...args)
     // Invoke the onSettled callback (3rd arg) so the production code's
@@ -105,25 +100,20 @@ vi.mock('../../lib/utils/concurrency', () => ({
 }))
 
 vi.mock('../useCachedProw', () => ({
-    createCachedHook: vi.fn(),
   fetchProwJobs: (...args: unknown[]) => mockFetchProwJobs(...args),
 }))
 
 vi.mock('../useCachedLLMd', () => ({
-    createCachedHook: vi.fn(),
   fetchLLMdServers: (...args: unknown[]) => mockFetchLLMdServers(...args),
   fetchLLMdModels: (...args: unknown[]) => mockFetchLLMdModels(...args),
 }))
 
-vi.mock('../useCachedISO27001', () => ({
-    createCachedHook: vi.fn(),}))
+vi.mock('../useCachedISO27001', () => ({}))
 
 // Stub the re-exports so the module loads cleanly
-vi.mock('../useWorkloads', () => ({
-    createCachedHook: vi.fn(),}))
+vi.mock('../useWorkloads', () => ({}))
 
 vi.mock('../../lib/schemas/validate', () => ({
-    createCachedHook: vi.fn(),
   validateResponse: (_schema: unknown, data: unknown) => data,
   validateArrayResponse: (_schema: unknown, data: unknown) => data,
 }))

@@ -155,7 +155,6 @@ export function UnifiedDashboard({
   const hasInitializedTabPersistence = useRef(false)
 
   // Modal state
-  // Modal state
   const addCardModal = useModalState()
   const configureCardModal = useModalState()
   const [cardToEdit, setCardToEdit] = useState<ConfigurableCard | null>(null)
