@@ -13,7 +13,7 @@ export const fleetComplianceHeatmapConfig: UnifiedCardConfig = {
   defaultWidth: 12,
   defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'useFleetComplianceHeatmap' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'FleetComplianceHeatmap' },
   emptyState: { icon: 'Grid3X3', title: 'No Data', message: 'No compliance tools detected', variant: 'info' },
   loadingState: { type: 'table', count: 4 },
   isDemoData: false,

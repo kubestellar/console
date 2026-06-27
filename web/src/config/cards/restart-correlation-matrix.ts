@@ -10,7 +10,7 @@ export const restartCorrelationMatrixConfig: UnifiedCardConfig = {
   defaultWidth: 8,
   defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'useMultiClusterInsights' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'RestartCorrelationMatrix' },
   emptyState: {
     icon: 'RefreshCcw',
     title: 'No restart correlations detected',

@@ -23,7 +23,7 @@ export const consoleAiIssuesConfig: UnifiedCardConfig = {
       { field: 'confidence', header: 'Conf', render: 'percentage', width: 60 },
     ],
   },
-  emptyState: { icon: 'Bot', title: 'No Issues', message: 'No AI-detected issues', variant: 'success' },
+  emptyState: { icon: 'Bot', title: 'No Issues', message: 'No AI-detected issues', variant: 'neutral' },
   loadingState: { type: 'list', rows: 5 },
   isDemoData: false,
   isLive: true,

@@ -18,7 +18,7 @@ export const agenticDetectionRunsConfig: UnifiedCardConfig = {
     icon: 'CheckCircle',
     title: 'No Detection Problems',
     message: 'All agentic workflows completed without warnings or failures',
-    variant: 'success',
+    variant: 'neutral',
   },
   loadingState: { type: 'list', rows: 5 },
   isDemoData: true,

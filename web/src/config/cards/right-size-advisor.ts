@@ -10,7 +10,7 @@ export const rightSizeAdvisorConfig: UnifiedCardConfig = {
   defaultWidth: 8,
   defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'useClusters' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'RightSizeAdvisor' },
   emptyState: {
     icon: 'Scale',
     title: 'No clusters available',

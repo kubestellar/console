@@ -10,7 +10,7 @@ export const deploymentRolloutTrackerConfig: UnifiedCardConfig = {
   defaultWidth: 8,
   defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'useMultiClusterInsights' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'DeploymentRolloutTracker' },
   emptyState: {
     icon: 'Rocket',
     title: 'No active rollouts detected',

@@ -10,7 +10,7 @@ export const resourceImbalanceDetectorConfig: UnifiedCardConfig = {
   defaultWidth: 6,
   defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'useMultiClusterInsights' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'ResourceImbalanceDetector' },
   emptyState: {
     icon: 'Scale',
     title: 'No resource imbalance detected',

@@ -75,6 +75,9 @@ describe("fetchWithTimeout", () => {
     const testCases = [200, 201, 204, 400, 404, 500, 503];
 
     for (const statusCode of testCases) {
+      vi.clearAllMocks();
+      vi.unstubAllGlobals();
+      
       const mockFetch = vi.fn().mockResolvedValueOnce(new Response("test", { status: statusCode }));
       vi.stubGlobal("fetch", mockFetch);
 

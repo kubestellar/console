@@ -91,7 +91,7 @@ export const warningEventsConfig: UnifiedCardConfig = {
     icon: 'CheckCircle',
     title: 'No warnings',
     message: 'All systems operating normally',
-    variant: 'success',
+    variant: 'neutral',
   },
 
   // Loading state
