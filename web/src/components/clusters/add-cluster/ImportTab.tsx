@@ -70,11 +70,11 @@ export function ImportTab({
       {importState === 'done' ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <Check className="w-10 h-10 text-green-400 mb-3" />
-          <p className="text-sm text-green-400">{t('cluster.importSuccess', { count: importedCount })}</p>
+          <div className="text-sm text-green-400">{t('cluster.importSuccess', { count: importedCount })}</div>
         </div>
       ) : (
         <>
-          <p className="text-sm text-muted-foreground">{t('cluster.importPaste')}</p>
+          <div className="text-sm text-muted-foreground">{t('cluster.importPaste')}</div>
 
           <div className="flex items-center gap-2">
             <textarea
@@ -132,7 +132,7 @@ export function ImportTab({
 
           {(importState === 'previewed' || importState === 'importing') && previewContexts.length > 0 && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">{t('cluster.importPreviewDesc')}</p>
+              <div className="text-sm text-muted-foreground">{t('cluster.importPreviewDesc')}</div>
               <div className="space-y-1">
                 {previewContexts.map((ctx) => (
                   <div

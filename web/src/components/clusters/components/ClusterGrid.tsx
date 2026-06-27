@@ -28,7 +28,7 @@ export const ClusterGrid = memo(function ClusterGrid({
   if (safeClusters.length === 0) {
     return (
       <div className="text-center py-12 mb-6">
-        <p className="text-muted-foreground">{t('cluster.noClustersMatchFilter')}</p>
+        <div className="text-muted-foreground">{t('cluster.noClustersMatchFilter')}</div>
       </div>
     )
   }
