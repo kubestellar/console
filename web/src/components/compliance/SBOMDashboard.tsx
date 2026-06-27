@@ -484,11 +484,11 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
                       {v.severity}
                     </span>
                   </td>
-                  <td className="py-2 px-3 text-gray-300 font-mono text-xs">{v.fixed_version}</td>
+                  <td className="py-2 px-3 text-gray-200 font-mono text-xs">{v.fixed_version}</td>
                   <td className="py-2 px-3">
                     <span className="flex items-center gap-1">
                       {STATUS_ICON[v.status]}
-                      <span className="text-gray-300 capitalize">{v.status}</span>
+                      <span className="text-gray-200 capitalize">{v.status}</span>
                     </span>
                   </td>
                 </tr>
