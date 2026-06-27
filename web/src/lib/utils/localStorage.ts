@@ -41,7 +41,7 @@ export function safeGetItem(key: string): string | null {
     return localStorage.getItem(key)
   } catch (error: unknown) {
     // localStorage may throw in private browsing mode or when disabled
-    console.error('Failed to read from localStorage:', sanitizeKeyForLog(key), error)
+    console.warn('Failed to read from localStorage:', sanitizeKeyForLog(key), error)
     dispatchStorageError('getItem', key, error)
     return null
   }
@@ -59,7 +59,7 @@ export function safeSetItem(key: string, value: string): boolean {
     return true
   } catch (error: unknown) {
     // localStorage may throw in private browsing mode, when quota exceeded, or when disabled
-    console.error('Failed to write to localStorage:', sanitizeKeyForLog(key), error)
+    console.warn('Failed to write to localStorage:', sanitizeKeyForLog(key), error)
     dispatchStorageError('setItem', key, error)
     return false
   }
@@ -75,7 +75,7 @@ export function safeRemoveItem(key: string): boolean {
     localStorage.removeItem(key)
     return true
   } catch (error: unknown) {
-    console.error('Failed to remove from localStorage:', sanitizeKeyForLog(key), error)
+    console.warn('Failed to remove from localStorage:', sanitizeKeyForLog(key), error)
     dispatchStorageError('removeItem', key, error)
     return false
   }
@@ -90,7 +90,7 @@ export function safeKey(index: number): string | null {
   try {
     return localStorage.key(index)
   } catch (error: unknown) {
-    console.error('Failed to read localStorage key by index:', index, error)
+    console.warn('Failed to read localStorage key by index:', index, error)
     return null
   }
 }
@@ -103,7 +103,7 @@ export function safeGetStorageLength(): number {
   try {
     return localStorage.length
   } catch (error: unknown) {
-    console.error('Failed to read localStorage length:', error)
+    console.warn('Failed to read localStorage length:', error)
     return 0
   }
 }
@@ -120,7 +120,7 @@ export function safeGetJSON<T = unknown>(key: string): T | null {
       return JSON.parse(item) as T
     }
   } catch (error: unknown) {
-    console.error('Failed to read/parse JSON from localStorage:', sanitizeKeyForLog(key), error)
+    console.warn('Failed to read/parse JSON from localStorage:', sanitizeKeyForLog(key), error)
   }
   return null
 }
@@ -136,7 +136,7 @@ export function safeSetJSON<T = unknown>(key: string, value: T): boolean {
     localStorage.setItem(key, JSON.stringify(value))
     return true
   } catch (error: unknown) {
-    console.error('Failed to write JSON to localStorage:', sanitizeKeyForLog(key), error)
+    console.warn('Failed to write JSON to localStorage:', sanitizeKeyForLog(key), error)
     return false
   }
 }

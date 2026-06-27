@@ -118,7 +118,7 @@ export function saveToStorage<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (e: unknown) {
-    console.error(`Failed to save ${key} to localStorage:`, e)
+    console.warn(`Failed to save ${key} to localStorage:`, e)
     // Dispatch custom event for monitoring/observability
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('storage-error', {
@@ -168,7 +168,7 @@ export function saveAlerts(alerts: Alert[]): void {
       try {
         localStorage.setItem(ALERTS_KEY, JSON.stringify(pruned))
       } catch (retryError: unknown) {
-        console.error('[Alerts] localStorage still full after pruning, clearing alerts', retryError)
+        console.warn('[Alerts] localStorage still full after pruning, clearing alerts', retryError)
         // Dispatch event for monitoring
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('storage-error', {
