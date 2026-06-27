@@ -259,7 +259,10 @@ function DashboardCardWrapper({
   }, [onConfigureCard, placement.id])
 
   // Fallback: component-only cards (no config file) render directly via CardWrapper
-  const DirectComponent = !cardConfig && cardTypeKey ? getCardComponent(cardTypeKey) : undefined
+  const DirectComponent = useMemo(
+    () => (!cardConfig && cardTypeKey ? getCardComponent(cardTypeKey) : undefined),
+    [cardConfig, cardTypeKey]
+  )
 
   if (!cardConfig && !DirectComponent) {
     return (
