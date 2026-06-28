@@ -40,6 +40,18 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+interface MockModalHeaderProps {
+  title: string
+  onClose: () => void
+  disabled?: boolean
+}
+
+interface MockModalFooterProps {
+  children: React.ReactNode
+  disabled?: boolean
+  loading?: boolean
+}
+
 vi.mock('../../../lib/modals', () => ({
   BaseModal: Object.assign(
     ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) => {
@@ -47,17 +59,17 @@ vi.mock('../../../lib/modals', () => ({
       return <div data-testid="base-modal">{children}</div>
     },
     {
-      Header: ({ title, onClose, ...rest }: { title: string; onClose: () => void; [key: string]: unknown }) => (
+      Header: ({ title, onClose, disabled }: MockModalHeaderProps) => (
         <div data-testid="modal-header">
           <span>{title}</span>
-          <button onClick={onClose} data-testid="close-button" disabled={(rest as any).disabled}>Close</button>
+          <button onClick={onClose} data-testid="close-button" disabled={disabled}>Close</button>
         </div>
       ),
       Content: ({ children }: { children: React.ReactNode }) => (
         <div data-testid="modal-content">{children}</div>
       ),
-      Footer: ({ children, ...rest }: { children: React.ReactNode; [key: string]: unknown }) => (
-        <div data-testid="modal-footer" data-disabled={(rest as any).disabled} data-loading={(rest as any).loading}>{children}</div>
+      Footer: ({ children, disabled, loading }: MockModalFooterProps) => (
+        <div data-testid="modal-footer" data-disabled={disabled} data-loading={loading}>{children}</div>
       ),
     }
   ),

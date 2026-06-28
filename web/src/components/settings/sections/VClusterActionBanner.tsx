@@ -12,6 +12,7 @@ function getVClusterActionMessage(feedback: VClusterActionFeedback, t: TFunction
   if (feedback.state === 'error') {
     return feedback.message
       ? friendlyErrorMessage(feedback.message)
+      // Dynamic i18n keys require type assertion — the key is built at runtime
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       : String(t(`${keyBase}Fallback` as any, { name: feedback.name, namespace: feedback.namespace }))
   }
