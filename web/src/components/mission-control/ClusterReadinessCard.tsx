@@ -31,10 +31,10 @@ function CapacityBar({ label, used, total, unit }: {
 }) {
   const pct = total > 0 ? Math.min((used / total) * 100, 100) : 0
   const color =
-    pct >= 90 ? 'bg-red-500' :
-    pct >= 70 ? 'bg-amber-500' :
-    pct >= 50 ? 'bg-yellow-500' :
-    'bg-green-500'
+    pct >= 90 ? 'bg-red-500 dark:bg-red-600' :
+    pct >= 70 ? 'bg-amber-500 dark:bg-amber-600' :
+    pct >= 50 ? 'bg-yellow-500 dark:bg-yellow-600' :
+    'bg-green-500 dark:bg-green-600'
 
   return (
     <div className="space-y-0.5">
@@ -44,7 +44,7 @@ function CapacityBar({ label, used, total, unit }: {
           {used.toFixed(1)}/{total.toFixed(1)} {unit} ({pct.toFixed(0)}%)
         </span>
       </div>
-      <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+      <div className="h-1.5 bg-secondary dark:bg-secondary/50 rounded-full overflow-hidden">
         <div className={cn('h-full rounded-full transition-all', color)} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -88,9 +88,9 @@ export function ClusterReadinessCard({
   return (
     <div
       className={cn(
-        'rounded-xl border bg-card p-4 transition-all',
-        isRecommended && 'border-purple-500/50 shadow-purple-glow',
-        !isRecommended && 'border-border'
+        'rounded-xl border bg-card dark:bg-card/80 p-4 transition-all',
+        isRecommended && 'border-purple-500/50 dark:border-purple-400/50 shadow-purple-glow',
+        !isRecommended && 'border-border dark:border-border/50'
       )}
     >
       {/* Header */}
@@ -104,7 +104,7 @@ export function ClusterReadinessCard({
             <span
               className={cn(
                 'w-2 h-2 rounded-full shrink-0',
-                cluster.healthy ? 'bg-green-500' : 'bg-red-500'
+                cluster.healthy ? 'bg-green-500 dark:bg-green-400' : 'bg-red-500 dark:bg-red-400'
               )}
               title={cluster.healthy ? 'Healthy' : 'Unhealthy'}
             />
@@ -131,9 +131,9 @@ export function ClusterReadinessCard({
           <div
             className={cn(
               'flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold',
-              readiness.overallScore >= 70 ? 'bg-green-500/15 text-green-400' :
-              readiness.overallScore >= 40 ? 'bg-yellow-500/15 text-yellow-400' :
-              'bg-red-500/15 text-red-400'
+              readiness.overallScore >= 70 ? 'bg-green-500/15 dark:bg-green-500/20 text-green-400' :
+              readiness.overallScore >= 40 ? 'bg-yellow-500/15 dark:bg-yellow-500/20 text-yellow-400' :
+              'bg-red-500/15 dark:bg-red-500/20 text-red-400'
             )}
             title={`Readiness score: ${readiness.overallScore}%`}
           >
@@ -172,7 +172,7 @@ export function ClusterReadinessCard({
             const isPositive = /already running|already deployed|already installed|skip install|healthy/.test(lower)
             const isError = /not installed|missing|must install|conflict|error|fail/.test(lower)
             // positive = green (already running), error/action needed = amber, neutral = slate
-            const color = isPositive ? 'text-emerald-400' : isError ? 'text-amber-400' : 'text-slate-400'
+            const color = isPositive ? 'text-emerald-400' : isError ? 'text-amber-400 dark:text-amber-300' : 'text-slate-400'
             const icon = isPositive ? '✓' : isError ? '⚠' : '•'
             return (
               <p key={i} className={cn('text-[10px] flex items-start gap-1', color)}>
@@ -185,7 +185,7 @@ export function ClusterReadinessCard({
       )}
 
       {/* Project assignment checkboxes */}
-      <div className="border-t border-border pt-2 mt-2">
+      <div className="border-t border-border dark:border-border/50 pt-2 mt-2">
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
           Assigned Projects
         </p>
@@ -204,7 +204,7 @@ export function ClusterReadinessCard({
                 key={name}
                 className={cn(
                   'flex items-center gap-2 text-xs px-1.5 py-0.5 rounded',
-                  isInstalled ? 'cursor-default' : 'cursor-pointer hover:bg-secondary/50'
+                  isInstalled ? 'cursor-default' : 'cursor-pointer hover:bg-secondary/50 dark:hover:bg-secondary/30'
                 )}
                 title={isInstalled ? `${name} is already installed on this cluster` : undefined}
               >
@@ -223,7 +223,7 @@ export function ClusterReadinessCard({
                 </span>
                 {isKubara && (
                   <span
-                    className="inline-flex items-center gap-0.5 px-1 py-px rounded text-[8px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    className="inline-flex items-center gap-0.5 px-1 py-px rounded text-[8px] font-medium bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 dark:border-emerald-500/30"
                     title={t('layout.missionSidebar.kubaraBadgeTooltip')}
                   >
                     <CheckCircle className="w-2 h-2" />
