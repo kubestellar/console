@@ -33,17 +33,23 @@ function setup(overrides?: Record<string, unknown>) {
       health: 'healthy',
       identities: [],
       bundles: [],
+      entries: [],
+      federatedDomains: [],
     },
     isLoading: false,
     isRefreshing: false,
+    isDemoData: false,
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: Date.now(),
     refetch: vi.fn(),
+    showSkeleton: false,
+    showEmptyState: false,
+    error: null,
     ...overrides,
   })
-  mockUseReportCardDataState.mockReturnValue({ showSkeleton: false, showEmptyState: false })
+  mockUseReportCardDataState.mockReturnValue(undefined)
 }
 
 describe('SpiffeStatus', () => {
@@ -52,8 +58,7 @@ describe('SpiffeStatus', () => {
   })
 
   it('renders skeleton when loading', () => {
-    setup({ isLoading: true })
-    mockUseReportCardDataState.mockReturnValue({ showSkeleton: true, showEmptyState: false })
+    setup({ isLoading: true, showSkeleton: true })
     render(<SpiffeStatus />)
 
     expect(screen.getByTestId('skeleton-stats')).toBeTruthy()

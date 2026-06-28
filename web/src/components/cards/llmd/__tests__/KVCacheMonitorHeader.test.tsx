@@ -41,7 +41,7 @@ vi.mock('lucide-react', () => ({
   Activity: () => <span>Activity</span>,
 }))
 
-import KVCacheMonitorHeader from '../KVCacheMonitorHeader'
+import { KVCacheMonitorHeader } from '../KVCacheMonitorHeader'
 
 describe('KVCacheMonitorHeader', () => {
   const mockT = ((key: string, fallback?: string) => fallback || key) as any

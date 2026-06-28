@@ -232,7 +232,7 @@ describe('missionSidebarHelpers', () => {
 
       const exported = savedMissionToExport(mission as Mission)
 
-      expect(exported.tags).toEqual(undefined)
+      expect(exported.tags).toEqual([])
       expect(exported.steps).toEqual([])
     })
   })

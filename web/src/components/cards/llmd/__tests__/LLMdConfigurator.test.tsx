@@ -37,7 +37,8 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../CardDataContext', () => ({
   useReportCardDataState: vi.fn(),
-  useCardLoadingState: vi.fn(),
+  useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false }),
+  useCardDemoState: () => ({ showDemoBadge: false }),
 }))
 
 vi.mock('../../../../hooks/useStackDiscovery', () => ({

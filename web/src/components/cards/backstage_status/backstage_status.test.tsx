@@ -31,9 +31,19 @@ function setup(overrides?: Record<string, unknown>) {
   mockUseCachedBackstage.mockReturnValue({
     data: {
       health: 'healthy',
-      catalogEntities: 0,
-      components: 0,
-      apis: 0,
+      summary: {
+        totalEntities: 5,
+        enabledPlugins: 2,
+        pluginErrors: 0,
+        scaffolderTemplates: 1,
+      },
+      replicas: 1,
+      desiredReplicas: 1,
+      version: '1.0.0',
+      plugins: [],
+      templates: [],
+      catalog: {},
+      lastCatalogSync: new Date().toISOString(),
     },
     isLoading: false,
     isRefreshing: false,

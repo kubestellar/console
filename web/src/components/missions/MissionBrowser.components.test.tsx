@@ -28,6 +28,22 @@ vi.mock('react-router-dom', () => ({
   useLocation: () => ({ pathname: '/' }),
 }))
 
+vi.mock('../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}))
+
+vi.mock('../../lib/analytics', () => ({
+  emitFixerGitHubLink: vi.fn(),
+  emitNavigate: vi.fn(),
+  emitEvent: vi.fn(),
+  emitLogin: vi.fn(),
+  analyticsReady: Promise.resolve(),
+  emitAddCardModalOpened: vi.fn(),
+  emitCardExpanded: vi.fn(),
+  emitCardRefreshed: vi.fn(),
+  markErrorReported: vi.fn(),
+}))
+
 describe('MissionBrowserFilterPanel', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -129,10 +145,24 @@ describe('MissionBrowserRecommendedTab', () => {
     const { MissionBrowserRecommendedTab } = await import('./MissionBrowserRecommendedTab')
     const { container } = render(
       <MissionBrowserRecommendedTab
-        installers={[]}
-        fixers={[]}
-        onImport={vi.fn()}
-        onSelect={vi.fn()}
+        tokenError={null}
+        missionFetchError={null}
+        loadingRecommendations={false}
+        searchProgress={null}
+        hasCluster={false}
+        recommendations={[]}
+        filteredRecommendations={[]}
+        onSelectMission={vi.fn()}
+        onImportMission={vi.fn()}
+        onCopyLink={vi.fn()}
+        loading={false}
+        filteredEntries={[]}
+        selectedPath=""
+        selectedNode={null}
+        viewMode="grid"
+        onImportDirectoryEntry={vi.fn()}
+        onToggleNode={vi.fn()}
+        onSelectNode={vi.fn()}
       />
     )
     expect(container).toBeTruthy()
@@ -144,7 +174,7 @@ describe('MissionBrowserScheduleActionTab', () => {
     const { MissionBrowserScheduleActionTab } = await import('./MissionBrowserScheduleActionTab')
     const { container } = render(
       <MissionBrowserScheduleActionTab
-        onClose={vi.fn()}
+        isActive={false}
       />
     )
     expect(container).toBeTruthy()

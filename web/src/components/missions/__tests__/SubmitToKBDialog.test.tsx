@@ -7,7 +7,6 @@ import React from 'react'
  * long-URL fallback to issue link.
  */
 
-import type React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import type { MockedFunction } from 'vitest'

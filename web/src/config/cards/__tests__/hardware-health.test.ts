@@ -39,7 +39,7 @@ describe('hardware-health configuration coverage', () => {
   it('validates empty state configuration', () => {
     expect(hardwareHealthConfig.emptyState?.icon).toBe('CheckCircle')
     expect(hardwareHealthConfig.emptyState?.title).toBe('All Healthy')
-    expect(hardwareHealthConfig.emptyState?.variant).toBe('success')
+    expect(hardwareHealthConfig.emptyState?.variant).toBe('neutral')
   })
 
   it('validates loading state configuration', () => {

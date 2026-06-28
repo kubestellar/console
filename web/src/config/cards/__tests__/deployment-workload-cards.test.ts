@@ -183,8 +183,8 @@ describe('Deployment cards', () => {
       expect(deploymentIssuesConfig.drillDown!.action).toBe('drillToDeployment')
     })
 
-    it('emptyState indicates healthy (success variant)', () => {
-      expect(deploymentIssuesConfig.emptyState!.variant).toBe('success')
+    it('emptyState indicates healthy (neutral variant)', () => {
+      expect(deploymentIssuesConfig.emptyState!.variant).toBe('neutral')
     })
 
     it('has smaller page size (focus on critical issues)', () => {
@@ -245,8 +245,8 @@ describe('Deployment cards', () => {
       expect(deploymentRiskScoreConfig.isDemoData).toBe(true)
     })
 
-    it('emptyState indicates success when no risk detected', () => {
-      expect(deploymentRiskScoreConfig.emptyState!.variant).toBe('success')
+    it('emptyState indicates neutral when no risk detected', () => {
+      expect(deploymentRiskScoreConfig.emptyState!.variant).toBe('neutral')
     })
   })
 

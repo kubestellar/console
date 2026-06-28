@@ -46,36 +46,51 @@ vi.mock('recharts', () => ({
   Legend: () => null,
 }))
 
-import KVCacheMonitorChart from '../KVCacheMonitorChart'
+import { KVCacheMonitorVisualization } from '../KVCacheMonitorChart'
 
 describe('KVCacheMonitorChart', () => {
   const mockT = ((key: string, fallback?: string) => fallback || key) as any
 
   it('renders without crashing with empty data', () => {
     const { container } = render(
-      <KVCacheMonitorChart
-        podHistory={{}}
+      <KVCacheMonitorVisualization
+        gaugeRefs={{ current: {} }}
+        isDemoData={true}
+        isExpanded={false}
+        onGaugeClick={vi.fn()}
         selectedPod={null}
-        selectedMetrics={['util']}
+        stats={[]}
         t={mockT}
+        viewMode="gauges"
       />
     )
     expect(container).toBeTruthy()
   })
 
   it('renders with pod history data', () => {
-    const podHistory = {
-      'pod-0': {
-        util: [50, 60, 70],
-        hitRate: [90, 91, 92],
+    const stats = [
+      {
+        cluster: 'test',
+        namespace: 'default',
+        podName: 'pod-0',
+        utilizationPercent: 75,
+        hitRate: 0.9,
+        evictionRate: 0.01,
+        totalCapacityGB: 80,
+        usedGB: 60,
+        lastUpdated: new Date(),
       },
-    }
+    ]
     const { container } = render(
-      <KVCacheMonitorChart
-        podHistory={podHistory}
+      <KVCacheMonitorVisualization
+        gaugeRefs={{ current: {} }}
+        isDemoData={false}
+        isExpanded={false}
+        onGaugeClick={vi.fn()}
         selectedPod="pod-0"
-        selectedMetrics={['util', 'hitRate']}
+        stats={stats}
         t={mockT}
+        viewMode="gauges"
       />
     )
     expect(container).toBeTruthy()

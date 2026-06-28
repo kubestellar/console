@@ -31,6 +31,12 @@ function setup(overrides?: Record<string, unknown>) {
   mockUseCachedRook.mockReturnValue({
     data: {
       health: 'healthy',
+      summary: {
+        totalClusters: 1,
+        healthyClusters: 1,
+        totalOSDs: 3,
+        healthyOSDs: 3,
+      },
       clusters: [],
       osds: [],
     },

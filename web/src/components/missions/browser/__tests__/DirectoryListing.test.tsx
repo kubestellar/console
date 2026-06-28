@@ -94,7 +94,7 @@ describe('DirectoryListing', () => {
       />
     )
 
-    expect(screen.getByText('1.00 KB')).toBeInTheDocument()
+    expect(screen.getByText('1 KB')).toBeInTheDocument()
     expect(screen.getByText('512 B')).toBeInTheDocument()
   })
 

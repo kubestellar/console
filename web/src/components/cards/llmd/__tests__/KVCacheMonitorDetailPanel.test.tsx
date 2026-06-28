@@ -39,7 +39,7 @@ vi.mock('../KVCacheMonitorChart', () => ({
   default: () => <div data-testid="kvcache-chart">Chart</div>,
 }))
 
-import KVCacheMonitorDetailPanel from '../KVCacheMonitorDetailPanel'
+import { KVCacheMonitorDetailPanel } from '../KVCacheMonitorDetailPanel'
 
 describe('KVCacheMonitorDetailPanel', () => {
   const mockT = ((key: string, fallback?: string) => fallback || key) as any

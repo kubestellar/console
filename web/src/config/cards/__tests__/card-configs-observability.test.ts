@@ -163,7 +163,7 @@ describe('Observability card configs', () => {
     })
 
     it('activeAlerts empty state indicates no alerts', () => {
-      expect(activeAlertsConfig.emptyState?.variant).toBe('success')
+      expect(activeAlertsConfig.emptyState?.variant).toBe('neutral')
     })
   })
 

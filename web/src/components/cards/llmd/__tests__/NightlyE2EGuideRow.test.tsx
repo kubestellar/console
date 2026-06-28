@@ -52,27 +52,31 @@ vi.mock('lucide-react', () => ({
   ChevronRight: () => <span>ChevronRight</span>,
 }))
 
-import NightlyE2EGuideRow from '../NightlyE2EGuideRow'
+import { GuideRow } from '../NightlyE2EGuideRow'
 
 describe('NightlyE2EGuideRow', () => {
-  const mockT = ((key: string, fallback?: string) => fallback || key) as any
-
   it('renders without crashing', () => {
     const guide = {
+      guide: 'llama-3-70b',
+      acronym: 'L3',
       model: 'llama-3-70b',
       gpuType: 'H100',
       gpuCount: 4,
       platform: 'OCP',
-      recentRuns: [],
+      repo: 'test/repo',
+      workflowFile: 'test.yml',
+      runs: [],
       passRate: 0.9,
-      avgDurationMin: 45,
-      lastRun: null,
+      trend: 'up' as const,
+      latestConclusion: 'success',
     }
     const { container } = render(
-      <NightlyE2EGuideRow
+      <GuideRow
         guide={guide as any}
-        onClick={vi.fn()}
-        t={mockT}
+        delay={0}
+        isSelected={false}
+        onMouseEnter={vi.fn()}
+        onRunHover={vi.fn()}
       />
     )
     expect(container).toBeTruthy()
@@ -80,22 +84,28 @@ describe('NightlyE2EGuideRow', () => {
 
   it('renders with recent runs data', () => {
     const guide = {
+      guide: 'mistral-7b',
+      acronym: 'M7',
       model: 'mistral-7b',
       gpuType: 'A100',
       gpuCount: 2,
       platform: 'GKE',
-      recentRuns: [
-        { status: 'completed', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T01:00:00Z' },
+      repo: 'test/repo',
+      workflowFile: 'test.yml',
+      runs: [
+        { conclusion: 'success', startedAt: '2026-01-01T00:00:00Z', completedAt: '2026-01-01T01:00:00Z', url: '' },
       ],
       passRate: 1.0,
-      avgDurationMin: 30,
-      lastRun: { status: 'completed', createdAt: '2026-01-01T00:00:00Z' },
+      trend: 'steady' as const,
+      latestConclusion: 'success',
     }
     const { container } = render(
-      <NightlyE2EGuideRow
+      <GuideRow
         guide={guide as any}
-        onClick={vi.fn()}
-        t={mockT}
+        delay={0}
+        isSelected={false}
+        onMouseEnter={vi.fn()}
+        onRunHover={vi.fn()}
       />
     )
     expect(container).toBeTruthy()

@@ -46,37 +46,36 @@ vi.mock('recharts', () => ({
   Legend: () => null,
 }))
 
-import NightlyE2EDetailPanel from '../NightlyE2EDetailPanel'
+import { NightlySummaryPanel, GuideDetailPanel } from '../NightlyE2EDetailPanel'
 
 describe('NightlyE2EDetailPanel', () => {
-  const mockT = ((key: string, fallback?: string) => fallback || key) as any
-
   it('renders without crashing when no guide selected', () => {
     const { container } = render(
-      <NightlyE2EDetailPanel
-        selectedGuide={null}
-        allRuns={[]}
-        onClose={vi.fn()}
-        t={mockT}
-      />
+      <NightlySummaryPanel guides={[]} />
     )
     expect(container).toBeTruthy()
   })
 
   it('renders with selected guide', () => {
     const guide = {
+      guide: 'llama-3-70b',
+      acronym: 'L3',
       model: 'llama-3-70b',
       gpuType: 'H100',
       gpuCount: 4,
-      platform: 'OCP',
-      recentRuns: [],
+      platform: 'OCP' as const,
+      repo: 'test/repo',
+      workflowFile: 'test.yml',
+      runs: [],
+      passRate: 0.95,
+      trend: 'up' as const,
+      latestConclusion: 'success',
     }
     const { container } = render(
-      <NightlyE2EDetailPanel
-        selectedGuide={guide as any}
-        allRuns={[]}
-        onClose={vi.fn()}
-        t={mockT}
+      <GuideDetailPanel
+        guide={guide as any}
+        hoveredRun={null}
+        onRunHover={vi.fn()}
       />
     )
     expect(container).toBeTruthy()

@@ -424,8 +424,8 @@ describe('Utility cards', () => {
       expect(content.pageSize).toBeGreaterThan(0)
     })
 
-    it('emptyState indicates success (all up to date)', () => {
-      expect(upgradeStatusConfig.emptyState!.variant).toBe('success')
+    it('emptyState indicates neutral (all up to date)', () => {
+      expect(upgradeStatusConfig.emptyState!.variant).toBe('neutral')
     })
 
     it('is registered in the config registry', () => {

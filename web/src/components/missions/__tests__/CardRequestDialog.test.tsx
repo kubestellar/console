@@ -7,7 +7,6 @@ import React from 'react'
  * retry flow, toast feedback, and close button.
  */
 
-import type React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 

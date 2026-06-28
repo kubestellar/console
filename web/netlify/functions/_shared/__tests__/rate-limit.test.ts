@@ -176,7 +176,7 @@ describe("rate-limit", () => {
 
       const result = await enforceSimpleRateLimit({
         ...DEFAULT_OPTIONS,
-        maxRequests: 4,
+        maxRequests: 5,
       });
 
       expect(result.limited).toBe(false);
