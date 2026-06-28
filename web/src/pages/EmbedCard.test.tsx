@@ -37,7 +37,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false }))
+const mockUseDemoMode = vi.fn(() => false)
 vi.mock('../hooks/useDemoMode', () => ({
   useDemoMode: () => mockUseDemoMode(),
 }))
@@ -102,7 +102,7 @@ function renderEmbed({ cardType = '', searchQuery = '' }: RenderEmbedOptions = {
 describe('EmbedCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
   })
 
   // ---- Scenario 1: Valid card query parameters ----
@@ -219,7 +219,7 @@ describe('EmbedCard', () => {
 
   describe('demo mode in embed context', () => {
     it('displays the demo badge when isDemoMode is active', () => {
-      mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+      mockUseDemoMode.mockReturnValue(true)
       renderEmbed({ cardType: 'nightly-release-pulse' })
 
       expect(screen.getByTestId('demo-badge')).toBeInTheDocument()
@@ -227,7 +227,7 @@ describe('EmbedCard', () => {
     })
 
     it('does not display demo badge when isDemoMode is disabled', () => {
-      mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+      mockUseDemoMode.mockReturnValue(false)
       renderEmbed({ cardType: 'nightly-release-pulse' })
 
       expect(screen.queryByTestId('demo-badge')).not.toBeInTheDocument()

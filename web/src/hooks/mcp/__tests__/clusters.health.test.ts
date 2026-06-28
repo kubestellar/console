@@ -8,7 +8,7 @@ import type { ClusterInfo, ClusterHealth, MCPStatus } from '../types'
 // ---------------------------------------------------------------------------
 const mockFullFetchClusters = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
 const mockConnectSharedWebSocket = vi.hoisted(() => vi.fn())
-const mockUseDemoMode = vi.hoisted(() => vi.fn().mockReturnValue({ isDemoMode: false }))
+const mockUseDemoMode = vi.hoisted(() => vi.fn().mockReturnValue(false))
 const mockIsDemoMode = vi.hoisted(() => vi.fn(() => false))
 const mockApiGet = vi.hoisted(() => vi.fn())
 const mockAgentFetch = vi.hoisted(() => vi.fn())

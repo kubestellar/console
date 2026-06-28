@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react'
 // ── Hoisted mocks ──────────────────────────────────────────────────
 
 const { mockUseDemoMode } = vi.hoisted(() => ({
-  mockUseDemoMode: vi.fn().mockReturnValue({ isDemoMode: false }),
+  mockUseDemoMode: vi.fn().mockReturnValue(false),
 }))
 
 vi.mock('../../../hooks/useDemoMode', () => ({
@@ -82,7 +82,7 @@ import { registerUnifiedHooks } from '../registerHooks'
 beforeEach(() => {
   vi.clearAllMocks()
   vi.useFakeTimers()
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
 })
 
 afterEach(() => {
@@ -118,7 +118,7 @@ describe('useDemoDataHook deep branches', () => {
   }
 
   it('returns empty data and isLoading=false in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     const demoData = [{ id: 1, value: 'test' }]
     const { result } = renderHook(() => useDemoDataHookSimulation(demoData))
 
@@ -130,7 +130,7 @@ describe('useDemoDataHook deep branches', () => {
   })
 
   it('returns empty data while loading in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     const demoData = [{ id: 1 }]
     const { result } = renderHook(() => useDemoDataHookSimulation(demoData))
 
@@ -140,7 +140,7 @@ describe('useDemoDataHook deep branches', () => {
   })
 
   it('returns demo data after timer fires in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     const demoData = [{ id: 1, metric: 42 }]
     const { result } = renderHook(() => useDemoDataHookSimulation(demoData))
 
@@ -151,7 +151,7 @@ describe('useDemoDataHook deep branches', () => {
   })
 
   it('cleans up timer on unmount before it fires', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     const { unmount } = renderHook(() => useDemoDataHookSimulation([{ id: 1 }]))
 
     // Unmount before timer fires
@@ -161,7 +161,7 @@ describe('useDemoDataHook deep branches', () => {
   })
 
   it('transitions from demo to non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     const demoData = [{ id: 1 }]
     const { result, rerender } = renderHook(() => useDemoDataHookSimulation(demoData))
 
@@ -169,14 +169,14 @@ describe('useDemoDataHook deep branches', () => {
     expect(result.current.data).toEqual(demoData)
 
     // Switch to non-demo
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     rerender()
     act(() => { vi.advanceTimersByTime(0) })
     expect(result.current.data).toEqual([])
   })
 
   it('refetch function is a no-op', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     const { result } = renderHook(() => useDemoDataHookSimulation([]))
     expect(() => result.current.refetch()).not.toThrow()
   })

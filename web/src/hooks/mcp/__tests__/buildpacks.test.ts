@@ -75,7 +75,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsNetlifyDeployment.value = false
   mockRegisterRefetch.mockReturnValue(vi.fn())
 })
@@ -116,7 +116,7 @@ describe('useBuildpackImages', () => {
 
   it('returns demo images when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     // Use a cluster param to bypass the module-level cache from prior tests
     const { result } = renderHook(() => useBuildpackImages('demo-cluster'))

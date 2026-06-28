@@ -46,7 +46,7 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => mockUseGlobalFilters(),
 }))
 
-const mockIsDemoMode = vi.fn(() => ({ isDemoMode: false }))
+const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
@@ -159,7 +159,7 @@ function setup() {
   mockUseGlobalFilters.mockReturnValue(defaultGlobalFilters)
   mockUseChartFilters.mockReturnValue(defaultChartFilters)
   mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false })
-  mockIsDemoMode.mockReturnValue({ isDemoMode: false })
+  mockIsDemoMode.mockReturnValue(false)
 }
 
 // ---------------------------------------------------------------------------

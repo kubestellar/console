@@ -102,7 +102,7 @@ describe('networking hooks - useServices', () => {
     localStorage.clear()
     mockIsAgentUnavailable.mockReturnValue(false)
     mockIsDemoMode.mockReturnValue(false)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
   })
 
   afterEach(() => {
@@ -267,7 +267,7 @@ describe('networking hooks - useServices', () => {
   // Test 7: Demo mode fallback
   it('returns demo data when demo mode is enabled', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useServices('cluster-a'))
 
@@ -356,7 +356,7 @@ describe('networking hooks - useIngresses', () => {
     localStorage.clear()
     mockIsAgentUnavailable.mockReturnValue(false)
     mockIsDemoMode.mockReturnValue(false)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
   })
 
   // Test 1: Loading → Success state transition
@@ -394,7 +394,7 @@ describe('networking hooks - useIngresses', () => {
   // Test 2: Demo mode returns demo ingresses
   it('returns demo data in demo mode', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useIngresses())
 

@@ -101,7 +101,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsAgentUnavailable.mockReturnValue(true)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockFetchSSE.mockResolvedValue([])
@@ -244,7 +244,7 @@ describe('useEvents', () => {
 
   it('returns demo events when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useEvents())
 
@@ -411,7 +411,7 @@ describe('useEvents', () => {
 
   it('demo mode filters events by cluster when specified', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useEvents('gke-staging'))
 
@@ -422,7 +422,7 @@ describe('useEvents', () => {
 
   it('demo mode filters events by namespace when specified', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useEvents(undefined, 'production'))
 
@@ -433,7 +433,7 @@ describe('useEvents', () => {
 
   it('demo mode respects the limit parameter', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     const DEMO_LIMIT = 2
 
     const { result } = renderHook(() => useEvents(undefined, undefined, DEMO_LIMIT))
@@ -663,7 +663,7 @@ describe('useWarningEvents', () => {
 
   it('returns only Warning events in demo mode', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useWarningEvents())
 
@@ -688,7 +688,7 @@ describe('useWarningEvents', () => {
 
   it('demo mode filters warning events by cluster', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useWarningEvents('vllm-gpu-cluster'))
 
@@ -699,7 +699,7 @@ describe('useWarningEvents', () => {
 
   it('demo mode filters warning events by namespace', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useWarningEvents(undefined, 'production'))
 

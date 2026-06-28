@@ -89,7 +89,7 @@ describe('FleetComplianceHeatmap', () => {
   })
 
   it('renders correct background for Kubescape score thresholds', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [{ name: 'cluster-green' }, { name: 'cluster-amber' }, { name: 'cluster-red' }] })
     
     mockUseKubescape.mockReturnValue({
@@ -114,7 +114,7 @@ describe('FleetComplianceHeatmap', () => {
   })
 
   it('renders correct background for Kyverno violation boundaries', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [{ name: 'cluster-green' }, { name: 'cluster-amber' }, { name: 'cluster-red' }] })
     
     mockUseKyverno.mockReturnValue({
@@ -139,7 +139,7 @@ describe('FleetComplianceHeatmap', () => {
   })
 
   it('renders correct background for Trivy crit+high boundaries', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [{ name: 'cluster-green' }, { name: 'cluster-amber' }, { name: 'cluster-red' }] })
     
     mockUseTrivy.mockReturnValue({
@@ -164,7 +164,7 @@ describe('FleetComplianceHeatmap', () => {
   })
 
   it('handles empty data by rendering clusters from fallback', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [{ name: 'cluster-1' }] })
     // All tools not installed
     

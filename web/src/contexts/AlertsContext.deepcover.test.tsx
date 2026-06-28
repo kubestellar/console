@@ -91,7 +91,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   // Re-initialize hoisted mocks after restoreAllMocks clears their implementations
   mockStartMission.mockReturnValue('mock-mission-id')
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockSendNotificationWithDeepLink.mockImplementation(() => {})
   // Re-stub globals after restoreAllMocks clears them
   vi.stubGlobal('Notification', { permission: 'granted', requestPermission: vi.fn() })

@@ -117,7 +117,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsAgentUnavailable.mockReturnValue(true)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockClusterCacheRef.clusters = []
@@ -292,7 +292,7 @@ describe('useGPUNodes', () => {
 
   it('uses demo GPU nodes when demo mode is enabled and no cached data exists', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     // SSE fails — should fall back to demo data in catch block
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
 
@@ -772,7 +772,7 @@ describe('useGPUNodes — deduplication edge cases', () => {
     gpuNodeCache.lastRefresh = null
     gpuNodeCache.lastUpdated = null
     mockIsDemoMode.mockReturnValue(false)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     mockFetchSSE.mockResolvedValue([])
   })
 
@@ -1069,7 +1069,7 @@ describe('fetchGPUNodes — error recovery from localStorage', () => {
 
   it('falls back to demo data when memory cache is empty and demo mode is on', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     gpuNodeCache.nodes = []
     gpuNodeCache.lastUpdated = null

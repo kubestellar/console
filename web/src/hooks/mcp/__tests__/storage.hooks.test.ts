@@ -102,7 +102,7 @@ describe('storage hooks - usePVCs', () => {
     localStorage.clear()
     mockIsAgentUnavailable.mockReturnValue(false)
     mockIsDemoMode.mockReturnValue(false)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
   })
 
   afterEach(() => {
@@ -258,7 +258,7 @@ describe('storage hooks - usePVCs', () => {
   // Test 7: Demo mode fallback
   it('returns demo data when demo mode is enabled', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => usePVCs())
 

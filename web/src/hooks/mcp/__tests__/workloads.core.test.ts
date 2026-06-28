@@ -144,7 +144,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsAgentUnavailable.mockReturnValue(true)
   mockIsBackendUnavailable.mockReturnValue(false)
   mockRegisterRefetch.mockReturnValue(vi.fn())
@@ -185,7 +185,7 @@ describe('usePods', () => {
 
   it('returns demo pods when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => usePods())
 
@@ -196,7 +196,7 @@ describe('usePods', () => {
 
   it('sorts pods by restarts descending by default', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => usePods(undefined, undefined, 'restarts', 100))
 
@@ -209,7 +209,7 @@ describe('usePods', () => {
 
   it('sorts pods by name when sortBy=name', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => usePods(undefined, undefined, 'name', 100))
 
@@ -221,7 +221,7 @@ describe('usePods', () => {
 
   it('limits the number of returned pods', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const LIMIT = 3
     const { result } = renderHook(() => usePods(undefined, undefined, 'restarts', LIMIT))
@@ -276,7 +276,7 @@ describe('usePods', () => {
 
   it('returns lastRefresh timestamp after fetch', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => usePods())
 
@@ -316,7 +316,7 @@ describe('useAllPods', () => {
 
   it('returns demo pods when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useAllPods())
 
@@ -326,7 +326,7 @@ describe('useAllPods', () => {
 
   it('filters by cluster when provided in demo mode', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useAllPods('vllm-d'))
 
@@ -410,7 +410,7 @@ describe('usePodIssues', () => {
 
   it('returns demo pod issues when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => usePodIssues())
 
@@ -468,7 +468,7 @@ describe('useDeploymentIssues', () => {
 
   it('returns demo deployment issues when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useDeploymentIssues())
 
@@ -504,7 +504,7 @@ describe('useDeployments', () => {
 
   it('returns demo deployments when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useDeployments())
 

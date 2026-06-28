@@ -132,7 +132,7 @@ function setup(): void {
   mockUseClusters.mockReturnValue(defaultClustersReturn)
   mockUseCachedPVCs.mockReturnValue(defaultPVCsReturn)
   mockUseGlobalFilters.mockReturnValue(defaultGlobalFilters)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockUseChartFilters.mockReturnValue(defaultChartFilters)
   mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false })
 }

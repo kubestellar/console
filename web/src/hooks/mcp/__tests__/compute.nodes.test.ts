@@ -116,7 +116,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsAgentUnavailable.mockReturnValue(true)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockClusterCacheRef.clusters = []
@@ -239,7 +239,7 @@ describe('useNodes', () => {
 
   it('returns demo nodes when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useNodes())
 
@@ -413,7 +413,7 @@ describe('useNodes — empty cluster handling', () => {
 describe('useNodes — additional branches', () => {
   it('returns demo nodes filtered by cluster', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useNodes('vllm-d'))
 

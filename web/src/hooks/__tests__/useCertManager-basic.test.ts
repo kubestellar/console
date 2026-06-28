@@ -14,7 +14,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 // Mocks — declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
 
-const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false }))
+const mockUseDemoMode = vi.fn(() => false)
 const mockUseClusters = vi.fn(() => ({
   clusters: [],
   deduplicatedClusters: [],
@@ -140,7 +140,7 @@ describe('useCertManager', () => {
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
     sessionStorage.clear()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
   })
 
   afterEach(() => {
@@ -192,7 +192,7 @@ describe('useCertManager', () => {
 
   describe('demo mode', () => {
     it('returns demo certificates when in demo mode', async () => {
-      mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+      mockUseDemoMode.mockReturnValue(true)
 
       const { useCertManager } = await loadModule()
       const { result } = renderHook(() => useCertManager())
@@ -209,7 +209,7 @@ describe('useCertManager', () => {
     })
 
     it('returns demo issuers when in demo mode', async () => {
-      mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+      mockUseDemoMode.mockReturnValue(true)
 
       const { useCertManager } = await loadModule()
       const { result } = renderHook(() => useCertManager())
@@ -225,7 +225,7 @@ describe('useCertManager', () => {
     })
 
     it('demo data includes expected certificate statuses', async () => {
-      mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+      mockUseDemoMode.mockReturnValue(true)
 
       const { useCertManager } = await loadModule()
       const { result } = renderHook(() => useCertManager())

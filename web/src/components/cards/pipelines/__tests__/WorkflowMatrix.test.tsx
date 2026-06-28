@@ -96,7 +96,7 @@ function setupMatrix(data: MatrixPayload | null, opts: { isLoading?: boolean; er
 describe('WorkflowMatrix', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     mockUseCardLoadingState.mockReturnValue({})
     setupMatrix(DEMO_MATRIX)
   })
@@ -160,7 +160,7 @@ describe('WorkflowMatrix', () => {
 
   describe('demo data path', () => {
     it('passes isDemoData=true to useCardLoadingState in demo mode', () => {
-      mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+      mockUseDemoMode.mockReturnValue(true)
       render(<WorkflowMatrix />)
       expect(mockUseCardLoadingState).toHaveBeenCalledWith(
         expect.objectContaining({ isDemoData: true, hasAnyData: true }),

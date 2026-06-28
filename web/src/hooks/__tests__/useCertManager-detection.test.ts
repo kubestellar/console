@@ -14,7 +14,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 // Mocks — declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
 
-const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false }))
+const mockUseDemoMode = vi.fn(() => false)
 const mockUseClusters = vi.fn(() => ({
   clusters: [],
   deduplicatedClusters: [],
@@ -140,7 +140,7 @@ describe('useCertManager', () => {
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
     sessionStorage.clear()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
   })
 
   afterEach(() => {

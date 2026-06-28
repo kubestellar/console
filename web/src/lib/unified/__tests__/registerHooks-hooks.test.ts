@@ -54,7 +54,7 @@ const {
 } = vi.hoisted(() => {
   const registry = new Map<string, (params?: Record<string, unknown>) => unknown>()
   return {
-    mockUseDemoMode: vi.fn().mockReturnValue({ isDemoMode: false }),
+    mockUseDemoMode: vi.fn().mockReturnValue(false),
     mockUseCachedPodIssues: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseCachedEvents: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseCachedDeployments: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
@@ -180,7 +180,7 @@ function getHook(name: string) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
 })
 
 afterEach(() => {
@@ -474,7 +474,7 @@ describe('useNamespaceEvents via renderHook', () => {
 
 describe('useDemoDataHook via registered demo hooks', () => {
   it('returns empty data when not in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     const hook = getHook('useSecurityIssues')
     const { result } = renderHook(() => hook())
     expect(result.current.data).toEqual([])
@@ -484,7 +484,7 @@ describe('useDemoDataHook via registered demo hooks', () => {
 
   it('shows loading then demo data when in demo mode', () => {
     vi.useFakeTimers()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     const hook = getHook('useSecurityIssues')
     const { result } = renderHook(() => hook())
 
@@ -503,7 +503,7 @@ describe('useDemoDataHook via registered demo hooks', () => {
 
   it('cleans up timer on unmount during loading', () => {
     vi.useFakeTimers()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     const hook = getHook('useActiveAlerts')
     const { unmount } = renderHook(() => hook())
 
@@ -517,7 +517,7 @@ describe('useDemoDataHook via registered demo hooks', () => {
 
   it('transitions from non-demo to demo mode', () => {
     vi.useFakeTimers()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     const hook = getHook('useTopPods')
     const { result, rerender } = renderHook(() => hook())
 
@@ -526,7 +526,7 @@ describe('useDemoDataHook via registered demo hooks', () => {
     expect(result.current.data).toEqual([])
 
     // Switch to demo mode
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     rerender()
 
     // Should be loading

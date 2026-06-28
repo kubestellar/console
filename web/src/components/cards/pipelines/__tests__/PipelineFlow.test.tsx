@@ -131,7 +131,7 @@ describe('PipelineFlow', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     mockUseCardLoadingState.mockReturnValue({})
     mockRunMutation.mockResolvedValue({ ok: true })
     setupFlow(DEMO_FLOW)
@@ -170,7 +170,7 @@ describe('PipelineFlow', () => {
 
   describe('demo data path', () => {
     it('passes isDemoData=true to useCardLoadingState in demo mode', () => {
-      mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+      mockUseDemoMode.mockReturnValue(true)
       render(<PipelineFlow />)
       expect(mockUseCardLoadingState).toHaveBeenCalledWith(
         expect.objectContaining({ isDemoData: true, hasAnyData: true }),
