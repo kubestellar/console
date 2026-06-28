@@ -12,10 +12,13 @@ function getVClusterActionMessage(feedback: VClusterActionFeedback, t: TFunction
   if (feedback.state === 'error') {
     return feedback.message
       ? friendlyErrorMessage(feedback.message)
-      : String(t(`${keyBase}Fallback`, { name: feedback.name, namespace: feedback.namespace }))
+      // Dynamic i18n keys require type assertion — the key is built at runtime
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      : String(t(`${keyBase}Fallback` as any, { name: feedback.name, namespace: feedback.namespace }))
   }
 
-  return String(t(keyBase, { name: feedback.name, namespace: feedback.namespace }))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return String(t(keyBase as any, { name: feedback.name, namespace: feedback.namespace }))
 }
 
 /** Inline feedback banner for vCluster create/connect/disconnect/delete operations. */
