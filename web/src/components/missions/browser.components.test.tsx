@@ -74,12 +74,28 @@ describe('RecommendationCard', () => {
 })
 
 describe('TreeNodeItem', () => {
+  const mockNode = {
+    id: 'test-1',
+    name: 'Test Node',
+    path: '/test',
+    type: 'directory' as const,
+    source: 'community' as const,
+  }
+  const defaultProps = {
+    expandedNodes: new Set<string>(),
+    selectedPath: null,
+    nodeRefs: { current: new Map<string, HTMLButtonElement>() },
+  }
+
   it('renders without errors', async () => {
     const { TreeNodeItem } = await import('./browser/TreeNodeItem')
     const { container } = render(
       <TreeNodeItem
-        label="Test Node"
-        onClick={vi.fn()}
+        node={mockNode}
+        depth={0}
+        {...defaultProps}
+        onToggle={vi.fn()}
+        onSelect={vi.fn()}
       />
     )
     expect(container).toBeTruthy()
@@ -89,8 +105,11 @@ describe('TreeNodeItem', () => {
     const { TreeNodeItem } = await import('./browser/TreeNodeItem')
     render(
       <TreeNodeItem
-        label="Root Node"
-        onClick={vi.fn()}
+        node={{ ...mockNode, name: 'Root Node' }}
+        depth={0}
+        {...defaultProps}
+        onToggle={vi.fn()}
+        onSelect={vi.fn()}
       />
     )
     expect(screen.getByText('Root Node')).toBeInTheDocument()

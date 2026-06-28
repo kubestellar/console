@@ -42,13 +42,19 @@ const mockLoadingNode: TreeNode = {
   loading: true,
 }
 
+const defaultProps = {
+  expandedNodes: new Set<string>(),
+  selectedPath: null,
+  nodeRefs: { current: new Map<string, HTMLButtonElement>() },
+}
+
 describe('TreeNodeItem', () => {
   it('renders directory node with name', () => {
     render(
       <TreeNodeItem
         node={mockDirectoryNode}
         depth={0}
-        isExpanded={false}
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -62,7 +68,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockFileNode}
         depth={0}
-        isExpanded={false}
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -79,7 +85,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockDirectoryNode}
         depth={0}
-        isExpanded={false}
+        {...defaultProps}
         onToggle={onToggle}
         onSelect={vi.fn()}
       />
@@ -100,7 +106,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockFileNode}
         depth={0}
-        isExpanded={false}
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={onSelect}
       />
@@ -118,7 +124,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockLoadingNode}
         depth={0}
-        isExpanded={false}
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -134,7 +140,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockFileNode}
         depth={0}
-        isExpanded={false}
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -144,7 +150,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockFileNode}
         depth={2}
-        isExpanded={false}
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -159,7 +165,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockGitHubNode}
         depth={0}
-        isExpanded={false}
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -173,7 +179,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockDirectoryNode}
         depth={0}
-        isExpanded={false}
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -189,7 +195,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockDirectoryNode}
         depth={0}
-        isExpanded={false}
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -199,7 +205,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockDirectoryNode}
         depth={0}
-        isExpanded={true}
+        {...{ ...defaultProps, expandedNodes: new Set([mockDirectoryNode.id]) }}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
