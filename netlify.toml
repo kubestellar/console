@@ -457,16 +457,12 @@
     #     feature and never successfully connects from console.kubestellar.io.
     #
     # Retained unsafe directives (cannot be removed without breaking features):
-    #   - script-src 'unsafe-eval' — required by the Tier 2 dynamic cards
-    #     feature, which compiles user-authored card modules at runtime via
-    #     `new Function()` in web/src/lib/dynamic-cards/compiler.ts. Removing
-    #     this would disable the dynamic card factory entirely.
     #   - style-src 'unsafe-inline' — React renders `style={{}}` props as
     #     `style="..."` HTML attributes, which are blocked under strict CSP
     #     without 'unsafe-inline'. Tailwind and our app-shell <style> block
     #     also rely on inline styles. Removing this would require rewriting
     #     every inline style across the entire component tree.
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' https://www.googletagmanager.com https://analytics.kubestellar.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://github.com https://avatars.githubusercontent.com https://raw.githubusercontent.com https://api.dicebear.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://fonts.googleapis.com https://www.googleapis.com https://www.googletagmanager.com https://api.github.com https://api.dicebear.com https://fonts.gstatic.com https://analytics.kubestellar.io https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src 'none'; worker-src 'self' blob:; manifest-src 'self'; report-uri /api/csp-report"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://www.googletagmanager.com https://analytics.kubestellar.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://github.com https://avatars.githubusercontent.com https://raw.githubusercontent.com https://api.dicebear.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://fonts.googleapis.com https://www.googleapis.com https://www.googletagmanager.com https://api.github.com https://api.dicebear.com https://fonts.gstatic.com https://analytics.kubestellar.io https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src 'none'; worker-src 'self' blob:; manifest-src 'self'; report-uri /api/csp-report"
     Report-To = "{\"group\":\"csp-endpoint\",\"max_age\":10886400,\"endpoints\":[{\"url\":\"/api/csp-report\"}]}"
     Cache-Control = "no-cache, no-store, must-revalidate"
     Pragma = "no-cache"
@@ -485,7 +481,7 @@
   for = "/embed/*"
   [headers.values]
     X-Frame-Options = "SAMEORIGIN"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' https://www.googletagmanager.com https://analytics.kubestellar.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://github.com https://avatars.githubusercontent.com https://raw.githubusercontent.com https://api.dicebear.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://fonts.googleapis.com https://www.googleapis.com https://www.googletagmanager.com https://api.github.com https://api.dicebear.com https://fonts.gstatic.com https://analytics.kubestellar.io https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; frame-src 'self'; worker-src 'self' blob:; manifest-src 'self'; report-uri /api/csp-report"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://www.googletagmanager.com https://analytics.kubestellar.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://github.com https://avatars.githubusercontent.com https://raw.githubusercontent.com https://api.dicebear.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://fonts.googleapis.com https://www.googleapis.com https://www.googletagmanager.com https://api.github.com https://api.dicebear.com https://fonts.gstatic.com https://analytics.kubestellar.io https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; frame-src 'self'; worker-src 'self' blob:; manifest-src 'self'; report-uri /api/csp-report"
     Report-To = "{\"group\":\"csp-endpoint\",\"max_age\":10886400,\"endpoints\":[{\"url\":\"/api/csp-report\"}]}"
     Cache-Control = "no-cache, no-store, must-revalidate"
     Pragma = "no-cache"
