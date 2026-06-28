@@ -46,8 +46,14 @@ vi.mock('../../dashboard/FloatingDashboardActions', () => ({
     <button onClick={onOpenCustomizer}>Open studio</button>
   ),
 }))
+interface MockDashboardCustomizerProps {
+  existingCardTypes: string[]
+  onAddCards: (cards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => void
+  isOpen: boolean
+}
+
 vi.mock('../../dashboard/customizer/DashboardCustomizer', () => ({
-  DashboardCustomizer: ({ existingCardTypes, onAddCards, isOpen }: any) => (
+  DashboardCustomizer: ({ existingCardTypes, onAddCards, isOpen }: MockDashboardCustomizerProps) => (
     <div>
       <div data-testid="customizer-open">{String(isOpen)}</div>
       <div data-testid="existing-cards">{existingCardTypes.join(',')}</div>

@@ -130,7 +130,7 @@ describe('ClusterGrid.common utilities', () => {
       const event = new KeyboardEvent('keydown', { key: 'Enter' })
       Object.defineProperty(event, 'preventDefault', { value: vi.fn() })
       
-      handler(event as any)
+      handler(event as unknown as React.KeyboardEvent<HTMLDivElement>)
       expect(callback).toHaveBeenCalledTimes(1)
       expect(event.preventDefault).toHaveBeenCalled()
     })
@@ -141,7 +141,7 @@ describe('ClusterGrid.common utilities', () => {
       const event = new KeyboardEvent('keydown', { key: ' ' })
       Object.defineProperty(event, 'preventDefault', { value: vi.fn() })
       
-      handler(event as any)
+      handler(event as unknown as React.KeyboardEvent<HTMLDivElement>)
       expect(callback).toHaveBeenCalledTimes(1)
       expect(event.preventDefault).toHaveBeenCalled()
     })
@@ -152,7 +152,7 @@ describe('ClusterGrid.common utilities', () => {
       const event = new KeyboardEvent('keydown', { key: 'a' })
       Object.defineProperty(event, 'preventDefault', { value: vi.fn() })
       
-      handler(event as any)
+      handler(event as unknown as React.KeyboardEvent<HTMLDivElement>)
       expect(callback).not.toHaveBeenCalled()
       expect(event.preventDefault).not.toHaveBeenCalled()
     })
