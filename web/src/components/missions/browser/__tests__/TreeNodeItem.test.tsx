@@ -68,7 +68,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockFileNode}
         depth={0}
-        ...defaultProps
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -85,7 +85,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockDirectoryNode}
         depth={0}
-        ...defaultProps
+        {...defaultProps}
         onToggle={onToggle}
         onSelect={vi.fn()}
       />
@@ -106,7 +106,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockFileNode}
         depth={0}
-        ...defaultProps
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={onSelect}
       />
@@ -124,7 +124,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockLoadingNode}
         depth={0}
-        ...defaultProps
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -140,7 +140,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockFileNode}
         depth={0}
-        ...defaultProps
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -150,7 +150,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockFileNode}
         depth={2}
-        ...defaultProps
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -165,7 +165,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockGitHubNode}
         depth={0}
-        ...defaultProps
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -179,7 +179,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockDirectoryNode}
         depth={0}
-        ...defaultProps
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -195,7 +195,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockDirectoryNode}
         depth={0}
-        ...defaultProps
+        {...defaultProps}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
@@ -205,7 +205,7 @@ describe('TreeNodeItem', () => {
       <TreeNodeItem
         node={mockDirectoryNode}
         depth={0}
-        ...defaultProps, expandedNodes: new Set([mockDirectoryNode.id])
+        {...{ ...defaultProps, expandedNodes: new Set([mockDirectoryNode.id]) }}
         onToggle={vi.fn()}
         onSelect={vi.fn()}
       />
