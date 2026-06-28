@@ -12,6 +12,14 @@ import type { CSSProperties } from 'react'
 const THEME_SECTION_DIV_STYLE_1: CSSProperties = { isolation: 'isolate' }
 const THEME_SECTION_DIV_STYLE_2: CSSProperties = { transform: 'translateZ(0)' }
 
+// CSS variable helper for theme color previews
+function createColorPreviewStyle(color: string): CSSProperties {
+  return {
+    backgroundColor: color,
+    // Ensure color previews remain visible in both light and dark modes
+    opacity: 1,
+  }
+}
 
 interface ThemeSectionProps {
   themeId: string
@@ -63,7 +71,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
   return (
     <div id="theme-settings" className="glass rounded-xl p-6 overflow-visible relative z-30" style={THEME_SECTION_DIV_STYLE_1}>
       <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 rounded-lg bg-secondary">
+        <div className="p-2 rounded-lg bg-secondary dark:bg-secondary/50">
           <Palette className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
@@ -74,7 +82,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
 
       <div className="space-y-4">
         {/* Current Theme Display */}
-        <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+        <div className="p-4 rounded-lg bg-secondary/30 dark:bg-secondary/20 border border-border dark:border-border/50">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-foreground">{currentTheme.name}</p>
@@ -84,21 +92,21 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
               {currentTheme.dark ? (
                 <Moon className="w-4 h-4 text-muted-foreground" />
               ) : (
-                <Sun className="w-4 h-4 text-yellow-400" />
+                <Sun className="w-4 h-4 text-yellow-400 dark:text-yellow-300" />
               )}
-              {/* Color preview dots */}
+              {/* Color preview dots - these intentionally show theme colors */}
               <div className="flex gap-1">
                 <div
-                  className="w-3 h-3 rounded-full border border-border"
-                  style={{ backgroundColor: currentTheme.colors.brandPrimary }}
+                  className="w-3 h-3 rounded-full border border-border dark:border-border/50"
+                  style={createColorPreviewStyle(currentTheme.colors.brandPrimary)}
                 />
                 <div
-                  className="w-3 h-3 rounded-full border border-border"
-                  style={{ backgroundColor: currentTheme.colors.brandSecondary }}
+                  className="w-3 h-3 rounded-full border border-border dark:border-border/50"
+                  style={createColorPreviewStyle(currentTheme.colors.brandSecondary)}
                 />
                 <div
-                  className="w-3 h-3 rounded-full border border-border"
-                  style={{ backgroundColor: currentTheme.colors.brandTertiary }}
+                  className="w-3 h-3 rounded-full border border-border dark:border-border/50"
+                  style={createColorPreviewStyle(currentTheme.colors.brandTertiary)}
                 />
               </div>
             </div>
@@ -119,17 +127,17 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
             aria-haspopup="listbox"
             aria-expanded={themeDropdownOpen}
             aria-labelledby="theme-dropdown-label"
-            className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-secondary border border-border text-foreground hover:bg-secondary/80 transition-colors"
+            className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-secondary dark:bg-secondary/50 border border-border dark:border-border/50 text-foreground hover:bg-secondary/80 dark:hover:bg-secondary/40 transition-colors"
           >
             <div className="flex items-center gap-3">
               <div className="flex gap-1">
                 <div
                   className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: currentTheme.colors.brandPrimary }}
+                  style={createColorPreviewStyle(currentTheme.colors.brandPrimary)}
                 />
                 <div
                   className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: currentTheme.colors.brandSecondary }}
+                  style={createColorPreviewStyle(currentTheme.colors.brandSecondary)}
                 />
               </div>
               <span>{currentTheme.name}</span>
@@ -142,10 +150,10 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
 
           {/* Dropdown Menu */}
           {themeDropdownOpen && (
-            <div role="listbox" aria-labelledby="theme-dropdown-label" className="absolute z-dropdown mt-2 w-full max-h-[400px] overflow-y-auto rounded-lg bg-card border border-border shadow-xl" style={THEME_SECTION_DIV_STYLE_2}>
+            <div role="listbox" aria-labelledby="theme-dropdown-label" className="absolute z-dropdown mt-2 w-full max-h-[400px] overflow-y-auto rounded-lg bg-card dark:bg-card/90 border border-border dark:border-border/50 shadow-xl" style={THEME_SECTION_DIV_STYLE_2}>
               {themeGroups.map((group) => (
                 <div key={group.name}>
-                  <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-secondary/50 sticky top-0">
+                  <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-secondary/50 dark:bg-secondary/30 sticky top-0">
                     {group.name}
                   </div>
                   {group.themes.map((tid) => {
@@ -167,23 +175,23 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                             setThemeDropdownOpen(false)
                           }
                         }}
-                        className={`w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/50 transition-colors ${
-                          isSelected ? 'bg-primary/10' : ''
+                        className={`w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/50 dark:hover:bg-secondary/30 transition-colors ${
+                          isSelected ? 'bg-primary/10 dark:bg-primary/20' : ''
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className="flex gap-1">
                             <div
-                              className="w-3 h-3 rounded-full border border-border/50"
-                              style={{ backgroundColor: t.colors.brandPrimary }}
+                              className="w-3 h-3 rounded-full border border-border/50 dark:border-border/30"
+                              style={createColorPreviewStyle(t.colors.brandPrimary)}
                             />
                             <div
-                              className="w-3 h-3 rounded-full border border-border/50"
-                              style={{ backgroundColor: t.colors.brandSecondary }}
+                              className="w-3 h-3 rounded-full border border-border/50 dark:border-border/30"
+                              style={createColorPreviewStyle(t.colors.brandSecondary)}
                             />
                             <div
-                              className="w-3 h-3 rounded-full border border-border/50"
-                              style={{ backgroundColor: t.colors.brandTertiary }}
+                              className="w-3 h-3 rounded-full border border-border/50 dark:border-border/30"
+                              style={createColorPreviewStyle(t.colors.brandTertiary)}
                             />
                           </div>
                           <div className="text-left">
@@ -197,7 +205,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                           {t.dark ? (
                             <Moon className="w-3 h-3 text-muted-foreground" />
                           ) : (
-                            <Sun className="w-3 h-3 text-yellow-400" />
+                            <Sun className="w-3 h-3 text-yellow-400 dark:text-yellow-300" />
                           )}
                           {isSelected && <Check className="w-4 h-4 text-primary" />}
                         </div>
@@ -208,7 +216,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
               ))}
               {customThemes.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-secondary/50 sticky top-0">
+                  <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-secondary/50 dark:bg-secondary/30 sticky top-0">
                     {t('settings.theme.marketplaceThemes')}
                   </div>
                   {customThemes.map((ct) => {
@@ -228,23 +236,23 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                             setThemeDropdownOpen(false)
                           }
                         }}
-                        className={`w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/50 transition-colors ${
-                          isSelected ? 'bg-primary/10' : ''
+                        className={`w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/50 dark:hover:bg-secondary/30 transition-colors ${
+                          isSelected ? 'bg-primary/10 dark:bg-primary/20' : ''
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className="flex gap-1">
                             <div
-                              className="w-3 h-3 rounded-full border border-border/50"
-                              style={{ backgroundColor: ct.colors?.brandPrimary || '#666' }}
+                              className="w-3 h-3 rounded-full border border-border/50 dark:border-border/30"
+                              style={createColorPreviewStyle(ct.colors?.brandPrimary || '#666')}
                             />
                             <div
-                              className="w-3 h-3 rounded-full border border-border/50"
-                              style={{ backgroundColor: ct.colors?.brandSecondary || '#666' }}
+                              className="w-3 h-3 rounded-full border border-border/50 dark:border-border/30"
+                              style={createColorPreviewStyle(ct.colors?.brandSecondary || '#666')}
                             />
                             <div
-                              className="w-3 h-3 rounded-full border border-border/50"
-                              style={{ backgroundColor: ct.colors?.brandTertiary || '#666' }}
+                              className="w-3 h-3 rounded-full border border-border/50 dark:border-border/30"
+                              style={createColorPreviewStyle(ct.colors?.brandTertiary || '#666')}
                             />
                           </div>
                           <div className="text-left">
@@ -258,7 +266,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                           {ct.dark ? (
                             <Moon className="w-3 h-3 text-muted-foreground" />
                           ) : (
-                            <Sun className="w-3 h-3 text-yellow-400" />
+                            <Sun className="w-3 h-3 text-yellow-400 dark:text-yellow-300" />
                           )}
                           {isSelected && <Check className="w-4 h-4 text-primary" />}
                         </div>
@@ -286,22 +294,22 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                   title={t.description}
                   className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all ${
                     isSelected
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/50 hover:bg-secondary/30'
+                      ? 'border-primary bg-primary/10 dark:bg-primary/20'
+                      : 'border-border dark:border-border/50 hover:border-primary/50 hover:bg-secondary/30 dark:hover:bg-secondary/20'
                   }`}
                 >
                   <div className="flex gap-0.5">
                     <div
                       className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: t.colors.brandPrimary }}
+                      style={createColorPreviewStyle(t.colors.brandPrimary)}
                     />
                     <div
                       className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: t.colors.brandSecondary }}
+                      style={createColorPreviewStyle(t.colors.brandSecondary)}
                     />
                     <div
                       className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: t.colors.brandTertiary }}
+                      style={createColorPreviewStyle(t.colors.brandTertiary)}
                     />
                   </div>
                   <span className={`text-xs ${isSelected ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
@@ -324,7 +332,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                   <div
                     key={ct.id}
                     className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
-                      isSelected ? 'border-primary bg-primary/10' : 'border-border bg-secondary/20'
+                      isSelected ? 'border-primary bg-primary/10 dark:bg-primary/20' : 'border-border dark:border-border/50 bg-secondary/20 dark:bg-secondary/10'
                     }`}
                   >
                     <button
@@ -332,9 +340,9 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                       className="flex items-center gap-3 flex-1 text-left"
                     >
                       <div className="flex gap-1">
-                        <div className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: ct.colors?.brandPrimary || '#666' }} />
-                        <div className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: ct.colors?.brandSecondary || '#666' }} />
-                        <div className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: ct.colors?.brandTertiary || '#666' }} />
+                        <div className="w-3 h-3 rounded-full border border-border/50 dark:border-border/30" style={createColorPreviewStyle(ct.colors?.brandPrimary || '#666')} />
+                        <div className="w-3 h-3 rounded-full border border-border/50 dark:border-border/30" style={createColorPreviewStyle(ct.colors?.brandSecondary || '#666')} />
+                        <div className="w-3 h-3 rounded-full border border-border/50 dark:border-border/30" style={createColorPreviewStyle(ct.colors?.brandTertiary || '#666')} />
                       </div>
                       <div>
                         <p className={`text-sm ${isSelected ? 'text-primary font-medium' : 'text-foreground'}`}>{ct.name}</p>
@@ -345,7 +353,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                     <button
                       onClick={() => setConfirmRemoveId(ct.id)}
                       aria-label={t('common.remove')}
-                      className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-red-950/50 rounded transition-colors"
+                      className="p-1.5 text-muted-foreground hover:text-red-400 dark:hover:text-red-300 hover:bg-red-950/50 dark:hover:bg-red-900/30 rounded transition-colors"
                       title={t('common.remove')}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -374,7 +382,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
               Gradients
             </StatusBadge>
           )}
-          <span className="px-2 py-1 text-xs rounded bg-secondary text-muted-foreground">
+          <span className="px-2 py-1 text-xs rounded bg-secondary dark:bg-secondary/50 text-muted-foreground">
             Font: {currentTheme.font?.family?.split(',')[0]?.replace(/'/g, '') ?? 'System'}
           </span>
         </div>
