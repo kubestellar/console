@@ -177,6 +177,7 @@ vi.mock('../../../hooks/useRefreshIndicator', () => ({
   useRefreshIndicator: (fn: () => void) => ({ showIndicator: false, triggerRefresh: fn }),
 }))
 vi.mock('../../../hooks/useDemoMode', () => ({ getDemoMode: () => false, isDemoModeForced: false }))
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 
 let mockDashboardHealthStatus: 'healthy' | 'warning' | 'critical' | 'empty' = 'healthy'
 vi.mock('../../../hooks/useDashboardHealth', () => ({

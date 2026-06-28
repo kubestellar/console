@@ -28,7 +28,7 @@ vi.mock('../../../hooks/useMCP', () => ({
 
 const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   isDemoModeForced: () => false,
   getDemoMode: () => false,
   canToggleDemoMode: () => true,

@@ -96,6 +96,7 @@ vi.mock('../ui/Skeleton', () => ({
   SkeletonList: ({ items, className }: { items?: number; className?: string }) => (
     <div data-testid="skeleton-list" data-items={items} className={className} />
   ),
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../lib/formatStats', () => ({

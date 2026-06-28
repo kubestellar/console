@@ -33,6 +33,7 @@ vi.mock('../mcp/shared', () => ({
 }))
 
 vi.mock('../../hooks/useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   isDemoModeForced: false,
 }))
 

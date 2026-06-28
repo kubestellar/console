@@ -27,7 +27,7 @@ vi.mock('../../hooks/useLocalAgent', () => ({
 }))
 
 vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false }),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../lib/unified/demo', () => ({

@@ -33,7 +33,7 @@ vi.mock('../../hooks/useDrillDown', () => ({
 }))
 
 vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false }),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('./CardDataContext', () => ({

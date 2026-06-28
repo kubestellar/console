@@ -43,7 +43,7 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
 }))
 
 vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false }),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../ui/Skeleton', () => ({

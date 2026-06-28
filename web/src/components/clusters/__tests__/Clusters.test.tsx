@@ -32,7 +32,7 @@ vi.mock('../../../hooks/useLocalAgent', () => ({
 }))
 
 vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: true }),
+  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({

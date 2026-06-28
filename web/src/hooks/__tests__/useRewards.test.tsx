@@ -11,7 +11,7 @@ vi.mock('../../lib/analytics', () => ({
 
 vi.mock('../useDemoMode', () => ({
   getDemoMode: vi.fn(() => false),
-  useDemoMode: vi.fn(() => ({ isDemoMode: false })),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 const mockUser = { id: 'user-1', github_login: 'testuser' }

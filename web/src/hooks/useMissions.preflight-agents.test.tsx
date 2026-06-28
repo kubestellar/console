@@ -17,6 +17,7 @@ vi.mock('./mcp/agentFetch', () => ({
 }))
 
 vi.mock('./useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: vi.fn(() => false),
   isDemoModeForced: false,
   default: vi.fn(() => false),

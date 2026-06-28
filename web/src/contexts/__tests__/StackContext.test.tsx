@@ -33,7 +33,7 @@ vi.mock('../../hooks/useStackDiscovery', () => ({
 }))
 
 vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: mockIsDemoMode }),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../hooks/mcp/clusters', () => ({

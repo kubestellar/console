@@ -22,7 +22,7 @@ vi.mock('../../hooks/useMissions', () => ({
 
 let mockIsDemoMode = false
 vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: mockIsDemoMode }),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../hooks/useDeepLink', () => ({

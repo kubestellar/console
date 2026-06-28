@@ -112,6 +112,8 @@ vi.mock('../../../lib/auth', () => ({
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({
     isDemoMode: mockState.isDemoMode,
+    toggleDemoMode: vi.fn(),
+    setDemoMode: vi.fn(),
   }),
   isDemoModeForced: false,
 }))
