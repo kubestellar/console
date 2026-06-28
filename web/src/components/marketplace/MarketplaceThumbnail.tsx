@@ -109,7 +109,7 @@ function ProjectLogo({ projectName, iconPath }: { projectName: string; iconPath:
 
   if (failed) {
     return (
-      <div className="w-12 h-12 rounded-xl bg-black/25 backdrop-blur-xs shadow-xs flex items-center justify-center">
+      <div className="w-12 h-12 rounded-xl bg-black/25 dark:bg-black/40 backdrop-blur-xs shadow-xs flex items-center justify-center">
         <svg viewBox="0 0 24 24" className="w-8 h-8 text-white drop-shadow-md" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
           <path d={iconPath} />
         </svg>
@@ -118,7 +118,7 @@ function ProjectLogo({ projectName, iconPath }: { projectName: string; iconPath:
   }
 
   return (
-    <div className="w-12 h-12 rounded-xl bg-card/90 shadow-xs flex items-center justify-center">
+    <div className="w-12 h-12 rounded-xl bg-card/90 dark:bg-card/70 shadow-xs flex items-center justify-center">
       <img
         src={getProjectLogoUrl(projectName)}
         alt={projectName}
@@ -146,11 +146,15 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
     const iconPath = cncfIcon || TYPE_FALLBACKS['card-preset'].icon
     return (
       <div
-        className={`relative h-20 flex items-center justify-center ${isHelpWanted ? 'opacity-70' : ''} ${className || ''}`}
-        style={{ background: `linear-gradient(135deg, ${cncfGradient[0]}, ${cncfGradient[1]})` }}
+        className={`relative h-20 flex items-center justify-center bg-gradient-to-br ${isHelpWanted ? 'opacity-70' : ''} ${className || ''}`}
+        style={{
+          '--tw-gradient-from': cncfGradient[0],
+          '--tw-gradient-to': cncfGradient[1],
+          background: `linear-gradient(135deg, ${cncfGradient[0]}, ${cncfGradient[1]})`,
+        } as React.CSSProperties}
       >
         <ProjectLogo projectName={projectName} iconPath={iconPath} />
-        <span className="absolute bottom-1.5 right-2 text-2xs font-medium text-white/70 bg-black/20 px-1.5 py-0.5 rounded">
+        <span className="absolute bottom-1.5 right-2 text-2xs font-medium text-white/70 dark:text-white/60 bg-black/20 dark:bg-black/30 px-1.5 py-0.5 rounded">
           {cncfCategory}
         </span>
       </div>
