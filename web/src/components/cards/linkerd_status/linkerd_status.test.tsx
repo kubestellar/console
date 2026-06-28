@@ -30,11 +30,16 @@ vi.mock('../../ui/Skeleton', () => ({
 function setup(overrides?: Record<string, unknown>) {
   mockUseCachedLinkerd.mockReturnValue({
     data: {
-      health: 'healthy',
-      meshedPods: 0,
-      totalPods: 0,
-      successRate: 0,
-      rps: 0,
+      summary: {
+        totalMeshedPods: 0,
+        totalPods: 0,
+      },
+      stats: {
+        avgSuccessRatePct: 0,
+        avgRequestsPerSecond: 0,
+        avgP99LatencyMs: 0,
+      },
+      deployments: [],
     },
     isLoading: false,
     isRefreshing: false,

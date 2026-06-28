@@ -78,7 +78,9 @@ describe("fetchWithTimeout", () => {
       vi.clearAllMocks();
       vi.unstubAllGlobals();
       
-      const mockFetch = vi.fn().mockResolvedValueOnce(new Response("test", { status: statusCode }));
+      // Status 204 (No Content) should not have a body
+      const responseBody = statusCode === 204 ? null : "test";
+      const mockFetch = vi.fn().mockResolvedValueOnce(new Response(responseBody, { status: statusCode }));
       vi.stubGlobal("fetch", mockFetch);
 
       const result = await fetchWithTimeout("http://example.com", { timeoutMs: 5000 });
