@@ -37,7 +37,7 @@ vi.mock('../../hooks/useCachedData', () => ({
 
 const mockIsDemoMode = vi.fn(() => ({ isDemoMode: false }))
 vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 const mockExecute = vi.fn()

@@ -23,7 +23,7 @@ const mockUseClusters = vi.fn(() => ({
 const mockKubectlProxy = { exec: vi.fn() }
 
 vi.mock('../useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => mockUseDemoMode(),
 }))
 
 vi.mock('../useMCP', () => ({

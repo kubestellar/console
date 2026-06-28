@@ -21,7 +21,7 @@ vi.mock('../../lib/api', () => ({
 
 const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false }))
 vi.mock('../useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => mockUseDemoMode(),
 }))
 
 vi.mock('../useBackendHealth', () => ({

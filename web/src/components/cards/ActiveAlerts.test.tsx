@@ -33,7 +33,7 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
 
 const mockUseDemoMode = vi.fn()
 vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => ({ isDemoMode: mockUseDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 const mockDrillToAlert = vi.fn()

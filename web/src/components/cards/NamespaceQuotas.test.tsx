@@ -51,7 +51,7 @@ vi.mock('../../hooks/useCachedData', () => ({
 
 const mockUseDemoMode = vi.fn()
 vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => mockUseDemoMode(),
 }))
 
 const mockUseCardLoadingState = vi.fn()

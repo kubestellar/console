@@ -27,7 +27,7 @@ vi.mock('../../hooks/useAlerts', () => ({
 
 const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 const mockUseCardLoadingState = vi.fn()
