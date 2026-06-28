@@ -110,6 +110,7 @@ useDefault = true
 
 # PCI vendor IDs (15b3=Mellanox, 10de=NVIDIA) flagged as generic-api-key
 # Port numbers and URL paths in comments flagged as generic-api-key
+# GA4 Measurement Protocol API secret (non-sensitive, client-side analytics)
 [[rules]]
   id = "generic-api-key"
   description = "Generic API Key"
