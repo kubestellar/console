@@ -22,51 +22,61 @@ export const CHART_MIN_HEIGHT_TALL_PX = 250
  * IMPORTANT: ECharts uses canvas-based rendering and does NOT support CSS variables.
  * These values MUST remain as raw hex/rgb strings for ECharts compatibility.
  * 
- * Corresponding CSS custom properties are defined in index.css as --chart-*
- * for use in non-ECharts contexts (DOM elements, Recharts, etc.).
+ * Values are read from CSS custom properties defined in index.css as --chart-*
+ * at runtime. This allows theme switching while maintaining ECharts compatibility.
  * 
- * To swap themes: update this object and the CSS variables together.
+ * To swap themes: update the CSS variables in index.css.
  */
+
+/**
+ * Helper to read CSS custom property value from :root.
+ * Returns the raw computed value (hex/rgba string) for ECharts canvas rendering.
+ */
+const getCSSVar = (name: string): string => {
+  if (typeof window === 'undefined') return '' // SSR fallback
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
 export const CHART_THEME = {
   tooltip: {
-    bg: '#1a1a2e',
-    border: '#333',
-    text: '#e0e0e0',
-    label: '#ccc',
+    bg: getCSSVar('--chart-tooltip-bg') || '#1a1a2e',
+    border: getCSSVar('--chart-tooltip-border') || '#333',
+    text: getCSSVar('--chart-tooltip-text') || '#e0e0e0',
+    label: getCSSVar('--chart-tooltip-label') || '#ccc',
     fontSize: '12px',
     fontSizeCompact: '11px',
   },
   tooltipGray: {
-    bg: '#1f2937',
-    border: '#374151',
+    bg: getCSSVar('--chart-tooltip-gray-bg') || '#1f2937',
+    border: getCSSVar('--chart-tooltip-gray-border') || '#374151',
     radius: '0.375rem',
   },
   grid: {
-    stroke: '#333',
+    stroke: getCSSVar('--chart-grid-stroke') || '#333',
   },
   axis: {
-    stroke: '#333',
-    tick: '#888',
+    stroke: getCSSVar('--chart-axis-stroke') || '#333',
+    tick: getCSSVar('--chart-axis-tick') || '#888',
   },
   dataZoom: {
-    border: '#444',
-    bg: 'rgba(50,50,50,0.3)',
-    filler: 'rgba(68,114,196,0.15)',
-    handle: '#666',
-    text: '#888',
-    dataLine: '#555',
-    dataArea: 'rgba(100,100,100,0.2)',
+    border: getCSSVar('--chart-datazoom-border') || '#444',
+    bg: getCSSVar('--chart-datazoom-bg') || 'rgba(50,50,50,0.3)',
+    filler: getCSSVar('--chart-datazoom-filler') || 'rgba(68,114,196,0.15)',
+    handle: getCSSVar('--chart-datazoom-handle') || '#666',
+    text: getCSSVar('--chart-datazoom-text') || '#888',
+    dataLine: getCSSVar('--chart-datazoom-data-line') || '#555',
+    dataArea: getCSSVar('--chart-datazoom-data-area') || 'rgba(100,100,100,0.2)',
   },
   markLine: {
-    label: '#888',
-    stroke: '#666',
+    label: getCSSVar('--chart-mark-line-label') || '#888',
+    stroke: getCSSVar('--chart-mark-line-stroke') || '#666',
   },
   text: {
-    white: '#fff',
-    muted: '#aaa',
+    white: getCSSVar('--chart-text-white') || '#fff',
+    muted: getCSSVar('--chart-text-muted') || '#aaa',
   },
   emphasis: {
-    shadow: 'rgba(0,0,0,0.5)',
+    shadow: getCSSVar('--chart-emphasis-shadow') || 'rgba(0,0,0,0.5)',
   },
 } as const
 
