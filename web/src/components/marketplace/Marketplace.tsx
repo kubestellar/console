@@ -608,6 +608,48 @@ export function Marketplace() {
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
 
+  // Type filter keyboard navigation
+  const typeOptions: (MarketplaceItemType | null)[] = [null, ...Object.keys(TYPE_LABELS) as MarketplaceItemType[]]
+  
+  const handleTypeKeyDown = (e: React.KeyboardEvent, currentType: MarketplaceItemType | null) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault()
+      const currentIndex = typeOptions.indexOf(currentType)
+      const nextIndex = e.key === 'ArrowRight'
+        ? (currentIndex + 1) % typeOptions.length
+        : (currentIndex - 1 + typeOptions.length) % typeOptions.length
+      const nextType = typeOptions[nextIndex]
+      setSelectedType(nextType)
+      setShowHelpWanted(false)
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      setSelectedType(null)
+      setShowHelpWanted(false)
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      setSelectedType(typeOptions[typeOptions.length - 1])
+      setShowHelpWanted(false)
+    }
+  }
+
+  // Tag filter keyboard navigation
+  const handleTagKeyDown = (e: React.KeyboardEvent, currentTag: string | null, tagList: string[]) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault()
+      const currentIndex = currentTag ? tagList.indexOf(currentTag) : -1
+      const nextIndex = e.key === 'ArrowRight'
+        ? (currentIndex + 1) % tagList.length
+        : currentIndex === -1 ? tagList.length - 1 : (currentIndex - 1 + tagList.length) % tagList.length
+      setSelectedTag(tagList[nextIndex])
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      setSelectedTag(tagList[0])
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      setSelectedTag(tagList[tagList.length - 1])
+    }
+  }
+
   const toggleViewMode = (mode: ViewMode) => {
     setViewMode(mode)
     try { localStorage.setItem(VIEW_MODE_KEY, mode) } catch { /* ok */ }
@@ -736,7 +778,11 @@ export function Marketplace() {
 
         {/* Type filter */}
         <div className="flex items-center gap-1.5">
-          <button onClick={() => { setSelectedType(null); setShowHelpWanted(false) }} className={filterBtnClass(!selectedType && !showHelpWanted)}>
+          <button 
+            onClick={() => { setSelectedType(null); setShowHelpWanted(false) }} 
+            onKeyDown={(e) => handleTypeKeyDown(e, null)}
+            className={filterBtnClass(!selectedType && !showHelpWanted)}
+          >
             All
             <span className="text-2xs ml-0.5 opacity-60">{typeCounts.all}</span>
           </button>
@@ -744,6 +790,7 @@ export function Marketplace() {
             <button
               key={type}
               onClick={() => { setSelectedType(selectedType === type ? null : type); setShowHelpWanted(false) }}
+              onKeyDown={(e) => handleTypeKeyDown(e, type)}
               className={filterBtnClass(selectedType === type && !showHelpWanted)}
             >
               <Icon className="w-3 h-3" />
@@ -787,6 +834,7 @@ export function Marketplace() {
               <button
                 key={tag}
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                onKeyDown={(e) => handleTagKeyDown(e, tag, allTags)}
                 className={filterBtnClass(selectedTag === tag)}
               >
                 <Tag className="w-3 h-3" />
@@ -803,6 +851,7 @@ export function Marketplace() {
               <button
                 key={cat}
                 onClick={() => setSelectedTag(selectedTag === cat ? null : cat)}
+                onKeyDown={(e) => handleTagKeyDown(e, cat, cncfCategories)}
                 className={`flex items-center gap-1 px-2 py-1 text-2xs rounded transition-colors ${
                   selectedTag === cat
                     ? 'bg-yellow-500/15 text-yellow-400 font-medium'

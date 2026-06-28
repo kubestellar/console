@@ -52,10 +52,31 @@ export function FilterTabs({
   onCreateClusterWithAI,
 }: FilterTabsProps) {
   const { t } = useTranslation()
+  
+  const filterOptions: FilterType[] = ['all', 'healthy', 'unhealthy', 'unreachable']
+  
+  const handleFilterKeyDown = (e: React.KeyboardEvent, currentFilter: FilterType) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault()
+      const currentIndex = filterOptions.indexOf(currentFilter)
+      const nextIndex = e.key === 'ArrowRight' 
+        ? (currentIndex + 1) % filterOptions.length
+        : (currentIndex - 1 + filterOptions.length) % filterOptions.length
+      onFilterChange(filterOptions[nextIndex])
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      onFilterChange(filterOptions[0])
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      onFilterChange(filterOptions[filterOptions.length - 1])
+    }
+  }
+
   return (
     <div className="flex flex-wrap gap-2 mb-4">
       <button
         onClick={() => onFilterChange('all')}
+        onKeyDown={(e) => handleFilterKeyDown(e, 'all')}
         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
           filter === 'all'
             ? 'bg-primary text-primary-foreground'
@@ -66,6 +87,7 @@ export function FilterTabs({
       </button>
       <button
         onClick={() => onFilterChange('healthy')}
+        onKeyDown={(e) => handleFilterKeyDown(e, 'healthy')}
         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
           filter === 'healthy'
             ? 'bg-green-500 text-foreground'
@@ -76,6 +98,7 @@ export function FilterTabs({
       </button>
       <button
         onClick={() => onFilterChange('unhealthy')}
+        onKeyDown={(e) => handleFilterKeyDown(e, 'unhealthy')}
         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
           filter === 'unhealthy'
             ? 'bg-orange-500 text-foreground'
@@ -86,6 +109,7 @@ export function FilterTabs({
       </button>
       <button
         onClick={() => onFilterChange('unreachable')}
+        onKeyDown={(e) => handleFilterKeyDown(e, 'unreachable')}
         className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
           filter === 'unreachable'
             ? 'bg-yellow-500 text-foreground'
@@ -129,6 +153,23 @@ export function FilterTabs({
               <button
                 key={mode}
                 onClick={() => onLayoutModeChange(mode)}
+                onKeyDown={(e) => {
+                  const modes = LAYOUT_OPTIONS.map((opt) => opt.mode)
+                  const currentIndex = modes.indexOf(mode)
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                    e.preventDefault()
+                    const nextIndex = e.key === 'ArrowRight' 
+                      ? (currentIndex + 1) % modes.length
+                      : (currentIndex - 1 + modes.length) % modes.length
+                    onLayoutModeChange(modes[nextIndex])
+                  } else if (e.key === 'Home') {
+                    e.preventDefault()
+                    onLayoutModeChange(modes[0])
+                  } else if (e.key === 'End') {
+                    e.preventDefault()
+                    onLayoutModeChange(modes[modes.length - 1])
+                  }
+                }}
                 className={`p-1.5 rounded-lg transition-colors ${
                   layoutMode === mode
                     ? 'bg-primary text-primary-foreground'
