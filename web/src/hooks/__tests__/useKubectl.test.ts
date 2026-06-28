@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 vi.mock('../useDemoMode', () => ({
-  getDemoMode: vi.fn(() => false),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../lib/constants', async (importOriginal) => {

@@ -5,6 +5,7 @@ import { EventCard } from './EventCard'
 import type { StellarNotification } from '../../types/stellar'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => key,
   }),

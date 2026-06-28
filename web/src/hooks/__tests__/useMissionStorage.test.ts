@@ -6,7 +6,7 @@ const { mockGetDemoMode } = vi.hoisted(() => ({
 }))
 
 vi.mock('../useDemoMode', () => ({
-  getDemoMode: mockGetDemoMode,
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../mocks/demoMissions', () => ({

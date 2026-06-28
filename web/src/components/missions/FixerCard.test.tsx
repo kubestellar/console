@@ -5,6 +5,7 @@ import { FixerCard } from './FixerCard'
 import type { MissionExport } from '../../lib/missions/types'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       const map: Record<string, string> = {

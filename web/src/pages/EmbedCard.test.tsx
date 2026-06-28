@@ -27,6 +27,7 @@ import { useDemoMode } from '../hooks/useDemoMode'
 // ---------------------------------------------------------------------------
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => {
       if (key === 'embed.unknownCard') return 'Card not found'
@@ -38,7 +39,7 @@ vi.mock('react-i18next', () => ({
 
 const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false }))
 vi.mock('../hooks/useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 const mockPipelineFilterProvider = vi.fn()

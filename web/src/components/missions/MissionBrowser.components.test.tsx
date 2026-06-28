@@ -7,6 +7,7 @@ import { render, screen } from '@testing-library/react'
 
 // Mock react-i18next for all components
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       const map: Record<string, string> = {
@@ -148,7 +149,7 @@ describe('MissionBrowserRecommendedTab', () => {
         tokenError={null}
         missionFetchError={null}
         loadingRecommendations={false}
-        searchProgress={null}
+        searchProgress={{ step: 'Idle', found: 0, scanned: 0, detail: '' }}
         hasCluster={false}
         recommendations={[]}
         filteredRecommendations={[]}

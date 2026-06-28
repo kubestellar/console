@@ -30,7 +30,7 @@ vi.mock('../CardDataContext', () => ({
 }))
 
 vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../ui/ClusterSelect', () => ({

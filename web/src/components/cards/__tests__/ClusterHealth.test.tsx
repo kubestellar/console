@@ -85,6 +85,7 @@ vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ variant }: { variant: string }) => <div data-testid={`skeleton-${variant}`} />,
   SkeletonStats: () => <div data-testid="skeleton-stats" />,
   SkeletonList: () => <div data-testid="skeleton-list" />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../ui/StatusBadge', () => ({

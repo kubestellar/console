@@ -48,7 +48,7 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
 
 const mockIsDemoMode = vi.fn(() => ({ isDemoMode: false }))
 vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => mockIsDemoMode(),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 const mockUseCardLoadingState = vi.fn()

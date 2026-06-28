@@ -23,6 +23,7 @@ vi.mock('../../../ui/Skeleton', () => ({
   Skeleton: ({ height }: { height?: number }) => (
     <div data-testid="skeleton" data-height={height} />
   ),
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../../../lib/cards/CardComponents', () => ({

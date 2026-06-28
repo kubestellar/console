@@ -32,6 +32,7 @@ vi.mock('../../../lib/cache', () => ({
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => {
       if (key === 'failedToLoad' || key === 'messages.failedToLoad') return 'failedToLoad';

@@ -40,7 +40,7 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
 }))
 
 vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../hooks/useKyverno', () => ({

@@ -68,6 +68,7 @@ vi.mock('react-i18next', () => ({
 // Stub UI components
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ variant }: { variant: string }) => <div data-testid={`skeleton-${variant}`} />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../ui/Pagination', () => ({

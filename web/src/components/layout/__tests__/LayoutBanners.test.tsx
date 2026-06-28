@@ -6,6 +6,7 @@ import { renderHook } from '@testing-library/react'
 import { useLayoutBanners } from '../LayoutBanners'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 

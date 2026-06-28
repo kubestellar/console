@@ -22,7 +22,7 @@ vi.mock('../../../lib/demoMode', () => ({
 }))
 
 vi.mock('../../useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../../lib/api', () => ({

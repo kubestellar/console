@@ -48,6 +48,7 @@ vi.mock('../../../components/ui/Skeleton', () => ({
   Skeleton: ({ height, width, variant, className }: { height?: number; width?: number; variant?: string; className?: string }) => (
     <div data-testid="skeleton" data-variant={variant} data-height={height} data-width={width} className={className} />
   ),
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 // Mock Pagination

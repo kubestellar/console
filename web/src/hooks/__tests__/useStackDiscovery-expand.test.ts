@@ -7,7 +7,7 @@ const mockGetDemoMode = vi.fn(() => false)
 const mockExec = vi.fn()
 
 vi.mock('../useDemoMode', () => ({
-  getDemoMode: (...args: unknown[]) => mockGetDemoMode(...args),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({

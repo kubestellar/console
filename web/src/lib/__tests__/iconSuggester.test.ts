@@ -3,7 +3,7 @@ import { suggestIconSync, suggestDashboardIcon } from '../iconSuggester'
 
 // Mock the getDemoMode dependency
 vi.mock('../../hooks/useDemoMode', () => ({
-  getDemoMode: vi.fn(() => false),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 // Mock WebSocket so askAgentForIcon does not open real connections

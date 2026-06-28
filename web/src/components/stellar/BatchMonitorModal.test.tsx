@@ -5,6 +5,7 @@ import { BatchMonitorModal } from './BatchMonitorModal'
 import type { StellarNotification, StellarSolve, StellarSolveProgress } from '../../types/stellar'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => key,
   }),

@@ -52,6 +52,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ height }: { height: number }) => <div data-testid="skeleton" style={{ height }} />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 // ── Tests ────────────────────────────────────────────────────────────────────

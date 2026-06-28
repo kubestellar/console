@@ -33,7 +33,9 @@ vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
   get isNetlifyDeployment() { return mockIsNetlifyDeployment.value },
 }))
-vi.mock('../../useDemoMode', () => ({ useDemoMode: () => mockUseDemoMode() }))
+vi.mock('../../useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+}))
 vi.mock('../../../lib/modeTransition', () => ({
   registerRefetch: (...args: unknown[]) => mockRegisterRefetch(...args),
   registerCacheReset: (...args: unknown[]) => mockRegisterCacheReset(...args),

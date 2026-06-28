@@ -33,6 +33,7 @@ vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ width, height, variant }: { width?: number; height?: number; variant?: string }) => (
     <div data-testid="skeleton" data-variant={variant} style={{ width, height }} />
   ),
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../../lib/modals', () => ({

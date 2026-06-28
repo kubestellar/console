@@ -5,6 +5,7 @@ import { UnstructuredFilePreview } from './UnstructuredFilePreview'
 import type { UnstructuredPreview } from '../../lib/missions/fileParser'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => {
       const map: Record<string, string> = {

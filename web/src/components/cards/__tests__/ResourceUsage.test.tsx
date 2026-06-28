@@ -53,6 +53,7 @@ vi.mock('../CardDataContext', () => ({
 
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ variant }: { variant: string }) => <div data-testid={`skeleton-${variant}`} />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../charts', () => ({

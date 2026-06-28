@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { authFetch } from '../../lib/api'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (_key: string, fallback?: string) => fallback ?? 'Retry' }),
 }))
 vi.mock('../../lib/api', () => ({ authFetch: vi.fn() }))

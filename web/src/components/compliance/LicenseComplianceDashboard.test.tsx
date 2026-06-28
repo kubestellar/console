@@ -24,6 +24,7 @@ const translations: Record<string, string> = {
 }
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, options?: { count?: number; total?: number; date?: string }) => {
       if (key === 'compliance.licenseOfTotal') return `of ${options?.total ?? 0}`

@@ -21,7 +21,7 @@ vi.mock('../../hooks/useDemoMode', () => ({
   isDemoModeForced: false,
 }))
 
-vi.mock('../../../lib/demoMode', () => ({
+vi.mock('../../demoMode', () => ({
   isDemoMode: () => false,
   getDemoMode: () => false,
   isNetlifyDeployment: false,

@@ -31,7 +31,7 @@ vi.mock('../../../../hooks/useGitHubPipelines', async (importOriginal) => {
 
 const mockUseDemoMode = vi.fn()
 vi.mock('../../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 const mockUseCardLoadingState = vi.fn()

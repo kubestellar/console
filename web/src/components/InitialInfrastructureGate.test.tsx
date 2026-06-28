@@ -15,6 +15,7 @@ const mockTranslate = vi.fn((_key: string, fallback: string, options?: Record<st
 })
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: mockTranslate,
   }),

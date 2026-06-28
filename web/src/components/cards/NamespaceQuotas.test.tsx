@@ -50,13 +50,9 @@ vi.mock('../../hooks/useCachedData', () => ({
 }))
 
 const mockUseDemoMode = vi.fn()
-vi.mock('../../hooks/useDemoMode', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../hooks/useDemoMode')>()
-  return {
-    ...actual,
-    useDemoMode: () => mockUseDemoMode(),
-  }
-})
+vi.mock('../../hooks/useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+}))
 
 const mockUseCardLoadingState = vi.fn()
 const mockUseCardDemoState = vi.fn()
@@ -69,6 +65,7 @@ vi.mock('../ui/Skeleton', () => ({
   Skeleton: ({ className }: { className?: string }) => (
     <div data-testid="skeleton" className={className} />
   ),
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 function setupMocks(overrides: {

@@ -21,6 +21,7 @@ vi.mock('../../../ui/Skeleton', () => ({
   Skeleton: ({ className }: { className?: string }) => <div className={`animate-pulse ${className}`} />,
   SkeletonStats: ({ className }: { className?: string }) => <div className={`animate-pulse ${className}`} />,
   SkeletonList: ({ className }: { className?: string }) => <div className={`animate-pulse ${className}`} />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 // Mock CardSearchInput

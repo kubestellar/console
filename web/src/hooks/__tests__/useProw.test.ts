@@ -18,7 +18,7 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 
 const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false }))
 vi.mock('../useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 import { useProwJobs, getDemoProwJobs } from '../useProw'

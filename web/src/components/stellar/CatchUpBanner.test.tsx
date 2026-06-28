@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { CatchUpBanner } from './CatchUpBanner'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => ({
       'stellar.catchUp.title': 'While you were away',

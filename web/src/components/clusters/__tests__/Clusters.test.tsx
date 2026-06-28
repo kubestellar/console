@@ -141,6 +141,7 @@ vi.mock('../components', () => ({
 
 vi.mock('../../ui/ClusterCardSkeleton', () => ({
   ClusterCardSkeleton: () => null,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 describe('Clusters', () => {

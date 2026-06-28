@@ -88,6 +88,7 @@ vi.mock('../ui/Skeleton', () => ({
   Skeleton: (props: Record<string, unknown>) => (
     <div data-testid="skeleton" data-variant={props.variant} />
   ),
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 // StatusBadge — simple wrapper

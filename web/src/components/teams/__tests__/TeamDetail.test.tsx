@@ -9,6 +9,7 @@ const mockT = vi.fn((key: string) => key)
 const mockUser = { id: 'user1', email: 'test@example.com' }
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: mockT }),
 }))
 

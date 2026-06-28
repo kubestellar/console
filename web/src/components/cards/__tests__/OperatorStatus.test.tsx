@@ -149,6 +149,7 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
 
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" className="animate-pulse" />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../ui/ClusterBadge', () => ({

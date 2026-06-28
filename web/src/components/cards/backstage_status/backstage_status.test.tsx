@@ -25,6 +25,7 @@ vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ height }: { height?: number }) => <div data-testid="skeleton" style={{ height }} />,
   SkeletonList: () => <div data-testid="skeleton-list" />,
   SkeletonStats: () => <div data-testid="skeleton-stats" />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 function setup(overrides?: Record<string, unknown>) {
