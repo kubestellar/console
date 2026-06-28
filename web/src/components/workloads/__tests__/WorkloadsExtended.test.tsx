@@ -44,10 +44,37 @@ vi.mock('../../../lib/dashboards/DashboardPage', () => ({
   ),
 }))
 
-let mockPodIssues: any[] = []
-let mockDeploymentIssues: any[] = []
-let mockDeployments: any[] = []
-const mockClusters: any[] = []
+interface MockPodIssue {
+  name: string
+  namespace: string
+  cluster: string
+  reason: string
+}
+
+interface MockDeploymentIssue {
+  name: string
+  namespace: string
+  cluster: string
+  reason?: string
+}
+
+interface MockDeployment {
+  name: string
+  namespace: string
+  cluster: string
+  status: string
+  replicas: number
+  readyReplicas: number
+}
+
+interface MockCluster {
+  name: string
+}
+
+let mockPodIssues: MockPodIssue[] = []
+let mockDeploymentIssues: MockDeploymentIssue[] = []
+let mockDeployments: MockDeployment[] = []
+const mockClusters: MockCluster[] = []
 let mockIsLoading = false
 let mockIsDemoMode = true
 
@@ -65,7 +92,7 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
     selectedClusters: [],
     isAllClustersSelected: true,
     customFilter: '',
-    filterByCluster: (items: any[]) => items,
+    filterByCluster: <T,>(items: T[]) => items,
   })),
 }))
 
@@ -115,7 +142,7 @@ vi.mock('../../ui/Toast', () => ({
 const kubectlExecSpy = vi.fn().mockResolvedValue({ output: 'deployment.apps/test restarted', exitCode: 0 })
 vi.mock('../../../lib/kubectlProxy', () => ({
   kubectlProxy: {
-    exec: (...args: any[]) => kubectlExecSpy(...args),
+    exec: (...args: unknown[]) => kubectlExecSpy(...args),
   },
 }))
 
@@ -141,8 +168,8 @@ const setupDeploymentView = () => {
     selectedClusters: [],
     isAllClustersSelected: true,
     customFilter: 'nginx',
-    filterByCluster: (items: any[]) => items,
-  } as any)
+    filterByCluster: <T,>(items: T[]) => items,
+  })
 
   mockDeployments = [
     { name: 'nginx-web', namespace: 'production', cluster: 'ctx/prod-east', status: 'running', replicas: 3, readyReplicas: 3 },
@@ -228,8 +255,8 @@ describe('Namespace-grouped view (#12479)', () => {
       selectedClusters: [],
       isAllClustersSelected: true,
       customFilter: '',
-      filterByCluster: (items: any[]) => items,
-    } as any)
+      filterByCluster: <T,>(items: T[]) => items,
+    })
   })
 
   it('groups deployments by namespace/cluster when no filter is applied', () => {
@@ -435,8 +462,8 @@ describe('Loading skeleton and agent-offline states (#12481)', () => {
       selectedClusters: [],
       isAllClustersSelected: true,
       customFilter: '',
-      filterByCluster: (items: any[]) => items,
-    } as any)
+      filterByCluster: <T,>(items: T[]) => items,
+    })
   })
 
   it('shows loading skeletons when data is loading and no data exists', () => {
