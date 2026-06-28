@@ -61,15 +61,6 @@ if (isBrowserEnvironment) {
       agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
     }
   })
-
-  // Mock useDemoMode hook to return proper object shape
-  vi.mock('../hooks/useDemoMode', () => ({
-    useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
-    getDemoMode: () => true,
-    isDemoModeForced: false,
-    canToggleDemoMode: () => true,
-    isNetlifyDeployment: false,
-  }))
 }
 
 const TOKEN_STORAGE_ALIASES = ['token', 'kc_token', 'kc-token', 'kc-auth-token'] as const
