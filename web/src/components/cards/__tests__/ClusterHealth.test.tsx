@@ -41,7 +41,7 @@ vi.mock('../../../hooks/useMobile', () => ({
 
 const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   isDemoModeForced: () => false,
   getDemoMode: () => false,
   canToggleDemoMode: () => true,

@@ -196,6 +196,11 @@ beforeEach(() => {
   globalThis.fetch = vi.fn().mockResolvedValue({ ok: true })
 })
 
+afterEach(() => {
+  vi.clearAllTimers()
+  vi.useRealTimers()
+})
+
 describe('agent selection: persisted "none" auto-selects available agent', () => {
   it('auto-selects the best available agent when persisted is "none"', async () => {
     localStorage.setItem('kc_selected_agent', 'none')

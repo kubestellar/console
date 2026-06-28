@@ -15,7 +15,7 @@ vi.mock('react-i18next', () => ({
 
 const mockUseDemoMode = vi.fn()
 vi.mock('../../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => mockUseDemoMode(),
 }))
 
 const mockStartMission = vi.fn()

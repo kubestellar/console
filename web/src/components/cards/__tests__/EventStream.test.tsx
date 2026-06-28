@@ -16,7 +16,7 @@ vi.mock('react-i18next', () => ({
 
 const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: () => true, default: () => true,
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
   canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),

@@ -53,7 +53,7 @@ vi.mock('../../../lib/demoMode', () => ({
 }))
 
 vi.mock('../../useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../useLocalAgent', () => ({
