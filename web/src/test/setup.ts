@@ -61,23 +61,16 @@ if (isBrowserEnvironment) {
       agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
     }
   })
-}
 
-// Cleanup after each test.
-// NOTE: vi.unstubAllGlobals() is intentionally NOT called here. Each test file
-// runs in its own vitest worker so global stubs cannot leak between files.
-// Calling unstubAllGlobals() here would remove file-level stubs (e.g.
-// vi.stubGlobal('fetch', mockFetch)) after the first test in a file, breaking
-// all subsequent tests that rely on that stub.
-afterEach(() => {
-  if (isBrowserEnvironment) {
-    cleanup()
-    window.localStorage.clear()
-    window.sessionStorage?.clear()
-  }
-  vi.unstubAllEnvs()
-  vi.clearAllMocks()
-})
+  // Mock useDemoMode hook to return proper object shape
+  vi.mock('../hooks/useDemoMode', () => ({
+    useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+    getDemoMode: () => true,
+    isDemoModeForced: false,
+    canToggleDemoMode: () => true,
+    isNetlifyDeployment: false,
+  }))
+}
 
 const TOKEN_STORAGE_ALIASES = ['token', 'kc_token', 'kc-token', 'kc-auth-token'] as const
 
@@ -158,3 +151,19 @@ if (isBrowserEnvironment) {
     },
   })
 }
+
+// Cleanup after each test.
+// NOTE: vi.unstubAllGlobals() is intentionally NOT called here. Each test file
+// runs in its own vitest worker so global stubs cannot leak between files.
+// Calling unstubAllGlobals() here would remove file-level stubs (e.g.
+// vi.stubGlobal('fetch', mockFetch)) after the first test in a file, breaking
+// all subsequent tests that rely on that stub.
+afterEach(() => {
+  if (isBrowserEnvironment) {
+    cleanup()
+    window.localStorage.clear()
+    window.sessionStorage?.clear()
+  }
+  vi.unstubAllEnvs()
+  vi.clearAllMocks()
+})

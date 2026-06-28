@@ -42,11 +42,15 @@ function setup(overrides?: Record<string, unknown>) {
     },
     isLoading: false,
     isRefreshing: false,
+    isDemoData: false,
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: Date.now(),
     refetch: vi.fn(),
+    showSkeleton: false,
+    showEmptyState: false,
+    error: null,
     ...overrides,
   })
   mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false })

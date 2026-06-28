@@ -101,8 +101,9 @@ describe('ResolutionKnowledgePanel', () => {
     const { ResolutionKnowledgePanel } = await import('./ResolutionKnowledgePanel')
     const { container } = render(
       <ResolutionKnowledgePanel
-        query=""
-        onSelectSuggestion={vi.fn()}
+        relatedResolutions={[]}
+        onApplyResolution={vi.fn()}
+        onSaveNewResolution={vi.fn()}
       />
     )
     expect(container).toBeTruthy()
@@ -139,16 +140,30 @@ describe('KagentAgentPicker', () => {
 describe('MissionContentViewer', () => {
   it('renders without errors', async () => {
     const { MissionContentViewer } = await import('./MissionContentViewer')
-    const mockMission = {
-      title: 'Test Mission',
-      description: 'Test',
-      type: 'custom' as const,
-      steps: [],
-      version: '1.0.0',
+    const mockProps = {
+      searchPanel: {
+        searchQuery: '',
+        setSearchQuery: vi.fn(),
+        isOpen: false,
+        setIsOpen: vi.fn(),
+      },
+      filePanel: {
+        selectedPath: null,
+        setSelectedPath: vi.fn(),
+        isOpen: false,
+        setIsOpen: vi.fn(),
+      },
+      content: {
+        directoryEntries: [],
+        isScanning: false,
+        scanResult: null,
+        handleScanComplete: vi.fn(),
+        handleScanDismiss: vi.fn(),
+      },
     }
     const { container } = render(
       <MissionContentViewer
-        mission={mockMission}
+        {...mockProps}
       />
     )
     expect(container).toBeTruthy()
