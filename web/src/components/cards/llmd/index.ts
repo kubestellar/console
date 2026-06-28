@@ -7,6 +7,7 @@
 export { LLMdFlow } from './LLMdFlow'
 export { KVCacheMonitor } from './KVCacheMonitor'
 export { EPPRouting } from './EPPRouting'
+export { EPPHealthCard } from './EPPHealthCard'
 export { PDDisaggregation } from './PDDisaggregation'
 export { LLMdAIInsights } from './LLMdAIInsights'
 export { LLMdConfigurator } from './LLMdConfigurator'
