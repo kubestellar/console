@@ -133,7 +133,7 @@ export function TargetClusterSelector({ selected, onChange }: TargetClusterSelec
                   )}
                   onClick={() => toggleCluster(name)}
                 >
-                  <span className={cn('w-1.5 h-1.5 rounded-full', isHealthy ? 'bg-green-500' : 'bg-yellow-500')} />
+                  <span className={cn('w-1.5 h-1.5 rounded-full', isHealthy ? 'bg-green-400' : 'bg-yellow-400')} />
                   {name}
                   <XIcon className="w-3 h-3 opacity-50 hover:opacity-100" />
                 </button>
@@ -208,7 +208,7 @@ export function TargetClusterSelector({ selected, onChange }: TargetClusterSelec
                 )}
                 onClick={() => toggleCluster(name)}
               >
-                <span className={cn('w-2 h-2 rounded-full shrink-0', isHealthy ? 'bg-green-500' : 'bg-yellow-500')} />
+                <span className={cn('w-2 h-2 rounded-full shrink-0', isHealthy ? 'bg-green-400' : 'bg-yellow-400')} />
                 <span className="truncate">{name}</span>
                 {isSelected && <span className="ml-auto text-primary text-xs">✓</span>}
               </button>

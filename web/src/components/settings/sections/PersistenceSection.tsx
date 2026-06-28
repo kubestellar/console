@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Database, RefreshCw, Check, X, AlertCircle, Loader2 } from 'lucide-react'
 import { usePersistence, type PersistenceConfig, type ClusterHealth } from '../../../hooks/usePersistence'
 import { useClusters } from '../../../hooks/mcp/clusters'
+import { cn } from '../../../lib/cn'
 
 interface ClusterInfo {
   name: string
@@ -180,7 +181,7 @@ export function PersistenceSection() {
               </button>
             </div>
             {testResult && testResult.cluster === localConfig.primaryCluster && (
-              <p className={`text-xs mt-1 ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
+              <p className={cn('text-xs mt-1', testResult.success ? 'text-green-400' : 'text-red-400')}>
                 {testResult.success ? t('settings.persistence.connectionSuccess') : t('settings.persistence.connectionFailed')}
               </p>
             )}
@@ -252,7 +253,7 @@ export function PersistenceSection() {
                 </button>
               </div>
               {testResult && testResult.cluster === localConfig.secondaryCluster && (
-                <p className={`text-xs mt-1 ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
+                <p className={cn('text-xs mt-1', testResult.success ? 'text-green-400' : 'text-red-400')}>
                   {testResult.success ? t('settings.persistence.connectionSuccess') : t('settings.persistence.connectionFailed')}
                 </p>
               )}

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { ShieldAlert, Check, X } from 'lucide-react'
 import { NotificationConfig } from '../../../types/alerts'
 import type { TestResultState } from './NotificationSettingsSection'
+import { cn } from '../../../lib/cn'
 
 interface OpsGenieNotificationSettingsProps {
   config: NotificationConfig
@@ -99,7 +100,7 @@ export function OpsGenieNotificationSettings({
           ) : (
             <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           )}
-          <p className={`text-sm ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
+          <p className={cn('text-sm', testResult.success ? 'text-green-400' : 'text-red-400')}>
             {testResult.message}
           </p>
         </div>
