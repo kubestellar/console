@@ -176,8 +176,14 @@ test.describe('Smoke Tests', () => {
       }
 
       const settingsLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/settings"], [data-testid="sidebar"] a[href="/settings"]').first()
-      // WebKit/mobile browsers need more time for sidebar elements to hydrate
-      await expect(settingsLink).toBeVisible({ timeout: 20000 })
+      // WebKit/mobile browsers need more time for sidebar elements to hydrate.
+      // Wait for both the element to exist AND become actionable (no visibility:hidden).
+      // The sidebar slide-in animation can leave elements in a "found but hidden" state.
+      await page.waitForLoadState('networkidle').catch(() => {})
+      await expect(settingsLink).toBeVisible({ timeout: 30000 })
+      // Extra stability wait for webkit/safari where elements can be "visible" but
+      // still mid-transition. Wait for DOM to fully settle after animation.
+      await page.waitForTimeout(500)
       await settingsLink.click({ force: true })
 
       await expect(page).toHaveURL(/\/settings(?:[?#].*)?$/, { timeout: 10000 })
