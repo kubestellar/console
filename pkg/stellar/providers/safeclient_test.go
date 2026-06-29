@@ -57,3 +57,15 @@ func TestSafeDialContext_BlocksNonPublicIPs(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateOllamaResolvedIP(t *testing.T) {
+	_, allowedCIDR, err := net.ParseCIDR("127.0.0.0/8")
+	require.NoError(t, err)
+
+	validate := validateOllamaResolvedIP([]*net.IPNet{allowedCIDR})
+	require.NoError(t, validate(net.ParseIP("127.0.0.1")))
+
+	err = validate(net.ParseIP("8.8.8.8"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not in allowed CIDRs")
+}

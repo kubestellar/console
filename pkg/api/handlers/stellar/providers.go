@@ -291,7 +291,11 @@ func (h *Handler) TestProvider(c *fiber.Ctx) error {
 	if cfg.Provider == "anthropic" {
 		p = providers.NewAnthropicProvider(rawKey)
 	} else if cfg.Provider == "ollama" {
-		p = providers.NewOllama(validatedBaseURL)
+		allowedCIDRs, err := loadStellarOllamaAllowedCIDRs()
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid ollama SSRF configuration"})
+		}
+		p = providers.NewOllamaWithAllowedCIDRs(validatedBaseURL, allowedCIDRs)
 	} else {
 		p = providers.NewOpenAICompat(validatedBaseURL, rawKey, cfg.Provider)
 	}

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -30,6 +31,16 @@ func NewOllama(baseURL string) *OllamaProvider {
 	return &OllamaProvider{
 		BaseURL: baseURL,
 		client:  &http.Client{Timeout: providerHTTPTimeout},
+	}
+}
+
+func NewOllamaWithAllowedCIDRs(baseURL string, allowedCIDRs []*net.IPNet) *OllamaProvider {
+	if baseURL == "" {
+		baseURL = defaultOllamaBaseURL
+	}
+	return &OllamaProvider{
+		BaseURL: baseURL,
+		client:  newOllamaSafeHTTPClient(providerHTTPTimeout, allowedCIDRs),
 	}
 }
 
