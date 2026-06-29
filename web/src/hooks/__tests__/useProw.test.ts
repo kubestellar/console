@@ -16,7 +16,7 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
   return { ...actual, KUBECTL_EXTENDED_TIMEOUT_MS: 30000 }
 })
 
-const mockUseDemoMode = vi.fn(() => false)
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => mockUseDemoMode(),
 }))
@@ -84,7 +84,7 @@ describe('useProwJobs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockExec.mockResolvedValue(buildKubectlResponse([]))
   })
 
@@ -311,7 +311,7 @@ describe('useProwJobs', () => {
   // ---------- Demo Mode ----------
 
   it('returns demo data in demo mode without calling kubectlProxy', async () => {
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
 
     const { result } = renderHook(() => useProwJobs())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -345,7 +345,7 @@ describe('useProwJobs', () => {
     expect(result.current.jobs[0].id).toBe('live-job')
 
     // Toggle to demo mode
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     rerender()
 
     await waitFor(() => {

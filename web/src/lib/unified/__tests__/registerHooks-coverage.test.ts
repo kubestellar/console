@@ -78,7 +78,7 @@ const {
   mockUseK8sRoleBindings: vi.fn().mockReturnValue({ bindings: [], isLoading: false, error: null, refetch: vi.fn() }),
   mockUseServiceExports: vi.fn().mockReturnValue({ exports: [], isLoading: false, error: null, refetch: vi.fn() }),
   mockUseServiceImports: vi.fn().mockReturnValue({ imports: [], isLoading: false, error: null, refetch: vi.fn() }),
-  mockUseDemoMode: vi.fn().mockReturnValue(false),
+  mockUseDemoMode: vi.fn().mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 vi.mock('../../../hooks/useDemoMode', () => ({
@@ -166,7 +166,7 @@ function getHook(name: string): HookFn {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.useFakeTimers()
-  mockUseDemoMode.mockReturnValue(false)
+  mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
 })
 
 afterEach(() => {
@@ -267,7 +267,7 @@ describe('useUnifiedServiceAccounts via renderHook', () => {
 
 describe('useDemoDataHook lifecycle (demo mode OFF)', () => {
   beforeEach(() => {
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   })
 
   const demoHooks = [
@@ -298,7 +298,7 @@ describe('useDemoDataHook lifecycle (demo mode OFF)', () => {
 
 describe('useDemoDataHook lifecycle (demo mode ON)', () => {
   beforeEach(() => {
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   })
 
   it('starts loading then resolves with demo data', async () => {
@@ -334,7 +334,7 @@ describe('useDemoDataHook lifecycle (demo mode ON)', () => {
 
 describe('Batch 4 demo hooks (demo mode OFF)', () => {
   beforeEach(() => {
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   })
 
   const batch4Hooks = [
@@ -365,7 +365,7 @@ describe('Batch 4 demo hooks (demo mode OFF)', () => {
 
 describe('Batch 4 demo hooks (demo mode ON)', () => {
   beforeEach(() => {
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   })
 
   it('useArgoCDApplications returns demo data after timer', async () => {
@@ -403,7 +403,7 @@ describe('Batch 4 demo hooks (demo mode ON)', () => {
 
 describe('Batch 5 demo hooks (demo mode OFF)', () => {
   beforeEach(() => {
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   })
 
   const batch5Hooks = [
@@ -446,7 +446,7 @@ describe('Batch 5 demo hooks (demo mode OFF)', () => {
 
 describe('Batch 5 demo hooks (demo mode ON)', () => {
   beforeEach(() => {
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   })
 
   it('useArgoCDHealth returns demo data after timer', async () => {
@@ -491,7 +491,7 @@ describe('Batch 5 demo hooks (demo mode ON)', () => {
 
 describe('Batch 6 demo hooks (demo mode OFF)', () => {
   beforeEach(() => {
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   })
 
   const batch6Hooks = [
@@ -514,7 +514,7 @@ describe('Batch 6 demo hooks (demo mode OFF)', () => {
 
 describe('Batch 6 demo hooks (demo mode ON)', () => {
   beforeEach(() => {
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   })
 
   it('useGithubActivity returns demo data after timer', async () => {
@@ -545,7 +545,7 @@ describe('Batch 6 demo hooks (demo mode ON)', () => {
 
 describe('useDemoDataHook timer cleanup', () => {
   it('cleans up timer on unmount during loading', () => {
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const hook = getHook('useActiveAlerts')
     const { result, unmount } = renderHook(() => hook())
     expect(result.current.isLoading).toBe(true)
@@ -558,7 +558,7 @@ describe('useDemoDataHook timer cleanup', () => {
   })
 
   it('transitions from demo-on to demo-off', async () => {
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const hook = getHook('useTopPods')
     const { result, rerender } = renderHook(() => hook())
 
@@ -567,7 +567,7 @@ describe('useDemoDataHook timer cleanup', () => {
     expect((result.current.data as unknown[]).length).toBeGreaterThan(0)
 
     // Switch to non-demo mode
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     rerender()
 
     expect(result.current.data).toEqual([])

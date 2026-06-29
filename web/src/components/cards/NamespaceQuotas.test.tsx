@@ -49,7 +49,7 @@ vi.mock('../../hooks/useCachedData', () => ({
   useCachedNamespaces: (cluster?: string) => mockUseCachedNamespaces(cluster),
 }))
 
-const mockUseDemoMode = vi.fn()
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
 vi.mock('../../hooks/useDemoMode', () => ({
   useDemoMode: () => mockUseDemoMode(),
 }))
