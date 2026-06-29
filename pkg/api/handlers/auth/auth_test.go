@@ -895,7 +895,7 @@ func TestJWTCookieSecureFlagFollowsRequestProtocol(t *testing.T) {
 		mockStore.On("CreateUser", mock.Anything).Return(nil).Once()
 		mockStore.On("UpdateLastLogin", mock.Anything).Return(nil).Once()
 
-		req := httptest.NewRequest(http.MethodGet, "http://console.example.com/auth/dev", nil)
+		req := httptest.NewRequest(http.MethodGet, "/auth/dev", nil)
 		req.Host = "localhost"
 		req.Header.Set("X-Forwarded-Proto", "https")
 		resp, err := app.Test(req, 5000)
@@ -919,7 +919,7 @@ func TestJWTCookieSecureFlagFollowsRequestProtocol(t *testing.T) {
 		mockStore.On("CreateUser", mock.Anything).Return(nil).Once()
 		mockStore.On("UpdateLastLogin", mock.Anything).Return(nil).Once()
 
-		req := httptest.NewRequest(http.MethodGet, "http://console.example.com/auth/dev", nil)
+		req := httptest.NewRequest(http.MethodGet, "/auth/dev", nil)
 		req.Host = "localhost"
 		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -219,7 +220,7 @@ func TestGitOpsArgo_GetHelmValues_Validation(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	// Invalid cluster name
-	req, err = http.NewRequest(http.MethodGet, "/api/gitops/helm/values?release=my-rel&cluster=bad;name", nil)
+	req, err = http.NewRequest(http.MethodGet, "/api/gitops/helm/values?release=my-rel&cluster="+url.QueryEscape("bad;name"), nil)
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err = env.App.Test(req)

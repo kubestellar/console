@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,7 +68,7 @@ func TestGitOps_ListHelmHistory_Validation_InvalidClusterName(t *testing.T) {
 	app, handler := setupGitOpsTest()
 	app.Get("/api/gitops/helm/history", handler.ListHelmHistory)
 
-	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/history?release=my-release&cluster=bad;name", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/history?release=my-release&cluster="+url.QueryEscape("bad;name"), nil)
 	require.NoError(t, err)
 	req.Host = "localhost"
 
