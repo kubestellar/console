@@ -122,6 +122,7 @@ func TestCardProxyAuthorization_ViewerForbidden(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/card-proxy?url=https://example.com", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
@@ -149,6 +150,7 @@ func TestCardProxyAuthorization_EditorAllowed(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/card-proxy", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
@@ -169,6 +171,7 @@ func TestCardProxyAuthorization_NilStoreSkipsCheck(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/card-proxy", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)

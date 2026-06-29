@@ -63,6 +63,7 @@ func TestRewardsHandler_GetReturnsZeroForNewUser(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/rewards/me", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -124,6 +125,7 @@ func TestRewardsHandler_PutRejectsOutOfRangeValues(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPut, "/api/rewards/me", bytes.NewReader(payload))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
@@ -142,6 +144,7 @@ func TestRewardsHandler_PostCoinsIncrementsCorrectly(t *testing.T) {
 		require.NoError(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/api/rewards/coins", bytes.NewReader(payload))
 		require.NoError(t, err)
+	req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 		require.NoError(t, err)
@@ -164,6 +167,7 @@ func TestRewardsHandler_PostCoinsNegativeDoesNotDriveBelowZero(t *testing.T) {
 	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodPost, "/api/rewards/coins", bytes.NewReader(payload))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
@@ -179,6 +183,7 @@ func TestRewardsHandler_PostCoinsRejectsZeroDelta(t *testing.T) {
 	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodPost, "/api/rewards/coins", bytes.NewReader(payload))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
@@ -193,6 +198,7 @@ func TestRewardsHandler_PostCoinsRejectsOversizedDelta(t *testing.T) {
 	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodPost, "/api/rewards/coins", bytes.NewReader(payload))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
@@ -204,6 +210,7 @@ func TestRewardsHandler_DailyBonusFirstClaimSucceeds(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/rewards/daily-bonus", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)

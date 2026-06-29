@@ -58,6 +58,7 @@ func TestTokenUsageHandler_GetReturnsZeroForNewUser(t *testing.T) {
 	app, _, _, _ := newTokenUsageTestApp(t)
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/token-usage/me", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -86,6 +87,7 @@ func TestTokenUsageHandler_PutThenGetRoundTrip(t *testing.T) {
 	raw, _ := json.Marshal(body)
 	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/me", bytes.NewReader(raw))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
@@ -119,6 +121,7 @@ func TestTokenUsageHandler_DeltaIncrementsAtomically(t *testing.T) {
 		})
 		req, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
 		require.NoError(t, err)
+	req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 		require.NoError(t, err)
@@ -182,6 +185,7 @@ func TestTokenUsageHandler_GetResetsStaleDayTotals(t *testing.T) {
 	})
 	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/me", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
@@ -213,6 +217,7 @@ func TestTokenUsageHandler_DeltaRejectsNegative(t *testing.T) {
 	})
 	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
@@ -230,6 +235,7 @@ func TestTokenUsageHandler_DeltaRejectsOverLimit(t *testing.T) {
 	})
 	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)
@@ -251,6 +257,7 @@ func TestTokenUsageHandler_PutRejectsTooManyCategories(t *testing.T) {
 	})
 	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/me", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)

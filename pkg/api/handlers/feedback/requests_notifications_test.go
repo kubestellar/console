@@ -22,6 +22,7 @@ func TestGetNotifications_Unauthorized(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -43,6 +44,7 @@ func TestGetNotifications_DefaultLimit(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -66,6 +68,7 @@ func TestGetNotifications_CustomLimit(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications?limit=25", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -89,6 +92,7 @@ func TestGetNotifications_LimitCappedAt100(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications?limit=200", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -112,6 +116,7 @@ func TestGetNotifications_ZeroLimitUsesDefault(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications?limit=0", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -129,6 +134,7 @@ func TestGetUnreadCount_Unauthorized(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications/unread", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -150,6 +156,7 @@ func TestGetUnreadCount_StoreError(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications/unread", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -165,6 +172,7 @@ func TestMarkNotificationRead_Unauthorized(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/notifications/"+uuid.New().String()+"/read", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -180,6 +188,7 @@ func TestMarkNotificationRead_InvalidID(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/notifications/invalid-id/read", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -217,6 +226,7 @@ func TestMarkNotificationRead_NotFound(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/notifications/"+notificationID.String()+"/read", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -232,6 +242,7 @@ func TestMarkAllNotificationsRead_Unauthorized(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/notifications/read-all", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -251,6 +262,7 @@ func TestMarkAllNotificationsRead_StoreError(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/notifications/read-all", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)

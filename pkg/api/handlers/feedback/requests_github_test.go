@@ -151,6 +151,7 @@ func TestExtractClientAuth_FromCookie(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/test", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Cookie", clientAuthCookieName+"=cookie-token")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -170,6 +171,7 @@ func TestExtractClientAuth_FromHeader(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/test", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("X-KC-Client-Auth", "header-token")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -189,6 +191,7 @@ func TestExtractClientAuth_CookiePrecedence(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/test", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Cookie", clientAuthCookieName+"=cookie-token")
 	req.Header.Set("X-KC-Client-Auth", "header-token")
 

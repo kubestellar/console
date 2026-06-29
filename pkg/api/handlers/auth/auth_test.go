@@ -53,6 +53,7 @@ func TestDevModeLogin(t *testing.T) {
 		mockStore.On("UpdateLastLogin", mock.Anything).Return(nil).Once()
 
 		req, _ := http.NewRequest("GET", "/auth/dev", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, 5000)
 
 		assert.NoError(t, err)
@@ -77,6 +78,7 @@ func TestDevModeLogin(t *testing.T) {
 		mockStore.On("UpdateLastLogin", existingUser.ID).Return(nil).Once()
 
 		req, _ := http.NewRequest("GET", "/auth/dev", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, 5000)
 
 		assert.NoError(t, err)
@@ -188,6 +190,7 @@ func TestRefreshToken(t *testing.T) {
 		token, _ := handler.generateJWT(user)
 
 		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, _ := app.Test(req, 5000)
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode,
@@ -328,6 +331,7 @@ func TestGitHubLogin_Redirects(t *testing.T) {
 	app.Get("/auth/github", handler.GitHubLogin)
 
 	req, _ := http.NewRequest("GET", "/auth/github", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 
 	assert.NoError(t, err)
@@ -362,6 +366,7 @@ func TestGitHubCallback_MissingCode(t *testing.T) {
 	app.Get("/auth/callback", handler.GitHubCallback)
 
 	req, _ := http.NewRequest("GET", "/auth/callback", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	if err != nil || resp == nil {
 		t.Fatalf("app.Test failed: %v", err)
@@ -378,6 +383,7 @@ func TestGitHubCallback_InvalidState(t *testing.T) {
 
 	// Provide code but no state
 	req, _ := http.NewRequest("GET", "/auth/callback?code=123", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	if err != nil || resp == nil {
 		t.Fatalf("app.Test failed: %v", err)
@@ -394,6 +400,7 @@ func TestGitHubCallback_GitHubError(t *testing.T) {
 
 	t.Run("Access denied by user", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/auth/callback?error=access_denied&error_description=The+user+denied+access", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, 5000)
 		if err != nil || resp == nil {
 			t.Fatalf("app.Test failed: %v", err)
@@ -407,6 +414,7 @@ func TestGitHubCallback_GitHubError(t *testing.T) {
 
 	t.Run("Generic GitHub error", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/auth/callback?error=application_suspended&error_description=App+is+suspended", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, 5000)
 		if err != nil || resp == nil {
 			t.Fatalf("app.Test failed: %v", err)
@@ -483,6 +491,8 @@ func TestGitHubCallback_RecoversFromValidCookieOnStateFailure(t *testing.T) {
 
 	t.Run("missing cookie + invalid state redirects to error page", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/auth/callback?code=123&state=bogus", nil)
+
+		req.Host = "localhost"
 
 		resp, err := app.Test(req, 5000)
 		assert.NoError(t, err)
@@ -779,6 +789,7 @@ func TestLogout_RequiresCSRFHeader(t *testing.T) {
 	// Without the CSRF header: 403.
 	req, err := http.NewRequest("POST", "/auth/logout", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -814,6 +825,7 @@ func TestLogout_ExpiredTokenIdempotent(t *testing.T) {
 
 	req, err := http.NewRequest("POST", "/auth/logout", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer "+signed)
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	resp, err := app.Test(req, 5000)
@@ -836,6 +848,7 @@ func TestCookieSameSiteStrict(t *testing.T) {
 	mockStore.On("UpdateLastLogin", mock.Anything).Return(nil).Once()
 
 	req, _ := http.NewRequest("GET", "/auth/dev", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 

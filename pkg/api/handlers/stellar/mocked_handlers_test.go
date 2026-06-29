@@ -125,6 +125,7 @@ func TestStellarCreateTask_DefaultsWithMockedStore(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/tasks", bytes.NewReader([]byte(`{"title":"Investigate failed rollout"}`)))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
@@ -146,6 +147,7 @@ func TestStellarCreateTask_InvalidDueAtReturnsBadRequest(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/tasks", bytes.NewReader([]byte(`{"title":"Investigate failed rollout","dueAt":"not-rfc3339"}`)))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
@@ -163,6 +165,7 @@ func TestStellarUpdateTaskStatus_ReturnsStatusWhenReloadFails(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPatch, "/api/stellar/tasks/task-7/status", bytes.NewReader([]byte(`{"status":"DONE"}`)))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
@@ -187,6 +190,7 @@ func TestStellarSearchMemory_DefaultLimitWithMockedStore(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/memory/search", bytes.NewReader([]byte(`{"query":"oomkilled"}`)))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
@@ -217,6 +221,7 @@ func TestStellarCreateProvider_UsesMockedUpsert(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/providers", bytes.NewReader([]byte(`{"provider":"ollama","displayName":"Local Ollama","baseUrl":"http://127.0.0.1:11434","model":"llama3"}`)))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)

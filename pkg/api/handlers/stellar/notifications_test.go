@@ -58,6 +58,7 @@ func TestListNotifications_EmptyResult(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/stellar/notifications", http.NoBody)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
 	require.NoError(t, err)
@@ -99,6 +100,7 @@ func TestListNotifications_ReturnsCreatedNotifications(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/stellar/notifications", http.NoBody)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
 	require.NoError(t, err)
@@ -144,6 +146,7 @@ func TestListNotifications_UnreadOnlyFilter(t *testing.T) {
 	// Query for unread only
 	req, err := http.NewRequest(http.MethodGet, "/api/stellar/notifications?unread=true", http.NoBody)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
 	require.NoError(t, err)
@@ -176,6 +179,7 @@ func TestMarkNotificationRead_Success(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/read", http.NoBody)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
 	require.NoError(t, err)
@@ -196,6 +200,7 @@ func TestMarkNotificationRead_MissingID(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/%20/read", http.NoBody)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
 	require.NoError(t, err)
@@ -233,6 +238,7 @@ func TestMarkNotificationInvestigating_Success(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/investigating", bytes.NewReader(bodyBytes))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
@@ -253,6 +259,7 @@ func TestMarkNotificationInvestigating_InvalidJSON(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/some-id/investigating", bytes.NewReader([]byte("invalid-json")))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
@@ -287,6 +294,7 @@ func TestResolveNotification_Success(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/resolve", bytes.NewReader(bodyBytes))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
@@ -328,6 +336,7 @@ func TestDismissNotification_Success(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/dismiss", bytes.NewReader(bodyBytes))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
@@ -355,6 +364,7 @@ func TestUpdateNotificationState_NotificationNotFound(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/nonexistent-id/resolve", bytes.NewReader(bodyBytes))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
@@ -394,6 +404,7 @@ func TestUpdateNotificationState_FillsAffectedResource(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/resolve", bytes.NewReader(bodyBytes))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
@@ -625,6 +636,7 @@ func TestUpdateNotificationState_WrongUser(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+n.ID+"/resolve", bytes.NewReader(bodyBytes))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)

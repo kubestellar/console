@@ -19,6 +19,7 @@ func TestListFeatureRequests_Unauthorized(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/requests", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -34,6 +35,7 @@ func TestListFeatureRequests_InvalidPageParams(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/requests?limit=-1", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -61,6 +63,7 @@ func TestListFeatureRequests_FiltersUntriagedRequests(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/requests", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -77,6 +80,7 @@ func TestListAllFeatureRequests_Unauthorized(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/requests/all", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -97,6 +101,7 @@ func TestListAllFeatureRequests_CountOnly(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/requests/all?count_only=true", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	// Note: This may fail if GitHub token is required, which is acceptable
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -122,6 +127,7 @@ func TestParsePageParams_Defaults(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/test", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)

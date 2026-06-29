@@ -25,6 +25,7 @@ func postCreateRequest(t *testing.T, body string) (int, string) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests", strings.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -49,6 +50,7 @@ func postCreateRequestWithToken(t *testing.T, body string) (int, string) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests", strings.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)

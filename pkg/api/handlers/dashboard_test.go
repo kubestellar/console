@@ -52,6 +52,7 @@ func TestListDashboards_Empty(t *testing.T) {
 	// MockStore.GetUserDashboards returns nil, nil by default — valid empty list
 	req, err := http.NewRequest("GET", "/api/dashboards", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -68,6 +69,7 @@ func TestCreateDashboard_Success(t *testing.T) {
 	body := `{"name":"Test Dashboard","is_default":false}`
 	req, err := http.NewRequest("POST", "/api/dashboards", strings.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -89,6 +91,7 @@ func TestCreateDashboard_DefaultName(t *testing.T) {
 	body := `{}`
 	req, err := http.NewRequest("POST", "/api/dashboards", strings.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -108,6 +111,7 @@ func TestCreateDashboard_InvalidBody(t *testing.T) {
 
 	req, err := http.NewRequest("POST", "/api/dashboards", strings.NewReader("not-json"))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -124,6 +128,7 @@ func TestGetDashboard_InvalidID(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "/api/dashboards/not-a-uuid", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -139,6 +144,7 @@ func TestGetDashboard_NotFound(t *testing.T) {
 	dashID := uuid.New()
 	req, err := http.NewRequest("GET", "/api/dashboards/"+dashID.String(), nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -154,6 +160,7 @@ func TestDeleteDashboard_InvalidID(t *testing.T) {
 
 	req, err := http.NewRequest("DELETE", "/api/dashboards/bad-id", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -168,6 +175,7 @@ func TestDeleteDashboard_NotFound(t *testing.T) {
 	dashID := uuid.New()
 	req, err := http.NewRequest("DELETE", "/api/dashboards/"+dashID.String(), nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -183,6 +191,7 @@ func TestImportDashboard_InvalidBody(t *testing.T) {
 
 	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader("not-json"))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -198,6 +207,7 @@ func TestImportDashboard_UnsupportedFormat(t *testing.T) {
 	body := `{"format":"unknown-format","name":"Bad Import","cards":[]}`
 	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -213,6 +223,7 @@ func TestImportDashboard_Success(t *testing.T) {
 	body := `{"format":"kc-dashboard-v1","name":"Imported","cards":[]}`
 	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -246,6 +257,7 @@ func TestImportDashboard_ExceedsCardLimit(t *testing.T) {
 
 	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader(sb.String()))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -269,6 +281,7 @@ func TestImportDashboard_ExceedsUserLimit(t *testing.T) {
 	body := `{"format":"kc-dashboard-v1","name":"ShouldFail","cards":[]}`
 	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
