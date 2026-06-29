@@ -93,7 +93,7 @@
     "remark-gfm": "^4.0.1",
     "sucrase": "^3.35.1",
     "tailwind-merge": "^3.6.0",
-    "three": "^0.184.0",
+    "three": "^0.185.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -114,7 +114,7 @@
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
-    "@types/three": "^0.184.1",
+    "@types/three": "^0.185.0",
     "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.8",
     "@vitest/ui": "^4.1.8",
