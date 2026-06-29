@@ -2,6 +2,11 @@
  * LLM-d Visualization Cards
  *
  * Stunning visualizations for LLM-d inference stack monitoring.
+ *
+ * NOTE: These components use CardDataContext internally. They are lazy-loaded
+ * via safeLazy() in cardRegistry files, so the circular dependency only manifests
+ * during eager module resolution in tests. Tests that hit circular import issues
+ * should mock this barrel or use jest.isolateModules / vi.mock to break the cycle.
  */
 
 export { LLMdFlow } from './LLMdFlow'
