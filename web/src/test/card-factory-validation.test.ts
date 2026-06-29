@@ -288,9 +288,9 @@ describe('Card Factory Compiler', () => {
     const compileResult = await compileCardCode(simpleCode)
     expect(compileResult.code).not.toBeNull()
 
-    // createCardComponent uses `new Function()` which may throw in strict-mode
-    // test environments. We verify it returns a well-formed result either way.
-    const componentResult = createCardComponent(compileResult.code!)
+    // createCardComponent uses dynamic ES module import which is async.
+    // We verify it returns a well-formed result either way.
+    const componentResult = await createCardComponent(compileResult.code!)
 
     // Must have exactly one of component or error populated
     const hasComponent = componentResult.component !== null
@@ -313,7 +313,7 @@ describe('Card Factory Compiler', () => {
     const compileResult = await compileCardCode(badExportCode)
     expect(compileResult.code).not.toBeNull()
 
-    const componentResult = createCardComponent(compileResult.code!)
+    const componentResult = await createCardComponent(compileResult.code!)
 
     // Should have an error — either "must export a function" or a runtime error
     expect(componentResult.error).not.toBeNull()

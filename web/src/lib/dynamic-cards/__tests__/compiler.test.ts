@@ -92,47 +92,47 @@ describe('compileCardCode', () => {
 })
 
 describe('createCardComponent', () => {
-  it('creates a component from valid compiled code', () => {
+  it('creates a component from valid compiled code', async () => {
     // Code that exports a function component
     const code = `
       function MyCard(props) { return null; }
       module.exports.default = MyCard;
     `
-    const result = createCardComponent(code)
+    const result = await createCardComponent(code)
     expect(result.error).toBeNull()
     expect(typeof result.component).toBe('function')
   })
 
-  it('returns error when module does not export a function', () => {
+  it('returns error when module does not export a function', async () => {
     const code = `
       module.exports.default = "not a function";
     `
-    const result = createCardComponent(code)
+    const result = await createCardComponent(code)
     expect(result.error).toContain('must export a default React component function')
     expect(result.component).toBeNull()
   })
 
-  it('returns error on runtime errors', () => {
+  it('returns error on runtime errors', async () => {
     const code = `
       throw new Error("runtime boom");
     `
-    const result = createCardComponent(code)
+    const result = await createCardComponent(code)
     expect(result.error).toContain('Runtime error')
     expect(result.error).toContain('runtime boom')
     expect(result.component).toBeNull()
   })
 
-  it('provides cleanup function when available', () => {
+  it('provides cleanup function when available', async () => {
     const code = `
       function Card() { return null; }
       module.exports.default = Card;
     `
-    const result = createCardComponent(code)
+    const result = await createCardComponent(code)
     // __timerCleanup is extracted from scope
     expect(result.cleanup).toBeDefined()
   })
 
-  it('blocks dangerous globals in the sandbox', () => {
+  it('blocks dangerous globals in the sandbox', async () => {
     // Code that tries to access window
     const code = `
       function Card() {
@@ -142,160 +142,160 @@ describe('createCardComponent', () => {
       }
       module.exports.default = Card;
     `
-    const result = createCardComponent(code)
+    const result = await createCardComponent(code)
     // Should compile without error (window is shadowed, not removed)
     expect(result.error).toBeNull()
     expect(typeof result.component).toBe('function')
   })
 
-  it('blocks fetch in the sandbox', () => {
+  it('blocks fetch in the sandbox', async () => {
     const code = `
       function Card() { return null; }
       module.exports.default = Card;
     `
-    const result = createCardComponent(code)
+    const result = await createCardComponent(code)
     expect(result.error).toBeNull()
   })
 
-  it('handles module.exports without default', () => {
+  it('handles module.exports without default', async () => {
     const code = `
       module.exports = function() { return null; };
     `
-    const result = createCardComponent(code)
+    const result = await createCardComponent(code)
     expect(result.error).toBeNull()
     expect(typeof result.component).toBe('function')
   })
 
-  it('handles empty code', () => {
+  it('handles empty code', async () => {
     const code = ``
-    const result = createCardComponent(code)
+    const result = await createCardComponent(code)
     // Empty code means no exports, so module.exports.default is undefined
     expect(result.error).toContain('must export a default React component function')
   })
 
-  it('handles non-Error thrown values', () => {
+  it('handles non-Error thrown values', async () => {
     // We can cause a thrown string by using invalid code that causes a runtime error
     const code = `
       undefined.property;
     `
-    const result = createCardComponent(code)
+    const result = await createCardComponent(code)
     expect(result.error).toContain('Runtime error')
   })
 
   // Security regression tests (#6676 — Function-constructor escape)
   describe('Function-constructor escape blocking (#6676)', () => {
-    it('blocks (function(){}).constructor(...) escape pattern', () => {
+    it('blocks (function(){}).constructor(...) escape pattern', async () => {
       const code = `
         function Card() {
           return (function(){}).constructor('return 1')();
         }
         module.exports.default = Card;
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/forbidden pattern.*\.constructor/)
     })
 
-    it('blocks __proto__ access patterns', () => {
+    it('blocks __proto__ access patterns', async () => {
       const code = `
         var c = (1).__proto__.constructor;
         module.exports.default = function() { return null; };
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/__proto__/)
     })
 
-    it("blocks bracket-access ['constructor'](...) pattern", () => {
+    it("blocks bracket-access ['constructor'](...) pattern", async () => {
       const code = `
         var f = ({})['constructor']('return 1');
         module.exports.default = function() { return null; };
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/constructor/)
     })
 
-    it('blocks AsyncFunction references', () => {
+    it('blocks AsyncFunction references', async () => {
       const code = `
         var AF = AsyncFunction;
         module.exports.default = function() { return null; };
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/AsyncFunction/)
     })
 
-    it('shadows atob and btoa from dynamic card code', () => {
+    it('shadows atob and btoa from dynamic card code', async () => {
       const code = `
         if (typeof atob !== 'undefined' || typeof btoa !== 'undefined') {
           throw new Error('base64 globals escaped sandbox');
         }
         module.exports.default = function() { return null; };
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.error).toBeNull()
       expect(typeof result.component).toBe('function')
     })
 
-    it('blocks String.fromCharCode constructor reconstruction', () => {
+    it('blocks String.fromCharCode constructor reconstruction', async () => {
       const code = `
         var key = String.fromCharCode(99, 111, 110, 115, 116, 114, 117, 99, 116, 111, 114);
         var fn = [][key][key]('return this');
         module.exports.default = function() { return null; };
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/fromCharCode/)
     })
 
-    it('blocks atob constructor reconstruction', () => {
+    it('blocks atob constructor reconstruction', async () => {
       const code = `
         var key = atob('Y29uc3RydWN0b3I=');
         var fn = [][key][key]('return this');
         module.exports.default = function() { return null; };
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/computed constructor access|Runtime error/)
     })
 
-    it('blocks String.fromCodePoint constructor reconstruction', () => {
+    it('blocks String.fromCodePoint constructor reconstruction', async () => {
       const code = `
         var key = String.fromCodePoint(99, 111, 110, 115, 116, 114, 117, 99, 116, 111, 114);
         module.exports.default = function() { return null; };
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/fromCodePoint/)
     })
 
-    it('blocks charCodeAt constructor reconstruction helpers', () => {
+    it('blocks charCodeAt constructor reconstruction helpers', async () => {
       const code = `
         var code = 'constructor'.charCodeAt(0);
         module.exports.default = function() { return null; };
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/charCodeAt/)
     })
 
-    it('blocks codePointAt constructor reconstruction helpers', () => {
+    it('blocks codePointAt constructor reconstruction helpers', async () => {
       const code = `
         var code = 'constructor'.codePointAt(0);
         module.exports.default = function() { return null; };
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/codePointAt/)
     })
 
-    it('blocks String.raw constructor reconstruction helpers', () => {
+    it('blocks String.raw constructor reconstruction helpers', async () => {
       const code = `
         var tag = String.raw;
         module.exports.default = function() { return null; };
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/String\.raw/)
     })
@@ -303,7 +303,7 @@ describe('createCardComponent', () => {
 
   // Security regression tests (#6677 — deep-freeze injected scope)
   describe('Deep-frozen scope (#6677)', () => {
-    it('injected scope values are deeply frozen', () => {
+    it('injected scope values are deeply frozen', async () => {
       // Try to mutate commonComparators (a plain object on the scope).
       // In strict mode, mutating a frozen object throws; in sloppy mode
       // it silently no-ops. Our module uses "use strict" so it throws.
@@ -317,7 +317,7 @@ describe('createCardComponent', () => {
           module.exports.mutated = false;
         }
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       expect(result.error).toBeNull()
       // The real assertion: commonComparators should not have been mutated.
       // We can't reach it from outside the mocked scope here, but we verify
@@ -326,12 +326,12 @@ describe('createCardComponent', () => {
       // (The primary signal is that the mutation attempt did not succeed.)
     })
 
-    it('Object.isFrozen returns true for injected plain objects', () => {
+    it('Object.isFrozen returns true for injected plain objects', async () => {
       const code = `
         module.exports.default = function() { return null; };
         module.exports.isFrozen = Object.isFrozen(commonComparators);
       `
-      const result = createCardComponent(code)
+      const result = await createCardComponent(code)
       // Component comes from module.exports.default; we can't easily read
       // the other exports through the current return path, so we assert
       // that the code at least compiled and ran without throwing — which
