@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// newK8sScheme returns a scheme with standard K8s types registered.
 func newK8sScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	_ = k8sscheme.AddToScheme(scheme)
@@ -39,10 +38,7 @@ func TestListWorkloads(t *testing.T) {
 	scheme := newK8sScheme()
 
 	deployment := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Deployment",
-			APIVersion: "apps/v1",
-		},
+		TypeMeta: metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-deploy",
 			Namespace: "default",
@@ -53,9 +49,7 @@ func TestListWorkloads(t *testing.T) {
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "test"}},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "test"}},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{Name: "c1", Image: "nginx"}},
-				},
+				Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "c1", Image: "nginx"}}},
 			},
 		},
 	}
@@ -64,6 +58,7 @@ func TestListWorkloads(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "/api/workloads?cluster=test-cluster", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	resp, err := env.App.Test(req, 5000)
 
@@ -108,6 +103,7 @@ func TestGetWorkload(t *testing.T) {
 	// 1. Success Case
 	req, err := http.NewRequest("GET", "/api/workloads/test-cluster/default/my-app", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -122,6 +118,7 @@ func TestGetWorkload(t *testing.T) {
 	// 2. Not Found
 	reqNotFound, err := http.NewRequest("GET", "/api/workloads/test-cluster/default/missing", nil)
 	require.NoError(t, err)
+	reqNotFound.Host = "localhost"
 	require.NotNil(t, reqNotFound)
 	respNotFound, errNotFound := env.App.Test(reqNotFound, 5000)
 	if errNotFound != nil || respNotFound == nil {
@@ -129,10 +126,6 @@ func TestGetWorkload(t *testing.T) {
 	}
 	assert.Equal(t, 404, respNotFound.StatusCode)
 }
-
-// TestDeployWorkload was removed when /api/workloads/deploy moved to kc-agent
-// (#7993 Phase 1 PR B). Coverage of the underlying deploy logic is provided
-// by pkg/k8s workload tests exercising MultiClusterClient.DeployWorkload.
 
 func TestGetDeployStatus(t *testing.T) {
 	env := setupTestEnv(t)
@@ -152,6 +145,7 @@ func TestGetDeployStatus(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "/api/workloads/deploy-status/c1/default/status-app", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	resp, err := env.App.Test(req, 5000)
 
@@ -164,16 +158,6 @@ func TestGetDeployStatus(t *testing.T) {
 	assert.Equal(t, float64(3), status["readyReplicas"])
 }
 
-// TestScaleWorkload was removed when /api/workloads/scale moved to kc-agent
-// (#7993 Phase 1 PR A). The equivalent coverage now lives in the agent
-// package (pkg/agent) which exercises handleScaleHTTP against the shared
-// pkg/k8s MultiClusterClient.ScaleWorkload method.
-
-// TestDeleteWorkload was removed when the DELETE /api/workloads/... route
-// moved to kc-agent (#7993 Phase 1 PR B). Coverage of the underlying delete
-// logic is provided by pkg/k8s workload tests exercising
-// MultiClusterClient.DeleteWorkload.
-
 func TestClusterGroupsCRUD(t *testing.T) {
 	clusterGroupsMu.Lock()
 	clusterGroups = make(map[string]ClusterGroup)
@@ -182,9 +166,6 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	env := setupTestEnv(t)
 	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 
-	// Inject fake dynamic clients for clusters used in the test so that
-	// LabelClusterNodes / RemoveClusterNodeLabels can resolve them without
-	// a real kubeconfig (fixes CI where ~/.kube/config doesn't exist).
 	nodeGVR := schema.GroupVersionResource{Version: "v1", Resource: "nodes"}
 	injectDynamicCluster(env, "c1", map[schema.GroupVersionResource]string{nodeGVR: "NodeList"})
 	injectDynamicCluster(env, "c2", map[schema.GroupVersionResource]string{nodeGVR: "NodeList"})
@@ -203,6 +184,7 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	data, _ := json.Marshal(createPayload)
 	req, err := http.NewRequest("POST", "/api/cluster-groups", bytes.NewReader(data))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -213,6 +195,7 @@ func TestClusterGroupsCRUD(t *testing.T) {
 
 	req, err = http.NewRequest("GET", "/api/cluster-groups", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	resp, err = env.App.Test(req)
 	require.NoError(t, err)
@@ -222,8 +205,6 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	var listResp map[string][]map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &listResp)
-	// ListClusterGroups prepends the built-in "all-healthy-clusters" group,
-	// so we expect 2 groups total: the built-in one plus "group1".
 	assert.Equal(t, 2, len(listResp["groups"]))
 	assert.Equal(t, "all-healthy-clusters", listResp["groups"][0]["name"])
 	assert.Equal(t, "group1", listResp["groups"][1]["name"])
@@ -237,6 +218,7 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	data, _ = json.Marshal(updatePayload)
 	req, err = http.NewRequest("PUT", "/api/cluster-groups/group1", bytes.NewReader(data))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -247,6 +229,7 @@ func TestClusterGroupsCRUD(t *testing.T) {
 
 	req, err = http.NewRequest("DELETE", "/api/cluster-groups/group1", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	resp, err = env.App.Test(req)
 	require.NoError(t, err)
@@ -255,6 +238,7 @@ func TestClusterGroupsCRUD(t *testing.T) {
 
 	req, err = http.NewRequest("GET", "/api/cluster-groups", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	resp, err = env.App.Test(req)
 	require.NoError(t, err)
@@ -262,7 +246,6 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	var listRespAfterDelete map[string][]map[string]interface{}
 	bodyAfterDelete, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(bodyAfterDelete, &listRespAfterDelete)
-	// After deleting "group1", only the built-in group should remain.
 	assert.Equal(t, 1, len(listRespAfterDelete["groups"]))
 	assert.Equal(t, "all-healthy-clusters", listRespAfterDelete["groups"][0]["name"])
 }
@@ -273,37 +256,23 @@ func TestEvaluateClusterQuery(t *testing.T) {
 	env.App.Post("/api/cluster-groups/evaluate", handler.EvaluateClusterQuery)
 
 	config := &api.Config{
-		Contexts: map[string]*api.Context{
-			"c1-ctx": {Cluster: "cluster1"},
-		},
-		Clusters: map[string]*api.Cluster{
-			"cluster1": {Server: "https://c1.com"},
-		},
+		Contexts: map[string]*api.Context{"c1-ctx": {Cluster: "cluster1"}},
+		Clusters: map[string]*api.Cluster{"cluster1": {Server: "https://c1.com"}},
 	}
 	env.K8sClient.SetRawConfig(config)
 
 	node := &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "node1",
-			Labels: map[string]string{"region": "us-east"},
-		},
+		ObjectMeta: metav1.ObjectMeta{Name: "node1", Labels: map[string]string{"region": "us-east"}},
 		Status: corev1.NodeStatus{
-			Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}},
-			Capacity: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("4"),
-				corev1.ResourceMemory: resource.MustParse("16Gi"),
-			},
-			Allocatable: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("4"),
-				corev1.ResourceMemory: resource.MustParse("16Gi"),
-			},
+			Conditions:  []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}},
+			Capacity:    corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("4"), corev1.ResourceMemory: resource.MustParse("16Gi")},
+			Allocatable: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("4"), corev1.ResourceMemory: resource.MustParse("16Gi")},
 		},
 	}
 
 	c1Client := k8sfake.NewSimpleClientset(node)
 	env.K8sClient.InjectClient("c1-ctx", c1Client)
 
-	// Complex Query with various operators
 	query := map[string]interface{}{
 		"labelSelector": "region=us-east",
 		"filters": []map[string]interface{}{
@@ -316,6 +285,7 @@ func TestEvaluateClusterQuery(t *testing.T) {
 	data, _ := json.Marshal(query)
 	req, err := http.NewRequest("POST", "/api/cluster-groups/evaluate", bytes.NewReader(data))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -333,7 +303,6 @@ func TestEvaluateClusterQuery(t *testing.T) {
 	assert.Equal(t, "c1-ctx", clusters[0])
 }
 
-// MockAIProvider implements agent.AIProvider for testing.
 type MockAIProvider struct {
 	Response string
 }
@@ -345,11 +314,7 @@ func (m *MockAIProvider) Provider() string                       { return "mock"
 func (m *MockAIProvider) IsAvailable() bool                      { return true }
 func (m *MockAIProvider) Capabilities() agent.ProviderCapability { return agent.CapabilityChat }
 func (m *MockAIProvider) Chat(ctx context.Context, req *agent.ChatRequest) (*agent.ChatResponse, error) {
-	return &agent.ChatResponse{
-		Content: m.Response,
-		Agent:   "mock-ai",
-		Done:    true,
-	}, nil
+	return &agent.ChatResponse{Content: m.Response, Agent: "mock-ai", Done: true}, nil
 }
 func (m *MockAIProvider) StreamChat(ctx context.Context, req *agent.ChatRequest, onChunk func(chunk string)) (*agent.ChatResponse, error) {
 	onChunk(m.Response)
@@ -361,7 +326,6 @@ func TestGenerateClusterQuery(t *testing.T) {
 	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups/generate", handler.GenerateClusterQuery)
 
-	// Register Mock AI
 	registry := agent.GetRegistry()
 	mockAI := &MockAIProvider{
 		Response: `{"suggestedName": "west-cpu-group", "query": {"labelSelector": "region=us-west", "filters": [{"field": "cpuCores", "operator": "gte", "value": "4"}]}}`,
@@ -374,6 +338,7 @@ func TestGenerateClusterQuery(t *testing.T) {
 
 	req, err := http.NewRequest("POST", "/api/cluster-groups/generate", bytes.NewReader(data))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -414,15 +379,14 @@ func TestResolveDependencies(t *testing.T) {
 	svc := &corev1.Service{
 		TypeMeta:   metav1.TypeMeta{Kind: "Service", APIVersion: "v1"},
 		ObjectMeta: metav1.ObjectMeta{Name: "app-svc", Namespace: "default"},
-		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{"app": "app"},
-		},
+		Spec:       corev1.ServiceSpec{Selector: map[string]string{"app": "app"}},
 	}
 
 	injectDynamicClusterWithObjects(env, "c1", scheme, []runtime.Object{deploy, svc})
 
 	req, err := http.NewRequest("GET", "/api/workloads/resolve-deps/c1/default/app", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -432,7 +396,6 @@ func TestResolveDependencies(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
 
-	// Should find Service dependency
 	deps := result["dependencies"].([]interface{})
 	foundSvc := false
 	for _, d := range deps {
@@ -469,6 +432,7 @@ func TestMonitorWorkload(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "/api/workloads/monitor/c1/default/monitored-app", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	require.NotNil(t, req)
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -496,9 +460,7 @@ func TestGetDeployLogs(t *testing.T) {
 			Namespace: "default",
 			Labels:    map[string]string{"app": "log-app"},
 		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{Name: "main"}},
-		},
+		Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "main"}}},
 	}
 
 	deploy := &appsv1.Deployment{
@@ -510,14 +472,11 @@ func TestGetDeployLogs(t *testing.T) {
 	}
 
 	t.Run("Smoke_WithDeploymentAndPod", func(t *testing.T) {
-		// Smoke test: ensure no panic and handler returns a valid HTTP response.
-		// The fake client does not implement the pod log subresource, so we cannot
-		// assert exact log content. We verify the handler resolves the deployment,
-		// finds matching pods, and returns without crashing.
 		injectDynamicClusterWithObjects(env, "c1", scheme, []runtime.Object{pod, deploy}, pod)
 
 		req, err := http.NewRequest("GET", "/api/workloads/logs/c1/default/log-app", nil)
 		require.NoError(t, err)
+		req.Host = "localhost"
 		require.NotNil(t, req)
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
@@ -525,14 +484,11 @@ func TestGetDeployLogs(t *testing.T) {
 	})
 
 	t.Run("Smoke_WithoutDeployment", func(t *testing.T) {
-		// Smoke test: GetDeployLogs always returns 200 with an events payload.
-		// Even when no deployment exists, the handler falls through to listing pods
-		// by label/name prefix and returns an empty events list — it never returns 404.
-		// We verify the handler does not crash and returns a well-formed response.
 		injectDynamicClusterWithObjects(env, "c1", scheme, []runtime.Object{pod}, pod)
 
 		req, err := http.NewRequest("GET", "/api/workloads/logs/c1/default/missing-app", nil)
 		require.NoError(t, err)
+		req.Host = "localhost"
 		require.NotNil(t, req)
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
@@ -545,9 +501,9 @@ func TestGetDeployLogs(t *testing.T) {
 	})
 
 	t.Run("MissingCluster_Returns500", func(t *testing.T) {
-		// When the cluster context does not exist, GetClient fails and handler returns 500.
 		req, err := http.NewRequest("GET", "/api/workloads/logs/nonexistent-cluster/default/app", nil)
 		require.NoError(t, err)
+		req.Host = "localhost"
 		require.NotNil(t, req)
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
