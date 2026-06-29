@@ -100,6 +100,7 @@ func TestParsePageParams(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, parsePageParamsRoute+tt.query, nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer resp.Body.Close()

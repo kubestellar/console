@@ -44,6 +44,7 @@ func TestSelfUpgradeHandler_GetStatus(t *testing.T) {
 		env.App.Get("/api/self-upgrade/status", h.GetStatus)
 
 		req := httptest.NewRequest("GET", "/api/self-upgrade/status", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
@@ -58,6 +59,7 @@ func TestSelfUpgradeHandler_GetStatus(t *testing.T) {
 		env.App.Get("/api/self-upgrade/status", h.GetStatus)
 
 		req := httptest.NewRequest("GET", "/api/self-upgrade/status", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -114,6 +116,7 @@ func TestSelfUpgradeHandler_GetStatus(t *testing.T) {
 		env.App.Get("/api/self-upgrade/status", h.GetStatus)
 
 		req := httptest.NewRequest("GET", "/api/self-upgrade/status", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -166,6 +169,7 @@ func TestSelfUpgradeHandler_GetStatus(t *testing.T) {
 		env.App.Get("/api/self-upgrade/status", h.GetStatus)
 
 		req := httptest.NewRequest("GET", "/api/self-upgrade/status", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 
@@ -203,6 +207,7 @@ func TestSelfUpgradeHandler_TriggerUpgrade(t *testing.T) {
 
 		body, _ := json.Marshal(SelfUpgradeTriggerRequest{ImageTag: "v0.2.0"})
 		req := httptest.NewRequest("POST", "/api/self-upgrade/trigger", bytes.NewReader(body))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := env.App.Test(req)
@@ -227,6 +232,7 @@ func TestSelfUpgradeHandler_TriggerUpgrade(t *testing.T) {
 		for _, tag := range maliciousTags {
 			body, _ := json.Marshal(SelfUpgradeTriggerRequest{ImageTag: tag})
 			req := httptest.NewRequest("POST", "/api/self-upgrade/trigger", bytes.NewReader(body))
+			req.Host = "localhost"
 			req.Header.Set("Content-Type", "application/json")
 
 			resp, err := env.App.Test(req)
@@ -285,6 +291,7 @@ func TestSelfUpgradeHandler_TriggerUpgrade(t *testing.T) {
 
 		body, _ := json.Marshal(SelfUpgradeTriggerRequest{ImageTag: "v0.1.1"})
 		req := httptest.NewRequest("POST", "/api/self-upgrade/trigger", bytes.NewReader(body))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := env.App.Test(req)
@@ -353,6 +360,7 @@ func TestSelfUpgradeHandler_TriggerUpgrade(t *testing.T) {
 
 		body, _ := json.Marshal(SelfUpgradeTriggerRequest{ImageTag: "v0.1.1"})
 		req := httptest.NewRequest("POST", "/api/self-upgrade/trigger", bytes.NewReader(body))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := env.App.Test(req)

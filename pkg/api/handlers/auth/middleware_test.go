@@ -51,6 +51,7 @@ func TestAuthMiddleware_RequireAuth(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+			req.Host = "localhost"
 			if tc.token != "" {
 				req.Header.Set("Authorization", tc.token)
 			}
@@ -92,6 +93,7 @@ func TestAuthMiddleware_CookieFallback(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/optional", nil)
+			req.Host = "localhost"
 			if tc.authorization != "" {
 				req.Header.Set("Authorization", tc.authorization)
 			}

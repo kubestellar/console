@@ -23,6 +23,7 @@ func TestKagentProxyHandler_GetStatus(t *testing.T) {
 		app.Get("/status", h.GetStatus)
 
 		req := httptest.NewRequest("GET", "/status", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
@@ -44,6 +45,7 @@ func TestKagentProxyHandler_GetStatus(t *testing.T) {
 		app.Get("/status", h.GetStatus)
 
 		req := httptest.NewRequest("GET", "/status", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
@@ -68,6 +70,7 @@ func TestKagentProxyHandler_ListAgents(t *testing.T) {
 	app.Get("/agents", h.ListAgents)
 
 	req := httptest.NewRequest("GET", "/agents", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
@@ -107,6 +110,7 @@ func TestKagentProxyHandler_CallToolSanitizesPrompt(t *testing.T) {
 	app.Post("/tools/call", h.CallTool)
 
 	req := httptest.NewRequest(http.MethodPost, "/tools/call", bytes.NewBufferString(maliciousRequest))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
@@ -136,6 +140,7 @@ func TestKagentProxyHandler_CallToolRejectsInvalidToolName(t *testing.T) {
 	app.Post("/tools/call", h.CallTool)
 
 	req := httptest.NewRequest(http.MethodPost, "/tools/call", bytes.NewBufferString(maliciousRequest))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
@@ -183,6 +188,7 @@ func TestKagentProxyHandler_Authorization(t *testing.T) {
 			},
 			request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, "/chat", bytes.NewReader([]byte(`{"agent":"a","namespace":"ns","message":"hi"}`)))
+				req.Host = "localhost"
 				req.Header.Set("Content-Type", "application/json")
 				return req
 			}(),
@@ -197,6 +203,7 @@ func TestKagentProxyHandler_Authorization(t *testing.T) {
 			},
 			request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, "/tools/call", bytes.NewReader([]byte(`{"agent":"a","namespace":"ns","tool":"tool"}`)))
+				req.Host = "localhost"
 				req.Header.Set("Content-Type", "application/json")
 				return req
 			}(),
@@ -211,6 +218,7 @@ func TestKagentProxyHandler_Authorization(t *testing.T) {
 			},
 			request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, "/chat", bytes.NewReader([]byte(`{"agent":"a","namespace":"ns","message":"hi"}`)))
+				req.Host = "localhost"
 				req.Header.Set("Content-Type", "application/json")
 				return req
 			}(),

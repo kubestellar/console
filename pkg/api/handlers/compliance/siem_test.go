@@ -176,6 +176,7 @@ func TestSIEMHandler_RegisterRoutesRequiresAdmin(t *testing.T) {
 			handler.RegisterRoutes(app.Group("/api"))
 
 			req := httptest.NewRequest(http.MethodGet, "/api/audit/export/summary", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)

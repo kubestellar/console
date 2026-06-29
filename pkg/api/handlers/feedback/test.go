@@ -78,6 +78,7 @@ func TestFeedback_CreateFeatureRequest_InvalidTitleValidation(t *testing.T) {
 
 	payload := `{"title":"short","description":"this description has enough words","requestType":"feature"}`
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests", strings.NewReader(payload))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -97,6 +98,7 @@ func TestFeedback_RequestUpdate_GitHubIssue_NoGitHubLoginForbidden(t *testing.T)
 	app.Post("/api/feedback/requests/:id/update", handler.RequestUpdate)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/gh-123/update", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -119,6 +121,7 @@ func TestFeedback_GetNotifications_LimitClampAndUserFilter(t *testing.T) {
 	app.Get("/api/feedback/notifications", handler.GetNotifications)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications?limit=999", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -139,6 +142,7 @@ func TestFeedback_GetNotifications_StoreErrorMapsTo500(t *testing.T) {
 	app.Get("/api/feedback/notifications", handler.GetNotifications)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -161,6 +165,7 @@ func TestFeedback_GetUnreadCount_StoreErrorMapsTo500(t *testing.T) {
 	app.Get("/api/feedback/notifications/unread", handler.GetUnreadCount)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications/unread", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -179,6 +184,7 @@ func TestFeedback_GetUnreadCount_Success(t *testing.T) {
 	app.Get("/api/feedback/notifications/unread", handler.GetUnreadCount)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/notifications/unread", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -219,6 +225,7 @@ func sendWebhook(t *testing.T, app *fiber.App, eventType string, payload []byte)
 	t.Helper()
 	sig := signWebhookPayload(payload, testWebhookSecret)
 	req, err := http.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Event", eventType)
@@ -340,6 +347,7 @@ func TestWebhook_InvalidSignature_Returns401(t *testing.T) {
 
 	payload := requireMarshalJSON(t, map[string]interface{}{"action": "opened"})
 	req, err := http.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Event", "issues")
@@ -357,6 +365,7 @@ func TestWebhook_InvalidJSON_Returns400(t *testing.T) {
 	payload := []byte(`{not json}`)
 	sig := signWebhookPayload(payload, testWebhookSecret)
 	req, err := http.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Event", "issues")

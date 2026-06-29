@@ -103,6 +103,7 @@ func TestProtectedRoutes_UnauthenticatedReturn401(t *testing.T) {
 		r := r
 		t.Run(r.method+" "+r.path, func(t *testing.T) {
 			req := httptest.NewRequest(r.method, r.path, nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req, 5000)
 			if err != nil {
 				t.Fatalf("app.Test: %v", err)

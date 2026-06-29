@@ -329,6 +329,7 @@ func TestGitopsHandlers(t *testing.T) {
 
 	t.Run("handleDetectDrift_OPTIONS", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodOptions, "/api/gitops/detect-drift", nil)
+		req.Host = "localhost"
 		w := httptest.NewRecorder()
 		server.handleDetectDrift(w, req)
 		if w.Code != http.StatusNoContent {
@@ -363,6 +364,7 @@ func TestGitopsHandlers(t *testing.T) {
 
 		reqBody := `{"repoUrl": "https://github.com/org/repo", "path": "manifests"}`
 		req := httptest.NewRequest(http.MethodPost, "/api/gitops/detect-drift", strings.NewReader(reqBody))
+		req.Host = "localhost"
 		w := httptest.NewRecorder()
 		server.handleDetectDrift(w, req)
 

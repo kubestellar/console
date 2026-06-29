@@ -52,6 +52,7 @@ func TestCRDListCRDs_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/crds", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := env.App.Test(req, 5000)
@@ -72,6 +73,7 @@ func TestCRDListCRDs_NoClient(t *testing.T) {
 	env.App.Get("/api/crds", handler.ListCRDs)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/crds", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := env.App.Test(req, 5000)

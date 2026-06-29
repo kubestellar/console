@@ -43,6 +43,7 @@ func performRequireAdminRequest(t *testing.T, app *fiber.App) (int, string) {
 	t.Helper()
 
 	req := httptest.NewRequest(http.MethodGet, requireAdminRoute, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()

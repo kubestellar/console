@@ -183,6 +183,7 @@ func TestListClusterGroups_IncludesBuiltIn(t *testing.T) {
 	clusterGroupsMu.Unlock()
 
 	req, _ := http.NewRequest("GET", "/api/cluster-groups", nil)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
@@ -212,6 +213,7 @@ func TestCreateClusterGroup_Success(t *testing.T) {
 
 	payload := `{"name":"new-group","kind":"static","clusters":["test-cluster"]}`
 	req, _ := http.NewRequest("POST", "/api/cluster-groups", strings.NewReader(payload))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -231,6 +233,7 @@ func TestCreateClusterGroup_MissingName(t *testing.T) {
 
 	payload := `{"name":"","kind":"static","clusters":["c1"]}`
 	req, _ := http.NewRequest("POST", "/api/cluster-groups", strings.NewReader(payload))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -245,6 +248,7 @@ func TestCreateClusterGroup_ReservedName(t *testing.T) {
 
 	payload := `{"name":"all-healthy-clusters","kind":"static","clusters":["c1"]}`
 	req, _ := http.NewRequest("POST", "/api/cluster-groups", strings.NewReader(payload))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -259,6 +263,7 @@ func TestCreateClusterGroup_StaticNoClusters(t *testing.T) {
 
 	payload := `{"name":"empty-group","kind":"static","clusters":[]}`
 	req, _ := http.NewRequest("POST", "/api/cluster-groups", strings.NewReader(payload))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -274,6 +279,7 @@ func TestCreateClusterGroup_DynamicNoClusters(t *testing.T) {
 	// Dynamic groups are allowed with no clusters
 	payload := `{"name":"dyn-group","kind":"dynamic","clusters":[]}`
 	req, _ := http.NewRequest("POST", "/api/cluster-groups", strings.NewReader(payload))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -287,6 +293,7 @@ func TestCreateClusterGroup_InvalidBody(t *testing.T) {
 	env.App.Post("/api/cluster-groups", h.CreateClusterGroup)
 
 	req, _ := http.NewRequest("POST", "/api/cluster-groups", strings.NewReader("not json"))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -310,6 +317,7 @@ func TestUpdateClusterGroup_Success(t *testing.T) {
 
 	payload := `{"kind":"static","clusters":["c1","c2"]}`
 	req, _ := http.NewRequest("PUT", "/api/cluster-groups/existing", strings.NewReader(payload))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -329,6 +337,7 @@ func TestUpdateClusterGroup_BuiltInReject(t *testing.T) {
 
 	payload := `{"kind":"static","clusters":["c1"]}`
 	req, _ := http.NewRequest("PUT", "/api/cluster-groups/all-healthy-clusters", strings.NewReader(payload))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -342,6 +351,7 @@ func TestUpdateClusterGroup_InvalidBody(t *testing.T) {
 	env.App.Put("/api/cluster-groups/:name", h.UpdateClusterGroup)
 
 	req, _ := http.NewRequest("PUT", "/api/cluster-groups/test", strings.NewReader("bad json"))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -363,6 +373,7 @@ func TestDeleteClusterGroup_Success(t *testing.T) {
 	clusterGroupsMu.Unlock()
 
 	req, _ := http.NewRequest("DELETE", "/api/cluster-groups/del-me", nil)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusMultiStatus, resp.StatusCode)
@@ -379,6 +390,7 @@ func TestDeleteClusterGroup_BuiltInReject(t *testing.T) {
 	env.App.Delete("/api/cluster-groups/:name", h.DeleteClusterGroup)
 
 	req, _ := http.NewRequest("DELETE", "/api/cluster-groups/all-healthy-clusters", nil)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -397,6 +409,7 @@ func TestSyncClusterGroups_Success(t *testing.T) {
 
 	payload := `[{"name":"g1","kind":"static","clusters":["c1"]},{"name":"g2","kind":"dynamic","clusters":[]}]`
 	req, _ := http.NewRequest("POST", "/api/cluster-groups/sync", strings.NewReader(payload))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -416,6 +429,7 @@ func TestSyncClusterGroups_FiltersReservedName(t *testing.T) {
 	// Include the reserved name — it should be filtered out
 	payload := `[{"name":"all-healthy-clusters","kind":"dynamic","clusters":[]},{"name":"real-group","kind":"static","clusters":["c1"]}]`
 	req, _ := http.NewRequest("POST", "/api/cluster-groups/sync", strings.NewReader(payload))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -433,6 +447,7 @@ func TestSyncClusterGroups_InvalidJSONClusterGroups(t *testing.T) {
 	env.App.Post("/api/cluster-groups/sync", h.SyncClusterGroups)
 
 	req, _ := http.NewRequest("POST", "/api/cluster-groups/sync", strings.NewReader("not json"))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -452,6 +467,7 @@ func TestSyncClusterGroups_BodyTooLarge(t *testing.T) {
 		bigPayload = strings.Repeat("x", 1<<20+1)
 	}
 	req, err := http.NewRequest("POST", "/api/cluster-groups/sync", strings.NewReader(bigPayload))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
@@ -491,6 +507,7 @@ func TestClusterGroupsConcurrentAccess(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 			req, _ := http.NewRequest("GET", "/api/cluster-groups", nil)
+			req.Host = "localhost"
 			env.App.Test(req, -1)
 		}(i)
 		go func(idx int) {

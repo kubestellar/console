@@ -27,6 +27,7 @@ func TestServer_HandleInsightsEnrich(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest("POST", "/insights/enrich", bytes.NewReader(body))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleInsightsEnrich(w, req)
@@ -56,6 +57,7 @@ func TestServer_HandleInsightsAI(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/insights/ai", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleInsightsAI(w, req)
@@ -90,6 +92,7 @@ func TestServer_HandleVClusterCheck(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/vcluster/check", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleVClusterCheck(w, req)

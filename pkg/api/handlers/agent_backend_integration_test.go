@@ -46,6 +46,7 @@ func TestAgentBackend_Integration_Proxy(t *testing.T) {
 
 	// 3. Test Agent Status Proxy
 	req1 := httptest.NewRequest(http.MethodGet, "/api/kagent/status", nil)
+	req1.Host = "localhost"
 	resp1, err := app.Test(req1)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp1.StatusCode)
@@ -56,6 +57,7 @@ func TestAgentBackend_Integration_Proxy(t *testing.T) {
 
 	// 4. Test List Agents Proxy
 	req2 := httptest.NewRequest(http.MethodGet, "/api/kagent/agents", nil)
+	req2.Host = "localhost"
 	resp2, err := app.Test(req2)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
@@ -108,6 +110,7 @@ func TestAgentBackend_Integration_ChatProxy(t *testing.T) {
 	}
 	body, _ := json.Marshal(chatReq)
 	req := httptest.NewRequest(http.MethodPost, "/api/kagent/chat", bytes.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, 5000)

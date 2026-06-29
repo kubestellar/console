@@ -20,6 +20,7 @@ func TestKubaraCatalogHandler_GetConfig(t *testing.T) {
 	env.App.Get("/api/kubara/config", h.GetConfig)
 
 	req := httptest.NewRequest("GET", "/api/kubara/config", nil)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -40,6 +41,7 @@ func TestKubaraCatalogHandler_GetCatalog(t *testing.T) {
 
 	t.Run("demo mode", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/kubara/catalog", nil)
+		req.Host = "localhost"
 		req.Header.Set("X-Demo-Mode", "true")
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
@@ -72,6 +74,7 @@ func TestKubaraCatalogHandler_GetCatalog(t *testing.T) {
 
 		// First call - should fetch from upstream
 		req := httptest.NewRequest("GET", "/api/kubara/catalog", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -113,6 +116,7 @@ func TestKubaraCatalogHandler_GetCatalog(t *testing.T) {
 
 		go func() {
 			req := httptest.NewRequest("GET", "/api/kubara/catalog", nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			if err == nil {
 				_ = resp.Body.Close()
@@ -153,6 +157,7 @@ func TestKubaraCatalogHandler_GetCatalog(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/api/kubara/catalog/fail", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		// Code returns StatusBadGateway (502) for any upstream error

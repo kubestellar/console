@@ -126,6 +126,7 @@ func TestRequireAdmin(t *testing.T) {
 			})
 
 			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCode, resp.StatusCode)

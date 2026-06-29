@@ -21,6 +21,7 @@ func TestValidateWebSocketOrigin_NoOriginHeader(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	// No Origin header — non-browser client
 	resp, err := app.Test(req, -1)
 	assert.NoError(t, err)
@@ -35,6 +36,7 @@ func TestValidateWebSocketOrigin_DevModeAllowsAll(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://evil.example.com")
 	resp, err := app.Test(req, -1)
 	assert.NoError(t, err)

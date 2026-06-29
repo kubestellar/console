@@ -19,6 +19,7 @@ func TestExtractClientAuth_EmptyCookieAndHeader(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	defer resp.Body.Close()

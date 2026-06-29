@@ -94,6 +94,7 @@ func TestHandleNodesStreamSSE_StreamsEvents(t *testing.T) {
 	k8sMock.SetClient("cluster-a", fakeCS)
 
 	req := httptest.NewRequest(http.MethodGet, "/nodes/stream?cluster=cluster-a", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleNodesStreamSSE(w, req)
@@ -162,6 +163,7 @@ func TestHandleGPUNodesStreamSSE_StreamsEvents(t *testing.T) {
 	k8sMock.SetClient("cluster-a", fakeCS)
 
 	req := httptest.NewRequest(http.MethodGet, "/gpu-nodes/stream?cluster=cluster-a", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleGPUNodesStreamSSE(w, req)
@@ -214,6 +216,7 @@ func TestHandleNodesStreamSSE_SkipsBackoffedClusters(t *testing.T) {
 	srv.recordClusterResourceFailure("nodes", "cluster-a")
 
 	req := httptest.NewRequest(http.MethodGet, "/nodes/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleNodesStreamSSE(w, req)
@@ -235,6 +238,7 @@ func TestHandleNodesStreamSSE_Unauthorized(t *testing.T) {
 	srv.tokenExplicit = true
 
 	req := httptest.NewRequest(http.MethodGet, "/nodes/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleNodesStreamSSE(w, req)
@@ -253,6 +257,7 @@ func TestHandleJobsStreamSSE_Headers(t *testing.T) {
 	k8sMock.SetClient("cluster-a", fakeCS)
 
 	req := httptest.NewRequest(http.MethodGet, "/jobs/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleJobsStreamSSE(w, req)
@@ -292,6 +297,7 @@ func TestHandleJobsStreamSSE_StreamsEvents(t *testing.T) {
 	k8sMock.SetClient("cluster-a", fakeCS)
 
 	req := httptest.NewRequest(http.MethodGet, "/jobs/stream?cluster=cluster-a", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleJobsStreamSSE(w, req)
@@ -352,6 +358,7 @@ func TestHandleJobsStreamSSE_SSEFormat(t *testing.T) {
 	k8sMock.SetClient("c1", fakeCS)
 
 	req := httptest.NewRequest(http.MethodGet, "/jobs/stream?cluster=c1", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleJobsStreamSSE(w, req)
@@ -380,6 +387,7 @@ func TestHandleJobsStreamSSE_EmptyClusters(t *testing.T) {
 	srv, _ := newTestServerForSSE(t, contexts)
 
 	req := httptest.NewRequest(http.MethodGet, "/jobs/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleJobsStreamSSE(w, req)
@@ -450,6 +458,7 @@ func TestHandleJobsStreamSSE_MultipleClusters(t *testing.T) {
 	k8sMock.SetClient("beta", fakeBeta)
 
 	req := httptest.NewRequest(http.MethodGet, "/jobs/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleJobsStreamSSE(w, req)
@@ -510,6 +519,7 @@ func TestHandleJobsStreamSSE_ClusterFilter(t *testing.T) {
 	k8sMock.SetClient("ignore", fakeIgnore)
 
 	req := httptest.NewRequest(http.MethodGet, "/jobs/stream?cluster=keep", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleJobsStreamSSE(w, req)
@@ -547,6 +557,7 @@ func TestHandleJobsStreamSSE_Unauthorized(t *testing.T) {
 	srv.tokenExplicit = true
 
 	req := httptest.NewRequest(http.MethodGet, "/jobs/stream", nil)
+	req.Host = "localhost"
 	// No Authorization header — should fail
 	w := httptest.NewRecorder()
 
@@ -566,6 +577,7 @@ func TestHandleJobsStreamSSE_NilK8sClient(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/jobs/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleJobsStreamSSE(w, req)
@@ -585,6 +597,7 @@ func TestHandleJobsStreamSSE_NilKubectl(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/jobs/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleJobsStreamSSE(w, req)
@@ -599,6 +612,7 @@ func TestHandleJobsStreamSSE_CORSPreflight(t *testing.T) {
 	srv, _ := newTestServerForSSE(t, contexts)
 
 	req := httptest.NewRequest(http.MethodOptions, "/jobs/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleJobsStreamSSE(w, req)
@@ -621,6 +635,7 @@ func TestHandleJobsStreamSSE_ClientDisconnect(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
 	req := httptest.NewRequest(http.MethodGet, "/jobs/stream?cluster=slow-cluster", nil)
+	req.Host = "localhost"
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
@@ -651,6 +666,7 @@ func TestHandleJobsStreamSSE_ClusterError(t *testing.T) {
 	// Don't set a client for "missing" — GetJobs will fail
 
 	req := httptest.NewRequest(http.MethodGet, "/jobs/stream?cluster=missing", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	srv.handleJobsStreamSSE(w, req)

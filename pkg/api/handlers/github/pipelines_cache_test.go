@@ -32,6 +32,7 @@ func cacheKeyViaApp(t *testing.T, h *GitHubPipelinesHandler, rawQuery string) st
 		return c.SendStatus(200)
 	})
 	req := httptest.NewRequest("GET", "/test?"+rawQuery, nil)
+	req.Host = "localhost"
 	if _, err := app.Test(req, -1); err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}
@@ -204,6 +205,7 @@ func TestGHPForwardRateLimitHeaders_ForwardsAll(t *testing.T) {
 		return c.SendStatus(200)
 	})
 	req := httptest.NewRequest("GET", "/fwd", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
@@ -231,6 +233,7 @@ func TestGHPForwardRateLimitHeaders_NoHeadersNoOp(t *testing.T) {
 		return c.SendStatus(200)
 	})
 	req := httptest.NewRequest("GET", "/noop", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)

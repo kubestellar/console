@@ -18,6 +18,7 @@ func TestNightlyE2EHandler_GetRuns_DemoMode(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
+	req.Host = "localhost"
 	req.Header.Set("X-Demo-Mode", "true")
 
 	resp, _ := app.Test(req, 5000)
@@ -36,6 +37,7 @@ func TestNightlyE2EHandler_GetRuns_NoToken(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
+	req.Host = "localhost"
 	resp, _ := app.Test(req, 5000)
 
 	if resp == nil {
@@ -67,6 +69,7 @@ func TestNightlyE2EHandler_GetRunLogs_DemoMode(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
+	req.Host = "localhost"
 
 	resp, _ := app.Test(req, 5000)
 	if resp == nil {
@@ -115,6 +118,7 @@ func TestNightlyE2EHandler_ErrorResponse(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
+	req.Host = "localhost"
 	resp, _ := app.Test(req, 10000)
 
 	if resp == nil {
@@ -138,6 +142,7 @@ func TestNightlyE2EHandler_GetRunLogs_NetworkError(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
+	req.Host = "localhost"
 	resp, _ := app.Test(req, 5000)
 
 	if resp == nil {
@@ -174,6 +179,7 @@ func TestNightlyE2EHandler_GetRunLogs_CacheBehavior(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
 	req1 := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
+	req1.Host = "localhost"
 	resp1, _ := app.Test(req1, 5000)
 	if resp1 == nil {
 		t.Fatal("expected non-nil response")
@@ -183,6 +189,7 @@ func TestNightlyE2EHandler_GetRunLogs_CacheBehavior(t *testing.T) {
 	initialCallCount := callCount.Load()
 
 	req2 := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
+	req2.Host = "localhost"
 	resp2, _ := app.Test(req2, 5000)
 	if resp2 == nil {
 		t.Fatal("expected non-nil response")
@@ -207,6 +214,7 @@ func TestNightlyE2EHandler_EmptyJobsList(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
+	req.Host = "localhost"
 	resp, _ := app.Test(req, 5000)
 
 	if resp == nil {
@@ -275,6 +283,7 @@ func TestNightlyE2EHandler_MalformedJSON(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
+	req.Host = "localhost"
 	resp, _ := app.Test(req, 5000)
 
 	if resp == nil {

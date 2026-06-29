@@ -17,6 +17,7 @@ func TestServer_GetKeysStatus(t *testing.T) {
 	GetRegistry().Register(&ServerMockProvider{name: "groq"})
 
 	req := httptest.NewRequest("GET", "/settings/keys", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleGetKeysStatus(w, req)
@@ -105,6 +106,7 @@ func TestServer_HandleSettingsExportImport(t *testing.T) {
 
 	// 1. Export (should return encrypted blob if settings exist, or default)
 	req := httptest.NewRequest("POST", "/settings/export", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 	server.handleSettingsExport(w, req)
 
@@ -115,6 +117,7 @@ func TestServer_HandleSettingsExportImport(t *testing.T) {
 	// 2. Import (mock an import)
 	importBody := `{"data": "mock-encrypted-blob"}`
 	req = httptest.NewRequest("POST", "/settings/import", strings.NewReader(importBody))
+	req.Host = "localhost"
 	w = httptest.NewRecorder()
 	server.handleSettingsImport(w, req)
 

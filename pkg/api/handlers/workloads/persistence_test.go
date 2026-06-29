@@ -154,6 +154,7 @@ func TestSyncClusterGroups_BulkSync(t *testing.T) {
 	body, _ := json.Marshal(groups)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/cluster-groups/sync", bytes.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -184,6 +185,7 @@ func TestSyncClusterGroups_ReservedNameFiltered(t *testing.T) {
 	body, _ := json.Marshal(groups)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/cluster-groups/sync", bytes.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -203,6 +205,7 @@ func TestSyncClusterGroups_InvalidJSON(t *testing.T) {
 	env.App.Post("/api/cluster-groups/sync", h.SyncClusterGroups)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/cluster-groups/sync", bytes.NewReader([]byte(`not json`)))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)
@@ -229,6 +232,7 @@ func TestSyncClusterGroups_RemovesStaleGroups(t *testing.T) {
 	body, _ := json.Marshal(groups)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/cluster-groups/sync", bytes.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := env.App.Test(req, -1)
 	require.NoError(t, err)

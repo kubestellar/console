@@ -19,6 +19,7 @@ func TestServer_HandleCloudCLIStatus(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/cloud-cli-status", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleCloudCLIStatus(w, req)
@@ -67,6 +68,7 @@ func TestServer_HandleLocalClusterTools(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/local-cluster-tools", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleLocalClusterTools(w, req)
@@ -129,6 +131,7 @@ func TestServer_HandleLocalClusterTools_RequestedToolsFallback(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/local-cluster-tools?tool=helm", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleLocalClusterTools(w, req)
@@ -168,6 +171,7 @@ func TestServer_HandleLocalClusters_List(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/local-clusters", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleLocalClusters(w, req)

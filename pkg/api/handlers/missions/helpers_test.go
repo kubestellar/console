@@ -38,6 +38,7 @@ func TestIsDemoMode(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
 			if tt.header != "" {
 				req.Header.Set("X-Demo-Mode", tt.header)
 			}
@@ -130,6 +131,7 @@ func TestRequireAdmin(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			require.NotNil(t, resp)

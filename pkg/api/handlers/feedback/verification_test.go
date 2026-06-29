@@ -57,6 +57,7 @@ func TestFeedback_CloseRequest_UserVerification(t *testing.T) {
 
 	app.Patch("/api/feedback/:id/close", handler.CloseRequest)
 	req := httptest.NewRequest(http.MethodPatch, "/api/feedback/"+requestID.String()+"/close", strings.NewReader(`{"user_verified":true}`))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -135,6 +136,7 @@ func TestFeedback_ReopenRequest_PostsCommentAndReopensIssue(t *testing.T) {
 
 	app.Post("/api/feedback/:id/reopen", handler.ReopenRequest)
 	req := httptest.NewRequest(http.MethodPost, "/api/feedback/"+requestID.String()+"/reopen", strings.NewReader(`{"comment":"Fails in my environment"}`))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)

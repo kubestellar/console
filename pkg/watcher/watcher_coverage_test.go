@@ -137,6 +137,7 @@ t.Fatal("timed out waiting for healthy->unhealthy transition")
 // TestServeFallback_WildcardAcceptBrowser tests wildcard Accept header for browser.
 func TestServeFallback_WildcardAcceptBrowser(t *testing.T) {
 req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+req.Host = "localhost"
 req.Header.Set("Accept", "*/*")
 rec := httptest.NewRecorder()
 
@@ -161,6 +162,7 @@ t.Error("HTML missing commit hash")
 // TestServeFallback_EmptyAcceptBrowser tests empty Accept header.
 func TestServeFallback_EmptyAcceptBrowser(t *testing.T) {
 req := httptest.NewRequest(http.MethodGet, "/page", nil)
+req.Host = "localhost"
 // No Accept header
 rec := httptest.NewRecorder()
 
@@ -181,6 +183,7 @@ t.Error("HTML missing version")
 // TestServeFallback_POSTRequest tests that POST always gets JSON.
 func TestServeFallback_POSTRequest(t *testing.T) {
 req := httptest.NewRequest(http.MethodPost, "/submit", nil)
+req.Host = "localhost"
 req.Header.Set("Accept", "text/html")
 rec := httptest.NewRecorder()
 
@@ -197,6 +200,7 @@ t.Fatalf("Content-Type = %q, want application/json", ct)
 // TestServeFallback_SSEPathGetsJSON tests SSE path gets JSON response.
 func TestServeFallback_SSEPathGetsJSON(t *testing.T) {
 req := httptest.NewRequest(http.MethodGet, "/sse/events", nil)
+req.Host = "localhost"
 req.Header.Set("Accept", "text/event-stream")
 rec := httptest.NewRecorder()
 
@@ -210,6 +214,7 @@ t.Fatalf("Content-Type = %q, want application/json", ct)
 // TestServeFallback_WebSocketPathGetsJSON tests websocket path gets JSON.
 func TestServeFallback_WebSocketPathGetsJSON(t *testing.T) {
 req := httptest.NewRequest(http.MethodGet, "/ws/chat", nil)
+req.Host = "localhost"
 req.Header.Set("Accept", "text/html")
 rec := httptest.NewRecorder()
 
@@ -294,6 +299,7 @@ t.Errorf("key = %q, want 'value'", result["key"])
 // TestIsAPIRequest_HeadMethod tests HEAD method is not API.
 func TestIsAPIRequest_HeadMethod(t *testing.T) {
 req := httptest.NewRequest(http.MethodHead, "/page", nil)
+req.Host = "localhost"
 req.Header.Set("Accept", "text/html")
 if IsAPIRequest(req) {
 t.Error("HEAD + text/html should not be API request")
@@ -303,6 +309,7 @@ t.Error("HEAD + text/html should not be API request")
 // TestIsAPIRequest_PutMethod tests PUT method is API.
 func TestIsAPIRequest_PutMethod(t *testing.T) {
 req := httptest.NewRequest(http.MethodPut, "/resource", nil)
+req.Host = "localhost"
 if !IsAPIRequest(req) {
 t.Error("PUT should be API request")
 }
@@ -311,6 +318,7 @@ t.Error("PUT should be API request")
 // TestIsAPIRequest_DeleteMethod tests DELETE method is API.
 func TestIsAPIRequest_DeleteMethod(t *testing.T) {
 req := httptest.NewRequest(http.MethodDelete, "/resource/1", nil)
+req.Host = "localhost"
 if !IsAPIRequest(req) {
 t.Error("DELETE should be API request")
 }
@@ -319,6 +327,7 @@ t.Error("DELETE should be API request")
 // TestIsAPIRequest_PatchMethod tests PATCH method is API.
 func TestIsAPIRequest_PatchMethod(t *testing.T) {
 req := httptest.NewRequest(http.MethodPatch, "/resource/1", nil)
+req.Host = "localhost"
 if !IsAPIRequest(req) {
 t.Error("PATCH should be API request")
 }

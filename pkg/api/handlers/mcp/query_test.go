@@ -55,6 +55,7 @@ func TestParseClusterParam(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test"+tt.queryParam, nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
 			assert.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -100,6 +101,7 @@ func TestParseNamespaceParam(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test"+tt.queryParam, nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
 			assert.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -119,6 +121,7 @@ func TestParseMultipleParams(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/test?cluster=my-cluster&namespace=default", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, -1)
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -135,6 +138,7 @@ func TestParseMultipleParams(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, -1)
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)

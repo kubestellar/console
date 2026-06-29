@@ -63,6 +63,7 @@ func TestNightlyE2EHandler_GetRuns_Success(t *testing.T) {
 	handler.prewarm()
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
+	req.Host = "localhost"
 	resp, _ := app.Test(req, 10000)
 
 	if resp == nil {
@@ -107,6 +108,7 @@ func TestNightlyE2EHandler_GetRuns_CacheBehavior(t *testing.T) {
 	handler.prewarm()
 
 	req1 := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
+	req1.Host = "localhost"
 	resp1, _ := app.Test(req1, 10000)
 	if resp1 == nil {
 		t.Fatal("expected non-nil response")
@@ -119,6 +121,7 @@ func TestNightlyE2EHandler_GetRuns_CacheBehavior(t *testing.T) {
 	initialCallCount := callCount.Load()
 
 	req2 := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
+	req2.Host = "localhost"
 	resp2, _ := app.Test(req2, 10000)
 	if resp2 == nil {
 		t.Fatal("expected non-nil response")
@@ -161,6 +164,7 @@ func TestNightlyE2EHandler_GetRunLogs_Success(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=llm-d/llm-d&runId=123", nil)
+	req.Host = "localhost"
 	resp, _ := app.Test(req, 10000)
 
 	if resp == nil {
@@ -180,6 +184,7 @@ func TestNightlyE2EHandler_GetRunLogs_InvalidRunId(t *testing.T) {
 	app, _ := setupNightlyE2EHandler("test-token")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/run-logs?repo=owner/repo&runId=invalid", nil)
+	req.Host = "localhost"
 	resp, _ := app.Test(req, 5000)
 
 	if resp == nil {

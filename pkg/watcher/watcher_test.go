@@ -46,6 +46,7 @@ func TestIsAPIRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.path, nil)
+			req.Host = "localhost"
 			if tt.accept != "" {
 				req.Header.Set("Accept", tt.accept)
 			}
@@ -59,6 +60,7 @@ func TestIsAPIRequest(t *testing.T) {
 
 func TestServeFallback_JSONForAPIRequests(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/version", nil)
+	req.Host = "localhost"
 	req.Header.Set("Accept", "*/*")
 	rec := httptest.NewRecorder()
 
@@ -85,6 +87,7 @@ func TestServeFallback_JSONForAPIRequests(t *testing.T) {
 
 func TestServeFallback_HTMLForBrowserRequests(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Host = "localhost"
 	req.Header.Set("Accept", "text/html,application/xhtml+xml")
 	rec := httptest.NewRecorder()
 

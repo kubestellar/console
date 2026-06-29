@@ -44,6 +44,7 @@ fi
 	env.App.Get("/api/gitops/operators", handler.ListOperators)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators?cluster=test-cluster", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
@@ -82,6 +83,7 @@ fi
 	env.App.Get("/api/gitops/subscriptions", handler.ListOperatorSubscriptions)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions?cluster=test-cluster", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
@@ -103,6 +105,7 @@ func TestGitOpsOperators_ListOperators_Validation(t *testing.T) {
 
 	// Invalid cluster name
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators?cluster=bad;name", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
@@ -128,6 +131,7 @@ func TestGitOpsOperators_StreamOperators_Validation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators/stream?cluster="+tc.cluster, nil)
+			req.Host = "localhost"
 			require.NoError(t, err)
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
@@ -154,6 +158,7 @@ func TestGitOpsOperators_StreamSubscriptions_Validation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions/stream?cluster="+tc.cluster, nil)
+			req.Host = "localhost"
 			require.NoError(t, err)
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
@@ -180,6 +185,7 @@ func TestGitOpsOperators_StreamHelmReleases_Validation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/stream?cluster="+tc.cluster, nil)
+			req.Host = "localhost"
 			require.NoError(t, err)
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)

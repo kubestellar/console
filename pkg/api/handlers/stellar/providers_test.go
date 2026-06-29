@@ -143,6 +143,7 @@ func TestListProvidersHTTPHandler(t *testing.T) {
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/providers", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -165,6 +166,7 @@ func TestCreateProviderHTTPHandler(t *testing.T) {
 
 	body := `{"provider":"anthropic","displayName":"My Anthropic","apiKey":"","model":"claude-3-opus-20240229","baseUrl":"https://api.anthropic.com"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/providers", bytes.NewReader([]byte(body)))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -197,6 +199,7 @@ func TestDeleteProviderHTTPHandler(t *testing.T) {
 	}))
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/providers/p1", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -230,6 +233,7 @@ func TestSetDefaultProviderHTTPHandler(t *testing.T) {
 	}))
 
 	req := httptest.NewRequest(http.MethodPatch, "/api/providers/p2/default", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -255,6 +259,7 @@ func TestTestProviderNotFoundHTTP(t *testing.T) {
 	defer s.Close()
 
 	req := httptest.NewRequest(http.MethodPost, "/api/providers/nonexistent/test", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	defer resp.Body.Close()

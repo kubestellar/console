@@ -151,6 +151,7 @@ func TestServer_HandleHelmRollback(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest("POST", "/helm/rollback", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 
@@ -169,6 +170,7 @@ func TestServer_HandleHelmRollback(t *testing.T) {
 	reqBody = helmRollbackRequest{Namespace: "my-ns", Revision: 1}
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest("POST", "/helm/rollback", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleHelmRollback(w, req)
@@ -182,6 +184,7 @@ func TestServer_HandleHelmRollback(t *testing.T) {
 	reqBody = helmRollbackRequest{Release: "r", Namespace: "n", Revision: 1}
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest("POST", "/helm/rollback", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleHelmRollback(w, req)
@@ -212,6 +215,7 @@ func TestServer_HandleHelmUninstall(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest("POST", "/helm/uninstall", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 
@@ -225,6 +229,7 @@ func TestServer_HandleHelmUninstall(t *testing.T) {
 	mockExitCode = 1
 	mockStderr = "uninstall failed"
 	req = httptest.NewRequest("POST", "/helm/uninstall", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleHelmUninstall(w, req)
@@ -255,6 +260,7 @@ func TestServer_HandleHelmUpgrade(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest("POST", "/helm/upgrade", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 
@@ -267,6 +273,7 @@ func TestServer_HandleHelmUpgrade(t *testing.T) {
 	reqBody.Values = "key: value"
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest("POST", "/helm/upgrade", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleHelmUpgrade(w, req)
@@ -278,6 +285,7 @@ func TestServer_HandleHelmUpgrade(t *testing.T) {
 	reqBody.Chart = "-invalid"
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest("POST", "/helm/upgrade", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleHelmUpgrade(w, req)
@@ -353,6 +361,7 @@ func TestHandleHelmUpgrade_SecurityBoundary(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "/helm/upgrade", strings.NewReader(tt.body))
+			req.Host = "localhost"
 			if tt.token != "" {
 				req.Header.Set("Authorization", tt.token)
 			}

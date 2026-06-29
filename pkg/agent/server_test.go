@@ -31,6 +31,7 @@ func TestServer_HandleHealth(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/health", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://allowed.com")
 	w := httptest.NewRecorder()
 
@@ -66,6 +67,7 @@ func TestServer_HandleHealth_CORS(t *testing.T) {
 
 	// Case 1: Allowed Origin
 	req := httptest.NewRequest("GET", "/health", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://allowed.com")
 	w := httptest.NewRecorder()
 	server.handleHealth(w, req)
@@ -75,6 +77,7 @@ func TestServer_HandleHealth_CORS(t *testing.T) {
 
 	// Case 2: Disallowed Origin
 	req = httptest.NewRequest("GET", "/health", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://evil.com")
 	w = httptest.NewRecorder()
 	server.handleHealth(w, req)
@@ -99,6 +102,7 @@ func TestServer_HandleStatus(t *testing.T) {
 
 	t.Run("requires auth", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/status", nil)
+		req.Host = "localhost"
 		req.Header.Set("Origin", "http://allowed.com")
 		w := httptest.NewRecorder()
 
@@ -118,6 +122,7 @@ func TestServer_HandleStatus(t *testing.T) {
 		}}
 
 		req := httptest.NewRequest(http.MethodGet, "/status", nil)
+		req.Host = "localhost"
 		req.Header.Set("Origin", "http://allowed.com")
 		req.Header.Set("Authorization", "Bearer test-token")
 		w := httptest.NewRecorder()
@@ -159,6 +164,7 @@ func TestServer_HandleMetrics(t *testing.T) {
 
 	t.Run("requires auth", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+		req.Host = "localhost"
 		req.Header.Set("Origin", "http://allowed.com")
 		w := httptest.NewRecorder()
 
@@ -171,6 +177,7 @@ func TestServer_HandleMetrics(t *testing.T) {
 
 	t.Run("returns metrics with valid token", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+		req.Host = "localhost"
 		req.Header.Set("Origin", "http://allowed.com")
 		req.Header.Set("Authorization", "Bearer test-token")
 		w := httptest.NewRecorder()
@@ -233,6 +240,7 @@ func TestServer_HandleClustersHTTP(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/clusters", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleClustersHTTP(w, req)
@@ -286,6 +294,7 @@ func TestServer_HandleRenameContextHTTP(t *testing.T) {
 	mockExitCode = 0
 	body1 := `{"oldName":"old", "newName":"new"}`
 	req := httptest.NewRequest("POST", "/rename-context", strings.NewReader(body1))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -297,6 +306,7 @@ func TestServer_HandleRenameContextHTTP(t *testing.T) {
 
 	// Case 2: Invalid JSON
 	req = httptest.NewRequest("POST", "/rename-context", strings.NewReader("bad-json"))
+	req.Host = "localhost"
 	w = httptest.NewRecorder()
 	server.handleRenameContextHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -308,6 +318,7 @@ func TestServer_HandleRenameContextHTTP(t *testing.T) {
 	mockStderr = "rename failed"
 	body3 := `{"oldName":"bad", "newName":"new"}`
 	req = httptest.NewRequest("POST", "/rename-context", strings.NewReader(body3))
+	req.Host = "localhost"
 	w = httptest.NewRecorder()
 	server.handleRenameContextHTTP(w, req)
 	if w.Code != http.StatusInternalServerError {
@@ -480,6 +491,7 @@ func TestServer_ResourceHandlers(t *testing.T) {
 			mockStderr = ""
 
 			req := httptest.NewRequest("GET", tt.path, nil)
+			req.Host = "localhost"
 			// Add query for namespace if present in path
 			if strings.Contains(tt.path, "?") {
 				parts := strings.Split(tt.path, "?")
@@ -532,6 +544,7 @@ func TestServer_SettingsHandlers(t *testing.T) {
 	// 2. Test handleSetKey
 	reqBody := `{"provider":"openai", "apiKey":"test-key", "model":"gpt-4"}`
 	req := httptest.NewRequest("POST", "/settings/keys", strings.NewReader(reqBody))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 	server.handleSettingsKeys(w, req)
 
@@ -546,6 +559,7 @@ func TestServer_SettingsHandlers(t *testing.T) {
 
 	// 3. Test handleGetKeysStatus
 	req = httptest.NewRequest("GET", "/settings/keys", nil)
+	req.Host = "localhost"
 	w = httptest.NewRecorder()
 	server.handleSettingsKeys(w, req)
 
@@ -662,6 +676,7 @@ func TestServer_SettingsAll(t *testing.T) {
 
 	// 1. Test GET /settings (initial default)
 	req := httptest.NewRequest("GET", "/settings", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 	server.handleSettingsAll(w, req)
 
@@ -682,6 +697,7 @@ func TestServer_SettingsAll(t *testing.T) {
 
 	body, _ := json.Marshal(all)
 	req = httptest.NewRequest("PUT", "/settings", strings.NewReader(string(body)))
+	req.Host = "localhost"
 	w = httptest.NewRecorder()
 	server.handleSettingsAll(w, req)
 
@@ -691,6 +707,7 @@ func TestServer_SettingsAll(t *testing.T) {
 
 	// 3. Verify saved settings
 	req = httptest.NewRequest("GET", "/settings", nil)
+	req.Host = "localhost"
 	w = httptest.NewRecorder()
 	server.handleSettingsAll(w, req)
 
@@ -875,6 +892,7 @@ func TestServer_ValidateToken(t *testing.T) {
 				url += "?token=" + tt.queryToken
 			}
 			req := httptest.NewRequest("GET", url, nil)
+			req.Host = "localhost"
 			if tt.authHeader != "" {
 				req.Header.Set("Authorization", tt.authHeader)
 			}
@@ -928,6 +946,7 @@ func TestServer_CheckOrigin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/ws", nil)
+			req.Host = "localhost"
 			if tt.origin != "" {
 				req.Header.Set("Origin", tt.origin)
 			}
@@ -977,6 +996,7 @@ func TestServer_HandleClustersHTTP_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/clusters", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:8080")
 	// No token provided
 	w := httptest.NewRecorder()
@@ -995,6 +1015,7 @@ func TestServer_HandleClustersHTTP_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/clusters", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://allowed.com")
 	w := httptest.NewRecorder()
 
@@ -1015,6 +1036,7 @@ func TestServer_HandleGPUNodesHTTP_NilClient(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/gpu-nodes?cluster=test", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleGPUNodesHTTP(w, req)
@@ -1038,6 +1060,7 @@ func TestServer_HandleGPUNodesHTTP_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/gpu-nodes?cluster=test", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:8080")
 	w := httptest.NewRecorder()
 
@@ -1054,6 +1077,7 @@ func TestServer_HandleGPUNodesHTTP_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/gpu-nodes", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleGPUNodesHTTP(w, req)
@@ -1070,6 +1094,7 @@ func TestServer_HandleNodesHTTP_NilClient(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/nodes?cluster=test", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleNodesHTTP(w, req)
@@ -1093,6 +1118,7 @@ func TestServer_HandleNodesHTTP_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/nodes?cluster=test", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:8080")
 	w := httptest.NewRecorder()
 
@@ -1111,6 +1137,7 @@ func TestServer_HandleEventsHTTP_MissingCluster(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/events", nil) // No cluster param
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleEventsHTTP(w, req)
@@ -1133,6 +1160,7 @@ func TestServer_HandleEventsHTTP_NilClient(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/events?cluster=test", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleEventsHTTP(w, req)
@@ -1150,6 +1178,7 @@ func TestServer_HandleEventsHTTP_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/events", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleEventsHTTP(w, req)
@@ -1167,6 +1196,7 @@ func TestServer_HandlePodsHTTP_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/pods?cluster=test", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:8080")
 	w := httptest.NewRecorder()
 
@@ -1184,6 +1214,7 @@ func TestServer_HandlePodsHTTP_NilClient(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/pods?cluster=test", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handlePodsHTTP(w, req)
@@ -1203,6 +1234,7 @@ func TestServer_HandlePodsHTTP_MissingCluster(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/pods", nil) // No cluster
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handlePodsHTTP(w, req)
@@ -1222,6 +1254,7 @@ func TestServer_HandleClusterHealthHTTP_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/cluster-health?cluster=test", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:8080")
 	w := httptest.NewRecorder()
 
@@ -1239,6 +1272,7 @@ func TestServer_HandleClusterHealthHTTP_NilClient(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/cluster-health?cluster=test", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleClusterHealthHTTP(w, req)
@@ -1258,6 +1292,7 @@ func TestServer_HandleClusterHealthHTTP_MissingCluster(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/cluster-health", nil) // No cluster
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleClusterHealthHTTP(w, req)
@@ -1275,6 +1310,7 @@ func TestServer_HandleRestartBackend_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/restart-backend", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -1292,6 +1328,7 @@ func TestServer_HandleRestartBackend_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", "/restart-backend", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleRestartBackend(w, req)
@@ -1307,6 +1344,7 @@ func TestServer_HandleRestartBackend_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/restart-backend", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleRestartBackend(w, req)
@@ -1439,6 +1477,7 @@ func TestServer_HandleRenameContextHTTP_Unauthorized(t *testing.T) {
 
 	body := `{"oldName":"old", "newName":"new"}`
 	req := httptest.NewRequest("POST", "/rename-context", strings.NewReader(body))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleRenameContextHTTP(w, req)
@@ -1455,6 +1494,7 @@ func TestServer_HandleRenameContextHTTP_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/rename-context", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleRenameContextHTTP(w, req)
@@ -1477,6 +1517,7 @@ func TestServer_HandleRenameContextHTTP_MissingNames(t *testing.T) {
 	// Missing newName
 	body := `{"oldName":"old", "newName":""}`
 	req := httptest.NewRequest("POST", "/rename-context", strings.NewReader(body))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleRenameContextHTTP(w, req)
@@ -1511,6 +1552,7 @@ func TestServer_HandleRenameContextHTTP_FlagInjection(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			body := `{"oldName":"` + tc.oldName + `","newName":"` + tc.newName + `"}`
 			req := httptest.NewRequest("POST", "/rename-context", strings.NewReader(body))
+			req.Host = "localhost"
 			w := httptest.NewRecorder()
 			server.handleRenameContextHTTP(w, req)
 			if w.Code != http.StatusBadRequest {
@@ -1526,6 +1568,7 @@ func TestServer_HandleRenameContextHTTP_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/rename-context", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -1542,6 +1585,7 @@ func TestServer_HandleSettingsKeyByProvider_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/settings/keys/claude", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -1558,6 +1602,7 @@ func TestServer_HandleSettingsKeyByProvider_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/settings/keys/claude", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleSettingsKeyByProvider(w, req)
@@ -1573,6 +1618,7 @@ func TestServer_HandleSettingsKeyByProvider_MissingProvider(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("DELETE", "/settings/keys/", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleSettingsKeyByProvider(w, req)
@@ -1588,6 +1634,7 @@ func TestServer_HandleSettingsAll_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("DELETE", "/settings", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleSettingsAll(w, req)
@@ -1603,6 +1650,7 @@ func TestServer_HandleSettingsAll_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/settings", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -1628,6 +1676,7 @@ func TestServer_HandleSettingsAll_InvalidJSON(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("PUT", "/settings", strings.NewReader("invalid json"))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleSettingsAll(w, req)
@@ -1643,6 +1692,7 @@ func TestServer_HandleSettingsKeys_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("DELETE", "/settings/keys", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleSettingsKeys(w, req)
@@ -1658,6 +1708,7 @@ func TestServer_HandleSettingsKeys_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/settings/keys", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -1674,6 +1725,7 @@ func TestServer_HandleProvidersHealth_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/providers/health", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -1690,6 +1742,7 @@ func TestServer_HandleProvidersHealth_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", "/providers/health", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleProvidersHealth(w, req)
@@ -1705,6 +1758,7 @@ func TestServer_HandleMetricsHistory_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/metrics/history", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -1721,6 +1775,7 @@ func TestServer_HandleMetricsHistory_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", "/metrics/history", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleMetricsHistory(w, req)
@@ -1737,6 +1792,7 @@ func TestServer_HandleMetricsHistory_NilHistory(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/metrics/history", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleMetricsHistory(w, req)
@@ -1758,6 +1814,7 @@ func TestServer_HandleDeviceAlerts_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/devices/alerts", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -1774,6 +1831,7 @@ func TestServer_HandleDeviceAlerts_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", "/devices/alerts", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleDeviceAlerts(w, req)
@@ -1790,6 +1848,7 @@ func TestServer_HandleDeviceAlerts_NilTracker(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/devices/alerts", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleDeviceAlerts(w, req)
@@ -1811,6 +1870,7 @@ func TestServer_HandleDeviceAlertsClear_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/devices/alerts/clear", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -1827,6 +1887,7 @@ func TestServer_HandleDeviceAlertsClear_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/devices/alerts/clear", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleDeviceAlertsClear(w, req)
@@ -1843,6 +1904,7 @@ func TestServer_HandleDeviceAlertsClear_NilTracker(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", "/devices/alerts/clear", strings.NewReader(`{"alertId":"test"}`))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleDeviceAlertsClear(w, req)
@@ -1859,6 +1921,7 @@ func TestServer_HandleDeviceAlertsClear_InvalidBody(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", "/devices/alerts/clear", strings.NewReader("invalid"))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleDeviceAlertsClear(w, req)
@@ -1875,6 +1938,7 @@ func TestServer_HandleDeviceAlertsClear_MissingAlertId(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", "/devices/alerts/clear", strings.NewReader(`{"alertId":""}`))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleDeviceAlertsClear(w, req)
@@ -1890,6 +1954,7 @@ func TestServer_HandleDeviceInventory_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/devices/inventory", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -1906,6 +1971,7 @@ func TestServer_HandleDeviceInventory_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", "/devices/inventory", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleDeviceInventory(w, req)
@@ -1922,6 +1988,7 @@ func TestServer_HandleDeviceInventory_NilTracker(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/devices/inventory", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleDeviceInventory(w, req)
@@ -1943,6 +2010,7 @@ func TestServer_HandlePredictionsAI_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/predictions/ai", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -1959,6 +2027,7 @@ func TestServer_HandlePredictionsAI_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", "/predictions/ai", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handlePredictionsAI(w, req)
@@ -1975,6 +2044,7 @@ func TestServer_HandlePredictionsAI_NilWorker(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/predictions/ai", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handlePredictionsAI(w, req)
@@ -1990,6 +2060,7 @@ func TestServer_HandlePredictionsStats_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/predictions/stats", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -2006,6 +2077,7 @@ func TestServer_HandlePredictionsStats_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", "/predictions/stats", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handlePredictionsStats(w, req)
@@ -2021,6 +2093,7 @@ func TestServer_HandlePredictionsStats_Success(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/predictions/stats", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handlePredictionsStats(w, req)
@@ -2054,6 +2127,7 @@ func TestServer_SetCORSHeaders(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
 			if tt.origin != "" {
 				req.Header.Set("Origin", tt.origin)
 			}
@@ -2128,6 +2202,7 @@ func TestServer_HandleHealth_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/health", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -2147,6 +2222,7 @@ func TestServer_HandleSettingsExport_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/settings/export", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -2163,6 +2239,7 @@ func TestServer_HandleSettingsExport_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/settings/export", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleSettingsExport(w, req)
@@ -2178,6 +2255,7 @@ func TestServer_HandleSettingsImport_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/settings/import", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -2194,6 +2272,7 @@ func TestServer_HandleSettingsImport_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/settings/import", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleSettingsImport(w, req)
@@ -2209,6 +2288,7 @@ func TestServer_HandlePredictionsAnalyze_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/predictions/analyze", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -2225,6 +2305,7 @@ func TestServer_HandlePredictionsAnalyze_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/predictions/analyze", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handlePredictionsAnalyze(w, req)
@@ -2240,6 +2321,7 @@ func TestServer_HandlePredictionsFeedback_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/predictions/feedback", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -2256,6 +2338,7 @@ func TestServer_HandlePredictionsFeedback_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/predictions/feedback", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handlePredictionsFeedback(w, req)
@@ -2424,6 +2507,7 @@ func TestServer_HandleWebSocket_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -2444,6 +2528,7 @@ func TestServer_HandleWebSocket_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/ws", nil)
+	req.Host = "localhost"
 	// Simulate websocket headers but no token
 	req.Header.Set("Upgrade", "websocket")
 	req.Header.Set("Connection", "Upgrade")
@@ -2463,6 +2548,7 @@ func TestServer_HandleLocalClusterTools_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/local-cluster-tools", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -2479,6 +2565,7 @@ func TestServer_HandleLocalClusters_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/local-clusters", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -2501,6 +2588,7 @@ func TestHandleLocalClusters_CORSAdvertisesDELETE(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/local-clusters?tool=kind&name=testing", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:8080")
 	req.Header.Set("Access-Control-Request-Method", "DELETE")
 	w := httptest.NewRecorder()
@@ -3190,6 +3278,7 @@ func TestServer_HandleProvidersHealth_GET(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/providers/health", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost")
 	w := httptest.NewRecorder()
 
@@ -3335,6 +3424,7 @@ func TestServer_HandleLocalClusterTools_GET(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/local-cluster-tools", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleLocalClusterTools(w, req)
@@ -3351,6 +3441,7 @@ func TestServer_HandleLocalClusters_GET(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/local-clusters", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleLocalClusters(w, req)
@@ -3367,6 +3458,7 @@ func TestServer_HandleLocalClusters_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("PUT", "/local-clusters", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleLocalClusters(w, req)
@@ -3382,6 +3474,7 @@ func TestServer_HandleLocalClusterTools_WrongMethod(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("PUT", "/local-cluster-tools", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleLocalClusterTools(w, req)

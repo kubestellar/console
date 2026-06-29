@@ -17,6 +17,7 @@ func TestDataResidencyHandler_ListRules(t *testing.T) {
 	handler.RegisterPublicRoutes(app.Group("/api/compliance/residency"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/residency/rules", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -43,6 +44,7 @@ func TestDataResidencyHandler_ListRegions(t *testing.T) {
 	handler.RegisterPublicRoutes(app.Group("/api/compliance/residency"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/residency/regions", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -75,6 +77,7 @@ func TestDataResidencyHandler_ListViolations(t *testing.T) {
 	handler.RegisterPublicRoutes(app.Group("/api/compliance/residency"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/residency/violations", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -106,6 +109,7 @@ func TestDataResidencyHandler_GetSummary(t *testing.T) {
 	handler.RegisterPublicRoutes(app.Group("/api/compliance/residency"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/residency/summary", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -138,6 +142,7 @@ func TestDataResidencyHandler_ListClusterRegions(t *testing.T) {
 	handler.RegisterPublicRoutes(app.Group("/api/compliance/residency"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/residency/clusters", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)

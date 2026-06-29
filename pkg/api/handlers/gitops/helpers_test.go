@@ -55,6 +55,7 @@ func TestIsDemoMode(t *testing.T) {
 			})
 
 			req, err := http.NewRequest(http.MethodGet, "/test", nil)
+			req.Host = "localhost"
 			require.NoError(t, err)
 			if tt.headerVal != "" {
 				req.Header.Set("X-Demo-Mode", tt.headerVal)

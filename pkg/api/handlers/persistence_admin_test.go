@@ -76,6 +76,7 @@ func TestPersistenceEndpointsRequireAdmin(t *testing.T) {
 			}
 
 			req := httptest.NewRequest(tt.method, tt.path, body)
+			req.Host = "localhost"
 			if tt.body != "" {
 				req.Header.Set("Content-Type", "application/json")
 			}
@@ -92,6 +93,7 @@ func TestPersistenceEndpointsAllowAdmin(t *testing.T) {
 
 	t.Run("GetConfigAllowedForAdmin", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/persistence/config", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -103,6 +105,7 @@ func TestPersistenceEndpointsAllowAdmin(t *testing.T) {
 
 	t.Run("TestConnectionAllowedForAdmin", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/persistence/test", bytes.NewBufferString(`{"cluster":"test-cluster"}`))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := app.Test(req)

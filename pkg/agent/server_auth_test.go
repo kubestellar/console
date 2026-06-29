@@ -18,6 +18,7 @@ func newWebSocketAuthRequest(t *testing.T, target string) *http.Request {
 	t.Helper()
 
 	req := httptest.NewRequest(http.MethodGet, target, nil)
+	req.Host = "localhost"
 	req.Header.Set("Upgrade", "websocket")
 	req.Header.Set("Connection", "Upgrade")
 	req.Header.Set("Sec-WebSocket-Key", wsHandshakeKey)
@@ -150,6 +151,7 @@ func TestValidateToken_OriginBypass(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			req.Host = "localhost"
 			if tt.origin != "" {
 				req.Header.Set("Origin", tt.origin)
 			}
@@ -219,6 +221,7 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+			req.Host = "localhost"
 			for key, value := range tt.headers {
 				req.Header.Set(key, value)
 			}

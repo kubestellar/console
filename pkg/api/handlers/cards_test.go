@@ -55,6 +55,7 @@ func TestGetCardTypes_ReturnsNonEmpty(t *testing.T) {
 	app.Get("/api/cards/types", handler.GetCardTypes)
 
 	req, err := http.NewRequest("GET", "/api/cards/types", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -75,6 +76,7 @@ func TestListCards_InvalidDashboardID(t *testing.T) {
 	app.Get("/api/dashboards/:id/cards", handler.ListCards)
 
 	req, err := http.NewRequest("GET", "/api/dashboards/not-a-uuid/cards", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -90,6 +92,7 @@ func TestListCards_DashboardNotFound(t *testing.T) {
 	// MockStore.GetDashboard returns nil — triggers "Access denied" (nil dashboard check)
 	dashID := uuid.New()
 	req, err := http.NewRequest("GET", "/api/dashboards/"+dashID.String()+"/cards", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -106,6 +109,7 @@ func TestCreateCard_InvalidDashboardID(t *testing.T) {
 
 	body := `{"card_type":"cluster_health","position":{"x":0,"y":0,"w":4,"h":3}}`
 	req, err := http.NewRequest("POST", "/api/dashboards/bad-id/cards", strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -123,6 +127,7 @@ func TestUpdateCard_InvalidCardID(t *testing.T) {
 
 	body := `{"position":{"x":1,"y":1,"w":4,"h":3}}`
 	req, err := http.NewRequest("PUT", "/api/cards/bad-id", strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -142,6 +147,7 @@ func TestUpdateCard_NotFound(t *testing.T) {
 
 	body := `{"position":{"x":1,"y":1,"w":4,"h":3}}`
 	req, err := http.NewRequest("PUT", "/api/cards/"+cardID.String(), strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -158,6 +164,7 @@ func TestDeleteCard_InvalidID(t *testing.T) {
 	app.Delete("/api/cards/:id", handler.DeleteCard)
 
 	req, err := http.NewRequest("DELETE", "/api/cards/bad-id", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -174,6 +181,7 @@ func TestDeleteCard_NotFound(t *testing.T) {
 	mockStore.On("GetCard", cardID).Return(nil, nil)
 
 	req, err := http.NewRequest("DELETE", "/api/cards/"+cardID.String(), nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -239,6 +247,7 @@ func TestRecordFocus_BadBody_Returns400(t *testing.T) {
 
 	req, err := http.NewRequest("POST", "/api/cards/"+cardID.String()+"/focus",
 		strings.NewReader("{invalid json"))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -255,6 +264,7 @@ func TestGetHistory_ReturnsOK(t *testing.T) {
 	app.Get("/api/cards/history", handler.GetHistory)
 
 	req, err := http.NewRequest("GET", "/api/cards/history", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -417,6 +427,7 @@ func TestMoveCard_RejectsWhenTargetAtLimit(t *testing.T) {
 
 	body := `{"target_dashboard_id":"` + targetDashID.String() + `"}`
 	req, err := http.NewRequest("POST", "/api/cards/"+cardID.String()+"/move", strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -436,6 +447,7 @@ func TestCreateCard_ViewerForbidden(t *testing.T) {
 	body := `{"card_type":"cluster_health","position":{"x":0,"y":0,"w":4,"h":3}}`
 	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
 		strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -452,6 +464,7 @@ func TestUpdateCard_ViewerForbidden(t *testing.T) {
 
 	body := `{"position":{"x":1,"y":1,"w":4,"h":3}}`
 	req, err := http.NewRequest("PUT", "/api/cards/"+cardID.String(), strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -467,6 +480,7 @@ func TestDeleteCard_ViewerForbidden(t *testing.T) {
 	app, _, _ := newCardMutationApp(t, models.UserRoleViewer, dashID, cardID)
 
 	req, err := http.NewRequest("DELETE", "/api/cards/"+cardID.String(), nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -484,6 +498,7 @@ func TestCreateCard_AdminAllowed(t *testing.T) {
 	body := `{"card_type":"cluster_health","config":{"cluster":"prod"},"position":{"x":0,"y":0,"w":4,"h":3}}`
 	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
 		strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -504,6 +519,7 @@ func TestUpdateCard_AdminAllowedWithConfig(t *testing.T) {
 
 	body := `{"card_type":"pod_issues","config":{"ns":"default"},"position":{"x":1,"y":1,"w":4,"h":3}}`
 	req, err := http.NewRequest("PUT", "/api/cards/"+cardID.String(), strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -527,6 +543,7 @@ func TestCreateCard_LimitReached_Returns429(t *testing.T) {
 	body := `{"card_type":"cluster_health","position":{"x":0,"y":0,"w":4,"h":3}}`
 	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
 		strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -546,6 +563,7 @@ func TestCreateCard_UnknownCardType_Returns400(t *testing.T) {
 	body := `{"card_type":"not_a_real_card","position":{"x":0,"y":0,"w":4,"h":3}}`
 	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
 		strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -562,6 +580,7 @@ func TestUpdateCard_UnknownCardType_Returns400(t *testing.T) {
 
 	body := `{"card_type":"not_a_real_card"}`
 	req, err := http.NewRequest("PUT", "/api/cards/"+cardID.String(), strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -614,6 +633,7 @@ func TestCreateCard_UserStoreError_Returns500(t *testing.T) {
 	body := `{"card_type":"cluster_health","position":{"x":0,"y":0,"w":4,"h":3}}`
 	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
 		strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 

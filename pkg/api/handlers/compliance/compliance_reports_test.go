@@ -117,6 +117,7 @@ func TestComplianceReportsHandler_GenerateReport(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost,
 				"/api/compliance/frameworks/"+tt.frameworkID+"/report",
 				bytes.NewBufferString(tt.body))
+			req.Host = "localhost"
 			req.Header.Set("Content-Type", "application/json")
 
 			resp, err := app.Test(req, -1)
@@ -166,6 +167,7 @@ func TestComplianceReportsHandler_ContentDisposition(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost,
 				"/api/compliance/frameworks/pci-dss-4.0/report",
 				bytes.NewReader(body))
+			req.Host = "localhost"
 			req.Header.Set("Content-Type", "application/json")
 
 			resp, err := app.Test(req, -1)

@@ -21,6 +21,7 @@ func setupBAAApp() *fiber.App {
 func TestBAAAgreements(t *testing.T) {
 	app := setupBAAApp()
 	req, _ := http.NewRequest("GET", "/api/compliance/baa/agreements", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -41,6 +42,7 @@ func TestBAAAgreements(t *testing.T) {
 func TestBAAAlerts(t *testing.T) {
 	app := setupBAAApp()
 	req, _ := http.NewRequest("GET", "/api/compliance/baa/alerts", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -61,6 +63,7 @@ func TestBAAAlerts(t *testing.T) {
 func TestBAASummary(t *testing.T) {
 	app := setupBAAApp()
 	req, _ := http.NewRequest("GET", "/api/compliance/baa/summary", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)

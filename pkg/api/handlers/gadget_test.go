@@ -24,6 +24,7 @@ func TestGadgetHandlers_GetStatus(t *testing.T) {
 
 	t.Run("unavailable", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/mcp/gadget/status", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -43,6 +44,7 @@ func TestGadgetHandlers_GetTools(t *testing.T) {
 
 	t.Run("unavailable", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/mcp/gadget/tools", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -71,6 +73,7 @@ func TestGadgetHandlers_RunTrace(t *testing.T) {
 		data, err := json.Marshal(body)
 		require.NoError(t, err)
 		req := httptest.NewRequest("POST", "/api/mcp/gadget/trace", bytes.NewReader(data))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 		require.NoError(t, err)
@@ -84,6 +87,7 @@ func TestGadgetHandlers_RunTrace(t *testing.T) {
 
 	t.Run("missing body", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/api/mcp/gadget/trace", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -91,6 +95,7 @@ func TestGadgetHandlers_RunTrace(t *testing.T) {
 
 	t.Run("invalid json", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/api/mcp/gadget/trace", bytes.NewReader([]byte(`{invalid}`)))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
@@ -103,6 +108,7 @@ func TestGadgetHandlers_RunTrace(t *testing.T) {
 		}
 		data, _ := json.Marshal(body)
 		req := httptest.NewRequest("POST", "/api/mcp/gadget/trace", bytes.NewReader(data))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
@@ -115,6 +121,7 @@ func TestGadgetHandlers_RunTrace(t *testing.T) {
 		}
 		data, _ := json.Marshal(body)
 		req := httptest.NewRequest("POST", "/api/mcp/gadget/trace", bytes.NewReader(data))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)

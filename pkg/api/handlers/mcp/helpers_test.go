@@ -26,6 +26,7 @@ func TestWithDemoFallback(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Host = "localhost"
 		req.Header.Set("X-Demo-Mode", "true")
 		resp, err := app.Test(req, -1)
 		require.NoError(t, err)
@@ -51,6 +52,7 @@ func TestWithDemoFallback(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, -1)
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)
@@ -70,6 +72,7 @@ func TestWithDemoFallback(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, -1)
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -90,6 +93,7 @@ func TestRespondClusterResources(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, -1)
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -111,6 +115,7 @@ func TestRespondClusterResources(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, -1)
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -129,6 +134,7 @@ func TestRespondClusterResources(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, -1)
 		require.NoError(t, err)
 

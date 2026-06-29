@@ -86,6 +86,7 @@ func TestACMMScanHandler_Validation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/api/acmm/scan"+tc.query, nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantStatus, resp.StatusCode)
@@ -138,6 +139,7 @@ func TestACMMScanHandler_Success(t *testing.T) {
 	app.Get("/api/acmm/scan", ACMMScanHandler)
 
 	req := httptest.NewRequest("GET", "/api/acmm/scan?repo="+repo, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
@@ -173,6 +175,7 @@ func TestACMMScanHandler_NotFound(t *testing.T) {
 	app.Get("/api/acmm/scan", ACMMScanHandler)
 
 	req := httptest.NewRequest("GET", "/api/acmm/scan?repo="+repo, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, 404, resp.StatusCode)
@@ -246,6 +249,7 @@ func TestACMMScanHandler_Coordination(t *testing.T) {
 				time.Sleep(50 * time.Millisecond)
 			}
 			req := httptest.NewRequest("GET", "/api/acmm/scan?repo="+repo, nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req, 1000)
 			results[idx] = testResult{resp.StatusCode, err}
 		}(i)
@@ -269,6 +273,7 @@ func TestACMMScanHandler_DemoMode(t *testing.T) {
 	app.Get("/api/acmm/scan", ACMMScanHandler)
 
 	req := httptest.NewRequest("GET", "/api/acmm/scan?repo=any/repo", nil)
+	req.Host = "localhost"
 	req.Header.Set("X-Demo-Mode", "true")
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -306,11 +311,13 @@ func TestACMMScanHandler_ForceRefreshRateLimitedPerUser(t *testing.T) {
 	app.Get("/api/acmm/scan", ACMMScanHandler)
 
 	firstReq := httptest.NewRequest("GET", "/api/acmm/scan?repo="+repo+"&force=true", nil)
+	firstReq.Host = "localhost"
 	firstResp, err := app.Test(firstReq)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, firstResp.StatusCode)
 
 	secondReq := httptest.NewRequest("GET", "/api/acmm/scan?repo="+repo+"&force=true", nil)
+	secondReq.Host = "localhost"
 	secondResp, err := app.Test(secondReq)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusTooManyRequests, secondResp.StatusCode)
@@ -355,6 +362,7 @@ func TestACMMScanHandler_ForceRefreshRateLimitIsPerUser(t *testing.T) {
 	app.Get("/api/acmm/scan", ACMMScanHandler)
 
 	firstReq := httptest.NewRequest("GET", "/api/acmm/scan?repo="+repo+"&force=true", nil)
+	firstReq.Host = "localhost"
 	firstReq.Header.Set("X-Test-User-ID", firstUserID.String())
 	firstResp, err := app.Test(firstReq)
 	require.NoError(t, err)
@@ -366,6 +374,7 @@ func TestACMMScanHandler_ForceRefreshRateLimitIsPerUser(t *testing.T) {
 	m.responses[issueURL] = mockResponse(200, `{"items": []}`)
 
 	secondReq := httptest.NewRequest("GET", "/api/acmm/scan?repo="+repo+"&force=true", nil)
+	secondReq.Host = "localhost"
 	secondReq.Header.Set("X-Test-User-ID", secondUserID.String())
 	secondResp, err := app.Test(secondReq)
 	require.NoError(t, err)

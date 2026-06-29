@@ -27,6 +27,7 @@ func TestAirGapHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", tt.url, nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
 			assert.Equal(t, 200, resp.StatusCode)

@@ -18,6 +18,7 @@ func TestAttestationHandler(t *testing.T) {
 
 	t.Run("GetScore", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/attestation/score", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)

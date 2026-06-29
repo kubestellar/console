@@ -76,6 +76,7 @@ func TestServer_HandleNvidiaOperatorsHTTP(t *testing.T) {
 
 	// 3. Test request for all clusters
 	req := httptest.NewRequest("GET", "/nvidia-operators?cluster=cluster1", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleNvidiaOperatorsHTTP(w, req)

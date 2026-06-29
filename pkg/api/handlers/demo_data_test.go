@@ -20,6 +20,7 @@ func TestDemoDataHelpers(t *testing.T) {
 
 		// Case 1: Header set to true
 		req := httptest.NewRequest("GET", "/is-demo", nil)
+		req.Host = "localhost"
 		req.Header.Set("X-Demo-Mode", "true")
 		resp, _ := app.Test(req)
 		var result map[string]interface{}
@@ -28,6 +29,7 @@ func TestDemoDataHelpers(t *testing.T) {
 
 		// Case 2: Header set to false
 		req = httptest.NewRequest("GET", "/is-demo", nil)
+		req.Host = "localhost"
 		req.Header.Set("X-Demo-Mode", "false")
 		resp, _ = app.Test(req)
 		json.NewDecoder(resp.Body).Decode(&result)
@@ -35,6 +37,7 @@ func TestDemoDataHelpers(t *testing.T) {
 
 		// Case 3: Header missing
 		req = httptest.NewRequest("GET", "/is-demo", nil)
+		req.Host = "localhost"
 		resp, _ = app.Test(req)
 		json.NewDecoder(resp.Body).Decode(&result)
 		assert.False(t, result["isDemo"].(bool))
@@ -46,6 +49,7 @@ func TestDemoDataHelpers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/no-access", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 		var result map[string]interface{}
@@ -59,6 +63,7 @@ func TestDemoDataHelpers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/demo-resp", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		var result map[string]interface{}

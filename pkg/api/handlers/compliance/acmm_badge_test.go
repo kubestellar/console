@@ -200,6 +200,7 @@ func TestACMMBadge_CacheMiss(t *testing.T) {
 
 	app := newBadgeApp()
 	req := httptest.NewRequest(http.MethodGet, "/api/acmm/badge?repo="+repo, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -230,6 +231,7 @@ func TestACMMBadge_CacheHit(t *testing.T) {
 
 	app := newBadgeApp()
 	req := httptest.NewRequest(http.MethodGet, "/api/acmm/badge?repo="+repo, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -255,6 +257,7 @@ func TestACMMBadge_CacheExpiry(t *testing.T) {
 
 	app := newBadgeApp()
 	req := httptest.NewRequest(http.MethodGet, "/api/acmm/badge?repo="+repo, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -289,6 +292,7 @@ func TestACMMBadge_StaleWhileRevalidate(t *testing.T) {
 
 	start := time.Now()
 	req := httptest.NewRequest(http.MethodGet, "/api/acmm/badge?repo="+repo, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	elapsed := time.Since(start)
 	require.NoError(t, err)
@@ -334,6 +338,7 @@ func TestACMMBadge_ConcurrentRequests(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 			r := httptest.NewRequest(http.MethodGet, "/api/acmm/badge?repo="+repo, nil)
+			r.Host = "localhost"
 			results[idx], errs[idx] = app.Test(r, -1)
 		}(i)
 	}
@@ -367,6 +372,7 @@ func TestACMMBadge_GitHubFailure_WithCache(t *testing.T) {
 
 	app := newBadgeApp()
 	req := httptest.NewRequest(http.MethodGet, "/api/acmm/badge?repo="+repo, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -387,6 +393,7 @@ func TestACMMBadge_GitHubFailure_NoCache(t *testing.T) {
 
 	app := newBadgeApp()
 	req := httptest.NewRequest(http.MethodGet, "/api/acmm/badge?repo="+repo, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -406,6 +413,7 @@ func TestACMMBadge_CacheControlHeaders(t *testing.T) {
 
 	app := newBadgeApp()
 	req := httptest.NewRequest(http.MethodGet, "/api/acmm/badge?repo="+repo, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 
@@ -423,6 +431,7 @@ func TestACMMBadge_CORSHeaders(t *testing.T) {
 
 	app := newBadgeApp()
 	req := httptest.NewRequest(http.MethodGet, "/api/acmm/badge?repo="+repo, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 
@@ -448,11 +457,13 @@ func TestACMMBadge_DifferentRepos(t *testing.T) {
 	app := newBadgeApp()
 
 	reqA := httptest.NewRequest(http.MethodGet, "/api/acmm/badge?repo="+repoA, nil)
+	reqA.Host = "localhost"
 	respA, err := app.Test(reqA, -1)
 	require.NoError(t, err)
 	badgeA := parseBadgeJSON(t, respA)
 
 	reqB := httptest.NewRequest(http.MethodGet, "/api/acmm/badge?repo="+repoB, nil)
+	reqB.Host = "localhost"
 	respB, err := app.Test(reqB, -1)
 	require.NoError(t, err)
 	badgeB := parseBadgeJSON(t, respB)

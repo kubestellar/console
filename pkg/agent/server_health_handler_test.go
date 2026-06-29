@@ -14,6 +14,7 @@ import (
 func TestHandleHealth_GET_ReturnsOKJSON(t *testing.T) {
 	srv := newTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Host = "localhost"
 	rec := serveAndRecord(srv.handleHealth, req)
 
 	if rec.Code != http.StatusOK {
@@ -39,6 +40,7 @@ func TestHandleHealth_GET_ReturnsOKJSON(t *testing.T) {
 func TestHandleHealth_OPTIONS_ReturnsNoContent(t *testing.T) {
 	srv := newTestServer(t)
 	req := httptest.NewRequest(http.MethodOptions, "/health", nil)
+	req.Host = "localhost"
 	rec := serveAndRecord(srv.handleHealth, req)
 
 	if rec.Code != http.StatusNoContent {
@@ -49,6 +51,7 @@ func TestHandleHealth_OPTIONS_ReturnsNoContent(t *testing.T) {
 func TestHandleHealth_CORS_AllowedOrigin(t *testing.T) {
 	srv := newTestServer(t, withAllowedOrigins("http://console.example.com"))
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://console.example.com")
 	rec := serveAndRecord(srv.handleHealth, req)
 
@@ -64,6 +67,7 @@ func TestHandleHealth_CORS_AllowedOrigin(t *testing.T) {
 func TestHandleHealth_CORS_DisallowedOrigin(t *testing.T) {
 	srv := newTestServer(t, withAllowedOrigins("http://console.example.com"))
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://evil.example.com")
 	rec := serveAndRecord(srv.handleHealth, req)
 
@@ -81,6 +85,7 @@ func TestHandleHealth_NoAuth_Required(t *testing.T) {
 	// probes and service discovery).
 	srv := newTestServer(t, withToken("secret-token"))
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Host = "localhost"
 	// Deliberately not setting Authorization header
 	rec := serveAndRecord(srv.handleHealth, req)
 
@@ -100,6 +105,7 @@ func TestHandleStatus_RequiresAuth(t *testing.T) {
 	)
 
 	req := httptest.NewRequest(http.MethodGet, "/status", nil)
+	req.Host = "localhost"
 	rec := serveAndRecord(srv.handleStatus, req)
 
 	if rec.Code != http.StatusUnauthorized {
@@ -139,6 +145,7 @@ func TestHandleStatus_ValidToken_ReturnsPayload(t *testing.T) {
 func TestHandleStatus_OPTIONS_ReturnsNoContent(t *testing.T) {
 	srv := newTestServer(t, withToken("tok"))
 	req := httptest.NewRequest(http.MethodOptions, "/status", nil)
+	req.Host = "localhost"
 	rec := serveAndRecord(srv.handleStatus, req)
 
 	if rec.Code != http.StatusNoContent {

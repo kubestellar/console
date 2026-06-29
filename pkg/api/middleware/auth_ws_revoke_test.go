@@ -23,6 +23,7 @@ func TestValidateWebSocketOrigin_NoOrigin(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/ws", nil)
+	req.Host = "localhost"
 	// No Origin header — non-browser client should be allowed unconditionally.
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -36,6 +37,7 @@ func TestValidateWebSocketOrigin_DevMode(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "https://attacker.example.com")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -83,6 +85,7 @@ func TestValidateWebSocketOrigin_EnvAllowList(t *testing.T) {
 
 	t.Run("allowed origin", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/ws", nil)
+		req.Host = "localhost"
 		req.Header.Set("Origin", "https://allowed.example.com")
 		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
@@ -91,6 +94,7 @@ func TestValidateWebSocketOrigin_EnvAllowList(t *testing.T) {
 
 	t.Run("second allowed origin", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/ws", nil)
+		req.Host = "localhost"
 		req.Header.Set("Origin", "https://also-allowed.dev")
 		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
@@ -99,6 +103,7 @@ func TestValidateWebSocketOrigin_EnvAllowList(t *testing.T) {
 
 	t.Run("unlisted origin", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/ws", nil)
+		req.Host = "localhost"
 		req.Header.Set("Origin", "https://evil.example.com")
 		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
@@ -116,6 +121,7 @@ func TestIsWSOriginAllowed_CaseInsensitive(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "https://console.example.com")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -132,6 +138,7 @@ func TestIsWSOriginAllowed_TrailingSlash(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "https://console.example.com")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)

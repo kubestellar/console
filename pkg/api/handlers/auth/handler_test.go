@@ -101,6 +101,7 @@ func TestAuthHandler_DevMode(t *testing.T) {
 	app.Get("/auth/github", h.GitHubLogin)
 
 	req := httptest.NewRequest(http.MethodGet, "/auth/github", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	require.Equal(t, fiber.StatusTemporaryRedirect, resp.StatusCode)

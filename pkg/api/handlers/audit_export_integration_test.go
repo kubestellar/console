@@ -265,6 +265,7 @@ func TestAuditExportDestinationValidation_Integration(t *testing.T) {
 
 	t.Run("query audit logs and validate export readiness", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/audit", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)

@@ -137,6 +137,7 @@ func TestStellarIngestEventRequiresEditorOrAdmin(t *testing.T) {
 			app.Post(ingestEventPath, auth.RequireEditorOrAdminMiddleware(sqlStore), h.IngestEvent)
 
 			req := httptest.NewRequest(http.MethodPost, ingestEventPath, strings.NewReader(`{}`))
+			req.Host = "localhost"
 			req.Header.Set("Content-Type", "application/json")
 			resp, err := app.Test(req, stellarTestFiberTimeoutMs)
 			require.NoError(t, err)

@@ -21,6 +21,7 @@ func setupHIPAAApp() *fiber.App {
 func TestHIPAASafeguards(t *testing.T) {
 	app := setupHIPAAApp()
 	req, _ := http.NewRequest("GET", "/api/compliance/hipaa/safeguards", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -42,6 +43,7 @@ func TestHIPAASafeguards(t *testing.T) {
 func TestHIPAAPHINamespaces(t *testing.T) {
 	app := setupHIPAAApp()
 	req, _ := http.NewRequest("GET", "/api/compliance/hipaa/phi-namespaces", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -63,6 +65,7 @@ func TestHIPAAPHINamespaces(t *testing.T) {
 func TestHIPAADataFlows(t *testing.T) {
 	app := setupHIPAAApp()
 	req, _ := http.NewRequest("GET", "/api/compliance/hipaa/data-flows", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -84,6 +87,7 @@ func TestHIPAADataFlows(t *testing.T) {
 func TestHIPAASummary(t *testing.T) {
 	app := setupHIPAAApp()
 	req, _ := http.NewRequest("GET", "/api/compliance/hipaa/summary", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)

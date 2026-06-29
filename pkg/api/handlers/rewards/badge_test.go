@@ -61,6 +61,7 @@ func TestBadgeGetBadge(t *testing.T) {
 		mockStore.On("GetUserRewards", "gh-1").Return(&store.UserRewards{Coins: 0}, nil).Once()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/rewards/badge/engaged-user", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -80,6 +81,7 @@ func TestBadgeGetBadge(t *testing.T) {
 		mockStore.On("GetUserByGitHubLogin", "stranger").Return(nil, nil).Once()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/rewards/badge/stranger", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -98,6 +100,7 @@ func TestBadgeGetBadge(t *testing.T) {
 		mockStore.On("GetUserRewards", "gh-2").Return(&store.UserRewards{Coins: 0}, nil).Once()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/rewards/badge/top-tier", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -120,6 +123,7 @@ func TestBadgeGetBadge(t *testing.T) {
 		}, nil).Once()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/rewards/badge/combo-user", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -135,6 +139,7 @@ func TestBadgeGetBadge(t *testing.T) {
 		mockStore.On("GetUserByGitHubLogin", "db-error").Return(nil, errors.New("query failed")).Once()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/rewards/badge/db-error", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
@@ -149,6 +154,7 @@ func TestBadgeGetBadge(t *testing.T) {
 		mockFetcher.errorFor["api-error"] = errors.New("github down")
 
 		req := httptest.NewRequest(http.MethodGet, "/api/rewards/badge/api-error", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusBadGateway, resp.StatusCode)

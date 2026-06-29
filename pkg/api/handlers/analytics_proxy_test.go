@@ -102,6 +102,7 @@ func TestAnalyticsProxy_GA4ScriptProxy(t *testing.T) {
 	gtagCache.Unlock()
 
 	req := httptest.NewRequest("GET", "/gtag?id=G-123", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)

@@ -56,6 +56,7 @@ func TestRequireUser(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
 
@@ -126,6 +127,7 @@ func TestIsAdminUser(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
 			assert.Equal(t, fiber.StatusOK, resp.StatusCode)

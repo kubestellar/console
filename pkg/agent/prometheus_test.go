@@ -72,6 +72,7 @@ func TestServer_HandlePrometheusQuery(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", tt.query, nil)
+			req.Host = "localhost"
 			w := httptest.NewRecorder()
 
 			server.handlePrometheusQuery(w, req)

@@ -106,6 +106,7 @@ func TestResourceHandlers_QueryExtraction(t *testing.T) {
 	// 1. Verify handleNodesHTTP extracts ?cluster=
 	t.Run("handleNodesHTTP", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/nodes?cluster=test-cluster", nil)
+		req.Host = "localhost"
 		w := httptest.NewRecorder()
 
 		server.handleNodesHTTP(w, req)
@@ -143,6 +144,7 @@ func TestResourceHandlers_QueryExtraction(t *testing.T) {
 		fakeCS.ClearActions()
 
 		req := httptest.NewRequest("GET", "/deployments?cluster=test-cluster&namespace=test-ns", nil)
+		req.Host = "localhost"
 		w := httptest.NewRecorder()
 
 		server.handleDeploymentsHTTP(w, req)
@@ -181,6 +183,7 @@ func TestMutationLogic_CreateNamespaceHTTP(t *testing.T) {
 
 	body := `{"cluster": "test-cluster", "name": "new-ns", "labels": {"env": "test"}}`
 	req := httptest.NewRequest("POST", "/namespaces", strings.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -220,6 +223,7 @@ func TestMutationLogic_CreateServiceAccountHTTP(t *testing.T) {
 
 	body := `{"cluster": "test-cluster", "namespace": "test-ns", "name": "new-sa"}`
 	req := httptest.NewRequest("POST", "/serviceaccounts", strings.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -261,6 +265,7 @@ func TestHandleAutoUpdateConfig_SaveAllError_Returns500(t *testing.T) {
 
 	body := `{"enabled":true,"channel":"developer"}`
 	req := httptest.NewRequest("POST", "/auto-update/config", strings.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 

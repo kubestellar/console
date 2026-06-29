@@ -35,6 +35,7 @@ func TestListFeatureRequests(t *testing.T) {
 		mockStore.On("CountUserPendingFeatureRequests", userID).Return(1, nil)
 
 		req := httptest.NewRequest("GET", "/api/feedback/requests", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -61,6 +62,7 @@ func TestCheckPreviewStatus(t *testing.T) {
 		app.Get("/api/feedback/requests/preview/:pr_number", handler.CheckPreviewStatus)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/abc", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
@@ -72,6 +74,7 @@ func TestCheckPreviewStatus(t *testing.T) {
 		app.Get("/api/feedback/requests/preview/:pr_number", handler.CheckPreviewStatus)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/123", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
@@ -100,6 +103,7 @@ func TestCheckPreviewStatus(t *testing.T) {
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/123", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 		mockStore.AssertExpectations(t)
@@ -133,6 +137,7 @@ func TestCheckPreviewStatus(t *testing.T) {
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/123", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -171,6 +176,7 @@ func TestCheckPreviewStatus(t *testing.T) {
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/123", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		mockStore.AssertExpectations(t)
@@ -201,6 +207,7 @@ func TestCheckPreviewStatus(t *testing.T) {
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/123", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		mockStore.AssertExpectations(t)
@@ -300,6 +307,7 @@ func TestListAllFeatureRequestsPreservesResolvedGitHubStatus(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/api/feedback/queue", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -350,12 +358,14 @@ func TestGetIssueLinkCapabilities(t *testing.T) {
 
 	t.Run("legacy header fallback", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/feedback/issue-link-capabilities?target_repo=console", nil)
+		req.Host = "localhost"
 		req.Header.Set("X-KC-Client-Auth", "user-client-token")
 		assertCanLinkParent(req)
 	})
 
 	t.Run("httpOnly cookie", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/feedback/issue-link-capabilities?target_repo=console", nil)
+		req.Host = "localhost"
 		req.AddCookie(&http.Cookie{Name: clientAuthCookieName, Value: "user-client-token"})
 		assertCanLinkParent(req)
 	})

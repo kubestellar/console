@@ -62,6 +62,7 @@ func TestAdminHandler_GetRateLimitStatus(t *testing.T) {
 			})
 
 			req := httptest.NewRequest(http.MethodGet, "/admin/ratelimit", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)

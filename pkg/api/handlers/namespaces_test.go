@@ -41,6 +41,7 @@ func TestNamespaceHandlers(t *testing.T) {
 
 	t.Run("ListNamespaces - Success", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/namespaces?cluster=test-cluster", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -53,6 +54,7 @@ func TestNamespaceHandlers(t *testing.T) {
 
 	t.Run("ListNamespaces - Missing Cluster", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/namespaces", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -71,6 +73,7 @@ func TestNamespaceHandlers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/api/namespaces?cluster=test-cluster", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
@@ -90,6 +93,7 @@ func TestNamespaceHandlers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/api/namespaces?cluster=test-cluster", nil)
+		req.Host = "localhost"
 		resp, _ := rbacEnv.App.Test(req)
 
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
@@ -106,6 +110,7 @@ func TestNamespaceHandlers(t *testing.T) {
 		}, metav1.CreateOptions{})
 
 		req := httptest.NewRequest("GET", "/api/namespaces/ns-1/access?cluster=test-cluster", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -137,6 +142,7 @@ func TestNamespaceHandlers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/api/namespaces/ns-1/access?cluster=test-cluster", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
@@ -144,6 +150,7 @@ func TestNamespaceHandlers(t *testing.T) {
 
 	t.Run("GetNamespaceAccess - Missing Parameters", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/namespaces/ns-1/access", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)

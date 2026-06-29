@@ -71,6 +71,7 @@ func TestGetPreferences(t *testing.T) {
 			app.Get("/api/stellar/preferences", handler.GetPreferences)
 
 			req := httptest.NewRequest("GET", "/api/stellar/preferences", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantStatusCode, resp.StatusCode)
@@ -149,6 +150,7 @@ func TestUpdatePreferences(t *testing.T) {
 			require.NoError(t, err)
 
 			req := httptest.NewRequest("PUT", "/api/stellar/preferences", bytes.NewReader(bodyBytes))
+			req.Host = "localhost"
 			req.Header.Set("Content-Type", "application/json")
 			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
@@ -174,6 +176,7 @@ func TestUpdatePreferences_InvalidJSON(t *testing.T) {
 	app.Put("/api/stellar/preferences", handler.UpdatePreferences)
 
 	req := httptest.NewRequest("PUT", "/api/stellar/preferences", bytes.NewReader([]byte("{invalid json")))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)

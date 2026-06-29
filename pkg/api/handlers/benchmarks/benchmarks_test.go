@@ -89,6 +89,7 @@ func TestBenchmarkHandlers_GetReports_NoConfig(t *testing.T) {
 	app.Get("/benchmarks", handler.GetReports)
 
 	req := httptest.NewRequest("GET", "/benchmarks", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 
@@ -108,6 +109,7 @@ func TestBenchmarkHandlers_StreamReports_NoConfig(t *testing.T) {
 	app.Get("/benchmarks/stream", handler.StreamReports)
 
 	req := httptest.NewRequest("GET", "/benchmarks/stream", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 
@@ -120,6 +122,7 @@ func TestBenchmarkHandlers_GetReports_DemoMode(t *testing.T) {
 	app.Get("/benchmarks", handler.GetReports)
 
 	req := httptest.NewRequest("GET", "/benchmarks", nil)
+	req.Host = "localhost"
 	req.Header.Set("X-Demo-Mode", "true")
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -139,6 +142,7 @@ func TestBenchmarkHandlers_StreamReports_DemoMode(t *testing.T) {
 	app.Get("/benchmarks/stream", handler.StreamReports)
 
 	req := httptest.NewRequest("GET", "/benchmarks/stream", nil)
+	req.Host = "localhost"
 	req.Header.Set("X-Demo-Mode", "true")
 	resp, err := app.Test(req)
 	require.NoError(t, err)

@@ -89,6 +89,7 @@ func TestServer_HandleCiliumStatus(t *testing.T) {
 	k8sClient.SetClient("ctx-2", fakeCS2)
 
 	req := httptest.NewRequest("GET", "/cilium-status", nil)
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 

@@ -27,6 +27,7 @@ func TestJWTAuth(t *testing.T) {
 	t.Run("Valid Token", func(t *testing.T) {
 		token, _ := generateTestToken("test-secret", time.Now().Add(time.Hour))
 		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp, err := app.Test(req, 5000)
@@ -36,12 +37,14 @@ func TestJWTAuth(t *testing.T) {
 
 	t.Run("Missing Header", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req, 5000)
 		assert.Equal(t, 401, resp.StatusCode)
 	})
 
 	t.Run("Invalid Format", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "InvalidFormat")
 		resp, _ := app.Test(req, 5000)
 		assert.Equal(t, 401, resp.StatusCode)
@@ -50,6 +53,7 @@ func TestJWTAuth(t *testing.T) {
 	t.Run("Invalid Signature", func(t *testing.T) {
 		token, _ := generateTestToken("WRONG-SECRET", time.Now().Add(time.Hour))
 		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, _ := app.Test(req, 5000)
 		assert.Equal(t, 401, resp.StatusCode)
@@ -58,6 +62,7 @@ func TestJWTAuth(t *testing.T) {
 	t.Run("Expired Token", func(t *testing.T) {
 		token, _ := generateTestToken("test-secret", time.Now().Add(-1*time.Hour))
 		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, _ := app.Test(req, 5000)
 		assert.Equal(t, 401, resp.StatusCode)
@@ -75,12 +80,14 @@ func TestJWTAuth(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/api/mcp/clusters?source=ubersicht-widget", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer widget-agent-token")
 		resp, err := widgetApp.Test(req, 5000)
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 
 		restrictedReq := httptest.NewRequest("GET", "/api/mcp/secrets?source=ubersicht-widget", nil)
+		restrictedReq.Host = "localhost"
 		restrictedReq.Header.Set("Authorization", "Bearer widget-agent-token")
 		restrictedResp, err := widgetApp.Test(restrictedReq, 5000)
 		assert.NoError(t, err)
@@ -100,11 +107,13 @@ func TestJWTAuth(t *testing.T) {
 		})
 
 		getReq := httptest.NewRequest("GET", "/api/github-pipelines?source=ubersicht-widget&view=pulse", nil)
+		getReq.Host = "localhost"
 		getResp, err := widgetApp.Test(getReq, 5000)
 		assert.NoError(t, err)
 		assert.Equal(t, 401, getResp.StatusCode, "GET /api/github-pipelines must require auth after #16917")
 
 		mutateReq := httptest.NewRequest("POST", "/api/github-pipelines?source=ubersicht-widget&view=mutate", nil)
+		mutateReq.Host = "localhost"
 		mutateResp, err := widgetApp.Test(mutateReq, 5000)
 		assert.NoError(t, err)
 		assert.Equal(t, 401, mutateResp.StatusCode)
@@ -118,6 +127,7 @@ func TestJWTAuth(t *testing.T) {
 		// to be logged by proxies and load balancers.
 		token, _ := generateTestToken("test-secret", time.Now().Add(time.Hour))
 		req := httptest.NewRequest("GET", "/protected/stream?_token="+token, nil)
+		req.Host = "localhost"
 
 		// Setup stream route specifically
 		app.Get("/protected/stream", handler, func(c *fiber.Ctx) error {
@@ -154,6 +164,7 @@ func TestJWTAuth(t *testing.T) {
 		// for authentication.
 		leakedToken, _ := generateTestToken("test-secret", time.Now().Add(time.Hour))
 		req := httptest.NewRequest("GET", "/events/stream?cluster=prod&_token="+leakedToken, nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, err := stripTestApp.Test(req, 5000)
 		assert.NoError(t, err)
@@ -191,6 +202,7 @@ func TestJWTAuth(t *testing.T) {
 		// must be scrubbed.
 		leakedToken, _ := generateTestToken("test-secret", time.Now().Add(time.Hour))
 		req := httptest.NewRequest("GET", "/events/stream?cluster=prod&_token="+leakedToken, nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp, err := bothTestApp.Test(req, 5000)
@@ -220,6 +232,7 @@ func TestJWTAuth(t *testing.T) {
 
 		leakedToken, _ := generateTestToken("test-secret", time.Now().Add(time.Hour))
 		req := httptest.NewRequest("GET", "/api/resource?_token="+leakedToken, nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp, err := nonStreamApp.Test(req, 5000)
@@ -290,6 +303,7 @@ func TestJWTAuth_TokenRefreshHeader(t *testing.T) {
 		require.NoError(t, err)
 
 		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
@@ -304,6 +318,7 @@ func TestJWTAuth_TokenRefreshHeader(t *testing.T) {
 		require.NoError(t, err)
 
 		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
@@ -333,6 +348,7 @@ func TestGetContextHelpers(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/me", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	if err != nil || resp == nil {
 		t.Fatalf("app.Test failed: %v", err)
@@ -395,6 +411,7 @@ func TestJWTAuth_StaleHeaderFallsBackToCookie(t *testing.T) {
 		validCookieToken, _ := generateTestToken(secret, time.Now().Add(time.Hour))
 
 		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+staleHeaderToken)
 		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: validCookieToken})
 
@@ -408,6 +425,7 @@ func TestJWTAuth_StaleHeaderFallsBackToCookie(t *testing.T) {
 		staleHeaderToken, _ := generateTestToken("WRONG-SECRET", time.Now().Add(time.Hour))
 
 		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+staleHeaderToken)
 
 		resp, err := app.Test(req, 5000)
@@ -422,6 +440,7 @@ func TestJWTAuth_StaleHeaderFallsBackToCookie(t *testing.T) {
 		staleCookieToken, _ := generateTestToken("ALSO-WRONG", time.Now().Add(time.Hour))
 
 		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+staleHeaderToken)
 		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: staleCookieToken})
 
@@ -438,6 +457,7 @@ func TestJWTAuth_StaleHeaderFallsBackToCookie(t *testing.T) {
 		brokenCookieToken, _ := generateTestToken("WRONG-SECRET", time.Now().Add(time.Hour))
 
 		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+validHeaderToken)
 		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: brokenCookieToken})
 
@@ -483,6 +503,7 @@ func TestJWTAuth_MalformedHeaderFallsBackToCookie(t *testing.T) {
 		t.Run(tc.name+" with valid cookie succeeds", func(t *testing.T) {
 			validCookieToken, _ := generateTestToken(secret, time.Now().Add(time.Hour))
 			req := httptest.NewRequest("GET", "/protected", nil)
+			req.Host = "localhost"
 			req.Header.Set("Authorization", tc.value)
 			req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: validCookieToken})
 
@@ -494,6 +515,7 @@ func TestJWTAuth_MalformedHeaderFallsBackToCookie(t *testing.T) {
 
 		t.Run(tc.name+" with no cookie still 401", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/protected", nil)
+			req.Host = "localhost"
 			req.Header.Set("Authorization", tc.value)
 
 			resp, err := app.Test(req, 5000)
@@ -573,6 +595,7 @@ func TestRevocationFailClosed(t *testing.T) {
 	signed, _ := tok.SignedString([]byte(secret))
 
 	req := httptest.NewRequest("GET", "/protected", nil)
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer "+signed)
 	resp, err := app.Test(req, 5000)
 	assert.NoError(t, err)
@@ -659,6 +682,7 @@ func TestRevocationQueryTokenRejectedOnUnknownPath(t *testing.T) {
 
 	token, _ := generateTestToken(secret, time.Now().Add(time.Hour))
 	req := httptest.NewRequest("GET", "/api/random/stream?_token="+token, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	assert.NoError(t, err)
 	assert.Equal(t, 401, resp.StatusCode,
@@ -673,6 +697,7 @@ func TestWebSocketUpgrade(t *testing.T) {
 
 	t.Run("Valid Upgrade", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/ws", nil)
+		req.Host = "localhost"
 		req.Header.Set("Upgrade", "websocket")
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
@@ -681,6 +706,7 @@ func TestWebSocketUpgrade(t *testing.T) {
 
 	t.Run("Missing Upgrade", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/ws", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 426, resp.StatusCode) // fiber.ErrUpgradeRequired
@@ -744,6 +770,7 @@ func TestGetContextHelpers_Empty(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/empty", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
@@ -1017,6 +1044,7 @@ func TestJWTAuth_UserValidation(t *testing.T) {
 		InitUserValidation(store)
 
 		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+makeToken(models.UserRoleViewer))
 		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
@@ -1029,6 +1057,7 @@ func TestJWTAuth_UserValidation(t *testing.T) {
 		InitUserValidation(store)
 
 		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+makeToken(models.UserRoleAdmin))
 		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
@@ -1043,6 +1072,7 @@ func TestJWTAuth_UserValidation(t *testing.T) {
 
 		for i := 0; i < 2; i++ {
 			req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+			req.Host = "localhost"
 			req.Header.Set("Authorization", "Bearer "+token)
 			resp, err := app.Test(req, 5000)
 			require.NoError(t, err)
@@ -1056,6 +1086,7 @@ func TestJWTAuth_UserValidation(t *testing.T) {
 		InitUserValidation(store)
 
 		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+makeToken(models.UserRoleViewer))
 		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)

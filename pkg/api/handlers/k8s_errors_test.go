@@ -97,6 +97,7 @@ func TestHandleK8sError(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer resp.Body.Close()

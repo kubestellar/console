@@ -68,6 +68,7 @@ func TestListWebhooks(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/admission-webhooks", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req, 5000)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -106,6 +107,7 @@ func TestListWebhooks(t *testing.T) {
 		// Don't inject a client for failing-cluster, so GetDynamicClient fails
 
 		req := httptest.NewRequest("GET", "/api/admission-webhooks", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req, 5000)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -124,6 +126,7 @@ func TestListWebhooks(t *testing.T) {
 		app.Get("/api/admission-webhooks", hNil.ListWebhooks)
 
 		req := httptest.NewRequest("GET", "/api/admission-webhooks", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 
 		assert.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)

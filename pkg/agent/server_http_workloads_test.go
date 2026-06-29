@@ -27,6 +27,7 @@ func TestServer_HandleScaleHTTP(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest("POST", "/workloads/scale", bytes.NewReader(body))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleScaleHTTP(w, req)
@@ -55,6 +56,7 @@ func TestServer_HandleDeployWorkloadHTTP_Validation(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest("POST", "/workloads/deploy", bytes.NewReader(body))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleDeployWorkloadHTTP(w, req)
@@ -72,6 +74,7 @@ func TestServer_HandlePodsHTTP(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/pods?cluster=cluster1&namespace=default", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handlePodsHTTP(w, req)

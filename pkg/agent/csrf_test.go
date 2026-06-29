@@ -33,6 +33,7 @@ func TestCSRF_SafeMethodsPassThrough(t *testing.T) {
 	for _, method := range safeMethods {
 		t.Run(method, func(t *testing.T) {
 			req := httptest.NewRequest(method, "/any-path", nil)
+			req.Host = "localhost"
 			rr := httptest.NewRecorder()
 			handler.ServeHTTP(rr, req)
 
@@ -57,6 +58,7 @@ func TestCSRF_UnsafeMethodsRejectedWithoutHeader(t *testing.T) {
 	for _, method := range unsafeMethods {
 		t.Run(method, func(t *testing.T) {
 			req := httptest.NewRequest(method, "/any-path", nil)
+			req.Host = "localhost"
 			rr := httptest.NewRecorder()
 			handler.ServeHTTP(rr, req)
 
@@ -72,6 +74,7 @@ func TestCSRF_UnsafeMethodsRejectedWithWrongValue(t *testing.T) {
 	handler := newCSRFTestHandler()
 
 	req := httptest.NewRequest(http.MethodPost, "/any-path", nil)
+	req.Host = "localhost"
 	req.Header.Set(csrfHeaderName, "BadValue")
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -95,6 +98,7 @@ func TestCSRF_UnsafeMethodsPassWithCorrectHeader(t *testing.T) {
 	for _, method := range unsafeMethods {
 		t.Run(method, func(t *testing.T) {
 			req := httptest.NewRequest(method, "/any-path", nil)
+			req.Host = "localhost"
 			req.Header.Set(csrfHeaderName, csrfHeaderValue)
 			rr := httptest.NewRecorder()
 			handler.ServeHTTP(rr, req)

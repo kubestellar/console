@@ -15,6 +15,7 @@ func TestHandleCanIHTTP_CORSMethodsHeader(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/rbac/can-i", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:3000")
 	w := httptest.NewRecorder()
 	s.handleCanIHTTP(w, req)
@@ -33,6 +34,7 @@ func TestSetCORSHeaders_DefaultsToGET(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/anything", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:3000")
 	w := httptest.NewRecorder()
 
@@ -52,6 +54,7 @@ func TestSetCORSHeaders_ExplicitMethodsJoined(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/anything", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:3000")
 	w := httptest.NewRecorder()
 
@@ -75,6 +78,7 @@ func TestHandleServiceAccounts_CORSMethodsHeader(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("OPTIONS", "/serviceaccounts", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:3000")
 	w := httptest.NewRecorder()
 

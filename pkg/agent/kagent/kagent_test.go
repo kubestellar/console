@@ -242,6 +242,7 @@ func TestHandleCRDAgents_OPTIONS(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("OPTIONS", "/api/kagent/agents", nil)
+	r.Host = "localhost"
 	h.HandleCRDAgents(w, r)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 	assert.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
@@ -251,6 +252,7 @@ func TestHandleCRDAgents_Unauthorized(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/agents", nil)
+	r.Host = "localhost"
 	h.HandleCRDAgents(w, r)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -259,6 +261,7 @@ func TestHandleCRDAgents_NilClient(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/agents", nil)
+	r.Host = "localhost"
 	h.HandleCRDAgents(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]any
@@ -274,6 +277,7 @@ func TestHandleCRDAgents_MissingCluster(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/agents", nil)
+	r.Host = "localhost"
 	h.HandleCRDAgents(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -285,6 +289,7 @@ func TestHandleCRDAgents_ClientError(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/agents?cluster=test", nil)
+	r.Host = "localhost"
 	h.HandleCRDAgents(w, r)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
@@ -313,6 +318,7 @@ func TestHandleCRDAgents_Success(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/agents?cluster=test&namespace=default", nil)
+	r.Host = "localhost"
 	h.HandleCRDAgents(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -337,6 +343,7 @@ func TestHandleCRDAgents_EmptyList(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/agents?cluster=test", nil)
+	r.Host = "localhost"
 	h.HandleCRDAgents(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]any
@@ -350,6 +357,7 @@ func TestHandleKagentiAgents_OPTIONS(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("OPTIONS", "/api/kagenti/agents", nil)
+	r.Host = "localhost"
 	h.HandleKagentiAgents(w, r)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
@@ -358,6 +366,7 @@ func TestHandleKagentiAgents_Unauthorized(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/agents", nil)
+	r.Host = "localhost"
 	h.HandleKagentiAgents(w, r)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -366,6 +375,7 @@ func TestHandleKagentiAgents_NilClient(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/agents", nil)
+	r.Host = "localhost"
 	h.HandleKagentiAgents(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
@@ -378,6 +388,7 @@ func TestHandleKagentiAgents_MissingCluster(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/agents", nil)
+	r.Host = "localhost"
 	h.HandleKagentiAgents(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -408,6 +419,7 @@ func TestHandleKagentiAgents_Success(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/agents?cluster=prod&namespace=agents", nil)
+	r.Host = "localhost"
 	h.HandleKagentiAgents(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -426,6 +438,7 @@ func TestHandleCRDTools_OPTIONS(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("OPTIONS", "/api/kagent/tools", nil)
+	r.Host = "localhost"
 	h.HandleCRDTools(w, r)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
@@ -434,6 +447,7 @@ func TestHandleCRDTools_Unauthorized(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/tools", nil)
+	r.Host = "localhost"
 	h.HandleCRDTools(w, r)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -442,6 +456,7 @@ func TestHandleCRDTools_NilClient(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/tools", nil)
+	r.Host = "localhost"
 	h.HandleCRDTools(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]any
@@ -457,6 +472,7 @@ func TestHandleCRDTools_MissingCluster(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/tools", nil)
+	r.Host = "localhost"
 	h.HandleCRDTools(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -483,6 +499,7 @@ func TestHandleCRDTools_Success(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/tools?cluster=test", nil)
+	r.Host = "localhost"
 	h.HandleCRDTools(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -503,6 +520,7 @@ func TestHandleCRDModels_OPTIONS(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("OPTIONS", "/api/kagent/models", nil)
+	r.Host = "localhost"
 	h.HandleCRDModels(w, r)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
@@ -511,6 +529,7 @@ func TestHandleCRDModels_Unauthorized(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/models", nil)
+	r.Host = "localhost"
 	h.HandleCRDModels(w, r)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -519,6 +538,7 @@ func TestHandleCRDModels_NilClient(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/models", nil)
+	r.Host = "localhost"
 	h.HandleCRDModels(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]any
@@ -534,6 +554,7 @@ func TestHandleCRDModels_MissingCluster(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/models", nil)
+	r.Host = "localhost"
 	h.HandleCRDModels(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -555,6 +576,7 @@ func TestHandleCRDModels_Success(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/models?cluster=test", nil)
+	r.Host = "localhost"
 	h.HandleCRDModels(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -575,6 +597,7 @@ func TestHandleCRDMemories_OPTIONS(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("OPTIONS", "/api/kagent/memories", nil)
+	r.Host = "localhost"
 	h.HandleCRDMemories(w, r)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
@@ -583,6 +606,7 @@ func TestHandleCRDMemories_Unauthorized(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/memories", nil)
+	r.Host = "localhost"
 	h.HandleCRDMemories(w, r)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -591,6 +615,7 @@ func TestHandleCRDMemories_NilClient(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/memories", nil)
+	r.Host = "localhost"
 	h.HandleCRDMemories(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]any
@@ -606,6 +631,7 @@ func TestHandleCRDMemories_MissingCluster(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/memories", nil)
+	r.Host = "localhost"
 	h.HandleCRDMemories(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -626,6 +652,7 @@ func TestHandleCRDMemories_Success(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/memories?cluster=test", nil)
+	r.Host = "localhost"
 	h.HandleCRDMemories(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -645,6 +672,7 @@ func TestHandleCRDSummary_OPTIONS(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("OPTIONS", "/api/kagent/summary", nil)
+	r.Host = "localhost"
 	h.HandleCRDSummary(w, r)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
@@ -653,6 +681,7 @@ func TestHandleCRDSummary_Unauthorized(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/summary", nil)
+	r.Host = "localhost"
 	h.HandleCRDSummary(w, r)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -661,6 +690,7 @@ func TestHandleCRDSummary_NilClient(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/summary", nil)
+	r.Host = "localhost"
 	h.HandleCRDSummary(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]any
@@ -676,6 +706,7 @@ func TestHandleCRDSummary_MissingCluster(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/summary", nil)
+	r.Host = "localhost"
 	h.HandleCRDSummary(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -688,6 +719,7 @@ func TestHandleCRDSummary_Success(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagent/summary?cluster=test", nil)
+	r.Host = "localhost"
 	h.HandleCRDSummary(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -704,6 +736,7 @@ func TestHandleKagentiBuilds_OPTIONS(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("OPTIONS", "/api/kagenti/builds", nil)
+	r.Host = "localhost"
 	h.HandleKagentiBuilds(w, r)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
@@ -712,6 +745,7 @@ func TestHandleKagentiBuilds_Unauthorized(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/builds", nil)
+	r.Host = "localhost"
 	h.HandleKagentiBuilds(w, r)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -720,6 +754,7 @@ func TestHandleKagentiBuilds_NilClient(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/builds", nil)
+	r.Host = "localhost"
 	h.HandleKagentiBuilds(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]any
@@ -735,6 +770,7 @@ func TestHandleKagentiBuilds_MissingCluster(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/builds", nil)
+	r.Host = "localhost"
 	h.HandleKagentiBuilds(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -762,6 +798,7 @@ func TestHandleKagentiBuilds_Success(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/builds?cluster=test", nil)
+	r.Host = "localhost"
 	h.HandleKagentiBuilds(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -781,6 +818,7 @@ func TestHandleKagentiCards_OPTIONS(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("OPTIONS", "/api/kagenti/cards", nil)
+	r.Host = "localhost"
 	h.HandleKagentiCards(w, r)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
@@ -789,6 +827,7 @@ func TestHandleKagentiCards_Unauthorized(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/cards", nil)
+	r.Host = "localhost"
 	h.HandleKagentiCards(w, r)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -797,6 +836,7 @@ func TestHandleKagentiCards_NilClient(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/cards", nil)
+	r.Host = "localhost"
 	h.HandleKagentiCards(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]any
@@ -812,6 +852,7 @@ func TestHandleKagentiCards_MissingCluster(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/cards", nil)
+	r.Host = "localhost"
 	h.HandleKagentiCards(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -836,6 +877,7 @@ func TestHandleKagentiCards_Success(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/cards?cluster=test", nil)
+	r.Host = "localhost"
 	h.HandleKagentiCards(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -855,6 +897,7 @@ func TestHandleKagentiTools_OPTIONS(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("OPTIONS", "/api/kagenti/tools", nil)
+	r.Host = "localhost"
 	h.HandleKagentiTools(w, r)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
@@ -863,6 +906,7 @@ func TestHandleKagentiTools_Unauthorized(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/tools", nil)
+	r.Host = "localhost"
 	h.HandleKagentiTools(w, r)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -871,6 +915,7 @@ func TestHandleKagentiTools_NilClient(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/tools", nil)
+	r.Host = "localhost"
 	h.HandleKagentiTools(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]any
@@ -886,6 +931,7 @@ func TestHandleKagentiTools_MissingCluster(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/tools", nil)
+	r.Host = "localhost"
 	h.HandleKagentiTools(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -908,6 +954,7 @@ func TestHandleKagentiTools_Success(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/tools?cluster=test", nil)
+	r.Host = "localhost"
 	h.HandleKagentiTools(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -928,6 +975,7 @@ func TestHandleKagentiSummary_OPTIONS(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("OPTIONS", "/api/kagenti/summary", nil)
+	r.Host = "localhost"
 	h.HandleKagentiSummary(w, r)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
@@ -936,6 +984,7 @@ func TestHandleKagentiSummary_Unauthorized(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: false}}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/summary", nil)
+	r.Host = "localhost"
 	h.HandleKagentiSummary(w, r)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -944,6 +993,7 @@ func TestHandleKagentiSummary_NilClient(t *testing.T) {
 	h := &Handlers{Ctx: &mockHandlerContext{tokenValid: true}, Client: nil}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/summary", nil)
+	r.Host = "localhost"
 	h.HandleKagentiSummary(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]any
@@ -959,6 +1009,7 @@ func TestHandleKagentiSummary_MissingCluster(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/summary", nil)
+	r.Host = "localhost"
 	h.HandleKagentiSummary(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -971,6 +1022,7 @@ func TestHandleKagentiSummary_Success(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/kagenti/summary?cluster=test", nil)
+	r.Host = "localhost"
 	h.HandleKagentiSummary(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 

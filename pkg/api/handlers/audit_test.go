@@ -20,6 +20,7 @@ func TestGetAuditLog(t *testing.T) {
 		env.App.Get("/api/audit", handler.GetAuditLog)
 
 		req := httptest.NewRequest("GET", "/api/audit", nil)
+		req.Host = "localhost"
 		req.Header.Set("X-Demo-Mode", "true")
 		resp, _ := env.App.Test(req)
 
@@ -40,6 +41,7 @@ func TestGetAuditLog(t *testing.T) {
 		env.Store.(*test.MockStore).On("CountUsersByRole").Return(1, 0, 1, nil)
 
 		req := httptest.NewRequest("GET", "/api/audit", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
@@ -57,6 +59,7 @@ func TestGetAuditLog(t *testing.T) {
 		env.Store.(*test.MockStore).On("QueryAuditLogs", 50, "", "").Return(mockEntries, nil)
 
 		req := httptest.NewRequest("GET", "/api/audit", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -74,6 +77,7 @@ func TestGetAuditLog(t *testing.T) {
 		env.Store.(*test.MockStore).On("QueryAuditLogs", 100, "user-123", "delete").Return([]store.AuditEntry{}, nil)
 
 		req := httptest.NewRequest("GET", "/api/audit?limit=100&user_id=user-123&action=delete", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -89,6 +93,7 @@ func TestGetAuditLog(t *testing.T) {
 		env.Store.(*test.MockStore).On("QueryAuditLogs", 200, "", "").Return([]store.AuditEntry{}, nil)
 
 		req := httptest.NewRequest("GET", "/api/audit?limit=500", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -103,6 +108,7 @@ func TestGetAuditLog(t *testing.T) {
 		env.Store.(*test.MockStore).On("QueryAuditLogs", mock.Anything, mock.Anything, mock.Anything).Return(nil, assert.AnError)
 
 		req := httptest.NewRequest("GET", "/api/audit", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)

@@ -16,6 +16,7 @@ func TestServer_HandlePredictionsAI(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/predictions/ai", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handlePredictionsAI(w, req)
@@ -45,6 +46,7 @@ func TestServer_HandlePredictionsFeedback(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest("POST", "/predictions/feedback", bytes.NewReader(body))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handlePredictionsFeedback(w, req)
@@ -70,6 +72,7 @@ func TestServer_HandleMetricsHistory(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/metrics/history", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleMetricsHistory(w, req)

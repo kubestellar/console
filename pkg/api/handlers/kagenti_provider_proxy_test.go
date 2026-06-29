@@ -64,6 +64,7 @@ func TestKagentiProviderProxyHandler_GetStatus(t *testing.T) {
 		app.Get("/status", h.GetStatus)
 
 		req := httptest.NewRequest("GET", "/status", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
@@ -89,6 +90,7 @@ func TestKagentiProviderProxyHandler_GetStatus(t *testing.T) {
 		app.Get("/status", h.GetStatus)
 
 		req := httptest.NewRequest("GET", "/status", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
@@ -120,6 +122,7 @@ func TestKagentiProviderProxyHandler_UpdateConfig(t *testing.T) {
 
 	body := bytes.NewBufferString(`{"llm_provider":"anthropic","api_key":"sk-ant"}`)
 	req := httptest.NewRequest(http.MethodPatch, "/config", body)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
@@ -153,6 +156,7 @@ func TestKagentiProviderProxyHandler_CallToolSanitizesPrompt(t *testing.T) {
 	app.Post("/tools/call", h.CallTool)
 
 	req := httptest.NewRequest(http.MethodPost, "/tools/call", bytes.NewBufferString(maliciousRequest))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
@@ -182,6 +186,7 @@ func TestKagentiProviderProxyHandler_CallToolRejectsInvalidToolName(t *testing.T
 	app.Post("/tools/call", h.CallTool)
 
 	req := httptest.NewRequest(http.MethodPost, "/tools/call", bytes.NewBufferString(maliciousRequest))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
@@ -314,6 +319,7 @@ func TestKagentiProviderProxyHandler_RoleAuthorization(t *testing.T) {
 			tt.register(app, h)
 
 			req := httptest.NewRequest(tt.method, tt.path, bytes.NewBufferString(tt.body))
+			req.Host = "localhost"
 			req.Header.Set("Content-Type", "application/json")
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
@@ -361,6 +367,7 @@ func TestKagentiProviderProxyHandler_CallToolDirectRedactsClusterInventory(t *te
 	app.Post("/tools/call-direct", h.CallToolDirect)
 
 	req := httptest.NewRequest(http.MethodPost, "/tools/call-direct", bytes.NewBufferString(`{"tool":"get_cluster_list","args":{}}`))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
@@ -394,6 +401,7 @@ func TestKagentiProviderProxyHandler_CallToolDirectRequiresNamespace(t *testing.
 	app.Post("/tools/call-direct", h.CallToolDirect)
 
 	req := httptest.NewRequest(http.MethodPost, "/tools/call-direct", bytes.NewBufferString(`{"tool":"get_pod_list","args":{"cluster":"prod-a"}}`))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
@@ -418,6 +426,7 @@ func TestKagentiProviderProxyHandler_ChatRequiresEditorOrAdmin(t *testing.T) {
 	app.Post("/chat", h.Chat)
 
 	req := httptest.NewRequest(http.MethodPost, "/chat", bytes.NewBufferString(`{"agent":"ops","namespace":"default","message":"hello"}`))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
@@ -476,6 +485,7 @@ func TestKagentiProviderProxyHandler_GetStatus_ClientStatusFailure(t *testing.T)
 	app.Get("/status", h.GetStatus)
 
 	req := httptest.NewRequest(http.MethodGet, "/status", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -512,6 +522,7 @@ func TestKagentiProviderProxyHandler_ListAgents_Success(t *testing.T) {
 	app.Get("/agents", h.ListAgents)
 
 	req := httptest.NewRequest(http.MethodGet, "/agents", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -540,6 +551,7 @@ func TestKagentiProviderProxyHandler_ListAgents_NilClient(t *testing.T) {
 	app.Get("/agents", h.ListAgents)
 
 	req := httptest.NewRequest(http.MethodGet, "/agents", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -571,6 +583,7 @@ func TestKagentiProviderProxyHandler_ListAgents_UpstreamError(t *testing.T) {
 	app.Get("/agents", h.ListAgents)
 
 	req := httptest.NewRequest(http.MethodGet, "/agents", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
@@ -608,6 +621,7 @@ func TestKagentiProviderProxyHandler_Chat_Success(t *testing.T) {
 
 	body := bytes.NewBufferString(`{"agent":"ops","namespace":"default","message":"hello"}`)
 	req := httptest.NewRequest(http.MethodPost, "/chat", body)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
@@ -670,6 +684,7 @@ func TestKagentiProviderProxyHandler_Chat_MissingRequiredFields(t *testing.T) {
 			app.Post("/chat", h.Chat)
 
 			req := httptest.NewRequest(http.MethodPost, "/chat", bytes.NewBufferString(tt.requestBody))
+			req.Host = "localhost"
 			req.Header.Set("Content-Type", "application/json")
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
@@ -704,6 +719,7 @@ func TestKagentiProviderProxyHandler_Chat_UpstreamInvokeFails(t *testing.T) {
 
 	body := bytes.NewBufferString(`{"agent":"ops","namespace":"default","message":"hello"}`)
 	req := httptest.NewRequest(http.MethodPost, "/chat", body)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	assert.NoError(t, err)

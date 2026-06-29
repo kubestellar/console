@@ -38,6 +38,7 @@ func TestResourceWorkloadHandlers_OPTIONS(t *testing.T) {
 	for _, h := range handlers {
 		t.Run(h.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodOptions, h.path, nil)
+			req.Host = "localhost"
 			w := httptest.NewRecorder()
 			h.handler(w, req)
 
@@ -77,6 +78,7 @@ func TestResourceWorkloadHandlers_Unauthorized(t *testing.T) {
 	for _, h := range handlers {
 		t.Run(h.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, h.path, nil)
+			req.Host = "localhost"
 			w := httptest.NewRecorder()
 			h.handler(w, req)
 
@@ -115,6 +117,7 @@ func TestResourceWorkloadHandlers_NilK8sClient(t *testing.T) {
 	for _, h := range handlers {
 		t.Run(h.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, h.path, nil)
+			req.Host = "localhost"
 			w := httptest.NewRecorder()
 			h.handler(w, req)
 
@@ -160,6 +163,7 @@ func TestResourceWorkloadHandlers_MissingCluster(t *testing.T) {
 	for _, h := range handlers {
 		t.Run(h.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, h.path, nil)
+			req.Host = "localhost"
 			w := httptest.NewRecorder()
 			h.handler(w, req)
 
@@ -210,6 +214,7 @@ func TestHandleNamespacesHTTP_CreateValidation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/namespaces", strings.NewReader(tc.body))
+			req.Host = "localhost"
 			w := httptest.NewRecorder()
 			s.handleNamespacesHTTP(w, req)
 
@@ -254,6 +259,7 @@ func TestHandleNamespacesHTTP_DeleteValidation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodDelete, "/namespaces"+tc.query, nil)
+			req.Host = "localhost"
 			w := httptest.NewRecorder()
 			s.handleNamespacesHTTP(w, req)
 
@@ -274,6 +280,7 @@ func TestHandleDeploymentsHTTP_ClusterUnavailable(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/deployments?cluster=nonexistent&namespace=default", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 	s.handleDeploymentsHTTP(w, req)
 

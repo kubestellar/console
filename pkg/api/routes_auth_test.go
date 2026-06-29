@@ -201,6 +201,7 @@ func TestSetupAuthRoutes_RegistersAllAuthRoutes(t *testing.T) {
 	for _, route := range authRoutes {
 		t.Run(route.method+" "+route.path, func(t *testing.T) {
 			req := httptest.NewRequest(route.method, route.path, nil)
+			req.Host = "localhost"
 			resp, err := s.app.Test(req, -1)
 			require.NoError(t, err)
 			defer resp.Body.Close()

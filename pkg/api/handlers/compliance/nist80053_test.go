@@ -15,6 +15,7 @@ func TestNIST80053Families(t *testing.T) {
 	h.RegisterPublicRoutes(app.Group("/api"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/nist/families", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -37,6 +38,7 @@ func TestNIST80053Mappings(t *testing.T) {
 	h.RegisterPublicRoutes(app.Group("/api"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/nist/mappings", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -59,6 +61,7 @@ func TestNIST80053Summary(t *testing.T) {
 	h.RegisterPublicRoutes(app.Group("/api"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/nist/summary", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)

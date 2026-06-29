@@ -46,6 +46,7 @@ func TestRequireAdminMiddleware(t *testing.T) {
 			})
 
 			req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer resp.Body.Close()
@@ -90,6 +91,7 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 			})
 
 			req := httptest.NewRequest(http.MethodPost, "/edit", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer resp.Body.Close()

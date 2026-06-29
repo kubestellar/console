@@ -23,6 +23,7 @@ func TestStreamReports_DemoMode(t *testing.T) {
 	app.Get("/stream", handler.StreamReports)
 
 	req := httptest.NewRequest("GET", "/stream", nil)
+	req.Host = "localhost"
 	req.Header.Set("X-Demo-Mode", "true")
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
@@ -42,6 +43,7 @@ func TestStreamReports_NoAPIKey(t *testing.T) {
 	app.Get("/stream", handler.StreamReports)
 
 	req := httptest.NewRequest("GET", "/stream", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -95,6 +97,7 @@ func TestStreamReports_CachedData(t *testing.T) {
 	app.Get("/stream", handler.StreamReports)
 
 	req := httptest.NewRequest("GET", "/stream", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -129,6 +132,7 @@ func TestStreamReports_SSEHeaders(t *testing.T) {
 	app.Get("/stream", handler.StreamReports)
 
 	req := httptest.NewRequest("GET", "/stream", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -153,6 +157,7 @@ func TestStreamReports_SinceParameter(t *testing.T) {
 
 	// Request with since=7d should hit cache
 	req := httptest.NewRequest("GET", "/stream?since=7d", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -283,6 +288,7 @@ func TestGetReports_DemoMode(t *testing.T) {
 	app.Get("/reports", handler.GetReports)
 
 	req := httptest.NewRequest("GET", "/reports", nil)
+	req.Host = "localhost"
 	req.Header.Set("X-Demo-Mode", "true")
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
@@ -331,6 +337,7 @@ func TestGetReports_SinceParameter_Normalized(t *testing.T) {
 			}
 
 			req := httptest.NewRequest("GET", url, nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
 			defer resp.Body.Close()
@@ -357,6 +364,7 @@ func TestGetReports_EmptyAPIKey(t *testing.T) {
 	app.Get("/reports", handler.GetReports)
 
 	req := httptest.NewRequest("GET", "/reports", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -392,6 +400,7 @@ func TestGetReports_StaleCache_OnFetchError(t *testing.T) {
 	app.Get("/reports", handler.GetReports)
 
 	req := httptest.NewRequest("GET", "/reports", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -423,6 +432,7 @@ func TestGetReports_ParseFailures_Reported(t *testing.T) {
 	app.Get("/reports", handler.GetReports)
 
 	req := httptest.NewRequest("GET", "/reports", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	defer resp.Body.Close()

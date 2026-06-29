@@ -108,6 +108,7 @@ func TestRequireAdminHelpers(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantStatus, resp.StatusCode)

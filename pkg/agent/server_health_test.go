@@ -12,6 +12,7 @@ func TestHandleHealth_ReturnsOK(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Host = "localhost"
 	rec := serveAndRecord(s.handleHealth, req)
 
 	if rec.Code != http.StatusOK {
@@ -31,6 +32,7 @@ func TestHandleHealth_Options(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t)
 	req := httptest.NewRequest(http.MethodOptions, "/health", nil)
+	req.Host = "localhost"
 	rec := serveAndRecord(s.handleHealth, req)
 
 	if rec.Code != http.StatusNoContent {
@@ -42,6 +44,7 @@ func TestHandleStatus_Unauthorized(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t, withToken("secret-token"))
 	req := httptest.NewRequest(http.MethodGet, "/status", nil)
+	req.Host = "localhost"
 	rec := serveAndRecord(s.handleStatus, req)
 
 	if rec.Code != http.StatusUnauthorized {
@@ -53,6 +56,7 @@ func TestHandleStatus_Authenticated(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t, withToken("secret-token"), withContexts("dev", "prod"))
 	req := httptest.NewRequest(http.MethodGet, "/status", nil)
+	req.Host = "localhost"
 	authRequest(req, "secret-token")
 	rec := serveAndRecord(s.handleStatus, req)
 
@@ -76,6 +80,7 @@ func TestHandleStatus_Options(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t)
 	req := httptest.NewRequest(http.MethodOptions, "/status", nil)
+	req.Host = "localhost"
 	rec := serveAndRecord(s.handleStatus, req)
 
 	if rec.Code != http.StatusNoContent {
@@ -87,6 +92,7 @@ func TestHandleMetrics_Unauthorized(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t, withToken("my-token"))
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	req.Host = "localhost"
 	rec := serveAndRecord(s.handleMetrics, req)
 
 	if rec.Code != http.StatusUnauthorized {
@@ -98,6 +104,7 @@ func TestHandleMetrics_Options(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t)
 	req := httptest.NewRequest(http.MethodOptions, "/metrics", nil)
+	req.Host = "localhost"
 	rec := serveAndRecord(s.handleMetrics, req)
 
 	if rec.Code != http.StatusNoContent {
@@ -137,6 +144,7 @@ func TestHandleProviderCheck_MissingName(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t, withToken("tok"))
 	req := httptest.NewRequest(http.MethodGet, "/provider/check", nil)
+	req.Host = "localhost"
 	authRequest(req, "tok")
 	rec := serveAndRecord(s.handleProviderCheck, req)
 
@@ -149,6 +157,7 @@ func TestHandleProviderCheck_NotFound(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t, withToken("tok"))
 	req := httptest.NewRequest(http.MethodGet, "/provider/check?name=nonexistent", nil)
+	req.Host = "localhost"
 	authRequest(req, "tok")
 	rec := serveAndRecord(s.handleProviderCheck, req)
 
@@ -164,6 +173,7 @@ func TestHandleProviderCheck_AvailableNoHandshake(t *testing.T) {
 	s := newTestServer(t, withToken("tok"), withRegistry(reg))
 
 	req := httptest.NewRequest(http.MethodGet, "/provider/check?name=test-ai", nil)
+	req.Host = "localhost"
 	authRequest(req, "tok")
 	rec := serveAndRecord(s.handleProviderCheck, req)
 
@@ -187,6 +197,7 @@ func TestHandleProviderCheck_UnavailableNoHandshake(t *testing.T) {
 	s := newTestServer(t, withToken("tok"), withRegistry(reg))
 
 	req := httptest.NewRequest(http.MethodGet, "/provider/check?name=test-ai", nil)
+	req.Host = "localhost"
 	authRequest(req, "tok")
 	rec := serveAndRecord(s.handleProviderCheck, req)
 
@@ -218,6 +229,7 @@ func TestHandleProviderCheck_WithHandshake(t *testing.T) {
 	s := newTestServer(t, withToken("tok"), withRegistry(reg))
 
 	req := httptest.NewRequest(http.MethodGet, "/provider/check?name=claude", nil)
+	req.Host = "localhost"
 	authRequest(req, "tok")
 	rec := serveAndRecord(s.handleProviderCheck, req)
 
@@ -241,6 +253,7 @@ func TestHandleProviderCheck_Unauthorized(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t, withToken("tok"))
 	req := httptest.NewRequest(http.MethodGet, "/provider/check?name=test", nil)
+	req.Host = "localhost"
 	rec := serveAndRecord(s.handleProviderCheck, req)
 
 	if rec.Code != http.StatusUnauthorized {

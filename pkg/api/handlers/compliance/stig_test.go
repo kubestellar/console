@@ -17,6 +17,7 @@ func TestSTIGHandlers(t *testing.T) {
 
 	t.Run("listBenchmarks", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/compliance/stig/benchmarks", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		t.Cleanup(func() { resp.Body.Close() })
@@ -30,6 +31,7 @@ func TestSTIGHandlers(t *testing.T) {
 
 	t.Run("listFindings", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/compliance/stig/findings", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		t.Cleanup(func() { resp.Body.Close() })
@@ -43,6 +45,7 @@ func TestSTIGHandlers(t *testing.T) {
 
 	t.Run("getSummary", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/compliance/stig/summary", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		t.Cleanup(func() { resp.Body.Close() })

@@ -37,6 +37,7 @@ func TestNotificationHandlers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("POST", "/api/notifications/test", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	})
@@ -50,6 +51,7 @@ func TestNotificationHandlers(t *testing.T) {
 
 		body := fmt.Sprintf(`{"type":"webhook", "config":{"webhookUrl":"%s"}}`, server.URL)
 		req := httptest.NewRequest("POST", "/api/notifications/test", strings.NewReader(body))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		resp, _ := env.App.Test(req)
 
@@ -62,6 +64,7 @@ func TestNotificationHandlers(t *testing.T) {
 
 	t.Run("GetNotificationConfig", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/notifications/config", nil)
+		req.Host = "localhost"
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)

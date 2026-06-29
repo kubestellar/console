@@ -22,6 +22,7 @@ func TestSupplyChainHandlers(t *testing.T) {
 
 		t.Run("getSummary", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/supply-chain/sbom/summary", nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			t.Cleanup(func() { resp.Body.Close() })
@@ -34,6 +35,7 @@ func TestSupplyChainHandlers(t *testing.T) {
 
 		t.Run("listDocuments", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/supply-chain/sbom/documents", nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			t.Cleanup(func() { resp.Body.Close() })
@@ -50,6 +52,7 @@ func TestSupplyChainHandlers(t *testing.T) {
 
 		t.Run("getSummary", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/supply-chain/signing/summary", nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			t.Cleanup(func() { resp.Body.Close() })
@@ -61,6 +64,7 @@ func TestSupplyChainHandlers(t *testing.T) {
 
 		t.Run("listImages", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/supply-chain/signing/images", nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			t.Cleanup(func() { resp.Body.Close() })
@@ -72,6 +76,7 @@ func TestSupplyChainHandlers(t *testing.T) {
 
 		t.Run("listPolicies", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/supply-chain/signing/policies", nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			t.Cleanup(func() { resp.Body.Close() })
@@ -88,6 +93,7 @@ func TestSupplyChainHandlers(t *testing.T) {
 
 		t.Run("getSummary", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/supply-chain/slsa/summary", nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			t.Cleanup(func() { resp.Body.Close() })
@@ -99,6 +105,7 @@ func TestSupplyChainHandlers(t *testing.T) {
 
 		t.Run("listWorkloads", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/supply-chain/slsa/workloads", nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			t.Cleanup(func() { resp.Body.Close() })
@@ -115,6 +122,7 @@ func TestSupplyChainHandlers(t *testing.T) {
 
 		t.Run("getSummary", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/supply-chain/licenses/summary", nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			t.Cleanup(func() { resp.Body.Close() })
@@ -126,6 +134,7 @@ func TestSupplyChainHandlers(t *testing.T) {
 
 		t.Run("listPackages", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/supply-chain/licenses/packages", nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			t.Cleanup(func() { resp.Body.Close() })
@@ -137,6 +146,7 @@ func TestSupplyChainHandlers(t *testing.T) {
 
 		t.Run("listCategories", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/supply-chain/licenses/categories", nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			t.Cleanup(func() { resp.Body.Close() })

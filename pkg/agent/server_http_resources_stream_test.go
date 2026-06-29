@@ -25,6 +25,7 @@ func TestHandleClusterResourceStreamSSE_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodOptions, "/nodes/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleNodesStreamSSE(w, req)
@@ -45,6 +46,7 @@ func TestHandleClusterResourceStreamSSE_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/nodes/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleNodesStreamSSE(w, req)
@@ -64,6 +66,7 @@ func TestHandleClusterResourceStreamSSE_NilK8sClient(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/nodes/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleNodesStreamSSE(w, req)
@@ -83,6 +86,7 @@ func TestHandleClusterResourceStreamSSE_NilKubectl(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/nodes/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleNodesStreamSSE(w, req)
@@ -107,6 +111,7 @@ func TestHandleClusterResourceStreamSSE_Success(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/test/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	handleClusterResourceStreamSSE(s, w, req, "test", "items", func(ctx context.Context, cluster string) ([]testItem, error) {
@@ -171,6 +176,7 @@ func TestHandleClusterResourceStreamSSE_ClusterFilter(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/test/stream?cluster=cluster2", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	fetchedClusters := make([]string, 0)
@@ -206,6 +212,7 @@ func TestHandleClusterResourceStreamSSE_FetchError(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/test/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	handleClusterResourceStreamSSE(s, w, req, "test", "items", func(ctx context.Context, cluster string) ([]testItem, error) {
@@ -272,6 +279,7 @@ func TestHandleGPUNodesStreamSSE_OPTIONS(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodOptions, "/gpu-nodes/stream", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleGPUNodesStreamSSE(w, req)

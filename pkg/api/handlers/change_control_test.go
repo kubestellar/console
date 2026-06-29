@@ -16,6 +16,7 @@ func TestChangeControlHandler_ListPolicies(t *testing.T) {
 	h.RegisterPublicRoutes(app.Group("/api"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/change-control/policies", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatal(err)
@@ -40,6 +41,7 @@ func TestChangeControlHandler_ListChanges(t *testing.T) {
 	h.RegisterPublicRoutes(app.Group("/api"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/change-control/changes", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatal(err)
@@ -56,6 +58,7 @@ func TestChangeControlHandler_ListViolations(t *testing.T) {
 	h.RegisterPublicRoutes(app.Group("/api"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/change-control/violations", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatal(err)
@@ -72,6 +75,7 @@ func TestChangeControlHandler_GetSummary(t *testing.T) {
 	h.RegisterPublicRoutes(app.Group("/api"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/compliance/change-control/summary", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatal(err)

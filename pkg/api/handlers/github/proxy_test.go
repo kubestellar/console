@@ -58,6 +58,7 @@ func TestSaveToken_RejectsNonAdmin(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodPost, "/api/github/token", strings.NewReader(`{"token":"ghp_test"}`))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	if err != nil {
@@ -92,6 +93,7 @@ func TestSaveToken_AllowsAdmin(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodPost, "/api/github/token", strings.NewReader(`{"token":"ghp_test"}`))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	if err != nil {
@@ -250,6 +252,7 @@ func TestProxy_BlocksDisallowedRepoRequest(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/github/repos/private/repo/issues", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("proxy request failed: %v", err)
@@ -285,6 +288,7 @@ func TestProxy_ScopesSearchRequestsToAllowedRepos(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/github/search/issues?q=is%3Apr+author%3Aoctocat", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("proxy request failed: %v", err)
@@ -326,6 +330,7 @@ func TestProxy_AllowsAllowlistedRepoRequest(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/github/repos/kubestellar/console/releases", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("proxy request failed: %v", err)
@@ -352,6 +357,7 @@ func TestDeleteToken_RejectsNonAdmin(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/github/token", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("DeleteToken request failed: %v", err)
@@ -384,6 +390,7 @@ func TestDeleteToken_AllowsAdmin(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/github/token", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("DeleteToken request failed: %v", err)

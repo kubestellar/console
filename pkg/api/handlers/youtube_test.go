@@ -57,6 +57,7 @@ func TestYouTubePlaylistHandler(t *testing.T) {
 	// Wait, youtube.go has 'var cache = &playlistCache{}' package level.
 
 	req := httptest.NewRequest("GET", "/youtube/playlist", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
@@ -100,6 +101,7 @@ func TestYouTubeThumbnailProxy(t *testing.T) {
 
 	t.Run("Valid ID", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/youtube/thumbnail/abcdefghijk", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
@@ -108,6 +110,7 @@ func TestYouTubeThumbnailProxy(t *testing.T) {
 
 	t.Run("Invalid ID length", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/youtube/thumbnail/too-short", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 400, resp.StatusCode)

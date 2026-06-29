@@ -52,6 +52,7 @@ func TestProxyDrasi_Server(t *testing.T) {
 	env.App.All("/api/drasi/proxy/*", h.ProxyDrasi)
 
 	req := httptest.NewRequest("GET", "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server&foo=bar", nil)
+	req.Host = "localhost"
 	req.Header.Set("X-Test-Header", "test-value")
 	req.Header.Set("Proxy-Authenticate", "should-be-stripped")
 
@@ -91,6 +92,7 @@ func TestProxyDrasi_Server_Post(t *testing.T) {
 	env.App.All("/api/drasi/proxy/*", h.ProxyDrasi)
 
 	req := httptest.NewRequest("POST", "/api/drasi/proxy/api/v1/sources?target=server&url="+upstream.URL, bytes.NewReader([]byte(`{"data":"test"}`)))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req)
@@ -122,6 +124,7 @@ func TestProxyDrasi_Validation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", tt.url, nil)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
@@ -143,6 +146,7 @@ func TestProxyDrasi_Server_RequiresEditorOrAdmin(t *testing.T) {
 	app.All("/api/drasi/proxy/*", h.ProxyDrasi)
 
 	req := httptest.NewRequest("GET", "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
@@ -174,6 +178,7 @@ func TestProxyDrasi_Platform(t *testing.T) {
 	env.App.All("/api/drasi/proxy/*", h.ProxyDrasi)
 
 	req := httptest.NewRequest("GET", "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster&foo=bar", nil)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -283,6 +288,7 @@ func TestProxyDrasi_MutatingEndpoints_ViewerForbidden(t *testing.T) {
 			}
 
 			req := httptest.NewRequest(tt.method, tt.url, body)
+			req.Host = "localhost"
 			if tt.body != nil {
 				req.Header.Set("Content-Type", "application/json")
 			}
@@ -300,6 +306,7 @@ func TestProxyDrasi_Platform_Post_ViewerForbidden(t *testing.T) {
 	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
 
 	req := httptest.NewRequest(fiber.MethodPost, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -324,6 +331,7 @@ func TestProxyDrasi_Platform_Post_EditorAllowed(t *testing.T) {
 	env.K8sClient.SetInClusterConfig(&rest.Config{Host: k8sServer.URL})
 
 	req := httptest.NewRequest(fiber.MethodPost, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -349,6 +357,7 @@ func TestProxyDrasi_Platform_Get_ViewerAllowed(t *testing.T) {
 	env.K8sClient.SetInClusterConfig(&rest.Config{Host: k8sServer.URL})
 
 	req := httptest.NewRequest(fiber.MethodGet, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", nil)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -362,6 +371,7 @@ func TestProxyDrasi_Platform_Put_ViewerForbidden(t *testing.T) {
 	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
 
 	req := httptest.NewRequest(fiber.MethodPut, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -386,6 +396,7 @@ func TestProxyDrasi_Platform_Put_EditorAllowed(t *testing.T) {
 	env.K8sClient.SetInClusterConfig(&rest.Config{Host: k8sServer.URL})
 
 	req := httptest.NewRequest(fiber.MethodPut, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -400,6 +411,7 @@ func TestProxyDrasi_Platform_Delete_ViewerForbidden(t *testing.T) {
 	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
 
 	req := httptest.NewRequest(fiber.MethodDelete, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", nil)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -422,6 +434,7 @@ func TestProxyDrasi_Platform_Delete_EditorAllowed(t *testing.T) {
 	env.K8sClient.SetInClusterConfig(&rest.Config{Host: k8sServer.URL})
 
 	req := httptest.NewRequest(fiber.MethodDelete, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", nil)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -435,6 +448,7 @@ func TestProxyDrasi_Platform_Patch_ViewerForbidden(t *testing.T) {
 	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
 
 	req := httptest.NewRequest(fiber.MethodPatch, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -459,6 +473,7 @@ func TestProxyDrasi_Platform_Patch_EditorAllowed(t *testing.T) {
 	env.K8sClient.SetInClusterConfig(&rest.Config{Host: k8sServer.URL})
 
 	req := httptest.NewRequest(fiber.MethodPatch, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -473,6 +488,7 @@ func TestProxyDrasi_Server_Post_ViewerForbidden(t *testing.T) {
 	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
 
 	req := httptest.NewRequest(fiber.MethodPost, "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)

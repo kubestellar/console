@@ -245,6 +245,7 @@ func TestGetReportsHandler(t *testing.T) {
 			app.Get("/api/benchmarks/reports", h.GetReports)
 
 			req := httptest.NewRequest("GET", "/api/benchmarks/reports"+tc.queryParams, nil)
+			req.Host = "localhost"
 			if tc.demoMode {
 				req.Header.Set("X-Demo-Mode", "true")
 			}
@@ -290,6 +291,7 @@ func TestStreamReportsHandler(t *testing.T) {
 			app.Get("/api/benchmarks/stream", h.StreamReports)
 
 			req := httptest.NewRequest("GET", "/api/benchmarks/stream"+tc.queryParams, nil)
+			req.Host = "localhost"
 			if tc.demoMode {
 				req.Header.Set("X-Demo-Mode", "true")
 			}
