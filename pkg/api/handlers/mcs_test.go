@@ -59,7 +59,8 @@ func TestListServiceExports(t *testing.T) {
 	})
 
 	// Case 1: List all
-	req, _ := http.NewRequest("GET", "/api/mcs/exports", nil)
+	req, err := http.NewRequest("GET", "/api/mcs/exports", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -80,7 +81,8 @@ func TestListServiceExports(t *testing.T) {
 	dynClient.PrependReactor("list", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("export list error")
 	})
-	req2, _ := http.NewRequest("GET", "/api/mcs/exports?cluster=test-cluster", nil)
+	req2, err := http.NewRequest("GET", "/api/mcs/exports?cluster=test-cluster", nil)
+	require.NoError(t, err)
 	req2.Host = "localhost"
 	resp2, err := env.App.Test(req2, 5000)
 	require.NoError(t, err)
@@ -90,7 +92,8 @@ func TestListServiceExports(t *testing.T) {
 	dynClient.PrependReactor("list", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("the server could not find the requested resource")
 	})
-	req3, _ := http.NewRequest("GET", "/api/mcs/exports?cluster=test-cluster", nil)
+	req3, err := http.NewRequest("GET", "/api/mcs/exports?cluster=test-cluster", nil)
+	require.NoError(t, err)
 	req3.Host = "localhost"
 	resp3, err := env.App.Test(req3, 5000)
 	require.NoError(t, err)
@@ -123,7 +126,8 @@ func TestGetServiceExport(t *testing.T) {
 	})
 
 	// Found
-	req, _ := http.NewRequest("GET", "/api/mcs/exports/c1/default/target-svc", nil)
+	req, err := http.NewRequest("GET", "/api/mcs/exports/c1/default/target-svc", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -135,7 +139,8 @@ func TestGetServiceExport(t *testing.T) {
 	dynClient.PrependReactor("list", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("the server could not find the requested resource")
 	})
-	req2, _ := http.NewRequest("GET", "/api/mcs/exports/c1/default/target-svc", nil)
+	req2, err := http.NewRequest("GET", "/api/mcs/exports/c1/default/target-svc", nil)
+	require.NoError(t, err)
 	req2.Host = "localhost"
 	resp2, err := env.App.Test(req2, 5000)
 	require.NoError(t, err)
@@ -168,7 +173,8 @@ func TestListServiceImports(t *testing.T) {
 	})
 
 	// List all
-	req, _ := http.NewRequest("GET", "/api/mcs/imports", nil)
+	req, err := http.NewRequest("GET", "/api/mcs/imports", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -203,7 +209,8 @@ func TestListServiceExportsMock(t *testing.T) {
 		handler := &MCSHandlers{k8sClient: mock, hub: env.Hub}
 		env.App.Get("/api/mcs/exports", handler.ListServiceExports)
 
-		req, _ := http.NewRequest("GET", "/api/mcs/exports", nil)
+		req, err := http.NewRequest("GET", "/api/mcs/exports", nil)
+		require.NoError(t, err)
 		req.Host = "localhost"
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
@@ -219,7 +226,8 @@ func TestListServiceExportsMock(t *testing.T) {
 		handler := &MCSHandlers{k8sClient: mock, hub: env.Hub}
 		env.App.Get("/api/mcs/exports", handler.ListServiceExports)
 
-		req, _ := http.NewRequest("GET", "/api/mcs/exports", nil)
+		req, err := http.NewRequest("GET", "/api/mcs/exports", nil)
+		require.NoError(t, err)
 		req.Host = "localhost"
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
@@ -235,7 +243,8 @@ func TestListServiceExportsMock(t *testing.T) {
 		handler := &MCSHandlers{k8sClient: mock, hub: env.Hub}
 		env.App.Get("/api/mcs/exports", handler.ListServiceExports)
 
-		req, _ := http.NewRequest("GET", "/api/mcs/exports?cluster=test-cluster", nil)
+		req, err := http.NewRequest("GET", "/api/mcs/exports?cluster=test-cluster", nil)
+		require.NoError(t, err)
 		req.Host = "localhost"
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
@@ -248,7 +257,8 @@ func TestListServiceExportsMock(t *testing.T) {
 		handler := &MCSHandlers{k8sClient: mock, hub: env.Hub}
 		emptyApp.Get("/api/mcs/exports", handler.ListServiceExports)
 
-		req, _ := http.NewRequest("GET", "/api/mcs/exports", nil)
+		req, err := http.NewRequest("GET", "/api/mcs/exports", nil)
+		require.NoError(t, err)
 		req.Host = "localhost"
 		resp, err := emptyApp.Test(req, 5000)
 		require.NoError(t, err)
@@ -278,7 +288,8 @@ func TestListServiceImportsMock(t *testing.T) {
 		handler := &MCSHandlers{k8sClient: mock, hub: env.Hub}
 		env.App.Get("/api/mcs/imports", handler.ListServiceImports)
 
-		req, _ := http.NewRequest("GET", "/api/mcs/imports", nil)
+		req, err := http.NewRequest("GET", "/api/mcs/imports", nil)
+		require.NoError(t, err)
 		req.Host = "localhost"
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
@@ -294,7 +305,8 @@ func TestListServiceImportsMock(t *testing.T) {
 		handler := &MCSHandlers{k8sClient: mock, hub: env.Hub}
 		env.App.Get("/api/mcs/imports", handler.ListServiceImports)
 
-		req, _ := http.NewRequest("GET", "/api/mcs/imports?cluster=test-cluster", nil)
+		req, err := http.NewRequest("GET", "/api/mcs/imports?cluster=test-cluster", nil)
+		require.NoError(t, err)
 		req.Host = "localhost"
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)

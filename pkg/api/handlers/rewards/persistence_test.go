@@ -259,7 +259,8 @@ func TestRewardsHandler_UnauthenticatedReturns401(t *testing.T) {
 	app.Post("/api/rewards/coins", h.IncrementCoins)
 	app.Post("/api/rewards/daily-bonus", h.ClaimDailyBonus)
 
-	getReq, _ := http.NewRequest(http.MethodGet, "/api/rewards/me", nil)
+	getReq, err := http.NewRequest(http.MethodGet, "/api/rewards/me", nil)
+	require.NoError(t, err)
 	getReq.Host = "localhost"
 	resp, err := app.Test(getReq, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)

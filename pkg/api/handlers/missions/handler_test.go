@@ -994,7 +994,8 @@ func TestGetKBScores_StaleCache(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	// Populate cache
-	req1, _ := http.NewRequest("GET", "/api/missions/scores", nil)
+	req1, err := http.NewRequest("GET", "/api/missions/scores", nil)
+	require.NoError(t, err)
 	req1.Host = "localhost"
 	resp1, err := app.Test(req1, 5000)
 	require.NoError(t, err)
@@ -1008,7 +1009,8 @@ func TestGetKBScores_StaleCache(t *testing.T) {
 	handler.cache.mu.Unlock()
 
 	// Second request: GitHub 403, should fall back to stale cache
-	req2, _ := http.NewRequest("GET", "/api/missions/scores", nil)
+	req2, err := http.NewRequest("GET", "/api/missions/scores", nil)
+	require.NoError(t, err)
 	req2.Host = "localhost"
 	resp2, err := app.Test(req2, 5000)
 	require.NoError(t, err)

@@ -57,7 +57,8 @@ func decodeTokenUsageResponse(t *testing.T, resp *http.Response) userTokenUsageR
 func TestTokenUsageHandler_GetReturnsZeroForNewUser(t *testing.T) {
 	app, _, _, _ := newTokenUsageTestApp(t)
 
-	req, _ := http.NewRequest(http.MethodGet, "/api/token-usage/me", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/token-usage/me", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
 	require.NoError(t, err)

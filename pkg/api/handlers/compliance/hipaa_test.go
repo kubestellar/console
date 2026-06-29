@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kubestellar/console/pkg/compliance/hipaa"
 )
@@ -20,7 +21,8 @@ func setupHIPAAApp() *fiber.App {
 
 func TestHIPAASafeguards(t *testing.T) {
 	app := setupHIPAAApp()
-	req, _ := http.NewRequest("GET", "/api/compliance/hipaa/safeguards", nil)
+	req, err := http.NewRequest("GET", "/api/compliance/hipaa/safeguards", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
@@ -42,7 +44,8 @@ func TestHIPAASafeguards(t *testing.T) {
 
 func TestHIPAAPHINamespaces(t *testing.T) {
 	app := setupHIPAAApp()
-	req, _ := http.NewRequest("GET", "/api/compliance/hipaa/phi-namespaces", nil)
+	req, err := http.NewRequest("GET", "/api/compliance/hipaa/phi-namespaces", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
@@ -64,7 +67,8 @@ func TestHIPAAPHINamespaces(t *testing.T) {
 
 func TestHIPAADataFlows(t *testing.T) {
 	app := setupHIPAAApp()
-	req, _ := http.NewRequest("GET", "/api/compliance/hipaa/data-flows", nil)
+	req, err := http.NewRequest("GET", "/api/compliance/hipaa/data-flows", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
@@ -86,7 +90,8 @@ func TestHIPAADataFlows(t *testing.T) {
 
 func TestHIPAASummary(t *testing.T) {
 	app := setupHIPAAApp()
-	req, _ := http.NewRequest("GET", "/api/compliance/hipaa/summary", nil)
+	req, err := http.NewRequest("GET", "/api/compliance/hipaa/summary", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	if err != nil {
