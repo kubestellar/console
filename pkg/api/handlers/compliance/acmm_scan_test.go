@@ -16,8 +16,8 @@ func TestACMMScanHandler_Demo(t *testing.T) {
 	env.App.Get("/api/acmm/scan", ACMMScanHandler)
 
 	req, err := http.NewRequest("GET", "/api/acmm/scan?repo=kubestellar/console", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("X-Demo-Mode", "true")
 
 	resp, err := env.App.Test(req, 5000)
@@ -39,8 +39,8 @@ func TestACMMScanHandler_InvalidRepo(t *testing.T) {
 	env.App.Get("/api/acmm/scan", ACMMScanHandler)
 
 	req, err := http.NewRequest("GET", "/api/acmm/scan?repo=invalid-repo", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)

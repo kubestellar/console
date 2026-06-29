@@ -62,8 +62,8 @@ func TestRewardsHandler_GetReturnsZeroForNewUser(t *testing.T) {
 	app, _, userID := newRewardsTestApp(t)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/rewards/me", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -96,8 +96,8 @@ func TestRewardsHandler_PutThenGetRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	putReq, err := http.NewRequest(http.MethodPut, "/api/rewards/me", bytes.NewReader(payload))
-	putReq.Host = "localhost"
 	require.NoError(t, err)
+	putReq.Host = "localhost"
 	putReq.Header.Set("Content-Type", "application/json")
 	putResp, err := app.Test(putReq, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
@@ -106,8 +106,8 @@ func TestRewardsHandler_PutThenGetRoundTrip(t *testing.T) {
 	assert.Equal(t, wantCoins, putBody.Coins)
 
 	getReq, err := http.NewRequest(http.MethodGet, "/api/rewards/me", nil)
-	getReq.Host = "localhost"
 	require.NoError(t, err)
+	getReq.Host = "localhost"
 	getResp, err := app.Test(getReq, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, getResp.StatusCode)
@@ -126,8 +126,8 @@ func TestRewardsHandler_PutRejectsOutOfRangeValues(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPut, "/api/rewards/me", bytes.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
@@ -145,8 +145,8 @@ func TestRewardsHandler_PostCoinsIncrementsCorrectly(t *testing.T) {
 		payload, err := json.Marshal(map[string]int{"delta": delta})
 		require.NoError(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/api/rewards/coins", bytes.NewReader(payload))
-		req.Host = "localhost"
 		require.NoError(t, err)
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 		require.NoError(t, err)
@@ -168,8 +168,8 @@ func TestRewardsHandler_PostCoinsNegativeDoesNotDriveBelowZero(t *testing.T) {
 	payload, err := json.Marshal(map[string]int{"delta": subtract})
 	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodPost, "/api/rewards/coins", bytes.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
@@ -184,8 +184,8 @@ func TestRewardsHandler_PostCoinsRejectsZeroDelta(t *testing.T) {
 	payload, err := json.Marshal(map[string]int{"delta": 0})
 	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodPost, "/api/rewards/coins", bytes.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
@@ -199,8 +199,8 @@ func TestRewardsHandler_PostCoinsRejectsOversizedDelta(t *testing.T) {
 	payload, err := json.Marshal(map[string]int{"delta": maxCoinDeltaPerRequest + 1})
 	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodPost, "/api/rewards/coins", bytes.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
@@ -211,8 +211,8 @@ func TestRewardsHandler_DailyBonusFirstClaimSucceeds(t *testing.T) {
 	app, _, _ := newRewardsTestApp(t)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/rewards/daily-bonus", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
@@ -228,16 +228,16 @@ func TestRewardsHandler_DailyBonusSecondClaimReturns429(t *testing.T) {
 	app, _, _ := newRewardsTestApp(t)
 
 	req1, err := http.NewRequest(http.MethodPost, "/api/rewards/daily-bonus", nil)
-	req1.Host = "localhost"
 	require.NoError(t, err)
+	req1.Host = "localhost"
 	resp1, err := app.Test(req1, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp1.StatusCode)
 	resp1.Body.Close()
 
 	req2, err := http.NewRequest(http.MethodPost, "/api/rewards/daily-bonus", nil)
-	req2.Host = "localhost"
 	require.NoError(t, err)
+	req2.Host = "localhost"
 	resp2, err := app.Test(req2, testRewardsFiberTimeoutMs)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusTooManyRequests, resp2.StatusCode)

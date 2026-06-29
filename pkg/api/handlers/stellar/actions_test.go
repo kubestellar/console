@@ -78,8 +78,8 @@ func TestStellarActionExecute_RBAC(t *testing.T) {
 			app := newStellarActionExecuteTestApp(t, tt.role)
 
 			req, err := http.NewRequest(http.MethodPost, "/api/stellar/actions/execute", http.NoBody)
-			req.Host = "localhost"
 			require.NoError(t, err)
+			req.Host = "localhost"
 			req.Header.Set("Content-Type", "application/json")
 
 			resp, err := app.Test(req, stellarActionExecuteFiberTimeoutMs)
@@ -111,8 +111,8 @@ func TestStellarActionExecute_DestructiveActionsRequireApprovalFlow(t *testing.T
 			require.NoError(t, err)
 
 			req, err := http.NewRequest(http.MethodPost, "/api/stellar/actions/execute", bytes.NewReader(body))
-			req.Host = "localhost"
 			require.NoError(t, err)
+			req.Host = "localhost"
 			req.Header.Set("Content-Type", "application/json")
 
 			resp, err := app.Test(req, stellarActionExecuteFiberTimeoutMs)

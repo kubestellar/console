@@ -115,8 +115,8 @@ func performTeamRequest(t *testing.T, app *fiber.App, method, path, body string)
 	t.Helper()
 
 	req, err := http.NewRequest(method, path, strings.NewReader(body))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")
 	}

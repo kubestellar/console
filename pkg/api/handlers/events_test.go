@@ -61,8 +61,8 @@ func TestEventRecordEvent_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/events", bytes.NewReader(body))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -87,8 +87,8 @@ func TestEventRecordEvent_InvalidBody(t *testing.T) {
 	env.App.Post("/api/events", handler.RecordEvent)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/events", bytes.NewBufferString("{"))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -112,8 +112,8 @@ func TestEventRecordEvent_InvalidCardID(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/events", bytes.NewReader(body))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -135,8 +135,8 @@ func TestEventRecordEvent_StoreError(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/events", bytes.NewReader(body))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -150,8 +150,8 @@ func TestEventGetEvents_Success(t *testing.T) {
 	env.App.Get("/api/events", handler.GetEvents)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/events", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -173,8 +173,8 @@ func TestEventGetEvents_QueryParams(t *testing.T) {
 	env.App.Get("/api/events", handler.GetEvents)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/events?since=1h&limit=50&offset=10", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -199,8 +199,8 @@ func TestEventGetEvents_LimitClamped(t *testing.T) {
 	env.App.Get("/api/events", handler.GetEvents)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/events?limit=999999", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -222,8 +222,8 @@ func TestEventGetEvents_StoreError(t *testing.T) {
 	env.App.Get("/api/events", handler.GetEvents)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/events", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)

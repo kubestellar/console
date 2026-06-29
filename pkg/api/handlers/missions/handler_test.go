@@ -46,8 +46,8 @@ func TestMissions_BrowseConsoleKB_Success(t *testing.T) {
 	handler.githubAPIURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/browse?path=missions", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -74,8 +74,8 @@ func TestMissions_BrowseConsoleKB_NoPath(t *testing.T) {
 	handler.githubAPIURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/browse", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -98,8 +98,8 @@ func TestMissions_ValidateMission_ValidMission(t *testing.T) {
 
 	payload := `{"mission":{"apiVersion":"kc-mission-v1","kind":"Mission","metadata":{"name":"test-mission"},"spec":{"description":"A test mission"}},"path":"fixes/demo/install.json"}`
 	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -127,8 +127,8 @@ func TestMissions_ValidateMission_QualityFailure(t *testing.T) {
 
 	payload := `{"mission":{"apiVersion":"kc-mission-v1","kind":"Mission","metadata":{"name":"test-mission"},"spec":{"description":"A test mission"}},"path":"fixes/demo/install.json"}`
 	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -156,8 +156,8 @@ func TestMissions_ValidateMission_MissionNotInIndex(t *testing.T) {
 
 	payload := `{"mission":{"apiVersion":"kc-mission-v1","kind":"Mission","metadata":{"name":"test-mission"},"spec":{"description":"A test mission"}},"path":"fixes/demo/install.json"}`
 	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -176,8 +176,8 @@ func TestMissions_ValidateMission_InvalidMission(t *testing.T) {
 	// Missing apiVersion, kind, metadata.name
 	payload := `{"mission":{"apiVersion":"wrong","spec":{}},"path":"fixes/demo/install.json"}`
 	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -196,8 +196,8 @@ func TestMissions_ValidateMission_EmptyBody(t *testing.T) {
 	app, _ := setupMissionsTest()
 
 	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(""))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -219,8 +219,8 @@ func TestMissions_ValidateMission_TooLarge(t *testing.T) {
 
 	largePayload := strings.Repeat("x", missionsMaxBodyBytes+1)
 	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(largePayload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -257,8 +257,8 @@ func TestMissions_ShareToSlack_Success(t *testing.T) {
 
 	payload := `{"webhookUrl":"https://hooks.slack.com/services/T00/B00/xxx","text":"Hello from mission"}`
 	req, err := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -275,8 +275,8 @@ func TestMissions_ShareToSlack_InvalidWebhook(t *testing.T) {
 
 	payload := `{"webhookUrl":"https://evil.com/webhook","text":"Hello"}`
 	req, err := http.NewRequest("POST", "/api/missions/share/slack", strings.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -291,8 +291,8 @@ func TestMissions_ShareToGitHub_NoToken(t *testing.T) {
 
 	payload := `{"repo":"kubestellar/console-kb","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`
 	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -312,8 +312,8 @@ func TestMissions_ShareToGitHub_RepoNotAllowed(t *testing.T) {
 	// GitHub API calls.
 	payload := `{"repo":"kubestellar/private-repo","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`
 	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Token", "ghp_test123")
 	resp, err := app.Test(req, 5000)
@@ -403,8 +403,8 @@ func TestMissions_ShareToGitHub_Success(t *testing.T) {
 
 	payload := `{"repo":"kubestellar/console-kb","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`
 	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Token", "ghp_test123")
 	resp, err := app.Test(req, 5000)
@@ -440,8 +440,8 @@ func TestMissions_GetMissionFile_Success(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/file?path=missions/example.yaml", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -462,8 +462,8 @@ func TestMissions_GetMissionFile_NotFound(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/file?path=missions/nonexistent.yaml", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -489,8 +489,8 @@ func TestMissions_BrowseConsoleKB_CacheHit(t *testing.T) {
 
 	// First request — should call GitHub (MISS)
 	req1, err := http.NewRequest("GET", "/api/missions/browse?path=fixes", nil)
-	req1.Host = "localhost"
 	require.NoError(t, err)
+	req1.Host = "localhost"
 	resp1, err := app.Test(req1, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp1.StatusCode)
@@ -499,8 +499,8 @@ func TestMissions_BrowseConsoleKB_CacheHit(t *testing.T) {
 
 	// Second request — should serve from cache (HIT), NOT call GitHub again
 	req2, err := http.NewRequest("GET", "/api/missions/browse?path=fixes", nil)
-	req2.Host = "localhost"
 	require.NoError(t, err)
+	req2.Host = "localhost"
 	resp2, err := app.Test(req2, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
@@ -530,8 +530,8 @@ func TestMissions_GetMissionFile_CacheHit(t *testing.T) {
 
 	// First request — MISS
 	req1, err := http.NewRequest("GET", "/api/missions/file?path=fixes/index.json", nil)
-	req1.Host = "localhost"
 	require.NoError(t, err)
+	req1.Host = "localhost"
 	resp1, err := app.Test(req1, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp1.StatusCode)
@@ -540,8 +540,8 @@ func TestMissions_GetMissionFile_CacheHit(t *testing.T) {
 
 	// Second request — HIT
 	req2, err := http.NewRequest("GET", "/api/missions/file?path=fixes/index.json", nil)
-	req2.Host = "localhost"
 	require.NoError(t, err)
+	req2.Host = "localhost"
 	resp2, err := app.Test(req2, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
@@ -574,8 +574,8 @@ func TestMissions_BrowseConsoleKB_RateLimitServesStaleCache(t *testing.T) {
 
 	// First request — populate the cache
 	req1, err := http.NewRequest("GET", "/api/missions/browse?path=stale-test", nil)
-	req1.Host = "localhost"
 	require.NoError(t, err)
+	req1.Host = "localhost"
 	resp1, err := app.Test(req1, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp1.StatusCode)
@@ -589,8 +589,8 @@ func TestMissions_BrowseConsoleKB_RateLimitServesStaleCache(t *testing.T) {
 
 	// Second request — GitHub returns 403, should serve stale cache
 	req2, err := http.NewRequest("GET", "/api/missions/browse?path=stale-test", nil)
-	req2.Host = "localhost"
 	require.NoError(t, err)
+	req2.Host = "localhost"
 	resp2, err := app.Test(req2, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp2.StatusCode, "rate-limited request should serve stale cache with 200")
@@ -622,8 +622,8 @@ func TestMissions_GetMissionFile_RateLimitServesStaleCache(t *testing.T) {
 
 	// Populate cache
 	req1, err := http.NewRequest("GET", "/api/missions/file?path=test/mission.json", nil)
-	req1.Host = "localhost"
 	require.NoError(t, err)
+	req1.Host = "localhost"
 	resp1, err := app.Test(req1, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp1.StatusCode)
@@ -637,8 +637,8 @@ func TestMissions_GetMissionFile_RateLimitServesStaleCache(t *testing.T) {
 
 	// Rate-limited request should serve stale
 	req2, err := http.NewRequest("GET", "/api/missions/file?path=test/mission.json", nil)
-	req2.Host = "localhost"
 	require.NoError(t, err)
+	req2.Host = "localhost"
 	resp2, err := app.Test(req2, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
@@ -659,8 +659,8 @@ func TestMissions_BrowseConsoleKB_EmbeddedFallback(t *testing.T) {
 	handler.githubAPIURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/browse?path=subdir", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -690,8 +690,8 @@ func TestMissions_GetMissionFile_EmbeddedFallback(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/file?path=subdir/nested.txt", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -909,8 +909,8 @@ func TestGetKBScores_Success(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -940,8 +940,8 @@ func TestGetKBScores_EmptyResultsEncoding(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -962,8 +962,8 @@ func TestGetKBScores_UpstreamError(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -1026,8 +1026,8 @@ func TestGetKBScores_EmbeddedFallback(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -1054,8 +1054,8 @@ func TestGetMissionScore_Success(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores/coredns/coredns-123", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -1078,8 +1078,8 @@ func TestGetMissionScore_NotFound(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores/coredns/coredns-999", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -1097,8 +1097,8 @@ func TestGetMissionScore_NoScore(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores/kubernetes/kubernetes-456", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -1120,8 +1120,8 @@ func TestGetMissionScore_ExactIDMatch(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores/coredns/coredns-12", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode,
@@ -1158,8 +1158,8 @@ func TestGetMissionScore_UpstreamError(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores/"+project+"/"+missionID, nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -1177,8 +1177,8 @@ func TestGetKBGaps_NoStore_ReturnsDisabled(t *testing.T) {
 	app, _ := setupMissionsTest()
 
 	req, err := http.NewRequest("GET", "/api/missions/gaps", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -1210,8 +1210,8 @@ func TestGetKBGaps_WithStore_ReturnsGaps(t *testing.T) {
 	handler.RegisterPublicRoutes(app.Group("/api/missions"))
 
 	req, err := http.NewRequest("GET", "/api/missions/gaps?limit=5", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -1239,8 +1239,8 @@ func TestGetKBGaps_RequiresAdmin(t *testing.T) {
 	handler.RegisterRoutes(app.Group("/api/missions"))
 
 	req, err := http.NewRequest("GET", "/api/missions/gaps", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)

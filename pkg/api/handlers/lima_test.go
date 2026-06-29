@@ -23,8 +23,8 @@ func TestLimaList_DemoModeReturnsDemoData(t *testing.T) {
 	env.App.Get("/api/lima", handler.ListLima)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/lima", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("X-Demo-Mode", "true")
 
 	resp, err := env.App.Test(req, 5000)
@@ -43,8 +43,8 @@ func TestLimaList_NoClientReturns503DemoFallback(t *testing.T) {
 	env.App.Get("/api/lima", handler.ListLima)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/lima", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -62,8 +62,8 @@ func TestLimaList_ReachableClusterNoLimaReturns200LiveEmpty(t *testing.T) {
 	env.App.Get("/api/lima", handler.ListLima)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/lima", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -91,8 +91,8 @@ func TestLimaList_AllClusterQueriesFailReturns503DemoFallback(t *testing.T) {
 	})
 
 	req, err := http.NewRequest(http.MethodGet, "/api/lima", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -138,8 +138,8 @@ func TestLimaList_LimaNodeDetectedFromLabels(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/lima", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)

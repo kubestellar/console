@@ -795,8 +795,8 @@ func TestLogout_RequiresCSRFHeader(t *testing.T) {
 
 	// Without the CSRF header: 403.
 	req, err := http.NewRequest("POST", "/auth/logout", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -804,8 +804,8 @@ func TestLogout_RequiresCSRFHeader(t *testing.T) {
 
 	// With the CSRF header: 200.
 	req2, err := http.NewRequest("POST", "/auth/logout", nil)
-	req2.Host = "localhost"
 	require.NoError(t, err)
+	req2.Host = "localhost"
 	req2.Header.Set("Authorization", "Bearer "+token)
 	req2.Header.Set("X-Requested-With", "XMLHttpRequest")
 	resp2, err := app.Test(req2, 5000)
@@ -832,8 +832,8 @@ func TestLogout_ExpiredTokenIdempotent(t *testing.T) {
 	signed, _ := tok.SignedString([]byte("test-secret"))
 
 	req, err := http.NewRequest("POST", "/auth/logout", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer "+signed)
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	resp, err := app.Test(req, 5000)

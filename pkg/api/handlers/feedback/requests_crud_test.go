@@ -20,8 +20,8 @@ func TestCloseRequest_Unauthorized(t *testing.T) {
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+uuid.New().String()+"/close", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -36,8 +36,8 @@ func TestCloseRequest_InvalidRequestID(t *testing.T) {
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/invalid-id/close", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -57,8 +57,8 @@ func TestCloseRequest_NotFound(t *testing.T) {
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/close", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -82,8 +82,8 @@ func TestCloseRequest_AccessDenied(t *testing.T) {
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/close", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -107,8 +107,8 @@ func TestCloseRequest_StoreError(t *testing.T) {
 	app.Post("/api/feedback/requests/:id/close", handler.CloseRequest)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/close", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -124,8 +124,8 @@ func TestCreateFeatureRequest_Unauthorized(t *testing.T) {
 
 	payload := `{"title":"Test Feature Request Title","description":"This is a test description with enough words","requestType":"feature"}`
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests", strings.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -141,8 +141,8 @@ func TestCreateFeatureRequest_InvalidJSON(t *testing.T) {
 	app.Post("/api/feedback/requests", handler.CreateFeatureRequest)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/feedback/requests", strings.NewReader(`invalid json`))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)

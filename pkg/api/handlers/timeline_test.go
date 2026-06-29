@@ -32,8 +32,8 @@ func TestTimelineGetTimeline_Success(t *testing.T) {
 	mockStore.On("QueryTimeline", mock.Anything).Return(expectedEvents, nil)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/timeline?cluster=test-cluster", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -56,8 +56,8 @@ func TestTimelineGetTimeline_Error(t *testing.T) {
 	mockStore.On("QueryTimeline", mock.Anything).Return(nil, assert.AnError)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/timeline", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)

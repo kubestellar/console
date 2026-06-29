@@ -25,8 +25,8 @@ func TestWebhook_NoSecretConfigured_Returns503(t *testing.T) {
 
 	payload := requireMarshalJSON(t, map[string]interface{}{"action": "opened"})
 	req, err := http.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Event", "issues")
 	req.Header.Set("X-Hub-Signature-256", "sha256=anything")
@@ -50,8 +50,8 @@ func TestWebhook_OversizedPayload_Returns413(t *testing.T) {
 
 	sig := signWebhookPayload(oversized, testWebhookSecret)
 	req, err := http.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(oversized))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Event", "issues")
 	req.Header.Set("X-Hub-Signature-256", sig)
@@ -85,8 +85,8 @@ func TestWebhook_EmptySignatureHeader_Returns401(t *testing.T) {
 
 	// No signature header at all
 	req, err := http.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Event", "issues")
 
@@ -103,8 +103,8 @@ func TestWebhook_ShortSignatureHeader_Returns401(t *testing.T) {
 
 	payload := requireMarshalJSON(t, map[string]interface{}{"action": "opened"})
 	req, err := http.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
-	req.Host = "localhost"
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Event", "issues")
 	req.Header.Set("X-Hub-Signature-256", "short")

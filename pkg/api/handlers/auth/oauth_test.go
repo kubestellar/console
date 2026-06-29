@@ -191,8 +191,8 @@ func TestAuthOAuth_GitHubLoginAndCallback_SuccessFlow(t *testing.T) {
 	app.Get("/auth/github/callback", h.GitHubCallback)
 
 	loginReq, err := http.NewRequest(http.MethodGet, "/auth/github", nil)
-	loginReq.Host = "localhost"
 	require.NoError(t, err)
+	loginReq.Host = "localhost"
 	loginResp, err := app.Test(loginReq, 5000)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusTemporaryRedirect, loginResp.StatusCode)
@@ -209,8 +209,8 @@ func TestAuthOAuth_GitHubLoginAndCallback_SuccessFlow(t *testing.T) {
 	require.NotEmpty(t, state)
 
 	callbackReq, err := http.NewRequest(http.MethodGet, "/auth/github/callback?code=test-code&state="+url.QueryEscape(state), nil)
-	callbackReq.Host = "localhost"
 	require.NoError(t, err)
+	callbackReq.Host = "localhost"
 	callbackResp, err := app.Test(callbackReq, 5000)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusTemporaryRedirect, callbackResp.StatusCode)
