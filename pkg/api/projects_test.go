@@ -2,29 +2,8 @@ package api
 
 import "testing"
 
-func TestGetProjectDashboards_KnownProject(t *testing.T) {
-dashboards := getProjectDashboards("kubestellar")
-if dashboards == nil {
-t.Fatal("expected non-nil dashboard list for 'kubestellar' project")
-}
-if len(dashboards) == 0 {
-t.Fatal("expected non-empty dashboard list for 'kubestellar' project")
-}
-// Verify key dashboards are present
-required := []string{"dashboard", "clusters", "compliance", "security", "workloads"}
-for _, r := range required {
-found := false
-for _, d := range dashboards {
-if d == r {
-found = true
-break
-}
-}
-if !found {
-t.Errorf("expected dashboard %q in kubestellar presets, not found", r)
-}
-}
-}
+// TestGetProjectDashboards_KnownProject lives in buildinfo_test.go (PR #17363).
+// The additional cases below cover edge cases not in that test.
 
 func TestGetProjectDashboards_UnknownProject(t *testing.T) {
 dashboards := getProjectDashboards("nonexistent-project")
