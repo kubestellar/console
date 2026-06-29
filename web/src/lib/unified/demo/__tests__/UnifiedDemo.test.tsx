@@ -67,7 +67,6 @@ function ContextConsumer() {
       <button data-testid="regen" onClick={() => ctx.regenerate('test-id')}>Regen</button>
     </div>
   )
-  getDemoMode: vi.fn(() => false),
 }
 
 /** Renders a component using useUnifiedData */
