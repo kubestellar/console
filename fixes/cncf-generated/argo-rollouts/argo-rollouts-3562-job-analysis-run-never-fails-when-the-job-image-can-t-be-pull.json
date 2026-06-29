@@ -1,0 +1,79 @@
+{
+  "version": "kc-mission-v1",
+  "name": "argo-rollouts-3562-job-analysis-run-never-fails-when-the-job-image-can-t-be-pull",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "argo-rollouts: Job Analysis Run never fails when the job image can't be pulled (it just succeeds and promotes).",
+    "description": "Job Analysis Run never fails when the job image can't be pulled (it just succeeds and promotes).. This issue affects 22+ users.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify argo-rollouts troubleshoot symptoms",
+        "description": "Check for the issue in your argo-rollouts deployment:\n```bash\nkubectl get pods -n argo-rollouts -l app.kubernetes.io/name=argo-rollouts\nkubectl logs -l app.kubernetes.io/name=argo-rollouts -n argo-rollouts --tail=100 | grep -i error\n```\nLook for errors or warnings in the logs that may indicate the issue."
+      },
+      {
+        "title": "Review argo-rollouts configuration",
+        "description": "Inspect the relevant argo-rollouts configuration:\n```bash\nkubectl get all -n argo-rollouts -l app.kubernetes.io/name=argo-rollouts\nkubectl get configmap -n argo-rollouts -l app.kubernetes.io/part-of=argo-rollouts\n```\nChecklist:\r\r\n\nAnalysis Run of type job never fails when the job image can't be pulled (it just succeeds and promotes). When Job pods can't pull image it goes into `ErrImagePull` indefinitely and the job itself does not Fail."
+      },
+      {
+        "title": "Apply the fix for Job Analysis Run never fails when the job image can't be…",
+        "description": "This is the first part of an effort to revamp how Job metrics work in Argo Rollouts. Currently the job metric is very limited and doesn't have the capabilities of the other providers for successConditions and failure conditions. More details at\n```yaml\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test-deployment\n  namespace: test-namespace\nspec:\n  replicas: 0\n  selector:\n    matchLabels:\n      app: nginx\n  template:\n    metadata:\n      labels:\n        app: nginx\n    spec:\n      containers:\n        - name: nginx\n          image: nginx:1.9.8 # update it to 1.19.0 to trigger a rollout, as the first time will only create the pods.\n          ports:\n            - containerPort: 8080\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: nginx-stable\n  namespace: test-namespace\nspec:\n  selector:\n    app: nginx\n  ports:\n  - port: 80\n    target\n```"
+      },
+      {
+        "title": "Confirm Job Analysis Run never fails when the job image… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=argo-rollouts -n argo-rollouts --tail=50 --since=5m\nkubectl get events -n argo-rollouts --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that the issue symptoms are gone."
+      }
+    ],
+    "resolution": {
+      "summary": "This is the first part of an effort to revamp how Job metrics work in Argo Rollouts. Currently the job metric is very limited and doesn't have the capabilities of the other providers for successConditions and failure conditions. More details at https://github.com/argoproj/argo-rollouts/issues/2250\n\nThis PR makes a job that is terminated to report as inconclusive instead of successful.",
+      "codeSnippets": [
+        "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test-deployment\n  namespace: test-namespace\nspec:\n  replicas: 0\n  selector:\n    matchLabels:\n      app: nginx\n  template:\n    metadata:\n      labels:\n        app: nginx\n    spec:\n      containers:\n        - name: nginx\n          image: nginx:1.9.8 # update it to 1.19.0 to trigger a rollout, as the first time will only create the pods.\n          ports:\n            - containerPort: 8080\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: nginx-stable\n  namespace: test-namespace\nspec:\n  selector:\n    app: nginx\n  ports:\n  - port: 80\n    targetPort: 8080\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: nginx-canary\n  namespace: test-namespace\nspec:\n  selector:\n      app: nginx\n  ports:\n  - port: 80\n    targetPort: 8080\n---\napiVersion: arg"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "argo-rollouts",
+      "graduated",
+      "app-definition",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "argo-rollouts"
+    ],
+    "targetResourceKinds": [
+      "Pod",
+      "Deployment",
+      "Namespace"
+    ],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/argoproj/argo-rollouts/issues/3562",
+      "repo": "https://github.com/argoproj/argo-rollouts",
+      "pr": "https://github.com/argoproj/argo-rollouts/pull/4602"
+    },
+    "reactions": 22,
+    "comments": 8,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with argo-rollouts installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-29T07:45:19.596Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
