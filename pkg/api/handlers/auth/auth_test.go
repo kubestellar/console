@@ -337,7 +337,6 @@ func TestGitHubLogin_Redirects(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
-
 	loc, _ := resp.Location()
 	assert.Contains(t, loc.String(), "github.com/login/oauth/authorize")
 	assert.Contains(t, loc.String(), "client_id=client-id")
@@ -766,10 +765,12 @@ func TestGitHubCallback_SanitizesErrorDescription(t *testing.T) {
 
 	// Include CR/LF in the query param; after URL decoding the handler
 	// should strip the control characters before reflecting them.
-	req, _ := http.NewRequest("GET",
-	req.Host = "localhost"
+	req, _ := http.NewRequest(
+		"GET",
 		"/auth/callback?error=access_denied&error_description=bad%0D%0Ainjected",
-		nil)
+		nil,
+	)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
