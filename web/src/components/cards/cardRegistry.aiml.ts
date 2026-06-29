@@ -10,6 +10,7 @@ const ConsoleHealthCheckCard = safeLazy(() => import('./console-missions/Console
 const ConsoleIssuesCard = safeLazy(() => import('./console-missions/ConsoleIssuesCard'), 'ConsoleIssuesCard')
 const ConsoleKubeconfigAuditCard = safeLazy(() => import('./console-missions/ConsoleKubeconfigAuditCard'), 'ConsoleKubeconfigAuditCard')
 const ConsoleOfflineDetectionCard = safeLazy(() => import('./console-missions/ConsoleOfflineDetectionCard'), 'ConsoleOfflineDetectionCard')
+const EPPHealth = safeLazy(() => import('./EPPHealth'), 'EPPHealth')
 const EPPRouting = safeLazy(() => _llmdBundle, 'EPPRouting')
 const HardwareLeaderboard = safeLazy(() => _llmdBundle, 'HardwareLeaderboard')
 const KVCacheMonitor = safeLazy(() => _llmdBundle, 'KVCacheMonitor')
@@ -56,13 +57,13 @@ const ThroughputComparison = safeLazy(() => _llmdBundle, 'ThroughputComparison')
  * AI/ML workload and agent cards.
  * Cards:
  * acmm_feedback_loops, acmm_level, acmm_recommendations, benchmark_hero, console_ai_health_check,
- * console_ai_issues, console_ai_kubeconfig_audit, console_ai_offline_detection, epp_routing,
- * hardware_leaderboard, kagent_agent_discovery, kagent_agent_fleet, kagent_model_providers,
- * kagent_security, kagent_status, kagent_tool_registry, kagent_topology, kagenti_agent_discovery,
- * kagenti_agent_fleet, kagenti_build_pipeline, kagenti_security, kagenti_security_posture,
- * kagenti_status, kagenti_tool_registry, kagenti_topology, kvcache_monitor, latency_breakdown,
- * llm_inference, llm_models, llmd_ai_insights, llmd_configurator, llmd_flow, llmd_stack_monitor,
- * ml_jobs, ml_notebooks, nightly_e2e_status, pareto_frontier, pd_disaggregation,
+ * console_ai_issues, console_ai_kubeconfig_audit, console_ai_offline_detection, epp_health,
+ * epp_routing, hardware_leaderboard, kagent_agent_discovery, kagent_agent_fleet,
+ * kagent_model_providers, kagent_security, kagent_status, kagent_tool_registry, kagent_topology,
+ * kagenti_agent_discovery, kagenti_agent_fleet, kagenti_build_pipeline, kagenti_security,
+ * kagenti_security_posture, kagenti_status, kagenti_tool_registry, kagenti_topology, kvcache_monitor,
+ * latency_breakdown, llm_inference, llm_models, llmd_ai_insights, llmd_configurator, llmd_flow,
+ * llmd_stack_monitor, ml_jobs, ml_notebooks, nightly_e2e_status, pareto_frontier, pd_disaggregation,
  * performance_timeline, provider_health, prow_history, prow_jobs, prow_status,
  * resource_utilization, throughput_comparison
  */
@@ -83,6 +84,7 @@ const components: Record<string, CardComponent> = {
   console_ai_issues: ConsoleIssuesCard,
   console_ai_kubeconfig_audit: ConsoleKubeconfigAuditCard,
   console_ai_offline_detection: ConsoleOfflineDetectionCard,
+  epp_health: EPPHealth,
   epp_routing: EPPRouting,
   hardware_leaderboard: HardwareLeaderboard,
   kagent_agent_discovery: KagentAgentDiscovery,
@@ -125,6 +127,7 @@ const components: Record<string, CardComponent> = {
 export const aimlCardRegistry: CardRegistryDomain = {
   components,
   demoDataCards: new Set([
+    'epp_health',
     'kagent_agent_discovery',
     'kagent_agent_fleet',
     'kagent_model_providers',
@@ -145,6 +148,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     'ml_notebooks',
   ]),
   liveDataCards: new Set([
+    'epp_health',
     'kagent_agent_discovery',
     'kagent_agent_fleet',
     'kagent_model_providers',
@@ -173,6 +177,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     console_ai_issues: () => import('./console-missions/ConsoleIssuesCard'),
     console_ai_kubeconfig_audit: () => import('./console-missions/ConsoleKubeconfigAuditCard'),
     console_ai_offline_detection: () => import('./console-missions/ConsoleOfflineDetectionCard'),
+    epp_health: () => import('./EPPHealth'),
     epp_routing: () => import('./llmd'),
     hardware_leaderboard: () => import('./llmd'),
     kagent_agent_discovery: () => import('./kagent'),
@@ -217,6 +222,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     console_ai_issues: 6,
     console_ai_kubeconfig_audit: 6,
     console_ai_offline_detection: 6,
+    epp_health: 4,
     epp_routing: 6,
     hardware_leaderboard: 12,
     kagent_agent_discovery: 4,

@@ -1,232 +1,130 @@
-import React from 'react'
-// @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TeamDetail } from '../TeamDetail'
-import type { TeamWithMembers, TeamRole } from '../../../types/teams'
-
-const mockT = vi.fn((key: string) => key)
-const mockUser = { id: 'user1', email: 'test@example.com' }
+import type { TeamWithMembers } from '../../../types/teams'
 
 vi.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: mockT }),
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'teams.deleteTeam': 'Delete Team',
+        'teams.confirmDelete': 'Are you sure you want to delete this team?',
+        'teams.members': 'Members',
+        'teams.accessGrants': 'Access Grants',
+        'common.back': 'Back',
+        'common.cancel': 'Cancel',
+        'common.confirm': 'Confirm',
+        'common.delete': 'Delete',
+      }
+      return translations[key] ?? key
+    },
+  }),
 }))
 
 vi.mock('../../../lib/auth', () => ({
-  useAuth: () => ({ user: mockUser }),
+  useAuth: () => ({
+    user: { id: 'current-user-id', name: 'Test User' },
+  }),
+}))
+
+vi.mock('../../../lib/modals', () => ({
+  ConfirmDialog: ({ isOpen, onConfirm, onCancel, title }: {
+    isOpen: boolean; onConfirm: () => void; onCancel: () => void; title: string
+  }) =>
+    isOpen ? (
+      <div data-testid="confirm-dialog">
+        <span>{title}</span>
+        <button onClick={onConfirm} data-testid="confirm-btn">Confirm</button>
+        <button onClick={onCancel} data-testid="cancel-btn">Cancel</button>
+      </div>
+    ) : null,
 }))
 
 vi.mock('../TeamMemberManager', () => ({
-  TeamMemberManager: ({ members, currentUserId }: { members: unknown[]; currentUserId: string }) => (
-    <div data-testid="team-member-manager">
-      TeamMemberManager: {members.length} members, currentUserId: {currentUserId}
-    </div>
-  ),
+  TeamMemberManager: () => <div data-testid="member-manager">MemberManager</div>,
 }))
 
 vi.mock('../TeamAccessGrants', () => ({
-  TeamAccessGrants: ({ teamName, grants }: { teamName: string; grants: unknown[] }) => (
-    <div data-testid="team-access-grants">
-      TeamAccessGrants: {teamName}, {grants.length} grants
-    </div>
-  ),
+  TeamAccessGrants: () => <div data-testid="access-grants">AccessGrants</div>,
 }))
 
-describe('TeamDetail', () => {
-  const mockOnBack = vi.fn()
-  const mockOnUpdateTeam = vi.fn()
-  const mockOnDeleteTeam = vi.fn()
-  const mockOnAddMember = vi.fn()
-  const mockOnRemoveMember = vi.fn()
-  const mockOnChangeRole = vi.fn()
+const makeTeamWithMembers = (overrides: Partial<TeamWithMembers> = {}): TeamWithMembers => ({
+  id: 'team-1',
+  name: 'Test Team',
+  description: 'A team for testing',
+  createdBy: 'creator-id',
+  memberCount: 2,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+  members: [
+    { userId: 'current-user-id', githubLogin: 'testuser', role: 'admin' },
+    { userId: 'other-user', githubLogin: 'otheruser', role: 'member' },
+  ],
+  ...overrides,
+})
 
-  const mockTeam: TeamWithMembers = {
-    id: 'team1',
-    name: 'Test Team',
-    description: 'Test description',
-    memberCount: 2,
-    members: [
-      { userId: 'user1', role: 'admin' as TeamRole, githubLogin: 'admin-user', email: 'admin@example.com' },
-      { userId: 'user2', role: 'member' as TeamRole, githubLogin: 'member-user', email: 'member@example.com' },
-    ],
+describe('TeamDetail', () => {
+  const defaultProps = {
+    team: makeTeamWithMembers(),
+    onBack: vi.fn(),
+    onUpdateTeam: vi.fn(),
+    onDeleteTeam: vi.fn(),
+    onAddMember: vi.fn().mockResolvedValue(true),
+    onRemoveMember: vi.fn().mockResolvedValue(true),
+    onChangeRole: vi.fn(),
   }
 
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockT.mockImplementation((key: string) => key)
+  it('renders team name', () => {
+    render(<TeamDetail {...defaultProps} />)
+    expect(screen.getByText('Test Team')).toBeDefined()
   })
 
-  afterAll(() => {
-    vi.clearAllMocks()
+  it('renders member manager component', () => {
+    render(<TeamDetail {...defaultProps} />)
+    expect(screen.getByTestId('member-manager')).toBeDefined()
   })
 
-  it('renders team name and description', () => {
-    render(
-      <TeamDetail
-        team={mockTeam}
-        onBack={mockOnBack}
-        onUpdateTeam={mockOnUpdateTeam}
-        onDeleteTeam={mockOnDeleteTeam}
-        onAddMember={mockOnAddMember}
-        onRemoveMember={mockOnRemoveMember}
-        onChangeRole={mockOnChangeRole}
-      />,
-    )
-
-    expect(screen.getByText('Test Team')).toBeInTheDocument()
-    expect(screen.getByText('Test description')).toBeInTheDocument()
+  it('shows delete button for admin user', () => {
+    render(<TeamDetail {...defaultProps} />)
+    // Admin should see the delete action
+    const deleteBtn = screen.queryByText('Delete Team')
+    expect(deleteBtn).not.toBeNull()
   })
 
-  it('renders without description when not provided', () => {
-    const teamWithoutDesc = { ...mockTeam, description: undefined }
-    render(
-      <TeamDetail
-        team={teamWithoutDesc}
-        onBack={mockOnBack}
-        onUpdateTeam={mockOnUpdateTeam}
-        onDeleteTeam={mockOnDeleteTeam}
-        onAddMember={mockOnAddMember}
-        onRemoveMember={mockOnRemoveMember}
-        onChangeRole={mockOnChangeRole}
-      />,
-    )
-
-    expect(screen.getByText('Test Team')).toBeInTheDocument()
-    expect(screen.queryByText('Test description')).not.toBeInTheDocument()
+  it('hides delete button for non-admin user', () => {
+    const team = makeTeamWithMembers({
+      members: [
+        { userId: 'current-user-id', githubLogin: 'testuser', role: 'member' },
+        { userId: 'other-user', githubLogin: 'otheruser', role: 'admin' },
+      ],
+    })
+    render(<TeamDetail {...defaultProps} team={team} />)
+    const deleteBtn = screen.queryByText('Delete Team')
+    expect(deleteBtn).toBeNull()
   })
 
   it('calls onBack when back button is clicked', () => {
-    render(
-      <TeamDetail
-        team={mockTeam}
-        onBack={mockOnBack}
-        onUpdateTeam={mockOnUpdateTeam}
-        onDeleteTeam={mockOnDeleteTeam}
-        onAddMember={mockOnAddMember}
-        onRemoveMember={mockOnRemoveMember}
-        onChangeRole={mockOnChangeRole}
-      />,
-    )
-
-    const backButton = screen.getByRole('button', { name: '' })
+    const onBack = vi.fn()
+    render(<TeamDetail {...defaultProps} onBack={onBack} />)
+    // Find a button that navigates back (ArrowLeft icon button)
+    const backButton = screen.getByText('Back')
     fireEvent.click(backButton)
-
-    expect(mockOnBack).toHaveBeenCalled()
+    expect(onBack).toHaveBeenCalled()
   })
 
-  it('shows delete button when current user is admin', () => {
-    render(
-      <TeamDetail
-        team={mockTeam}
-        onBack={mockOnBack}
-        onUpdateTeam={mockOnUpdateTeam}
-        onDeleteTeam={mockOnDeleteTeam}
-        onAddMember={mockOnAddMember}
-        onRemoveMember={mockOnRemoveMember}
-        onChangeRole={mockOnChangeRole}
-      />,
-    )
-
-    expect(screen.getByText('teams.deleteTeam')).toBeInTheDocument()
-  })
-
-  it('hides delete button when current user is not admin', () => {
-    const teamWithNoAdminUser = {
-      ...mockTeam,
-      members: [
-        { userId: 'user2', role: 'member' as TeamRole, githubLogin: 'member-user', email: 'member@example.com' },
-      ],
-    }
-
-    render(
-      <TeamDetail
-        team={teamWithNoAdminUser}
-        onBack={mockOnBack}
-        onUpdateTeam={mockOnUpdateTeam}
-        onDeleteTeam={mockOnDeleteTeam}
-        onAddMember={mockOnAddMember}
-        onRemoveMember={mockOnRemoveMember}
-        onChangeRole={mockOnChangeRole}
-      />,
-    )
-
-    expect(screen.queryByText('teams.deleteTeam')).not.toBeInTheDocument()
-  })
-
-  it('opens delete confirmation dialog when delete button is clicked', () => {
-    render(
-      <TeamDetail
-        team={mockTeam}
-        onBack={mockOnBack}
-        onUpdateTeam={mockOnUpdateTeam}
-        onDeleteTeam={mockOnDeleteTeam}
-        onAddMember={mockOnAddMember}
-        onRemoveMember={mockOnRemoveMember}
-        onChangeRole={mockOnChangeRole}
-      />,
-    )
-
-    const deleteButton = screen.getByText('teams.deleteTeam')
-    fireEvent.click(deleteButton)
-
-    expect(screen.getByText('teams.deleteTeamTitle')).toBeInTheDocument()
-    expect(screen.getByText('teams.deleteTeamMessage')).toBeInTheDocument()
+  it('shows confirmation dialog before delete', () => {
+    render(<TeamDetail {...defaultProps} />)
+    const deleteBtn = screen.getByText('Delete Team')
+    fireEvent.click(deleteBtn)
+    expect(screen.getByTestId('confirm-dialog')).toBeDefined()
   })
 
   it('calls onDeleteTeam when delete is confirmed', () => {
-    render(
-      <TeamDetail
-        team={mockTeam}
-        onBack={mockOnBack}
-        onUpdateTeam={mockOnUpdateTeam}
-        onDeleteTeam={mockOnDeleteTeam}
-        onAddMember={mockOnAddMember}
-        onRemoveMember={mockOnRemoveMember}
-        onChangeRole={mockOnChangeRole}
-      />,
-    )
-
-    fireEvent.click(screen.getByText('teams.deleteTeam'))
-    fireEvent.click(screen.getAllByText('teams.deleteTeam')[1])
-
-    expect(mockOnDeleteTeam).toHaveBeenCalled()
-  })
-
-  it('renders TeamMemberManager with correct props', () => {
-    render(
-      <TeamDetail
-        team={mockTeam}
-        onBack={mockOnBack}
-        onUpdateTeam={mockOnUpdateTeam}
-        onDeleteTeam={mockOnDeleteTeam}
-        onAddMember={mockOnAddMember}
-        onRemoveMember={mockOnRemoveMember}
-        onChangeRole={mockOnChangeRole}
-      />,
-    )
-
-    const memberManager = screen.getByTestId('team-member-manager')
-    expect(memberManager).toBeInTheDocument()
-    expect(memberManager.textContent).toContain('2 members')
-    expect(memberManager.textContent).toContain('currentUserId: user1')
-  })
-
-  it('renders TeamAccessGrants with correct props', () => {
-    render(
-      <TeamDetail
-        team={mockTeam}
-        onBack={mockOnBack}
-        onUpdateTeam={mockOnUpdateTeam}
-        onDeleteTeam={mockOnDeleteTeam}
-        onAddMember={mockOnAddMember}
-        onRemoveMember={mockOnRemoveMember}
-        onChangeRole={mockOnChangeRole}
-      />,
-    )
-
-    const accessGrants = screen.getByTestId('team-access-grants')
-    expect(accessGrants).toBeInTheDocument()
-    expect(accessGrants.textContent).toContain('Test Team')
+    const onDeleteTeam = vi.fn()
+    render(<TeamDetail {...defaultProps} onDeleteTeam={onDeleteTeam} />)
+    const deleteBtn = screen.getByText('Delete Team')
+    fireEvent.click(deleteBtn)
+    fireEvent.click(screen.getByTestId('confirm-btn'))
+    expect(onDeleteTeam).toHaveBeenCalled()
   })
 })

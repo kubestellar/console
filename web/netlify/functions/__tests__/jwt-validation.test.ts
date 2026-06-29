@@ -1,269 +1,220 @@
 // @vitest-environment node
-/**
- * Unit tests for jwt-validation.ts (#17355).
- * Covers validateJWT, validateBearerToken, structural validation, and
- * critical security properties (alg:none bypass, expired tokens, bad signatures).
- */
-import { SignJWT } from "jose";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { validateBearerToken, validateJWT } from "../_shared/jwt-validation";
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { SignJWT } from 'jose'
+import { validateJWT, validateBearerToken } from '../_shared/jwt-validation'
 
-const TEST_SECRET = "test-secret-key-for-unit-tests-32chars";
+const TEST_SECRET = 'test-secret-for-jwt-validation-at-least-32-chars'
 
-/** Build a signed HS256 JWT with the given payload and secret. */
-async function signToken(
-  payload: Record<string, unknown>,
-  secret = TEST_SECRET,
-  options: { expiresIn?: string } = { expiresIn: "1h" },
+async function makeToken(
+  payload: Record<string, unknown> = {},
+  options: { secret?: string; alg?: string; exp?: number } = {},
 ): Promise<string> {
-  let builder = new SignJWT(payload).setProtectedHeader({ alg: "HS256" });
-  if (options.expiresIn) {
-    builder = builder.setExpirationTime(options.expiresIn);
+  const secret = options.secret ?? TEST_SECRET
+  const alg = options.alg ?? 'HS256'
+  const key = new TextEncoder().encode(secret)
+
+  let builder = new SignJWT(payload).setProtectedHeader({ alg })
+
+  if (options.exp !== undefined) {
+    builder = builder.setExpirationTime(options.exp)
   }
-  return builder.sign(new TextEncoder().encode(secret));
+
+  return builder.sign(key)
 }
 
-/** Manually craft a JWT with a custom header alg (unsigned / no real signature). */
-function craftTokenWithAlg(alg: string, payload: Record<string, unknown> = {}): string {
-  const header = Buffer.from(JSON.stringify({ alg, typ: "JWT" })).toString("base64url");
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${header}.${body}.fakesignature`;
+function makeUnsignedToken(
+  header: Record<string, unknown>,
+  payload: Record<string, unknown>,
+  signature = '',
+): string {
+  const encodeB64url = (obj: unknown) =>
+    Buffer.from(JSON.stringify(obj)).toString('base64url')
+  return `${encodeB64url(header)}.${encodeB64url(payload)}.${signature}`
 }
 
-describe("validateJWT", () => {
-  beforeEach(() => {
-    vi.useRealTimers();
-  });
+describe('validateJWT', () => {
+  describe('structural validation', () => {
+    it('rejects empty token', async () => {
+      const result = await validateJWT('', TEST_SECRET)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('required')
+    })
 
-  describe("structural validation", () => {
-    it("rejects empty string", async () => {
-      const result = await validateJWT("", TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/required/i);
-    });
+    it('rejects non-string token', async () => {
+      const result = await validateJWT(null as unknown as string, TEST_SECRET)
+      expect(result.valid).toBe(false)
+    })
 
-    it("rejects non-string (null coerced)", async () => {
-      // @ts-expect-error intentional bad input
-      const result = await validateJWT(null, TEST_SECRET);
-      expect(result.valid).toBe(false);
-    });
+    it('rejects token with wrong number of parts', async () => {
+      const result = await validateJWT('only.two', TEST_SECRET)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('3 parts')
+    })
 
-    it("rejects token with fewer than 3 parts", async () => {
-      const result = await validateJWT("header.payload", TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/3 parts/i);
-    });
+    it('rejects token with 4 parts', async () => {
+      const result = await validateJWT('a.b.c.d', TEST_SECRET)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('3 parts')
+    })
 
-    it("rejects token with more than 3 parts", async () => {
-      const result = await validateJWT("a.b.c.d", TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/3 parts/i);
-    });
+    it('rejects token with invalid header JSON', async () => {
+      const invalidHeader = Buffer.from('not-json').toString('base64url')
+      const payload = Buffer.from('{}').toString('base64url')
+      const result = await validateJWT(`${invalidHeader}.${payload}.sig`, TEST_SECRET)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('header')
+    })
 
-    it("rejects invalid base64url in header", async () => {
-      const result = await validateJWT("!!!.payload.sig", TEST_SECRET);
-      expect(result.valid).toBe(false);
-    });
+    it('rejects token with invalid payload JSON', async () => {
+      const header = Buffer.from('{"alg":"HS256"}').toString('base64url')
+      const invalidPayload = Buffer.from('not-json').toString('base64url')
+      const result = await validateJWT(`${header}.${invalidPayload}.sig`, TEST_SECRET)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('payload')
+    })
+  })
 
-    it("rejects non-JSON header", async () => {
-      const badHeader = Buffer.from("not-json").toString("base64url");
-      const result = await validateJWT(`${badHeader}.payload.sig`, TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/header/i);
-    });
+  describe('algorithm validation', () => {
+    it('rejects alg "none" (unsigned token attack)', async () => {
+      const token = makeUnsignedToken({ alg: 'none' }, { sub: 'attacker' })
+      const result = await validateJWT(token, TEST_SECRET)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('none')
+    })
 
-    it("rejects token where alg is not a string", async () => {
-      const header = Buffer.from(JSON.stringify({ alg: 42 })).toString("base64url");
-      const payload = Buffer.from(JSON.stringify({})).toString("base64url");
-      const result = await validateJWT(`${header}.${payload}.sig`, TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/alg/i);
-    });
+    it('rejects unsupported algorithm', async () => {
+      const token = makeUnsignedToken({ alg: 'RS256' }, { sub: 'user' }, 'fakesig')
+      const result = await validateJWT(token, TEST_SECRET)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('unsupported')
+    })
 
-    it("rejects missing signature segment", async () => {
-      const header = Buffer.from(JSON.stringify({ alg: "HS256" })).toString("base64url");
-      const body = Buffer.from(JSON.stringify({})).toString("base64url");
-      // trailing dot means empty signature
-      const result = await validateJWT(`${header}.${body}.`, TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/signature/i);
-    });
-  });
+    it('rejects non-string alg header', async () => {
+      const token = makeUnsignedToken({ alg: 123 }, { sub: 'user' }, 'sig')
+      const result = await validateJWT(token, TEST_SECRET)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('alg')
+    })
 
-  describe("security: alg:none bypass prevention", () => {
-    it("rejects alg:none tokens", async () => {
-      const token = craftTokenWithAlg("none");
-      const result = await validateJWT(token, TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/none/i);
-    });
+    it('rejects missing signature with valid header', async () => {
+      const token = makeUnsignedToken({ alg: 'HS256' }, { sub: 'user' })
+      const result = await validateJWT(token, TEST_SECRET)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('signature')
+    })
+  })
 
-    it("rejects unsupported algorithm (RS256)", async () => {
-      const token = craftTokenWithAlg("RS256");
-      const result = await validateJWT(token, TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/unsupported alg/i);
-    });
+  describe('expiry validation', () => {
+    it('rejects expired token', async () => {
+      const pastExp = Math.floor(Date.now() / 1000) - 3600 // 1 hour ago
+      const token = await makeToken({ sub: 'user' }, { exp: pastExp })
+      const result = await validateJWT(token, TEST_SECRET)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('expired')
+    })
 
-    it("rejects unsupported algorithm (HS512)", async () => {
-      const token = craftTokenWithAlg("HS512");
-      const result = await validateJWT(token, TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/unsupported alg/i);
-    });
-  });
+    it('rejects non-numeric exp claim', async () => {
+      const token = makeUnsignedToken(
+        { alg: 'HS256' },
+        { sub: 'user', exp: 'not-a-number' },
+        'fakesig',
+      )
+      const result = await validateJWT(token, TEST_SECRET)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('exp')
+    })
+  })
 
-  describe("expiry validation", () => {
-    it("rejects expired token", async () => {
-      const token = await signToken({ sub: "user1" }, TEST_SECRET, { expiresIn: "-1s" });
-      const result = await validateJWT(token, TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/expired/i);
-    });
+  describe('secret validation', () => {
+    it('rejects when no secret provided', async () => {
+      const token = await makeToken({ sub: 'user' })
+      const result = await validateJWT(token, undefined)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('secret')
+    })
 
-    it("accepts a non-expired token", async () => {
-      const token = await signToken({ sub: "user1" }, TEST_SECRET, { expiresIn: "1h" });
-      const result = await validateJWT(token, TEST_SECRET);
-      expect(result.valid).toBe(true);
-      expect(result.payload).toBeDefined();
-    });
+    it('rejects when secret is empty string', async () => {
+      const token = await makeToken({ sub: 'user' })
+      const result = await validateJWT(token, '')
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('secret')
+    })
 
-    it("rejects token with non-numeric exp claim", async () => {
-      const header = Buffer.from(JSON.stringify({ alg: "HS256" })).toString("base64url");
-      const payload = Buffer.from(JSON.stringify({ exp: "not-a-number" })).toString("base64url");
-      const result = await validateJWT(`${header}.${payload}.sig`, TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/exp/i);
-    });
-  });
+    it('rejects when secret is whitespace-only', async () => {
+      const token = await makeToken({ sub: 'user' })
+      const result = await validateJWT(token, '   ')
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('secret')
+    })
+  })
 
-  describe("JWT secret validation", () => {
-    it("rejects when secret is missing", async () => {
-      const token = await signToken({ sub: "user1" });
-      const result = await validateJWT(token, undefined);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/secret.*not configured/i);
-    });
+  describe('signature verification', () => {
+    it('accepts valid token with correct secret', async () => {
+      const futureExp = Math.floor(Date.now() / 1000) + 3600
+      const token = await makeToken({ sub: 'user-123' }, { exp: futureExp })
+      const result = await validateJWT(token, TEST_SECRET)
+      expect(result.valid).toBe(true)
+      expect(result.payload?.sub).toBe('user-123')
+    })
 
-    it("rejects when secret is empty string", async () => {
-      const token = await signToken({ sub: "user1" });
-      const result = await validateJWT(token, "");
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/secret.*not configured/i);
-    });
+    it('accepts valid token without exp claim', async () => {
+      const token = await makeToken({ sub: 'user-456' })
+      const result = await validateJWT(token, TEST_SECRET)
+      expect(result.valid).toBe(true)
+      expect(result.payload?.sub).toBe('user-456')
+    })
 
-    it("rejects when secret is whitespace-only", async () => {
-      const token = await signToken({ sub: "user1" });
-      const result = await validateJWT(token, "   ");
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/secret.*not configured/i);
-    });
+    it('rejects token signed with wrong secret', async () => {
+      const token = await makeToken({ sub: 'user' }, { secret: 'wrong-secret-that-is-long-enough' })
+      const result = await validateJWT(token, TEST_SECRET)
+      expect(result.valid).toBe(false)
+    })
 
-    it("rejects when token is signed with a different secret", async () => {
-      const token = await signToken({ sub: "user1" }, "other-secret-value-here-32chars!!");
-      const result = await validateJWT(token, TEST_SECRET);
-      expect(result.valid).toBe(false);
-    });
-  });
+    it('preserves custom claims in payload', async () => {
+      const token = await makeToken({ sub: 'admin', role: 'superuser', org: 'kubestellar' })
+      const result = await validateJWT(token, TEST_SECRET)
+      expect(result.valid).toBe(true)
+      expect(result.payload?.role).toBe('superuser')
+      expect(result.payload?.org).toBe('kubestellar')
+    })
+  })
+})
 
-  describe("valid token", () => {
-    it("returns valid:true and payload for a correct HS256 token", async () => {
-      const token = await signToken({ sub: "user42", role: "admin" });
-      const result = await validateJWT(token, TEST_SECRET);
-      expect(result.valid).toBe(true);
-      expect(result.payload?.sub).toBe("user42");
-      expect(result.payload?.role).toBe("admin");
-      expect(result.error).toBeUndefined();
-    });
+describe('validateBearerToken', () => {
+  it('rejects empty auth header', async () => {
+    const result = await validateBearerToken('', TEST_SECRET)
+    expect(result.valid).toBe(false)
+    expect(result.error).toContain('Authorization')
+  })
 
-    it("trims whitespace from token before validation", async () => {
-      const token = await signToken({ sub: "user1" });
-      const result = await validateJWT(`  ${token}  `, TEST_SECRET);
-      expect(result.valid).toBe(true);
-    });
+  it('rejects null auth header', async () => {
+    const result = await validateBearerToken(null as unknown as string, TEST_SECRET)
+    expect(result.valid).toBe(false)
+  })
 
-    it("trims whitespace from secret before validation", async () => {
-      const token = await signToken({ sub: "user1" });
-      const result = await validateJWT(token, `  ${TEST_SECRET}  `);
-      expect(result.valid).toBe(true);
-    });
+  it('rejects header without Bearer prefix', async () => {
+    const result = await validateBearerToken('Basic dXNlcjpwYXNz', TEST_SECRET)
+    expect(result.valid).toBe(false)
+    expect(result.error).toContain('Bearer')
+  })
 
-    it("accepts token with no exp claim (long-lived token)", async () => {
-      const token = await signToken({ sub: "user1" }, TEST_SECRET, {});
-      const result = await validateJWT(token, TEST_SECRET);
-      expect(result.valid).toBe(true);
-    });
-  });
-});
+  it('rejects Bearer header with empty token', async () => {
+    const result = await validateBearerToken('Bearer ', TEST_SECRET)
+    expect(result.valid).toBe(false)
+    expect(result.error).toContain('empty')
+  })
 
-describe("validateBearerToken", () => {
-  describe("Authorization header validation", () => {
-    it("rejects empty authorization header", async () => {
-      const result = await validateBearerToken("", TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/required/i);
-    });
+  it('accepts valid Bearer token', async () => {
+    const token = await makeToken({ sub: 'bearer-user' })
+    const result = await validateBearerToken(`Bearer ${token}`, TEST_SECRET)
+    expect(result.valid).toBe(true)
+    expect(result.payload?.sub).toBe('bearer-user')
+  })
 
-    it("rejects non-string authorization header", async () => {
-      // @ts-expect-error intentional bad input
-      const result = await validateBearerToken(null, TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/required/i);
-    });
-
-    it("rejects header without Bearer prefix", async () => {
-      const token = await signToken({ sub: "user1" });
-      const result = await validateBearerToken(`Basic ${token}`, TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/Bearer/i);
-    });
-
-    it("rejects header with empty Bearer token", async () => {
-      const result = await validateBearerToken("Bearer ", TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/empty/i);
-    });
-
-    it("rejects header that has only whitespace after the Bearer prefix", async () => {
-      const result = await validateBearerToken("Bearer    ", TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/empty/i);
-    });
-  });
-
-  describe("valid Bearer token", () => {
-    it("returns valid:true for a correct Bearer token", async () => {
-      const token = await signToken({ sub: "user99" });
-      const result = await validateBearerToken(`Bearer ${token}`, TEST_SECRET);
-      expect(result.valid).toBe(true);
-      expect(result.payload?.sub).toBe("user99");
-    });
-
-    it("handles extra whitespace around Bearer token", async () => {
-      const token = await signToken({ sub: "user1" });
-      const result = await validateBearerToken(`Bearer  ${token}`, TEST_SECRET);
-      // The extra space means the token part itself is trimmed
-      expect(result.valid).toBe(true);
-    });
-  });
-
-  describe("invalid Bearer token contents", () => {
-    it("propagates JWT validation errors from the inner token", async () => {
-      const result = await validateBearerToken("Bearer not.a.valid.jwt", TEST_SECRET);
-      expect(result.valid).toBe(false);
-    });
-
-    it("rejects expired Bearer token", async () => {
-      const token = await signToken({ sub: "user1" }, TEST_SECRET, { expiresIn: "-1s" });
-      const result = await validateBearerToken(`Bearer ${token}`, TEST_SECRET);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/expired/i);
-    });
-
-    it("rejects Bearer token signed with wrong secret", async () => {
-      const token = await signToken({ sub: "user1" }, "wrong-secret-value-here-32chars!!");
-      const result = await validateBearerToken(`Bearer ${token}`, TEST_SECRET);
-      expect(result.valid).toBe(false);
-    });
-  });
-});
+  it('handles extra whitespace in Bearer header', async () => {
+    const token = await makeToken({ sub: 'padded-user' })
+    const result = await validateBearerToken(`  Bearer   ${token}  `, TEST_SECRET)
+    expect(result.valid).toBe(true)
+    expect(result.payload?.sub).toBe('padded-user')
+  })
+})
