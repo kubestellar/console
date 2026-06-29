@@ -1,0 +1,60 @@
+name: Console Live Promote Failure Issue
+
+on:
+  workflow_run:
+    workflows:
+      - Console Live Promote
+      - Console Live macOS Canary
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Console Live canary workflow run ID to summarize.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+jobs:
+  create-or-update-issue:
+    name: Create or Update Console Live Canary Failure Issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.repository == 'kubestellar/console' && (github.event_name == 'workflow_dispatch' || contains(fromJSON('["failure","cancelled","timed_out"]'), github.event.workflow_run.conclusion))
+    env:
+      SOURCE_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download console live canary evidence
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ env.SOURCE_RUN_ID }}
+        run: |
+          mkdir -p console-live-promote-artifacts
+          gh run download "$RUN_ID" \
+            --repo "$REPOSITORY" \
+            --name console-live-promote-evidence \
+            --dir console-live-promote-artifacts || true
+          gh run download "$RUN_ID" \
+            --repo "$REPOSITORY" \
+            --name console-live-macos-popup-evidence \
+            --dir console-live-promote-artifacts || true
+          find console-live-promote-artifacts -maxdepth 8 -type f | sort || true
+
+      - name: Create or update AI-fix issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          SOURCE_RUN_ID: ${{ env.SOURCE_RUN_ID }}
+          ARTIFACT_ROOT: console-live-promote-artifacts
+        with:
+          script: |
+            const run = require('./.github/scripts/console-live-promote-failure-issue.cjs')
+            await run({ github, context, core })

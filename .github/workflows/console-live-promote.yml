@@ -1,0 +1,789 @@
+# Project-owned live regression target infrastructure.
+# Scheduled runs deploy the current main candidate to console-live and then run live canary tests.
+# Manual dry runs can still test a private ClusterIP canary by setting promoteProduction=false.
+name: Console Live Promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: 'Optional candidate image SHA to deploy before testing'
+        required: false
+        type: string
+      candidate_tag:
+        description: 'Optional candidate image tag to deploy before testing, for example main or a release candidate tag'
+        required: false
+        type: string
+      promoteProduction:
+        description: 'Deploy the candidate to public console-live before running tests'
+        required: false
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+  schedule:
+    - cron: '17 */12 * * *'
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: console-live-promote
+  cancel-in-progress: true
+
+env:
+  IMAGE_REPOSITORY: ${{ vars.CONSOLE_LIVE_IMAGE_REPOSITORY || 'ghcr.io/kubestellar/console' }}
+  LIVE_NAMESPACE: kubestellar-console-live
+  LIVE_RELEASE: kc-live
+  LIVE_DEPLOYMENT: kc-live-kubestellar-console
+  LIVE_CLUSTER_NAME: ${{ vars.CONSOLE_LIVE_CLUSTER_NAME || vars.LIVE_CLUSTER_PRIMARY_CONTEXT || 'console-live' }}
+  LIVE_SERVICE_ACCOUNT: ${{ vars.CONSOLE_LIVE_SERVICE_ACCOUNT || 'kc-live-kubestellar-console' }}
+  CANARY_RELEASE: ${{ vars.CONSOLE_LIVE_CANARY_RELEASE || 'kc-live-canary' }}
+  CANARY_DEPLOYMENT: ${{ vars.CONSOLE_LIVE_CANARY_DEPLOYMENT || 'kc-live-canary-kubestellar-console' }}
+  CANARY_SERVICE: ${{ vars.CONSOLE_LIVE_CANARY_SERVICE || 'kc-live-canary-kubestellar-console' }}
+  CANARY_LOCAL_URL: ${{ vars.CONSOLE_LIVE_CANARY_LOCAL_URL || 'http://127.0.0.1:18080' }}
+  LIVE_HOST: ${{ vars.CONSOLE_LIVE_HOST || 'console-live.kubestellar.io' }}
+  LIVE_URL: ${{ vars.CONSOLE_LIVE_URL || 'https://console-live.kubestellar.io' }}
+  LIVE_TLS_SECRET: console-live-kubestellar-io-tls
+  OAUTH_SECRET_NAME: kc-live-github-oauth
+  KUBECONFIG_SECRET_NAME: kc-live-kubeconfig
+  LIVE_CLUSTER_CONTEXTS: ${{ vars.LIVE_CLUSTER_CONTEXTS }}
+  LIVE_CLUSTER_EXPECTED_CONTEXTS: ${{ vars.LIVE_CLUSTER_EXPECTED_CONTEXTS }}
+  LIVE_CLUSTER_EXPECTED_READY_NODES: ${{ vars.LIVE_CLUSTER_EXPECTED_READY_NODES }}
+  LIVE_CLUSTER_FIXTURES: ${{ vars.LIVE_CLUSTER_FIXTURES || 'false' }}
+  LIVE_CLUSTER_FIXTURE_CONTEXT: ${{ vars.LIVE_CLUSTER_FIXTURE_CONTEXT || vars.LIVE_CLUSTER_PRIMARY_CONTEXT }}
+  LIVE_FIXTURE_NAMESPACE: ${{ vars.LIVE_FIXTURE_NAMESPACE || 'ks-live-ui-fixtures' }}
+  LIVE_SITE_AI_AUDIT: ${{ vars.LIVE_SITE_AI_AUDIT || 'off' }}
+  LIVE_CANARY_ROUTE_DELAY_MS: ${{ vars.LIVE_CANARY_ROUTE_DELAY_MS || '15000' }}
+  LIVE_CANARY_MIN_ROUTE_DELAY_MS: '15000'
+  LIVE_CANARY_PHASE_COOLDOWN_MS: ${{ vars.LIVE_CANARY_PHASE_COOLDOWN_MS || '90000' }}
+  LIVE_CANARY_MIN_PHASE_COOLDOWN_MS: '90000'
+  CONSOLE_LIVE_TEST_SESSION_COUNT: ${{ vars.CONSOLE_LIVE_TEST_SESSION_COUNT || '80' }}
+  CONSOLE_LIVE_ALLOWED_GITHUB_LOGINS: ${{ secrets.CONSOLE_LIVE_ALLOWED_GITHUB_LOGINS || vars.CONSOLE_LIVE_ALLOWED_GITHUB_LOGINS }}
+  CONSOLE_LIVE_ADMIN_GITHUB_LOGINS: ${{ secrets.CONSOLE_LIVE_ADMIN_GITHUB_LOGINS || vars.CONSOLE_LIVE_ADMIN_GITHUB_LOGINS }}
+  CONSOLE_LIVE_TEST_USER_ID: ${{ secrets.CONSOLE_LIVE_TEST_USER_ID || vars.CONSOLE_LIVE_TEST_USER_ID }}
+  CONSOLE_LIVE_TEST_GITHUB_LOGIN: ${{ secrets.CONSOLE_LIVE_TEST_GITHUB_LOGIN || vars.CONSOLE_LIVE_TEST_GITHUB_LOGIN }}
+  CONSOLE_LIVE_TEST_USER_ROLE: ${{ vars.CONSOLE_LIVE_TEST_USER_ROLE || 'admin' }}
+  PROMOTE_PRODUCTION: ${{ github.event_name == 'schedule' && 'true' || (github.event_name == 'workflow_dispatch' && inputs.promoteProduction || 'true') }}
+  CANDIDATE_SHA_INPUT: ${{ inputs.candidate_sha || '' }}
+  CANDIDATE_TAG_INPUT: ${{ inputs.candidate_tag || '' }}
+
+jobs:
+  promote:
+    name: Deploy Console Live Then Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    if: github.repository == 'kubestellar/console'
+    environment: console-live
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Normalize live canary pacing
+        shell: bash
+        run: |
+          set -euo pipefail
+          normalize_ms() {
+            local raw="$1"
+            local minimum="$2"
+            local label="$3"
+            if ! [[ "$raw" =~ ^[0-9]+$ ]]; then
+              echo "$minimum"
+              echo "${label}=${minimum} (defaulted from non-numeric '${raw}')" >> "$GITHUB_STEP_SUMMARY"
+              return
+            fi
+            if [ "$raw" -lt "$minimum" ]; then
+              echo "$minimum"
+              echo "${label}=${minimum} (raised from ${raw} to protect the 12-hour live target)" >> "$GITHUB_STEP_SUMMARY"
+              return
+            fi
+            echo "$raw"
+            echo "${label}=${raw}" >> "$GITHUB_STEP_SUMMARY"
+          }
+
+          route_delay="$(normalize_ms "${LIVE_CANARY_ROUTE_DELAY_MS:-}" "$LIVE_CANARY_MIN_ROUTE_DELAY_MS" LIVE_CANARY_ROUTE_DELAY_MS)"
+          phase_cooldown="$(normalize_ms "${LIVE_CANARY_PHASE_COOLDOWN_MS:-}" "$LIVE_CANARY_MIN_PHASE_COOLDOWN_MS" LIVE_CANARY_PHASE_COOLDOWN_MS)"
+          {
+            echo "LIVE_CANARY_ROUTE_DELAY_MS=$route_delay"
+            echo "LIVE_CANARY_PHASE_COOLDOWN_MS=$phase_cooldown"
+          } >> "$GITHUB_ENV"
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Validate required secrets
+        env:
+          CONSOLE_LIVE_KUBECONFIG_B64: ${{ secrets.CONSOLE_LIVE_KUBECONFIG_B64 }}
+          CONSOLE_LIVE_OAUTH_CLIENT_ID: ${{ secrets.CONSOLE_LIVE_OAUTH_CLIENT_ID }}
+          CONSOLE_LIVE_OAUTH_CLIENT_SECRET: ${{ secrets.CONSOLE_LIVE_OAUTH_CLIENT_SECRET }}
+          CONSOLE_LIVE_JWT_SECRET: ${{ secrets.CONSOLE_LIVE_JWT_SECRET }}
+          CONSOLE_LIVE_TEST_USER_ID: ${{ env.CONSOLE_LIVE_TEST_USER_ID }}
+          CONSOLE_LIVE_TEST_GITHUB_LOGIN: ${{ env.CONSOLE_LIVE_TEST_GITHUB_LOGIN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in \
+            CONSOLE_LIVE_KUBECONFIG_B64 \
+            CONSOLE_LIVE_OAUTH_CLIENT_ID \
+            CONSOLE_LIVE_OAUTH_CLIENT_SECRET \
+            CONSOLE_LIVE_JWT_SECRET \
+            CONSOLE_LIVE_TEST_USER_ID \
+            CONSOLE_LIVE_TEST_GITHUB_LOGIN \
+            CONSOLE_LIVE_ALLOWED_GITHUB_LOGINS \
+            CONSOLE_LIVE_ADMIN_GITHUB_LOGINS \
+            LIVE_CLUSTER_CONTEXTS \
+            LIVE_CLUSTER_EXPECTED_CONTEXTS \
+            LIVE_CLUSTER_EXPECTED_READY_NODES; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf '::error::Missing required secrets or vars: %s\n' "${missing[*]}"
+            exit 1
+          fi
+
+      - name: Configure deploy kubeconfig
+        env:
+          CONSOLE_LIVE_KUBECONFIG_B64: ${{ secrets.CONSOLE_LIVE_KUBECONFIG_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/console-live"
+          deploy_kubeconfig="$RUNNER_TEMP/console-live/deploy-kubeconfig"
+          printf '%s' "$CONSOLE_LIVE_KUBECONFIG_B64" | base64 -d > "$deploy_kubeconfig"
+          chmod 600 "$deploy_kubeconfig"
+          echo "DEPLOY_KUBECONFIG=$deploy_kubeconfig" >> "$GITHUB_ENV"
+          KUBECONFIG="$deploy_kubeconfig" kubectl config get-contexts
+
+      - name: Configure groundtruth kubeconfig
+        id: groundtruth-kubeconfig
+        env:
+          GROUNDTRUTH_KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          groundtruth_kubeconfig="$RUNNER_TEMP/console-live/groundtruth-kubeconfig"
+          if [ -n "${GROUNDTRUTH_KUBECONFIG_B64:-}" ]; then
+            printf '%s' "$GROUNDTRUTH_KUBECONFIG_B64" | base64 -d > "$groundtruth_kubeconfig"
+          else
+            cp "$DEPLOY_KUBECONFIG" "$groundtruth_kubeconfig"
+          fi
+          chmod 600 "$groundtruth_kubeconfig"
+          echo "path=$groundtruth_kubeconfig" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve candidate image
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${CANDIDATE_TAG_INPUT:-}" ]; then
+            candidate_tag="$CANDIDATE_TAG_INPUT"
+          elif [ -n "${CANDIDATE_SHA_INPUT:-}" ]; then
+            if ! [[ "$CANDIDATE_SHA_INPUT" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::Candidate SHA must be a 40-character lowercase git SHA"
+              exit 1
+            fi
+            candidate_tag="$CANDIDATE_SHA_INPUT"
+          else
+            candidate_tag="main"
+          fi
+          candidate_image="${IMAGE_REPOSITORY}:${candidate_tag}"
+          echo "tag=$candidate_tag" >> "$GITHUB_OUTPUT"
+          echo "image=$candidate_image" >> "$GITHUB_OUTPUT"
+          for i in 1 2 3; do
+            if docker buildx imagetools inspect "$candidate_image" >/dev/null; then
+              echo "Resolved candidate image $candidate_image"
+              exit 0
+            fi
+            echo "Candidate image not visible yet; retry $i/3"
+            sleep 15
+          done
+          echo "::error::Candidate image is not available in GHCR: $candidate_image"
+          exit 1
+
+      - name: Check current live image
+        id: live-state
+        shell: bash
+        run: |
+          set -euo pipefail
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          current_image="$(kubectl -n "$LIVE_NAMESPACE" get deploy "$LIVE_DEPLOYMENT" -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)"
+          candidate_tag="${{ steps.candidate.outputs.tag }}"
+          candidate_image="${{ steps.candidate.outputs.image }}"
+          mutable_tag=false
+          case "$candidate_tag" in
+            main|latest) mutable_tag=true ;;
+          esac
+          echo "current_image=${current_image:-missing}" >> "$GITHUB_OUTPUT"
+          echo "mutable_tag=$mutable_tag" >> "$GITHUB_OUTPUT"
+          if [ "$current_image" = "$candidate_image" ] && [ "$mutable_tag" != "true" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Live already runs $current_image"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            if [ "$current_image" = "$candidate_image" ]; then
+              echo "Live image string already matches mutable tag $candidate_image; forcing a rollout to pick up the latest manifest."
+            else
+              echo "Live currently runs ${current_image:-missing}; candidate is $candidate_image"
+            fi
+          fi
+
+      - name: Capture current live Helm revision
+        id: live-revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          revision="$(helm -n "$LIVE_NAMESPACE" history "$LIVE_RELEASE" -o json 2>/dev/null | jq -r '.[-1].revision // empty' || true)"
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "Current live Helm revision: ${revision:-none}"
+
+      - name: Prepare live secrets
+        env:
+          CONSOLE_LIVE_OAUTH_CLIENT_ID: ${{ secrets.CONSOLE_LIVE_OAUTH_CLIENT_ID }}
+          CONSOLE_LIVE_OAUTH_CLIENT_SECRET: ${{ secrets.CONSOLE_LIVE_OAUTH_CLIENT_SECRET }}
+          CONSOLE_LIVE_JWT_SECRET: ${{ secrets.CONSOLE_LIVE_JWT_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          kubectl -n "$LIVE_NAMESPACE" create secret generic "$OAUTH_SECRET_NAME" \
+            --from-literal=github-client-id="$CONSOLE_LIVE_OAUTH_CLIENT_ID" \
+            --from-literal=github-client-secret="$CONSOLE_LIVE_OAUTH_CLIENT_SECRET" \
+            --from-literal=jwt-secret="$CONSOLE_LIVE_JWT_SECRET" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy candidate to private canary
+        id: deploy_canary
+        shell: bash
+        run: |
+          set -euo pipefail
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          canary_values="$RUNNER_TEMP/console-live/canary-values.yaml"
+          canary_timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          cat > "$canary_values" <<EOF
+          image:
+            repository: "$IMAGE_REPOSITORY"
+            tag: "${{ steps.candidate.outputs.tag }}"
+            pullPolicy: Always
+          podAnnotations:
+            console-live.kubestellar.io/canary-run-id: "${{ github.run_id }}"
+            console-live.kubestellar.io/canary-candidate-tag: "${{ steps.candidate.outputs.tag }}"
+            console-live.kubestellar.io/canary-candidate-image: "${{ steps.candidate.outputs.image }}"
+            console-live.kubestellar.io/canary-at: "$canary_timestamp"
+          clusterName: "$LIVE_CLUSTER_NAME"
+          service:
+            type: ClusterIP
+          serviceAccount:
+            create: false
+            name: "$LIVE_SERVICE_ACCOUNT"
+          ingress:
+            enabled: false
+          route:
+            enabled: false
+          persistence:
+            enabled: false
+          database:
+            sqlitePath: /tmp/console-live-canary/console.db
+          backup:
+            enabled: false
+          podSecurityContext:
+            seccompProfile:
+              type: RuntimeDefault
+            fsGroup: 1001
+            fsGroupChangePolicy: OnRootMismatch
+          github:
+            existingSecret: "$OAUTH_SECRET_NAME"
+          jwt:
+            existingSecret: "$OAUTH_SECRET_NAME"
+          kubeconfig:
+            existingSecret: "$KUBECONFIG_SECRET_NAME"
+          auth:
+            allowedGitHubLogins: "$CONSOLE_LIVE_ALLOWED_GITHUB_LOGINS"
+            adminGitHubLogins: "$CONSOLE_LIVE_ADMIN_GITHUB_LOGINS"
+          rbac:
+            create: false
+            resourceQuotasReadOnly: true
+            namespaceCreationEnabled: false
+          selfUpgrade:
+            enabled: false
+          extraEnv:
+            - name: FRONTEND_URL
+              value: "$CANARY_LOCAL_URL"
+            - name: DEV_MODE
+              value: "false"
+            - name: CLUSTER_BACKED_MODE
+              value: "true"
+            - name: CONSOLE_LIVE_TEST_MODE
+              value: "true"
+            - name: SUPPRESS_OPTIONAL_POLLERS
+              value: "true"
+            - name: WATCHDOG_RUNTIME_FILE
+              value: /tmp/kc-watcher-runtime.env
+            - name: CONSOLE_LIVE_TEST_USER_BOOTSTRAP
+              value: "true"
+            - name: CONSOLE_LIVE_TEST_USER_ID
+              value: "$CONSOLE_LIVE_TEST_USER_ID"
+            - name: CONSOLE_LIVE_TEST_GITHUB_LOGIN
+              value: "$CONSOLE_LIVE_TEST_GITHUB_LOGIN"
+            - name: CONSOLE_LIVE_TEST_USER_ROLE
+              value: "$CONSOLE_LIVE_TEST_USER_ROLE"
+          EOF
+          if ! helm upgrade --install "$CANARY_RELEASE" ./deploy/helm/kubestellar-console \
+            --namespace "$LIVE_NAMESPACE" \
+            --reset-values \
+            -f "$canary_values" \
+            --wait \
+            --timeout 10m; then
+            echo "::group::Private canary diagnostics"
+            helm status "$CANARY_RELEASE" -n "$LIVE_NAMESPACE" || true
+            kubectl -n "$LIVE_NAMESPACE" get all -l "app.kubernetes.io/instance=$CANARY_RELEASE" -o wide || true
+            kubectl -n "$LIVE_NAMESPACE" describe deploy "$CANARY_DEPLOYMENT" || true
+            kubectl -n "$LIVE_NAMESPACE" describe pods -l "app.kubernetes.io/instance=$CANARY_RELEASE" || true
+            kubectl -n "$LIVE_NAMESPACE" logs -l "app.kubernetes.io/instance=$CANARY_RELEASE" --all-containers --tail=200 || true
+            kubectl -n "$LIVE_NAMESPACE" get events --sort-by=.lastTimestamp | tail -80 || true
+            echo "::endgroup::"
+            exit 1
+          fi
+          kubectl -n "$LIVE_NAMESPACE" rollout status "deployment/$CANARY_DEPLOYMENT" --timeout=3m
+          canary_image="$(kubectl -n "$LIVE_NAMESPACE" get deploy "$CANARY_DEPLOYMENT" -o jsonpath='{.spec.template.spec.containers[0].image}')"
+          if [ "$canary_image" != "${{ steps.candidate.outputs.image }}" ]; then
+            echo "::error::Private canary image mismatch. got=$canary_image want=${{ steps.candidate.outputs.image }}"
+            exit 1
+          fi
+
+      - name: Start private canary port-forward
+        id: canary_port_forward
+        shell: bash
+        run: |
+          set -euo pipefail
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          canary_log="$RUNNER_TEMP/console-live/canary-port-forward.log"
+          local_port="${CANARY_LOCAL_URL##*:}"
+          local_port="${local_port%%/*}"
+          kubectl -n "$LIVE_NAMESPACE" port-forward "svc/$CANARY_SERVICE" "$local_port:8080" > "$canary_log" 2>&1 &
+          canary_pid="$!"
+          echo "CANARY_PORT_FORWARD_PID=$canary_pid" >> "$GITHUB_ENV"
+          echo "url=$CANARY_LOCAL_URL" >> "$GITHUB_OUTPUT"
+          for i in $(seq 1 60); do
+            if curl -fsS "$CANARY_LOCAL_URL/health" >/dev/null || curl -fsS "$CANARY_LOCAL_URL/healthz" >/dev/null; then
+              echo "Private canary is reachable at $CANARY_LOCAL_URL"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Private canary port-forward did not become healthy"
+          cat "$canary_log" || true
+          exit 1
+
+      - name: Select live test target
+        id: test-target
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$PROMOTE_PRODUCTION" = "true" ]; then
+            target_url="$LIVE_URL"
+            target_kind="public-live"
+          else
+            target_url="${{ steps.canary_port_forward.outputs.url }}"
+            target_kind="private-canary"
+          fi
+          echo "TEST_CONSOLE_URL=$target_url" >> "$GITHUB_ENV"
+          echo "TEST_TARGET_KIND=$target_kind" >> "$GITHUB_ENV"
+          echo "url=$target_url" >> "$GITHUB_OUTPUT"
+          echo "kind=$target_kind" >> "$GITHUB_OUTPUT"
+          echo "Live canary tests will target $target_kind at $target_url"
+
+      - name: Verify private canary deployment and auth boundary
+        id: canary_smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          kubectl -n "$LIVE_NAMESPACE" rollout status "deployment/$CANARY_DEPLOYMENT" --timeout=3m
+          canary_image="$(kubectl -n "$LIVE_NAMESPACE" get deploy "$CANARY_DEPLOYMENT" -o jsonpath='{.spec.template.spec.containers[0].image}')"
+          if [ "$canary_image" != "${{ steps.candidate.outputs.image }}" ]; then
+            echo "::error::Private canary image mismatch. got=$canary_image want=${{ steps.candidate.outputs.image }}"
+            exit 1
+          fi
+
+          if ! curl -fsS "$CANARY_LOCAL_URL/health" >/dev/null && ! curl -fsS "$CANARY_LOCAL_URL/healthz" >/dev/null; then
+            echo "::error::Private canary health endpoint is not reachable"
+            exit 1
+          fi
+
+          api_code="$(curl -sS -o /dev/null -w '%{http_code}' "$CANARY_LOCAL_URL/api/me")"
+          if [ "$api_code" != "401" ]; then
+            echo "::error::Unauthenticated private canary /api/me returned HTTP $api_code, expected 401"
+            exit 1
+          fi
+
+      - name: Deploy candidate to console-live
+        id: deploy_live
+        if: env.PROMOTE_PRODUCTION == 'true' && steps.live-state.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          prod_values="$RUNNER_TEMP/console-live/prod-values.yaml"
+          promote_timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          cat > "$prod_values" <<EOF
+          image:
+            repository: "$IMAGE_REPOSITORY"
+            tag: "${{ steps.candidate.outputs.tag }}"
+            pullPolicy: Always
+          podAnnotations:
+            console-live.kubestellar.io/promote-run-id: "${{ github.run_id }}"
+            console-live.kubestellar.io/promote-candidate-tag: "${{ steps.candidate.outputs.tag }}"
+            console-live.kubestellar.io/promote-candidate-image: "${{ steps.candidate.outputs.image }}"
+            console-live.kubestellar.io/promote-at: "$promote_timestamp"
+          clusterName: "$LIVE_CLUSTER_NAME"
+          service:
+            type: ClusterIP
+          podSecurityContext:
+            seccompProfile:
+              type: RuntimeDefault
+            fsGroup: 1001
+            fsGroupChangePolicy: OnRootMismatch
+          github:
+            existingSecret: "$OAUTH_SECRET_NAME"
+          jwt:
+            existingSecret: "$OAUTH_SECRET_NAME"
+          kubeconfig:
+            existingSecret: "$KUBECONFIG_SECRET_NAME"
+          ingress:
+            enabled: true
+            className: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-http01
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+            hosts:
+              - host: "$LIVE_HOST"
+                paths:
+                  - path: /
+                    pathType: Prefix
+            tls:
+              - secretName: "$LIVE_TLS_SECRET"
+                hosts:
+                  - "$LIVE_HOST"
+          auth:
+            allowedGitHubLogins: "$CONSOLE_LIVE_ALLOWED_GITHUB_LOGINS"
+            adminGitHubLogins: "$CONSOLE_LIVE_ADMIN_GITHUB_LOGINS"
+          rbac:
+            resourceQuotasReadOnly: true
+            namespaceCreationEnabled: false
+          extraEnv:
+            - name: DEV_MODE
+              value: "false"
+            - name: CLUSTER_BACKED_MODE
+              value: "true"
+            - name: CONSOLE_LIVE_TEST_MODE
+              value: "true"
+            - name: SUPPRESS_OPTIONAL_POLLERS
+              value: "true"
+          EOF
+          helm upgrade --install "$LIVE_RELEASE" ./deploy/helm/kubestellar-console \
+            --namespace "$LIVE_NAMESPACE" \
+            --reset-values \
+            -f "$prod_values" \
+            --atomic \
+            --cleanup-on-fail \
+            --wait \
+            --timeout 10m
+
+      - name: Verify live deployment and auth boundary
+        id: live_smoke
+        if: env.PROMOTE_PRODUCTION == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          kubectl -n "$LIVE_NAMESPACE" rollout status "deployment/$LIVE_DEPLOYMENT" --timeout=3m
+          live_image="$(kubectl -n "$LIVE_NAMESPACE" get deploy "$LIVE_DEPLOYMENT" -o jsonpath='{.spec.template.spec.containers[0].image}')"
+          if [ "$PROMOTE_PRODUCTION" = "true" ] && [ "$live_image" != "${{ steps.candidate.outputs.image }}" ]; then
+            echo "::error::Live image mismatch. got=$live_image want=${{ steps.candidate.outputs.image }}"
+            exit 1
+          fi
+
+          health_ready=false
+          last_health_code=""
+          last_healthz_code=""
+          for attempt in $(seq 1 60); do
+            last_health_code="$(curl -k -sS -o /dev/null -w '%{http_code}' "$LIVE_URL/health" || true)"
+            last_healthz_code="$(curl -k -sS -o /dev/null -w '%{http_code}' "$LIVE_URL/healthz" || true)"
+            if [[ "$last_health_code" =~ ^2[0-9][0-9]$ ]] || [[ "$last_healthz_code" =~ ^2[0-9][0-9]$ ]]; then
+              health_ready=true
+              break
+            fi
+            echo "Waiting for live ingress health; attempt $attempt got /health=$last_health_code /healthz=$last_healthz_code"
+            sleep 2
+          done
+          if [ "$health_ready" != "true" ]; then
+            echo "::error::Live health endpoint is not reachable after ingress warm-up. /health=$last_health_code /healthz=$last_healthz_code"
+            exit 1
+          fi
+
+          api_code=""
+          for attempt in $(seq 1 30); do
+            api_code="$(curl -k -sS -o /dev/null -w '%{http_code}' "$LIVE_URL/api/me" || true)"
+            if [ "$api_code" = "401" ]; then
+              break
+            fi
+            echo "Waiting for unauthenticated /api/me boundary; attempt $attempt got HTTP $api_code"
+            sleep 2
+          done
+          if [ "$api_code" != "401" ]; then
+            echo "::error::Unauthenticated /api/me returned HTTP $api_code, expected 401"
+            exit 1
+          fi
+
+          oauth_response=""
+          oauth_code=""
+          oauth_redirect=""
+          for attempt in $(seq 1 30); do
+            oauth_response="$(curl -k -sS -o /dev/null -w '%{http_code} %{redirect_url}' "$LIVE_URL/auth/github" || true)"
+            oauth_code="${oauth_response%% *}"
+            oauth_redirect="${oauth_response#* }"
+            case "$oauth_code" in
+              302|303|307|308) break ;;
+            esac
+            echo "Waiting for /auth/github redirect; attempt $attempt got HTTP ${oauth_code:-curl-error}"
+            sleep 2
+          done
+          case "$oauth_code" in
+            302|303|307|308) ;;
+            *)
+              echo "::error::/auth/github returned HTTP $oauth_code, expected redirect"
+              exit 1
+              ;;
+          esac
+          if ! [[ "$oauth_redirect" =~ github\.com|/login/oauth/authorize ]]; then
+            echo "::error::/auth/github redirect did not target GitHub OAuth"
+            exit 1
+          fi
+
+          if kubectl -n "$LIVE_NAMESPACE" auth can-i list certificates.cert-manager.io >/dev/null 2>&1; then
+            cert_ready="$(kubectl -n "$LIVE_NAMESPACE" get certificate -o json \
+              | jq -r --arg secret "$LIVE_TLS_SECRET" '.items[] | select(.spec.secretName == $secret) | .status.conditions[]? | select(.type == "Ready") | .status' \
+              | tail -n1)"
+            if [ "$cert_ready" != "True" ]; then
+              echo "::error::TLS certificate for $LIVE_HOST is not Ready"
+              exit 1
+            fi
+          else
+            echo "::notice::Skipping cert-manager Certificate readiness check; deploy service account cannot list certificates.cert-manager.io. HTTPS endpoint checks already succeeded."
+          fi
+
+      - name: Roll back live on deployment or auth-boundary failure
+        if: ${{ failure() && env.PROMOTE_PRODUCTION == 'true' && steps.live-state.outputs.skip != 'true' && steps.live-revision.outputs.revision != '' && (steps.deploy_live.outcome == 'failure' || steps.live_smoke.outcome == 'failure') }}
+        shell: bash
+        run: |
+          set +e
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          helm rollback "$LIVE_RELEASE" "${{ steps.live-revision.outputs.revision }}" -n "$LIVE_NAMESPACE" --wait --timeout 5m \
+            > "$RUNNER_TEMP/console-live/live-rollback.log" 2>&1
+          cat "$RUNNER_TEMP/console-live/live-rollback.log"
+
+      - name: Install web test dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: web
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Mint signed live test session
+        env:
+          CONSOLE_LIVE_JWT_SECRET: ${{ secrets.CONSOLE_LIVE_JWT_SECRET }}
+          CONSOLE_LIVE_TEST_USER_ID: ${{ env.CONSOLE_LIVE_TEST_USER_ID }}
+          CONSOLE_LIVE_TEST_GITHUB_LOGIN: ${{ env.CONSOLE_LIVE_TEST_GITHUB_LOGIN }}
+          CONSOLE_LIVE_TEST_USER_ROLE: ${{ env.CONSOLE_LIVE_TEST_USER_ROLE }}
+          CONSOLE_LIVE_TEST_SESSION_COUNT: ${{ env.CONSOLE_LIVE_TEST_SESSION_COUNT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          session_file="$RUNNER_TEMP/console-live/live-session-jwts.txt"
+          mkdir -p "$(dirname "$session_file")"
+          : > "$session_file"
+          count="${CONSOLE_LIVE_TEST_SESSION_COUNT:-80}"
+          if ! [[ "$count" =~ ^[0-9]+$ ]] || [ "$count" -lt 8 ] || [ "$count" -gt 200 ]; then
+            echo "::error::CONSOLE_LIVE_TEST_SESSION_COUNT must be an integer between 8 and 200"
+            exit 1
+          fi
+          for i in $(seq 1 "$count"); do
+            token="$(node .github/scripts/console-live-mint-session.cjs)"
+            echo "::add-mask::$token"
+            printf '%s\n' "$token" >> "$session_file"
+            if [ "$i" = "1" ]; then
+              echo "CONSOLE_LIVE_TEST_SESSION_JWT=$token" >> "$GITHUB_ENV"
+            fi
+          done
+          echo "CONSOLE_LIVE_TEST_SESSION_JWT_FILE=$session_file" >> "$GITHUB_ENV"
+
+      - name: Run production auth/session smoke
+        id: session_smoke
+        if: ${{ !cancelled() && steps.canary_smoke.outcome == 'success' && (env.PROMOTE_PRODUCTION != 'true' || steps.live_smoke.outcome == 'success') }}
+        timeout-minutes: 8
+        working-directory: web
+        env:
+          LIVE_SITE_TESTS: 'true'
+          LIVE_SITE_AUTH_MODE: signed-cookie
+          LIVE_PRODUCTION_CONSOLE_URL: ${{ env.TEST_CONSOLE_URL }}
+          CONSOLE_LIVE_URL: ${{ env.TEST_CONSOLE_URL }}
+          CONSOLE_LIVE_TEST_SESSION_JWT_FILE: ${{ env.CONSOLE_LIVE_TEST_SESSION_JWT_FILE }}
+          CONSOLE_LIVE_TEST_SESSION_JWT: ${{ env.CONSOLE_LIVE_TEST_SESSION_JWT }}
+          CONSOLE_LIVE_TEST_USER_ID: ${{ env.CONSOLE_LIVE_TEST_USER_ID }}
+          CONSOLE_LIVE_TEST_GITHUB_LOGIN: ${{ env.CONSOLE_LIVE_TEST_GITHUB_LOGIN }}
+          CONSOLE_LIVE_TEST_USER_ROLE: ${{ env.CONSOLE_LIVE_TEST_USER_ROLE }}
+          LIVE_CANARY_ROUTE_DELAY_MS: ${{ env.LIVE_CANARY_ROUTE_DELAY_MS }}
+          LIVE_CANARY_MIN_ROUTE_DELAY_MS: ${{ env.LIVE_CANARY_MIN_ROUTE_DELAY_MS }}
+        run: npx playwright test --config e2e/visual-login/intensive.config.ts --project=semantic-groundtruth --grep "production live" --workers=1
+
+      - name: Roll back live on session-smoke failure
+        if: ${{ failure() && env.PROMOTE_PRODUCTION == 'true' && steps.live-state.outputs.skip != 'true' && steps.live-revision.outputs.revision != '' && steps.session_smoke.outcome == 'failure' }}
+        shell: bash
+        run: |
+          set +e
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          helm rollback "$LIVE_RELEASE" "${{ steps.live-revision.outputs.revision }}" -n "$LIVE_NAMESPACE" --wait --timeout 5m \
+            > "$RUNNER_TEMP/console-live/live-rollback.log" 2>&1
+          cat "$RUNNER_TEMP/console-live/live-rollback.log"
+
+      - name: Run live semantic tests against selected target
+        id: live_semantic
+        if: ${{ !cancelled() && steps.canary_smoke.outcome == 'success' && steps.session_smoke.outcome == 'success' }}
+        timeout-minutes: 25
+        working-directory: web
+        env:
+          KUBECONFIG: ${{ steps.groundtruth-kubeconfig.outputs.path }}
+          LIVE_CLUSTER_FIXTURE_KUBECONFIG_B64: ${{ secrets.LIVE_CLUSTER_FIXTURE_KUBECONFIG_B64 }}
+          LIVE_CLUSTER_FIXTURES: ${{ vars.LIVE_CLUSTER_FIXTURES || 'false' }}
+          LIVE_CLUSTER_FIXTURE_CLEANUP: ${{ vars.LIVE_CLUSTER_FIXTURE_CLEANUP || 'true' }}
+          LIVE_CLUSTER_TESTS: 'true'
+          LIVE_SITE_TESTS: 'true'
+          LIVE_SITE_AUTH_MODE: signed-cookie
+          LIVE_CANARY_CONSOLE_URL: ${{ env.TEST_CONSOLE_URL }}
+          LIVE_PRODUCTION_CONSOLE_URL: ${{ env.TEST_CONSOLE_URL }}
+          SELF_HOSTED_CONSOLE_URL: ${{ env.TEST_CONSOLE_URL }}
+          CONSOLE_LIVE_URL: ${{ env.TEST_CONSOLE_URL }}
+          CONSOLE_LIVE_TEST_SESSION_JWT_FILE: ${{ env.CONSOLE_LIVE_TEST_SESSION_JWT_FILE }}
+          CONSOLE_LIVE_TEST_SESSION_JWT: ${{ env.CONSOLE_LIVE_TEST_SESSION_JWT }}
+          CONSOLE_LIVE_TEST_USER_ID: ${{ env.CONSOLE_LIVE_TEST_USER_ID }}
+          CONSOLE_LIVE_TEST_GITHUB_LOGIN: ${{ env.CONSOLE_LIVE_TEST_GITHUB_LOGIN }}
+          CONSOLE_LIVE_TEST_USER_ROLE: ${{ env.CONSOLE_LIVE_TEST_USER_ROLE }}
+          LIVE_CANARY_ROUTE_DELAY_MS: ${{ env.LIVE_CANARY_ROUTE_DELAY_MS }}
+          LIVE_CANARY_MIN_ROUTE_DELAY_MS: ${{ env.LIVE_CANARY_MIN_ROUTE_DELAY_MS }}
+        run: npx playwright test --config e2e/visual-login/intensive.config.ts --project=semantic-groundtruth --grep @live-site --grep-invert "production live" --workers=1 --max-failures=1
+
+      - name: Cool down before browser matrix
+        if: ${{ !cancelled() && steps.canary_smoke.outcome == 'success' && steps.session_smoke.outcome == 'success' && steps.live_semantic.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep_seconds=$((LIVE_CANARY_PHASE_COOLDOWN_MS / 1000))
+          if [ "$sleep_seconds" -gt 0 ]; then
+            echo "Cooling down ${sleep_seconds}s before browser matrix to avoid rate-limit cascades."
+            sleep "$sleep_seconds"
+          fi
+
+      - name: Run live browser matrix against selected target
+        if: ${{ !cancelled() && steps.canary_smoke.outcome == 'success' && steps.session_smoke.outcome == 'success' && steps.live_semantic.outcome == 'success' }}
+        timeout-minutes: 30
+        working-directory: web
+        env:
+          KUBECONFIG: ${{ steps.groundtruth-kubeconfig.outputs.path }}
+          LIVE_CLUSTER_TESTS: 'true'
+          LIVE_SITE_TESTS: 'true'
+          LIVE_SITE_AUTH_MODE: signed-cookie
+          BROWSER_MATRIX_BASELINES: ${{ vars.BROWSER_MATRIX_BASELINES || 'false' }}
+          LIVE_CANARY_CONSOLE_URL: ${{ env.TEST_CONSOLE_URL }}
+          LIVE_PRODUCTION_CONSOLE_URL: ${{ env.TEST_CONSOLE_URL }}
+          SELF_HOSTED_CONSOLE_URL: ${{ env.TEST_CONSOLE_URL }}
+          CONSOLE_LIVE_URL: ${{ env.TEST_CONSOLE_URL }}
+          CONSOLE_LIVE_TEST_SESSION_JWT_FILE: ${{ env.CONSOLE_LIVE_TEST_SESSION_JWT_FILE }}
+          CONSOLE_LIVE_TEST_SESSION_JWT: ${{ env.CONSOLE_LIVE_TEST_SESSION_JWT }}
+          CONSOLE_LIVE_TEST_USER_ID: ${{ env.CONSOLE_LIVE_TEST_USER_ID }}
+          CONSOLE_LIVE_TEST_GITHUB_LOGIN: ${{ env.CONSOLE_LIVE_TEST_GITHUB_LOGIN }}
+          CONSOLE_LIVE_TEST_USER_ROLE: ${{ env.CONSOLE_LIVE_TEST_USER_ROLE }}
+          LIVE_CANARY_ROUTE_DELAY_MS: ${{ env.LIVE_CANARY_ROUTE_DELAY_MS }}
+          LIVE_CANARY_MIN_ROUTE_DELAY_MS: ${{ env.LIVE_CANARY_MIN_ROUTE_DELAY_MS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          for project in live-chromium live-firefox live-webkit; do
+            npx playwright test --config e2e/visual-login/browser-matrix.config.ts --project "$project" --workers=1 || status=1
+            sleep 10
+          done
+          exit "$status"
+
+      - name: Compare live browser matrix
+        if: ${{ !cancelled() && steps.canary_smoke.outcome == 'success' && steps.session_smoke.outcome == 'success' && steps.live_semantic.outcome == 'success' }}
+        timeout-minutes: 5
+        working-directory: web
+        run: npm run test:visual:browser-matrix:compare
+
+      - name: Upload console live promote evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: console-live-promote-evidence
+          path: |
+            web/test-results/results.json
+            web/test-results/evidence/
+            web/test-results/reports/
+            web/test-results/reports/browser-matrix/
+            web/test-results/reports/browser-matrix.json
+            web/test-results/browser-matrix/
+            web/test-results/browser-matrix-results/
+            web/test-results/visual-login-intensive/
+            web/e2e/visual-login/test-results/results.json
+            web/e2e/visual-login/test-results/evidence/
+            web/e2e/visual-login/test-results/visual-login-intensive/
+            ${{ runner.temp }}/console-live/live-rollback.log
+            ${{ runner.temp }}/console-live/live-rate-limit-data-loss.json
+            ${{ runner.temp }}/console-live/canary-port-forward.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Run test adequacy analyzer
+        if: ${{ !cancelled() && steps.canary_smoke.outcome == 'success' && steps.session_smoke.outcome == 'success' && steps.live_semantic.outcome == 'success' }}
+        timeout-minutes: 10
+        working-directory: web
+        run: npm run test:visual:adequacy
+
+      - name: Remove private canary
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -n "${CANARY_PORT_FORWARD_PID:-}" ]; then
+            kill "$CANARY_PORT_FORWARD_PID" 2>/dev/null || true
+          fi
+          if [ -n "${DEPLOY_KUBECONFIG:-}" ]; then
+            export KUBECONFIG="$DEPLOY_KUBECONFIG"
+            helm uninstall "$CANARY_RELEASE" -n "$LIVE_NAMESPACE" --wait --timeout 5m || true
+          fi
