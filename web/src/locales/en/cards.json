@@ -1564,7 +1564,15 @@
     "providerCount_other": "{{count}} providers",
     "emptyTitle": "No Kagent CRDs Found",
     "emptyDescription": "Install kagent to deploy AI agents on your clusters",
-    "byo": "BYO"
+    "byo": "BYO",
+    "noAgents": "No Agents Found",
+    "noAgentsDescription": "No kagent agents are currently deployed in your clusters",
+    "totalAgents": "Total Agents",
+    "ready": "Ready",
+    "issues": "Issues",
+    "overallHealth": "Overall Health",
+    "agentsByCluster": "Agents by Cluster",
+    "recentAgents": "Recent Agents"
   },
   "prow": {
     "jobName": "Job Name",
