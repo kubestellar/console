@@ -38,6 +38,7 @@ func TestCSRF_SafeMethodsPassThrough(t *testing.T) {
 	for _, method := range safeMethods {
 		t.Run(method, func(t *testing.T) {
 			req := httptest.NewRequest(method, "/any-path", nil)
+			req.Host = "localhost"
 			// No CSRF header — should still pass for safe methods
 			resp, err := app.Test(req)
 			if err != nil {
@@ -64,6 +65,7 @@ func TestCSRF_UnsafeMethodsRejectedWithoutHeader(t *testing.T) {
 	for _, method := range unsafeMethods {
 		t.Run(method, func(t *testing.T) {
 			req := httptest.NewRequest(method, "/any-path", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -80,6 +82,7 @@ func TestCSRF_UnsafeMethodsRejectedWithWrongValue(t *testing.T) {
 	app := newTestApp()
 
 	req := httptest.NewRequest(http.MethodPost, "/any-path", nil)
+	req.Host = "localhost"
 	req.Header.Set(middleware.CSRFHeaderName, "BadValue")
 	resp, err := app.Test(req)
 	if err != nil {
@@ -104,6 +107,7 @@ func TestCSRF_UnsafeMethodsPassWithCorrectHeader(t *testing.T) {
 	for _, method := range unsafeMethods {
 		t.Run(method, func(t *testing.T) {
 			req := httptest.NewRequest(method, "/any-path", nil)
+			req.Host = "localhost"
 			req.Header.Set(middleware.CSRFHeaderName, middleware.CSRFHeaderValue)
 			resp, err := app.Test(req)
 			if err != nil {

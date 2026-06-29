@@ -50,6 +50,7 @@ func TestFeedbackRoutes_SubmitFeedbackRequiresAuthentication(t *testing.T) {
 	requestID := uuid.New()
 
 	req := httptest.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/feedback", strings.NewReader(`{"feedback_type":"positive"}`))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -79,6 +80,7 @@ func TestFeedbackRoutes_SubmitFeedbackCreatesFeedback(t *testing.T) {
 	app := newFeedbackRouteTestApp(t, userID, store)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/feedback/requests/"+requestID.String()+"/feedback", strings.NewReader(`{"feedback_type":"positive","comment":"Looks good"}`))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)

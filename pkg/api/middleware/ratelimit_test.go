@@ -227,6 +227,7 @@ func TestCompositeKey(t *testing.T) {
 
 	t.Run("IP only", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Host = "localhost"
 		req.Header.Set("X-Forwarded-For", "1.1.1.1")
 		resp, err := app.Test(req)
 		if err != nil {
@@ -250,6 +251,7 @@ func TestCompositeKey(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Host = "localhost"
 		req.Header.Set("X-Forwarded-For", "2.2.2.2")
 		resp, err := appWithAuth.Test(req)
 		if err != nil {

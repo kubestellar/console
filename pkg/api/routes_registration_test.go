@@ -128,6 +128,7 @@ func TestSetupRoutes_ProtectedEndpointsKeepAuthAndCSRFGuards(t *testing.T) {
 
 	t.Run("refresh requires csrf before jwt auth", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/auth/refresh", strings.NewReader(`{}`))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := server.app.Test(req)
@@ -139,6 +140,7 @@ func TestSetupRoutes_ProtectedEndpointsKeepAuthAndCSRFGuards(t *testing.T) {
 
 	t.Run("refresh with csrf still requires jwt", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/auth/refresh", strings.NewReader(`{}`))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Requested-With", "XMLHttpRequest")
 
@@ -151,6 +153,7 @@ func TestSetupRoutes_ProtectedEndpointsKeepAuthAndCSRFGuards(t *testing.T) {
 
 	t.Run("api me remains authenticated", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/me", nil)
+		req.Host = "localhost"
 
 		resp, err := server.app.Test(req)
 		require.NoError(t, err)
@@ -167,6 +170,7 @@ func TestSetupRoutes_ProtectedEndpointsKeepAuthAndCSRFGuards(t *testing.T) {
 		}, nil).Maybe()
 
 		req := httptest.NewRequest(http.MethodPost, "/api/github/token", strings.NewReader(`{"token":"ghp_test"}`))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Requested-With", "XMLHttpRequest")
 		req.Header.Set("Authorization", "Bearer "+signedRouteTestToken(t, viewerID, models.UserRoleViewer))

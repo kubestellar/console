@@ -21,6 +21,7 @@ func TestValidateWebSocketOrigin_NoOriginHeader(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	// No Origin header — non-browser client
 	resp, err := app.Test(req, -1)
 	assert.NoError(t, err)
@@ -35,6 +36,7 @@ func TestValidateWebSocketOrigin_DevModeAllowsAll(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://evil.example.com")
 	resp, err := app.Test(req, -1)
 	assert.NoError(t, err)
@@ -49,6 +51,7 @@ func TestValidateWebSocketOrigin_MatchingHostAllowed(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:5174")
 	req.Host = "localhost:5174"
 	resp, err := app.Test(req, -1)
@@ -64,6 +67,7 @@ func TestValidateWebSocketOrigin_MismatchedHostRejected(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://evil.example.com")
 	req.Host = "localhost:5174"
 	resp, err := app.Test(req, -1)
@@ -79,6 +83,7 @@ func TestValidateWebSocketOrigin_TrailingSlashNormalized(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:8080/")
 	req.Host = "localhost:8080"
 	resp, err := app.Test(req, -1)
@@ -97,6 +102,7 @@ func TestValidateWebSocketOrigin_EnvOverride(t *testing.T) {
 
 	// Allowed origin
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "https://console.kubestellar.io")
 	req.Host = "api.kubestellar.io"
 	resp, err := app.Test(req, -1)
@@ -105,6 +111,7 @@ func TestValidateWebSocketOrigin_EnvOverride(t *testing.T) {
 
 	// Second allowed origin
 	req2 := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req2.Host = "localhost"
 	req2.Header.Set("Origin", "https://staging.kubestellar.io")
 	req2.Host = "api.kubestellar.io"
 	resp2, err := app.Test(req2, -1)
@@ -122,6 +129,7 @@ func TestValidateWebSocketOrigin_EnvRejectsUnlisted(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "https://evil.example.com")
 	req.Host = "api.kubestellar.io"
 	resp, err := app.Test(req, -1)
@@ -139,6 +147,7 @@ func TestValidateWebSocketOrigin_EnvCaseInsensitive(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "https://console.kubestellar.io")
 	req.Host = "api.kubestellar.io"
 	resp, err := app.Test(req, -1)
@@ -156,6 +165,7 @@ func TestValidateWebSocketOrigin_EnvWithTrailingSlash(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "https://console.kubestellar.io")
 	req.Host = "api.kubestellar.io"
 	resp, err := app.Test(req, -1)
@@ -175,6 +185,7 @@ func TestIsWSOriginAllowed_XForwardedProtoHTTPS(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "https://myapp.example.com")
 	req.Header.Set("X-Forwarded-Proto", "https")
 	req.Host = "myapp.example.com"
