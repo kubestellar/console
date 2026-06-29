@@ -59,7 +59,12 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test:visual": "playwright test --config e2e/visual/app-visual.config.ts",
-    "test:visual:update": "playwright test --config e2e/visual/app-visual.config.ts --update-snapshots"
+    "test:visual:update": "playwright test --config e2e/visual/app-visual.config.ts --update-snapshots",
+    "test:visual:groundtruth": "playwright test --config e2e/visual-login/intensive.config.ts --project=semantic-groundtruth",
+    "test:visual:live": "playwright test --config e2e/visual-login/intensive.config.ts --project=semantic-groundtruth --grep @live-site",
+    "test:visual:browser-matrix": "playwright test --config e2e/visual-login/browser-matrix.config.ts",
+    "test:visual:browser-matrix:compare": "node harness/scripts/compareBrowserMatrix.cjs",
+    "test:visual:macos-popup": "playwright test --config e2e/visual-login/macos-popup.config.ts"
   },
   "dependencies": {
     "@codemirror/legacy-modes": "^6.5.3",

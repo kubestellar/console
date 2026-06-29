@@ -1,0 +1,195 @@
+invariants:
+  - id: hosted-demo-no-login
+    area: auth
+    severity: critical
+    description: Hosted demo must not require GitHub login.
+    required:
+      - recognizable demo/dashboard content is visible
+    forbidden:
+      - URL matches login|signin|auth
+      - blocking GitHub sign-in button is visible
+      - blank page
+      - unrecoverable loading state
+
+  - id: local-auth-mode-correct
+    area: auth
+    severity: critical
+    description: Local/full Console auth behavior must match configured auth mode.
+    required:
+      - when auth is enabled, expected login affordance appears
+      - when demo/mock mode is enabled, login does not block the demo/dashboard shell
+    forbidden:
+      - wrong auth mode for configured environment
+
+  - id: auth-mode-separation
+    area: auth
+    severity: critical
+    description: Hosted demo and local/full auth behavior must not be accidentally swapped.
+    required:
+      - hosted/demo mode renders without a blocking login
+      - self-hosted/full mode follows its configured auth expectation
+    forbidden:
+      - hosted demo behavior and local/full auth behavior are swapped
+
+  - id: login-layout-stable
+    area: visual
+    severity: major
+    description: Login page must render without overlap, clipping, or missing primary controls.
+    required:
+      - primary login controls are visible and inside the viewport
+    forbidden:
+      - clipped primary controls
+      - overlapping primary controls
+
+  - id: demo-dashboard-visual-smoke
+    area: visual
+    severity: major
+    description: Demo dashboard shell must render primary navigation/content and not be blank or stuck loading.
+    required:
+      - primary navigation or dashboard content is visible
+      - dashboard shell contains meaningful text
+    forbidden:
+      - blank page
+      - unrecoverable loading state
+      - missing primary app shell
+
+  - id: ai-mission-entrypoint-usable-if-enabled
+    area: visual-ai
+    severity: major
+    description: AI Mission entry point should remain visible and usable when the feature is enabled. It should be skipped or marked config-dependent if the feature is not present/enabled.
+    required:
+      - AI Mission entry point is visible when enabled
+    forbidden:
+      - enabled AI Mission entry point is hidden or outside the viewport
+
+  - id: cluster-dashboard-groundtruth-match
+    area: semantic-visual
+    severity: critical
+    description: Cluster dashboard UI should match Kubernetes ground truth when live clusters are configured.
+    required:
+      - UI cluster and workload claims match normalized Kubernetes ground truth
+    forbidden:
+      - wrong cluster count
+      - wrong pod or workload status
+
+  - id: live-dashboard-groundtruth-match
+    area: live-semantic-visual
+    severity: critical
+    description: Live dashboard stats must match Kubernetes ground truth and authenticated API data.
+    required:
+      - dashboard cluster, node, pod, and namespace counts match Kubernetes ground truth
+      - dashboard counts match authenticated API responses
+    forbidden:
+      - positive live resource count renders as zero
+      - dashboard shows empty-state text while live resources exist
+
+  - id: live-core-pages-render-real-data
+    area: live-semantic-visual
+    severity: critical
+    description: Core live pages must render real live resource data rather than unavailable, partial, or contradictory empty states.
+    required:
+      - core live routes load successfully
+      - semantic count fields match Kubernetes ground truth or authenticated API data
+    forbidden:
+      - infrastructure connection error on core live resource pages
+      - empty-state text when live resources exist
+      - API data exists while the UI renders zero or unavailable
+
+  - id: live-ui-no-demo-artifacts
+    area: live-visual
+    severity: major
+    description: Authenticated live UI must not show demo, local-only, or fake-data artifacts.
+    required:
+      - live UI uses real cluster-backed data source
+    forbidden:
+      - demo mode controls
+      - connection log drawer
+      - local-agent-only warning artifacts
+
+  - id: live-ui-no-warning-flood
+    area: live-reliability
+    severity: major
+    description: Authenticated live UI must not show persistent warning floods after live data settles.
+    required:
+      - live UI settles without persistent warning badges
+    forbidden:
+      - nonzero warning badge flood after live route settle
+
+  - id: live-ui-no-text-collisions
+    area: live-visual
+    severity: major
+    description: Live UI text must remain readable without severe visible overlap.
+    required:
+      - visible text boxes remain readable
+    forbidden:
+      - severe text overlap
+
+  - id: live-ui-no-unexpected-network-errors
+    area: live-reliability
+    severity: critical
+    description: Live UI must not produce blocking app-origin network errors while rendering core routes.
+    required:
+      - authenticated core resource APIs return usable responses
+    forbidden:
+      - blocking 4xx or 5xx responses from core resource APIs
+      - rate-limit data loss on live resource pages
+
+  - id: live-browser-matrix
+    area: live-browser-compat
+    severity: major
+    description: Chromium, Firefox, and WebKit must render the live canary with equivalent core content, route states, semantic fields, and interactive top layers.
+    required:
+      - all required browser matrix reports are produced
+      - core routes render live content in each browser
+      - menus, dialogs, and overlays open above the page content
+    forbidden:
+      - browser-specific missing content
+      - browser-specific semantic field mismatch
+      - browser-specific overlay or z-index breakage
+
+  - id: live-production-auth-boundary
+    area: live-security
+    severity: critical
+    description: Production console-live must expose only the public shell and OAuth redirect while protecting authenticated APIs.
+    required:
+      - health endpoint is reachable
+      - unauthenticated /api/me returns 401
+      - /auth/github redirects to OAuth
+    forbidden:
+      - unauthenticated API user data
+      - ingress 403/404/5xx page on the root route
+
+  - id: live-canary-ui-layout-stable
+    area: live-visual
+    severity: major
+    description: Authenticated live canary pages must render real cluster data without blank cards, stuck loading, overflow, or severe overlap.
+    required:
+      - authenticated dashboard shell is visible
+      - live data pages settle without layout breakage
+    forbidden:
+      - login page after canary session setup
+      - horizontal overflow
+      - blank card shells
+      - unrecoverable loading state
+
+  - id: live-fixture-ui-match
+    area: live-semantic-visual
+    severity: critical
+    description: Controlled Kubernetes fixture resources should appear in the authenticated live UI with their expected states.
+    required:
+      - injected healthy deployment is visible
+      - injected pending and image-pull-failure pods are visible
+    forbidden:
+      - fixture resources missing from UI
+      - fixture state not observable from Kubernetes
+
+  - id: no-critical-runtime-errors
+    area: reliability
+    severity: major
+    description: Important visual/login routes should not emit critical browser console/runtime errors during startup.
+    required:
+      - no unexpected critical console or page errors are emitted during startup
+    forbidden:
+      - uncaught runtime error
+      - framework error overlay
+      - route-breaking failed network request
