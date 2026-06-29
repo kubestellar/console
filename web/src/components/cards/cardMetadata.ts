@@ -220,6 +220,8 @@ export const CARD_TITLES: Record<string, string> = {
   // ML/AI workload cards
   llm_inference: 'llm-d Inference',
   llm_models: 'llm-d Models',
+  model_endpoint_health: 'Model Endpoint Health',
+  epp_health: 'EPP Health',
   llmd_flow: 'llm-d Request Flow',
   llmd_ai_insights: 'llm-d AI Insights',
   llmd_configurator: 'llm-d Configurator',
@@ -564,6 +566,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   prow_history: 'Historical PROW job runs and success rates.',
   llm_inference: 'llm-d is a Kubernetes-native platform for serving Large Language Models. This card shows inference endpoint health, request throughput, and latency metrics for your LLM deployments.',
   llm_models: 'LLM models deployed via llm-d with version info. See which models are loaded, their parameter sizes, and which pods are serving them.',
+  model_endpoint_health: 'Health summary for llm-d model serving endpoints, including ready, degraded, and replica counts across discovered serving deployments.',
+  epp_health: 'Health summary for llm-d Endpoint Picker Pod deployments, including ready, degraded, unavailable, and replica status.',
   llmd_flow: 'Animated visualization showing how an inference request flows through the llm-d stack: from the load balancer, to the Endpoint Picker Pod (EPP), to prefill and decode pods. Helps you understand the request lifecycle.',
   llmd_ai_insights: 'AI-generated insights about llm-d performance, bottlenecks, and optimization recommendations. Uses your cluster metrics to suggest improvements like adjusting batch sizes or scaling pods.',
   llmd_configurator: 'Configure llm-d deployment parameters interactively: replicas, autoscaling thresholds, model variants, and GPU resource limits. Changes can be applied directly to your cluster.',

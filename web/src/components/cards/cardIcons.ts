@@ -164,6 +164,8 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   // ML/AI workload cards
   llm_inference: { icon: Cpu, color: 'text-purple-400' },
   llm_models: { icon: Database, color: 'text-blue-400' },
+  model_endpoint_health: { icon: Cpu, color: 'text-purple-400' },
+  epp_health: { icon: Activity, color: 'text-green-400' },
   llmd_flow: { icon: Workflow, color: 'text-cyan-400' },
   llmd_ai_insights: { icon: Wand2, color: 'text-purple-400' },
   llmd_configurator: { icon: Settings, color: 'text-blue-400' },

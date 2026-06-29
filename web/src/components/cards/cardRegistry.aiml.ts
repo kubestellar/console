@@ -42,6 +42,7 @@ const LLMdStackMonitor = safeLazy(() => _workloadMonitorBundle, 'LLMdStackMonito
 const LatencyBreakdown = safeLazy(() => _llmdBundle, 'LatencyBreakdown')
 const MLJobs = safeLazy(() => _workloadDetectionBundle, 'MLJobs')
 const MLNotebooks = safeLazy(() => _workloadDetectionBundle, 'MLNotebooks')
+const ModelEndpointHealthCard = safeLazy(() => _llmdBundle, 'ModelEndpointHealthCard')
 const NightlyE2EStatus = safeLazy(() => _llmdBundle, 'NightlyE2EStatus')
 const PDDisaggregation = safeLazy(() => _llmdBundle, 'PDDisaggregation')
 const ParetoFrontier = safeLazy(() => _llmdBundle, 'ParetoFrontier')
@@ -63,8 +64,9 @@ const ThroughputComparison = safeLazy(() => _llmdBundle, 'ThroughputComparison')
  * kagenti_agent_discovery, kagenti_agent_fleet, kagenti_build_pipeline, kagenti_security,
  * kagenti_security_posture, kagenti_status, kagenti_tool_registry, kagenti_topology, kvcache_monitor,
  * latency_breakdown, llm_inference, llm_models, llmd_ai_insights, llmd_configurator, llmd_flow,
- * llmd_stack_monitor, ml_jobs, ml_notebooks, nightly_e2e_status, pareto_frontier, pd_disaggregation,
- * performance_timeline, provider_health, prow_history, prow_jobs, prow_status,
+ * llmd_stack_monitor, ml_jobs, ml_notebooks, model_endpoint_health, nightly_e2e_status,
+ * pareto_frontier, pd_disaggregation, performance_timeline, provider_health, prow_history,
+ * prow_jobs, prow_status,
  * resource_utilization, throughput_comparison
  */
 export interface CardRegistryDomain {
@@ -112,6 +114,7 @@ const components: Record<string, CardComponent> = {
   llmd_stack_monitor: LLMdStackMonitor,
   ml_jobs: MLJobs,
   ml_notebooks: MLNotebooks,
+  model_endpoint_health: ModelEndpointHealthCard,
   nightly_e2e_status: NightlyE2EStatus,
   pareto_frontier: ParetoFrontier,
   pd_disaggregation: PDDisaggregation,
@@ -165,6 +168,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     'kagenti_topology',
     'llm_inference',
     'llm_models',
+    'model_endpoint_health',
     'llmd_stack_monitor',
     'nightly_e2e_status',
     'prow_history',
@@ -205,6 +209,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     llmd_stack_monitor: () => import('./workload-monitor'),
     ml_jobs: () => import('./workload-detection'),
     ml_notebooks: () => import('./workload-detection'),
+    model_endpoint_health: () => import('./llmd'),
     nightly_e2e_status: () => import('./llmd'),
     pareto_frontier: () => import('./llmd'),
     pd_disaggregation: () => import('./llmd'),
@@ -250,6 +255,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     llmd_stack_monitor: 6,
     ml_jobs: 6,
     ml_notebooks: 6,
+    model_endpoint_health: 4,
     nightly_e2e_status: 12,
     pareto_frontier: 12,
     pd_disaggregation: 6,
