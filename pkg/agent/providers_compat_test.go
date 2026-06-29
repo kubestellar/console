@@ -73,7 +73,7 @@ func TestTruncateString(t *testing.T) {
 	}
 }
 
-func TestNewRestrictedAIProviderHTTPClient(t *testing.T) {
+func TestNewRestrictedAIProviderHTTPClient_Basic(t *testing.T) {
 	client := newRestrictedAIProviderHTTPClient(30 * time.Second)
 	if client == nil {
 		t.Fatal("newRestrictedAIProviderHTTPClient returned nil")
