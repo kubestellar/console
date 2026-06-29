@@ -163,6 +163,9 @@ func (r *Registry) SetSelectedAgent(sessionID, agentName string) error {
 	if !exists {
 		return fmt.Errorf("provider %s not found", agentName)
 	}
+	if provider == nil {
+		return fmt.Errorf("provider %s is nil", agentName)
+	}
 	if !provider.IsAvailable() {
 		return fmt.Errorf("provider %s is not available", agentName)
 	}

@@ -17,6 +17,7 @@ const KVCacheMonitor = safeLazy(() => _llmdBundle, 'KVCacheMonitor')
 const _kagentBundle = import('./kagent').catch(() => undefined as never)
 const KagentAgentDiscovery = safeLazy(() => _kagentBundle, 'KagentAgentDiscovery')
 const KagentAgentFleet = safeLazy(() => _kagentBundle, 'KagentAgentFleet')
+const KagentAgentListCard = safeLazy(() => import('./KagentAgentListCard'), 'KagentAgentListCard')
 const KagentModelProviders = safeLazy(() => _kagentBundle, 'KagentModelProviders')
 const KagentSecurity = safeLazy(() => _kagentBundle, 'KagentSecurity')
 const KagentStatusCard = safeLazy(() => import('./KagentStatusCard'), 'KagentStatusCard')
@@ -59,7 +60,7 @@ const ThroughputComparison = safeLazy(() => _llmdBundle, 'ThroughputComparison')
  * Cards:
  * acmm_feedback_loops, acmm_level, acmm_recommendations, benchmark_hero, console_ai_health_check,
  * console_ai_issues, console_ai_kubeconfig_audit, console_ai_offline_detection, epp_health,
- * epp_routing, hardware_leaderboard, kagent_agent_discovery, kagent_agent_fleet,
+ * epp_routing, hardware_leaderboard, kagent_agent_discovery, kagent_agent_fleet, kagent_agent_list,
  * kagent_model_providers, kagent_security, kagent_status, kagent_tool_registry, kagent_topology,
  * kagenti_agent_discovery, kagenti_agent_fleet, kagenti_build_pipeline, kagenti_security,
  * kagenti_security_posture, kagenti_status, kagenti_tool_registry, kagenti_topology, kvcache_monitor,
@@ -91,6 +92,7 @@ const components: Record<string, CardComponent> = {
   hardware_leaderboard: HardwareLeaderboard,
   kagent_agent_discovery: KagentAgentDiscovery,
   kagent_agent_fleet: KagentAgentFleet,
+  kagent_agent_list: KagentAgentListCard,
   kagent_model_providers: KagentModelProviders,
   kagent_security: KagentSecurity,
   kagent_status: KagentStatusCard,
@@ -133,6 +135,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     'epp_health',
     'kagent_agent_discovery',
     'kagent_agent_fleet',
+    'kagent_agent_list',
     'kagent_model_providers',
     'kagent_security',
     'kagent_status',
@@ -154,6 +157,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     'epp_health',
     'kagent_agent_discovery',
     'kagent_agent_fleet',
+    'kagent_agent_list',
     'kagent_model_providers',
     'kagent_security',
     'kagent_status',
@@ -186,6 +190,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     hardware_leaderboard: () => import('./llmd'),
     kagent_agent_discovery: () => import('./kagent'),
     kagent_agent_fleet: () => import('./kagent'),
+    kagent_agent_list: () => import('./KagentAgentListCard'),
     kagent_model_providers: () => import('./kagent'),
     kagent_security: () => import('./kagent'),
     kagent_status: () => import('./KagentStatusCard'),

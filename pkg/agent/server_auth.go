@@ -194,8 +194,12 @@ func matchOrigin(origin, allowed string) bool {
 		}
 		// Extract the subdomain part between the scheme and the suffix
 		middle := origin[len(scheme) : len(origin)-len(suffix)]
-		// Must be non-empty (at least one subdomain level)
-		return len(middle) > 0
+		// Must be non-empty (at least one subdomain level).
+		// RFC 6454 §6.1 defines Origin as scheme://host[:port] with NO path
+		// component. Reject any "/" in the middle segment to block crafted
+		// non-browser Origins like https://evil.com/.trusted.com from
+		// matching *.trusted.com (#19941).
+		return len(middle) > 0 && !strings.Contains(middle, "/")
 	}
 	// Exact match
 	if origin == allowed {
