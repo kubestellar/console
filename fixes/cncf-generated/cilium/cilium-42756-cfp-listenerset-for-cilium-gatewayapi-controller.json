@@ -1,0 +1,75 @@
+{
+  "version": "kc-mission-v1",
+  "name": "cilium-42756-cfp-listenerset-for-cilium-gatewayapi-controller",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "cilium: CFP: ListenerSet for Cilium GatewayAPI Controller",
+    "description": "CFP: ListenerSet for Cilium GatewayAPI Controller. Requested by 44+ users.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current cilium deployment",
+        "description": "Verify your cilium version and configuration:\n```bash\nkubectl get pods -n cilium -l app.kubernetes.io/name=cilium\nhelm list -n cilium 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working cilium installation."
+      },
+      {
+        "title": "Review cilium configuration",
+        "description": "Inspect the relevant cilium configuration:\n```bash\nkubectl get all -n cilium -l app.kubernetes.io/name=cilium\nkubectl get configmap -n cilium -l app.kubernetes.io/part-of=cilium\n```\nAdd support for the experimental Gateway API resource XListenerSet, introduced in Gateway API v1.3+ (and still part of the experimental channel as of v1.4)."
+      },
+      {
+        "title": "Apply the fix for CFP: ListenerSet for Cilium GatewayAPI Controller",
+        "description": "An initial batch of container images have been built from the branch. If you have a bleeding edge Cilium installation, you can test `ListenerSet` features using the following container image for the `cilium-operator`.\n\n**This is pre-alpha software and should not be used in a production\n```yaml\nquay.io/cilium/operator-generic-ci:d12045db0d6394f328b423dfa209590b4aad6d8e\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n cilium -l app.kubernetes.io/name=cilium\nkubectl get events -n cilium --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"CFP: ListenerSet for Cilium GatewayAPI Controller\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "An initial batch of container images have been built from the branch. If you have a bleeding edge Cilium installation, you can test `ListenerSet` features using the following container image for the `cilium-operator`.",
+      "codeSnippets": [
+        "quay.io/cilium/operator-generic-ci:d12045db0d6394f328b423dfa209590b4aad6d8e",
+        "$ git checkout --track origin/pr/asauber/implement-listener-sets\n$ make kind-down\n$ make kind\n$ WAIT_DURATION=5m make kind-servicemesh-install-cilium-fast\n$ make gateway-api-conformance\n$ # You now have a local cluster with ListenerSet support"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "cilium",
+      "graduated",
+      "networking",
+      "feature"
+    ],
+    "cncfProjects": [
+      "cilium"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/cilium/cilium/issues/42756",
+      "repo": "https://github.com/cilium/cilium"
+    },
+    "reactions": 44,
+    "comments": 14,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with cilium installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-29T07:46:07.257Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
