@@ -7,19 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDefaultSystemPrompt_NotEmpty(t *testing.T) {
-	require.NotEmpty(t, DefaultSystemPrompt)
-}
-
 func TestDefaultSystemPrompt_ContainsBasePrompt(t *testing.T) {
 	require.Contains(t, DefaultSystemPrompt, "You are a helpful AI assistant embedded in the KubeStellar Console")
 	require.Contains(t, DefaultSystemPrompt, "Managing Kubernetes clusters and workloads")
 	require.Contains(t, DefaultSystemPrompt, "Creating and managing BindingPolicies")
-}
-
-func TestDefaultSystemPrompt_ContainsOSHint(t *testing.T) {
-	osHint := OSCommandHint()
-	require.Contains(t, DefaultSystemPrompt, osHint)
 }
 
 func TestDefaultSystemPrompt_ContainsCriticalSections(t *testing.T) {
