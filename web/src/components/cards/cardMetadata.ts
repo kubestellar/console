@@ -182,6 +182,7 @@ export const CARD_TITLES: Record<string, string> = {
   // Kagent CRD Dashboard
   kagent_status: 'Kagent Status',
   kagent_agent_fleet: 'Kagent Agent Fleet',
+  kagent_agent_list: 'Kagent Agent List',
   kagent_tool_registry: 'Kagent Tool Registry',
   kagent_model_providers: 'Kagent Model Providers',
   kagent_agent_discovery: 'Kagent Agent Discovery',
@@ -533,6 +534,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   // Kagent CRD Dashboard
   kagent_status: 'Overview of kagent agents, tools, and models.',
   kagent_agent_fleet: 'All kagent agents across clusters.',
+  kagent_agent_list: 'Agent status monitoring with health metrics.',
   kagent_tool_registry: 'ToolServer and RemoteMCPServer resources.',
   kagent_model_providers: 'ModelConfig and ModelProviderConfig resources.',
   kagent_agent_discovery: 'Agent A2A config, tools, and skills.',
