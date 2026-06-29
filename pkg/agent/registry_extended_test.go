@@ -8,22 +8,22 @@ import (
 	"time"
 )
 
-// mockToolProvider implements ai.Provider with CapabilityToolExec.
-type mockToolProvider struct {
+// mockRegToolProvider implements ai.Provider with CapabilityToolExec.
+type mockRegToolProvider struct {
 	name      string
 	available bool
 }
 
-func (m *mockToolProvider) Name() string                           { return m.name }
-func (m *mockToolProvider) DisplayName() string                    { return m.name }
-func (m *mockToolProvider) Description() string                    { return m.name }
-func (m *mockToolProvider) Provider() string                       { return "mock" }
-func (m *mockToolProvider) IsAvailable() bool                      { return m.available }
-func (m *mockToolProvider) Capabilities() ProviderCapability       { return CapabilityToolExec }
-func (m *mockToolProvider) Chat(_ context.Context, _ *ChatRequest) (*ChatResponse, error) {
+func (m *mockRegToolProvider) Name() string                           { return m.name }
+func (m *mockRegToolProvider) DisplayName() string                    { return m.name }
+func (m *mockRegToolProvider) Description() string                    { return m.name }
+func (m *mockRegToolProvider) Provider() string                       { return "mock" }
+func (m *mockRegToolProvider) IsAvailable() bool                      { return m.available }
+func (m *mockRegToolProvider) Capabilities() ProviderCapability       { return CapabilityToolExec }
+func (m *mockRegToolProvider) Chat(_ context.Context, _ *ChatRequest) (*ChatResponse, error) {
 	return nil, nil
 }
-func (m *mockToolProvider) StreamChat(_ context.Context, _ *ChatRequest, _ func(string)) (*ChatResponse, error) {
+func (m *mockRegToolProvider) StreamChat(_ context.Context, _ *ChatRequest, _ func(string)) (*ChatResponse, error) {
 	return nil, nil
 }
 
@@ -119,7 +119,7 @@ func TestRegistry_PromoteExecutingDefault(t *testing.T) {
 	}
 
 	// Register a tool-capable provider
-	tool := &mockToolProvider{name: "claude-code", available: true}
+	tool := &mockRegToolProvider{name: "claude-code", available: true}
 	r.Register(tool)
 
 	// Promote should switch default to the tool-capable agent
@@ -133,7 +133,7 @@ func TestRegistry_PromoteExecutingDefault_NoChange(t *testing.T) {
 	r := newTestRegistry()
 
 	// Register a tool-capable provider as default (not in suggestOnlyAgents)
-	tool := &mockToolProvider{name: "claude-code", available: true}
+	tool := &mockRegToolProvider{name: "claude-code", available: true}
 	r.Register(tool)
 
 	// promoteExecutingDefault should not change anything
