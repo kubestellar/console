@@ -19,6 +19,7 @@ const KagentAgentFleet = safeLazy(() => _kagentBundle, 'KagentAgentFleet')
 const KagentModelProviders = safeLazy(() => _kagentBundle, 'KagentModelProviders')
 const KagentSecurity = safeLazy(() => _kagentBundle, 'KagentSecurity')
 const KagentStatusCard = safeLazy(() => import('./KagentStatusCard'), 'KagentStatusCard')
+const KagentStatusComponent = safeLazy(() => import('./KagentStatus'), 'KagentStatus')
 const KagentToolRegistry = safeLazy(() => _kagentBundle, 'KagentToolRegistry')
 const KagentTopology = safeLazy(() => _kagentBundle, 'KagentTopology')
 const _kagentiBundle = import('./kagenti').catch(() => undefined as never)
@@ -57,14 +58,14 @@ const ThroughputComparison = safeLazy(() => _llmdBundle, 'ThroughputComparison')
  * Cards:
  * acmm_feedback_loops, acmm_level, acmm_recommendations, benchmark_hero, console_ai_health_check,
  * console_ai_issues, console_ai_kubeconfig_audit, console_ai_offline_detection, epp_routing,
- * hardware_leaderboard, kagent_agent_discovery, kagent_agent_fleet, kagent_model_providers,
- * kagent_security, kagent_status, kagent_tool_registry, kagent_topology, kagenti_agent_discovery,
- * kagenti_agent_fleet, kagenti_build_pipeline, kagenti_security, kagenti_security_posture,
- * kagenti_status, kagenti_tool_registry, kagenti_topology, kvcache_monitor, latency_breakdown,
- * llm_inference, llm_models, llmd_ai_insights, llmd_configurator, llmd_flow, llmd_stack_monitor,
- * ml_jobs, ml_notebooks, nightly_e2e_status, pareto_frontier, pd_disaggregation,
- * performance_timeline, provider_health, prow_history, prow_jobs, prow_status,
- * resource_utilization, throughput_comparison
+ * hardware_leaderboard, kagent_agent_discovery, kagent_agent_fleet, kagent_agent_status,
+ * kagent_model_providers, kagent_security, kagent_status, kagent_tool_registry, kagent_topology,
+ * kagenti_agent_discovery, kagenti_agent_fleet, kagenti_build_pipeline, kagenti_security,
+ * kagenti_security_posture, kagenti_status, kagenti_tool_registry, kagenti_topology,
+ * kvcache_monitor, latency_breakdown, llm_inference, llm_models, llmd_ai_insights,
+ * llmd_configurator, llmd_flow, llmd_stack_monitor, ml_jobs, ml_notebooks, nightly_e2e_status,
+ * pareto_frontier, pd_disaggregation, performance_timeline, provider_health, prow_history,
+ * prow_jobs, prow_status, resource_utilization, throughput_comparison
  */
 export interface CardRegistryDomain {
   components: Record<string, CardComponent>
@@ -87,6 +88,7 @@ const components: Record<string, CardComponent> = {
   hardware_leaderboard: HardwareLeaderboard,
   kagent_agent_discovery: KagentAgentDiscovery,
   kagent_agent_fleet: KagentAgentFleet,
+  kagent_agent_status: KagentStatusComponent,
   kagent_model_providers: KagentModelProviders,
   kagent_security: KagentSecurity,
   kagent_status: KagentStatusCard,
@@ -127,6 +129,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
   demoDataCards: new Set([
     'kagent_agent_discovery',
     'kagent_agent_fleet',
+    'kagent_agent_status',
     'kagent_model_providers',
     'kagent_security',
     'kagent_status',
@@ -147,6 +150,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
   liveDataCards: new Set([
     'kagent_agent_discovery',
     'kagent_agent_fleet',
+    'kagent_agent_status',
     'kagent_model_providers',
     'kagent_security',
     'kagent_status',
@@ -177,6 +181,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     hardware_leaderboard: () => import('./llmd'),
     kagent_agent_discovery: () => import('./kagent'),
     kagent_agent_fleet: () => import('./kagent'),
+    kagent_agent_status: () => import('./KagentStatus'),
     kagent_model_providers: () => import('./kagent'),
     kagent_security: () => import('./kagent'),
     kagent_status: () => import('./KagentStatusCard'),
@@ -221,6 +226,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     hardware_leaderboard: 12,
     kagent_agent_discovery: 4,
     kagent_agent_fleet: 8,
+    kagent_agent_status: 4,
     kagent_model_providers: 4,
     kagent_security: 4,
     kagent_status: 4,
