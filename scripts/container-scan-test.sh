@@ -55,24 +55,63 @@ echo ""
 # Prerequisites
 # ============================================================================
 
+# Pinned trivy version — update SHA256 hashes when bumping this version.
+# Verify hashes at: https://github.com/aquasecurity/trivy/releases/tag/v${TRIVY_VERSION}
+TRIVY_VERSION="0.71.2"
+
 if ! command -v trivy &>/dev/null; then
   echo -e "${YELLOW}Installing trivy...${NC}"
   if command -v brew &>/dev/null; then
     brew install trivy 2>/dev/null
   else
-    # Use official trivy install script for Linux
+    # Download pinned trivy binary with SHA256 verification (no curl|sh)
     INSTALL_DIR="${HOME}/.local/bin"
     mkdir -p "$INSTALL_DIR"
-    
-    echo -e "${DIM}Downloading trivy installer...${NC}"
-    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$INSTALL_DIR" 2>/dev/null || {
-      echo -e "${RED}ERROR: Cannot install trivy — install manually: brew install trivy${NC}"
+
+    _PLATFORM="$(uname -s)"
+    _ARCH="$(uname -m)"
+    case "$_PLATFORM-$_ARCH" in
+      Linux-x86_64)
+        _TARBALL="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+        _SHA256="0510e71e2fd39bf863856d499c8dc19feb4e7336546394c502a8f5cc7ab27460"
+        ;;
+      Linux-aarch64)
+        _TARBALL="trivy_${TRIVY_VERSION}_Linux-ARM64.tar.gz"
+        _SHA256="fe1c7106e15a5365d485b098a8c338f91e3b7ba71cb0e4963b98a3a098763cfc"
+        ;;
+      Darwin-x86_64)
+        _TARBALL="trivy_${TRIVY_VERSION}_macOS-64bit.tar.gz"
+        _SHA256="c27bcf4ddd281aecb7267eb5df804ec49ac0f8fa23fe018d33932e17f30a38bf"
+        ;;
+      Darwin-arm64)
+        _TARBALL="trivy_${TRIVY_VERSION}_macOS-ARM64.tar.gz"
+        _SHA256="a9f585cad53542a54ef286b5fa4199d081e5a061f8894635bdf3ce2608ece7a9"
+        ;;
+      *)
+        echo -e "${RED}ERROR: Unsupported platform $_PLATFORM-$_ARCH — install trivy manually: brew install trivy${NC}"
+        exit 1
+        ;;
+    esac
+
+    echo -e "${DIM}Downloading trivy v${TRIVY_VERSION} (${_TARBALL})...${NC}"
+    curl -sL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${_TARBALL}" \
+      -o "/tmp/${_TARBALL}" || {
+      echo -e "${RED}ERROR: Failed to download trivy — install manually: brew install trivy${NC}"
       exit 1
     }
-    
+
+    echo "${_SHA256}  /tmp/${_TARBALL}" | sha256sum -c - || {
+      echo -e "${RED}ERROR: trivy checksum verification failed — refusing to install${NC}"
+      rm -f "/tmp/${_TARBALL}"
+      exit 1
+    }
+
+    tar xzf "/tmp/${_TARBALL}" -C "$INSTALL_DIR" trivy
+    rm -f "/tmp/${_TARBALL}"
+
     export PATH="$INSTALL_DIR:$PATH"
   fi
-  
+
   if ! command -v trivy &>/dev/null; then
     echo -e "${RED}ERROR: trivy installation failed — binary not found after install${NC}"
     exit 1

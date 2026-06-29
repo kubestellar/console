@@ -1,6 +1,25 @@
+/**
+ * useCachedEPPStatus — Hook for EPP (Endpoint Picker Protocol) monitoring.
+ *
+ * Follows the useCached* caching contract from CLAUDE.md:
+ *   - Returns: data, isLoading, isRefreshing, isDemoData, isFailed,
+ *     consecutiveFailures, lastRefresh, refetch.
+ *   - isDemoData is suppressed while isLoading is true.
+ *
+ * Data source: derives EPP deployment status from llm-d servers
+ * (componentType === 'epp') surfaced by useCachedLLMd. Metrics data
+ * (queueDepth, latency, errorRate) is sourced from the demo factory
+ * at `web/src/lib/demo/epp.ts` until live metric endpoints are available.
+ *
+ * Upstream issue: kubestellar/console#19910
+ */
+
 import { createCachedHook, type CachedHookResult, type RefreshCategory } from '../lib/cache'
 import { fetchLLMdServers } from './useCachedLLMd'
 import type { LLMdServer } from './useLLMd'
+import { generateEPPStatus, type EPPStatusData as EPPMetrics } from '../lib/demo/epp'
+
+export type { EPPStatusData as EPPMetricsData } from '../lib/demo/epp'
 
 export type EPPHealth = 'healthy' | 'degraded' | 'unavailable'
 
@@ -106,9 +125,26 @@ export async function fetchEPPStatus(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Hook return type
+// ---------------------------------------------------------------------------
+
+export type UseCachedEPPStatusResult = CachedHookResult<EPPStatusData> & {
+  epps: LLMdServer[]
+  summary: EPPStatusSummary
+  /** True when the hook is falling back to demo data (isDemoFallback alias). */
+  isDemoData: boolean
+  /** EPP monitoring metrics (queue depth, latency, error rate). */
+  metrics: EPPMetrics
+}
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
+
 export function useCachedEPPStatus(
   clusters: string[] = [...DEFAULT_LLMD_CLUSTERS]
-): CachedHookResult<EPPStatusData> & { epps: LLMdServer[]; summary: EPPStatusSummary } {
+): UseCachedEPPStatusResult {
   const key = `llmd-epp-status:${clusters.join(',')}`
 
   const useEPPStatusBase = createCachedHook<EPPStatusData>({
@@ -120,10 +156,14 @@ export function useCachedEPPStatus(
   })
   const result = useEPPStatusBase()
 
+  const isDemoData = result.isDemoFallback && !result.isLoading
+
   return {
     ...result,
     epps: result.data.epps,
     summary: result.data.summary,
-    isDemoFallback: result.isDemoFallback && !result.isLoading,
+    isDemoFallback: isDemoData,
+    isDemoData,
+    metrics: generateEPPStatus(),
   }
 }
