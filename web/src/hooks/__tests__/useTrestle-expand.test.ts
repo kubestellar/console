@@ -24,6 +24,7 @@ vi.mock('../../lib/kubectlProxy', () => ({
 vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockDemoMode }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../lib/modeTransition', () => ({

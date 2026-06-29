@@ -37,6 +37,7 @@ const mockUseDemoMode = vi.fn(() => ({
 vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: (...args: unknown[]) => mockUseDemoMode(...args),
+  getDemoMode: vi.fn(() => false),
 }
 ))
 

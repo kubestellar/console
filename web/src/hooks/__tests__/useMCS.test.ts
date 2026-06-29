@@ -17,6 +17,7 @@ let mockDemoMode = false
 vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockDemoMode }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 const mockApiGet = vi.fn()

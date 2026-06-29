@@ -32,6 +32,7 @@ vi.mock('../hooks/useMissions', () => ({
 vi.mock('../hooks/useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
+  getDemoMode: vi.fn(() => false),
 }
 ))
 

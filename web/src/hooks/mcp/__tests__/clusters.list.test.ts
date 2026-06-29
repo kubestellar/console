@@ -95,6 +95,7 @@ vi.mock('../../../lib/demoMode', () => ({
 vi.mock('../../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
+  getDemoMode: vi.fn(() => false),
 }
 ))
 

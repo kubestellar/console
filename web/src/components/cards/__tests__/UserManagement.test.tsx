@@ -198,6 +198,7 @@ vi.mock('../../../lib/analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitUserRoleChanged: vi.fn(),
   emitUserRemoved: vi.fn(),
+  getDemoMode: vi.fn(() => false),
 }
 ))
 

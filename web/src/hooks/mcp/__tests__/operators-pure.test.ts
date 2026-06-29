@@ -8,6 +8,7 @@ vi.mock('../../../lib/sseClient', () => ({ fetchSSE: vi.fn() }))
 vi.mock('../../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false }),
+  getDemoMode: vi.fn(() => false),
 }))
 vi.mock('../../../lib/modeTransition', () => ({
   registerRefetch: vi.fn(),

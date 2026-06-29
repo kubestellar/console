@@ -55,6 +55,7 @@ vi.mock('../../../lib/demoMode', () => ({
 vi.mock('../../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../useLocalAgent', () => ({

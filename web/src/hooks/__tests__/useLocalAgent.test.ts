@@ -27,6 +27,7 @@ vi.mock('../mcp/shared', () => ({
 vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
   isDemoModeForced: false,
+  getDemoMode: vi.fn(() => false),
 }
 ))
 

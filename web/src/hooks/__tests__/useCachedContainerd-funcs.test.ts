@@ -32,6 +32,7 @@ vi.mock('../../lib/constants/network', () => ({
 vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false }),
+  getDemoMode: vi.fn(() => false),
   isDemoModeForced: false,
 }))
 
