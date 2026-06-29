@@ -101,7 +101,6 @@ afterEach(() => {
 
 function kubectlOk(output: string) {
   return { exitCode: 0, output }
-  getDemoMode: vi.fn(() => false),
 }
 
 function kubectlFail(output = '') {
