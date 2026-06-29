@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-24T18:31:20.487Z",
-  "count": 1615,
+  "generatedAt": "2026-06-29T08:16:08.571Z",
+  "count": 1619,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -2006,6 +2006,48 @@
         "feature"
       ],
       "type": "feature",
+      "installMethods": [],
+      "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/argo-rollouts/argo-rollouts-3562-job-analysis-run-never-fails-when-the-job-image-can-t-be-pull.json",
+      "title": "argo-rollouts: Job Analysis Run never fails when the job image can't be pulled (it just succeeds and promotes).",
+      "description": "Job Analysis Run never fails when the job image can't be pulled (it just succeeds and promotes).. This issue affects 22+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "argo-rollouts",
+        "graduated",
+        "app-definition",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "argo-rollouts"
+      ],
+      "targetResourceKinds": [
+        "Pod",
+        "Deployment",
+        "Namespace"
+      ],
+      "difficulty": "beginner",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
       "installMethods": [],
       "maturity": "graduated",
       "qualityScore": 100,
@@ -7559,6 +7601,44 @@
       ],
       "targetResourceKinds": [],
       "difficulty": "intermediate",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/cilium/cilium-42756-cfp-listenerset-for-cilium-gatewayapi-controller.json",
+      "title": "cilium: CFP: ListenerSet for Cilium GatewayAPI Controller",
+      "description": "CFP: ListenerSet for Cilium GatewayAPI Controller. Requested by 44+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "cilium",
+        "graduated",
+        "networking",
+        "feature"
+      ],
+      "cncfProjects": [
+        "cilium"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "beginner",
       "issueTypes": [
         "feature"
       ],
@@ -44050,6 +44130,48 @@
       "qualitySuggestions": []
     },
     {
+      "path": "fixes/cncf-generated/kyverno/kyverno-15722-bug-generatingpolicy-generateexisting-does-not-trigger-for-pre-exi.json",
+      "title": "kyverno: [Bug] GeneratingPolicy: generateExisting does not trigger for pre-existing resources",
+      "description": "[Bug] GeneratingPolicy: generateExisting does not trigger for pre-existing resources. This issue affects 10+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "kyverno",
+        "incubating",
+        "security",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "kyverno"
+      ],
+      "targetResourceKinds": [
+        "Namespace",
+        "Clusterrole",
+        "Rolebinding"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "incubating",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
       "path": "fixes/cncf-generated/kyverno/kyverno-13310-bug-imagepullsecret-doesn-t-render-properly.json",
       "title": "kyverno: [Bug] imagePullSecret doesn't render properly",
       "description": "[Bug] imagePullSecret doesn't render properly. This issue affects 11+ users.",
@@ -47471,6 +47593,44 @@
         "feature"
       ],
       "type": "feature",
+      "installMethods": [],
+      "maturity": "community",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/localai/localai-6268-v3-5-0-macos-installer-is-broken-on-apple-m-series.json",
+      "title": "localai: v3.5.0 MacOS installer is broken on Apple M series",
+      "description": "v3.5.0 MacOS installer is broken on Apple M series. This issue affects 8+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "localai",
+        "community",
+        "llm-serving",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "localai"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
       "installMethods": [],
       "maturity": "community",
       "qualityScore": 100,
