@@ -27,7 +27,7 @@ func TestGetBaseURLEnvKeyForProvider(t *testing.T) {
 		{"llamacpp", true},
 		{"localai", true},
 		{"vllm", true},
-		{"lmstudio", true},
+		{"lm-studio", true},
 		{"nonexistent-provider", false},
 	}
 

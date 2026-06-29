@@ -40,6 +40,8 @@ func TestProviderVars(t *testing.T) {
 }
 
 func TestGroqValidationURL(t *testing.T) {
+	// Set GROQ_BASE_URL explicitly so the test is hermetic
+	t.Setenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
 	url := groqValidationURL()
 	if url == "" {
 		t.Error("groqValidationURL() returned empty string")
@@ -59,8 +61,8 @@ func TestTruncateString(t *testing.T) {
 		{"empty", "", 10, ""},
 		{"within limit", "hello", 10, "hello"},
 		{"at limit", "hello", 5, "hello"},
-		{"over limit", "hello world", 5, "hello"},
-		{"zero max", "hello", 0, ""},
+		{"over limit", "hello world", 5, "hello..."},
+		{"zero max", "hello", 0, "..."},
 	}
 
 	for _, tt := range tests {
@@ -99,6 +101,10 @@ func TestMaxLLMResponseBytes(t *testing.T) {
 }
 
 func TestSetAllowLoopbackForTests(t *testing.T) {
+	// Restore the package-wide default (loopback enabled) after the test
+	// so we don't break other tests that rely on httptest servers.
+	t.Cleanup(func() { SetAllowLoopbackForTests(true) })
+
 	// Should not panic
 	SetAllowLoopbackForTests(true)
 	SetAllowLoopbackForTests(false)
