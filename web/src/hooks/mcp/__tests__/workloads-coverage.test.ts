@@ -145,7 +145,7 @@ beforeEach(() => {
   __resetInfrastructureCaches()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsAgentUnavailable.mockReturnValue(true)
   mockIsBackendUnavailable.mockReturnValue(false)
   mockRegisterRefetch.mockReturnValue(vi.fn())
@@ -500,7 +500,7 @@ describe('useDeploymentIssues — uncovered branches', () => {
   it('silent demo mode does not set isRefreshing', async () => {
     vi.useFakeTimers()
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useDeploymentIssues())
 

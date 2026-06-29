@@ -135,7 +135,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsNetlifyDeployment.value = false
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockSubscribePolling.mockReturnValue(vi.fn())
@@ -225,7 +225,7 @@ describe('useHelmReleases — additional branches', () => {
   it('demo mode refetch with silent does not show refresh indicator', async () => {
     vi.useFakeTimers()
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useHelmReleases())
 

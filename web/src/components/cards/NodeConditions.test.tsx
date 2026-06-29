@@ -35,7 +35,7 @@ vi.mock('../../hooks/useCachedData', () => ({
   useCachedNodes: () => mockCachedNodes(),
 }))
 
-const mockIsDemoMode = vi.fn(() => ({ isDemoMode: false }))
+const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
@@ -110,7 +110,7 @@ const defaultNodesReturn = {
 function setup() {
   mockCachedNodes.mockReturnValue(defaultNodesReturn)
   mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false })
-  mockIsDemoMode.mockReturnValue({ isDemoMode: false })
+  mockIsDemoMode.mockReturnValue(false)
   mockExecute.mockResolvedValue(undefined)
 }
 

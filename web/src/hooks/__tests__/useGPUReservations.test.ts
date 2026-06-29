@@ -19,7 +19,7 @@ vi.mock('../../lib/api', () => ({
   },
 }))
 
-const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false }))
+const mockUseDemoMode = vi.fn(() => false)
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => mockUseDemoMode(),
 }))
@@ -70,7 +70,7 @@ describe('useGPUReservations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     mockGet.mockResolvedValue({ data: [] })
     mockPost.mockResolvedValue({ data: MOCK_RESERVATION })
     mockPut.mockResolvedValue({ data: MOCK_RESERVATION })
@@ -175,7 +175,7 @@ describe('useGPUReservations', () => {
   // ---------- Demo Mode ----------
 
   it('falls back to demo data when API fails in demo mode', async () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     mockGet.mockRejectedValue(new Error('fail'))
 
     const { result } = renderHook(() => useGPUReservations())
@@ -186,7 +186,7 @@ describe('useGPUReservations', () => {
   })
 
   it('uses demo data when API returns empty in demo mode', async () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     mockGet.mockResolvedValue({ data: [] })
 
     const { result } = renderHook(() => useGPUReservations())
@@ -197,7 +197,7 @@ describe('useGPUReservations', () => {
   })
 
   it('uses live data in demo mode when API returns non-empty', async () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     mockGet.mockResolvedValue({ data: [MOCK_RESERVATION] })
 
     const { result } = renderHook(() => useGPUReservations())

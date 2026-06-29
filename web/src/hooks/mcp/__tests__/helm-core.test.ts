@@ -135,7 +135,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsNetlifyDeployment.value = false
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockSubscribePolling.mockReturnValue(vi.fn())
@@ -174,7 +174,7 @@ describe('useHelmReleases', () => {
 
   it('returns demo releases when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useHelmReleases())
 
@@ -348,7 +348,7 @@ describe('useHelmReleases', () => {
 
   it('demo releases each have required HelmRelease fields', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useHelmReleases())
 
@@ -473,7 +473,7 @@ describe('useHelmHistory', () => {
 
   it('returns demo history when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useHelmHistory('c1', 'prometheus', 'monitoring'))
 
@@ -605,7 +605,7 @@ describe('useHelmHistory', () => {
 
   it('demo history entries each have required HelmHistoryEntry fields', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useHelmHistory('c1', 'prometheus', 'monitoring'))
     await waitFor(() => expect(result.current.history.length).toBeGreaterThan(0))
@@ -727,7 +727,7 @@ describe('useHelmValues', () => {
 
   it('returns demo values when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useHelmValues('c1', 'prometheus', 'monitoring'))
 
@@ -881,7 +881,7 @@ describe('useHelmValues', () => {
 
   it('demo values contain expected structure', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const cluster = uniqueCluster('val-demo-struct')
     const { result } = renderHook(() => useHelmValues(cluster, 'prometheus', 'monitoring'))

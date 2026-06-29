@@ -122,7 +122,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsNetlifyDeployment.value = false
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockSubscribePolling.mockReturnValue(vi.fn())
@@ -379,7 +379,7 @@ describe('crossplane-coverage: consecutive failure tracking', () => {
 describe('crossplane-coverage: demo mode data processing', () => {
   it('returns demo resources with expected structure', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useCrossplaneManagedResources('demo-struct'))
 
@@ -398,7 +398,7 @@ describe('crossplane-coverage: demo mode data processing', () => {
 
   it('saves demo data to localStorage when no cluster filter', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useCrossplaneManagedResources())
 
@@ -412,7 +412,7 @@ describe('crossplane-coverage: demo mode data processing', () => {
   it('does not save demo data to localStorage when cluster filter provided', async () => {
     localStorage.clear()
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useCrossplaneManagedResources('demo-filtered'))
 
@@ -426,7 +426,7 @@ describe('crossplane-coverage: demo mode data processing', () => {
 
   it('sets lastRefresh on demo mode fetch', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useCrossplaneManagedResources('demo-ts'))
 
@@ -616,7 +616,7 @@ describe('crossplane-coverage: demoMode toggle re-fetches', () => {
 
     // Toggle demo mode
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     rerender()
 
     await waitFor(() => expect(result.current.isDemoData).toBe(true))

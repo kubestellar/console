@@ -96,7 +96,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'tk')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsNetlifyDeployment.value = false
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockSubscribePolling.mockReturnValue(vi.fn())

@@ -125,7 +125,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsAgentUnavailable.mockReturnValue(true)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockClusterCacheRef.clusters = []

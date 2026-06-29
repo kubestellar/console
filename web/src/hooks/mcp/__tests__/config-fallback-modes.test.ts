@@ -97,7 +97,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsAgentUnavailable.mockReturnValue(true)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   // Default: SSE returns empty list (succeeds so REST is not reached by default)
@@ -285,7 +285,7 @@ describe('useServiceAccounts — REST fallback', () => {
 describe('useConfigMaps — demo mode filtering', () => {
   beforeEach(() => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
   })
 
   it('filters demo configmaps by cluster', async () => {
@@ -334,7 +334,7 @@ describe('useConfigMaps — demo mode filtering', () => {
 describe('useSecrets — demo mode filtering', () => {
   beforeEach(() => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
   })
 
   it('filters demo secrets by cluster', async () => {
@@ -377,7 +377,7 @@ describe('useSecrets — demo mode filtering', () => {
 describe('useServiceAccounts — demo mode filtering', () => {
   beforeEach(() => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
   })
 
   it('filters demo service accounts by cluster', async () => {
