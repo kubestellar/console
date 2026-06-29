@@ -63,10 +63,7 @@ on:
         description: Issue number to work on
         required: true
 
-permissions:
-  issues: write
-  pull-requests: write
-  contents: write
+permissions: {}
 
 concurrency:
   group: "gh-aw-${{ github.workflow }}-${{ github.event.issue.number || github.run_id }}"
