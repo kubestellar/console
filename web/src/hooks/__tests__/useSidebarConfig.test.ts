@@ -12,7 +12,7 @@ vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: vi.fn(() => ({ isDemoMode: true })),
   getDemoMode: vi.fn(() => false),
-})
+}))
 
 vi.mock('../useBackendHealth', () => ({
   useBackendHealth: vi.fn(() => ({
