@@ -63,7 +63,7 @@ export function CardFactoryCode({ onCardCreated, onSaveMessage }: CardFactoryCod
       return
     }
 
-    const componentResult = createCardComponent(result.code!)
+    const componentResult = await createCardComponent(result.code!)
     if (componentResult.error) {
       setCompileStatus('error')
       setCompileError(componentResult.error)
