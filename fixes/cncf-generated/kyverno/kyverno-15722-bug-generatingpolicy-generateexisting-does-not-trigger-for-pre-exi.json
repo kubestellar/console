@@ -1,0 +1,81 @@
+{
+  "version": "kc-mission-v1",
+  "name": "kyverno-15722-bug-generatingpolicy-generateexisting-does-not-trigger-for-pre-exi",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "kyverno: [Bug] GeneratingPolicy: generateExisting does not trigger for pre-existing resources",
+    "description": "[Bug] GeneratingPolicy: generateExisting does not trigger for pre-existing resources. This issue affects 10+ users.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify kyverno troubleshoot symptoms",
+        "description": "Check for the issue in your kyverno deployment:\n```bash\nkubectl get pods -n kyverno -l app.kubernetes.io/name=kyverno\nkubectl logs -l app.kubernetes.io/name=kyverno -n kyverno --tail=100 | grep -i error\n```\nLook for errors or warnings in the logs that may indicate the issue."
+      },
+      {
+        "title": "Review kyverno configuration",
+        "description": "Inspect the relevant kyverno configuration:\n```bash\nkubectl get all -n kyverno -l app.kubernetes.io/name=kyverno\nkubectl get configmap -n kyverno -l app.kubernetes.io/part-of=kyverno\n```\nWhen using GeneratingPolicy (policies.kyverno.io/v1) with spec.evaluation.generateExisting.enabled: true, Kyverno does not generate resources in namespaces that existed before the policy was applied."
+      },
+      {
+        "title": "Apply the fix for [Bug] GeneratingPolicy: generateExisting does not trigger…",
+        "description": "*: If this PR results in new or altered behavior which is user facing, you\n\nread and follow the steps outlined in the [PR documentation guide](pr_documentation.md) and add Proof Manifests as defined below.\n-->\nContext Isolation: Added a `Clone()` method to contextProvider to ensure each background\n```yaml\nkyverno-admission-controller    3 replicas   Running\nkyverno-background-controller   2 replicas   Running\nkyverno-cleanup-controller      2 replicas   Running\nkyverno-reports-controller      2 replicas   Running\n```"
+      },
+      {
+        "title": "Confirm [Bug] GeneratingPolicy: generateExisting does not… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=kyverno -n kyverno --tail=50 --since=5m\nkubectl get events -n kyverno --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that the issue symptoms are gone."
+      }
+    ],
+    "resolution": {
+      "summary": "*: If this PR results in new or altered behavior which is user facing, you\n\nread and follow the steps outlined in the [PR documentation guide](pr_documentation.md) and add Proof Manifests as defined below.\n-->\nContext Isolation: Added a `Clone()` method to contextProvider to ensure each background worker has an isolated `genCtx` state.",
+      "codeSnippets": [
+        "kyverno-admission-controller    3 replicas   Running\nkyverno-background-controller   2 replicas   Running\nkyverno-cleanup-controller      2 replicas   Running\nkyverno-reports-controller      2 replicas   Running",
+        "--- TEST 1: ClusterPolicy (old API) ---\n[1] Creating namespace 'test-cp-exist-ns' BEFORE applying policy...\n    RoleBindings (expect none): No resources found\n\n[2] Applying ClusterPolicy with generateExisting: true...\n[3] Waiting 30s...\n[4] RoleBindings in 'test-cp-exist-ns':\nNAME          ROLE               AGE\ntest-viewer   ClusterRole/view   36s    ← ✓ CORRECT\n\n--- TEST 2: GeneratingPolicy (new API) ---\n[1] Creating namespace 'test-gp-exist-ns' BEFORE applying policy...\n    RoleBindings (expect none): No resources found\n\n[2] Applying GeneratingPolicy with generateExisting.enabled: true...\n[3] Waiting 30s...\n[4] RoleBindings in 'test-gp-exist-ns':\nNo resources found in test-gp-exist-ns namespace.   ← ✗ BUG\n\n[5] UpdateRequests in kyverno namespace:\nNo resources found in kyverno namespace.",
+        "# Kyverno CLI test manifest (please see docs for latest manifest format at https://kyverno.io/docs/kyverno-cli/). See kyverno/policies for complete examples of all related test files."
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "kyverno",
+      "incubating",
+      "security",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "kyverno"
+    ],
+    "targetResourceKinds": [
+      "Namespace",
+      "Clusterrole",
+      "Rolebinding"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "incubating",
+    "sourceUrls": {
+      "issue": "https://github.com/kyverno/kyverno/issues/15722",
+      "repo": "https://github.com/kyverno/kyverno",
+      "pr": "https://github.com/kyverno/kyverno/pull/16041"
+    },
+    "reactions": 10,
+    "comments": 4,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with kyverno installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-29T07:51:08.621Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
