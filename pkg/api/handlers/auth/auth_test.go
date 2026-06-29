@@ -53,6 +53,7 @@ func TestDevModeLogin(t *testing.T) {
 		mockStore.On("UpdateLastLogin", mock.Anything).Return(nil).Once()
 
 		req, _ := http.NewRequest("GET", "/auth/dev", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, 5000)
 
 		assert.NoError(t, err)
@@ -77,6 +78,7 @@ func TestDevModeLogin(t *testing.T) {
 		mockStore.On("UpdateLastLogin", existingUser.ID).Return(nil).Once()
 
 		req, _ := http.NewRequest("GET", "/auth/dev", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, 5000)
 
 		assert.NoError(t, err)
@@ -94,6 +96,7 @@ func TestDevModeLogin(t *testing.T) {
 // want to exercise the CSRF gate should build requests directly.
 func refreshReq(authHeader string) *http.Request {
 	req, err := http.NewRequest("POST", "/auth/refresh", nil)
+	req.Host = "localhost"
 	if err != nil {
 		panic(err)
 	}
@@ -188,6 +191,7 @@ func TestRefreshToken(t *testing.T) {
 		token, _ := handler.generateJWT(user)
 
 		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, _ := app.Test(req, 5000)
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode,
@@ -328,6 +332,7 @@ func TestGitHubLogin_Redirects(t *testing.T) {
 	app.Get("/auth/github", handler.GitHubLogin)
 
 	req, _ := http.NewRequest("GET", "/auth/github", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 
 	assert.NoError(t, err)
@@ -362,6 +367,7 @@ func TestGitHubCallback_MissingCode(t *testing.T) {
 	app.Get("/auth/callback", handler.GitHubCallback)
 
 	req, _ := http.NewRequest("GET", "/auth/callback", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	if err != nil || resp == nil {
 		t.Fatalf("app.Test failed: %v", err)
@@ -378,6 +384,7 @@ func TestGitHubCallback_InvalidState(t *testing.T) {
 
 	// Provide code but no state
 	req, _ := http.NewRequest("GET", "/auth/callback?code=123", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	if err != nil || resp == nil {
 		t.Fatalf("app.Test failed: %v", err)
@@ -394,6 +401,7 @@ func TestGitHubCallback_GitHubError(t *testing.T) {
 
 	t.Run("Access denied by user", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/auth/callback?error=access_denied&error_description=The+user+denied+access", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, 5000)
 		if err != nil || resp == nil {
 			t.Fatalf("app.Test failed: %v", err)
@@ -407,6 +415,7 @@ func TestGitHubCallback_GitHubError(t *testing.T) {
 
 	t.Run("Generic GitHub error", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/auth/callback?error=application_suspended&error_description=App+is+suspended", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, 5000)
 		if err != nil || resp == nil {
 			t.Fatalf("app.Test failed: %v", err)
@@ -468,6 +477,7 @@ func TestGitHubCallback_RecoversFromValidCookieOnStateFailure(t *testing.T) {
 		assert.NoError(t, err)
 
 		req, _ := http.NewRequest("GET", "/auth/callback?code=123&state=bogus", nil)
+		req.Host = "localhost"
 		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: cookieToken})
 
 		resp, err := app.Test(req, 5000)
@@ -483,6 +493,7 @@ func TestGitHubCallback_RecoversFromValidCookieOnStateFailure(t *testing.T) {
 
 	t.Run("missing cookie + invalid state redirects to error page", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/auth/callback?code=123&state=bogus", nil)
+		req.Host = "localhost"
 
 		resp, err := app.Test(req, 5000)
 		assert.NoError(t, err)
@@ -505,6 +516,7 @@ func TestGitHubCallback_RecoversFromValidCookieOnStateFailure(t *testing.T) {
 		expiredSigned, _ := expiredJWT.SignedString([]byte("test-secret"))
 
 		req, _ := http.NewRequest("GET", "/auth/callback?code=123&state=bogus", nil)
+		req.Host = "localhost"
 		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: expiredSigned})
 
 		resp, err := app.Test(req, 5000)
@@ -530,6 +542,7 @@ func TestGitHubCallback_RecoversFromValidCookieOnStateFailure(t *testing.T) {
 		forgedSigned, _ := forgedJWT.SignedString([]byte("not-the-real-secret"))
 
 		req, _ := http.NewRequest("GET", "/auth/callback?code=123&state=bogus", nil)
+		req.Host = "localhost"
 		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: forgedSigned})
 
 		resp, err := app.Test(req, 5000)
@@ -548,6 +561,7 @@ func TestGitHubCallback_RecoversFromValidCookieOnStateFailure(t *testing.T) {
 		assert.NoError(t, err)
 
 		req, _ := http.NewRequest("GET", "/auth/callback?code=123", nil)
+		req.Host = "localhost"
 		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: cookieToken})
 
 		resp, err := app.Test(req, 5000)
@@ -753,6 +767,7 @@ func TestGitHubCallback_SanitizesErrorDescription(t *testing.T) {
 	// Include CR/LF in the query param; after URL decoding the handler
 	// should strip the control characters before reflecting them.
 	req, _ := http.NewRequest("GET",
+	req.Host = "localhost"
 		"/auth/callback?error=access_denied&error_description=bad%0D%0Ainjected",
 		nil)
 	resp, err := app.Test(req, 5000)
@@ -778,6 +793,7 @@ func TestLogout_RequiresCSRFHeader(t *testing.T) {
 
 	// Without the CSRF header: 403.
 	req, err := http.NewRequest("POST", "/auth/logout", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := app.Test(req, 5000)
@@ -786,6 +802,7 @@ func TestLogout_RequiresCSRFHeader(t *testing.T) {
 
 	// With the CSRF header: 200.
 	req2, err := http.NewRequest("POST", "/auth/logout", nil)
+	req2.Host = "localhost"
 	require.NoError(t, err)
 	req2.Header.Set("Authorization", "Bearer "+token)
 	req2.Header.Set("X-Requested-With", "XMLHttpRequest")
@@ -813,6 +830,7 @@ func TestLogout_ExpiredTokenIdempotent(t *testing.T) {
 	signed, _ := tok.SignedString([]byte("test-secret"))
 
 	req, err := http.NewRequest("POST", "/auth/logout", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+signed)
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
@@ -836,6 +854,7 @@ func TestCookieSameSiteStrict(t *testing.T) {
 	mockStore.On("UpdateLastLogin", mock.Anything).Return(nil).Once()
 
 	req, _ := http.NewRequest("GET", "/auth/dev", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
 

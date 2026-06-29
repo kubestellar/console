@@ -32,6 +32,7 @@ func TestGetGitHubRewards(t *testing.T) {
 	// For now, let's verify it returns 503 if GitHub is unreachable (default behavior with fake token).
 
 	req, err := http.NewRequest("GET", "/api/rewards/github", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 
 	resp, err := env.App.Test(req, 5000)

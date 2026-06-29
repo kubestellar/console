@@ -65,6 +65,7 @@ func TestListGateways(t *testing.T) {
 
 	// Case 1: List all (success)
 	req, _ := http.NewRequest("GET", "/api/gateway/gateways", nil)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
@@ -78,6 +79,7 @@ func TestListGateways(t *testing.T) {
 
 	// Case 2: List specific cluster (success)
 	req2, _ := http.NewRequest("GET", "/api/gateway/gateways?cluster=test-cluster", nil)
+	req2.Host = "localhost"
 	resp2, err := env.App.Test(req2, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp2.StatusCode)
@@ -93,6 +95,7 @@ func TestListGateways(t *testing.T) {
 	})
 
 	req3, _ := http.NewRequest("GET", "/api/gateway/gateways?cluster=test-cluster", nil)
+	req3.Host = "localhost"
 	resp3, err := env.App.Test(req3, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 500, resp3.StatusCode,
@@ -126,12 +129,14 @@ func TestGetGateway(t *testing.T) {
 
 	// Case 1: Found
 	req, _ := http.NewRequest("GET", "/api/gateway/gateways/c1/default/target-gw", nil)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
 	// Case 2: Not Found (name filter excludes it)
 	req2, _ := http.NewRequest("GET", "/api/gateway/gateways/c1/default/missing", nil)
+	req2.Host = "localhost"
 	resp2, err := env.App.Test(req2, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 404, resp2.StatusCode)
@@ -145,6 +150,7 @@ func TestGetGateway(t *testing.T) {
 		return true, nil, errors.New("list failure")
 	})
 	req3, _ := http.NewRequest("GET", "/api/gateway/gateways/c1/default/target-gw", nil)
+	req3.Host = "localhost"
 	resp3, err := env.App.Test(req3, 5000)
 	require.NoError(t, err)
 	if resp3.StatusCode == 404 {
@@ -179,6 +185,7 @@ func TestListHTTPRoutes(t *testing.T) {
 
 	// Case 1: List all
 	req, _ := http.NewRequest("GET", "/api/gateway/httproutes", nil)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
@@ -198,6 +205,7 @@ func TestListHTTPRoutes(t *testing.T) {
 		return true, nil, errors.New("route error")
 	})
 	req2, _ := http.NewRequest("GET", "/api/gateway/httproutes?cluster=test-cluster", nil)
+	req2.Host = "localhost"
 	resp2, err := env.App.Test(req2, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 500, resp2.StatusCode,
@@ -231,12 +239,14 @@ func TestGetHTTPRoute(t *testing.T) {
 
 	// Case 1: Found
 	req, _ := http.NewRequest("GET", "/api/gateway/httproutes/c1/default/target-route", nil)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
 	// Case 2: 404
 	req2, _ := http.NewRequest("GET", "/api/gateway/httproutes/c1/default/missing", nil)
+	req2.Host = "localhost"
 	resp2, err := env.App.Test(req2, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 404, resp2.StatusCode)
@@ -250,6 +260,7 @@ func TestGetGatewayAPIStatus(t *testing.T) {
 	_ = injectDynamicCluster(env, "test-cluster", gatewayGVRs())
 
 	req, _ := http.NewRequest("GET", "/api/gateway/status", nil)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
@@ -279,6 +290,7 @@ func TestListGatewaysMock(t *testing.T) {
 		env.App.Get("/api/gateway/gateways", handler.ListGateways)
 
 		req, _ := http.NewRequest("GET", "/api/gateway/gateways", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
@@ -294,6 +306,7 @@ func TestListGatewaysMock(t *testing.T) {
 		env.App.Get("/api/gateway/gateways", handler.ListGateways)
 
 		req, _ := http.NewRequest("GET", "/api/gateway/gateways", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
@@ -306,6 +319,7 @@ func TestListGatewaysMock(t *testing.T) {
 		emptyApp.Get("/api/gateway/gateways", handler.ListGateways)
 
 		req, _ := http.NewRequest("GET", "/api/gateway/gateways", nil)
+		req.Host = "localhost"
 		resp, err := emptyApp.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
@@ -335,6 +349,7 @@ func TestListHTTPRoutesMock(t *testing.T) {
 		env.App.Get("/api/gateway/httproutes", handler.ListHTTPRoutes)
 
 		req, _ := http.NewRequest("GET", "/api/gateway/httproutes", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
@@ -350,6 +365,7 @@ func TestListHTTPRoutesMock(t *testing.T) {
 		env.App.Get("/api/gateway/httproutes", handler.ListHTTPRoutes)
 
 		req, _ := http.NewRequest("GET", "/api/gateway/httproutes?cluster=test-cluster", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)

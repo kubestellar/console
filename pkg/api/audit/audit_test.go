@@ -35,6 +35,7 @@ func TestLogEmitsRequiredFields(t *testing.T) {
 	var buf bytes.Buffer
 	captureLog(&buf, func() {
 		req := httptest.NewRequest("POST", "/api/users/target-123/role", nil)
+		req.Host = "localhost"
 		req.Header.Set("X-Forwarded-For", "10.0.0.1")
 		//nolint:errcheck // test-only; response body is irrelevant
 		app.Test(req)
@@ -76,6 +77,7 @@ func TestLogOmitsDetailsWhenEmpty(t *testing.T) {
 	var buf bytes.Buffer
 	captureLog(&buf, func() {
 		req := httptest.NewRequest("DELETE", "/api/users/target-456", nil)
+		req.Host = "localhost"
 		//nolint:errcheck // test-only
 		app.Test(req)
 	})
@@ -104,6 +106,7 @@ func TestLogUnauthorizedAttempt(t *testing.T) {
 	var buf bytes.Buffer
 	captureLog(&buf, func() {
 		req := httptest.NewRequest("GET", "/api/users", nil)
+		req.Host = "localhost"
 		//nolint:errcheck // test-only
 		app.Test(req)
 	})
@@ -151,6 +154,7 @@ func TestLogPersistsAuditEntry(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("PUT", "/api/settings", nil)
+	req.Host = "localhost"
 	req.Header.Set("X-Forwarded-For", "203.0.113.10")
 	_, err := app.Test(req)
 	if err != nil {
@@ -204,6 +208,7 @@ func TestLogStoreFailureLogsError(t *testing.T) {
 	var buf bytes.Buffer
 	captureLog(&buf, func() {
 		req := httptest.NewRequest("POST", "/api/login", nil)
+		req.Host = "localhost"
 		_, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test() error = %v", err)

@@ -71,6 +71,7 @@ func TestGitOpsArgo_ListArgoApplications(t *testing.T) {
 	env.App.Get("/api/gitops/argocd/applications", handler.ListArgoApplications)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/argocd/applications", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
@@ -100,6 +101,7 @@ func TestGitOpsArgo_GetArgoHealthSummary(t *testing.T) {
 	env.App.Get("/api/gitops/argocd/health", handler.GetArgoHealthSummary)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/argocd/health", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
@@ -129,6 +131,7 @@ func TestGitOpsArgo_GetArgoSyncSummary(t *testing.T) {
 	env.App.Get("/api/gitops/argocd/sync", handler.GetArgoSyncSummary)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/argocd/sync", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
@@ -156,6 +159,7 @@ func TestGitOpsArgo_ListArgoApplicationSets(t *testing.T) {
 	env.App.Get("/api/gitops/argocd/applicationsets", handler.ListArgoApplicationSets)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/argocd/applicationsets", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
@@ -184,6 +188,7 @@ func TestGitOpsArgo_GetArgoStatus(t *testing.T) {
 	env.App.Get("/api/gitops/argocd/status", handler.GetArgoStatus)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/argocd/status", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
@@ -207,6 +212,7 @@ func TestGitOpsArgo_GetHelmValues_Validation(t *testing.T) {
 
 	// Missing release
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/values", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
@@ -214,6 +220,7 @@ func TestGitOpsArgo_GetHelmValues_Validation(t *testing.T) {
 
 	// Invalid cluster name
 	req, err = http.NewRequest(http.MethodGet, "/api/gitops/helm/values?release=my-rel&cluster=bad;name", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err = env.App.Test(req)
 	require.NoError(t, err)

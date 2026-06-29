@@ -29,6 +29,7 @@ func TestMissions_GetKBScores_Success(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -70,6 +71,7 @@ func TestMissions_GetKBScores_Pagination(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores?limit=2&offset=1", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -93,6 +95,7 @@ func TestMissions_GetKBScores_DemoMode(t *testing.T) {
 	app, _ := setupMissionsTest()
 
 	req, err := http.NewRequest("GET", "/api/missions/scores", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Header.Set("X-Demo-Mode", "true")
 
@@ -135,6 +138,7 @@ func TestMissions_GetMissionScore_Success(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores/demo/test-123", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -167,6 +171,7 @@ func TestMissions_GetMissionScore_NotFound(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores/demo/nonexistent", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
@@ -194,6 +199,7 @@ func TestMissions_GetMissionScore_NoScore(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	req, err := http.NewRequest("GET", "/api/missions/scores/demo/test-123", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
