@@ -18,7 +18,7 @@ const {
 } = vi.hoisted(() => ({
   mockUseClusters: vi.fn(),
   mockUseGlobalFilters: vi.fn(),
-  mockUseDemoMode: vi.fn(),
+  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })),
   mockUseKyverno: vi.fn(),
   mockUseKubescape: vi.fn(),
   mockUseTrivy: vi.fn(),

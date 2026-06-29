@@ -22,7 +22,7 @@ import { useEffect, useState } from 'react'
 // ── Hoisted mocks ──────────────────────────────────────────────────
 
 const { mockUseDemoMode, mockUseCachedEvents } = vi.hoisted(() => ({
-  mockUseDemoMode: vi.fn().mockReturnValue(false),
+  mockUseDemoMode: vi.fn().mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   mockUseCachedEvents: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
 }))
 
@@ -88,7 +88,7 @@ import { registerUnifiedHooks } from '../registerHooks'
 beforeEach(() => {
   vi.clearAllMocks()
   vi.useFakeTimers()
-  mockUseDemoMode.mockReturnValue(false)
+  mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   mockUseCachedEvents.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() })
 })
 
@@ -125,7 +125,7 @@ describe('useDemoDataHook mode transitions', () => {
   }
 
   it('transitions from non-demo to demo: loading then data', () => {
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const demoData = [{ x: 1 }, { x: 2 }]
     const { result, rerender } = renderHook(() => useSimulatedDemoDataHook(demoData))
 
@@ -134,7 +134,7 @@ describe('useDemoDataHook mode transitions', () => {
     expect(result.current.isLoading).toBe(false)
 
     // Switch to demo mode
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     rerender()
 
     // Should be loading
@@ -148,14 +148,14 @@ describe('useDemoDataHook mode transitions', () => {
   })
 
   it('handles rapid mode toggling (timer cleanup)', () => {
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const { result, rerender } = renderHook(() => useSimulatedDemoDataHook([{ v: 1 }]))
 
     // Start loading in demo mode
     expect(result.current.isLoading).toBe(true)
 
     // Switch away before timer fires
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     rerender()
     act(() => { vi.advanceTimersByTime(0) })
 
@@ -169,7 +169,7 @@ describe('useDemoDataHook mode transitions', () => {
   })
 
   it('returns empty array for empty demo data in demo mode', () => {
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const { result } = renderHook(() => useSimulatedDemoDataHook([]))
     act(() => { vi.advanceTimersByTime(15) })
     expect(result.current.data).toEqual([])

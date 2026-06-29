@@ -7,7 +7,7 @@ const mockUseClusters = vi.fn()
 const mockUseWorkloads = vi.fn()
 const mockUseResolveDependencies = vi.fn()
 const mockUseCardLoadingState = vi.fn()
-const mockUseDemoMode = vi.fn()
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
 
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
@@ -77,7 +77,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
   })
 
   it('when isDemoMode is false and cluster is live, namespace dropdown stays unselected until a cluster is chosen', () => {
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCachedNamespaces.mockReturnValue({
       namespaces: ['prod-ns', 'staging-ns'],
       isLoading: false,
@@ -94,7 +94,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
   })
 
   it('when isDemoMode is true, auto-selection prefers "production" namespace if available', () => {
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCachedNamespaces.mockReturnValue({
       namespaces: ['default', 'production', 'staging'],
       isLoading: false,
@@ -113,7 +113,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
   })
 
   it('when isDemoMode is false, auto-selection logic does NOT run', () => {
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCachedNamespaces.mockReturnValue({
       namespaces: ['default', 'production', 'staging'],
       isLoading: false,
@@ -129,7 +129,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
   })
 
   it('isDemoData flag is true when demoMode is true', () => {
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCachedNamespaces.mockReturnValue({
       namespaces: ['default'],
       isLoading: false,
@@ -149,7 +149,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
   })
 
   it('isDemoData flag is true when isDemoFallback is true', () => {
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCachedNamespaces.mockReturnValue({
       namespaces: ['default'],
       isLoading: false,
@@ -169,7 +169,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
   })
 
   it('namespace dropdown renders empty state when useCachedNamespaces returns empty array in live mode', () => {
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCachedNamespaces.mockReturnValue({
       namespaces: [],
       isLoading: false,
@@ -186,7 +186,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
 
   it('verifies isDemoData combines demoMode OR isDemoFallback (line 73)', () => {
     // Test case 1: demoMode true, isDemoFallback false
-    mockUseDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCachedNamespaces.mockReturnValue({
       namespaces: [],
       isLoading: false,
@@ -206,7 +206,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
     vi.clearAllMocks()
 
     // Test case 2: demoMode false, isDemoFallback true
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCachedNamespaces.mockReturnValue({
       namespaces: [],
       isLoading: false,
@@ -226,7 +226,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
     vi.clearAllMocks()
 
     // Test case 3: both false
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCachedNamespaces.mockReturnValue({
       namespaces: [],
       isLoading: false,

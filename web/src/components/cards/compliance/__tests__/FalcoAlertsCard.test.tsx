@@ -13,7 +13,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
-const mockUseDemoMode = vi.fn()
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
 vi.mock('../../../../hooks/useDemoMode', () => ({
   useDemoMode: () => mockUseDemoMode(),
 }))

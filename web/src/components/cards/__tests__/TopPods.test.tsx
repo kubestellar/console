@@ -11,7 +11,7 @@ vi.mock('../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
-const mockUseDemoMode = vi.fn()
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
 vi.mock('../../../hooks/useDemoMode', () => ({
   getDemoMode: () => true, default: () => true,
   useDemoMode: () => mockUseDemoMode(),

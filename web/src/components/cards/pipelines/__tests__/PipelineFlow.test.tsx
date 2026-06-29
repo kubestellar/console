@@ -29,7 +29,7 @@ vi.mock('../../../../hooks/useGitHubPipelines', async (importOriginal) => {
   }
 })
 
-const mockUseDemoMode = vi.fn()
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
 vi.mock('../../../../hooks/useDemoMode', () => ({
   useDemoMode: () => mockUseDemoMode(),
 }))
@@ -131,7 +131,7 @@ describe('PipelineFlow', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue(false)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({})
     mockRunMutation.mockResolvedValue({ ok: true })
     setupFlow(DEMO_FLOW)
@@ -170,7 +170,7 @@ describe('PipelineFlow', () => {
 
   describe('demo data path', () => {
     it('passes isDemoData=true to useCardLoadingState in demo mode', () => {
-      mockUseDemoMode.mockReturnValue(true)
+      mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
       render(<PipelineFlow />)
       expect(mockUseCardLoadingState).toHaveBeenCalledWith(
         expect.objectContaining({ isDemoData: true, hasAnyData: true }),

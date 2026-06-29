@@ -3,6 +3,7 @@ import { renderHook, act } from '@testing-library/react'
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../lib/constants', async (importOriginal) => {

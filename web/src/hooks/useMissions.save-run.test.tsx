@@ -17,6 +17,7 @@ vi.mock('./mcp/shared', () => ({
 
 vi.mock('./useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 vi.mock('./useLocalAgent', () => ({
   useLocalAgent: vi.fn(() => ({ isConnected: false })),

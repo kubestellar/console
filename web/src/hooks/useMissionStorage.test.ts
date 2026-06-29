@@ -16,6 +16,7 @@ import type { Mission } from './useMissionTypes'
 
 vi.mock('./useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../mocks/demoMissions', () => ({
