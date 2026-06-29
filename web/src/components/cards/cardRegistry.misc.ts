@@ -23,6 +23,7 @@ const CrossplaneManagedResources = safeLazy(() => import('./crossplane-status/Cr
 const CubefsStatus = safeLazy(() => import('./cubefs_status'), 'CubefsStatus')
 const DeploymentRolloutTracker = safeLazy(() => _insightsBundle, 'DeploymentRolloutTracker')
 const DragonflyStatus = safeLazy(() => import('./dragonfly_status'), 'DragonflyStatus')
+const DrasiPipelines = safeLazy(() => import('./DrasiPipelines'), 'DrasiPipelines')
 const _drasiBundle = import('./drasi').catch(() => undefined as never)
 const DrasiReactiveGraph = safeLazy(() => _drasiBundle, 'DrasiReactiveGraph')
 const DynamicCard = safeLazy(() => import('./DynamicCard'), 'DynamicCard')
@@ -95,8 +96,8 @@ const WasmcloudStatus = safeLazy(() => import('./wasmcloud_status'), 'WasmcloudS
  * chaos_mesh_status, checkers, cloudevents_status, cluster_changelog, cluster_delta_detector,
  * config_drift_heatmap, container_tetris, control_plane_health, crio_status,
  * cross_cluster_event_correlation, crossplane_managed_resources, cubefs_status,
- * deployment_rollout_tracker, dragonfly_status, drasi_reactive_graph, dynamic_card, etcd_status,
- * failover_timeline, flappy_pod, flatcar_status, fluid_status, game_2048, gateway_status,
+ * deployment_rollout_tracker, dragonfly_status, drasi_pipelines, drasi_reactive_graph, dynamic_card,
+ * etcd_status, failover_timeline, flappy_pod, flatcar_status, fluid_status, game_2048, gateway_status,
  * github_activity, iframe_embed, issue_activity_chart, karmada_status, keda_status,
  * knative_status, kserve_status, kube_bert, kube_chess, kube_doom, kube_galaga, kube_kart,
  * kube_kong, kube_man, kube_pong, kube_snake, kubectl, kubedle, kuberay_fleet, kubevela_status,
@@ -136,6 +137,7 @@ const components: Record<string, CardComponent> = {
   cubefs_status: CubefsStatus,
   deployment_rollout_tracker: DeploymentRolloutTracker,
   dragonfly_status: DragonflyStatus,
+  drasi_pipelines: DrasiPipelines,
   drasi_reactive_graph: DrasiReactiveGraph,
   dynamic_card: DynamicCard,
   etcd_status: EtcdStatus,
@@ -207,6 +209,7 @@ export const miscCardRegistry: CardRegistryDomain = {
     'admission_webhooks',
     'crossplane_managed_resources',
     'cubefs_status',
+    'drasi_pipelines',
     'fluid_status',
     'gateway_status',
     'knative_status',
@@ -257,6 +260,7 @@ export const miscCardRegistry: CardRegistryDomain = {
     cubefs_status: () => import('./cubefs_status'),
     deployment_rollout_tracker: () => import('./insights'),
     dragonfly_status: () => import('./dragonfly_status'),
+    drasi_pipelines: () => import('./DrasiPipelines'),
     drasi_reactive_graph: () => import('./drasi'),
     dynamic_card: () => import('./DynamicCard'),
     etcd_status: () => import('./cluster-admin-bundle'),
@@ -340,6 +344,7 @@ export const miscCardRegistry: CardRegistryDomain = {
     crossplane_managed_resources: 4,
     deployment_rollout_tracker: 6,
     dragonfly_status: 6,
+    drasi_pipelines: 6,
     drasi_reactive_graph: 12,
     etcd_status: 4,
     failover_timeline: 8,
