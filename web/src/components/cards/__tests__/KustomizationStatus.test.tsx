@@ -22,7 +22,8 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
   }),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }), // demo so we get data
   getDemoMode: () => true, default: () => true,
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,

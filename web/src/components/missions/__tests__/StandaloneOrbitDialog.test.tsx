@@ -68,13 +68,15 @@ vi.mock('../../../hooks/mcp/clusters', () => ({
   }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitOrbitMissionCreated: vi.fn(),
   emitNavigate: vi.fn(),
   emitLogin: vi.fn(),
   emitEvent: vi.fn(),
   analyticsReady: Promise.resolve(),
-}))
+}
+))
 
 // SetupInstructionsDialog pulls in heavy deps; stub it.
 vi.mock('../../setup/SetupInstructionsDialog', () => ({

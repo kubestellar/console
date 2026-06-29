@@ -17,11 +17,13 @@ vi.mock('../../../../hooks/usePredictionFeedback', () => ({
   }),
 }))
 
-vi.mock('../../../../lib/analytics', () => ({
+vi.mock('../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitAIPredictionsToggled: vi.fn(),
   emitConfidenceThresholdChanged: vi.fn(),
   emitConsensusModeToggled: vi.fn(),
-}))
+}
+))
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

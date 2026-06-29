@@ -7,11 +7,13 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   getDemoMode: vi.fn(() => false),
   isDemoModeForced: false,
   default: vi.fn(() => false),
-}))
+}
+))
 
 vi.mock('../useLocalAgent', () => ({
   useLocalAgent: vi.fn(() => ({ isConnected: false })),
@@ -24,7 +26,8 @@ vi.mock('../mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
   emitMissionStarted: vi.fn(),
@@ -32,7 +35,8 @@ vi.mock('../../lib/analytics', () => ({
   emitAgentTokenFailure: vi.fn(),
   emitWsAuthMissing: vi.fn(),
   emitSseAuthFailure: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>

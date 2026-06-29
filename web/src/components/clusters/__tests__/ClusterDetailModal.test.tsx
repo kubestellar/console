@@ -62,9 +62,11 @@ vi.mock('../../../hooks/useMissions', () => ({
   useMissions: () => ({ startMission: mockStartMission }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitClusterAction: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../lib/modals', () => ({
   BaseModal: ({ children, isOpen }: { children: ReactNode; isOpen?: boolean }) => isOpen ? <div data-testid="base-modal">{children}</div> : null,

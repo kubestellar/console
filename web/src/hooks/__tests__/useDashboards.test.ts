@@ -10,12 +10,14 @@ vi.mock('../../lib/api', () => ({
   },
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitDashboardCreated: vi.fn(),
   emitDashboardDeleted: vi.fn(),
   emitDashboardImported: vi.fn(),
   emitDashboardExported: vi.fn(),
-}))
+}
+))
 
 import { useDashboards } from '../useDashboards'
 import { api } from '../../lib/api'

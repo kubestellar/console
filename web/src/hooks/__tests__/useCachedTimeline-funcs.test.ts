@@ -19,7 +19,8 @@ vi.mock('../../lib/constants/time', () => ({
   MS_PER_DAY: 86400000,
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
     createCachedHook: vi.fn(),
   useDemoMode: () => ({ isDemoMode: false }),
   isDemoModeForced: () => false,

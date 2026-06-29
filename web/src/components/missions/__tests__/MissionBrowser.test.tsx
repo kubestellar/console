@@ -75,14 +75,16 @@ vi.mock('../../../lib/api', () => ({
   },
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitFixerBrowsed: vi.fn(),
   emitFixerViewed: vi.fn(),
   emitFixerImported: vi.fn(),
   emitFixerImportError: vi.fn(),
   emitFixerGitHubLink: vi.fn(),
   emitFixerLinkCopied: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../lib/missions/matcher', () => ({
   matchMissionsToCluster: vi.fn((missions: any[]) => missions.map((mission) => ({

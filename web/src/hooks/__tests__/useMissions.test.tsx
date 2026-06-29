@@ -23,7 +23,8 @@ vi.mock('../mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: vi.fn(() => false),
   isDemoModeForced: false,
@@ -69,7 +70,8 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   }
 })
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitMissionStarted: vi.fn(),
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
@@ -78,7 +80,8 @@ vi.mock('../../lib/analytics', () => ({
   emitWsAuthMissing: vi.fn(),
   emitSseAuthFailure: vi.fn(),
   emitMissionToolMissing: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/logger', () => ({
   logger: {

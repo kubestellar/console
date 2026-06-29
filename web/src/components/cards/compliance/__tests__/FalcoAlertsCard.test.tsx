@@ -14,9 +14,11 @@ vi.mock('react-i18next', () => ({
 }))
 
 const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
-vi.mock('../../../../hooks/useDemoMode', () => ({
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
-}))
+}
+))
 
 const mockStartMission = vi.fn()
 vi.mock('../../../../hooks/useMissions', () => ({

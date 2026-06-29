@@ -14,10 +14,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitDrillDownOpened: vi.fn(),
   emitDrillDownClosed: vi.fn(),
-}))
+}
+))
 
 import { DrillDownProvider, useDrillDown, useDrillDownActions } from '../useDrillDown'
 import type { DrillDownView } from '../useDrillDown'

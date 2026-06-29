@@ -18,11 +18,13 @@ vi.mock('../../hooks/mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitWidgetLoaded: vi.fn(),
   emitWidgetNavigation: vi.fn(),
   emitWidgetInstalled: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../hooks/useDeepLink', () => ({
   sendNotificationWithDeepLink: vi.fn(),

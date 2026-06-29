@@ -20,9 +20,11 @@ vi.mock('@/lib/clipboard', () => ({
   copyToClipboard: mockCopyToClipboard,
 }))
 
-vi.mock('@/lib/analytics', () => ({
+vi.mock('@/lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/analytics')>()),
   emitInstallCommandCopied: mockEmitInstallCommandCopied,
-}))
+}
+))
 
 vi.mock('@/lib/constants', () => ({
   COPY_FEEDBACK_TIMEOUT_MS,

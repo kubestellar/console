@@ -6,12 +6,14 @@ import React from 'react'
 // Mocks
 // ============================================================================
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitEvent: vi.fn(),
   emitTourStarted: vi.fn(),
   emitTourCompleted: vi.fn(),
   emitTourSkipped: vi.fn(),
-}))
+}
+))
 
 const mockIsMobile = vi.fn(() => false)
 vi.mock('../useMobile', () => ({

@@ -53,7 +53,8 @@ vi.mock('../../../hooks/useLocalAgent', () => ({
   wasAgentEverConnected: () => true,
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
@@ -108,9 +109,11 @@ vi.mock('../../cards/multi-tenancy/missionLoader', () => ({
   loadMissionPrompt: vi.fn(),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitClusterStatsDrillDown: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../lib/constants')>()

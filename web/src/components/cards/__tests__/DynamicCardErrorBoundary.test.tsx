@@ -14,10 +14,12 @@ afterAll(() => {
   console.error = originalConsoleError
 })
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitError: vi.fn(),
   markErrorReported: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../lib/chunkErrors', () => ({
   isChunkLoadError: () => false,

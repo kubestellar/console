@@ -29,7 +29,8 @@ vi.mock('../../../lib/demoMode', () => ({
 }))
 
 const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 

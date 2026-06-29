@@ -6,9 +6,11 @@ vi.mock('../../../lib/clipboard', () => ({
   copyToClipboard: vi.fn().mockResolvedValue(true),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitInstallCommandCopied: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../lib/constants', () => ({
   COPY_FEEDBACK_TIMEOUT_MS: 2000,

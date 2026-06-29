@@ -111,10 +111,12 @@ vi.mock('../../../lib/demoMode', () => ({
   },
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitLinkedInShare: vi.fn(),
   emitLanguageChanged,
-}))
+}
+))
 
 vi.mock('../../../lib/api', () => ({
   checkOAuthConfigured: vi.fn().mockResolvedValue({ oauthConfigured: true, backendUp: true }),

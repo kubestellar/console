@@ -5,10 +5,12 @@ import { AppErrorBoundary } from './AppErrorBoundary'
 import { emitError, markErrorReported } from '../lib/analytics'
 
 // Mock analytics to prevent real network calls and allow spying
-vi.mock('../lib/analytics', () => ({
+vi.mock('../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/analytics')>()),
   emitError: vi.fn(),
   markErrorReported: vi.fn(),
-}))
+}
+))
 
 // Mock i18next to return translation keys directly
 vi.mock('i18next', () => ({

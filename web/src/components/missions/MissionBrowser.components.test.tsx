@@ -33,7 +33,8 @@ vi.mock('../ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitFixerGitHubLink: vi.fn(),
   emitNavigate: vi.fn(),
   emitEvent: vi.fn(),
@@ -43,7 +44,8 @@ vi.mock('../../lib/analytics', () => ({
   emitCardExpanded: vi.fn(),
   emitCardRefreshed: vi.fn(),
   markErrorReported: vi.fn(),
-}))
+}
+))
 
 describe('MissionBrowserFilterPanel', () => {
   beforeEach(() => {

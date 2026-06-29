@@ -33,7 +33,8 @@ vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
   get isNetlifyDeployment() { return mockIsNetlifyDeployment.value },
 }))
-vi.mock('../../useDemoMode', () => ({
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 vi.mock('../../../lib/modeTransition', () => ({

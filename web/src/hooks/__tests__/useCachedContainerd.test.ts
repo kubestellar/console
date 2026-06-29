@@ -24,7 +24,8 @@ vi.mock('../../lib/cache', () => ({
   },
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false }),
 }))
 

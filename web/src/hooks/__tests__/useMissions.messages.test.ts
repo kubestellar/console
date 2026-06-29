@@ -15,11 +15,13 @@ vi.mock('../useTokenUsage', () => ({
   clearActiveTokenCategory: vi.fn(),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
   emitMissionToolMissing: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/tokenUsageMissionCategory', () => ({
   getTokenCategoryForMissionType: vi.fn(() => 'custom'),

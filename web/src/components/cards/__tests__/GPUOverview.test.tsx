@@ -47,7 +47,8 @@ vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false })),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: () => false, default: () => false,
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,

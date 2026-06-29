@@ -8,9 +8,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
 // Mock the analytics module
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitDashboardScrolled: vi.fn(),
-}))
+}
+))
 
 import { useDashboardScrollTracking } from '../useDashboardScrollTracking'
 import { emitDashboardScrolled } from '../../lib/analytics'

@@ -32,7 +32,8 @@ vi.mock('../mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   isDemoModeForced: false,
 }))
@@ -48,12 +49,14 @@ const mockEmitAgentDisconnected = vi.fn()
 const mockEmitAgentProvidersDetected = vi.fn()
 const mockEmitConversionStep = vi.fn()
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitAgentConnected: (...args: unknown[]) => mockEmitAgentConnected(...args),
   emitAgentDisconnected: (...args: unknown[]) => mockEmitAgentDisconnected(...args),
   emitAgentProvidersDetected: (...args: unknown[]) => mockEmitAgentProvidersDetected(...args),
   emitConversionStep: (...args: unknown[]) => mockEmitConversionStep(...args),
-}))
+}
+))
 
 vi.mock('../../lib/utils/localStorage', () => ({
   safeGetItem: vi.fn(() => null),

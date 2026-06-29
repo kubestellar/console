@@ -109,7 +109,8 @@ vi.mock('../../../lib/auth', () => ({
   }),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({
     isDemoMode: mockState.isDemoMode,
     toggleDemoMode: vi.fn(),
@@ -193,10 +194,12 @@ vi.mock('../../ui/Toast', () => ({
   }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitUserRoleChanged: vi.fn(),
   emitUserRemoved: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ placeholder }: { placeholder: string }) => (

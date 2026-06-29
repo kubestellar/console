@@ -7,9 +7,11 @@ vi.mock('../../../lib/demoMode', () => ({
   subscribeDemoMode: vi.fn(),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitClusterDiscovery: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: vi.fn(), isConnected: vi.fn().mockReturnValue(false) },

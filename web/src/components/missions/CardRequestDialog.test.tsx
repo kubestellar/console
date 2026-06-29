@@ -25,9 +25,11 @@ vi.mock('../../lib/api', () => ({
   },
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitGroundControlCardRequestOpened: vi.fn(),
-}))
+}
+))
 
 vi.mock('../ui/Toast', () => ({
   useToast: () => ({

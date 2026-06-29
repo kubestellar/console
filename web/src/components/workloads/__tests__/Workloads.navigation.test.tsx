@@ -64,19 +64,22 @@ let mockIsLoading = false
 let mockAgentStatus: 'connected' | 'disconnected' = 'connected'
 let mockIsDemoMode = true
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   getDemoMode: () => mockIsDemoMode,
   default: () => mockIsDemoMode,
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode }),
   isDemoModeForced: false,
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(),
   emitLogin: vi.fn(),
   emitEvent: vi.fn(),
   analyticsReady: Promise.resolve(),
-}))
+}
+))
 
 vi.mock('../../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: ({ title, rightExtra, children }: { title: string; rightExtra?: React.ReactNode; children?: React.ReactNode }) => (

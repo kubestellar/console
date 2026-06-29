@@ -43,11 +43,13 @@ vi.mock('./AgentIcon', () => ({
   AgentIcon: ({ provider }: { provider: string }) => <div data-testid={`agent-icon-${provider}`} />,
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitApiKeyConfigured: vi.fn(),
   emitApiKeyRemoved: vi.fn(),
   emitConversionStep: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/clipboard', () => ({
   copyToClipboard: vi.fn().mockResolvedValue(undefined),

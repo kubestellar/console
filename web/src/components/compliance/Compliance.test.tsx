@@ -39,9 +39,11 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => mockUseGlobalFilters(),
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
-}))
+}
+))
 
 vi.mock('../../hooks/useKyverno', () => ({
   useKyverno: () => mockUseKyverno(),
@@ -69,9 +71,11 @@ vi.mock('../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => mockUseDrillDownActions(),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitComplianceDrillDown: vi.fn(),
-}))
+}
+))
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

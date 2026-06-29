@@ -21,19 +21,22 @@ vi.mock('../../../lib/demoMode', () => ({
   setDemoToken: vi.fn(),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   getDemoMode: () => mockIsDemoMode,
   default: () => ({ isDemoMode: mockIsDemoMode, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   isDemoModeForced: false,
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(),
   emitLogin: vi.fn(),
   emitEvent: vi.fn(),
   analyticsReady: Promise.resolve(),
-}))
+}
+))
 
 vi.mock('../../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: ({ title, children }: { title: string; children?: React.ReactNode }) => (

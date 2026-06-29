@@ -61,12 +61,14 @@ vi.mock('../../../ui/FeatureHintTooltip', () => ({
   FeatureHintTooltip: () => null,
 }))
 
-vi.mock('../../../../lib/analytics', () => ({
+vi.mock('../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitGlobalSearchOpened: vi.fn(),
   emitGlobalSearchQueried: vi.fn(),
   emitGlobalSearchSelected: vi.fn(),
   emitGlobalSearchAskAI: vi.fn(),
-}))
+}
+))
 
 describe('SearchDropdown', () => {
   beforeEach(() => {

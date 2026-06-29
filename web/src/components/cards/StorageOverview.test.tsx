@@ -47,7 +47,8 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
 }))
 
 const mockIsDemoMode = vi.fn(() => false)
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 

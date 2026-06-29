@@ -7,10 +7,12 @@ import { emitDrillDownOpened, emitDrillDownClosed } from '../lib/analytics'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
-vi.mock('../lib/analytics', () => ({
+vi.mock('../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/analytics')>()),
   emitDrillDownOpened: vi.fn(),
   emitDrillDownClosed: vi.fn(),
-}))
+}
+))
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

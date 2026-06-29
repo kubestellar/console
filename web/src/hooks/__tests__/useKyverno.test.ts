@@ -26,7 +26,8 @@ vi.mock('../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => ({
     isDemoMode: mockDemoMode,
     toggleDemoMode: vi.fn(),

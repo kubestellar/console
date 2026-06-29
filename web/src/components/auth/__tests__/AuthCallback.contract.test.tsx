@@ -71,10 +71,12 @@ vi.mock('../../../config/routes', () => ({
   getLoginWithError: (err: string) => `/login?error=${err}`,
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitGitHubConnected: mockEmitGitHubConnected,
   emitError: mockEmitError,
-}))
+}
+))
 
 vi.mock('../../../lib/utils/localStorage', () => ({
   safeGetItem: () => null,

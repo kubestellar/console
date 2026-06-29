@@ -22,10 +22,12 @@ vi.mock('../useLocalAgent', () => ({
   reportAgentDataError: vi.fn(),
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
     createCachedHook: vi.fn(),
   getDemoMode: vi.fn(() => false),
-  useDemoMode: vi.fn(() => ({ isDemoMode: false })),
+  useDemoMode: vi.fn(() => ({ isDemoMode: false }
+)),
 }))
 
 vi.mock('../../lib/constants/network', async (importOriginal) => {

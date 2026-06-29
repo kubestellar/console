@@ -18,19 +18,23 @@ vi.mock('../../../lib/demoMode', () => ({
   setDemoToken: vi.fn(),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   getDemoMode: () => true,
   default: () => true,
   useDemoMode: () => true,
   isDemoModeForced: false,
-}))
+}
+))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(),
   emitLogin: vi.fn(),
   emitEvent: vi.fn(),
   analyticsReady: Promise.resolve(),
-}))
+}
+))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({

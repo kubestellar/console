@@ -49,10 +49,12 @@ vi.mock('../../lib/kagentiProviderBackend', () => ({
   kagentiProviderChat: vi.fn(),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/logger', () => ({
   logger: {

@@ -96,11 +96,13 @@ vi.mock('../card/hooks/useDataSource', () => ({
   },
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
   getDemoMode: () => mockUseDemoMode().isDemoMode,
   isDemoModeForced: false,
-}))
+}
+))
 
 vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPodIssues: (...a: unknown[]) => mockUseCachedPodIssues(...a),

@@ -14,9 +14,11 @@ vi.mock('../../../lib/demoMode', async (importOriginal) => {
     isNetlifyDeployment: false,
   }
 })
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitAgentTokenFailure: mockEmitAgentTokenFailure,
-}))
+}
+))
 vi.mock('../../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../lib/constants')>()
   return {

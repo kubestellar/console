@@ -26,11 +26,13 @@ vi.mock('../mcp/clusters', () => ({
   useClusters: mockUseClusters,
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitGlobalClusterFilterChanged: mockEmitCluster,
   emitGlobalSeverityFilterChanged: mockEmitSeverity,
   emitGlobalStatusFilterChanged: mockEmitStatus,
-}))
+}
+))
 
 // ---------------------------------------------------------------------------
 // Imports (resolved after mocks are installed)

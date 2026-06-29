@@ -39,7 +39,8 @@ vi.mock('../../../lib/demoMode', () => ({
 }))
 
 const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
   getDemoMode: () => true,
   default: () => true,
@@ -50,7 +51,8 @@ vi.mock('../../../hooks/useDemoMode', () => ({
   isDemoToken: () => true,
   setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
-}))
+}
+))
 
 const mockUseIsModeSwitching = vi.fn(() => false)
 vi.mock('../../../lib/unified/demo', () => ({
@@ -65,12 +67,14 @@ vi.mock('../../../hooks/useSnoozedCards', () => ({
   useSnoozedCards: () => ({ snoozeSwap: vi.fn() }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitCardExpanded: vi.fn(),
   emitCardRefreshed: vi.fn(),
   emitError: vi.fn(),
   markErrorReported: vi.fn(),
-}))
+}
+))
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

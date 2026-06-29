@@ -4,10 +4,12 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { CompactErrorBoundary } from './CompactErrorBoundary'
 
-vi.mock('../lib/analytics', () => ({
+vi.mock('../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/analytics')>()),
   emitError: vi.fn(),
   markErrorReported: vi.fn(),
-}))
+}
+))
 
 const originalConsoleError = console.error
 

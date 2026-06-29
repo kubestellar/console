@@ -15,12 +15,16 @@ vi.mock('../../lib/demoMode', () => ({
   toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => { },
   isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
 }))
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
   getDemoMode: () => true, default: () => true, useDemoMode: () => true, isDemoModeForced: false,
-}))
-vi.mock('../../lib/analytics', () => ({
+}
+))
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-}))
+}
+))
 vi.mock('../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
   tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },

@@ -24,9 +24,11 @@ vi.mock('../../../lib/api', () => ({
   api: { post: mockApiPost },
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitGroundControlCardRequestOpened: mockEmitCardRequest,
-}))
+}
+))
 
 vi.mock('../../ui/Toast', () => ({
   useToast: () => ({ showToast: mockShowToast }),

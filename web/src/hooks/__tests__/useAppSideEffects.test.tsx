@@ -27,10 +27,12 @@ vi.mock('../useBranding', () => ({
 vi.mock('../../lib/auth', () => ({
   useAuth: vi.fn(() => ({ isAuthenticated: false })),
 }))
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitPageView: vi.fn(),
   emitDashboardViewed: vi.fn(),
-}))
+}
+))
 vi.mock('../../hooks/useSidebarConfig', () => ({
   fetchEnabledDashboards: vi.fn(() => Promise.resolve()),
   getEnabledDashboardIds: vi.fn(() => null),

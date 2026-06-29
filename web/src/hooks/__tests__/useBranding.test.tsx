@@ -59,9 +59,11 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 } })
 
 const mockUpdateAnalyticsIds = vi.fn()
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   updateAnalyticsIds: (...args: unknown[]) => mockUpdateAnalyticsIds(...args),
-}))
+}
+))
 
 import { useBranding, BrandingProvider } from '../useBranding'
 

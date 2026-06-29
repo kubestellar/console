@@ -8,7 +8,8 @@ vi.mock('../../useLocalAgent', () => ({
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: vi.fn().mockReturnValue(false),
 }))
-vi.mock('../../useDemoMode', () => ({
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false }),
 }))
 vi.mock('../../../lib/modeTransition', () => ({

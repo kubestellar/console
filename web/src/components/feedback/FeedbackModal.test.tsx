@@ -28,7 +28,8 @@ vi.mock('../ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitFeedbackSubmitted: vi.fn(),
   emitLinkedInShare: vi.fn(),
   emitScreenshotAttached: vi.fn(),
@@ -36,7 +37,8 @@ vi.mock('../../lib/analytics', () => ({
   emitScreenshotUploadSuccess: vi.fn(),
   getRecentBrowserErrors: () => [],
   getRecentFailedApiCalls: () => [],
-}))
+}
+))
 
 vi.mock('../../lib/clipboard', () => ({
   copyBlobToClipboard: vi.fn(),

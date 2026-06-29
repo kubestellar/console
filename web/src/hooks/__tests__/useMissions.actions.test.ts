@@ -27,9 +27,11 @@ vi.mock('../useMissions.messaging', () => ({
   })),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitMissionRated: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/logger', () => ({
   logger: {

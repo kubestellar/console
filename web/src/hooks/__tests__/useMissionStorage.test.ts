@@ -5,7 +5,8 @@ const { mockGetDemoMode } = vi.hoisted(() => ({
   mockGetDemoMode: vi.fn(() => false),
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 

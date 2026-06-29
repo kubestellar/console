@@ -19,7 +19,8 @@ vi.mock('../../../../lib/demoMode', () => ({
 }))
 
 const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
-vi.mock('../../../../hooks/useDemoMode', () => ({
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
   getDemoMode: () => true,
   default: () => true,
   useDemoMode: () => mockUseDemoMode(),
@@ -30,9 +31,11 @@ vi.mock('../../../../hooks/useDemoMode', () => ({
   isDemoToken: () => true,
   setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
-}))
+}
+))
 
-vi.mock('../../../../lib/analytics', () => ({
+vi.mock('../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitNavigate: vi.fn(),
   emitLogin: vi.fn(),
   emitEvent: vi.fn(),
@@ -41,7 +44,8 @@ vi.mock('../../../../lib/analytics', () => ({
   emitCardExpanded: vi.fn(),
   emitCardRefreshed: vi.fn(),
   markErrorReported: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),

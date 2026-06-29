@@ -28,11 +28,13 @@ vi.mock('../../hooks/useMCP', () => ({
   }),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitSmartSuggestionsShown: vi.fn(),
   emitSmartSuggestionAccepted: vi.fn(),
   emitSmartSuggestionsAddAll: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/utils/localStorage', () => ({
   safeGetItem: vi.fn(() => null),

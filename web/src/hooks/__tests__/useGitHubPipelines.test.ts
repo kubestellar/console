@@ -38,7 +38,8 @@ vi.mock('../../lib/demoMode', () => ({
   isDemoMode: () => true,
   isNetlifyDeployment: false,
 }))
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
     createCachedHook: vi.fn(),
   getDemoMode: () => true,
   useDemoMode: () => ({ isDemoMode: true }),

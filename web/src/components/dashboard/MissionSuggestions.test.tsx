@@ -54,12 +54,15 @@ vi.mock('../../hooks/useLocalAgent', () => ({
 vi.mock('../../hooks/useBackendHealth', () => ({
   isInClusterMode: () => false }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }) }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitMissionSuggestionsShown: vi.fn(),
-  emitMissionSuggestionActioned: vi.fn() }))
+  emitMissionSuggestionActioned: vi.fn() }
+))
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

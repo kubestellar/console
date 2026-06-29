@@ -9,13 +9,15 @@ import { describe, it, expect, vi } from 'vitest'
 // Mock heavy dependencies to keep the test fast and prevent transitive import errors.
 // The paths are relative to the importing module, so we need multiple patterns.
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false }),
   getDemoMode: () => false,
   isDemoModeForced: false,
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false }),
   getDemoMode: () => false,
   isDemoModeForced: false,

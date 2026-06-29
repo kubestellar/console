@@ -9,7 +9,8 @@ vi.mock('../../../../hooks/mcp/shared', () => ({
 
 // getDemoMode returns false by default so the component actually fetches.
 // Individual tests that need demo-mode blocking can override it.
-vi.mock('../../../../hooks/useDemoMode', () => ({
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
   getDemoMode: vi.fn().mockReturnValue(false),
   default: () => false,
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
@@ -30,10 +31,12 @@ vi.mock('../../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
-vi.mock('../../../../lib/analytics', () => ({
+vi.mock('../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),

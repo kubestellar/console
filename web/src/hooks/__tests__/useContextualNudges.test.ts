@@ -9,11 +9,13 @@ const mockEmitNudgeShown = vi.fn()
 const mockEmitNudgeDismissed = vi.fn()
 const mockEmitNudgeActioned = vi.fn()
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitNudgeShown: (...args: unknown[]) => mockEmitNudgeShown(...args),
   emitNudgeDismissed: (...args: unknown[]) => mockEmitNudgeDismissed(...args),
   emitNudgeActioned: (...args: unknown[]) => mockEmitNudgeActioned(...args),
-}))
+}
+))
 
 // ---------------------------------------------------------------------------
 // Mock localStorage utilities — pass through to real localStorage

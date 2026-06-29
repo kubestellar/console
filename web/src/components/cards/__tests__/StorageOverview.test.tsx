@@ -31,9 +31,11 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
 }))
 
 const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
-}))
+}
+))
 
 const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({

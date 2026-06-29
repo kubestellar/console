@@ -17,13 +17,15 @@ vi.mock('@/lib/constants', () => ({
   COPY_FEEDBACK_TIMEOUT_MS,
 }))
 
-vi.mock('@/lib/analytics', () => ({
+vi.mock('@/lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/analytics')>()),
   emitWhiteLabelViewed: vi.fn(),
   emitWhiteLabelActioned: vi.fn(),
   emitWhiteLabelTabSwitch: vi.fn(),
   emitWhiteLabelCommandCopy: vi.fn(),
   emitInstallCommandCopied: vi.fn(),
-}))
+}
+))
 
 import { WhiteLabel } from './WhiteLabel'
 

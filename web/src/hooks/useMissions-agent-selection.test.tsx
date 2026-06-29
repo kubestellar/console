@@ -15,7 +15,8 @@ vi.mock('./mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
-vi.mock('./useDemoMode', () => ({
+vi.mock('./useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: vi.fn(() => false),
   isDemoModeForced: false,
@@ -58,7 +59,8 @@ vi.mock('../lib/constants', async (importOriginal) => {
   LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
 } })
 
-vi.mock('../lib/analytics', () => ({
+vi.mock('../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/analytics')>()),
   emitMissionStarted: vi.fn(),
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
@@ -67,7 +69,8 @@ vi.mock('../lib/analytics', () => ({
   emitWsAuthMissing: vi.fn(),
   emitSseAuthFailure: vi.fn(),
   emitSessionRefreshFailure: vi.fn(),
-}))
+}
+))
 
 vi.mock('../lib/missions/preflightCheck', () => ({
   runPreflightCheck: vi.fn().mockResolvedValue({ ok: true }),

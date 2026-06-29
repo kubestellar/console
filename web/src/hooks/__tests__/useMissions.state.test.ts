@@ -7,10 +7,12 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
-}))
+}
+))
 
 vi.mock('../useMissions.helpers', () => ({
   canAutoCompleteMissionFromResponse: vi.fn(({

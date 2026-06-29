@@ -25,10 +25,12 @@ const {
   emitFromLensCommandCopy,
 } = analyticsMocks
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   ...analyticsMocks,
   emitInstallCommandCopied: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/clipboard', () => ({
   copyToClipboard: vi.fn().mockResolvedValue(true),

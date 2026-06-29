@@ -14,7 +14,8 @@ vi.mock('../../../lib/demoMode', () => ({
   isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
   isFeatureEnabled: () => true,
 }))
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   getDemoMode: () => true,
   default: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
@@ -26,12 +27,14 @@ vi.mock('../../../hooks/useDemoMode', () => ({
   setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
 }))
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitAddCardModalAbandoned: vi.fn(),
   emitCardCategoryBrowsed: vi.fn(), emitRecommendedCardShown: vi.fn(),
   emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
-}))
+}
+))
 vi.mock('../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
   tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },

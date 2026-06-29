@@ -81,11 +81,13 @@ const {
   mockUseDemoMode: vi.fn().mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
   getDemoMode: () => false,
   isDemoModeForced: false,
-}))
+}
+))
 
 vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPodIssues: (...args: unknown[]) => mockUseCachedPodIssues(...args),

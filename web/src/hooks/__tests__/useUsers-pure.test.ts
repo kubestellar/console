@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setStoredAuthToken } from '../../lib/authToken'
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   getDemoMode: vi.fn(() => true),
   isDemoModeForced: false,
   useDemoMode: () => ({ isDemoMode: true }),

@@ -24,11 +24,13 @@ vi.mock('../../../lib/constants/storage', async (importOriginal) => {
   STORAGE_KEY_SEEN_TIPS: 'kc-seen-tips',
 } })
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitGettingStartedShown: vi.fn(),
   emitGettingStartedActioned: vi.fn(),
   emitTipShown: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../config/dashboards/index', () => ({
   DASHBOARD_CONFIGS: { main: {}, clusters: {}, security: {} },

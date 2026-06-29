@@ -4,8 +4,12 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import type { MissionExport, MissionMatch, BrowseEntry } from '../../../lib/missions/types'
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
-vi.mock('../../lib/analytics', () => ({ emitFixerGitHubLink: vi.fn() }))
-vi.mock('../../../lib/analytics', () => ({ emitFixerGitHubLink: vi.fn() }))
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()), emitFixerGitHubLink: vi.fn() }
+))
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()), emitFixerGitHubLink: vi.fn() }
+))
 
 const { mockResetMissionCache } = vi.hoisted(() => ({
   mockResetMissionCache: vi.fn(),

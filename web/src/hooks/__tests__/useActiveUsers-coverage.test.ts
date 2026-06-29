@@ -22,10 +22,12 @@ const { mockGetDemoMode, mockIsDemoModeForced } = vi.hoisted(() => ({
   mockIsDemoModeForced: false,
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   getDemoMode: mockGetDemoMode,
   isDemoModeForced: mockIsDemoModeForced,
-}))
+}
+))
 
 vi.mock('../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>

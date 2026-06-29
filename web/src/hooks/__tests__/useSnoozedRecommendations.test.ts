@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitSnoozed: vi.fn(),
   emitUnsnoozed: vi.fn(),
-}))
+}
+))
 
 import { useSnoozedRecommendations } from '../useSnoozedRecommendations'
 

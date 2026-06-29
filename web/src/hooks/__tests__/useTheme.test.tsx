@@ -23,9 +23,11 @@ function hrefHasHostname(el: Element, hostname: string): boolean {
 // ---------------------------------------------------------------------------
 const mockEmitThemeChanged = vi.hoisted(() => vi.fn())
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitThemeChanged: mockEmitThemeChanged,
-}))
+}
+))
 
 // ---------------------------------------------------------------------------
 // Import after mocks are wired

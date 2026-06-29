@@ -29,9 +29,11 @@ vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
-}))
+}
+))
 
 vi.mock('../../ui/ClusterSelect', () => ({
   ClusterSelect: ({ clusters, onChange, value, placeholder }: { clusters: Array<{ name: string }>; value: string; onChange: (value: string) => void; placeholder?: string }) => (

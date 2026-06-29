@@ -4,14 +4,16 @@ import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 // Mock analytics to prevent side effects
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitPageView: vi.fn(),
   emitWhiteLabelViewed: vi.fn(),
   emitWhiteLabelActioned: vi.fn(),
   emitWhiteLabelTabSwitch: vi.fn(),
   emitWhiteLabelCommandCopy: vi.fn(),
   emitInstallCommandCopied: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/clipboard', () => ({
   copyToClipboard: vi.fn().mockResolvedValue(true),

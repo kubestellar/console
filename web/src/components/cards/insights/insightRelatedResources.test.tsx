@@ -21,9 +21,11 @@ vi.mock('react-i18next', async () => {
     useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
   }
 })
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-}))
+}
+))
 const mockStartMission = vi.fn()
 const mockOpenSidebar = vi.fn()
 const mockMissions: unknown[] = []

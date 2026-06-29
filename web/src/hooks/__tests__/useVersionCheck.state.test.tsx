@@ -37,9 +37,11 @@ vi.mock('../useLocalAgent', () => ({
     useLocalAgent: mockUseLocalAgent,
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
     emitSessionContext: vi.fn(),
-}))
+}
+))
 
 function wrapper({ children }: { children: React.ReactNode }) {
     return <VersionCheckProvider>{children}</VersionCheckProvider>

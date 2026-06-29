@@ -69,11 +69,13 @@ vi.mock('./CardDataContext', () => ({
 }))
 
 // Mock analytics to avoid side effects
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitModalOpened: vi.fn(),
   emitModalTabViewed: vi.fn(),
   emitModalClosed: vi.fn(),
-}))
+}
+))
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 

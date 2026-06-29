@@ -20,9 +20,11 @@ vi.mock('../useDashboards', () => ({
   }),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitGroundControlDashboardCreated: mockEmitDashboardCreated,
-}))
+}
+))
 
 vi.mock('../../lib/utils/localStorage', () => ({
   safeGetJSON: <T,>(key: string): T | null => {

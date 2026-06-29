@@ -22,9 +22,11 @@ const mockUseClusters = vi.fn(() => ({
 }))
 const mockKubectlProxy = { exec: vi.fn() }
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
-}))
+}
+))
 
 vi.mock('../useMCP', () => ({
   useClusters: () => mockUseClusters(),

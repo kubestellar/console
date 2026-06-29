@@ -8,8 +8,10 @@ vi.mock('../mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
-vi.mock('../useDemoMode', () => ({
-  useDemoMode: vi.fn(() => ({ isDemoMode: true })),
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
+  useDemoMode: vi.fn(() => ({ isDemoMode: true }
+)),
 }))
 
 vi.mock('../useBackendHealth', () => ({
@@ -20,9 +22,11 @@ vi.mock('../useBackendHealth', () => ({
   })),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitEvent: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>

@@ -14,7 +14,8 @@ import {
 } from './useMissionStorage'
 import type { Mission } from './useMissionTypes'
 
-vi.mock('./useDemoMode', () => ({
+vi.mock('./useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: vi.fn(() => false),
 }))

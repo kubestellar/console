@@ -51,7 +51,8 @@ vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
     createCachedHook: vi.fn(),
   useDemoMode: () => ({ isDemoMode: false }),
   isDemoModeForced: () => false,

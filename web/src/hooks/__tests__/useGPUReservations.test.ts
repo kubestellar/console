@@ -20,9 +20,11 @@ vi.mock('../../lib/api', () => ({
 }))
 
 const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
-}))
+}
+))
 
 vi.mock('../useBackendHealth', () => ({
   isInClusterMode: vi.fn(() => false),

@@ -26,11 +26,13 @@ const { mockUseDemoMode, mockUseCachedEvents } = vi.hoisted(() => ({
   mockUseCachedEvents: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
   getDemoMode: () => mockUseDemoMode().isDemoMode,
   isDemoModeForced: false,
-}))
+}
+))
 
 vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPodIssues: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),

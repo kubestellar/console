@@ -5,10 +5,12 @@ import * as DrillDownModalModule from './DrillDownModal'
 import { useDrillDown, DrillDownProvider } from '../../hooks/useDrillDown'
 import type { DrillDownView } from '../../hooks/useDrillDown'
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitDrillDownOpened: vi.fn(),
   emitDrillDownClosed: vi.fn(),
-}))
+}
+))
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <DrillDownProvider>{children}</DrillDownProvider>

@@ -29,9 +29,11 @@ vi.mock('../hooks/useMissions', () => ({
   useMissions: vi.fn(() => ({ startMission: mockStartMission })),
 }))
 
-vi.mock('../hooks/useDemoMode', () => ({
+vi.mock('../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
-}))
+}
+))
 
 vi.mock('../hooks/useDeepLink', () => ({
   sendNotificationWithDeepLink: mockSendNotificationWithDeepLink,

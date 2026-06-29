@@ -40,12 +40,14 @@ vi.mock('../../../lib/constants/network', async (importOriginal) => {
   FOCUS_DELAY_MS: 0,
   RETRY_DELAY_MS: 0,
 } })
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitAddCardModalOpened: vi.fn(),
   emitAddCardModalAbandoned: vi.fn(),
   emitCardCategoryBrowsed: vi.fn(),
   emitRecommendedCardShown: vi.fn(),
-}))
+}
+))
 vi.mock('../../../config/cards', () => ({
   isCardVisibleForProject: () => true,
 }))

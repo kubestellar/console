@@ -12,11 +12,13 @@ vi.mock('../../lib/demoMode', () => ({
   isNetlifyDeployment: false,
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitAdopterNudgeShown: vi.fn(),
   emitAdopterNudgeActioned: vi.fn(),
   emitConversionStep: vi.fn(),
-}))
+}
+))
 
 const NUDGE_DELAY_DAYS = 3
 const MS_PER_DAY = 86_400_000
