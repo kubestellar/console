@@ -98,10 +98,10 @@ func TestDevModeLogin(t *testing.T) {
 // want to exercise the CSRF gate should build requests directly.
 func refreshReq(authHeader string) *http.Request {
 	req, err := http.NewRequest("POST", "/auth/refresh", nil)
-	req.Host = "localhost"
 	if err != nil {
 		panic(err)
 	}
+	req.Host = "localhost"
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	if authHeader != "" {
 		req.Header.Set("Authorization", authHeader)
@@ -781,9 +781,10 @@ func TestGitHubCallback_SanitizesErrorDescription(t *testing.T) {
 
 	// Include CR/LF in the query param; after URL decoding the handler
 	// should strip the control characters before reflecting them.
-	req, _ := http.NewRequest("GET",
+	req, err := http.NewRequest("GET",
 		"/auth/callback?error=access_denied&error_description=bad%0D%0Ainjected",
 		nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
