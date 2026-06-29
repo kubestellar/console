@@ -1,3 +1,5 @@
+//go:build !windows
+
 package agent
 
 import (
@@ -13,6 +15,9 @@ func TestConfigureProcessGroup(t *testing.T) {
 	// Verify SysProcAttr was set (on Unix, this sets Setpgid)
 	if cmd.SysProcAttr == nil {
 		t.Error("configureProcessGroup did not set SysProcAttr")
+	}
+	if !cmd.SysProcAttr.Setpgid {
+		t.Error("configureProcessGroup did not set Setpgid=true")
 	}
 }
 
