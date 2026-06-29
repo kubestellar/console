@@ -17,6 +17,19 @@ func TestProviderTypeAliases(t *testing.T) {
 	}
 }
 
+func TestCapabilityHasCapability(t *testing.T) {
+	both := CapabilityChat | CapabilityToolExec
+	if !both.HasCapability(CapabilityChat) {
+		t.Error("combined capability should include CapabilityChat")
+	}
+	if !both.HasCapability(CapabilityToolExec) {
+		t.Error("combined capability should include CapabilityToolExec")
+	}
+	if CapabilityChat.HasCapability(CapabilityToolExec) {
+		t.Error("CapabilityChat alone should not include CapabilityToolExec")
+	}
+}
+
 func TestMaxStderrBytes(t *testing.T) {
 	// maxStderrBytes should be 1MB
 	if maxStderrBytes != 1<<20 {
@@ -58,8 +71,14 @@ func TestMixedModeConfigFields(t *testing.T) {
 func TestChatRequestZeroValue(t *testing.T) {
 	// ChatRequest type alias should compile and instantiate
 	var req ChatRequest
-	if req.Messages != nil {
-		t.Error("zero-value ChatRequest should have nil Messages")
+	if req.SessionID != "" {
+		t.Error("zero-value ChatRequest should have empty SessionID")
+	}
+	if req.Prompt != "" {
+		t.Error("zero-value ChatRequest should have empty Prompt")
+	}
+	if req.History != nil {
+		t.Error("zero-value ChatRequest should have nil History")
 	}
 }
 
@@ -68,5 +87,11 @@ func TestChatResponseZeroValue(t *testing.T) {
 	var resp ChatResponse
 	if resp.Content != "" {
 		t.Error("zero-value ChatResponse should have empty Content")
+	}
+	if resp.Done {
+		t.Error("zero-value ChatResponse should have Done=false")
+	}
+	if resp.ExitCode != 0 {
+		t.Error("zero-value ChatResponse should have ExitCode=0")
 	}
 }
