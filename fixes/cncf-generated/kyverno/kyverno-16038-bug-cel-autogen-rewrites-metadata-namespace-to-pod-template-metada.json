@@ -1,0 +1,81 @@
+{
+  "version": "kc-mission-v1",
+  "name": "kyverno-16038-bug-cel-autogen-rewrites-metadata-namespace-to-pod-template-metada",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "kyverno: [Bug] CEL autogen rewrites metadata.namespace to pod template metadata",
+    "description": "[Bug] CEL autogen rewrites metadata.namespace to pod template metadata. This issue affects 13+ users.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify kyverno troubleshoot symptoms",
+        "description": "Check for the issue in your kyverno deployment:\n```bash\nkubectl get pods -n kyverno -l app.kubernetes.io/name=kyverno\nkubectl logs -l app.kubernetes.io/name=kyverno -n kyverno --tail=100 | grep -i error\n```\nLook for error: `no such key: namespace`"
+      },
+      {
+        "title": "Review kyverno configuration",
+        "description": "Inspect the relevant kyverno configuration:\n```bash\nkubectl get all -n kyverno -l app.kubernetes.io/name=kyverno\nkubectl get configmap -n kyverno -l app.kubernetes.io/part-of=kyverno\n```\nCEL autogen for `ValidatingPolicy` rewrites `object.metadata.namespace` to `object.spec.template.metadata.namespace` for generated workload rules."
+      },
+      {
+        "title": "Apply the fix for [Bug] CEL autogen rewrites metadata.namespace to pod…",
+        "description": "This fixes CEL autogen for workload policies so namespace checks continue to use the workload object's own metadata namespace. Without this, generated policies can reference `object.spec.template.metadata.namespace`, which is normally absent on Deployments and causes admission failures when match\n```yaml\nFor a Deployment this should instead be:\n```"
+      },
+      {
+        "title": "Confirm [Bug] CEL autogen rewrites metadata.namespace to… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=kyverno -n kyverno --tail=50 --since=5m\nkubectl get events -n kyverno --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that `no such key: namespace` no longer appears in logs."
+      }
+    ],
+    "resolution": {
+      "summary": "This fixes CEL autogen for workload policies so namespace checks continue to use the workload object's own metadata namespace. Without this, generated policies can reference `object.spec.template.metadata.namespace`, which is normally absent on Deployments and causes admission failures when match conditions are evaluated.",
+      "codeSnippets": [
+        "For a Deployment this should instead be:",
+        "and should not generate:",
+        "because pod templates usually do not contain `metadata.namespace`.\n\nThe focused unit test passes:"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "kyverno",
+      "incubating",
+      "security",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "kyverno"
+    ],
+    "targetResourceKinds": [
+      "Pod",
+      "Deployment",
+      "Statefulset"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "incubating",
+    "sourceUrls": {
+      "issue": "https://github.com/kyverno/kyverno/issues/16038",
+      "repo": "https://github.com/kyverno/kyverno",
+      "pr": "https://github.com/kyverno/kyverno/pull/16039"
+    },
+    "reactions": 13,
+    "comments": 2,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with kyverno installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-30T07:26:32.371Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
