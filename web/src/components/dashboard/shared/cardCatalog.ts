@@ -432,7 +432,10 @@ export const CARD_CATALOG = {
     { type: 'chaos_mesh_status', title: 'Chaos Mesh', description: 'Chaos Mesh experiment status and workflow progress', visualization: 'status' },
   ],
   'Drasi': [
+    { type: 'drasi_pipeline_health', title: 'Pipeline Health', description: 'Aggregate health summary across all Drasi pipelines with uptime and component ratios', visualization: 'status' },
+    { type: 'drasi_pipelines', title: 'Pipeline Status', description: 'Searchable list of Drasi pipelines with operational status, query and reaction counts', visualization: 'status' },
     { type: 'drasi_reactive_graph', title: 'Drasi Reactive Graph', description: 'Reactive data pipeline — sources, continuous queries, reactions, and live results with animated flow', visualization: 'status' },
+    { type: 'drasi_topology', title: 'Topology', description: 'Source → query → reaction connection topology with status indicators and orphan detection', visualization: 'status' },
   ],
   'Maturity': [
     { type: 'acmm_level', title: 'Current Level', description: "The repo's current level on the AI Codebase Maturity Model (L1–L6)", visualization: 'gauge' },
