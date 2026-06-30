@@ -1,0 +1,201 @@
+name: Bug Fix Forensics
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions: read-all
+
+jobs:
+  forensics:
+    if: >
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.body, 'Fixes #')
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Post forensic analysis on linked issues
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const MAX_FILES_TO_SHOW = 15;
+            const MAX_BLAME_ENTRIES = 10;
+            const MAX_DIFF_LINES_PER_FILE = 50;
+            const FORENSICS_HEADER = '## :mag: Bug Fix Forensic Analysis';
+            const DISCLAIMER = [
+              '',
+              '---',
+              '_:robot: This is an automated forensic analysis for maintainers.',
+              'It identifies what changed, who last touched the affected code, and',
+              'which commits may have introduced the bug. Non-maintainers are not',
+              'expected to understand every detail._',
+            ].join('\n');
+
+            const prBody = context.payload.pull_request.body || '';
+            const prNumber = context.payload.pull_request.number;
+            const prTitle = context.payload.pull_request.title;
+            const prAuthor = context.payload.pull_request.user.login;
+            const prUrl = context.payload.pull_request.html_url;
+
+            // Extract all issue numbers from "Fixes #NNN" patterns
+            const issuePattern = /(?:fixes|closes|resolves)\s+#(\d+)/gi;
+            const issueNumbers = [];
+            let match;
+            while ((match = issuePattern.exec(prBody)) !== null) {
+              const num = parseInt(match[1], 10);
+              if (!issueNumbers.includes(num)) {
+                issueNumbers.push(num);
+              }
+            }
+
+            if (issueNumbers.length === 0) {
+              console.log('No linked issues found in PR body');
+              return;
+            }
+
+            console.log(`Found linked issues: ${issueNumbers.join(', ')}`);
+
+            // Check if any linked issue has the kind/bug label
+            let hasBugLabel = false;
+            for (const issueNum of issueNumbers) {
+              try {
+                const { data: issue } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNum,
+                });
+                if ((issue.labels || []).some(l => (l.name || l) === 'kind/bug')) {
+                  hasBugLabel = true;
+                  break;
+                }
+              } catch (e) {
+                console.log(`Could not fetch issue #${issueNum}: ${e.message}`);
+              }
+            }
+
+            if (!hasBugLabel) {
+              console.log('No linked issues have kind/bug label — skipping forensics');
+              return;
+            }
+
+            // Get the PR diff (files changed)
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              per_page: 100,
+            });
+
+            // Build file change summary
+            const fileChanges = files.slice(0, MAX_FILES_TO_SHOW).map(f => {
+              const status = f.status === 'added' ? ':new:' :
+                             f.status === 'removed' ? ':x:' :
+                             f.status === 'renamed' ? ':arrow_right:' : ':pencil2:';
+              return `| ${status} \`${f.filename}\` | +${f.additions} / -${f.deletions} |`;
+            });
+
+            if (files.length > MAX_FILES_TO_SHOW) {
+              fileChanges.push(`| ... | _${files.length - MAX_FILES_TO_SHOW} more files_ |`);
+            }
+
+            // Get commits in the PR for blame cross-reference
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              per_page: 100,
+            });
+
+            const commitSummary = commits.map(c => {
+              const sha = c.sha.substring(0, 7);
+              const msg = (c.commit.message || '').split('\n')[0].substring(0, 80);
+              return `- [\`${sha}\`](${c.html_url}) ${msg}`;
+            }).join('\n');
+
+            // Run git blame on modified files (best-effort via exec)
+            let blameSection = '';
+            try {
+              const exec = require('child_process').execSync;
+              const blameEntries = [];
+
+              for (const f of files.slice(0, MAX_BLAME_ENTRIES)) {
+                if (f.status === 'added' || f.status === 'removed') continue;
+                try {
+                  // Get the blame for the file at the merge base (before the fix)
+                  const mergeBase = exec(
+                    `git merge-base origin/main ${context.payload.pull_request.merge_commit_sha}`,
+                    { encoding: 'utf8', timeout: 5000 }
+                  ).trim();
+
+                  const blame = exec(
+                    `git log --oneline -1 ${mergeBase} -- "${f.filename}"`,
+                    { encoding: 'utf8', timeout: 5000 }
+                  ).trim();
+
+                  if (blame) {
+                    blameEntries.push(`- \`${f.filename}\`: last changed in ${blame}`);
+                  }
+                } catch (e) {
+                  // git blame can fail on binary files or missing refs
+                }
+              }
+
+              if (blameEntries.length > 0) {
+                blameSection = [
+                  '',
+                  '### :detective: Blame Analysis',
+                  'Last commits touching the fixed files (before this fix):',
+                  '',
+                  ...blameEntries,
+                ].join('\n');
+              }
+            } catch (e) {
+              console.log(`Blame analysis skipped: ${e.message}`);
+            }
+
+            // Build the forensics comment
+            const body = [
+              FORENSICS_HEADER,
+              '',
+              `PR #${prNumber} (\`${prTitle}\`) by @${prAuthor} was merged as a bug fix for this issue.`,
+              '',
+              '### :wrench: Fix Summary',
+              '',
+              `**PR**: ${prUrl}`,
+              `**Files changed**: ${files.length}`,
+              `**Total diff**: +${files.reduce((s, f) => s + f.additions, 0)} / -${files.reduce((s, f) => s + f.deletions, 0)} lines`,
+              '',
+              '| File | Changes |',
+              '|------|---------|',
+              ...fileChanges,
+              '',
+              '### :scroll: Commits',
+              '',
+              commitSummary,
+              blameSection,
+              DISCLAIMER,
+            ].join('\n');
+
+            // Post on each linked issue
+            for (const issueNum of issueNumbers) {
+              try {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNum,
+                  body,
+                });
+                console.log(`Posted forensics comment on issue #${issueNum}`);
+              } catch (e) {
+                console.log(`Failed to post on issue #${issueNum}: ${e.message}`);
+              }
+            }
