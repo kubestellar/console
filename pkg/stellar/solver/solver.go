@@ -315,7 +315,7 @@ func terminate(
 	notifSeverity := "info"
 	switch status {
 	case "resolved":
-		notifTitle = "\u2746 Stellar resolved an issue"
+		notifTitle = "\u2726 Stellar resolved an issue"
 	case "escalated":
 		notifTitle = "\u26a0 Stellar escalated to you"
 		notifSeverity = "warning"
