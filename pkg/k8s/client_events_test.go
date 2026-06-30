@@ -108,8 +108,10 @@ func TestSortEventsByLastSeenDesc_EmptyLastSeenSortsToEnd(t *testing.T) {
 
 	SortEventsByLastSeenDesc(events)
 
+	require.Len(t, events, 3, "sort should not drop any events")
 	require.Equal(t, "HasTime", events[0].Reason)
-	// Empty LastSeen sorts to end (zero time)
+	require.Equal(t, "NoTime", events[1].Reason)
+	require.Equal(t, "AlsoNoTime", events[2].Reason)
 }
 
 func TestSortEventsByLastSeenDesc_UnparseableLastSeenSortsToEnd(t *testing.T) {
@@ -142,13 +144,14 @@ func TestSortEventsByLastSeenDesc_StableSort(t *testing.T) {
 func TestSortEventsByLastSeenDesc_MixedTimezones(t *testing.T) {
 	events := []Event{
 		{Reason: "UTC", LastSeen: "2025-06-15T10:00:00Z"},
-		{Reason: "Later", LastSeen: "2025-06-15T12:00:00Z"},
-		{Reason: "Earlier", LastSeen: "2025-06-15T08:00:00Z"},
+		{Reason: "PlusFive", LastSeen: "2025-06-15T12:00:00+05:00"},  // 07:00 UTC
+		{Reason: "MinusThree", LastSeen: "2025-06-15T09:00:00-03:00"}, // 12:00 UTC
 	}
 
 	SortEventsByLastSeenDesc(events)
 
-	require.Equal(t, "Later", events[0].Reason)
+	// MinusThree = 12:00 UTC, UTC = 10:00 UTC, PlusFive = 07:00 UTC
+	require.Equal(t, "MinusThree", events[0].Reason)
 	require.Equal(t, "UTC", events[1].Reason)
-	require.Equal(t, "Earlier", events[2].Reason)
+	require.Equal(t, "PlusFive", events[2].Reason)
 }
