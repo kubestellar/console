@@ -237,10 +237,12 @@ func dispatchAction(
 		ApprovedBy:  "stellar-solver",
 		ApprovedAt:  &now,
 	}
-	if err := storage.CreateStellarAction(ctx, action); err != nil {
-		return "", "", fmt.Errorf("create action: %w", err)
+	if storage != nil {
+		if err := storage.CreateStellarAction(ctx, action); err != nil {
+			return "", "", fmt.Errorf("create action: %w", err)
+		}
+		_ = storage.UpdateStellarActionStatus(ctx, action.ID, "running", "", "")
 	}
-	_ = storage.UpdateStellarActionStatus(ctx, action.ID, "running", "", "")
 
 	outcome, dispatchErr := scheduler.Dispatch(ctx, k8sClient, *action)
 	status := "completed"
@@ -248,7 +250,9 @@ func dispatchAction(
 		status = "failed"
 		outcome = dispatchErr.Error()
 	}
-	_ = storage.UpdateStellarActionStatus(ctx, action.ID, status, outcome, "")
+	if storage != nil {
+		_ = storage.UpdateStellarActionStatus(ctx, action.ID, status, outcome, "")
+	}
 
 	completed := time.Now().UTC()
 	durationMs := int(completed.Sub(now).Milliseconds())
