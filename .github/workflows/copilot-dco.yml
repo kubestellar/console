@@ -4,6 +4,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions: read-all
+
 jobs:
   copilot-dco:
-    uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@main
+    permissions:
+      statuses: write
+      pull-requests: read
+    uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@1a04a3fd17771e78e5cf6d42a3fda84e3ba478f3
