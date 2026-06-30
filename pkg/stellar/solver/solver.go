@@ -313,7 +313,9 @@ func terminate(
 	broadcaster Broadcaster,
 	input Input,
 ) {
-	_ = storage.UpdateSolveStatus(ctx, solveID, status, summary, limitHit, errStr)
+	if storage != nil {
+		_ = storage.UpdateSolveStatus(ctx, solveID, status, summary, limitHit, errStr)
+	}
 
 	notifTitle := ""
 	notifSeverity := "info"
@@ -327,7 +329,7 @@ func terminate(
 		notifTitle = "\u23f8 Stellar paused at budget limit"
 		notifSeverity = "warning"
 	}
-	if notifTitle != "" {
+	if notifTitle != "" && storage != nil {
 		_ = storage.CreateStellarNotification(ctx, &store.StellarNotification{
 			UserID:    input.UserID,
 			Type:      "action",
