@@ -1,0 +1,75 @@
+{
+  "version": "kc-mission-v1",
+  "name": "atlantis-3245-drift-detection",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "atlantis: Drift Detection",
+    "description": "Drift Detection. Requested by 245+ users.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current atlantis deployment",
+        "description": "Verify your atlantis version and configuration:\n```bash\nkubectl get pods -n atlantis -l app.kubernetes.io/name=atlantis\nhelm list -n atlantis 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working atlantis installation."
+      },
+      {
+        "title": "Review atlantis configuration",
+        "description": "Inspect the relevant atlantis configuration:\n```bash\nkubectl get all -n atlantis -l app.kubernetes.io/name=atlantis\nkubectl get configmap -n atlantis -l app.kubernetes.io/part-of=atlantis\n```\n### Community Note\n\n- Please vote on this issue by adding a 👍 [reaction](https://blog.github.com/2016-03-10-add-reactions-to-pull-requests-issues-and-comments/) to the original issue to help the community and maintainers prioritize this request."
+      },
+      {
+        "title": "Apply the fix for Drift Detection",
+        "description": "I believe you're correct. If drift detection is built-in then Atlantis won't need to hit its own API.\n\n---\n\nFeatures I'd like to see\n\n- enable drift detect globally in Atlantis\n- set a global config\n- set per repo config\n- set per project config\n- modify code to change to propose the pr\n- modify pr\n```yaml\nATLANTIS_DRIFT_DETECTION=true\n# daily at 8am\nATLANTIS_DRIFT_DETECTION_CRON=\"0 8 * * *\"\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n atlantis -l app.kubernetes.io/name=atlantis\nkubectl get events -n atlantis --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Drift Detection\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "I believe you're correct. If drift detection is built-in then Atlantis won't need to hit its own API.",
+      "codeSnippets": [
+        "ATLANTIS_DRIFT_DETECTION=true\n# daily at 8am\nATLANTIS_DRIFT_DETECTION_CRON=\"0 8 * * *\"",
+        "# repo global to override server config\ndrift_detection:\n  enabled: true\n  cron: 0 9 * * *\nprojects:\n  - name: ue1-dev-ecs-service-titan\n    dir: components/terraform/ecs-service\n    workspace: ue1-dev-ecs-service-titan\n    # per project override\n    drift_detection:\n      enabled: false\n\n  - name: ue1-dev-ecs-service-metro\n    dir: components/terraform/ecs-service\n    workspace: ue1-dev-ecs-service-metro\n    drift_detection:\n      enabled: true\n      cron: 0 9 * * *"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "atlantis",
+      "sandbox",
+      "app-definition",
+      "feature"
+    ],
+    "cncfProjects": [
+      "atlantis"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "sandbox",
+    "sourceUrls": {
+      "issue": "https://github.com/runatlantis/atlantis/issues/3245",
+      "repo": "https://github.com/runatlantis/atlantis"
+    },
+    "reactions": 245,
+    "comments": 33,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with atlantis installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-06-30T07:28:43.948Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
