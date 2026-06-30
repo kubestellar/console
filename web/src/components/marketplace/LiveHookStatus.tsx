@@ -139,7 +139,6 @@ interface LiveHookStatusPanelProps {
 }
 
 export function LiveHookStatusPanel({
-  itemId,
   itemName,
   hooks,
   activities,
