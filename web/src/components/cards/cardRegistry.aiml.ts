@@ -23,6 +23,7 @@ const KagentSecurity = safeLazy(() => _kagentBundle, 'KagentSecurity')
 const KagentStatusCard = safeLazy(() => import('./KagentStatusCard'), 'KagentStatusCard')
 const KagentToolRegistry = safeLazy(() => _kagentBundle, 'KagentToolRegistry')
 const KagentTopology = safeLazy(() => _kagentBundle, 'KagentTopology')
+const KagentLifecycleState = safeLazy(() => _kagentBundle, 'KagentLifecycleState')
 const _kagentiBundle = import('./kagenti').catch(() => undefined as never)
 const KagentiAgentDiscovery = safeLazy(() => _kagentiBundle, 'KagentiAgentDiscovery')
 const KagentiAgentFleet = safeLazy(() => _kagentiBundle, 'KagentiAgentFleet')
@@ -32,6 +33,7 @@ const KagentiSecurityPosture = safeLazy(() => _kagentiBundle, 'KagentiSecurityPo
 const KagentiStatusCard = safeLazy(() => import('./KagentiStatusCard'), 'KagentiStatusCard')
 const KagentiToolRegistry = safeLazy(() => _kagentiBundle, 'KagentiToolRegistry')
 const KagentiTopology = safeLazy(() => _kagentiBundle, 'KagentiTopology')
+const KagentiLifecycleManager = safeLazy(() => _kagentiBundle, 'KagentiLifecycleManager')
 const _workloadDetectionBundle = import('./workload-detection').catch(() => undefined as never)
 const LLMInference = safeLazy(() => _workloadDetectionBundle, 'LLMInference')
 const LLMModels = safeLazy(() => _workloadDetectionBundle, 'LLMModels')
@@ -61,9 +63,10 @@ const ThroughputComparison = safeLazy(() => _llmdBundle, 'ThroughputComparison')
  * acmm_feedback_loops, acmm_level, acmm_recommendations, benchmark_hero, console_ai_health_check,
  * console_ai_issues, console_ai_kubeconfig_audit, console_ai_offline_detection, epp_health,
  * epp_routing, hardware_leaderboard, kagent_agent_discovery, kagent_agent_fleet, kagent_agent_list,
- * kagent_model_providers, kagent_security, kagent_status, kagent_tool_registry, kagent_topology,
- * kagenti_agent_discovery, kagenti_agent_fleet, kagenti_build_pipeline, kagenti_security,
- * kagenti_security_posture, kagenti_status, kagenti_tool_registry, kagenti_topology, kvcache_monitor,
+ * kagent_lifecycle_state, kagent_model_providers, kagent_security, kagent_status, kagent_tool_registry,
+ * kagent_topology, kagenti_agent_discovery, kagenti_agent_fleet, kagenti_build_pipeline,
+ * kagenti_lifecycle_manager, kagenti_security, kagenti_security_posture, kagenti_status,
+ * kagenti_tool_registry, kagenti_topology, kvcache_monitor,
  * latency_breakdown, llm_inference, llm_models, llmd_ai_insights, llmd_configurator, llmd_flow,
  * llmd_stack_monitor, ml_jobs, ml_notebooks, model_endpoint_health, nightly_e2e_status,
  * pareto_frontier, pd_disaggregation, performance_timeline, provider_health, prow_history,
@@ -93,6 +96,7 @@ const components: Record<string, CardComponent> = {
   kagent_agent_discovery: KagentAgentDiscovery,
   kagent_agent_fleet: KagentAgentFleet,
   kagent_agent_list: KagentAgentListCard,
+  kagent_lifecycle_state: KagentLifecycleState,
   kagent_model_providers: KagentModelProviders,
   kagent_security: KagentSecurity,
   kagent_status: KagentStatusCard,
@@ -101,6 +105,7 @@ const components: Record<string, CardComponent> = {
   kagenti_agent_discovery: KagentiAgentDiscovery,
   kagenti_agent_fleet: KagentiAgentFleet,
   kagenti_build_pipeline: KagentiBuildPipeline,
+  kagenti_lifecycle_manager: KagentiLifecycleManager,
   kagenti_security: KagentiSecurity,
   kagenti_security_posture: KagentiSecurityPosture,
   kagenti_status: KagentiStatusCard,
@@ -136,6 +141,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     'kagent_agent_discovery',
     'kagent_agent_fleet',
     'kagent_agent_list',
+    'kagent_lifecycle_state',
     'kagent_model_providers',
     'kagent_security',
     'kagent_status',
@@ -144,6 +150,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     'kagenti_agent_discovery',
     'kagenti_agent_fleet',
     'kagenti_build_pipeline',
+    'kagenti_lifecycle_manager',
     'kagenti_security',
     'kagenti_security_posture',
     'kagenti_status',
@@ -158,6 +165,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     'kagent_agent_discovery',
     'kagent_agent_fleet',
     'kagent_agent_list',
+    'kagent_lifecycle_state',
     'kagent_model_providers',
     'kagent_security',
     'kagent_status',
@@ -166,6 +174,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     'kagenti_agent_discovery',
     'kagenti_agent_fleet',
     'kagenti_build_pipeline',
+    'kagenti_lifecycle_manager',
     'kagenti_security',
     'kagenti_status',
     'kagenti_tool_registry',
@@ -191,6 +200,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     kagent_agent_discovery: () => import('./kagent'),
     kagent_agent_fleet: () => import('./kagent'),
     kagent_agent_list: () => import('./KagentAgentListCard'),
+    kagent_lifecycle_state: () => import('./kagent'),
     kagent_model_providers: () => import('./kagent'),
     kagent_security: () => import('./kagent'),
     kagent_status: () => import('./KagentStatusCard'),
@@ -199,6 +209,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     kagenti_agent_discovery: () => import('./kagenti'),
     kagenti_agent_fleet: () => import('./kagenti'),
     kagenti_build_pipeline: () => import('./kagenti'),
+    kagenti_lifecycle_manager: () => import('./kagenti'),
     kagenti_security: () => import('./kagenti'),
     kagenti_security_posture: () => import('./kagenti'),
     kagenti_status: () => import('./KagentiStatusCard'),
@@ -237,6 +248,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     hardware_leaderboard: 12,
     kagent_agent_discovery: 4,
     kagent_agent_fleet: 8,
+    kagent_lifecycle_state: 8,
     kagent_model_providers: 4,
     kagent_security: 4,
     kagent_status: 4,
@@ -245,6 +257,7 @@ export const aimlCardRegistry: CardRegistryDomain = {
     kagenti_agent_discovery: 4,
     kagenti_agent_fleet: 8,
     kagenti_build_pipeline: 4,
+    kagenti_lifecycle_manager: 8,
     kagenti_security: 4,
     kagenti_security_posture: 4,
     kagenti_status: 4,

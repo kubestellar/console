@@ -237,6 +237,8 @@ export const CARD_CATALOG = {
     { type: 'kagenti_agent_discovery', title: 'Agent Discovery', description: 'AgentCard-based A2A discovery with skills, capabilities, and sync status', visualization: 'status' },
     { type: 'kagenti_security', title: 'Security Posture', description: 'SPIFFE identity binding coverage and unbound agent warnings', visualization: 'gauge' },
     { type: 'kagenti_topology', title: 'Agent Topology', description: 'Visual graph of agent-to-agent and agent-to-tool relationships', visualization: 'status' },
+    { type: 'kagenti_lifecycle_manager', title: 'Kagenti Lifecycle Manager', description: 'Unified lifecycle view of agents and builds with activity timeline', visualization: 'status' },
+    { type: 'kagent_lifecycle_state', title: 'Kagent Lifecycle State', description: 'Visual state machine showing agent lifecycle transitions', visualization: 'status' },
   ],
   'AI Assistant': [
     { type: 'console_ai_issues', title: 'AI Issues', description: 'AI-powered issue detection and repair', visualization: 'status' },
