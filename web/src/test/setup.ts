@@ -44,30 +44,47 @@ if (isBrowserEnvironment) {
     }
   })
 
-  // Mock useDemoMode globally to prevent module initialization issues in tests.
-  // CardDataContext imports useDemoMode, which triggers lib/demoMode module-level
-  // initialization that accesses browser APIs. While localStorage is mocked above,
-  // other dependencies (getStoredAuthTokenSync, etc.) may not be available in all
-  // test contexts. This global mock ensures consistent behavior across all tests.
-  vi.mock('../hooks/useDemoMode', async () => {
-    const actual = await vi.importActual<typeof import('../hooks/useDemoMode')>('../hooks/useDemoMode')
-    return {
-      ...actual,
-      useDemoMode: () => ({
-        isDemoMode: false,
-        toggleDemoMode: vi.fn(),
-        setDemoMode: vi.fn(),
-      }),
-      getDemoMode: vi.fn(() => false),
-      setGlobalDemoMode: vi.fn(),
-      isNetlifyDeployment: false,
-      isDemoModeForced: false,
-      canToggleDemoMode: () => true,
-      isDemoToken: async () => false,
-      hasRealToken: async () => true,
-      setDemoToken: vi.fn(),
-    }
-  })
+  // Mock lib/demoMode globally to prevent module-level initialization that accesses
+  // localStorage and getStoredAuthTokenSync at import time. This ensures tests don't
+  // break when any module imports demoMode or useDemoMode.
+  vi.mock('../lib/demoMode', () => ({
+    isDemoMode: vi.fn(() => false),
+    setDemoMode: vi.fn(),
+    toggleDemoMode: vi.fn(),
+    subscribeDemoMode: vi.fn(() => () => {}),
+    isNetlifyDeployment: false,
+    isDemoModeForced: false,
+    canToggleDemoMode: vi.fn(() => true),
+    isDemoToken: vi.fn(async () => false),
+    hasRealToken: vi.fn(async () => true),
+    setDemoToken: vi.fn(),
+    getDemoMode: vi.fn(() => false),
+    setGlobalDemoMode: vi.fn(),
+    isQuantumWorkloadAvailable: vi.fn(() => false),
+    setQuantumWorkloadAvailable: vi.fn(),
+    isQuantumForcedToDemo: vi.fn(() => false),
+    activatePublicDemoMode: vi.fn(),
+  }))
+
+  // Mock useDemoMode hook globally - uses the lib/demoMode mock above.
+  // Provides a complete standalone mock without vi.importActual to avoid triggering
+  // module initialization. Re-exports all utilities from lib/demoMode.
+  vi.mock('../hooks/useDemoMode', () => ({
+    useDemoMode: () => ({
+      isDemoMode: false,
+      toggleDemoMode: vi.fn(),
+      setDemoMode: vi.fn(),
+    }),
+    getDemoMode: vi.fn(() => false),
+    setGlobalDemoMode: vi.fn(),
+    isNetlifyDeployment: false,
+    isDemoModeForced: false,
+    canToggleDemoMode: vi.fn(() => true),
+    isDemoToken: vi.fn(async () => false),
+    hasRealToken: vi.fn(async () => true),
+    setDemoToken: vi.fn(),
+  }))
+
 
   // Mock agentFetch wrappers to delegate to global.fetch so test mocks intercept
   // both the legacy shared wrapper and the direct mcp/agentFetch module imports.
