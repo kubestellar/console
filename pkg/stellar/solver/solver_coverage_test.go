@@ -133,7 +133,7 @@ func TestTerminateResolved(t *testing.T) {
 	if len(storage.notifications) != 1 {
 		t.Fatalf("notifications = %d, want 1", len(storage.notifications))
 	}
-	if storage.notifications[0].Title != "\u2746 Stellar resolved an issue" {
+	if storage.notifications[0].Title != "\u2726 Stellar resolved an issue" {
 		t.Fatalf("title = %q, want resolved title", storage.notifications[0].Title)
 	}
 	// Should broadcast solve_complete
@@ -453,7 +453,7 @@ func TestTerminateAllStatusTypes(t *testing.T) {
 			errStr:           "",
 			expectNotifCount: 1,
 			expectSeverity:   "info",
-			expectTitle:      "\u2746 Stellar resolved an issue",
+			expectTitle:      "\u2726 Stellar resolved an issue",
 		},
 		{
 			name:             "escalated status",
