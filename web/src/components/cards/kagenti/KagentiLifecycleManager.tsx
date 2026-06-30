@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import {
-  Activity, ArrowRight, Bot, CheckCircle, Clock, Hammer,
-  Server, XCircle, Wrench, Shield,
+  Activity, ArrowRight, Bot, Hammer,
+  Server,
 } from 'lucide-react'
 import { useKagentiAgents, useKagentiBuilds } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
@@ -173,7 +173,7 @@ function KagentiLifecycleManagerInternal({ config }: KagentiLifecycleManagerProp
         type: 'build',
         status: build.status,
         timestamp: build.startTime || build.completionTime || '',
-        detail: `${build.mode || 'dev'} / ${build.framework || 'generic'}`,
+        detail: build.mode || 'dev',
       })
     }
 
