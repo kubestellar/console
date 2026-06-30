@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-29T08:16:08.571Z",
-  "count": 1619,
+  "generatedAt": "2026-06-30T07:51:31.675Z",
+  "count": 1622,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -4066,6 +4066,44 @@
         "troubleshoot"
       ],
       "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "sandbox",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/atlantis/atlantis-3245-drift-detection.json",
+      "title": "atlantis: Drift Detection",
+      "description": "Drift Detection. Requested by 245+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "atlantis",
+        "sandbox",
+        "app-definition",
+        "feature"
+      ],
+      "cncfProjects": [
+        "atlantis"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
       "installMethods": [],
       "maturity": "sandbox",
       "qualityScore": 100,
@@ -44090,6 +44128,48 @@
       "qualitySuggestions": []
     },
     {
+      "path": "fixes/cncf-generated/kyverno/kyverno-16038-bug-cel-autogen-rewrites-metadata-namespace-to-pod-template-metada.json",
+      "title": "kyverno: [Bug] CEL autogen rewrites metadata.namespace to pod template metadata",
+      "description": "[Bug] CEL autogen rewrites metadata.namespace to pod template metadata. This issue affects 13+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "kyverno",
+        "incubating",
+        "security",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "kyverno"
+      ],
+      "targetResourceKinds": [
+        "Pod",
+        "Deployment",
+        "Statefulset"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "incubating",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
       "path": "fixes/cncf-generated/kyverno/kyverno-12049-bug-certificate-renewer-does-not-remove-old-ca-certificate-from-se.json",
       "title": "kyverno: [Bug] Certificate Renewer Does Not Remove Old CA Certificate From Secret",
       "description": "[Bug] Certificate Renewer Does Not Remove Old CA Certificate From Secret. This issue affects 10+ users.",
@@ -65161,6 +65241,44 @@
       "type": "feature",
       "installMethods": [],
       "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/vllm/vllm-22519-bug-gpt-oss-20b-tool-call-unexpected-token-12606-while-expecting-star.json",
+      "title": "vllm: [Bug]: [gpt oss 20b] [tool_call] Unexpected token 12606 while expecting start token 200006",
+      "description": "[Bug]: [gpt oss 20b] [tool_call] Unexpected token 12606 while expecting start token 200006. Users encounter: \"openai_harmony.HarmonyError:\".",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "vllm",
+        "community",
+        "llm-serving",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "vllm"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "advanced",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "community",
       "qualityScore": 100,
       "qualityPass": true,
       "qualityBreakdown": {
