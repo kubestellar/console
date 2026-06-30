@@ -75,6 +75,11 @@ if (isBrowserEnvironment) {
       toggleDemoMode: vi.fn(),
       setDemoMode: vi.fn(),
     }),
+    // Re-export all lib/demoMode functions (both current and legacy names)
+    isDemoMode: vi.fn(() => false),
+    setDemoMode: vi.fn(),
+    toggleDemoMode: vi.fn(),
+    subscribeDemoMode: vi.fn(() => () => {}),
     getDemoMode: vi.fn(() => false),
     setGlobalDemoMode: vi.fn(),
     isNetlifyDeployment: false,
@@ -83,6 +88,10 @@ if (isBrowserEnvironment) {
     isDemoToken: vi.fn(async () => false),
     hasRealToken: vi.fn(async () => true),
     setDemoToken: vi.fn(),
+    isQuantumWorkloadAvailable: vi.fn(() => false),
+    setQuantumWorkloadAvailable: vi.fn(),
+    isQuantumForcedToDemo: vi.fn(() => false),
+    activatePublicDemoMode: vi.fn(),
   }))
 
 
