@@ -670,14 +670,14 @@ func TestSolveLoopWithNilStorage(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	// Should not panic - nil storage will cause nil pointer dereference
-	// but we're testing that the code path is reached
+	// Should not panic - nil storage is handled gracefully by nil guards
 	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("expected panic with nil storage")
+		if r := recover(); r != nil {
+			t.Fatalf("unexpected panic with nil storage: %v", r)
 		}
 	}()
 	SolveLoop(ctx, input, nil, nil, broadcaster)
+	// If we reach here without panicking, the test passes
 }
 
 func TestInputFieldsWithEmptyValues(t *testing.T) {
