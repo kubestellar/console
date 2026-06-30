@@ -44,6 +44,31 @@ if (isBrowserEnvironment) {
     }
   })
 
+  // Mock useDemoMode globally to prevent module initialization issues in tests.
+  // CardDataContext imports useDemoMode, which triggers lib/demoMode module-level
+  // initialization that accesses browser APIs. While localStorage is mocked above,
+  // other dependencies (getStoredAuthTokenSync, etc.) may not be available in all
+  // test contexts. This global mock ensures consistent behavior across all tests.
+  vi.mock('../hooks/useDemoMode', async () => {
+    const actual = await vi.importActual<typeof import('../hooks/useDemoMode')>('../hooks/useDemoMode')
+    return {
+      ...actual,
+      useDemoMode: () => ({
+        isDemoMode: false,
+        toggleDemoMode: vi.fn(),
+        setDemoMode: vi.fn(),
+      }),
+      getDemoMode: vi.fn(() => false),
+      setGlobalDemoMode: vi.fn(),
+      isNetlifyDeployment: false,
+      isDemoModeForced: false,
+      canToggleDemoMode: () => true,
+      isDemoToken: async () => false,
+      hasRealToken: async () => true,
+      setDemoToken: vi.fn(),
+    }
+  })
+
   // Mock agentFetch wrappers to delegate to global.fetch so test mocks intercept
   // both the legacy shared wrapper and the direct mcp/agentFetch module imports.
   vi.mock('../hooks/mcp/shared', async () => {
