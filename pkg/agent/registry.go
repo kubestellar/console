@@ -233,6 +233,9 @@ func (r *Registry) List() []ai.ProviderInfo {
 
 	result := make([]ai.ProviderInfo, 0, len(r.providers))
 	for _, provider := range r.providers {
+		if provider == nil {
+			continue
+		}
 		result = append(result, ai.ProviderInfo{
 			Name:         provider.Name(),
 			DisplayName:  provider.DisplayName(),
