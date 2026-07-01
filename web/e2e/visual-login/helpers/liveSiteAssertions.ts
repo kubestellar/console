@@ -146,7 +146,7 @@ export function liveCanaryUrl(): string | undefined {
   const selfHosted = normalizeBaseUrl(process.env.SELF_HOSTED_CONSOLE_URL)
   if (
     selfHosted
-    && /console-live\.kubestellar\.io/i.test(selfHosted)
+    && isConsoleLiveUrl(selfHosted)
     && !process.env.LIVE_SITE_AUTH_MODE
     && !process.env.LIVE_CANARY_AUTH_MODE
   ) {
@@ -159,12 +159,20 @@ export function liveCanaryUrl(): string | undefined {
   )
 }
 
+function isConsoleLiveUrl(value: string): boolean {
+  try {
+    return new URL(value).hostname.toLowerCase() === 'console-live.kubestellar.io'
+  } catch {
+    return false
+  }
+}
+
 export function liveCanaryAuthMode(baseUrl?: string): LiveSiteAuthMode {
   const rawValue = (process.env.LIVE_SITE_AUTH_MODE || process.env.LIVE_CANARY_AUTH_MODE || 'dev').toLowerCase()
   if (rawValue === 'preauth' || rawValue === 'preauthenticated' || rawValue === 'storage-state') return 'preauthenticated'
   if (rawValue === 'signed-cookie' || rawValue === 'cookie' || rawValue === 'production-cookie') return 'signed-cookie'
   if (rawValue === 'none' || rawValue === 'unauthenticated') return 'none'
-  if (!process.env.LIVE_SITE_AUTH_MODE && !process.env.LIVE_CANARY_AUTH_MODE && baseUrl && /console-live\.kubestellar\.io/i.test(baseUrl)) {
+  if (!process.env.LIVE_SITE_AUTH_MODE && !process.env.LIVE_CANARY_AUTH_MODE && baseUrl && isConsoleLiveUrl(baseUrl)) {
     throw new Error('Authenticated live UI tests need LIVE_SITE_AUTH_MODE=signed-cookie, preauthenticated, or none when targeting production OAuth.')
   }
   return 'dev'
@@ -744,9 +752,7 @@ export function writeLiveSiteReport(entry: Record<string, unknown>) {
   const outDir = path.resolve(process.cwd(), 'test-results/reports')
   fs.mkdirSync(outDir, { recursive: true })
   const outPath = path.join(outDir, 'live-site.json')
-  const existing = fs.existsSync(outPath)
-    ? JSON.parse(fs.readFileSync(outPath, 'utf8')) as Array<Record<string, unknown>>
-    : []
+  const existing = readJsonArrayFile<Record<string, unknown>>(outPath)
   existing.push({ timestamp: new Date().toISOString(), ...entry })
   fs.writeFileSync(outPath, safeJsonStringify(existing))
 }
@@ -755,11 +761,24 @@ export function writeLiveRouteEvidence(entry: Record<string, unknown>) {
   const outDir = path.resolve(process.cwd(), 'test-results/reports')
   fs.mkdirSync(outDir, { recursive: true })
   const outPath = path.join(outDir, 'live-routes.json')
-  const existing = fs.existsSync(outPath)
-    ? JSON.parse(fs.readFileSync(outPath, 'utf8')) as Array<Record<string, unknown>>
-    : []
+  const existing = readJsonArrayFile<Record<string, unknown>>(outPath)
   existing.push({ timestamp: new Date().toISOString(), ...entry })
   fs.writeFileSync(outPath, safeJsonStringify(existing))
+}
+
+function readJsonArrayFile<T>(filePath: string): T[] {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T[]
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      return []
+    }
+    throw error
+  }
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error
 }
 
 function liveRateLimitDataLossPath() {
@@ -782,14 +801,16 @@ function markLiveRateLimitDataLoss(route: string, classifications: LiveNetworkCl
 
 export function liveRateLimitDataLossSkipReason(): string | null {
   const markerPath = liveRateLimitDataLossPath()
-  if (!fs.existsSync(markerPath)) return null
   try {
     const details = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as { route?: string; classifications?: LiveNetworkClassification[] }
     const endpoints = (details.classifications || [])
       .map(item => `${item.url}${item.status ? ` (${item.status})` : ''}`)
       .join(', ')
     return `Skipping after core live Kubernetes API rate limit on ${details.route || 'an earlier route'}${endpoints ? `: ${endpoints}` : ''}.`
-  } catch {
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      return null
+    }
     return 'Skipping after an earlier core live Kubernetes API rate-limit event.'
   }
 }

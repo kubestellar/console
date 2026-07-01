@@ -44,6 +44,7 @@ function truncate(value, limit = 2400) {
 
 function escapeCell(value) {
   return String(value ?? '')
+    .replace(/\\/g, '\\\\')
     .replace(/\r?\n/g, ' ')
     .replace(/\|/g, '\\|')
     .slice(0, 300)

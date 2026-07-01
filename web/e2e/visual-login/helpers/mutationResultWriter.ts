@@ -7,10 +7,19 @@ export function appendMutationResult(result: MutationResult) {
   const outDir = path.resolve(process.cwd(), 'test-results/reports')
   const outPath = path.join(outDir, 'mutation-results.json')
   fs.mkdirSync(outDir, { recursive: true })
-  const existing = fs.existsSync(outPath)
-    ? JSON.parse(fs.readFileSync(outPath, 'utf8')) as MutationResult[]
-    : []
+  let existing: MutationResult[] = []
+  try {
+    existing = JSON.parse(fs.readFileSync(outPath, 'utf8')) as MutationResult[]
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== 'ENOENT') {
+      throw error
+    }
+  }
   const withoutDuplicate = existing.filter(item => item.id !== result.id)
   withoutDuplicate.push(result)
   fs.writeFileSync(outPath, safeJsonStringify(withoutDuplicate))
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error
 }
