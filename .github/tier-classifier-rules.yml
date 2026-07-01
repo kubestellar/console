@@ -20,12 +20,14 @@
 # auto-merge is wired up in a follow-up PR.
 
 tier/0-automatic:
-  # Dependency manifests maintained by tooling
+  # Lock files maintained by tooling — but see note below about go.mod
   - "package-lock.json"
   - "web/package-lock.json"
   - "go.sum"
-  - "go.mod"
-  - "deploy/helm/console/Chart.lock"
+  # NOTE: standalone package-lock.json changes without package.json are
+  # anomalous and worth a quick look, but are hard to express as a glob
+  # exclusion here. Document the expectation: a lock-only PR should be
+  # accompanied by tooling output evidence (e.g. renovate/dependabot).
   # Docs-only changes
   - "docs/**"
   - "README.md"
@@ -37,6 +39,10 @@ tier/0-automatic:
   - "**/*.snap"
 
 tier/1-lightweight:
+  # go.mod intentionally NOT in tier/0: it can carry `replace` directives
+  # that redirect a dependency to an attacker-controlled fork. Always
+  # requires at least one maintainer review even for tooling-generated bumps.
+  - "go.mod"
   # Tests only
   - "**/__tests__/**"
   - "**/*.test.ts"
