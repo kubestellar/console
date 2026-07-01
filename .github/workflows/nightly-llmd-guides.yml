@@ -21,6 +21,9 @@ on:
           - autoscaler
           - model-mesh
           - custom-metrics
+  push:
+    paths:
+      - '.github/workflows/nightly-llmd-guides.yml'
 
 permissions: read-all
 

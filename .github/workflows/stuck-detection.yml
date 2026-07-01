@@ -1,0 +1,63 @@
+name: Stuck Detection Workflow
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # Every hour at :00
+  workflow_dispatch:
+    inputs:
+      force_check:
+        description: 'Force check all items regardless of age'
+        required: false
+        default: 'false'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  detect-stuck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check for stuck workflow runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking for stuck workflow runs..."
+          
+          TIMEOUT_HOURS=6
+          CUTOFF=$(date -u -d "${TIMEOUT_HOURS} hours ago" +%Y-%m-%dT%H:%M:%SZ)
+          
+          # Find in_progress runs older than timeout
+          STUCK_RUNS=$(gh api \
+            "repos/${{ github.repository }}/actions/runs" \
+            --jq ".workflow_runs[] | select(.status == \"in_progress\" and .created_at < \"${CUTOFF}\") | {id: .id, name: .name, created_at: .created_at, html_url: .html_url}" \
+            | jq -s '.')
+          
+          STUCK_COUNT=$(echo "$STUCK_RUNS" | jq 'length')
+          
+          if [ "$STUCK_COUNT" -gt 0 ]; then
+            echo "Found ${STUCK_COUNT} stuck workflow run(s):"
+            echo "$STUCK_RUNS" | jq -r '.[] | "- \(.name) (ID: \(.id), created: \(.created_at))"'
+            echo ""
+            echo "::warning::Found ${STUCK_COUNT} workflow runs in 'in_progress' state for more than ${TIMEOUT_HOURS} hours"
+            
+            # Output URLs for manual review
+            echo "Review these runs:"
+            echo "$STUCK_RUNS" | jq -r '.[] | .html_url'
+          else
+            echo "✅ No stuck workflow runs found"
+          fi
+          
+          echo "stuck_count=${STUCK_COUNT}" >> $GITHUB_OUTPUT
+          echo "stuck_runs<<EOF" >> $GITHUB_OUTPUT
+          echo "$STUCK_RUNS" | jq -c '.' >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Stuck Detection Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timeout threshold:** 6 hours" >> $GITHUB_STEP_SUMMARY
+          echo "**Check time:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
