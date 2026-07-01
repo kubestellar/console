@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { validateMissionExport } from './scanner.mjs';
 
 /** Valid mission file extensions */
@@ -38,7 +38,7 @@ if (args.includes('--all')) {
   files = discoverMissionFiles('fixes');
   console.log(`Discovered ${files.length} mission files to validate.\n`);
 } else {
-  files = args;
+  files = args.flatMap(a => a.split(/\s+/)).filter(Boolean);
 }
 
 if (files.length === 0) {

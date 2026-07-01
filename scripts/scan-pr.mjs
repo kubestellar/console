@@ -37,7 +37,7 @@ if (args.includes('--all')) {
   files = discoverMissionFiles('fixes');
   console.log(`Discovered ${files.length} mission files to scan.\n`);
 } else {
-  files = args;
+  files = args.flatMap(a => a.split(/\s+/)).filter(Boolean);
 }
 
 if (files.length === 0) {
