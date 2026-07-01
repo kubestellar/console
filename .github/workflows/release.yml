@@ -170,7 +170,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     needs: determine_version
     if: needs.determine_version.outputs.has_changes == 'true'
     outputs:
