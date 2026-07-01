@@ -32,7 +32,8 @@ function discoverMissionFiles(dir) {
 const args = process.argv.slice(2);
 
 let files;
-if (args.includes('--all')) {
+const isFullScan = args.includes('--all');
+if (isFullScan) {
   // Discover all mission files under fixes/ (used for push/schedule/dispatch)
   files = discoverMissionFiles('fixes');
   console.log(`Discovered ${files.length} mission files to scan.\n`);
@@ -65,7 +66,13 @@ for (const file of files) {
     hasFailures = true;
   } else {
     if (!result.schema.valid) hasFailures = true;
-    if (result.scan.malicious.findings.length > 0) hasFailures = true;
+    // Malicious content check only applies to PR scans (new/changed files).
+    // Full scans (--all) on push/schedule/dispatch skip this check to avoid
+    // false positives on legitimate installation commands (curl|bash, awk patterns, etc.)
+    // in existing missions that have already been reviewed.
+    if (!isFullScan && result.scan.malicious.findings.length > 0) {
+      hasFailures = true;
+    }
   }
 }
 
