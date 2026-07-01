@@ -9,11 +9,18 @@ import type { MarketplaceItemType } from './types'
 export type {
   CNCFProjectInfo,
   CNCFStats,
+  CommunityReview,
+  HookActivity,
+  HookEventType,
+  HookStatus,
   InstallResult,
+  LiveHook,
   MarketplaceDifficulty,
   MarketplaceItem,
   MarketplaceItemStatus,
   MarketplaceItemType,
+  ReviewRating,
+  ReviewSummary,
 } from './types'
 
 export function useMarketplace() {

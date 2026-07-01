@@ -125,9 +125,13 @@ import { kustomizationStatusConfig } from './kustomization-status'
 import { keycloakStatusConfig } from './keycloak-status'
 import { kyvernoPoliciesConfig } from './kyverno-policies'
 import { limitRangeStatusConfig } from './limit-range-status'
+import { eppHealthConfig } from './epp-health'
+import { eppRoutingConfig } from './epp-routing'
+import { kvcacheMonitorConfig } from './kvcache-monitor'
 import { llmInferenceConfig } from './llm-inference'
 import { llmModelsConfig } from './llm-models'
 import { llmdStackMonitorConfig } from './llmd-stack-monitor'
+import { modelEndpointHealthConfig } from './model-endpoint-health'
 import { matchGameConfig } from './match-game'
 import { mlJobsConfig } from './ml-jobs'
 import { mlNotebooksConfig } from './ml-notebooks'
@@ -265,6 +269,8 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   deployment_progress: deploymentProgressConfig,
   deployment_status: deploymentStatusConfig,
   dynamic_card: dynamicCardConfig,
+  epp_health: eppHealthConfig,
+  epp_routing: eppRoutingConfig,
   event_stream: eventStreamConfig,
   event_summary: eventSummaryConfig,
   events_timeline: eventsTimelineConfig,
@@ -336,6 +342,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   kubevirt_status: kubevirtStatusConfig,
   kustomization_status: kustomizationStatusConfig,
   keycloak_status: keycloakStatusConfig,
+  kvcache_monitor: kvcacheMonitorConfig,
   kyverno_policies: kyvernoPoliciesConfig,
   limit_range_status: limitRangeStatusConfig,
   llm_inference: llmInferenceConfig,
@@ -345,6 +352,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   ml_jobs: mlJobsConfig,
   ml_notebooks: mlNotebooksConfig,
   mobile_browser: mobileBrowserConfig,
+  model_endpoint_health: modelEndpointHealthConfig,
   namespace_events: namespaceEventsConfig,
   namespace_monitor: namespaceMonitorConfig,
   namespace_overview: namespaceOverviewConfig,
@@ -453,6 +461,9 @@ export const CARD_PROJECT_TAGS: Record<string, string[]> = {
   throughput_comparison: ['kubestellar'],
   performance_timeline: ['kubestellar'],
   resource_utilization: ['kubestellar'],
+  // LLM-d monitoring cards
+  epp_health: ['kubestellar'],
+  model_endpoint_health: ['kubestellar'],
   // LLM-d architecture cards (component-only)
   llmd_flow: ['kubestellar'],
   kvcache_monitor: ['kubestellar'],
@@ -570,6 +581,8 @@ export {
   deploymentStatusConfig,
   chaosMeshStatusConfig,
   dynamicCardConfig,
+  eppHealthConfig,
+  eppRoutingConfig,
   eventStreamConfig,
   eventSummaryConfig,
   eventsTimelineConfig,
@@ -618,6 +631,7 @@ export {
   kubeVelaStatusConfig,
   kubevirtStatusConfig,
   kustomizationStatusConfig,
+  kvcacheMonitorConfig,
   kyvernoPoliciesConfig,
   limitRangeStatusConfig,
   llmInferenceConfig,
@@ -627,6 +641,7 @@ export {
   mlJobsConfig,
   mlNotebooksConfig,
   mobileBrowserConfig,
+  modelEndpointHealthConfig,
   namespaceEventsConfig,
   namespaceMonitorConfig,
   namespaceOverviewConfig,

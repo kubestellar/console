@@ -252,8 +252,10 @@ jobs:
               }),
             ]);
 
-            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            const recentlyClosed = closedIssues.filter(i => new Date(i.closed_at) > sevenDaysAgo);
+            const DEDUP_WINDOW_DAYS = 2;
+            const dedup_window_ms = DEDUP_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+            const dedupCutoff = new Date(Date.now() - dedup_window_ms);
+            const recentlyClosed = closedIssues.filter(i => new Date(i.closed_at) > dedupCutoff);
 
             // Normalize title for dedup: strip numbers
             const normalize = (t) => t.replace(/\[Auto-QA\]\s*/, '').replace(/\d+/g, 'N').toLowerCase().trim();

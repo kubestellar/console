@@ -29,6 +29,26 @@ export function emitMarketplaceItemViewed(itemType: string, itemName: string) {
   send('ksc_marketplace_item_viewed', { item_type: itemType, item_name: itemName })
 }
 
+// ── Community Reviews ──────────────────────────────────
+
+export function emitMarketplaceReviewSubmitted(itemId: string, itemName: string, rating: number) {
+  send('ksc_marketplace_review_submitted', { item_id: itemId, item_name: itemName, rating: String(rating) })
+}
+
+export function emitMarketplaceReviewHelpful(itemId: string, reviewId: string) {
+  send('ksc_marketplace_review_helpful', { item_id: itemId, review_id: reviewId })
+}
+
+// ── Live Hooks ──────────────────────────────────────────
+
+export function emitMarketplaceHookToggled(itemId: string, eventType: string, active: boolean) {
+  send('ksc_marketplace_hook_toggled', { item_id: itemId, event_type: eventType, active: String(active) })
+}
+
+export function emitMarketplaceHookCreated(itemId: string, eventType: string) {
+  send('ksc_marketplace_hook_created', { item_id: itemId, event_type: eventType })
+}
+
 // ── Install & Conversion ──────────────────────────────────
 
 export function emitInstallCommandCopied(source: InstallCopySource, command: string) {
