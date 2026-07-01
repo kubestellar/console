@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-30T07:51:31.675Z",
-  "count": 1622,
+  "generatedAt": "2026-07-01T09:44:59.076Z",
+  "count": 1623,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -21232,6 +21232,46 @@
       "type": "troubleshoot",
       "installMethods": [],
       "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/headlamp/headlamp-2165-disable-refresh-of-home-all-clusters-on-startup.json",
+      "title": "headlamp: Disable refresh of Home > All Clusters on startup",
+      "description": "Disable refresh of Home > All Clusters on startup. Requested by 11+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "headlamp",
+        "sandbox",
+        "observability",
+        "feature"
+      ],
+      "cncfProjects": [
+        "headlamp"
+      ],
+      "targetResourceKinds": [
+        "Service"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "sandbox",
       "qualityScore": 100,
       "qualityPass": true,
       "qualityBreakdown": {
