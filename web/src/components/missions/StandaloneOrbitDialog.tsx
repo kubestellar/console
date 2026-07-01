@@ -92,7 +92,7 @@ function ClusterScopeSection({ clusterName, value, onChange }: ClusterScopeSecti
         className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors py-0.5"
       >
         {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-        <span>Scope</span>
+        <span>{i18next.t('common:scope', 'Scope')}</span>
         {activeCount > 0 && (
           <span className="bg-purple-500/20 text-purple-400 px-1 rounded-full">
             {activeCount}

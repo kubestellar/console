@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { CheckCircle, AlertTriangle, XCircle, Info, Clock, Zap } from 'lucide-react'
+import i18next from 'i18next'
 import { StatusBadge } from './StatusBadge'
 import { TEST_STRINGS } from '@/lib/test-strings'
 
@@ -97,9 +98,9 @@ export const AllSizes: Story = {
   args: { color: 'blue' },
   render: () => (
     <div className="flex flex-wrap gap-2 items-center">
-      <StatusBadge color="blue" size="xs">Extra Small</StatusBadge>
-      <StatusBadge color="blue" size="sm">Small</StatusBadge>
-      <StatusBadge color="blue" size="md">Medium</StatusBadge>
+      <StatusBadge color="blue" size="xs">{i18next.t('common:sizes.extraSmall', 'Extra Small')}</StatusBadge>
+      <StatusBadge color="blue" size="sm">{i18next.t('common:sizes.small', 'Small')}</StatusBadge>
+      <StatusBadge color="blue" size="md">{i18next.t('common:sizes.medium', 'Medium')}</StatusBadge>
     </div>
   ),
 }

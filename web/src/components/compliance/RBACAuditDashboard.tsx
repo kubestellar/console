@@ -231,11 +231,11 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
               value={severityFilter}
               onChange={e => setSeverityFilter(e.target.value)}
             >
-              <option value="all">All Severities</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
+              <option value="all">{i18next.t('common:severityFilters.allSeverities', 'All Severities')}</option>
+              <option value="critical">{i18next.t('common:severityFilters.critical', 'Critical')}</option>
+              <option value="high">{i18next.t('common:severityFilters.high', 'High')}</option>
+              <option value="medium">{i18next.t('common:severityFilters.medium', 'Medium')}</option>
+              <option value="low">{i18next.t('common:severityFilters.low', 'Low')}</option>
             </Select>
           </div>
         )}

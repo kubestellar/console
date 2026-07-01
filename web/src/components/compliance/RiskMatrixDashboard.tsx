@@ -270,7 +270,7 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
                 <button
                   onClick={() => setSelectedCell(null)}
                   className="text-xs text-gray-400 hover:text-white"
-                >Clear selection</button>
+                >{i18next.t('common:clearSelection', 'Clear selection')}</button>
               </div>
               {selectedRisks.length === 0 ? (
                 <p className="text-gray-500 text-sm">No risks in this zone</p>
