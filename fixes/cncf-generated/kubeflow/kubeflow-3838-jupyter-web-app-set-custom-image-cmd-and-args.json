@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for jupyter-web-app: Set custom Image cmd and args",
-        "description": "#### What changes were proposed in this pull request?\r\nThis PR extends `PodDefault` to provide a capability to set a custom `command` and `args` for Notebook servers.\n\n#### Example\n- Create the following PodDefaut in the user's namespace:\n```\napiVersion: \"kubeflow.org/v1alpha1\"\nkind:\n```yaml\napiVersion: \"kubeflow.org/v1alpha1\"\nkind: PodDefault\nmetadata:\n  name: custom-entrypoint\nspec:\n  selector:\n    matchLabels:\n      custom-entrypoint: \"true\"\n  desc: \"Lauch as Jupyter Lab\"\n  command:\n  - jupyter\n  args:\n  - lab\n  - --notebook-dir=/workspace\n  - --ip=0.0.0.0\n  - --no-browser\n  - --allow-root\n  - --port=8888\n  - --NotebookApp.token=''\n  - --NotebookApp.password=''\n  - --NotebookApp.allow_origin='*'\n  - --NotebookApp.base_url=$(NB_PREFIX)\n```"
+        "description": "#### What changes were proposed in this pull request?\r\nThis PR extends `PodDefault` to provide a capability to set a custom `command` and `args` for Notebook servers.\n\n#### Example\n- Create the following PodDefaut in the user's namespace:\n```\napiVersion: \"kubeflow.org/v1alpha1\"\nkind:\n```yaml\napiVersion: \"kubeflow.org/v1alpha1\"\nkind: PodDefault\nmetadata:\n  name: custom-entrypoint\nspec:\n  selector:\n    matchLabels:\n      custom-entrypoint: \"true\"\n  desc: \"Lauch as Jupyter Lab\"\n  command:\n  - jupyter\n  args:\n  - lab\n  - --notebook-dir=/workspace\n  - --ip=0.0.0.0\n  - --no-browser\n  - --allow-root\n  - --port=8888\n  - --NotebookApp.token=''\n  - --NotebookApp.password=''\n  - --NotebookApp.allow_origin='*'\n  - --NotebookApp.base_url=`NB_PREFIX`\n```"
       },
       {
         "title": "Verify the feature works",
@@ -30,7 +30,7 @@
     "resolution": {
       "summary": "#### What changes were proposed in this pull request?\r\nThis PR extends `PodDefault` to provide a capability to set a custom `command` and `args` for Notebook servers.",
       "codeSnippets": [
-        "apiVersion: \"kubeflow.org/v1alpha1\"\nkind: PodDefault\nmetadata:\n  name: custom-entrypoint\nspec:\n  selector:\n    matchLabels:\n      custom-entrypoint: \"true\"\n  desc: \"Lauch as Jupyter Lab\"\n  command:\n  - jupyter\n  args:\n  - lab\n  - --notebook-dir=/workspace\n  - --ip=0.0.0.0\n  - --no-browser\n  - --allow-root\n  - --port=8888\n  - --NotebookApp.token=''\n  - --NotebookApp.password=''\n  - --NotebookApp.allow_origin='*'\n  - --NotebookApp.base_url=$(NB_PREFIX)"
+        "apiVersion: \"kubeflow.org/v1alpha1\"\nkind: PodDefault\nmetadata:\n  name: custom-entrypoint\nspec:\n  selector:\n    matchLabels:\n      custom-entrypoint: \"true\"\n  desc: \"Lauch as Jupyter Lab\"\n  command:\n  - jupyter\n  args:\n  - lab\n  - --notebook-dir=/workspace\n  - --ip=0.0.0.0\n  - --no-browser\n  - --allow-root\n  - --port=8888\n  - --NotebookApp.token=''\n  - --NotebookApp.password=''\n  - --NotebookApp.allow_origin='*'\n  - --NotebookApp.base_url=`NB_PREFIX`"
       ]
     }
   },

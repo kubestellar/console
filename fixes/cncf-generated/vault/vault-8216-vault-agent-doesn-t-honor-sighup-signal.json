@@ -20,7 +20,7 @@
       },
       {
         "title": "Upgrade Vault to get Agent reloadable configuration",
-        "description": "Vault Agent reloadable configuration support was implemented in PR #18638 (merged January 2023). This allows Vault Agent to reload its configuration on SIGHUP, including TLS certificates, without requiring a full restart.\n```bash\n# Upgrade to Vault 1.13+ which includes Agent reloadable config\nvault version\n# Send SIGHUP to the agent process to reload configuration\nkill -HUP $(pgrep -f \"vault agent\")\n```"
+        "description": "Vault Agent reloadable configuration support was implemented in PR #18638 (merged January 2023). This allows Vault Agent to reload its configuration on SIGHUP, including TLS certificates, without requiring a full restart.\n```bash\n# Upgrade to Vault 1.13+ which includes Agent reloadable config\nvault version\n# Send SIGHUP to the agent process to reload configuration\nkill -HUP `pgrep -f \"vault agent\"`\n```"
       },
       {
         "title": "Verify the feature works",

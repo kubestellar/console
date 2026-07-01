@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for Provide a way to ignore files or directories",
-        "description": "Hi,\nLet me add few more cases\n\n1. `kpt pkg get` will download ALL files in the repository. This is not cool at all.\ne.g. I may have my IDE files inside, some scripts, Makefiles, Markdown, etc.\nWA: move Kptfile and everything to separate folder and don't put there any other resources.\nThis doesn't\n```yaml\nkind: PodChaos\napiVersion: chaos-mesh.org/v1alpha1\nmetadata:\n  namespace: $(params.namespace)\n  name: pod-kill\nspec:\n  selector:\n    namespaces:\n      - $(params.namespace)\n    labelSelectors:\n      app.kubernetes.io/component: master\n      app.kubernetes.io/name: redis\n  mode: one\n  action: pod-kill\n  gracePeriod: 0\n```"
+        "description": "Hi,\nLet me add few more cases\n\n1. `kpt pkg get` will download ALL files in the repository. This is not cool at all.\ne.g. I may have my IDE files inside, some scripts, Makefiles, Markdown, etc.\nWA: move Kptfile and everything to separate folder and don't put there any other resources.\nThis doesn't\n```yaml\nkind: PodChaos\napiVersion: chaos-mesh.org/v1alpha1\nmetadata:\n  namespace: `params.namespace`\n  name: pod-kill\nspec:\n  selector:\n    namespaces:\n      - `params.namespace`\n    labelSelectors:\n      app.kubernetes.io/component: master\n      app.kubernetes.io/name: redis\n  mode: one\n  action: pod-kill\n  gracePeriod: 0\n```"
       },
       {
         "title": "Verify the feature works",
@@ -30,7 +30,7 @@
     "resolution": {
       "summary": "Hi,\nLet me add few more cases\n\n1. `kpt pkg get` will download ALL files in the repository. This is not cool at all.\ne.g. I may have my IDE files inside, some scripts, Makefiles, Markdown, etc.\nWA: move Kptfile and everything to separate folder and don't put there any other resources.",
       "codeSnippets": [
-        "kind: PodChaos\napiVersion: chaos-mesh.org/v1alpha1\nmetadata:\n  namespace: $(params.namespace)\n  name: pod-kill\nspec:\n  selector:\n    namespaces:\n      - $(params.namespace)\n    labelSelectors:\n      app.kubernetes.io/component: master\n      app.kubernetes.io/name: redis\n  mode: one\n  action: pod-kill\n  gracePeriod: 0",
+        "kind: PodChaos\napiVersion: chaos-mesh.org/v1alpha1\nmetadata:\n  namespace: `params.namespace`\n  name: pod-kill\nspec:\n  selector:\n    namespaces:\n      - `params.namespace`\n    labelSelectors:\n      app.kubernetes.io/component: master\n      app.kubernetes.io/name: redis\n  mode: one\n  action: pod-kill\n  gracePeriod: 0",
         "apiVersion: kpt.dev/v1\nkind: Kptfile\nmetadata:\n  name: example\npipeline:\n  pkg:\n    - function: ignore\n      configMap:\n        resources:\n          - '*.iml'\n          - '*.idea'\n          - 'Makefile'",
         "apiVersion: kpt.dev/v1\nkind: Kptfile\nmetadata:\n  name: example\npipeline:\n  live:\n    - image: gcr.io/kpt-fn/ignore\n      configMap:\n        group: chaos-mesh.org"
       ]

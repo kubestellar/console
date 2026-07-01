@@ -24,7 +24,7 @@
       },
       {
         "title": "Verify the volume was resized",
-        "description": "Check that the PVC and PV reflect the new size:\n```bash\nkubectl get pvc <pvc-name> -n <namespace> -o jsonpath='{.status.capacity.storage}'\nkubectl get pv $(kubectl get pvc <pvc-name> -n <namespace> -o jsonpath='{.spec.volumeName}') -o jsonpath='{.spec.capacity.storage}'\n```\nBoth should show the new size. If the PVC shows `FileSystemResizePending` condition, the filesystem resize will complete when the pod using it restarts."
+        "description": "Check that the PVC and PV reflect the new size:\n```bash\nkubectl get pvc <pvc-name> -n <namespace> -o jsonpath='{.status.capacity.storage}'\nkubectl get pv `kubectl get pvc <pvc-name> -n <namespace> -o jsonpath='{.spec.volumeName}'` -o jsonpath='{.spec.capacity.storage}'\n```\nBoth should show the new size. If the PVC shows `FileSystemResizePending` condition, the filesystem resize will complete when the pod using it restarts."
       }
     ],
     "resolution": {

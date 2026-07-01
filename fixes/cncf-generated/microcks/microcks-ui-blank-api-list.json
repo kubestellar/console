@@ -20,7 +20,7 @@
       },
       {
         "title": "Fix Keycloak SSL requirement (most common cause)",
-        "description": "If the logs show the SSL warning, disable the SSL requirement on the microcks realm:\n```bash\nkubectl port-forward svc/microcks-keycloak -n microcks 9090:8080 &\nsleep 2\n\nKC_TOKEN=$(curl -s -X POST http://localhost:9090/realms/master/protocol/openid-connect/token \\\n  -d 'username=admin&password=admin&grant_type=password&client_id=admin-cli' | jq -r '.access_token')\n\ncurl -s -X PUT http://localhost:9090/admin/realms/microcks \\\n  -H \"Authorization: Bearer $KC_TOKEN\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"sslRequired\": \"NONE\"}'\n```\nThis allows internal HTTP requests between Microcks and Keycloak without TLS."
+        "description": "If the logs show the SSL warning, disable the SSL requirement on the microcks realm:\n```bash\nkubectl port-forward svc/microcks-keycloak -n microcks 9090:8080 &\nsleep 2\n\nKC_TOKEN=`curl -s -X POST http://localhost:9090/realms/master/protocol/openid-connect/token \\\n  -d 'username=admin&password=admin&grant_type=password&client_id=admin-cli' | jq -r '.access_token'`\n\ncurl -s -X PUT http://localhost:9090/admin/realms/microcks \\\n  -H \"Authorization: Bearer $KC_TOKEN\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"sslRequired\": \"NONE\"}'\n```\nThis allows internal HTTP requests between Microcks and Keycloak without TLS."
       },
       {
         "title": "Verify the API list loads",

@@ -31,7 +31,7 @@
       "summary": "Hey Folks, Thanks for the interest in the mentorship. We have certain prerequisites which we expect to be included in your application. Please include details or reference to a document for the said prerequisite in your Cover Letter / Mail to the mentors / Submit it in the issue thread / DM Mentors in KubeArmor Slack by 20 Feb.\n\nFollowing are the details.",
       "codeSnippets": [
         "[plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc.options]\n    SystemdCgroup = true\n    [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc.options.Runtime]\n        RuntimeType = \"io.containerd.runc.v2\"\n    [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc.options.Hooks]\n        [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc.options.Hooks.prestart]\n            path = \"/var/ocihooks/prestarthook.sh\"",
-        "#!/bin/bash\n\necho \"Setting the desired default container runtime to 'crio'\"\nexport DEFAULT_CONTAINER_RUNTIME=\"crio\"\necho \"OCI hook executed successfully! at $(date)\" >> /usr/share/containers/oci/hooks.d/hook_log.txt",
+        "#!/bin/bash\n\necho \"Setting the desired default container runtime to 'crio'\"\nexport DEFAULT_CONTAINER_RUNTIME=\"crio\"\necho \"OCI hook executed successfully! at `date`\" >> /usr/share/containers/oci/hooks.d/hook_log.txt",
         "{\n    \"version\": \"1.0.0\",\n    \"hook\": {\n        \"path\": \"/usr/share/containers/oci/hooks.d/prestarthook.sh\"\n    },\n    \"when\": {\n        \"always\": true \n    },\n    \"stages\": [\"createContainer\", \"poststop\"] \n}"
       ]
     }

@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for Could not access Ceph dashboard",
-        "description": "Binding the dashboard and prometheus to all interfaces instead of the pod ip will ensure that they are listening properly. Binding to the pod ip was only a short term solution that was intended to be removed when deploying Nautilus, which is already Rook's min supported version.\n\nThis PR will\n```yaml\nkubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l \"app=rook-ceph-tools\" -o jsonpath='{.items[0].metadata.name}') -- ceph config set mgr mgr/dashboard/server_addr 0.0.0.0\n\nkubectl delete pod -n rook-ceph  $(kubectl -n rook-ceph get pod -l app=rook-ceph-mgr -o jsonpath=\"{.items[0].metadata.name}\")\n\nkubectl -n rook-ceph port-forward $(kubectl -n rook-ceph get pod -l app=rook-ceph-mgr -o jsonpath=\"{.items[0].metadata.name}\") 8443:8443\n\ncurl -k https://localhost:8443\n...\n```"
+        "description": "Binding the dashboard and prometheus to all interfaces instead of the pod ip will ensure that they are listening properly. Binding to the pod ip was only a short term solution that was intended to be removed when deploying Nautilus, which is already Rook's min supported version.\n\nThis PR will\n```yaml\nkubectl -n rook-ceph exec -it `kubectl -n rook-ceph get pod -l \"app=rook-ceph-tools\" -o jsonpath='{.items[0].metadata.name}'` -- ceph config set mgr mgr/dashboard/server_addr 0.0.0.0\n\nkubectl delete pod -n rook-ceph  `kubectl -n rook-ceph get pod -l app=rook-ceph-mgr -o jsonpath=\"{.items[0].metadata.name}\"`\n\nkubectl -n rook-ceph port-forward `kubectl -n rook-ceph get pod -l app=rook-ceph-mgr -o jsonpath=\"{.items[0].metadata.name}\"` 8443:8443\n\ncurl -k https://localhost:8443\n...\n```"
       },
       {
         "title": "Upgrade rook to include the fix",
@@ -34,7 +34,7 @@
     "resolution": {
       "summary": "Binding the dashboard and prometheus to all interfaces instead of the pod ip will ensure that they are listening properly. Binding to the pod ip was only a short term solution that was intended to be removed when deploying Nautilus, which is already Rook's min supported version.\n\nThis PR will ensure the new binding is applied for all upgrade clusters to the latest v1.5.",
       "codeSnippets": [
-        "kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l \"app=rook-ceph-tools\" -o jsonpath='{.items[0].metadata.name}') -- ceph config set mgr mgr/dashboard/server_addr 0.0.0.0\n\nkubectl delete pod -n rook-ceph  $(kubectl -n rook-ceph get pod -l app=rook-ceph-mgr -o jsonpath=\"{.items[0].metadata.name}\")\n\nkubectl -n rook-ceph port-forward $(kubectl -n rook-ceph get pod -l app=rook-ceph-mgr -o jsonpath=\"{.items[0].metadata.name}\") 8443:8443\n\ncurl -k https://localhost:8443\n...",
+        "kubectl -n rook-ceph exec -it `kubectl -n rook-ceph get pod -l \"app=rook-ceph-tools\" -o jsonpath='{.items[0].metadata.name}'` -- ceph config set mgr mgr/dashboard/server_addr 0.0.0.0\n\nkubectl delete pod -n rook-ceph  `kubectl -n rook-ceph get pod -l app=rook-ceph-mgr -o jsonpath=\"{.items[0].metadata.name}\"`\n\nkubectl -n rook-ceph port-forward `kubectl -n rook-ceph get pod -l app=rook-ceph-mgr -o jsonpath=\"{.items[0].metadata.name}\"` 8443:8443\n\ncurl -k https://localhost:8443\n...",
         "$ kubectl proxy\nStarting to serve on 127.0.0.1:8001",
         "kubectl logs rook-ceph-mgr-a-[RANDOM]  -n rook-ceph | grep \"Serving on\""
       ]

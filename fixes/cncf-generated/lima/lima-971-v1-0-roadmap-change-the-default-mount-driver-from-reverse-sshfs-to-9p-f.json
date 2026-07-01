@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for v1.0 roadmap: change the default mount driver from…",
-        "description": "The `mapped-xattr` model is known to be incompatible with symlinks: https://gitlab.com/qemu-project/qemu/-/issues/173\n\nThe `none` model is obviously incompatible with chown, but this is fine, as the reverse-sshfs does not support chown either.\n\nSee issue #971\n```yaml\nnerdctl run --rm -v /Users/$(whoami):/mnt --user 100 alpine cat /mnt/.bashrc\n```"
+        "description": "The `mapped-xattr` model is known to be incompatible with symlinks: https://gitlab.com/qemu-project/qemu/-/issues/173\n\nThe `none` model is obviously incompatible with chown, but this is fine, as the reverse-sshfs does not support chown either.\n\nSee issue #971\n```yaml\nnerdctl run --rm -v /Users/`whoami`:/mnt --user 100 alpine cat /mnt/.bashrc\n```"
       },
       {
         "title": "Verify the feature works",
@@ -30,9 +30,9 @@
     "resolution": {
       "summary": "The `mapped-xattr` model is known to be incompatible with symlinks: https://gitlab.com/qemu-project/qemu/-/issues/173\n\nThe `none` model is obviously incompatible with chown, but this is fine, as the reverse-sshfs does not support chown either.\n\nSee issue #971",
       "codeSnippets": [
-        "nerdctl run --rm -v /Users/$(whoami):/mnt --user 100 alpine cat /mnt/.bashrc",
-        "# attempt uid 100, failed\n$ nerdctl -- run --rm -v /Users/$(whoami):/mnt --user 100 alpine cat /mnt/.bashrc\ncat: can't open '/mnt/.bashrc': Permission denied\nFATA[0000] exit status 1",
-        "# attempt uid 0, success\n$ nerdctl -- run --rm -v /Users/$(whoami):/mnt alpine cat /mnt/.bashrc\n[ -f ~/.fzf.bash ] && source ~/.fzf.bash"
+        "nerdctl run --rm -v /Users/`whoami`:/mnt --user 100 alpine cat /mnt/.bashrc",
+        "# attempt uid 100, failed\n$ nerdctl -- run --rm -v /Users/`whoami`:/mnt --user 100 alpine cat /mnt/.bashrc\ncat: can't open '/mnt/.bashrc': Permission denied\nFATA[0000] exit status 1",
+        "# attempt uid 0, success\n$ nerdctl -- run --rm -v /Users/`whoami`:/mnt alpine cat /mnt/.bashrc\n[ -f ~/.fzf.bash ] && source ~/.fzf.bash"
       ]
     }
   },

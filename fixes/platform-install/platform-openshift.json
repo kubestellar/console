@@ -29,9 +29,9 @@
       },
       {
         "title": "Set up kubeconfig",
-        "description": "This step configures your kubeconfig file to access the OpenShift cluster.\n\n```bash\n\nexport KUBECONFIG=$(pwd)/mycluster/auth/kubeconfig\n\n```\n\n> Set the KUBECONFIG environment variable to the cluster's kubeconfig.",
+        "description": "This step configures your kubeconfig file to access the OpenShift cluster.\n\n```bash\n\nexport KUBECONFIG=`pwd`/mycluster/auth/kubeconfig\n\n```\n\n> Set the KUBECONFIG environment variable to the cluster's kubeconfig.",
         "commands": [
-          "export KUBECONFIG=$(pwd)/mycluster/auth/kubeconfig"
+          "export KUBECONFIG=`pwd`/mycluster/auth/kubeconfig"
         ]
       },
       {
@@ -109,7 +109,7 @@
         "tar -xvf openshift-client-linux-4.17.0.tar.gz",
         "sudo mv oc kubectl /usr/local/bin/",
         "openshift-install create cluster --dir=mycluster --log-level=info",
-        "export KUBECONFIG=$(pwd)/mycluster/auth/kubeconfig",
+        "export KUBECONFIG=`pwd`/mycluster/auth/kubeconfig",
         "oc get nodes",
         "oc apply -f https://raw.githubusercontent.com/openshift/cluster-monitoring-operator/master/deploy/cluster-monitoring-operator.yaml",
         "oc apply -f https://raw.githubusercontent.com/openshift/cluster-autoscaler/master/deploy/cluster-autoscaler-operator.yaml"

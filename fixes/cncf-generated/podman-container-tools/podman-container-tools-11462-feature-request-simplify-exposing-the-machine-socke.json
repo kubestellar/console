@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for Feature request: simplify exposing the machine socket on OS…",
-        "description": "> The unix-to-unix over ssh forwarding has been added in my PR.\n> \n>  I feel like gvproxy could be a better tool that services more than just podman; but as long it's stack is statically configured and it has flags for proxying things out of band of the VirtualNetwork's services, it will remain\n```yaml\nsshPort=$(ps -ef | grep -i gvproxy | grep -v grep | sed 's/.*ssh-port //')\n\nssh -i ~/.ssh/podman-machine-default -p $sshPort -L'/tmp/podman.sock:/run/user/1000/podman/podman.sock' -N core@localhost\n```"
+        "description": "> The unix-to-unix over ssh forwarding has been added in my PR.\n> \n>  I feel like gvproxy could be a better tool that services more than just podman; but as long it's stack is statically configured and it has flags for proxying things out of band of the VirtualNetwork's services, it will remain\n```yaml\nsshPort=`ps -ef | grep -i gvproxy | grep -v grep | sed 's/.*ssh-port //'`\n\nssh -i ~/.ssh/podman-machine-default -p $sshPort -L'/tmp/podman.sock:/run/user/1000/podman/podman.sock' -N core@localhost\n```"
       },
       {
         "title": "Verify the feature works",
@@ -30,7 +30,7 @@
     "resolution": {
       "summary": "> The unix-to-unix over ssh forwarding has been added in my PR.\n> \n>  I feel like gvproxy could be a better tool that services more than just podman; but as long it's stack is statically configured and it has flags for proxying things out of band of the VirtualNetwork's services, it will remain service-locked to podman.",
       "codeSnippets": [
-        "sshPort=$(ps -ef | grep -i gvproxy | grep -v grep | sed 's/.*ssh-port //')\n\nssh -i ~/.ssh/podman-machine-default -p $sshPort -L'/tmp/podman.sock:/run/user/1000/podman/podman.sock' -N core@localhost",
+        "sshPort=`ps -ef | grep -i gvproxy | grep -v grep | sed 's/.*ssh-port //'`\n\nssh -i ~/.ssh/podman-machine-default -p $sshPort -L'/tmp/podman.sock:/run/user/1000/podman/podman.sock' -N core@localhost",
         "Client:\nVersion:      3.3.1\nAPI Version:  3.3.1\nGo Version:   go1.17\nBuilt:        Mon Aug 30 21:15:26 2021\nOS/Arch:      darwin/amd64\n\nServer:\nVersion:      3.3.0\nAPI Version:  3.3.0\nGo Version:   go1.16.6\nBuilt:        Fri Aug 20 21:36:14 2021\nOS/Arch:      linux/amd64"
       ]
     }

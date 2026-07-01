@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for [NEW] Add CMake support",
-        "description": "This PR was tested on:\n- Amazon Linux 2\n- Ubuntu 22.04\n- AlmaLinux 9\n- macOS Sonoma 14.7\n- FreeBSD 9 -\n\non FreeBSD, we require `gmake` for building `valkey`\n\n---\n\nWith this PR, users are able to build valkey using `CMake`.\n\n## Example usage:\n\nBuild `valkey-server` in Release mode with TLS enabled\n```yaml\nmkdir build-release\ncd $_\ncmake .. -DCMAKE_BUILD_TYPE=Release \\\n         -DCMAKE_INSTALL_PREFIX=/tmp/valkey-install \\\n         -DWITH_MALLOC=jemalloc -DWITH_TLS=1\nmake -j$(nproc) install\n\n# start valkey\n/tmp/valkey-install/bin/valkey-server\n```"
+        "description": "This PR was tested on:\n- Amazon Linux 2\n- Ubuntu 22.04\n- AlmaLinux 9\n- macOS Sonoma 14.7\n- FreeBSD 9 -\n\non FreeBSD, we require `gmake` for building `valkey`\n\n---\n\nWith this PR, users are able to build valkey using `CMake`.\n\n## Example usage:\n\nBuild `valkey-server` in Release mode with TLS enabled\n```yaml\nmkdir build-release\ncd $_\ncmake .. -DCMAKE_BUILD_TYPE=Release \\\n         -DCMAKE_INSTALL_PREFIX=/tmp/valkey-install \\\n         -DWITH_MALLOC=jemalloc -DWITH_TLS=1\nmake -j`nproc` install\n\n# start valkey\n/tmp/valkey-install/bin/valkey-server\n```"
       },
       {
         "title": "Verify the feature works",
@@ -30,9 +30,9 @@
     "resolution": {
       "summary": "This PR was tested on:\n- Amazon Linux 2\n- Ubuntu 22.04\n- AlmaLinux 9\n- macOS Sonoma 14.7\n- FreeBSD 9 -\n\non FreeBSD, we require `gmake` for building `valkey`\n\n---\n\nWith this PR, users are able to build valkey using `CMake`.\n\n## Example usage:\n\nBuild `valkey-server` in Release mode with TLS enabled and using `jemalloc` as the allocator:\n\n```bash\nmkdir build-release\ncd $_\ncmake ..",
       "codeSnippets": [
-        "mkdir build-release\ncd $_\ncmake .. -DCMAKE_BUILD_TYPE=Release \\\n         -DCMAKE_INSTALL_PREFIX=/tmp/valkey-install \\\n         -DWITH_MALLOC=jemalloc -DWITH_TLS=1\nmake -j$(nproc) install\n\n# start valkey\n/tmp/valkey-install/bin/valkey-server",
-        "mkdir build-release-ut\ncd $_\ncmake .. -DCMAKE_BUILD_TYPE=Release \\\n         -DWITH_MALLOC=jemalloc -DBUILD_TESTS=1\nmake -j$(nproc)\n\n# Run the tests\n./bin/valkey-unit-tests",
-        "mkdir build-asan\ncd $_\ncmake .. -DWITH_SANITIZER=address -DWITH_MALLOC=libc\nmake -j$(nproc)"
+        "mkdir build-release\ncd $_\ncmake .. -DCMAKE_BUILD_TYPE=Release \\\n         -DCMAKE_INSTALL_PREFIX=/tmp/valkey-install \\\n         -DWITH_MALLOC=jemalloc -DWITH_TLS=1\nmake -j`nproc` install\n\n# start valkey\n/tmp/valkey-install/bin/valkey-server",
+        "mkdir build-release-ut\ncd $_\ncmake .. -DCMAKE_BUILD_TYPE=Release \\\n         -DWITH_MALLOC=jemalloc -DBUILD_TESTS=1\nmake -j`nproc`\n\n# Run the tests\n./bin/valkey-unit-tests",
+        "mkdir build-asan\ncd $_\ncmake .. -DWITH_SANITIZER=address -DWITH_MALLOC=libc\nmake -j`nproc`"
       ]
     }
   },

@@ -31,8 +31,8 @@
       "summary": "The root cause is: Thank you for contributing to Harbor!\n\n# Comprehensive Summary of your change\nThis PR aims to enable the Vulnerability Dashboard feature in Harbor \n\n# Issue being fixed\n\nCommunity Proposal: [Link](https://github.com/goharbor/community/pull/222)\n\nAdded the decision on the finalized approach to add the feature is discussed in the community proposal: https://github.com/goharbor/community/pull/222. This fixes the issue because it addresses the underlying problem that was causing the failure.",
       "codeSnippets": [
         "curl -Ss --header \"authorization: Basic $AUTH\" -X GET \"$HARBOR_SERVER/api/v2.0/projects/$PROJECT_NAME/repositories/$REPO_NAME/artifacts\" | jq -r '.[].addition_links.vulnerabilities.href'",
-        "ARTIFACT_PATH=$(curl -Ss --header \"authorization: Basic $AUTH\" -X GET \"${HARBOR_SERVER}/api/v2.0/projects/${PROJECT_NAME}/repositories/${REPO_NAME}/artifacts\" | jq -r '.[0].addition_links.vulnerabilities.href')",
-        "SCAN_RESULTS=$(curl -Ss --header \"authorization: Basic $AUTH\" -X GET \"${HARBOR_SERVER}${ARTIFACT_PATH}\")"
+        "ARTIFACT_PATH=`curl -Ss --header \"authorization: Basic $AUTH\" -X GET \"${HARBOR_SERVER}/api/v2.0/projects/${PROJECT_NAME}/repositories/${REPO_NAME}/artifacts\" | jq -r '.[0].addition_links.vulnerabilities.href'`",
+        "SCAN_RESULTS=`curl -Ss --header \"authorization: Basic $AUTH\" -X GET \"${HARBOR_SERVER}${ARTIFACT_PATH}\"`"
       ]
     }
   },

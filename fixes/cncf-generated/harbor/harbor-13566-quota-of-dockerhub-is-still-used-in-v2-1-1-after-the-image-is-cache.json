@@ -24,14 +24,14 @@
       },
       {
         "title": "Verify the feature works",
-        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n harbor -l app.kubernetes.io/name=harbor\nkubectl get events -n harbor --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Quota of dockerhub is still used in v2.1.1 after the image\u2026\" is functioning correctly."
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n harbor -l app.kubernetes.io/name=harbor\nkubectl get events -n harbor --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Quota of dockerhub is still used in v2.1.1 after the image…\" is functioning correctly."
       }
     ],
     "resolution": {
       "summary": "After an image is cached via proxy cache, the quota for the upstream registry (e.g., Docker Hub) continues to be consumed because Harbor counts both the cached copy and the upstream reference. The issue is compounded by manifest lists (multi-arch images), which are common on Docker Hub. The fix involves properly accounting for cached manifest lists so that quota is only consumed for the locally stored layers, not the full upstream manifest list size.",
       "codeSnippets": [
-        "export HEADER='Authorization: Bearer'\nexport TOKEN=$(curl \"https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitpreview/test:pull\" | sed 's/{\"token\":\"//g' | sed 's/\",\"access_token\":.*//g') \ncurl --head -H \"$HEADER $TOKEN\" https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest 2>&1",
-        "export HEADER='Authorization: Bearer'\nexport TOKEN=$(curl \"https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitpreview/test:pull\" | sed 's/{\"token\":\"//g' | sed 's/\",\"access_token\":.*//g') \ncurl --head -H \"$HEADER $TOKEN\" https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest 2>&1"
+        "export HEADER='Authorization: Bearer'\nexport TOKEN=`curl \"https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitpreview/test:pull\" | sed 's/{\"token\":\"//g' | sed 's/\",\"access_token\":.*//g'` \ncurl --head -H \"$HEADER $TOKEN\" https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest 2>&1",
+        "export HEADER='Authorization: Bearer'\nexport TOKEN=`curl \"https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitpreview/test:pull\" | sed 's/{\"token\":\"//g' | sed 's/\",\"access_token\":.*//g'` \ncurl --head -H \"$HEADER $TOKEN\" https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest 2>&1"
       ]
     }
   },

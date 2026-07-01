@@ -31,7 +31,7 @@
       "summary": "This new feature exposes API options to enable X-RateLimit headers in Envoy/rate-limiter config. The related rate-limiter PR for implementing the return of the headers is [here](https://github.com/solo-io/rate-limiter/pull/133)",
       "codeSnippets": [
         "X-RateLimit-Limit-Second: 5\nX-RateLimit-Remaining-Second: 4\nX-RateLimit-Limit-Minute: 10\nX-RateLimit-Remaining-Minute: 9",
-        "for key in $(redis-cli -p 6379 keys \\*);\n  do echo \"Key : '$key'\"\n     redis-cli -p 6379 GET $key;\ndone"
+        "for key in `redis-cli -p 6379 keys \\*`;\n  do echo \"Key : '$key'\"\n     redis-cli -p 6379 GET $key;\ndone"
       ]
     }
   },

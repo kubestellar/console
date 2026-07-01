@@ -30,8 +30,8 @@
     "resolution": {
       "summary": "This PR adds the necessary code to build and release `virtctl` for the `darwin-arm64` architecture for Macs with Apple Silicon. After running `make bazel-build` a new binary `virtctl-4d1925c86-darwin-arm64` is created that can be executed on a Mac with an Apple Silicon processor.",
       "codeSnippets": [
-        "VERSION=$(kubectl get kubevirt.kubevirt.io/kubevirt -n kubevirt -o=jsonpath=\"{.status.observedKubeVirtVersion}\")\nARCH=$(uname -s | tr A-Z a-z)-$(uname -m | sed 's/x86_64/amd64/') || windows-amd64.exe\necho ${ARCH}\ncurl -L -o virtctl https://github.com/kubevirt/kubevirt/releases/download/${VERSION}/virtctl-${VERSION}-${ARCH}\nchmod +x virtctl\nsudo install virtctl /usr/local/bin",
-        "VERSION=$(kubectl get kubevirt.kubevirt.io/kubevirt -n kubevirt -o=jsonpath=\"{.status.observedKubeVirtVersion}\")\n# Force AMD64 build and use the emulation\nARCH=darwin-amd64\ncurl -L -o virtctl https://github.com/kubevirt/kubevirt/releases/download/${VERSION}/virtctl-${VERSION}-${ARCH}\nchmod +x virtctl\nsudo install virtctl /usr/local/bin"
+        "VERSION=`kubectl get kubevirt.kubevirt.io/kubevirt -n kubevirt -o=jsonpath=\"{.status.observedKubeVirtVersion}\"`\nARCH=`uname -s | tr A-Z a-z`-`uname -m | sed 's/x86_64/amd64/'` || windows-amd64.exe\necho ${ARCH}\ncurl -L -o virtctl https://github.com/kubevirt/kubevirt/releases/download/${VERSION}/virtctl-${VERSION}-${ARCH}\nchmod +x virtctl\nsudo install virtctl /usr/local/bin",
+        "VERSION=`kubectl get kubevirt.kubevirt.io/kubevirt -n kubevirt -o=jsonpath=\"{.status.observedKubeVirtVersion}\"`\n# Force AMD64 build and use the emulation\nARCH=darwin-amd64\ncurl -L -o virtctl https://github.com/kubevirt/kubevirt/releases/download/${VERSION}/virtctl-${VERSION}-${ARCH}\nchmod +x virtctl\nsudo install virtctl /usr/local/bin"
       ]
     }
   },

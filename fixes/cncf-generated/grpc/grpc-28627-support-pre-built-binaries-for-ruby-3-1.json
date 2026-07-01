@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for Support pre-built binaries for Ruby 3.1",
-        "description": "If you want to save some space (in our case it's like 800MB) you can run the following after installing the gem:\n\n```shell\ngrpc_path=\"$(bundle show --paths grpc)/src/ruby/ext/grpc\"\nmake -C $grpc_path clean\nrm -rf \"$grpc_path\"/{libs,objs}\n```\n```yaml\ngrpc_path=\"$(bundle show --paths grpc)/src/ruby/ext/grpc\"\nmake -C $grpc_path clean\nrm -rf \"$grpc_path\"/{libs,objs}\n```"
+        "description": "If you want to save some space (in our case it's like 800MB) you can run the following after installing the gem:\n\n```shell\ngrpc_path=\"`bundle show --paths grpc`/src/ruby/ext/grpc\"\nmake -C $grpc_path clean\nrm -rf \"$grpc_path\"/{libs,objs}\n```\n```yaml\ngrpc_path=\"`bundle show --paths grpc`/src/ruby/ext/grpc\"\nmake -C $grpc_path clean\nrm -rf \"$grpc_path\"/{libs,objs}\n```"
       },
       {
         "title": "Verify the feature works",
@@ -28,9 +28,9 @@
       }
     ],
     "resolution": {
-      "summary": "If you want to save some space (in our case it's like 800MB) you can run the following after installing the gem:\n\n```shell\ngrpc_path=\"$(bundle show --paths grpc)/src/ruby/ext/grpc\"\nmake -C $grpc_path clean\nrm -rf \"$grpc_path\"/{libs,objs}\n```",
+      "summary": "If you want to save some space (in our case it's like 800MB) you can run the following after installing the gem:\n\n```shell\ngrpc_path=\"`bundle show --paths grpc`/src/ruby/ext/grpc\"\nmake -C $grpc_path clean\nrm -rf \"$grpc_path\"/{libs,objs}\n```",
       "codeSnippets": [
-        "grpc_path=\"$(bundle show --paths grpc)/src/ruby/ext/grpc\"\nmake -C $grpc_path clean\nrm -rf \"$grpc_path\"/{libs,objs}"
+        "grpc_path=\"`bundle show --paths grpc`/src/ruby/ext/grpc\"\nmake -C $grpc_path clean\nrm -rf \"$grpc_path\"/{libs,objs}"
       ]
     }
   },

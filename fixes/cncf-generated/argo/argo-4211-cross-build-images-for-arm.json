@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for Cross Build Images for ARM",
-        "description": "## Summary\r\n\nI added a function to publish arm64 docker image in release workflow using `docker/build-push-action`.\n\nI tested this workflow with my repo and docker hub.\nhttps://github.com/dragoneena12/argo-cd/actions/runs/1045272993\nhttps://hub.docker.com/repository/docker/dragoneena12/argocd\n\nThis\n```yaml\ndocker run --rm -it -v $(pwd)/ui/package.json:/src/package.json:ro -v $(pwd)/ui/yarn.lock:/src/yarn.lock:ro -v $(pwd)/cache:/cache --workdir /src node:12.18.4 yarn install --cache-folder /cache\n```"
+        "description": "## Summary\r\n\nI added a function to publish arm64 docker image in release workflow using `docker/build-push-action`.\n\nI tested this workflow with my repo and docker hub.\nhttps://github.com/dragoneena12/argo-cd/actions/runs/1045272993\nhttps://hub.docker.com/repository/docker/dragoneena12/argocd\n\nThis\n```yaml\ndocker run --rm -it -v `pwd`/ui/package.json:/src/package.json:ro -v `pwd`/ui/yarn.lock:/src/yarn.lock:ro -v `pwd`/cache:/cache --workdir /src node:12.18.4 yarn install --cache-folder /cache\n```"
       },
       {
         "title": "Verify the feature works",
@@ -30,7 +30,7 @@
     "resolution": {
       "summary": "## Summary\r\n\nI added a function to publish arm64 docker image in release workflow using `docker/build-push-action`.\n\nI tested this workflow with my repo and docker hub.\nhttps://github.com/dragoneena12/argo-cd/actions/runs/1045272993\nhttps://hub.docker.com/repository/docker/dragoneena12/argocd\n\nThis should be useful for argocd users who use arm64 k8s clusters like raspi4 or M1Mac.",
       "codeSnippets": [
-        "docker run --rm -it -v $(pwd)/ui/package.json:/src/package.json:ro -v $(pwd)/ui/yarn.lock:/src/yarn.lock:ro -v $(pwd)/cache:/cache --workdir /src node:12.18.4 yarn install --cache-folder /cache",
+        "docker run --rm -it -v `pwd`/ui/package.json:/src/package.json:ro -v `pwd`/ui/yarn.lock:/src/yarn.lock:ro -v `pwd`/cache:/cache --workdir /src node:12.18.4 yarn install --cache-folder /cache",
         "Built the image (this took awhile)"
       ]
     }

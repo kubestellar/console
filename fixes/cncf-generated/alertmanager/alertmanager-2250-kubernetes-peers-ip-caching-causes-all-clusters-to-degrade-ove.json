@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for [Kubernetes] Peers ip caching causes all clusters to…",
-        "description": "Can you elaborate about your setup? Which names do you use for `--cluster.peer`?\nAlertmanager will try to reconnect to a previously known IP address for 6 hours by default. After this, it will forget about it.\n```yaml\n- args:\n    - --config.file=/etc/alertmanager/config/alertmanager.yaml\n    - --cluster.listen-address=[$(POD_IP)]:9094\n    - --storage.path=/alertmanager\n    - --data.retention=120h\n    - --web.listen-address=:9093\n    - --web.external-url=https://alertmanager-address\n    - --web.route-prefix=/\n    - --cluster.peer=alertmanager-main-0.alertmanager-operated.namespace.svc:9094\n    - --cluster.peer=alertmanager-main-1.alertmanager-operated.namespace.svc:9094\n    - --cluster.peer=alertmanager-main-2.alertmanager-operated.namespace.svc:9094\n```"
+        "description": "Can you elaborate about your setup? Which names do you use for `--cluster.peer`?\nAlertmanager will try to reconnect to a previously known IP address for 6 hours by default. After this, it will forget about it.\n```yaml\n- args:\n    - --config.file=/etc/alertmanager/config/alertmanager.yaml\n    - --cluster.listen-address=[`POD_IP`]:9094\n    - --storage.path=/alertmanager\n    - --data.retention=120h\n    - --web.listen-address=:9093\n    - --web.external-url=https://alertmanager-address\n    - --web.route-prefix=/\n    - --cluster.peer=alertmanager-main-0.alertmanager-operated.namespace.svc:9094\n    - --cluster.peer=alertmanager-main-1.alertmanager-operated.namespace.svc:9094\n    - --cluster.peer=alertmanager-main-2.alertmanager-operated.namespace.svc:9094\n```"
       },
       {
         "title": "Verify the feature works",
@@ -30,7 +30,7 @@
     "resolution": {
       "summary": "Can you elaborate about your setup? Which names do you use for `--cluster.peer`?\nAlertmanager will try to reconnect to a previously known IP address for 6 hours by default. After this, it will forget about it.",
       "codeSnippets": [
-        "- args:\n    - --config.file=/etc/alertmanager/config/alertmanager.yaml\n    - --cluster.listen-address=[$(POD_IP)]:9094\n    - --storage.path=/alertmanager\n    - --data.retention=120h\n    - --web.listen-address=:9093\n    - --web.external-url=https://alertmanager-address\n    - --web.route-prefix=/\n    - --cluster.peer=alertmanager-main-0.alertmanager-operated.namespace.svc:9094\n    - --cluster.peer=alertmanager-main-1.alertmanager-operated.namespace.svc:9094\n    - --cluster.peer=alertmanager-main-2.alertmanager-operated.namespace.svc:9094",
+        "- args:\n    - --config.file=/etc/alertmanager/config/alertmanager.yaml\n    - --cluster.listen-address=[`POD_IP`]:9094\n    - --storage.path=/alertmanager\n    - --data.retention=120h\n    - --web.listen-address=:9093\n    - --web.external-url=https://alertmanager-address\n    - --web.route-prefix=/\n    - --cluster.peer=alertmanager-main-0.alertmanager-operated.namespace.svc:9094\n    - --cluster.peer=alertmanager-main-1.alertmanager-operated.namespace.svc:9094\n    - --cluster.peer=alertmanager-main-2.alertmanager-operated.namespace.svc:9094",
         "$ kind create cluster\n...",
         "$ helm install my-release foo/bar\n$ helm install my-bad-release foo/bar"
       ]

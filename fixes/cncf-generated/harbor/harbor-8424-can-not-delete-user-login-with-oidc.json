@@ -20,7 +20,7 @@
       },
       {
         "title": "Delete the OIDC user from Harbor's database",
-        "description": "Connect to the Harbor database pod and remove the user records directly:\n```bash\n# Get the database pod name\nPOD_NAME=$(kubectl get pods -n harbor --output=json | jq -r '.items[].metadata | select(.name | startswith(\"harbor-database\")) | .name')\n\n# Open a shell in the database pod\nkubectl exec -it -n harbor $POD_NAME -- bash\n\n# Connect to the PostgreSQL CLI\npsql -U postgres\n```\nThen run the following SQL to remove the user:\n```sql\n\\c registry\n\n-- Find the user_id for the user to delete\nSELECT user_id FROM harbor_user WHERE username = 'target_username';\n\n-- Replace <USER_ID> with the actual user_id from the query above\nDELETE FROM project_member WHERE entity_id = <USER_ID> AND entity_type = 'u';\nDELETE FROM oidc_user WHERE user_id = <USER_ID>;\nDELETE FROM harbor_user WHERE user_id = <USER_ID>;\n```"
+        "description": "Connect to the Harbor database pod and remove the user records directly:\n```bash\n# Get the database pod name\nPOD_NAME=`kubectl get pods -n harbor --output=json | jq -r '.items[].metadata | select(.name | startswith(\"harbor-database\"`) | .name')\n\n# Open a shell in the database pod\nkubectl exec -it -n harbor $POD_NAME -- bash\n\n# Connect to the PostgreSQL CLI\npsql -U postgres\n```\nThen run the following SQL to remove the user:\n```sql\n\\c registry\n\n-- Find the user_id for the user to delete\nSELECT user_id FROM harbor_user WHERE username = 'target_username';\n\n-- Replace <USER_ID> with the actual user_id from the query above\nDELETE FROM project_member WHERE entity_id = <USER_ID> AND entity_type = 'u';\nDELETE FROM oidc_user WHERE user_id = <USER_ID>;\nDELETE FROM harbor_user WHERE user_id = <USER_ID>;\n```"
       },
       {
         "title": "Verify the feature works",
@@ -30,7 +30,7 @@
     "resolution": {
       "summary": "When OIDC authentication is enabled in Harbor and a user is removed from the OIDC provider (e.g., Dex or Keycloak), the user cannot log in via the UI but Docker CLI access may persist. Harbor does not expose a UI option to delete OIDC-authenticated users. The workaround is to directly delete the user records from Harbor's PostgreSQL database by removing rows from the oidc_user, project_member, and harbor_user tables for the target user_id.",
       "codeSnippets": [
-        "# Get the database pod name\nPOD_NAME=$(kubectl get pods -n harbor --output=json | jq -r '.items[].metadata | select(.name | startswith(\"harbor-database\")) | .name')\n\n# Open a shell in the database pod\nkubectl exec -it -n harbor $POD_NAME -- bash\n\n# Connect to the PostgreSQL CLI\npsql -U postgres",
+        "# Get the database pod name\nPOD_NAME=`kubectl get pods -n harbor --output=json | jq -r '.items[].metadata | select(.name | startswith(\"harbor-database\"`) | .name')\n\n# Open a shell in the database pod\nkubectl exec -it -n harbor $POD_NAME -- bash\n\n# Connect to the PostgreSQL CLI\npsql -U postgres",
         "\\c registry\n\n-- Find the user_id for the user to delete\nSELECT user_id FROM harbor_user WHERE username = 'target_username';\n\n-- Replace <USER_ID> with the actual user_id\nDELETE FROM project_member WHERE entity_id = <USER_ID> AND entity_type = 'u';\nDELETE FROM oidc_user WHERE user_id = <USER_ID>;\nDELETE FROM harbor_user WHERE user_id = <USER_ID>;"
       ]
     }

@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for td-agent v3.2.1 does not close log files on rotation",
-        "description": "* Enable to set interval of restarting workers\n  See #3749 and #3768\n* Fix a bug that fluentd doesn't release its own log file even after\n  rotated by external tools\n  Fix #2200 and #2426\nFix a bug that fluentd doesn't release its own log file even after rotated by external tools\n```yaml\n/var/log/td-agent/td-agent.log {\n  daily\n  rotate 30\n  compress\n  delaycompress\n  notifempty\n  create 640 td-agent td-agent\n  sharedscripts\n  postrotate\n    pid=/var/run/td-agent/td-agent.pid\n    if [ -s \"$pid\" ]\n    then\n      kill -USR1 \"$(cat $pid)\"\n    fi\n  endscript\n}\n```"
+        "description": "* Enable to set interval of restarting workers\n  See #3749 and #3768\n* Fix a bug that fluentd doesn't release its own log file even after\n  rotated by external tools\n  Fix #2200 and #2426\nFix a bug that fluentd doesn't release its own log file even after rotated by external tools\n```yaml\n/var/log/td-agent/td-agent.log {\n  daily\n  rotate 30\n  compress\n  delaycompress\n  notifempty\n  create 640 td-agent td-agent\n  sharedscripts\n  postrotate\n    pid=/var/run/td-agent/td-agent.pid\n    if [ -s \"$pid\" ]\n    then\n      kill -USR1 \"`cat $pid`\"\n    fi\n  endscript\n}\n```"
       },
       {
         "title": "Confirm td-agent v3.2.1 does not close log files on… is resolved",
@@ -30,7 +30,7 @@
     "resolution": {
       "summary": "* Enable to set interval of restarting workers\n  See #3749 and #3768\n* Fix a bug that fluentd doesn't release its own log file even after\n  rotated by external tools\n  Fix #2200 and #2426\nFix a bug that fluentd doesn't release its own log file even after rotated by external tools",
       "codeSnippets": [
-        "/var/log/td-agent/td-agent.log {\n  daily\n  rotate 30\n  compress\n  delaycompress\n  notifempty\n  create 640 td-agent td-agent\n  sharedscripts\n  postrotate\n    pid=/var/run/td-agent/td-agent.pid\n    if [ -s \"$pid\" ]\n    then\n      kill -USR1 \"$(cat $pid)\"\n    fi\n  endscript\n}",
+        "/var/log/td-agent/td-agent.log {\n  daily\n  rotate 30\n  compress\n  delaycompress\n  notifempty\n  create 640 td-agent td-agent\n  sharedscripts\n  postrotate\n    pid=/var/run/td-agent/td-agent.pid\n    if [ -s \"$pid\" ]\n    then\n      kill -USR1 \"`cat $pid`\"\n    fi\n  endscript\n}",
         "$ cat /var/run/td-agent/td-agent.pid\n387",
         "fluentd 387 td-agent    7w      REG             253,62  5296042    526173 /var/log/td-agent/td-agent.log.1\nfluentd 387 td-agent    9w      REG             253,62     4381    528081 /var/log/td-agent/td-agent.log\nruby    392 td-agent    7w      REG             253,62     4381    528081 /var/log/td-agent/td-agent.log"
       ]

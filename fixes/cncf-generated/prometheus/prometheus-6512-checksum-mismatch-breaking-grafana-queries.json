@@ -31,8 +31,8 @@
       "summary": "Yup, we have race on `s.crc32` and `s.buf` on chunk file reader. https://github.com/prometheus/prometheus/pull/6514 fixed most of it, s.buf is still to remove (: \n\n are you on it? Can take it over. We might need patch release for this.",
       "codeSnippets": [
         "enableAdminAPI: false\n    image: docker.io/prom/prometheus:v2.15.0\n    podMetadata:\n      annotations:\n        sidecar.istio.io/inject: \"false\"\n      labels:\n        app: prometheus\n    resources:\n      requests:\n        memory: 32Gi\n    retention: 72h\n    scrapeInterval: 15s\n    secrets:\n    - istio.prometheus\n    securityContext:\n      fsGroup: 2000\n      runAsNonRoot: true\n      runAsUser: 1000\n    serviceAccountName: prometheus\n    serviceMonitorNamespaceSelector:\n      any: true\n    serviceMonitorSelector:\n      any: true\n    storage:\n      volumeClaimTemplate:\n        selector: {}\n        spec:\n          accessModes:\n          - ReadWriteOnce\n          resources:\n            requests:\n              storage: 500Gi\n          storageClassName: ssd\n    version: v2.15.0",
-        "for TIME in {1577173160..1577174660}; do curl \"http://localhost:9090/api/v1/query?query=sum(increase(gateway_wan_bytes_received%5B30d%5D))&start=${TIME}&end=$((TIME+300))&step=15\"; done;",
-        "for TIME in {1577173500..1577174000}; do curl \"http://localhost:9090/api/v1/query?query=sum(increase(gateway_wan_bytes_sent%5B5y%5D))%2F(sum(increase(gateway_wan_bytes_received%5B5y%5D))%2Bsum(increase(gateway_wan_bytes_sent%5B5y%5D)))&start=${TIME}&end=$((TIME+300))&step=15\"; done;"
+        "for TIME in {1577173160..1577174660}; do curl \"http://localhost:9090/api/v1/query?query=sum(increase(gateway_wan_bytes_received%5B30d%5D))&start=${TIME}&end=`(TIME+300`)&step=15\"; done;",
+        "for TIME in {1577173500..1577174000}; do curl \"http://localhost:9090/api/v1/query?query=sum(increase(gateway_wan_bytes_sent%5B5y%5D))%2F(sum(increase(gateway_wan_bytes_received%5B5y%5D))%2Bsum(increase(gateway_wan_bytes_sent%5B5y%5D)))&start=${TIME}&end=`(TIME+300`)&step=15\"; done;"
       ]
     }
   },

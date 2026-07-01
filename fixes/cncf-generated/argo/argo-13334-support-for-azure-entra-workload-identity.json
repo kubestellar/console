@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for Support for Azure Entra workload identity ",
-        "description": "Workaround for the poor souls who found this through google and are stuck in the same place:\n\n```bash\nexport ACR_NAME=\"targetacr\"\n# The username of the TARGET account\nexport USER_NAME=\"argocd-helm-token-$ACR_NAME\"\n# Creates a token\nexport PASSWORD=$(az acr token create -n $USER_NAME \\\n             \n```yaml\nexport ACR_NAME=\"targetacr\"\n# The username of the TARGET account\nexport USER_NAME=\"argocd-helm-token-$ACR_NAME\"\n# Creates a token\nexport PASSWORD=$(az acr token create -n $USER_NAME \\\n                  -r $ACR_NAME \\\n                  --scope-map _repositories_pull \\\n                  --only-show-errors \\\n                  --query \"credentials.passwords[0].value\" -o tsv)\n# add the repo to argo\n argocd repo add $ACR_NAME.azurecr.io/helm --username $USER_NAME --password $PASSWORD --enable-oci --type helm --name helm --project default\n```"
+        "description": "Workaround for the poor souls who found this through google and are stuck in the same place:\n\n```bash\nexport ACR_NAME=\"targetacr\"\n# The username of the TARGET account\nexport USER_NAME=\"argocd-helm-token-$ACR_NAME\"\n# Creates a token\nexport PASSWORD=`az acr token create -n $USER_NAME \\\n             \n```yaml\nexport ACR_NAME=\"targetacr\"\n# The username of the TARGET account\nexport USER_NAME=\"argocd-helm-token-$ACR_NAME\"\n# Creates a token\nexport PASSWORD=$(az acr token create -n $USER_NAME \\\n                  -r $ACR_NAME \\\n                  --scope-map _repositories_pull \\\n                  --only-show-errors \\\n                  --query \"credentials.passwords[0].value\" -o tsv`\n# add the repo to argo\n argocd repo add $ACR_NAME.azurecr.io/helm --username $USER_NAME --password $PASSWORD --enable-oci --type helm --name helm --project default\n```"
       },
       {
         "title": "Verify the feature works",
@@ -28,9 +28,9 @@
       }
     ],
     "resolution": {
-      "summary": "Workaround for the poor souls who found this through google and are stuck in the same place:\n\n```bash\nexport ACR_NAME=\"targetacr\"\n# The username of the TARGET account\nexport USER_NAME=\"argocd-helm-token-$ACR_NAME\"\n# Creates a token\nexport PASSWORD=$(az acr token create -n $USER_NAME \\\n                  -r $ACR_NAME \\\n                  --scope-map _repositories_pull \\\n                 ",
+      "summary": "Workaround for the poor souls who found this through google and are stuck in the same place:\n\n```bash\nexport ACR_NAME=\"targetacr\"\n# The username of the TARGET account\nexport USER_NAME=\"argocd-helm-token-$ACR_NAME\"\n# Creates a token\nexport PASSWORD=`az acr token create -n $USER_NAME \\\n                  -r $ACR_NAME \\\n                  --scope-map _repositories_pull \\\n                 ",
       "codeSnippets": [
-        "export ACR_NAME=\"targetacr\"\n# The username of the TARGET account\nexport USER_NAME=\"argocd-helm-token-$ACR_NAME\"\n# Creates a token\nexport PASSWORD=$(az acr token create -n $USER_NAME \\\n                  -r $ACR_NAME \\\n                  --scope-map _repositories_pull \\\n                  --only-show-errors \\\n                  --query \"credentials.passwords[0].value\" -o tsv)\n# add the repo to argo\n argocd repo add $ACR_NAME.azurecr.io/helm --username $USER_NAME --password $PASSWORD --enable-oci --type helm --name helm --project default"
+        "export ACR_NAME=\"targetacr\"\n# The username of the TARGET account\nexport USER_NAME=\"argocd-helm-token-$ACR_NAME\"\n# Creates a token\nexport PASSWORD=$(az acr token create -n $USER_NAME \\\n                  -r $ACR_NAME \\\n                  --scope-map _repositories_pull \\\n                  --only-show-errors \\\n                  --query \"credentials.passwords[0].value\" -o tsv`\n# add the repo to argo\n argocd repo add $ACR_NAME.azurecr.io/helm --username $USER_NAME --password $PASSWORD --enable-oci --type helm --name helm --project default"
       ]
     }
   },

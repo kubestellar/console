@@ -151,9 +151,9 @@ const MALICIOUS_PATTERNS = [
   // when markdown inline-code spans in natural-language descriptions happen to contain
   // ; or || somewhere between two backticks in the joined text.
   { name: 'Command injection: backtick', pattern: /`[^`\n]*(?:\$\(|;|&&|\|\|)[^`\n]*`/g, allowSafeCLI: true },
-  { name: 'Command injection: $() in string', pattern: /\$\([^)]{4,}\)/g, allowSafeCLI: true },
-  { name: 'Suspicious curl pipe', pattern: /curl\s[^|]*\|\s*(?:ba)?sh/gi },
-  { name: 'Suspicious wget pipe', pattern: /wget\s[^|]*\|\s*(?:ba)?sh/gi },
+  { name: 'Command injection: $() in string', pattern: /\$\([^)\n]{4,}\)/g, allowSafeCLI: true },
+  { name: 'Suspicious curl pipe', pattern: /curl\s[^|\n]*\|\s*(?:ba)?sh/gi },
+  { name: 'Suspicious wget pipe', pattern: /wget\s[^|\n]*\|\s*(?:ba)?sh/gi },
   // env / xargs / find shell-interpreter escapes
   // `env bash -c '...'` bypasses binary allowlists even when shell:false is set.
   { name: 'Allowlist escape via env', pattern: /\benv\s+(?:-\S+\s+)*(?:bash|sh|zsh|ksh|dash|python\d*|ruby|perl|node)\b/gi },
@@ -162,10 +162,10 @@ const MALICIOUS_PATTERNS = [
 
   // Obfuscation bypass techniques (issue #2693)
   // Base64 decode piped to shell execution
-  { name: 'Obfuscation: base64 decode pipe to shell', pattern: /\b(?:base64|openssl\s+(?:enc|base64))\s+(?:-d|-D|--decode)[^|]*\|\s*(?:ba)?sh\b/gi },
-  { name: 'Obfuscation: echo base64 pipe', pattern: /\becho\s+[^|]*\|\s*base64\s+(?:-d|-D|--decode)[^|]*\|\s*(?:ba)?sh\b/gi },
+  { name: 'Obfuscation: base64 decode pipe to shell', pattern: /\b(?:base64|openssl\s+(?:enc|base64))\s+(?:-d|-D|--decode)[^|\n]*\|\s*(?:ba)?sh\b/gi },
+  { name: 'Obfuscation: echo base64 pipe', pattern: /\becho\s+[^|\n]*\|\s*base64\s+(?:-d|-D|--decode)[^|\n]*\|\s*(?:ba)?sh\b/gi },
   // Printf with escape sequences piped to shell
-  { name: 'Obfuscation: printf escape sequences', pattern: /\bprintf\s+["'][^"']*\\x[0-9a-fA-F]{2}[^"']*["'][^|]*\|\s*(?:ba)?sh\b/gi },
+  { name: 'Obfuscation: printf escape sequences', pattern: /\bprintf\s+["'][^"']*\\x[0-9a-fA-F]{2}[^"']*["'][^|\n]*\|\s*(?:ba)?sh\b/gi },
   // Shell variable construction of interpreter names (e.g., VAR=ba; ${VAR}sh or $VARsh)
   { name: 'Obfuscation: variable shell interpreter', pattern: /(?:\$\{[A-Za-z_][A-Za-z0-9_]*\}|\$[A-Za-z_][A-Za-z0-9_]*)(?:bash|sh|zsh|ksh|dash)\b/g },
   { name: 'Obfuscation: concatenated interpreter name', pattern: /["'](?:ba|z|k|da)?["']\s*\+\s*["']sh["']/gi },
@@ -183,6 +183,7 @@ const SAFE_CLI_COMMANDS = new Set([
   'uniq', 'wc', 'head', 'tail', 'cat', 'echo', 'date', 'basename',
   'dirname', 'xargs', 'find', 'ls', 'yq', 'kustomize', 'istioctl',
   'age', 'sops', 'systemd-run',  // encryption/secret management tools in CNCF docs
+  'curl', 'wget', 'podman', 'docker', 'openssl', 'sha256sum', 'md5sum',  // common CNCF doc CLI tools
 ]);
 
 // Markdown code fence language identifiers — these appear after backticks
@@ -201,7 +202,7 @@ const CODE_FENCE_LANGS = new Set([
  */
 function isSafeCLIMatch(value) {
   // Extract content inside $(...) blocks
-  const subshells = [...value.matchAll(/\$\(([^)]+)\)/g)].map(m => m[1].trim());
+  const subshells = [...value.matchAll(/\$\(([^)\n]+)\)/g)].map(m => m[1].trim());
   if (subshells.length === 0) {
     // For backtick pattern: check all command invocations
     // Remove backticks and normalize whitespace (handles multi-line code blocks)
@@ -255,8 +256,8 @@ function scanBase64DecodedContent(text) {
       // Check if decoded content contains shell commands or suspicious patterns
       const suspiciousPatterns = [
         /\b(?:curl|wget|bash|sh|eval|exec|nc|netcat|chmod|chown)\b/gi,
-        /\$\([^)]+\)/g,
-        /`[^`]+`/g,
+        /\$\([^)\n]+\)/g,
+        /`[^`\n]+`/g,
       ];
       
       for (const pattern of suspiciousPatterns) {

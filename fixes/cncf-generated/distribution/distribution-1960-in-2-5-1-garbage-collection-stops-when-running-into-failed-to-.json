@@ -19,19 +19,19 @@
         "description": "Inspect the relevant distribution configuration:\n```bash\nkubectl get all -n distribution -l app.kubernetes.io/name=distribution\nkubectl get configmap -n distribution -l app.kubernetes.io/part-of=distribution\n```\nI guess this is more of a question than a bug, since I assume the issue lies with my environment, but: \nTrying to run garbage-collection, it stops with:\n failed to garbage collect: failed to mark: invalid checksum digest format\n\nThen switched to"
       },
       {
-        "title": "Apply the fix for In 2.5.1 garbage-collection stops when running into failed\u2026",
-        "description": "This issue is due to an empty or corrupted (does not contain a valid digest) tag link file (`/docker/registry/v2/repositories/<name>/_manifests/tags/<tag>/current/link`).\n\nWhile the root cause is yet unknown, I think it's safe to log a warn message and skip to the next tag instead of stoping GC. By\n```yaml\nmv data/registry/docker/registry/v2/repositories/some-app data/some-app\n\ndocker run -it --name gc --rm -v /opt/registry/data/registry:/var/lib/registry -v /opt/registry/conf/registry/config.yml:/etc/docker/registry/config.yml registry:2.6.2 garbage-collect /etc/docker/registry/config.yml\n```"
+        "title": "Apply the fix for In 2.5.1 garbage-collection stops when running into failed…",
+        "description": "This issue is due to an empty or corrupted (does not contain a valid digest) tag link file (`/docker/REGISTRY/v2/repositories/REPOSITORY_NAME/_manifests/tags/TAG_NAME/current/link`).\n\nWhile the root cause is yet unknown, I think it's safe to log a warn message and skip to the next tag instead of stoping GC. By\n```yaml\nmv data/REGISTRY/docker/REGISTRY/v2/repositories/some-app data/some-app\n\ndocker run -it --name gc --rm -v /opt/REGISTRY/data/REGISTRY:/var/lib/REGISTRY -v /opt/REGISTRY/conf/REGISTRY/config.yml:/etc/docker/REGISTRY/config.yml registry:2.6.2 garbage-collect /etc/docker/REGISTRY/config.yml\n```"
       },
       {
         "title": "Verify the feature works",
-        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n distribution -l app.kubernetes.io/name=distribution\nkubectl get events -n distribution --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"In 2.5.1 garbage-collection stops when running into failed\u2026\" is functioning correctly."
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n distribution -l app.kubernetes.io/name=distribution\nkubectl get events -n distribution --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"In 2.5.1 garbage-collection stops when running into failed…\" is functioning correctly."
       }
     ],
     "resolution": {
-      "summary": "This issue is due to an empty or corrupted (does not contain a valid digest) tag link file (`/docker/registry/v2/repositories/<name>/_manifests/tags/<tag>/current/link`).\n\nWhile the root cause is yet unknown, I think it's safe to log a warn message and skip to the next tag instead of stoping GC.",
+      "summary": "This issue is due to an empty or corrupted (does not contain a valid digest) tag link file (`/docker/REGISTRY/v2/repositories/REPOSITORY_NAME/_manifests/tags/TAG_NAME/current/link`).\n\nWhile the root cause is yet unknown, I think it's safe to log a warn message and skip to the next tag instead of stoping GC.",
       "codeSnippets": [
-        "mv data/registry/docker/registry/v2/repositories/some-app data/some-app\n\ndocker run -it --name gc --rm -v /opt/registry/data/registry:/var/lib/registry -v /opt/registry/conf/registry/config.yml:/etc/docker/registry/config.yml registry:2.6.2 garbage-collect /etc/docker/registry/config.yml",
-        "rm $(find /path/to/registry_data -iname link -size 0)"
+        "mv data/REGISTRY/docker/REGISTRY/v2/repositories/some-app data/some-app\n\ndocker run -it --name gc --rm -v /opt/REGISTRY/data/REGISTRY:/var/lib/REGISTRY -v /opt/REGISTRY/conf/REGISTRY/config.yml:/etc/docker/REGISTRY/config.yml registry:2.6.2 garbage-collect /etc/docker/REGISTRY/config.yml",
+        "rm `find /path/to/registry_data -iname link -size 0`"
       ]
     }
   },

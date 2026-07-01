@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for document how to run multiple Contours per cluster (e.g.…",
-        "description": "Move the example deployment to Kustomize. This requires the `kustomize`\ntool, since the version of Kustomize vendored in `kubectl apply -k`\nis too old to support.\n\nThe YAML documents in the example deployment are broken into 4 components\nlocated in `config/components` - types, contour, envoy and\n```yaml\n- serve\n        - --incluster\n        - --xds-address\n        - 0.0.0.0\n        - --xds-port\n        - $(CONTOUR_EXTERNAL_SERVICE_PORT)\n        - --envoy-http-port\n        - \"80\"   #<<<<<\n        - --envoy-https-port\n        - \"443\" #<<<<<\n        - --ingress-class-name=envoy-external\n```"
+        "description": "Move the example deployment to Kustomize. This requires the `kustomize`\ntool, since the version of Kustomize vendored in `kubectl apply -k`\nis too old to support.\n\nThe YAML documents in the example deployment are broken into 4 components\nlocated in `config/components` - types, contour, envoy and\n```yaml\n- serve\n        - --incluster\n        - --xds-address\n        - 0.0.0.0\n        - --xds-port\n        - `CONTOUR_EXTERNAL_SERVICE_PORT`\n        - --envoy-http-port\n        - \"80\"   #<<<<<\n        - --envoy-https-port\n        - \"443\" #<<<<<\n        - --ingress-class-name=envoy-external\n```"
       },
       {
         "title": "Upgrade contour to include the fix",
@@ -34,8 +34,8 @@
     "resolution": {
       "summary": "Move the example deployment to Kustomize. This requires the `kustomize`\ntool, since the version of Kustomize vendored in `kubectl apply -k`\nis too old to support.\n\nThe YAML documents in the example deployment are broken into 4 components\nlocated in `config/components` - types, contour, envoy and certgen.",
       "codeSnippets": [
-        "- serve\n        - --incluster\n        - --xds-address\n        - 0.0.0.0\n        - --xds-port\n        - $(CONTOUR_EXTERNAL_SERVICE_PORT)\n        - --envoy-http-port\n        - \"80\"   #<<<<<\n        - --envoy-https-port\n        - \"443\" #<<<<<\n        - --ingress-class-name=envoy-external",
-        "- serve\n        - --incluster\n        - --xds-address\n        - 0.0.0.0\n        - --xds-port\n        - $(CONTOUR_INTERNAL_SERVICE_PORT)\n        - --envoy-http-port\n        - \"8080\" #<<<<<\n        - --envoy-https-port\n        - \"8443\" #<<<<<\n        - --ingress-class-name=envoy-internal",
+        "- serve\n        - --incluster\n        - --xds-address\n        - 0.0.0.0\n        - --xds-port\n        - `CONTOUR_EXTERNAL_SERVICE_PORT`\n        - --envoy-http-port\n        - \"80\"   #<<<<<\n        - --envoy-https-port\n        - \"443\" #<<<<<\n        - --ingress-class-name=envoy-external",
+        "- serve\n        - --incluster\n        - --xds-address\n        - 0.0.0.0\n        - --xds-port\n        - `CONTOUR_INTERNAL_SERVICE_PORT`\n        - --envoy-http-port\n        - \"8080\" #<<<<<\n        - --envoy-https-port\n        - \"8443\" #<<<<<\n        - --ingress-class-name=envoy-internal",
         "- name: NODE_NAME\n          valueFrom:\n            fieldRef:\n              fieldPath: spec.nodeName"
       ]
     }

@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for Rabbitmq scaler: Allow providing separate paremeters for use",
-        "description": "Add the possibility to use username/password as separate parameters for the RabbitMQ scaler, as well as domain\n\n### Checklist\n\nFixes #\n\nRelates to #2513\n```yaml\nenvFrom:\r\n  - prefix: RABBITMQ_\r\n    secretRef:\r\n      name: example-deployment-default-user\r\nenv:\r\n  - name: RABBITMQ_ConnectionString\r\n    value: amqp://$(RABBITMQ_username):$(RABBITMQ_password)@$(RABBITMQ_host):$(RABBITMQ_port)\n```"
+        "description": "Add the possibility to use username/password as separate parameters for the RabbitMQ scaler, as well as domain\n\n### Checklist\n\nFixes #\n\nRelates to #2513\n```yaml\nenvFrom:\r\n  - prefix: RABBITMQ_\r\n    secretRef:\r\n      name: example-deployment-default-user\r\nenv:\r\n  - name: RABBITMQ_ConnectionString\r\n    value: amqp://`RABBITMQ_username`:`RABBITMQ_password`@`RABBITMQ_host`:`RABBITMQ_port`\n```"
       },
       {
         "title": "Confirm Rabbitmq scaler: Allow providing separate paremete is resolved",
@@ -30,7 +30,7 @@
     "resolution": {
       "summary": "The root cause is: Add the possibility to use username/password as separate parameters for the RabbitMQ scaler, as well as domain\n\n### Checklist\n\nFixes #\n\nRelates to #2513. This fixes the issue because it addresses the underlying problem that was causing the failure.",
       "codeSnippets": [
-        "envFrom:\r\n  - prefix: RABBITMQ_\r\n    secretRef:\r\n      name: example-deployment-default-user\r\nenv:\r\n  - name: RABBITMQ_ConnectionString\r\n    value: amqp://$(RABBITMQ_username):$(RABBITMQ_password)@$(RABBITMQ_host):$(RABBITMQ_port)"
+        "envFrom:\r\n  - prefix: RABBITMQ_\r\n    secretRef:\r\n      name: example-deployment-default-user\r\nenv:\r\n  - name: RABBITMQ_ConnectionString\r\n    value: amqp://`RABBITMQ_username`:`RABBITMQ_password`@`RABBITMQ_host`:`RABBITMQ_port`"
       ]
     }
   },

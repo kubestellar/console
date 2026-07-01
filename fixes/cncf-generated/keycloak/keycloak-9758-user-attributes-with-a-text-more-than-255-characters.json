@@ -24,7 +24,7 @@
       },
       {
         "title": "Verify long attributes are stored correctly",
-        "description": "Test that user attributes longer than 255 characters are stored and retrieved correctly:\n```bash\n# Set a long user attribute via the Admin REST API:\ncurl -X PUT -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"attributes\": {\"longattr\": [\"'$(python3 -c \"print('A'*500)\")'\"]}}' \\\n  https://your-keycloak/admin/realms/your-realm/users/$USER_ID\n\n# Verify it was stored fully:\ncurl -s -H \"Authorization: Bearer $TOKEN\" \\\n  https://your-keycloak/admin/realms/your-realm/users/$USER_ID \\\n  | jq '.attributes.longattr[0] | length'\n```\nThe returned length should be 500, confirming the full attribute was stored."
+        "description": "Test that user attributes longer than 255 characters are stored and retrieved correctly:\n```bash\n# Set a long user attribute via the Admin REST API:\ncurl -X PUT -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"attributes\": {\"longattr\": [\"'`python3 -c \"print('A'*500`\")'\"]}}' \\\n  https://your-keycloak/admin/realms/your-realm/users/$USER_ID\n\n# Verify it was stored fully:\ncurl -s -H \"Authorization: Bearer $TOKEN\" \\\n  https://your-keycloak/admin/realms/your-realm/users/$USER_ID \\\n  | jq '.attributes.longattr[0] | length'\n```\nThe returned length should be 500, confirming the full attribute was stored."
       }
     ],
     "resolution": {

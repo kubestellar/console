@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the fix for Sending Arbitrary Headers in CLI",
-        "description": "This PR add a new option to the vault cli: -header with can be specified multiple times. All the parameters specified like that will be added to HTTP headers for all requests.\n\nFor example, it will enable us to achieve zero trust with Cloudflare access and still be able to use vault cli\n\nThis fix\n```yaml\nfunction vault-curl() {\n  curl_command=\"$(vault ${@} -output-curl-string)\"\n  curl_command=\"${curl_command#curl }\"\n  curl -v --fail -H \"Authorization: Bearer $(gcloud auth print-identity-token)\" $(echo -n \"${curl_command}\")\n}\n\nvault-curl operator generate-root -init\n```"
+        "description": "This PR add a new option to the vault cli: -header with can be specified multiple times. All the parameters specified like that will be added to HTTP headers for all requests.\n\nFor example, it will enable us to achieve zero trust with Cloudflare access and still be able to use vault cli\n\nThis fix\n```yaml\nfunction vault-curl() {\n  curl_command=\"`vault ${@} -output-curl-string`\"\n  curl_command=\"${curl_command#curl }\"\n  curl -v --fail -H \"Authorization: Bearer `gcloud auth print-identity-token`\" `echo -n \"${curl_command}\"`\n}\n\nvault-curl operator generate-root -init\n```"
       },
       {
         "title": "Verify the feature works",
@@ -30,7 +30,7 @@
     "resolution": {
       "summary": "This PR add a new option to the vault cli: -header with can be specified multiple times. All the parameters specified like that will be added to HTTP headers for all requests.\n\nFor example, it will enable us to achieve zero trust with Cloudflare access and still be able to use vault cli\n\nThis fix #8754",
       "codeSnippets": [
-        "function vault-curl() {\n  curl_command=\"$(vault ${@} -output-curl-string)\"\n  curl_command=\"${curl_command#curl }\"\n  curl -v --fail -H \"Authorization: Bearer $(gcloud auth print-identity-token)\" $(echo -n \"${curl_command}\")\n}\n\nvault-curl operator generate-root -init"
+        "function vault-curl() {\n  curl_command=\"`vault ${@} -output-curl-string`\"\n  curl_command=\"${curl_command#curl }\"\n  curl -v --fail -H \"Authorization: Bearer `gcloud auth print-identity-token`\" `echo -n \"${curl_command}\"`\n}\n\nvault-curl operator generate-root -init"
       ]
     }
   },

@@ -24,7 +24,7 @@
       },
       {
         "title": "Verify load balancing",
-        "description": "Test that requests are distributed across all resolved addresses:\n```bash\nfor i in $(seq 1 10); do curl -s http://localhost/health; done\n```\nCheck Caddy logs to confirm requests are being routed to different backend IPs."
+        "description": "Test that requests are distributed across all resolved addresses:\n```bash\nfor i in `seq 1 10`; do curl -s http://localhost/health; done\n```\nCheck Caddy logs to confirm requests are being routed to different backend IPs."
       }
     ],
     "resolution": {

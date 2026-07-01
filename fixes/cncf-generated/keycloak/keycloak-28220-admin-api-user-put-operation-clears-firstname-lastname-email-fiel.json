@@ -20,7 +20,7 @@
       },
       {
         "title": "Apply the workaround",
-        "description": "Until a PATCH endpoint is available, always send the complete user representation when using PUT:\n```bash\n# First GET the full user representation:\nUSER=$(curl -s -H \"Authorization: Bearer $TOKEN\" \\\n  https://your-keycloak/admin/realms/your-realm/users/$USER_ID)\n\n# Modify only the field you want to change:\nUPDATED=$(echo \"$USER\" | jq '.lastName = \"NewLastName\"')\n\n# PUT the complete modified representation:\ncurl -X PUT -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d \"$UPDATED\" \\\n  https://your-keycloak/admin/realms/your-realm/users/$USER_ID\n```\nThis ensures no fields are accidentally cleared."
+        "description": "Until a PATCH endpoint is available, always send the complete user representation when using PUT:\n```bash\n# First GET the full user representation:\nUSER=`curl -s -H \"Authorization: Bearer $TOKEN\" \\\n  https://your-keycloak/admin/realms/your-realm/users/$USER_ID`\n\n# Modify only the field you want to change:\nUPDATED=`echo \"$USER\" | jq '.lastName = \"NewLastName\"'`\n\n# PUT the complete modified representation:\ncurl -X PUT -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d \"$UPDATED\" \\\n  https://your-keycloak/admin/realms/your-realm/users/$USER_ID\n```\nThis ensures no fields are accidentally cleared."
       },
       {
         "title": "Verify fields are preserved",
