@@ -124,22 +124,30 @@ jobs:
             // Run git blame on modified files (best-effort via exec)
             let blameSection = '';
             try {
-              const exec = require('child_process').execSync;
+              // Use execSync only for the merge-base lookup (merge_commit_sha is
+              // all-hex from GitHub API — safe for shell interpolation).
+              // Use spawnSync with an array for the blame lookup so that
+              // f.filename is NEVER interpreted by the shell, preventing command
+              // injection via a crafted filename in the PR.
+              const { execSync, spawnSync } = require('child_process');
               const blameEntries = [];
 
               for (const f of files.slice(0, MAX_BLAME_ENTRIES)) {
                 if (f.status === 'added' || f.status === 'removed') continue;
                 try {
-                  // Get the blame for the file at the merge base (before the fix)
-                  const mergeBase = exec(
+                  // merge_commit_sha is a hex SHA — safe to interpolate
+                  const mergeBase = execSync(
                     `git merge-base origin/main ${context.payload.pull_request.merge_commit_sha}`,
                     { encoding: 'utf8', timeout: 5000 }
                   ).trim();
 
-                  const blame = exec(
-                    `git log --oneline -1 ${mergeBase} -- "${f.filename}"`,
+                  // spawnSync with array args: f.filename is never shell-expanded
+                  const blameResult = spawnSync(
+                    'git',
+                    ['log', '--oneline', '-1', mergeBase, '--', f.filename],
                     { encoding: 'utf8', timeout: 5000 }
-                  ).trim();
+                  );
+                  const blame = blameResult.stdout ? blameResult.stdout.trim() : '';
 
                   if (blame) {
                     blameEntries.push(`- \`${f.filename}\`: last changed in ${blame}`);
