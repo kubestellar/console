@@ -71,6 +71,7 @@ jobs:
 
       - name: Post PR comment with results
         if: always()
+        continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -97,26 +98,31 @@ jobs:
             const COMMENT_TAG = '<!-- a11y-audit-comment -->';
             body = COMMENT_TAG + '\n' + body;
 
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const existing = (comments || []).find(c => (c.body || '').includes(COMMENT_TAG));
-
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body,
               });
+
+              const existing = (comments || []).find(c => (c.body || '').includes(COMMENT_TAG));
+
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body,
+                });
+              }
+            } catch (err) {
+              // Fork PRs have read-only GITHUB_TOKEN — comment posting is best-effort
+              core.warning(`Could not post a11y comment (expected for fork PRs): ${err.message}`);
             }
