@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../config/routes'
 import {
+  Activity,
   ArrowRight,
   ExternalLink,
   Sparkles,
@@ -75,6 +76,11 @@ const CAPABILITIES: Capability[] = [
     icon: <GitBranch className="w-5 h-5 text-purple-400" />,
     title: 'Multi-Agent Orchestration',
     description: 'Agents can call other agents as tools. Define specialized agents for monitoring, deployment, and security — then orchestrate them from a single conversation.',
+  },
+  {
+    icon: <Activity className="w-5 h-5 text-purple-400" />,
+    title: 'Lifecycle Management',
+    description: 'Track agent lifecycle states from Pending through Ready, with visual state machines for kagent and unified lifecycle views for kagenti. Monitor builds, deploys, and agent health in one place.',
   },
 ]
 

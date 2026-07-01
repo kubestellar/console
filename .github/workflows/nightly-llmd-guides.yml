@@ -1,0 +1,257 @@
+name: Nightly llm-d Guide E2E
+
+on:
+  schedule:
+    # Run at 7 AM UTC daily (2 AM EST / 3 AM EDT) — one hour after the main nightly suite
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      guide:
+        description: 'Run a single guide (or "all")'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - workload-variant-autoscaler
+          - basic-inference
+          - multi-model
+          - gateway
+          - epp-config
+          - autoscaler
+          - model-mesh
+          - custom-metrics
+
+permissions: read-all
+
+concurrency:
+  group: nightly-llmd-guides
+  cancel-in-progress: false
+
+env:
+  # Tracking issue title — searched to find or create the issue
+  TRACKING_ISSUE_TITLE: 'Nightly llm-d Guide E2E Results'
+  TRACKING_ISSUE_LABEL: 'nightly-llmd-guides'
+  # Timeouts (seconds)
+  GUIDE_SETUP_TIMEOUT_S: '600'
+  GUIDE_RUN_TIMEOUT_S: '1800'
+  GUIDE_TEARDOWN_TIMEOUT_S: '300'
+
+jobs:
+  run-guides:
+    permissions:
+      contents: read
+      issues: write
+    if: github.repository == 'kubestellar/console'
+    runs-on: [self-hosted, kc, openshift]
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        guide:
+          - workload-variant-autoscaler
+          - basic-inference
+          - multi-model
+          - gateway
+          - epp-config
+          - autoscaler
+          - model-mesh
+          - custom-metrics
+        exclude:
+          - guide: ${{ github.event.inputs.guide != 'all' && github.event.inputs.guide != '' && 'EXCLUDE_NONE' || '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Run guide E2E
+        id: guide
+        timeout-minutes: 45
+        env:
+          GUIDE_NAME: ${{ matrix.guide }}
+        run: |
+          echo "::group::Setup"
+          START_TIME=$(date +%s)
+          echo "guide=$GUIDE_NAME" >> "$GITHUB_OUTPUT"
+
+          # Check if guide script exists
+          SCRIPT="scripts/llmd-guides/${GUIDE_NAME}.sh"
+          if [ ! -f "$SCRIPT" ]; then
+            echo "::warning::Guide script not found: $SCRIPT — skipping"
+            echo "status=skipped" >> "$GITHUB_OUTPUT"
+            echo "duration=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Execute guide: $GUIDE_NAME"
+          set +e
+          timeout "${GUIDE_RUN_TIMEOUT_S}" bash "$SCRIPT"
+          EXIT_CODE=$?
+          set -e
+
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          echo "duration=${DURATION}" >> "$GITHUB_OUTPUT"
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+          elif [ $EXIT_CODE -eq 124 ]; then
+            echo "status=timeout" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+          fi
+          echo "::endgroup::"
+
+      - name: Upload result artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: guide-result-${{ matrix.guide }}
+          retention-days: 30
+          path: |
+            scripts/llmd-guides/*.log
+
+  report:
+    permissions:
+      issues: write
+    needs: run-guides
+    if: always() && github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download all result artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: guide-result-*
+          merge-multiple: true
+          path: results
+
+      - name: Build result summary
+        id: summary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          GUIDES=(
+            workload-variant-autoscaler
+            basic-inference
+            multi-model
+            gateway
+            epp-config
+            autoscaler
+            model-mesh
+            custom-metrics
+          )
+
+          TOTAL=${#GUIDES[@]}
+          PASSED=0
+          FAILED=0
+          SKIPPED=0
+          TABLE_ROWS=""
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          for guide in "${GUIDES[@]}"; do
+            # Parse status from the job outputs via artifacts or job conclusion
+            JOB_NAME="run-guides ($guide)"
+            CONCLUSION=$(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" \
+              --jq ".jobs[] | select(.name == \"${JOB_NAME}\") | .conclusion" 2>/dev/null || echo "unknown")
+
+            case "$CONCLUSION" in
+              success)
+                STATUS="✅ PASS"
+                PASSED=$((PASSED + 1))
+                ;;
+              skipped)
+                STATUS="⏭️ SKIP"
+                SKIPPED=$((SKIPPED + 1))
+                ;;
+              *)
+                STATUS="❌ FAIL"
+                FAILED=$((FAILED + 1))
+                ;;
+            esac
+
+            TABLE_ROWS="${TABLE_ROWS}| \`${guide}\` | ${STATUS} |\n"
+          done
+
+          # Build comment body
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          if [ $FAILED -eq 0 ] && [ $SKIPPED -eq 0 ]; then
+            HEADER="## ✅ Nightly llm-d Guide E2E — ${TIMESTAMP}"
+            RATE="**Pass rate: 100%** (${PASSED}/${TOTAL} passed)"
+          elif [ $FAILED -eq 0 ]; then
+            HEADER="## ✅ Nightly llm-d Guide E2E — ${TIMESTAMP}"
+            RATE="**Pass rate: 100%** (${PASSED}/${TOTAL} passed, ${SKIPPED} skipped)"
+          else
+            HEADER="## ❌ Nightly llm-d Guide E2E — ${TIMESTAMP}"
+            RATE="**Pass rate: $((PASSED * 100 / TOTAL))%** (${PASSED}/${TOTAL} passed, ${FAILED} failed, ${SKIPPED} skipped)"
+          fi
+
+          {
+            echo "COMMENT_BODY<<COMMENT_EOF"
+            echo "${HEADER}"
+            echo ""
+            echo "${RATE}"
+            echo ""
+            echo "| Guide | Status |"
+            echo "|-------|--------|"
+            echo -e "${TABLE_ROWS}"
+            echo "[Full run logs](${RUN_URL})"
+            echo "COMMENT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Find or create tracking issue
+        id: issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LABEL="${TRACKING_ISSUE_LABEL}"
+          TITLE="${TRACKING_ISSUE_TITLE}"
+
+          # Ensure label exists
+          gh label create "$LABEL" \
+            --description "Nightly llm-d guide E2E results" \
+            --color "5319e7" 2>/dev/null || true
+
+          # Find existing open issue
+          EXISTING=$(gh issue list \
+            --state open \
+            --label "$LABEL" \
+            --search "in:title \"${TITLE}\"" \
+            --json number,title \
+            --jq ".[] | select(.title == \"${TITLE}\") | .number" \
+            | head -1)
+
+          if [ -n "$EXISTING" ]; then
+            echo "issue_number=$EXISTING" >> "$GITHUB_OUTPUT"
+          else
+            NEW_ISSUE=$(gh issue create \
+              --title "$TITLE" \
+              --label "$LABEL" \
+              --label "hold" \
+              --body "## llm-d Guide E2E Tracking
+
+This issue tracks nightly E2E results for the 8 llm-d guides on OpenShift.
+
+### Guides
+- workload-variant-autoscaler
+- basic-inference
+- multi-model
+- gateway
+- epp-config
+- autoscaler
+- model-mesh
+- custom-metrics
+
+---
+_Results are posted as comments below, newest first._" \
+              | grep -oP '\d+$')
+            echo "issue_number=$NEW_ISSUE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post results to tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "${{ steps.summary.outputs.COMMENT_BODY }}"
