@@ -292,7 +292,11 @@ jobs:
           gh label create "triage/needed" --color "FBCA04" \
             --description "Needs triage" 2>/dev/null || true
 
-          # Create an issue for each failing suite (skip if one already exists)
+          # Create an issue for each failing suite (skip if one already exists
+          # or was closed within the dedup window)
+          DEDUP_WINDOW_DAYS=2
+          DEDUP_CUTOFF=$(date -u -d "${DEDUP_WINDOW_DAYS} days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+            || date -u -v-${DEDUP_WINDOW_DAYS}d +%Y-%m-%dT%H:%M:%SZ)
           FAILING_SUITES=$(jq -r '.results[] | select(.status == "fail") | .suite' "$RESULT_FILE" 2>/dev/null || true)
           for suite in $FAILING_SUITES; do
             ISSUE_TITLE="Nightly regression: ${suite}"
@@ -306,6 +310,19 @@ jobs:
             if [ -n "$EXISTING" ]; then
               echo "Issue #${EXISTING} already open for ${suite} — adding comment"
               gh issue comment "$EXISTING" --body "Still failing as of $(date -u +%Y-%m-%d). [Run](${RUN_URL})"
+              continue
+            fi
+
+            # Check for recently-closed issue (within dedup window) to avoid
+            # creating duplicate issues for the same recurring regression
+            RECENT_CLOSED=$(gh issue list --state closed \
+              --label "nightly-regression" \
+              --search "in:title \"${ISSUE_TITLE}\" closed:>${DEDUP_CUTOFF}" \
+              --json number --jq '.[0].number // empty')
+
+            if [ -n "$RECENT_CLOSED" ]; then
+              echo "Issue #${RECENT_CLOSED} closed within ${DEDUP_WINDOW_DAYS}d for ${suite} — reopening"
+              gh issue reopen "$RECENT_CLOSED" --comment "Regression recurred on $(date -u +%Y-%m-%d). [Run](${RUN_URL})"
               continue
             fi
 
