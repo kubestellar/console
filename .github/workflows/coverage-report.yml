@@ -1,0 +1,103 @@
+name: Coverage Report (Non-gating)
+
+# Generates coverage reports with broad instrumentation (src/**/*.{ts,tsx})
+# but does NOT gate on test pass/fail. Allows monitoring coverage expansion
+# progress without blocking PRs on V8/vi.mock() incompatibilities (see #19998).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/src/**'
+      - 'web/netlify/functions/**'
+      - 'web/package.json'
+      - 'web/package-lock.json'
+      - 'web/vite.config.ts'
+  pull_request:
+    paths:
+      - 'web/src/**'
+      - 'web/netlify/functions/**'
+      - 'web/package.json'
+      - 'web/package-lock.json'
+      - 'web/vite.config.ts'
+  workflow_dispatch:
+
+concurrency:
+  group: coverage-report-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  coverage-report:
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci || npm ci
+
+      - name: Run tests with broad coverage instrumentation
+        id: coverage
+        working-directory: web
+        # Use continue-on-error so test failures from V8/vi.mock() incompatibility
+        # don't fail the workflow. This job is for coverage metrics only.
+        continue-on-error: true
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+        run: |
+          # Override coverage.include via CLI to use broad src/**/*.{ts,tsx} pattern
+          # instead of the narrow include in vite.config.ts
+          npx vitest run --coverage \
+            --coverage.include='src/**/*.ts' \
+            --coverage.include='src/**/*.tsx' \
+            --reporter=default
+
+      - name: Generate coverage summary
+        if: always()
+        working-directory: web
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            PCT=$(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)
+            STMTS=$(jq -r '.total.statements.pct // 0' coverage/coverage-summary.json)
+            BRANCHES=$(jq -r '.total.branches.pct // 0' coverage/coverage-summary.json)
+            FUNCS=$(jq -r '.total.functions.pct // 0' coverage/coverage-summary.json)
+
+            echo "## Coverage Report (Broad Instrumentation)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "ℹ️ This report uses \`src/**/*.{ts,tsx}\` instrumentation and does NOT gate on test failures." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Percentage |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-----------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Lines | ${PCT}% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Statements | ${STMTS}% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Branches | ${BRANCHES}% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Functions | ${FUNCS}% |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No coverage summary generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload coverage HTML report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-report-broad-${{ github.run_number }}
+          path: web/coverage/
+          if-no-files-found: ignore
+          retention-days: 7
