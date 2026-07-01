@@ -75,7 +75,6 @@ func TestEvaluateFrameworkDemo(t *testing.T) {
 
 	body := `{"cluster":"demo-cluster"}`
 	req, err := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
-	req.Host = "localhost"
 		strings.NewReader(body))
 	require.NoError(t, err)
 	req.Host = "localhost"

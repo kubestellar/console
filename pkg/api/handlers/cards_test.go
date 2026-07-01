@@ -254,7 +254,6 @@ func TestRecordFocus_BadBody_Returns400(t *testing.T) {
 	app.Post("/api/cards/:id/focus", handler.RecordFocus)
 
 	req, err := http.NewRequest("POST", "/api/cards/"+cardID.String()+"/focus",
-	req.Host = "localhost"
 		strings.NewReader("{invalid json"))
 	require.NoError(t, err)
 	req.Host = "localhost"

@@ -796,7 +796,6 @@ func TestGitHubCallback_SanitizesErrorDescription(t *testing.T) {
 	// Include CR/LF in the query param; after URL decoding the handler
 	// should strip the control characters before reflecting them.
 	req, err := http.NewRequest("GET",
-	req.Host = "localhost"
 		"/auth/callback?error=access_denied&error_description=bad%0D%0Ainjected",
 		nil)
 	require.NoError(t, err)
