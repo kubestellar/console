@@ -82,13 +82,12 @@ test.describe('Deep Links — Dashboard Routes', () => {
 
     test(`${label} renders content (not blank)`, async ({ page }) => {
       await setupDemoAndNavigate(page, route)
-      await page.waitForLoadState('domcontentloaded')
 
-      const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-      expect(
-        bodyText.length,
-        `Route "${route}" rendered a blank page (body text length: ${bodyText.length})`,
-      ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+      await page.waitForFunction(
+        (min) => (document.body.innerText || '').trim().length > min,
+        MIN_BODY_TEXT_LENGTH,
+        { timeout: CONTENT_TIMEOUT_MS },
+      )
 
       const crash = page.getByText(/something went wrong|application error|unhandled error/i)
       await expect(crash).not.toBeVisible()
@@ -101,15 +100,13 @@ test.describe('Deep Links — Landing Pages', () => {
     const label = route.replace('/', '')
 
     test(`${label} renders content (not blank)`, async ({ page }) => {
-      // Landing pages may still check auth context even under LightweightShell,
-      // so set up demo mode first to prevent redirect to /login.
       await setupDemoAndNavigate(page, route)
 
-      const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-      expect(
-        bodyText.length,
-        `Landing page "${route}" rendered a blank page`,
-      ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+      await page.waitForFunction(
+        (min) => (document.body.innerText || '').trim().length > min,
+        MIN_BODY_TEXT_LENGTH,
+        { timeout: CONTENT_TIMEOUT_MS },
+      )
 
       const crash = page.getByText(/something went wrong|application error|unhandled error/i)
       await expect(crash).not.toBeVisible()
@@ -122,14 +119,13 @@ test.describe('Deep Links — Mission Deep Links', () => {
     const missionName = route.replace('/missions/', '')
 
     test(`mission "${missionName}" renders landing page`, async ({ page }) => {
-      // Mission landing pages need demo context to avoid auth redirects
       await setupDemoAndNavigate(page, route)
 
-      const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-      expect(
-        bodyText.length,
-        `Mission "${missionName}" rendered a blank page`,
-      ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+      await page.waitForFunction(
+        (min) => (document.body.innerText || '').trim().length > min,
+        MIN_BODY_TEXT_LENGTH,
+        { timeout: CONTENT_TIMEOUT_MS },
+      )
 
       const crash = page.getByText(/something went wrong|application error|unhandled error/i)
       await expect(crash).not.toBeVisible()
@@ -141,8 +137,11 @@ test.describe('Deep Links — Query Params & Special Routes', () => {
   test('/?browse=missions renders missions content', async ({ page }) => {
     await setupDemoAndNavigate(page, '/?browse=missions')
 
-    const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-    expect(bodyText.length).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+    await page.waitForFunction(
+      (min) => (document.body.innerText || '').trim().length > min,
+      MIN_BODY_TEXT_LENGTH,
+      { timeout: CONTENT_TIMEOUT_MS },
+    )
 
     const crash = page.getByText(/something went wrong|application error/i)
     await expect(crash).not.toBeVisible()
@@ -151,8 +150,11 @@ test.describe('Deep Links — Query Params & Special Routes', () => {
   test('route with hash fragment does not crash', async ({ page }) => {
     await setupDemoAndNavigate(page, '/settings#appearance')
 
-    const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-    expect(bodyText.length).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+    await page.waitForFunction(
+      (min) => (document.body.innerText || '').trim().length > min,
+      MIN_BODY_TEXT_LENGTH,
+      { timeout: CONTENT_TIMEOUT_MS },
+    )
   })
 })
 
