@@ -539,43 +539,41 @@ func (h *Handler) buildOperationalState(ctx context.Context, userID, focusCluste
 		PendingActionIDs: []string{},
 	}
 	if h.k8sClient == nil {
-        return nil, nil 
-    }
-	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
-		if err != nil {
-			clusters, err = h.k8sClient.ListClusters(ctx)
-		}
-		if err == nil {
-			for _, cluster := range clusters {
-				state.ClustersWatching = append(state.ClustersWatching, cluster.Name)
-				if focusCluster != "" && focusCluster != cluster.Name {
-					continue
+		return state, nil
+	}
+	clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
+	if err != nil {
+		clusters, err = h.k8sClient.ListClusters(ctx)
+	}
+	if err == nil {
+		for _, cluster := range clusters {
+			state.ClustersWatching = append(state.ClustersWatching, cluster.Name)
+			if focusCluster != "" && focusCluster != cluster.Name {
+				continue
+			}
+			events, eventErr := h.k8sClient.GetWarningEvents(ctx, cluster.Name, "", 50)
+			if eventErr != nil {
+				continue
+			}
+			for _, event := range events {
+				severity := "warning"
+				if isCriticalReason(event.Reason) {
+					severity = "critical"
 				}
-				events, eventErr := h.k8sClient.GetWarningEvents(ctx, cluster.Name, "", 50)
-				if eventErr != nil {
-					continue
-				}
-				for _, event := range events {
-					severity := "warning"
-					if isCriticalReason(event.Reason) {
-						severity = "critical"
-					}
-					state.EventCounts[severity]++
-					state.RecentEvents = append(state.RecentEvents, store.ClusterEvent{
-						ID:                 fmt.Sprintf("%s:%s:%s", cluster.Name, event.Namespace, event.Object),
-						ClusterName:        cluster.Name,
-						Namespace:          event.Namespace,
-						EventType:          event.Type,
-						Reason:             event.Reason,
-						Message:            event.Message,
-						InvolvedObjectKind: splitEventObjectKind(event.Object),
-						InvolvedObjectName: splitEventObjectName(event.Object),
-						EventCount:         event.Count,
-						LastSeen:           event.LastSeen,
-						FirstSeen:          event.FirstSeen,
-					})
-				}
+				state.EventCounts[severity]++
+				state.RecentEvents = append(state.RecentEvents, store.ClusterEvent{
+					ID:                 fmt.Sprintf("%s:%s:%s", cluster.Name, event.Namespace, event.Object),
+					ClusterName:        cluster.Name,
+					Namespace:          event.Namespace,
+					EventType:          event.Type,
+					Reason:             event.Reason,
+					Message:            event.Message,
+					InvolvedObjectKind: splitEventObjectKind(event.Object),
+					InvolvedObjectName: splitEventObjectName(event.Object),
+					EventCount:         event.Count,
+					LastSeen:           event.LastSeen,
+					FirstSeen:          event.FirstSeen,
+				})
 			}
 		}
 	}

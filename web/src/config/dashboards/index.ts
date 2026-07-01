@@ -51,6 +51,7 @@ import { arcadeDashboardConfig } from './arcade'
 import { deployDashboardConfig } from './deploy'
 import { aiAgentsDashboardConfig } from './ai-agents'
 import { llmdBenchmarksDashboardConfig } from './llmd-benchmarks'
+import { llmdMonitoringDashboardConfig } from './llmd-monitoring'
 import { clusterAdminDashboardConfig } from './cluster-admin'
 import { insightsDashboardConfig } from './insights'
 import { multiTenancyDashboardConfig } from './multi-tenancy'
@@ -114,6 +115,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   deploy: deployDashboardConfig,
   'ai-agents': aiAgentsDashboardConfig,
   'llm-d-benchmarks': llmdBenchmarksDashboardConfig,
+  'llm-d-monitoring': llmdMonitoringDashboardConfig,
   'cluster-admin': clusterAdminDashboardConfig,
   insights: insightsDashboardConfig,
   'multi-tenancy': multiTenancyDashboardConfig,
@@ -248,6 +250,7 @@ export {
   deployDashboardConfig,
   aiAgentsDashboardConfig,
   llmdBenchmarksDashboardConfig,
+  llmdMonitoringDashboardConfig,
   clusterAdminDashboardConfig,
   insightsDashboardConfig,
   multiTenancyDashboardConfig,

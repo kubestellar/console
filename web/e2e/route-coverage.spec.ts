@@ -48,13 +48,14 @@ async function loadRouteAndAssertNoErrors(
 
 /**
  * Asserts the page has meaningful content (not blank or near-empty).
+ * Polls until React renders rather than reading body text immediately.
  */
 async function assertPageHasContent(page: Page, path: string) {
-  const bodyText = await page.textContent('body')
-  expect(
-    bodyText?.length,
-    `${path} rendered a blank or near-empty page`,
-  ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+  await page.waitForFunction(
+    (min) => (document.body.innerText || '').trim().length > min,
+    MIN_BODY_TEXT_LENGTH,
+    { timeout: ELEMENT_VISIBLE_TIMEOUT_MS },
+  )
 }
 
 // ===========================================================================

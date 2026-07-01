@@ -1,0 +1,122 @@
+name: Accessibility Audit (WCAG 2.1 AA)
+
+on:
+  pull_request:
+    paths:
+      - 'web/src/**/*.tsx'
+      - 'web/src/**/*.css'
+      - 'web/src/lib/a11y/**'
+      - 'web/src/lib/accessibility.ts'
+
+permissions: read-all
+
+env:
+  CI: true
+  NODE_VERSION: '22'
+  PREVIEW_PORT: 4174
+  # axe-core rule tags matching WCAG 2.1 AA
+  AXE_TAGS: 'wcag2a,wcag2aa,wcag21a,wcag21aa'
+  # Maximum number of routes to audit per PR
+  MAX_ROUTES: 15
+  # Timeout for each route's axe scan in ms
+  AXE_SCAN_TIMEOUT_MS: 30000
+  # Page settle time before scanning in ms
+  PAGE_SETTLE_MS: 2000
+
+jobs:
+  a11y-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: web
+        run: npx vite build
+
+      - name: Install Playwright
+        working-directory: web
+        run: npx playwright install chromium --with-deps
+
+      - name: Start preview server
+        working-directory: web
+        run: |
+          npx vite preview --port ${{ env.PREVIEW_PORT }} &
+          sleep 5
+
+      - name: Run axe-core audit
+        id: audit
+        working-directory: web
+        run: |
+          npx playwright test e2e/compliance/a11y-compliance.spec.ts \
+            --project=chromium \
+            --reporter=json \
+            > /tmp/a11y-results.json 2>&1 || true
+
+          # Count violations from output
+          CRITICAL=$(jq '[.suites[]?.suites[]?.specs[]? | select(.tests[]?.results[]?.status == "failed")] | length' /tmp/a11y-results.json 2>/dev/null || echo "0")
+          echo "critical_count=$CRITICAL" >> "$GITHUB_OUTPUT"
+
+      - name: Post PR comment with results
+        if: always()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const criticalCount = parseInt('${{ steps.audit.outputs.critical_count }}' || '0', 10);
+
+            let body = '## ♿ Accessibility Audit (WCAG 2.1 AA)\n\n';
+
+            if (criticalCount > 0) {
+              body += `⚠️ **${criticalCount} route(s) with accessibility violations**\n\n`;
+              body += 'Review the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.\n\n';
+              body += '### What to fix\n';
+              body += '- **Critical/Serious**: Must fix before merge (WCAG Level A)\n';
+              body += '- **Moderate**: Should fix (WCAG Level AA)\n';
+              body += '- **Minor**: Nice to have (WCAG Level AAA)\n';
+            } else {
+              body += '✅ No WCAG 2.1 AA violations detected in audited routes.\n';
+            }
+
+            body += '\n---\n_Powered by [axe-core](https://github.com/dequelabs/axe-core). ';
+            body += 'Target: WCAG 2.1 AA compliance._';
+
+            // Find and update existing comment or create new
+            const COMMENT_TAG = '<!-- a11y-audit-comment -->';
+            body = COMMENT_TAG + '\n' + body;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = (comments || []).find(c => (c.body || '').includes(COMMENT_TAG));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

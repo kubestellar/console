@@ -22,6 +22,9 @@ func Dispatch(ctx context.Context, k8sClient *k8s.MultiClusterClient, a store.St
 	if err != nil {
 		return "", err
 	}
+	if k8sClient == nil {
+		return "", fmt.Errorf("k8s client is nil, cannot dispatch action %s", a.ActionType)
+	}
 	switch a.ActionType {
 	case "ScaleDeployment":
 		ns := readString(params, "namespace", a.Namespace)
