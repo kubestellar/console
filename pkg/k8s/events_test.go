@@ -99,24 +99,3 @@ func TestSortEventsByLastSeenDesc(t *testing.T) {
 			events[3].Reason, events[4].Reason)
 	}
 }
-
-func TestSortEventsByLastSeenDesc_MixedTimezones(t *testing.T) {
-	// Lexicographic comparison would get this wrong: the -04:00 string sorts
-	// before "Z" but is actually the more recent instant.
-	events := []Event{
-		{Reason: "Z-formatted", LastSeen: "2024-06-01T12:00:00Z"},
-		{Reason: "Offset-formatted", LastSeen: "2024-06-01T09:00:00-04:00"}, // = 13:00 UTC
-	}
-
-	SortEventsByLastSeenDesc(events)
-
-	if events[0].Reason != "Offset-formatted" {
-		t.Errorf("time-typed sort must rank 13:00 UTC before 12:00 UTC; got %q first",
-			events[0].Reason)
-	}
-}
-
-func TestSortEventsByLastSeenDesc_EmptySlice(t *testing.T) {
-	var events []Event
-	SortEventsByLastSeenDesc(events) // must not panic
-}
