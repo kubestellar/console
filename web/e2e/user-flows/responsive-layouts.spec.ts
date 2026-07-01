@@ -24,6 +24,19 @@ const ROUTES = ['/', '/clusters', '/settings', '/missions', '/deploy'] as const
 
 async function expectRenderedContent(page: Page, route: string, viewportName: string) {
   await page.waitForLoadState('domcontentloaded')
+  // Wait for React app to mount and replace the loading shell
+  await page.locator('#root').waitFor({ state: 'visible', timeout: ROUTE_CONTENT_TIMEOUT_MS })
+  // Wait for actual app content (not just the loading spinner)
+  await page.waitForFunction(
+    () => {
+      const root = document.getElementById('root')
+      if (!root) return false
+      // If loading shell is still visible, app hasn't mounted yet
+      if (root.querySelector('#app-shell')) return false
+      return (document.body.innerText || '').trim().length > 10
+    },
+    { timeout: ROUTE_CONTENT_TIMEOUT_MS }
+  )
   await expect.poll(
     () => page.evaluate(() => (document.body.innerText || '').trim().length),
     {
