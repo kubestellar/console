@@ -157,9 +157,7 @@ jobs:
 
   generate:
     permissions:
-      contents: write
-      pull-requests: write
-      issues: write
+      contents: read  # script uses ORG_TOKEN for issue/PR operations
     needs: plan
     runs-on: ubuntu-latest
     strategy:
