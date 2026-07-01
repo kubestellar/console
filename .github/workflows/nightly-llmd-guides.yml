@@ -228,26 +228,24 @@ jobs:
           if [ -n "$EXISTING" ]; then
             echo "issue_number=$EXISTING" >> "$GITHUB_OUTPUT"
           else
+            ISSUE_BODY="## llm-d Guide E2E Tracking"$'\n\n'
+            ISSUE_BODY+="This issue tracks nightly E2E results for the 8 llm-d guides on OpenShift."$'\n\n'
+            ISSUE_BODY+="### Guides"$'\n'
+            ISSUE_BODY+="- workload-variant-autoscaler"$'\n'
+            ISSUE_BODY+="- basic-inference"$'\n'
+            ISSUE_BODY+="- multi-model"$'\n'
+            ISSUE_BODY+="- gateway"$'\n'
+            ISSUE_BODY+="- epp-config"$'\n'
+            ISSUE_BODY+="- autoscaler"$'\n'
+            ISSUE_BODY+="- model-mesh"$'\n'
+            ISSUE_BODY+="- custom-metrics"$'\n\n'
+            ISSUE_BODY+="---"$'\n'
+            ISSUE_BODY+="_Results are posted as comments below, newest first._"
             NEW_ISSUE=$(gh issue create \
               --title "$TITLE" \
               --label "$LABEL" \
               --label "hold" \
-              --body "## llm-d Guide E2E Tracking
-
-This issue tracks nightly E2E results for the 8 llm-d guides on OpenShift.
-
-### Guides
-- workload-variant-autoscaler
-- basic-inference
-- multi-model
-- gateway
-- epp-config
-- autoscaler
-- model-mesh
-- custom-metrics
-
----
-_Results are posted as comments below, newest first._" \
+              --body "$ISSUE_BODY" \
               | grep -oP '\d+$')
             echo "issue_number=$NEW_ISSUE" >> "$GITHUB_OUTPUT"
           fi
