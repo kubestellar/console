@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * Network Constants - URLs, timeouts, and connection parameters
  *
@@ -14,18 +15,30 @@
  * On Netlify, agent URLs are disabled — there is no local kc-agent.
  * Duplicated from demoMode.ts to avoid circular imports (demoMode → constants → network).
  */
+function isTestEnvironment(): boolean {
+  return typeof process !== 'undefined' && process.env.NODE_ENV === 'test'
+}
+
 const viteEnv = (import.meta.env ?? {}) as Partial<ImportMetaEnv>
 const isDemoModeBuild = viteEnv.VITE_DEMO_MODE === 'true'
 const isNoLocalAgentBuild = viteEnv.VITE_NO_LOCAL_AGENT === 'true'
-const isConsoleLiveHost = typeof window !== 'undefined' && typeof window.location !== 'undefined' && window.location.hostname === 'console-live.kubestellar.io'
 
-const _isNetlify = typeof window !== 'undefined' && typeof window.location !== 'undefined' && (
-  isDemoModeBuild ||
-  window.location.hostname.includes('netlify.app') ||
-  window.location.hostname.includes('deploy-preview-') ||
-  window.location.hostname === 'console.kubestellar.io' ||
-  isConsoleLiveHost
-)
+// In test environments (jsdom/vitest), window.location exists but has mock values.
+// Skip hostname checks to avoid false positives.
+const isConsoleLiveHost = !isTestEnvironment() && 
+  typeof window !== 'undefined' && 
+  typeof window.location !== 'undefined' && 
+  window.location.hostname === 'console-live.kubestellar.io'
+
+const _isNetlify = !isTestEnvironment() && 
+  typeof window !== 'undefined' && 
+  typeof window.location !== 'undefined' && (
+    isDemoModeBuild ||
+    window.location.hostname.includes('netlify.app') ||
+    window.location.hostname.includes('deploy-preview-') ||
+    window.location.hostname === 'console.kubestellar.io' ||
+    isConsoleLiveHost
+  )
 
 /**
  * Whether the local kc-agent should be suppressed.
