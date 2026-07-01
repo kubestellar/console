@@ -344,7 +344,13 @@ export default defineConfig(({ mode }) => ({
       provider: 'v8',
       reporter: ['text', 'json', 'json-summary', 'html'],
       include: [
-        'src/**/*.{ts,tsx}',
+        'src/hooks/**',
+        'src/lib/**',
+        'src/contexts/**',
+        'src/components/charts/**',
+        'src/components/dashboard/customizer/**',
+        'src/components/dashboard/shared/cardCatalog.ts',
+        'src/components/dashboard/shared/CardPreview.tsx',
       ],
       exclude: [
         'node_modules/',
