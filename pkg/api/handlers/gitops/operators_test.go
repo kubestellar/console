@@ -45,6 +45,7 @@ fi
 	env.App.Get("/api/gitops/operators", handler.ListOperators)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators?cluster=test-cluster", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req)
@@ -84,6 +85,7 @@ fi
 	env.App.Get("/api/gitops/subscriptions", handler.ListOperatorSubscriptions)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions?cluster=test-cluster", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req)
@@ -106,6 +108,7 @@ func TestGitOpsOperators_ListOperators_Validation(t *testing.T) {
 
 	// Invalid cluster name
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators?cluster="+url.QueryEscape("bad;name"), nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req)
@@ -132,6 +135,7 @@ func TestGitOpsOperators_StreamOperators_Validation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators/stream?cluster="+url.QueryEscape(tc.cluster), nil)
+	req.Host = "localhost"
 			require.NoError(t, err)
 			req.Host = "localhost"
 			resp, err := env.App.Test(req)
@@ -159,6 +163,7 @@ func TestGitOpsOperators_StreamSubscriptions_Validation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions/stream?cluster="+url.QueryEscape(tc.cluster), nil)
+	req.Host = "localhost"
 			require.NoError(t, err)
 			req.Host = "localhost"
 			resp, err := env.App.Test(req)
@@ -186,6 +191,7 @@ func TestGitOpsOperators_StreamHelmReleases_Validation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/stream?cluster="+url.QueryEscape(tc.cluster), nil)
+	req.Host = "localhost"
 			require.NoError(t, err)
 			req.Host = "localhost"
 			resp, err := env.App.Test(req)

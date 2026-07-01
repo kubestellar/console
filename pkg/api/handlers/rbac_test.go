@@ -65,6 +65,7 @@ func TestRBACUpdateUserRole_ForbiddenForNonAdmin(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPut, "/api/rbac/users/"+uuid.NewString()+"/role", bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -99,6 +100,7 @@ func TestRBACUpdateUserRole_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPut, "/api/rbac/users/"+targetUserID.String()+"/role", bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -128,6 +130,7 @@ func TestRBACListConsoleUsers_ForbiddenForNonAdmin(t *testing.T) {
 	env.App.Get("/api/rbac/users", handler.ListConsoleUsers)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/rbac/users", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -158,6 +161,7 @@ func TestRBACListConsoleUsers_Success(t *testing.T) {
 	env.App.Get("/api/rbac/users", handler.ListConsoleUsers)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/rbac/users", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 

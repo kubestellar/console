@@ -63,6 +63,7 @@ func TestListWorkloads(t *testing.T) {
 	injectDynamicClusterWithObjects(env, "test-cluster", scheme, []runtime.Object{deployment})
 
 	req, err := http.NewRequest("GET", "/api/workloads?cluster=test-cluster", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -108,6 +109,7 @@ func TestGetWorkload(t *testing.T) {
 
 	// 1. Success Case
 	req, err := http.NewRequest("GET", "/api/workloads/test-cluster/default/my-app", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -123,6 +125,7 @@ func TestGetWorkload(t *testing.T) {
 
 	// 2. Not Found
 	reqNotFound, err := http.NewRequest("GET", "/api/workloads/test-cluster/default/missing", nil)
+	reqNotFound.Host = "localhost"
 	require.NoError(t, err)
 	reqNotFound.Host = "localhost"
 	require.NotNil(t, reqNotFound)
@@ -154,6 +157,7 @@ func TestGetDeployStatus(t *testing.T) {
 	injectDynamicClusterWithObjects(env, "c1", scheme, []runtime.Object{deploy})
 
 	req, err := http.NewRequest("GET", "/api/workloads/deploy-status/c1/default/status-app", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -206,6 +210,7 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	}
 	data, _ := json.Marshal(createPayload)
 	req, err := http.NewRequest("POST", "/api/cluster-groups", bytes.NewReader(data))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -217,6 +222,7 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	assert.Equal(t, 201, resp.StatusCode)
 
 	req, err = http.NewRequest("GET", "/api/cluster-groups", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -242,6 +248,7 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	}
 	data, _ = json.Marshal(updatePayload)
 	req, err = http.NewRequest("PUT", "/api/cluster-groups/group1", bytes.NewReader(data))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -253,6 +260,7 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	assert.Equal(t, 200, resp.StatusCode)
 
 	req, err = http.NewRequest("DELETE", "/api/cluster-groups/group1", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -262,6 +270,7 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	assert.Equal(t, 200, resp.StatusCode)
 
 	req, err = http.NewRequest("GET", "/api/cluster-groups", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -324,6 +333,7 @@ func TestEvaluateClusterQuery(t *testing.T) {
 
 	data, _ := json.Marshal(query)
 	req, err := http.NewRequest("POST", "/api/cluster-groups/evaluate", bytes.NewReader(data))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -383,6 +393,7 @@ func TestGenerateClusterQuery(t *testing.T) {
 	data, _ := json.Marshal(payload)
 
 	req, err := http.NewRequest("POST", "/api/cluster-groups/generate", bytes.NewReader(data))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -433,6 +444,7 @@ func TestResolveDependencies(t *testing.T) {
 	injectDynamicClusterWithObjects(env, "c1", scheme, []runtime.Object{deploy, svc})
 
 	req, err := http.NewRequest("GET", "/api/workloads/resolve-deps/c1/default/app", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -480,6 +492,7 @@ func TestMonitorWorkload(t *testing.T) {
 	injectDynamicClusterWithObjects(env, "c1", scheme, []runtime.Object{deploy})
 
 	req, err := http.NewRequest("GET", "/api/workloads/monitor/c1/default/monitored-app", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	require.NotNil(t, req)
@@ -530,6 +543,7 @@ func TestGetDeployLogs(t *testing.T) {
 		injectDynamicClusterWithObjects(env, "c1", scheme, []runtime.Object{pod, deploy}, pod)
 
 		req, err := http.NewRequest("GET", "/api/workloads/logs/c1/default/log-app", nil)
+	req.Host = "localhost"
 		require.NoError(t, err)
 		req.Host = "localhost"
 		require.NotNil(t, req)
@@ -546,6 +560,7 @@ func TestGetDeployLogs(t *testing.T) {
 		injectDynamicClusterWithObjects(env, "c1", scheme, []runtime.Object{pod}, pod)
 
 		req, err := http.NewRequest("GET", "/api/workloads/logs/c1/default/missing-app", nil)
+	req.Host = "localhost"
 		require.NoError(t, err)
 		req.Host = "localhost"
 		require.NotNil(t, req)
@@ -562,6 +577,7 @@ func TestGetDeployLogs(t *testing.T) {
 	t.Run("MissingCluster_Returns500", func(t *testing.T) {
 		// When the cluster context does not exist, GetClient fails and handler returns 500.
 		req, err := http.NewRequest("GET", "/api/workloads/logs/nonexistent-cluster/default/app", nil)
+	req.Host = "localhost"
 		require.NoError(t, err)
 		req.Host = "localhost"
 		require.NotNil(t, req)

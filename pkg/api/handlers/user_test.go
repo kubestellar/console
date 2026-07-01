@@ -49,6 +49,7 @@ func TestGetCurrentUser_Success(t *testing.T) {
 	mockStore.On("GetUser", userID).Return(expectedUser, nil).Once()
 
 	req, err := http.NewRequest("GET", "/api/user", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -72,6 +73,7 @@ func TestGetCurrentUser_NotFound(t *testing.T) {
 	mockStore.On("GetUser", userID).Return(nil, nil).Once()
 
 	req, err := http.NewRequest("GET", "/api/user", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -97,6 +99,7 @@ func TestUpdateCurrentUser_Success(t *testing.T) {
 
 	payload := `{"email":"new@example.com","slackId":"U12345"}`
 	req, err := http.NewRequest("PUT", "/api/user", strings.NewReader(payload))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -121,6 +124,7 @@ func TestUpdateCurrentUser_NotFound(t *testing.T) {
 
 	payload := `{"email":"new@example.com"}`
 	req, err := http.NewRequest("PUT", "/api/user", strings.NewReader(payload))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -138,6 +142,7 @@ func TestUpdateCurrentUser_InvalidBody(t *testing.T) {
 	// Body parsing happens before the service is invoked, so no store
 	// calls are expected.
 	req, err := http.NewRequest("PUT", "/api/user", strings.NewReader("not-json"))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -165,6 +170,7 @@ func TestUpdateCurrentUser_InvalidEmail(t *testing.T) {
 
 	payload := `{"email":"not-an-email"}`
 	req, err := http.NewRequest("PUT", "/api/user", strings.NewReader(payload))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")

@@ -211,6 +211,7 @@ func TestGPUCreateReservation_OverAllocationReturnsConflict(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/gpu/reservations", bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -242,6 +243,7 @@ func TestGPUCreateReservation_SetsDefaultDurationAndUserName(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/gpu/reservations", bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -276,6 +278,7 @@ func TestGPUCreateReservation_ProvisioningSuccessReturnsActiveReservation(t *tes
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/gpu/reservations", bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -331,6 +334,7 @@ func TestGPUCreateReservation_ProvisioningCleanupOnStoreFailure(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/gpu/reservations", bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -356,6 +360,7 @@ func TestGPUListReservations_MineNilReturnsEmptyArray(t *testing.T) {
 	env.App.Get("/api/gpu/reservations", handler.ListReservations)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations?mine=true", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -380,6 +385,7 @@ func TestGPUListReservations_NonAdminOnlyGetsOwnReservations(t *testing.T) {
 	env.App.Get("/api/gpu/reservations", handler.ListReservations)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -407,6 +413,7 @@ func TestGPUGetReservation_NonOwnerIsForbidden(t *testing.T) {
 	env.App.Get("/api/gpu/reservations/:id", handler.GetReservation)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations/"+resID.String(), nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -432,6 +439,7 @@ func TestGPUUpdateReservation_RejectsZeroGPUCount(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -459,6 +467,7 @@ func TestGPUUpdateReservation_RejectsNegativeGPUCount(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -485,6 +494,7 @@ func TestGPUUpdateReservation_RejectsNegativeDuration(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -511,6 +521,7 @@ func TestGPUUpdateReservation_RejectsZeroDuration(t *testing.T) {
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -535,6 +546,7 @@ func TestGPUBulkUtilizations_ForbiddenForNonOwner(t *testing.T) {
 	env.App.Get("/api/gpu/utilizations", handler.GetBulkUtilizations)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gpu/utilizations?ids="+resID.String(), nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 

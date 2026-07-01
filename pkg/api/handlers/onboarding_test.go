@@ -39,6 +39,7 @@ func TestGetQuestions_ReturnsNonEmpty(t *testing.T) {
 	app.Get("/api/onboarding/questions", handler.GetQuestions)
 
 	req, err := http.NewRequest("GET", "/api/onboarding/questions", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -66,6 +67,7 @@ func TestSaveResponses_Success(t *testing.T) {
 
 	payload := `[{"question_key":"role","answer":"SRE"},{"question_key":"focus_layer","answer":"Application"}]`
 	req, err := http.NewRequest("POST", "/api/onboarding/responses", strings.NewReader(payload))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -90,6 +92,7 @@ func TestSaveResponses_InvalidBody(t *testing.T) {
 	app.Post("/api/onboarding/responses", handler.SaveResponses)
 
 	req, err := http.NewRequest("POST", "/api/onboarding/responses", strings.NewReader("not-json"))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -109,6 +112,7 @@ func TestCompleteOnboarding_Success(t *testing.T) {
 	// MockStore stubs return nil/nil for GetOnboardingResponses, CreateDashboard,
 	// CreateCard, SetUserOnboarded — all succeed silently with default behavior.
 	req, err := http.NewRequest("POST", "/api/onboarding/complete", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 

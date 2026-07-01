@@ -58,6 +58,7 @@ func TestTokenUsageHandler_GetReturnsZeroForNewUser(t *testing.T) {
 	app, _, _, _ := newTokenUsageTestApp(t)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/token-usage/me", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
@@ -87,6 +88,7 @@ func TestTokenUsageHandler_PutThenGetRoundTrip(t *testing.T) {
 	}
 	raw, _ := json.Marshal(body)
 	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/me", bytes.NewReader(raw))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -122,6 +124,7 @@ func TestTokenUsageHandler_DeltaIncrementsAtomically(t *testing.T) {
 			AgentSessionID: "session-delta-1",
 		})
 		req, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
+	req.Host = "localhost"
 		require.NoError(t, err)
 		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
@@ -154,6 +157,7 @@ func TestTokenUsageHandler_DeltaSessionChangeSkipsAdd(t *testing.T) {
 		AgentSessionID: "session-A",
 	})
 	req1, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body1))
+	req1.Host = "localhost"
 	require.NoError(t, err)
 	req1.Host = "localhost"
 	req1.Header.Set("Content-Type", "application/json")
@@ -168,6 +172,7 @@ func TestTokenUsageHandler_DeltaSessionChangeSkipsAdd(t *testing.T) {
 		AgentSessionID: "session-B",
 	})
 	req2, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body2))
+	req2.Host = "localhost"
 	require.NoError(t, err)
 	req2.Host = "localhost"
 	req2.Header.Set("Content-Type", "application/json")
@@ -189,6 +194,7 @@ func TestTokenUsageHandler_GetResetsStaleDayTotals(t *testing.T) {
 		LastAgentSessionID: "session-stale",
 	})
 	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/me", bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -222,6 +228,7 @@ func TestTokenUsageHandler_DeltaRejectsNegative(t *testing.T) {
 		AgentSessionID: "session-neg",
 	})
 	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -240,6 +247,7 @@ func TestTokenUsageHandler_DeltaRejectsOverLimit(t *testing.T) {
 		AgentSessionID: "session-big",
 	})
 	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/delta", bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -262,6 +270,7 @@ func TestTokenUsageHandler_PutRejectsTooManyCategories(t *testing.T) {
 		LastAgentSessionID: "session-many",
 	})
 	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/me", bytes.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")

@@ -25,6 +25,7 @@ func TestListFrameworks(t *testing.T) {
 	app, _ := setupComplianceFrameworksTest()
 
 	req, err := http.NewRequest("GET", "/api/compliance/frameworks/", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
@@ -43,6 +44,7 @@ func TestGetFramework(t *testing.T) {
 	app, _ := setupComplianceFrameworksTest()
 
 	req, err := http.NewRequest("GET", "/api/compliance/frameworks/pci-dss-4.0", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
@@ -60,6 +62,7 @@ func TestGetFrameworkNotFound(t *testing.T) {
 	app, _ := setupComplianceFrameworksTest()
 
 	req, err := http.NewRequest("GET", "/api/compliance/frameworks/nonexistent", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, 5000)
@@ -72,6 +75,7 @@ func TestEvaluateFrameworkDemo(t *testing.T) {
 
 	body := `{"cluster":"demo-cluster"}`
 	req, err := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
+	req.Host = "localhost"
 		strings.NewReader(body))
 	require.NoError(t, err)
 	req.Host = "localhost"
@@ -92,6 +96,7 @@ func TestEvaluateFrameworkNotFound(t *testing.T) {
 
 	body := `{"cluster":"c"}`
 	req, err := http.NewRequest("POST", "/api/compliance/frameworks/nonexistent/evaluate",
+	req.Host = "localhost"
 		strings.NewReader(body))
 	require.NoError(t, err)
 	req.Host = "localhost"
@@ -106,6 +111,7 @@ func TestEvaluateFrameworkMissingCluster(t *testing.T) {
 
 	body := `{}`
 	req, err := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
+	req.Host = "localhost"
 		strings.NewReader(body))
 	require.NoError(t, err)
 	req.Host = "localhost"
@@ -119,6 +125,7 @@ func TestEvaluateFrameworkBadBody(t *testing.T) {
 	app, _ := setupComplianceFrameworksTest()
 
 	req, err := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
+	req.Host = "localhost"
 		strings.NewReader("not json"))
 	require.NoError(t, err)
 	req.Host = "localhost"
@@ -178,6 +185,7 @@ func TestEvaluateLiveCluster(t *testing.T) {
 
 	body := `{"cluster":"live-cluster"}`
 	req, err := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
+	req.Host = "localhost"
 		strings.NewReader(body))
 	require.NoError(t, err)
 	req.Host = "localhost"
@@ -238,6 +246,7 @@ func TestEvaluateFrameworkLiveError(t *testing.T) {
 
 	body := `{"cluster":"bad-cluster"}`
 	req, err := http.NewRequest("POST", "/api/compliance/frameworks/pci-dss-4.0/evaluate",
+	req.Host = "localhost"
 		strings.NewReader(body))
 	require.NoError(t, err)
 	req.Host = "localhost"

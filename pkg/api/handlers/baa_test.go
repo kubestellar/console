@@ -22,6 +22,7 @@ func setupBAAApp() *fiber.App {
 func TestBAAAgreements(t *testing.T) {
 	app := setupBAAApp()
 	req, err := http.NewRequest("GET", "/api/compliance/baa/agreements", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
@@ -44,6 +45,7 @@ func TestBAAAgreements(t *testing.T) {
 func TestBAAAlerts(t *testing.T) {
 	app := setupBAAApp()
 	req, err := http.NewRequest("GET", "/api/compliance/baa/alerts", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
@@ -66,6 +68,7 @@ func TestBAAAlerts(t *testing.T) {
 func TestBAASummary(t *testing.T) {
 	app := setupBAAApp()
 	req, err := http.NewRequest("GET", "/api/compliance/baa/summary", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)

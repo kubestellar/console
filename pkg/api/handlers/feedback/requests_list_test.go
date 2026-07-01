@@ -18,6 +18,7 @@ func TestListFeatureRequests_Unauthorized(t *testing.T) {
 	app.Get("/api/feedback/requests", handler.ListFeatureRequests)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/requests", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -34,6 +35,7 @@ func TestListFeatureRequests_InvalidPageParams(t *testing.T) {
 	app.Get("/api/feedback/requests", handler.ListFeatureRequests)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/requests?limit=-1", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -62,6 +64,7 @@ func TestListFeatureRequests_FiltersUntriagedRequests(t *testing.T) {
 	app.Get("/api/feedback/requests", handler.ListFeatureRequests)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/requests", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -79,6 +82,7 @@ func TestListAllFeatureRequests_Unauthorized(t *testing.T) {
 	app.Get("/api/feedback/requests/all", handler.ListAllFeatureRequests)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/requests/all", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -100,6 +104,7 @@ func TestListAllFeatureRequests_CountOnly(t *testing.T) {
 	app.Get("/api/feedback/requests/all", handler.ListAllFeatureRequests)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/feedback/requests/all?count_only=true", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -126,6 +131,7 @@ func TestParsePageParams_Defaults(t *testing.T) {
 	})
 
 	req, err := http.NewRequest(http.MethodGet, "/test", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 

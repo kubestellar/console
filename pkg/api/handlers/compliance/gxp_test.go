@@ -22,6 +22,7 @@ func setupGxPApp() *fiber.App {
 func TestGxPConfig(t *testing.T) {
 	app := setupGxPApp()
 	req, err := http.NewRequest("GET", "/api/compliance/gxp/config", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
@@ -44,6 +45,7 @@ func TestGxPConfig(t *testing.T) {
 func TestGxPRecords(t *testing.T) {
 	app := setupGxPApp()
 	req, err := http.NewRequest("GET", "/api/compliance/gxp/records", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
@@ -66,6 +68,7 @@ func TestGxPRecords(t *testing.T) {
 func TestGxPChainVerify(t *testing.T) {
 	app := setupGxPApp()
 	req, err := http.NewRequest("GET", "/api/compliance/gxp/chain/verify", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
@@ -88,6 +91,7 @@ func TestGxPChainVerify(t *testing.T) {
 func TestGxPSummary(t *testing.T) {
 	app := setupGxPApp()
 	req, err := http.NewRequest("GET", "/api/compliance/gxp/summary", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)

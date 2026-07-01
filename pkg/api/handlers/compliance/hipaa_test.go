@@ -22,6 +22,7 @@ func setupHIPAAApp() *fiber.App {
 func TestHIPAASafeguards(t *testing.T) {
 	app := setupHIPAAApp()
 	req, err := http.NewRequest("GET", "/api/compliance/hipaa/safeguards", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
@@ -45,6 +46,7 @@ func TestHIPAASafeguards(t *testing.T) {
 func TestHIPAAPHINamespaces(t *testing.T) {
 	app := setupHIPAAApp()
 	req, err := http.NewRequest("GET", "/api/compliance/hipaa/phi-namespaces", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
@@ -68,6 +70,7 @@ func TestHIPAAPHINamespaces(t *testing.T) {
 func TestHIPAADataFlows(t *testing.T) {
 	app := setupHIPAAApp()
 	req, err := http.NewRequest("GET", "/api/compliance/hipaa/data-flows", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
@@ -91,6 +94,7 @@ func TestHIPAADataFlows(t *testing.T) {
 func TestHIPAASummary(t *testing.T) {
 	app := setupHIPAAApp()
 	req, err := http.NewRequest("GET", "/api/compliance/hipaa/summary", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, -1)

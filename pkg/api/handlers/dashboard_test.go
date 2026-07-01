@@ -51,6 +51,7 @@ func TestListDashboards_Empty(t *testing.T) {
 
 	// MockStore.GetUserDashboards returns nil, nil by default — valid empty list
 	req, err := http.NewRequest("GET", "/api/dashboards", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -68,6 +69,7 @@ func TestCreateDashboard_Success(t *testing.T) {
 
 	body := `{"name":"Test Dashboard","is_default":false}`
 	req, err := http.NewRequest("POST", "/api/dashboards", strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -90,6 +92,7 @@ func TestCreateDashboard_DefaultName(t *testing.T) {
 	// Empty name should default to "New Dashboard"
 	body := `{}`
 	req, err := http.NewRequest("POST", "/api/dashboards", strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -110,6 +113,7 @@ func TestCreateDashboard_InvalidBody(t *testing.T) {
 	app.Post("/api/dashboards", handler.CreateDashboard)
 
 	req, err := http.NewRequest("POST", "/api/dashboards", strings.NewReader("not-json"))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -127,6 +131,7 @@ func TestGetDashboard_InvalidID(t *testing.T) {
 	app.Get("/api/dashboards/:id", handler.GetDashboard)
 
 	req, err := http.NewRequest("GET", "/api/dashboards/not-a-uuid", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -143,6 +148,7 @@ func TestGetDashboard_NotFound(t *testing.T) {
 	// MockStore.GetDashboard returns nil, nil — triggers "not found"
 	dashID := uuid.New()
 	req, err := http.NewRequest("GET", "/api/dashboards/"+dashID.String(), nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -159,6 +165,7 @@ func TestDeleteDashboard_InvalidID(t *testing.T) {
 	app.Delete("/api/dashboards/:id", handler.DeleteDashboard)
 
 	req, err := http.NewRequest("DELETE", "/api/dashboards/bad-id", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -174,6 +181,7 @@ func TestDeleteDashboard_NotFound(t *testing.T) {
 
 	dashID := uuid.New()
 	req, err := http.NewRequest("DELETE", "/api/dashboards/"+dashID.String(), nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -190,6 +198,7 @@ func TestImportDashboard_InvalidBody(t *testing.T) {
 	app.Post("/api/dashboards/import", handler.ImportDashboard)
 
 	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader("not-json"))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -206,6 +215,7 @@ func TestImportDashboard_UnsupportedFormat(t *testing.T) {
 
 	body := `{"format":"unknown-format","name":"Bad Import","cards":[]}`
 	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -222,6 +232,7 @@ func TestImportDashboard_Success(t *testing.T) {
 
 	body := `{"format":"kc-dashboard-v1","name":"Imported","cards":[]}`
 	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -256,6 +267,7 @@ func TestImportDashboard_ExceedsCardLimit(t *testing.T) {
 	sb.WriteString(`]}`)
 
 	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader(sb.String()))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -280,6 +292,7 @@ func TestImportDashboard_ExceedsUserLimit(t *testing.T) {
 
 	body := `{"format":"kc-dashboard-v1","name":"ShouldFail","cards":[]}`
 	req, err := http.NewRequest("POST", "/api/dashboards/import", strings.NewReader(body))
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")

@@ -50,6 +50,7 @@ func TestGitOps_ListHelmHistory_Validation_MissingRelease(t *testing.T) {
 	app.Get("/api/gitops/helm/history", handler.ListHelmHistory)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/history?namespace=default", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -69,6 +70,7 @@ func TestGitOps_ListHelmHistory_Validation_InvalidClusterName(t *testing.T) {
 	app.Get("/api/gitops/helm/history", handler.ListHelmHistory)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/history?release=my-release&cluster="+url.QueryEscape("bad;name"), nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -87,6 +89,7 @@ func TestGitOps_ListHelmHistory_UsesClusterAndNamespaceFilters(t *testing.T) {
 	app.Get("/api/gitops/helm/history", handler.ListHelmHistory)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/history?cluster=prod-east&namespace=payments&release=orders", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -152,6 +155,7 @@ func TestGitOps_GetHelmValues_RBAC(t *testing.T) {
 	app.Get("/api/gitops/helm/values", handler.GetHelmValues)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/values?release=my-rel", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
@@ -167,6 +171,7 @@ func TestGitOps_ListHelmHistory_HelmErrorMapping(t *testing.T) {
 	app.Get("/api/gitops/helm/history", handler.ListHelmHistory)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/history?release=orders", nil)
+	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 
