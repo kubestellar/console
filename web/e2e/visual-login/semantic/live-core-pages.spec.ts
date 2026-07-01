@@ -131,6 +131,13 @@ const coreRoutes: CoreRoute[] = [
   },
 ]
 
+let cachedGroundTruth: ReturnType<typeof collectK8sGroundTruth> | undefined
+
+function collectCorePagesGroundTruth(): ReturnType<typeof collectK8sGroundTruth> {
+  cachedGroundTruth ??= collectK8sGroundTruth()
+  return cachedGroundTruth
+}
+
 for (const coreRoute of coreRoutes) {
   test(`live core page renders real data: ${coreRoute.label} @intensive @live-site @core-page @invariant:live-core-pages-render-real-data`, async ({ page }, testInfo) => {
     invariantIds.forEach(id => annotateLiveInvariant(testInfo, id))
@@ -147,7 +154,7 @@ for (const coreRoute of coreRoutes) {
       return
     }
 
-    const groundTruth = collectK8sGroundTruth()
+    const groundTruth = collectCorePagesGroundTruth()
 
     try {
       if (groundTruth.skipped) {

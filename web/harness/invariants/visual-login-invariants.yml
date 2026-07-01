@@ -147,6 +147,28 @@ invariants:
       - browser-specific semantic field mismatch
       - browser-specific overlay or z-index breakage
 
+  - id: macos-popup-top-layer-stable
+    area: live-browser-compat
+    severity: major
+    description: macOS WebKit live popup controls must open stable top-layer content above the page.
+    required:
+      - required popup controls open visible top-layer content
+      - popup content remains the top element during sampling
+    forbidden:
+      - popup content hidden behind page content
+      - popup content closes unexpectedly during sampling
+
+  - id: live-interactive-surfaces-work
+    area: live-interaction
+    severity: major
+    description: Authenticated live interactive controls should remain discoverable and usable without breaking the rendered route.
+    required:
+      - required search, filter, settings, sidebar, or user-menu controls are visible when expected
+      - clicking required controls keeps the route rendered and stable
+    forbidden:
+      - missing required interactive control
+      - interaction leaves the page blank or broken
+
   - id: live-production-auth-boundary
     area: live-security
     severity: critical
@@ -158,6 +180,17 @@ invariants:
     forbidden:
       - unauthenticated API user data
       - ingress 403/404/5xx page on the root route
+
+  - id: live-production-auth-session
+    area: live-security
+    severity: critical
+    description: Signed production canary sessions must reach the authenticated dashboard and validate against /api/me.
+    required:
+      - signed canary session establishes an authenticated dashboard shell
+      - authenticated /api/me returns 200
+    forbidden:
+      - session-expired loop
+      - signed session remains on the login screen
 
   - id: live-canary-ui-layout-stable
     area: live-visual

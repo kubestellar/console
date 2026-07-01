@@ -14,7 +14,6 @@ function kubectl(args: string[], kubeconfigPath?: string): string {
 
 function writeTempKubeconfig(): string | undefined {
   if (process.env.KUBECONFIG_PATH) return process.env.KUBECONFIG_PATH
-  if (process.env.KUBECONFIG) return process.env.KUBECONFIG
   const content = process.env.KUBECONFIG_B64
     ? Buffer.from(process.env.KUBECONFIG_B64, 'base64').toString('utf8')
     : process.env.KUBECONFIG_CONTENT
