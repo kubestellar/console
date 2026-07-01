@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react'
+import i18next from 'i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { nistDashboardConfig } from '../../config/dashboards/nist'
 import {
@@ -194,7 +195,7 @@ export const NISTDashboardContent = memo(function NISTDashboardContent() {
             <button
               onClick={() => setFamilyFilter('all')}
               className={`px-3 py-1 rounded text-xs ${familyFilter === 'all' ? 'bg-blue-500 text-foreground' : 'bg-muted text-muted-foreground'}`}
-            >All</button>
+            >{i18next.t('common:severityFilters.all', 'All')}</button>
             {families.map(f => (
               <button
                 key={f.id}

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react'
+import i18next from 'i18next'
 import { CollapsibleSection } from './CollapsibleSection'
 import { StatusBadge } from './StatusBadge'
 
@@ -21,7 +22,7 @@ export const Default: Story = {
     defaultOpen: true,
     children: (
       <div className="p-3 bg-secondary/30 rounded-lg text-sm text-foreground">
-        <p>This is the content of the collapsible section.</p>
+        <p>{i18next.t('common:stories.collapsibleContent', 'This is the content of the collapsible section.')}</p>
         <p className="mt-2 text-muted-foreground">It can contain any React nodes.</p>
       </div>
     ),
@@ -34,7 +35,7 @@ export const Collapsed: Story = {
     defaultOpen: false,
     children: (
       <div className="p-3 bg-secondary/30 rounded-lg text-sm text-foreground">
-        <p>This content is hidden by default.</p>
+        <p>{i18next.t('common:stories.hiddenByDefault', 'This content is hidden by default.')}</p>
       </div>
     ),
   },
@@ -48,9 +49,9 @@ export const WithBadge: Story = {
     children: (
       <div className="p-3 bg-secondary/30 rounded-lg text-sm text-foreground">
         <ul className="space-y-1 text-muted-foreground">
-          <li>Pod Security Standards: Pass</li>
-          <li>Network Policies: Pass</li>
-          <li>Resource Limits: Pass</li>
+          <li>{i18next.t('common:stories.podSecurityPass', 'Pod Security Standards: Pass')}</li>
+          <li>{i18next.t('common:stories.networkPoliciesPass', 'Network Policies: Pass')}</li>
+          <li>{i18next.t('common:stories.resourceLimitsPass', 'Resource Limits: Pass')}</li>
         </ul>
       </div>
     ),
@@ -67,7 +68,7 @@ export const WithWarningBadge: Story = {
         <ul className="space-y-1 text-muted-foreground">
           <li>CVE-2024-1234: Medium severity</li>
           <li>CVE-2024-5678: Low severity</li>
-          <li>Deprecated API usage detected</li>
+          <li>{i18next.t('common:stories.deprecatedAPIUsage', 'Deprecated API usage detected')}</li>
         </ul>
       </div>
     ),
