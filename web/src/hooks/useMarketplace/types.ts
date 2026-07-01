@@ -61,3 +61,53 @@ export interface InstallResult {
   type: MarketplaceItemType
   data?: unknown
 }
+
+// ── Community Review types ──────────────────────────────
+
+export type ReviewRating = 1 | 2 | 3 | 4 | 5
+
+export interface CommunityReview {
+  id: string
+  itemId: string
+  authorGithub: string
+  rating: ReviewRating
+  text: string
+  createdAt: string
+  verifiedInstall: boolean
+}
+
+export interface ReviewSummary {
+  itemId: string
+  averageRating: number
+  totalReviews: number
+  ratingDistribution: Record<ReviewRating, number>
+}
+
+// ── Live Hook types ──────────────────────────────────────
+
+export type HookEventType =
+  | 'install'
+  | 'remove'
+  | 'update'
+  | 'config-change'
+
+export type HookStatus = 'active' | 'inactive' | 'error'
+
+export interface LiveHook {
+  id: string
+  itemId: string
+  eventType: HookEventType
+  callbackUrl: string
+  status: HookStatus
+  lastTriggeredAt: string | null
+  failureCount: number
+  createdAt: string
+}
+
+export interface HookActivity {
+  hookId: string
+  eventType: HookEventType
+  triggeredAt: string
+  success: boolean
+  responseTimeMs: number
+}

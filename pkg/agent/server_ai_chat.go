@@ -280,6 +280,9 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		if err != nil {
 			return s.errorResponse(msg.ID, "no_agent", "No AI agent available. Please configure an API key (ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_API_KEY)")
 		}
+		if provider == nil {
+			return s.errorResponse(msg.ID, "no_agent", "Default AI agent resolved to nil")
+		}
 		agentName = provider.Name()
 	}
 

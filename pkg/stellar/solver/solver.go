@@ -237,10 +237,12 @@ func dispatchAction(
 		ApprovedBy:  "stellar-solver",
 		ApprovedAt:  &now,
 	}
-	if err := storage.CreateStellarAction(ctx, action); err != nil {
-		return "", "", fmt.Errorf("create action: %w", err)
+	if storage != nil {
+		if err := storage.CreateStellarAction(ctx, action); err != nil {
+			return "", "", fmt.Errorf("create action: %w", err)
+		}
+		_ = storage.UpdateStellarActionStatus(ctx, action.ID, "running", "", "")
 	}
-	_ = storage.UpdateStellarActionStatus(ctx, action.ID, "running", "", "")
 
 	outcome, dispatchErr := scheduler.Dispatch(ctx, k8sClient, *action)
 	status := "completed"
@@ -248,7 +250,9 @@ func dispatchAction(
 		status = "failed"
 		outcome = dispatchErr.Error()
 	}
-	_ = storage.UpdateStellarActionStatus(ctx, action.ID, status, outcome, "")
+	if storage != nil {
+		_ = storage.UpdateStellarActionStatus(ctx, action.ID, status, outcome, "")
+	}
 
 	completed := time.Now().UTC()
 	durationMs := int(completed.Sub(now).Milliseconds())
@@ -309,7 +313,9 @@ func terminate(
 	broadcaster Broadcaster,
 	input Input,
 ) {
-	_ = storage.UpdateSolveStatus(ctx, solveID, status, summary, limitHit, errStr)
+	if storage != nil {
+		_ = storage.UpdateSolveStatus(ctx, solveID, status, summary, limitHit, errStr)
+	}
 
 	notifTitle := ""
 	notifSeverity := "info"
@@ -323,7 +329,7 @@ func terminate(
 		notifTitle = "\u23f8 Stellar paused at budget limit"
 		notifSeverity = "warning"
 	}
-	if notifTitle != "" {
+	if notifTitle != "" && storage != nil {
 		_ = storage.CreateStellarNotification(ctx, &store.StellarNotification{
 			UserID:    input.UserID,
 			Type:      "action",

@@ -71,7 +71,7 @@ func (r *Registry) Get(name string) (ai.Provider, error) {
 	defer r.mu.RUnlock()
 
 	provider, exists := r.providers[name]
-	if !exists {
+	if !exists || provider == nil {
 		return nil, fmt.Errorf("provider %s not found", name)
 	}
 	return provider, nil
@@ -90,7 +90,7 @@ func (r *Registry) GetDefault() (ai.Provider, error) {
 	}
 
 	provider, exists := r.providers[r.defaultAgent]
-	if !exists {
+	if !exists || provider == nil {
 		return nil, fmt.Errorf("default agent %s not found", r.defaultAgent)
 	}
 	return provider, nil
@@ -233,6 +233,9 @@ func (r *Registry) List() []ai.ProviderInfo {
 
 	result := make([]ai.ProviderInfo, 0, len(r.providers))
 	for _, provider := range r.providers {
+		if provider == nil {
+			continue
+		}
 		result = append(result, ai.ProviderInfo{
 			Name:         provider.Name(),
 			DisplayName:  provider.DisplayName(),

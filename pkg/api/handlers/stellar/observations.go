@@ -186,8 +186,10 @@ func (h *Handler) Ask(c *fiber.Ctx) error {
 	resolved := h.providerRegistry.Resolve(body.Provider, body.Model, userCfg)
 
 	state, err := h.buildOperationalState(c.UserContext(), userID, body.Cluster)
-	if err != nil {
-		slog.Warn("stellar: could not build operational state", "error", err)
+	if err != nil || state == nil {
+		if err != nil {
+			slog.Warn("stellar: could not build operational state", "error", err)
+		}
 		state = &OperationalState{
 			GeneratedAt:      time.Now().UTC(),
 			EventCounts:      map[string]int{"critical": 0, "warning": 0, "info": 0},

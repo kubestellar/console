@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   setupDemoAndNavigate,
-  NETWORK_IDLE_TIMEOUT_MS,
+  ELEMENT_VISIBLE_TIMEOUT_MS,
 } from '../helpers/setup'
 import { assertNoLayoutOverflow } from '../helpers/ux-assertions'
 
@@ -40,11 +40,11 @@ for (const viewport of VIEWPORTS) {
       test('renders content (not blank)', async ({ page }) => {
         await setupDemoAndNavigate(page, route)
 
-        const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-        expect(
-          bodyText.length,
-          `Route "${route}" at ${viewport.name} rendered blank (${bodyText.length} chars)`,
-        ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+        await page.waitForFunction(
+          (min) => (document.body.innerText || '').trim().length > min,
+          MIN_BODY_TEXT_LENGTH,
+          { timeout: ELEMENT_VISIBLE_TIMEOUT_MS },
+        )
       })
 
       test('screenshot for visual review', async ({ page }) => {
