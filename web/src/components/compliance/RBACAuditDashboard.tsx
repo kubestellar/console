@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, memo, useRef } from 'react'
+import i18next from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { rbacAuditDashboardConfig } from '../../config/dashboards/rbac-audit'

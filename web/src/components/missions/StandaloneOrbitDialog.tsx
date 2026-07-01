@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback } from 'react'
+import i18next from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Satellite, Orbit, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
