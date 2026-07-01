@@ -17,9 +17,9 @@
 const viteEnv = (import.meta.env ?? {}) as Partial<ImportMetaEnv>
 const isDemoModeBuild = viteEnv.VITE_DEMO_MODE === 'true'
 const isNoLocalAgentBuild = viteEnv.VITE_NO_LOCAL_AGENT === 'true'
-const isConsoleLiveHost = typeof window !== 'undefined' && window.location.hostname === 'console-live.kubestellar.io'
+const isConsoleLiveHost = typeof window !== 'undefined' && typeof window.location !== 'undefined' && window.location.hostname === 'console-live.kubestellar.io'
 
-const _isNetlify = typeof window !== 'undefined' && (
+const _isNetlify = typeof window !== 'undefined' && typeof window.location !== 'undefined' && (
   isDemoModeBuild ||
   window.location.hostname.includes('netlify.app') ||
   window.location.hostname.includes('deploy-preview-') ||
