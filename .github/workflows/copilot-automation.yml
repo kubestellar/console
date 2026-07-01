@@ -26,7 +26,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request_target' ||
       github.event.pull_request.head.repo.full_name == github.repository
-    uses: kubestellar/infra/.github/workflows/reusable-copilot-automation.yml@main
+    uses: kubestellar/infra/.github/workflows/reusable-copilot-automation.yml@1a04a3fd17771e78e5cf6d42a3fda84e3ba478f3 # pinned from main
     with:
       pr_number: ${{ github.event.inputs.pr_number || '' }}
     secrets:
