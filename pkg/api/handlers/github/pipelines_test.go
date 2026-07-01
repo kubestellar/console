@@ -176,7 +176,17 @@ func TestGHPHistory_MergeAndTrim(t *testing.T) {
 		{ID: 2, Repo: "kubestellar/console", Name: "Release", Conclusion: &success, CreatedAt: "2026-04-01T06:00:00Z", HTMLURL: "url-2"},
 	})
 	snap := h.snapshot()
-	day := snap["kubestellar/console"]["Release"]["2026-04-01"]
+	// Debug: check intermediate map keys exist
+	if snap["kubestellar/console"] == nil {
+		t.Fatalf("repo key missing from snapshot")
+	}
+	if snap["kubestellar/console"]["Release"] == nil {
+		t.Fatalf("workflow key missing from snapshot")
+	}
+	day, ok := snap["kubestellar/console"]["Release"]["2026-04-01"]
+	if !ok {
+		t.Fatalf("date key '2026-04-01' missing from snapshot, available keys: %v", snap["kubestellar/console"]["Release"])
+	}
 	if day.RunID != 2 {
 		t.Fatalf("expected newer run ID to win, got %d", day.RunID)
 	}

@@ -357,10 +357,9 @@ func TestCloneTLSConfig_Nil(t *testing.T) {
 }
 
 func TestCloneTLSConfig_PreservesServerName(t *testing.T) {
-	original := &http.Transport{}.TLSClientConfig
-	if original == nil {
-		original = &http.DefaultTransport.(*http.Transport).TLSClientConfig
-	}
+	defaultTransport := http.DefaultTransport.(*http.Transport)
+	original := defaultTransport.TLSClientConfig
+	
 	// Create config with custom ServerName
 	base := cloneTLSConfig(original)
 	base.ServerName = "example.com"
@@ -372,8 +371,7 @@ func TestCloneTLSConfig_PreservesServerName(t *testing.T) {
 }
 
 func TestCloneTLSConfig_SetsMinVersion(t *testing.T) {
-	base := &http.Transport{}.TLSClientConfig
-	cloned := cloneTLSConfig(base)
+	cloned := cloneTLSConfig(nil)
 
 	if cloned.MinVersion < 0x0303 { // Must be at least TLS 1.2
 		t.Errorf("MinVersion = %x, want >= 0x0303 (TLS 1.2)", cloned.MinVersion)

@@ -199,15 +199,8 @@ func TestCloneTLSConfig(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// preventAIProviderRedirects — SSRF redirect mitigation
+// preventAIProviderRedirects — covered in provider_helpers_ssrf_test.go
 // ---------------------------------------------------------------------------
-
-func TestPreventAIProviderRedirects(t *testing.T) {
-	err := preventAIProviderRedirects(nil, nil)
-	if err != http.ErrUseLastResponse {
-		t.Errorf("got %v, want http.ErrUseLastResponse to block redirects", err)
-	}
-}
 
 // ---------------------------------------------------------------------------
 // collectExplicitNegativeConstraints — comprehensive edge cases
