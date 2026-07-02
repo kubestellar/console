@@ -434,7 +434,7 @@ describe('ClusterHealth', () => {
         deduplicatedClusters: clusters,
         isLoading: false,
         isRefreshing: false,
-        error: null,
+        error: false,
         lastRefresh: null,
         consecutiveFailures: 0,
         isFailed: false,

@@ -44,7 +44,7 @@ vi.mock('../../../../hooks/useQASMFiles', () => ({
   useQASMFiles: () => ({
     files: [{ name: 'bell.qasm' }],
     isLoading: false,
-    error: null,
+    error: false,
   }),
 }))
 
@@ -94,7 +94,7 @@ function statusHookReturn(
     isLoading: false,
     isRefreshing: false,
     isDemoData: false,
-    error: null,
+    error: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: Date.now(),
@@ -125,7 +125,7 @@ function authHookReturn(
     isLoading: false,
     isRefreshing: false,
     isDemoData: false,
-    error: null,
+    error: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: null,

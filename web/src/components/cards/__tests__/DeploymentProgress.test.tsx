@@ -78,7 +78,7 @@ describe('DeploymentProgress', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockDeployments.mockReturnValue({ deployments: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockDeployments.mockReturnValue({ deployments: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
     mockDrillDown.mockReturnValue({ drillToDeployment: vi.fn() })
   })
 
@@ -112,13 +112,13 @@ describe('DeploymentProgress', () => {
 
   it('renders during background refresh with cached data', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockDeployments.mockReturnValue({ deployments: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockDeployments.mockReturnValue({ deployments: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
     const { container } = render(<DeploymentProgress />)
     expect(container).toBeTruthy()
   })
 
   it('reports demo fallback state', () => {
-    mockDeployments.mockReturnValue({ deployments: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockDeployments.mockReturnValue({ deployments: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
     render(<DeploymentProgress />)
     expect(mockUseCardLoadingState).toHaveBeenCalled()
   })

@@ -90,7 +90,7 @@ function defaultHookReturn(
     isLoading: false,
     isRefreshing: false,
     isDemoData: false,
-    error: null,
+    error: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: STABLE_LAST_REFRESH_MS,

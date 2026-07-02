@@ -72,7 +72,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
     mockUseResolveDependencies.mockReturnValue({
       data: null,
       isLoading: false,
-      error: null,
+      error: false,
       resolve: vi.fn(),
       reset: vi.fn(),
     })
@@ -86,7 +86,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
       isLoading: false,
       isDemoFallback: false,
       isFailed: false,
-      error: null,
+      error: false,
     })
 
     render(<ResourceMarshall />)
@@ -103,7 +103,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
       isLoading: false,
       isDemoFallback: true,
       isFailed: false,
-      error: null,
+      error: false,
     })
 
     const { rerender } = render(<ResourceMarshall />)
@@ -122,7 +122,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
       isLoading: false,
       isDemoFallback: false,
       isFailed: false,
-      error: null,
+      error: false,
     })
 
     render(<ResourceMarshall />)
@@ -138,7 +138,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
       isLoading: false,
       isDemoFallback: false,
       isFailed: false,
-      error: null,
+      error: false,
     })
 
     render(<ResourceMarshall />)
@@ -158,7 +158,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
       isLoading: false,
       isDemoFallback: true,
       isFailed: false,
-      error: null,
+      error: false,
     })
 
     render(<ResourceMarshall />)
@@ -178,7 +178,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
       isLoading: false,
       isDemoFallback: false,
       isFailed: false,
-      error: null,
+      error: false,
     })
 
     const { container } = render(<ResourceMarshall />)
@@ -195,7 +195,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
       isLoading: false,
       isDemoFallback: false,
       isFailed: false,
-      error: null,
+      error: false,
     })
 
     const { rerender } = render(<ResourceMarshall />)
@@ -215,7 +215,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
       isLoading: false,
       isDemoFallback: true,
       isFailed: false,
-      error: null,
+      error: false,
     })
 
     rerender(<ResourceMarshall />)
@@ -235,7 +235,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
       isLoading: false,
       isDemoFallback: false,
       isFailed: false,
-      error: null,
+      error: false,
     })
 
     rerender(<ResourceMarshall />)

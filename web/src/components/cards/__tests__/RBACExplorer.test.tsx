@@ -60,7 +60,7 @@ describe('RBACExplorer', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockRBAC.mockReturnValue({ findings: [], isLoading: false, error: null })
+    mockRBAC.mockReturnValue({ findings: [], isLoading: false, error: false })
   })
 
   it('renders without crashing', () => {

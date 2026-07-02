@@ -74,7 +74,7 @@ vi.mock('../../../../lib/cards/cardHooks', () => ({
 }))
 
 vi.mock('../../../../hooks/useCachedData', () => ({
-  useCachedLLMdServers: () => ({ servers: [], isLoading: false, isRefreshing: false, lastRefresh: Date.now(), refetch: vi.fn(), isFailed: false, consecutiveFailures: 0, isDemoFallback: null, error: null }),
+  useCachedLLMdServers: () => ({ servers: [], isLoading: false, isRefreshing: false, lastRefresh: Date.now(), refetch: vi.fn(), isFailed: false, consecutiveFailures: 0, isDemoFallback: null, error: false }),
   useCachedGPUNodes: () => ({ nodes: [] }),
 }))
 
@@ -83,7 +83,7 @@ vi.mock('../../../../hooks/useMCP', () => ({
 }))
 
 vi.mock('../../CardDataContext', () => ({
-  useCardLoadingState: () => ({ data: [], isLoading: false, error: null }),
+  useCardLoadingState: () => ({ data: [], isLoading: false, error: false }),
   useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
 }))
 

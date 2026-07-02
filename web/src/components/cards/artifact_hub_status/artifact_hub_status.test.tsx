@@ -29,7 +29,7 @@ function setup(overrides?: Record<string, unknown>) {
       totalPublishers: 0,
       totalRepositories: 0,
     },
-    error: null,
+    error: false,
     showSkeleton: false,
     showEmptyState: false,
     ...overrides,
@@ -56,7 +56,7 @@ describe('ArtifactHubStatus', () => {
   })
 
   it('renders empty state when showEmptyState is true', () => {
-    setup({ error: null, showEmptyState: true })
+    setup({ error: false, showEmptyState: true })
     render(<ArtifactHubStatus />)
 
     expect(screen.getByText('artifactHub.noData')).toBeTruthy()

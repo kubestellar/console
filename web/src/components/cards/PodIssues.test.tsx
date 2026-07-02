@@ -166,7 +166,7 @@ const defaultPodIssuesReturn = {
   isDemoFallback: false,
   isFailed: false,
   consecutiveFailures: 0,
-  error: null,
+  error: false,
 }
 
 const defaultClustersReturn = {

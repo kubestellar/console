@@ -165,7 +165,7 @@ vi.mock('../nodeCache', () => ({
   getNodesCache: () => mockGetNodesCache(),
   subscribeToNodes: () => () => {},
   fetchAllNodes: vi.fn(() =>
-    Promise.resolve({ nodes: [], error: null, consecutiveFailures: 0 }),
+    Promise.resolve({ nodes: [], error: false, consecutiveFailures: 0 }),
   ),
   OFFLINE_DETECTION_FAILURE_THRESHOLD: 3,
   GPU_CLUSTER_EXHAUSTION_THRESHOLD: 0.8,

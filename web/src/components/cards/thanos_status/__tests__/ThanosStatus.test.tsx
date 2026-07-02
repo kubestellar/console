@@ -22,7 +22,7 @@ vi.mock('../../../../hooks/useCachedThanosStatus', () => ({
         isLoading: false,
         isRefreshing: false,
         isDemoFallback: false,
-        error: null,
+        error: false,
         isFailed: false,
         consecutiveFailures: 0,
         lastRefresh: Date.now(),

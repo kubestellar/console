@@ -113,7 +113,7 @@ const defaultPVCsReturn = {
   isDemoFallback: false,
   isFailed: false,
   consecutiveFailures: 0,
-  error: null,
+  error: false,
 }
 
 const defaultGlobalFilters = {

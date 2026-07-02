@@ -86,7 +86,7 @@ vi.mock('../../../../hooks/useWorkloads', () => ({
 }))
 
 vi.mock('../../../../hooks/useWorkloadMonitor', () => ({
-  useWorkloadMonitor: () => ({ resources: [], issues: [], overallStatus: null, workloadKind: null, isLoading: false, isRefreshing: false, error: null, refetch: vi.fn() }),
+  useWorkloadMonitor: () => ({ resources: [], issues: [], overallStatus: null, workloadKind: null, isLoading: false, isRefreshing: false, error: false, refetch: vi.fn() }),
 }))
 
 vi.mock('../../../../lib/cn', () => ({
@@ -94,7 +94,7 @@ vi.mock('../../../../lib/cn', () => ({
 }))
 
 vi.mock('../../CardDataContext', () => ({
-  useCardLoadingState: () => ({ data: [], isLoading: false, error: null }),
+  useCardLoadingState: () => ({ data: [], isLoading: false, error: false }),
   useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
 }))
 

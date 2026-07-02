@@ -71,7 +71,7 @@ describe('CRDHealth', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockCRDs.mockReturnValue({ crds: [], isLoading: false, error: null })
+    mockCRDs.mockReturnValue({ crds: [], isLoading: false, error: false })
   })
 
   it('renders without crashing', () => {

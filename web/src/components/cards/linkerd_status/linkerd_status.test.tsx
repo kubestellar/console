@@ -52,7 +52,7 @@ function setup(overrides?: Record<string, unknown>) {
     refetch: vi.fn(),
     showSkeleton: false,
     showEmptyState: false,
-    error: null,
+    error: false,
     ...overrides,
   })
   mockUseReportCardDataState.mockReturnValue(undefined)

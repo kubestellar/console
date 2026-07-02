@@ -60,7 +60,7 @@ describe('AdmissionWebhooks', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockWebhooks.mockReturnValue({ webhooks: [], isLoading: false, error: null })
+    mockWebhooks.mockReturnValue({ webhooks: [], isLoading: false, error: false })
   })
 
   it('renders without crashing', () => {

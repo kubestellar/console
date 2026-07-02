@@ -137,7 +137,7 @@ const defaultPVCsReturn = {
   consecutiveFailures: 0,
   isFailed: false,
   isDemoFallback: false,
-  error: null,
+  error: false,
 }
 
 const defaultChartFilters = {

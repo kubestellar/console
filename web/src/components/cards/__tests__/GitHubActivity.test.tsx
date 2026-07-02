@@ -113,7 +113,7 @@ describe('GitHubActivity', () => {
       data: buildLoadedCacheData(),
       isLoading: false,
       isRefreshing: false,
-      error: null,
+      error: false,
       isDemoFallback: true,
       refetch: mockRefetch,
     })
@@ -146,7 +146,7 @@ describe('GitHubActivity', () => {
       },
       isLoading: true,
       isRefreshing: false,
-      error: null,
+      error: false,
       isDemoFallback: false,
       refetch: mockRefetch,
     })
@@ -193,7 +193,7 @@ describe('GitHubActivity', () => {
       data: buildLoadedCacheData({ prs: [stalePr, ...demo.prs.slice(1)] }),
       isLoading: false,
       isRefreshing: false,
-      error: null,
+      error: false,
       isDemoFallback: true,
       refetch: mockRefetch,
     })
@@ -220,7 +220,7 @@ describe('GitHubActivity', () => {
       data: buildLoadedCacheData({ prs: [stalePr] }),
       isLoading: false,
       isRefreshing: false,
-      error: null,
+      error: false,
       isDemoFallback: true,
       refetch: mockRefetch,
     })

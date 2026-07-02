@@ -70,13 +70,13 @@ describe('ResourceMarshall', () => {
       isLoading: false,
       isDemoFallback: false,
       isFailed: false,
-      error: null,
+      error: false,
     })
     mockUseWorkloads.mockReturnValue({ data: [], isLoading: false })
     mockUseResolveDependencies.mockReturnValue({
       data: null,
       isLoading: false,
-      error: null,
+      error: false,
       resolve: vi.fn(),
       reset: vi.fn(),
     })

@@ -44,7 +44,7 @@ vi.mock('../../../../hooks/mcp/kagent_crds', () => ({
 }))
 
 vi.mock('../../CardDataContext', () => ({
-  useCardLoadingState: () => ({ data: [], isLoading: false, error: null }),
+  useCardLoadingState: () => ({ data: [], isLoading: false, error: false }),
   useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
 }))
 
