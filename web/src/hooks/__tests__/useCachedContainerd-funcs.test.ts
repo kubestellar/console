@@ -24,10 +24,14 @@ const mockCreateCachedHook = vi.hoisted(() => vi.fn())
 
 vi.mock('../mcp/shared', () => ({ agentFetch: mockAgentFetch }))
 
-vi.mock('../../lib/constants/network', () => ({
-  FETCH_DEFAULT_TIMEOUT_MS: 5000,
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FETCH_DEFAULT_TIMEOUT_MS: 5000,
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+  }
+})
 
 vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),

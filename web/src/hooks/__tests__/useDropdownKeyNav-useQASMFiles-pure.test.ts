@@ -24,9 +24,13 @@ vi.mock('../../lib/demoMode', () => ({
   isNetlifyDeployment: false,
 }))
 
-vi.mock('../../lib/constants/network', () => ({
-  FETCH_DEFAULT_TIMEOUT_MS: 5000,
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FETCH_DEFAULT_TIMEOUT_MS: 5000,
+  }
+})
 
 import { __testables as dropdownTestables } from '../useDropdownKeyNav'
 import { __testables as qasmTestables } from '../useQASMFiles'

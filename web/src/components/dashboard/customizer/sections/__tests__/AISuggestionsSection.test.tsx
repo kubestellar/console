@@ -20,9 +20,13 @@ vi.mock('../../../shared/cardCatalog', () => ({
 }))
 
 // Mock RETRY_DELAY_MS to 0 so setTimeout resolves near-instantly
-vi.mock('../../../../../lib/constants/network', () => ({
-  RETRY_DELAY_MS: 0,
-}))
+vi.mock('../../../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    RETRY_DELAY_MS: 0,
+  }
+})
 
 import { AISuggestionsSection } from '../AISuggestionsSection'
 

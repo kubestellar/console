@@ -34,10 +34,14 @@ vi.mock('../../../../lib/demoMode', async (importOriginal) => {
   return { ...actual, isDemoMode: vi.fn(() => false) }
 })
 vi.mock('../../../../lib/kubectlProxy', () => ({ kubectlProxy: vi.fn() }))
-vi.mock('../../../../lib/constants/network', () => ({
-  MCP_HOOK_TIMEOUT_MS: 10_000,
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+vi.mock('../../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    MCP_HOOK_TIMEOUT_MS: 10_000,
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+  }
+})
 vi.mock('../../../../lib/sseClient', () => ({ fetchSSE: vi.fn() }))
 vi.mock('../../../../lib/cache/fetcherUtils', () => ({
   getClusterModeBaseUrl: vi.fn(() => 'http://localhost:8080'),

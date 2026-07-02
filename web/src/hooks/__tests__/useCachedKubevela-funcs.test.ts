@@ -12,11 +12,15 @@ const { mockAuthFetch, mockUseCache: mockUseCacheHoisted } = vi.hoisted(() => ({
 vi.mock('../../lib/api', () => ({
     createCachedHook: vi.fn(), authFetch: mockAuthFetch }))
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
     createCachedHook: vi.fn(),
-  FETCH_DEFAULT_TIMEOUT_MS: 5000,
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+    FETCH_DEFAULT_TIMEOUT_MS: 5000,
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+  }
+})
 
 vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),

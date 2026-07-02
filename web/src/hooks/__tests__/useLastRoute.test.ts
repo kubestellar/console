@@ -27,9 +27,13 @@ vi.mock('../../lib/dashboardVisits', () => ({
   recordDashboardVisit: vi.fn(),
 }))
 
-vi.mock('../../lib/constants/network', () => ({
-  FOCUS_DELAY_MS: 0,
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FOCUS_DELAY_MS: 0,
+  }
+})
 
 // ---------- Setup ----------
 

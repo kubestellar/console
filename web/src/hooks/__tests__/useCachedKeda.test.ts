@@ -40,10 +40,14 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   }
 })
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
     createCachedHook: vi.fn(),
     LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+  }
+})
 
 import { useCachedKeda } from '../useCachedKeda'
 

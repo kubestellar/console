@@ -56,10 +56,14 @@ vi.mock('../../lib/api', () => ({
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),
 }))
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
     createCachedHook: vi.fn(),
-  FETCH_DEFAULT_TIMEOUT_MS: 10_000,
-}))
+    FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+  }
+})
 
 // Now import the hooks under test
 import {
