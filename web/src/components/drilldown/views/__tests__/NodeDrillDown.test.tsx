@@ -55,7 +55,7 @@ vi.mock('../../../../lib/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }))
 
-let mockNodeLoading = false
+const mockNodeLoading = false
 let mockNodeFailed = false
 
 vi.mock('../../../../hooks/useCachedData', () => ({
