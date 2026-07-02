@@ -39,16 +39,15 @@ on:
     - cron: "0 * * * *"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
-
+permissions: read-all  # default read; writes scoped to job below
 concurrency:
   group: auth-login-smoke
   cancel-in-progress: true
 
 jobs:
   auth-smoke:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: Auth Login Smoke
     runs-on: ubuntu-latest

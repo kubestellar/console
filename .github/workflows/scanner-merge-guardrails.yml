@@ -8,14 +8,12 @@ on:
   check_suite:
     types: [completed]
 
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
-  checks: read
-
+permissions: read-all  # default read; writes scoped to job below
 jobs:
   enforce-guardrails:
+    permissions:
+      pull-requests: write
+      issues: write
     runs-on: ubuntu-latest
     if: github.event.pull_request.user.login == 'kubestellar-hive[bot]' || github.event.pull_request.user.login == 'app/kubestellar-hive'
     

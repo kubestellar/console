@@ -12,10 +12,7 @@ on:
       - 'web/vite.config.ts'
       - 'web/package.json'
 
-permissions:
-  contents: read
-  pull-requests: write
-
+permissions: read-all  # default read; writes scoped to job below
 concurrency:
   group: coverage-gate-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -26,6 +23,8 @@ env:
 
 jobs:
   coverage-gate:
+    permissions:
+      pull-requests: write
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
     timeout-minutes: 10

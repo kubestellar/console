@@ -16,11 +16,7 @@ on:
     - cron: '15 */2 * * *'
   workflow_dispatch: {}
 
-permissions:
-  contents: read
-  actions: read
-  issues: write
-
+permissions: read-all  # default read; writes scoped to job below
 concurrency:
   group: perf-bundle-size
   cancel-in-progress: true
@@ -32,6 +28,8 @@ env:
 
 jobs:
   bundle-size:
+    permissions:
+      issues: write
     name: JS bundle gzipped size
     runs-on: ubuntu-latest
     timeout-minutes: 20

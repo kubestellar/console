@@ -39,12 +39,11 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: read
-  issues: write
-
+permissions: read-all  # default read; writes scoped to job below
 jobs:
   notify:
+    permissions:
+      issues: write
     name: File/update perf regression issue
     runs-on: ubuntu-latest
     timeout-minutes: 5
