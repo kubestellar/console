@@ -514,4 +514,12 @@ describe('agent management', () => {
 
     expect(result.current.selectedAgent).toBe('openai-gpt4')
   })
+
+  describe('loading state exposure', () => {
+    it('exposes agentsLoading state to consumers', () => {
+      const { result } = renderHook(() => useMissions(), { wrapper })
+      expect(result.current).toHaveProperty('agentsLoading')
+      expect(typeof result.current.agentsLoading).toBe('boolean')
+    })
+  })
 })

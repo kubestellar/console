@@ -870,4 +870,12 @@ describe('saveMissions pruning: blocked and cancelling missions preserved', () =
     const { result } = renderHook(() => useMissions(), { wrapper })
     expect(result.current.missions.length).toBe(1)
   })
+
+  describe('loading state exposure', () => {
+    it('exposes agentsLoading state to consumers', () => {
+      const { result } = renderHook(() => useMissions(), { wrapper })
+      expect(result.current).toHaveProperty('agentsLoading')
+      expect(typeof result.current.agentsLoading).toBe('boolean')
+    })
+  })
 })

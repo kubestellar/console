@@ -287,4 +287,14 @@ describe('useBranding', () => {
       }))
     })
   })
+
+  describe('progressive enhancement - no loading state needed', () => {
+    it('provides branding immediately without loading state', () => {
+      const { result } = renderHook(() => useBranding(), { wrapper: createWrapper() })
+      // useBranding uses progressive enhancement - always returns valid branding immediately
+      expect(result.current.appName).toBeDefined()
+      expect(result.current.appShortName).toBeDefined()
+      // No loading state needed since defaults are always available
+    })
+  })
 })

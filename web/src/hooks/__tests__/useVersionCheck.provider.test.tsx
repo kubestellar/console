@@ -425,4 +425,18 @@ describe('toggle-sensitive polling', () => {
         // At least one additional call from the interval
         expect(callsAfterPoll).toBeGreaterThan(callsBeforePoll)
     })
+
+    describe('loading and error state exposure', () => {
+        it('exposes isChecking state to consumers', () => {
+            const { result } = renderHook(() => useVersionCheck(), { wrapper })
+            expect(result.current).toHaveProperty('isChecking')
+            expect(typeof result.current.isChecking).toBe('boolean')
+        })
+
+        it('exposes error state to consumers', () => {
+            const { result } = renderHook(() => useVersionCheck(), { wrapper })
+            expect(result.current).toHaveProperty('error')
+            expect(result.current.error === null || typeof result.current.error === 'string').toBe(true)
+        })
+    })
 })
