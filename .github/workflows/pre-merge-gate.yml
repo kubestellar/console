@@ -40,4 +40,4 @@ jobs:
 
       - name: Frontend lint
         working-directory: web
-        run: npm run lint
+        run: npm run lint:check
