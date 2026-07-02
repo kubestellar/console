@@ -160,6 +160,8 @@ test.describe('Smoke Tests', () => {
       // the actual router path without relying on preview-server rewrites.
       await page.goto('/', { waitUntil: 'domcontentloaded' })
       const sidebar = page.getByTestId('sidebar')
+      const settingsLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/settings"], [data-testid="sidebar"] a[href="/settings"]').first()
+      
       const viewportSize = page.viewportSize()
       if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
         const hamburger = page
@@ -172,10 +174,12 @@ test.describe('Smoke Tests', () => {
         if (hamburgerVisible) {
           await hamburger.evaluate((el) => (el as HTMLElement).click())
           await expect(sidebar).toBeVisible({ timeout: 3000 })
+          // Mobile sidebar animation: wait for Settings link to become visible after sidebar opens.
+          // Fixes #20086, #20087 — sidebar container visible but links still hidden mid-animation.
+          await expect(settingsLink).toBeVisible({ timeout: 5000 })
         }
       }
 
-      const settingsLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/settings"], [data-testid="sidebar"] a[href="/settings"]').first()
       // WebKit/mobile browsers need more time for sidebar elements to hydrate.
       // Wait for both the element to exist AND become actionable (no visibility:hidden).
       // The sidebar slide-in animation can leave elements in a "found but hidden" state.
