@@ -10,6 +10,7 @@ import { useAlertRules } from '../../hooks/useAlerts'
 import { formatCondition, ALERT_SEVERITY_ORDER } from '../../types/alerts'
 import type { AlertRule, AlertSeverity } from '../../types/alerts'
 import { Button } from '../ui/Button'
+import { FlexRow } from '../ui/FlexRow'
 import { AlertRuleEditor } from '../alerts/AlertRuleEditor'
 import { StatusBadge } from '../ui/StatusBadge'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
@@ -166,11 +167,11 @@ export function AlertRulesCard() {
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header with controls */}
       <div className="mb-3 flex flex-col gap-2 shrink-0 @lg:flex-row @lg:items-start @lg:justify-between">
-        <div className="flex items-start gap-2">
+        <FlexRow gap={2} align="start">
           <span className="px-1.5 py-0.5 text-xs rounded bg-secondary text-muted-foreground">
             {t('alertRules.activeCount', { count: enabledCount })}
           </span>
-        </div>
+        </FlexRow>
 
         <div className="flex w-full flex-col items-stretch gap-2 @lg:w-auto @lg:min-w-[18rem] @lg:max-w-[20rem] @lg:items-end">
           <CardSearchInput
@@ -209,7 +210,7 @@ export function AlertRulesCard() {
       <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2 min-h-card-content" style={containerStyle}>
         {displayedRules.length === 0 ? (
           <div className="rounded-lg border border-border/50 bg-secondary/10 p-3 text-sm text-muted-foreground">
-            <div className="flex items-start gap-3">
+            <FlexRow gap={3} align="start">
               <Bell className="mt-0.5 h-5 w-5 shrink-0" />
               <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">{t('alertRules.noRulesConfigured')}</p>
@@ -223,7 +224,7 @@ export function AlertRulesCard() {
                   {t('alertRules.createRule')}
                 </Button>
               </div>
-            </div>
+            </FlexRow>
           </div>
         ) : (
           displayedRules.map((rule: AlertRule) => (
@@ -235,10 +236,10 @@ export function AlertRulesCard() {
                   : 'bg-secondary/10 border-border/30 opacity-60'
               }`}
             >
-              <div className="flex items-start gap-2">
+              <FlexRow gap={2} align="start">
                 <SeverityIndicator severity={rule.severity} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <FlexRow gap={2}>
                     <span
                       className={`text-sm font-medium truncate ${
                         rule.enabled ? 'text-foreground' : 'text-muted-foreground'
@@ -251,13 +252,13 @@ export function AlertRulesCard() {
                         AI
                       </StatusBadge>
                     )}
-                  </div>
+                  </FlexRow>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {formatCondition(rule.condition)}
                   </p>
 
                   {/* Channels */}
-                  <div className="flex items-center gap-2 mt-1.5">
+                  <FlexRow gap={2} className="mt-1.5">
                     {(rule.channels || []).map((channel, idx) => (
                       <span
                         key={idx}
@@ -270,11 +271,11 @@ export function AlertRulesCard() {
                         {channel.type}
                       </span>
                     ))}
-                  </div>
+                  </FlexRow>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1">
+                <FlexRow gap={1}>
                   <button
                     onClick={e => handleEdit(e, rule)}
                     className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"

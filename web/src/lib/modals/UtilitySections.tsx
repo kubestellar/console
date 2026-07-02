@@ -2,11 +2,12 @@
  * Utility Sections - Various reusable section components (Alert, Empty, Loading, Badges, QuickActions)
  */
 
-import { ReactNode, useState } from 'react'
+import { ReactNode } from 'react'
 import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { cn } from '../../lib/cn'
 import { TOUCH_TARGET_HEIGHT_CLASS } from '../../lib/constants/ui'
+import { useModal } from '../../hooks/useModal'
 
 // ============================================================================
 // Collapsible Section
@@ -27,7 +28,7 @@ export function CollapsibleSection({
   badge,
   className = '',
 }: CollapsibleSectionProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
+  const { isOpen, toggle } = useModal(defaultOpen)
 
   return (
     <div className={className}>
@@ -35,7 +36,7 @@ export function CollapsibleSection({
         variant="ghost"
         size="sm"
         fullWidth
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggle}
         className="justify-between px-0 py-2 text-sm font-medium text-foreground hover:text-purple-400"
         aria-expanded={isOpen}
         aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${title} section`}

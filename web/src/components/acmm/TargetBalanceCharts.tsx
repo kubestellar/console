@@ -15,6 +15,7 @@
 
 import { useMemo } from 'react'
 import { LazyEChart } from '../charts/LazyEChart'
+import { DashboardGrid } from '../ui/DashboardGrid'
 import {
   CHART_TOOLTIP_BG,
   CHART_TOOLTIP_BORDER,
@@ -148,7 +149,7 @@ export function TargetBalanceCharts({ level }: TargetBalanceChartsProps) {
   const issueOption = useMemo(() => buildOption('Issues (AI vs Human)', issueAiShare, SHARE_SCALE), [issueAiShare])
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <DashboardGrid cols={2}>
       <div>
         <LazyEChart
           option={prOption}
@@ -171,6 +172,6 @@ export function TargetBalanceCharts({ level }: TargetBalanceChartsProps) {
           AI {Math.round(issueAiShare * SHARE_SCALE)}% · Human {Math.round((1 - issueAiShare) * SHARE_SCALE)}%
         </div>
       </div>
-    </div>
+    </DashboardGrid>
   )
 }
