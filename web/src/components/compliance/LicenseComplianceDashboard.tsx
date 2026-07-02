@@ -120,7 +120,7 @@ export default function LicenseComplianceDashboard() {
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm">{t('compliance.retry')}</button>
+      <button onClick={fetchData} className="px-4 py-2 min-h-11 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm">{t('compliance.retry')}</button>
     </div>
   )
 

@@ -10,6 +10,8 @@
     "build": "tsc -b && vite build",
     "postbuild": "node scripts/check-vendor-safety.mjs",
     "lint": "eslint .",
+    "lint:check": "node scripts/lint-baseline-check.mjs",
+    "lint:baseline": "node scripts/lint-baseline-check.mjs --update",
     "preview": "vite preview",
     "test": "vitest",
     "test:card-wrapper": "vitest run src/hooks/__tests__/useTimeoutFlag.test.ts src/components/cards/__tests__/CardWrapper.test.tsx",
