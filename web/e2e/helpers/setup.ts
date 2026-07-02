@@ -188,9 +188,9 @@ export async function mockLocalAgentUnavailable(page: Page) {
               payload: { error: LOCAL_AGENT_UNAVAILABLE_MESSAGE },
             }))
           }
-        } catch {
+        } catch (error) { console.error('Error:', error)
           // Ignore malformed test traffic.
-        }
+         }
       })
     })
   }
@@ -621,9 +621,9 @@ export async function setupDemoMode(page: Page) {
       // Fire-and-forget IndexedDB delete — must not block localStorage seeding
       try {
         indexedDB.deleteDatabase('kc_cache')
-      } catch {
+      } catch (error) { console.error('Error:', error)
         // IndexedDB may not be available in all test contexts
-      }
+       }
     }
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
@@ -676,10 +676,10 @@ export async function waitForNetworkIdleBestEffort(
 ) {
   try {
     await page.waitForLoadState('networkidle', { timeout: timeoutMs })
-  } catch {
+  } catch (error) { console.error('Error:', error)
     if (typeof process !== 'undefined' && process.env.E2E_VERBOSE_WAITS) {
       console.warn(
-        `[e2e] networkidle timed out after ${timeoutMs}ms${label ? ` (${label})` : ''} — page may have long-lived WebSocket/SSE connections`
+        `[e2e] networkidle timed out after ${timeoutMs }ms${label ? ` (${label})` : ''} — page may have long-lived WebSocket/SSE connections`
       )
     }
   }

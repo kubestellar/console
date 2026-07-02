@@ -205,9 +205,9 @@ test.describe('React Render Error Detection', () => {
       // Wait for cards to render and effects to settle
       try {
         await page.waitForSelector('[data-card-type]', { timeout: CARD_SETTLE_MS })
-      } catch {
-        // Some routes may not have cards — continue to check for errors
-      }
+      } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
 
       // Exercise pagination to trigger useLayoutEffect cascades
       if (route.hasPagination) {
@@ -280,9 +280,9 @@ test.describe('React Render Error Detection', () => {
       // Wait for cards to render and effects to settle
       try {
         await page.waitForSelector('[data-card-type]', { timeout: CARD_SETTLE_MS })
-      } catch {
-        // Some routes may not have cards at mobile viewport — continue
-      }
+      } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
 
       // Also check for error boundary rendering
       const errorBoundary = await page.locator('text=This page encountered an error').count()

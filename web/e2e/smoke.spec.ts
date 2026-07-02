@@ -91,7 +91,7 @@ test.describe('Smoke Tests', () => {
       if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
         const hamburgerVisible = await hamburger
           .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
-          .catch(() => false)
+          .catch((error) => { console.error(\'Promise error:\', error); return false })
         if (hamburgerVisible) {
           // Use native el.click() for cross-browser stability
           await hamburger.evaluate((el) => (el as HTMLElement).click())
@@ -112,7 +112,7 @@ test.describe('Smoke Tests', () => {
         // Wait for network idle before clicking to avoid DOM detach during
         // hook re-renders (common in webkit/firefox). This stabilizes the
         // element before interaction.
-        await page.waitForLoadState('networkidle').catch(() => {})
+        await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
         
         // Use native el.click() for maximum cross-browser compatibility
         await link.evaluate((el) => (el as HTMLElement).click())
@@ -123,11 +123,11 @@ test.describe('Smoke Tests', () => {
         if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
           const stillVisible = await link
             .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
-            .catch(() => false)
+            .catch((error) => { console.error(\'Promise error:\', error); return false })
           if (!stillVisible) {
             const hamburgerVisible = await hamburger
               .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
-              .catch(() => false)
+              .catch((error) => { console.error(\'Promise error:\', error); return false })
             if (hamburgerVisible) {
               await hamburger.evaluate((el) => (el as HTMLElement).click())
               await expect(sidebar).toBeVisible({ timeout: 3000 })
@@ -170,7 +170,7 @@ test.describe('Smoke Tests', () => {
           .first()
         const hamburgerVisible = await hamburger
           .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
-          .catch(() => false)
+          .catch((error) => { console.error(\'Promise error:\', error); return false })
         if (hamburgerVisible) {
           await hamburger.evaluate((el) => (el as HTMLElement).click())
           await expect(sidebar).toBeVisible({ timeout: 3000 })
@@ -183,7 +183,7 @@ test.describe('Smoke Tests', () => {
       // WebKit/mobile browsers need more time for sidebar elements to hydrate.
       // Wait for both the element to exist AND become actionable (no visibility:hidden).
       // The sidebar slide-in animation can leave elements in a "found but hidden" state.
-      await page.waitForLoadState('networkidle').catch(() => {})
+      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
       await expect(settingsLink).toBeVisible({ timeout: 30000 })
       // Extra stability wait for webkit/safari where elements can be "visible" but
       // still mid-transition. Wait for DOM to fully settle after animation.
@@ -250,7 +250,7 @@ test.describe('Smoke Tests', () => {
         const htmlBefore = await page.locator('html').getAttribute('class')
         
         // Wait for network idle before clicking to avoid DOM detach
-        await page.waitForLoadState('networkidle').catch(() => {})
+        await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
         
         // Use native el.click() for maximum cross-browser compatibility
         await themeToggle.first().evaluate((el) => (el as HTMLElement).click())

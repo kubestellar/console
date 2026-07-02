@@ -131,9 +131,9 @@ function kindClusterExists(name: string): boolean {
   try {
     const output = execSync('kind get clusters 2>/dev/null', { timeout: VERIFY_TIMEOUT_MS }).toString()
     return output.split('\n').map(s => s.trim()).includes(name)
-  } catch {
+  } catch (error) { console.error('Error:', error)
     return false
-  }
+   }
 }
 
 /** Export kubeconfig for a kind cluster so kubectl can use it */
@@ -141,9 +141,9 @@ function exportKindKubeconfig(name: string): boolean {
   try {
     execSync(`kind export kubeconfig --name ${name} 2>/dev/null`, { timeout: VERIFY_TIMEOUT_MS })
     return true
-  } catch {
+  } catch (error) { console.error('Error:', error)
     return false
-  }
+   }
 }
 
 /** Check if kubectl can reach the cluster API server */
@@ -151,9 +151,9 @@ function clusterReachable(context: string): boolean {
   try {
     execSync(`kubectl --context=${context} get nodes 2>/dev/null`, { timeout: VERIFY_TIMEOUT_MS })
     return true
-  } catch {
+  } catch (error) { console.error('Error:', error)
     return false
-  }
+   }
 }
 
 // ---------------------------------------------------------------------------
@@ -181,8 +181,8 @@ function getPodsInNamespace(context: string, namespace: string): PodStatus {
       runningCount: pods.filter(p => p.status?.phase === 'Running').length,
       names: pods.map(p => p.metadata?.name || 'unknown'),
     }
-  } catch {
-    return { found: false, podCount: 0, runningCount: 0, names: [] }
+  } catch (error) { console.error('Error:', error)
+    return { found: false, podCount: 0, runningCount: 0, names: []  }
   }
 }
 
@@ -202,9 +202,9 @@ function getWebhookConfigurations(context: string): string[] {
       { timeout: VERIFY_TIMEOUT_MS }
     ).toString().trim()
     return output ? output.split(/\s+/) : []
-  } catch {
+  } catch (error) { console.error('Error:', error)
     return []
-  }
+   }
 }
 
 // ---------------------------------------------------------------------------
@@ -279,7 +279,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
     })
 
     const visible = await page.getByText(/Define Mission|Chart Course|Flight Plan|Define Your|Chart Your|Launch/i)
-      .first().isVisible({ timeout: 5000 }).catch(() => false)
+      .first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (visible) break
 
     // If dialog didn't open, try scrolling sidebar and retrying

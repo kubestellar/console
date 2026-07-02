@@ -9,7 +9,7 @@ test.describe('Login Page — requires backend', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
   test.beforeEach(async ({ page }) => {
-    const backendUp = await page.request.get('/health').then(r => r.ok()).catch(() => false)
+    const backendUp = await page.request.get('/health').then(r => r.ok()).catch((error) => { console.error(\'Promise error:\', error); return false })
     test.skip(!backendUp, 'Backend not running — these tests require OAuth mode')
   })
 
@@ -151,7 +151,7 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
     // Wait for the auth route to be intercepted OR a short timeout (webkit
     // may complete the navigation synchronously before the mock fires).
     const AUTH_INTERCEPT_TIMEOUT_MS = 3000
-    await page.waitForURL(/auth\/github/, { timeout: AUTH_INTERCEPT_TIMEOUT_MS }).catch(() => {})
+    await page.waitForURL(/auth\/github/, { timeout: AUTH_INTERCEPT_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Navigate to the error page — this is what the real OAuth server does
     // via a 302 redirect when authentication fails.
@@ -161,7 +161,7 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
     const errorBanner = page.getByTestId('oauth-error-banner')
       .or(page.getByRole('alert'))
       .or(page.locator('[class*="error"]'))
-    const errorShown = await errorBanner.first().isVisible({ timeout: 5000 }).catch(() => false)
+    const errorShown = await errorBanner.first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     // If the app surfaces an error, assert it is visible; otherwise assert
     // we're on the login page (graceful degradation). (#10784)
     if (errorShown) {
@@ -187,7 +187,7 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
     // Wait for EITHER the login page or dashboard to appear.
     // On some browsers the app may also land on /auth/github or stay on
     // a loading state — accept any of these outcomes as valid.
-    const loginVisible = await loginPage.isVisible({ timeout: PAGE_SETTLE_TIMEOUT_MS }).catch(() => false)
+    const loginVisible = await loginPage.isVisible({ timeout: PAGE_SETTLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (loginVisible) {
       // Demo or unauthenticated mode — login screen should be visible
@@ -197,7 +197,7 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
       // OAuth/authenticated mode — check dashboard-page OR accept that
       // the app redirected to /auth/github (webkit/firefox sometimes
       // trigger the OAuth redirect before React renders). (#10784)
-      const dashboardVisible = await dashboardPage.isVisible({ timeout: PAGE_SETTLE_TIMEOUT_MS }).catch(() => false)
+      const dashboardVisible = await dashboardPage.isVisible({ timeout: PAGE_SETTLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
       if (dashboardVisible) {
         await expect(dashboardPage).toBeVisible()
       } else {

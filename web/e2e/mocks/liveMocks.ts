@@ -680,9 +680,9 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
       try {
         const msg = JSON.parse(String(data))
         ws.send(JSON.stringify({ id: msg.id, type: 'result', payload: { output: '{"items":[]}', exitCode: 0 } }))
-      } catch {
+      } catch (error) { console.error('Error:', error)
         // ignore parse errors
-      }
+       }
     })
   })
 
@@ -725,7 +725,7 @@ export async function setLiveColdMode(page: Page, user?: typeof mockUser): Promi
           if (!key || COLD_KEEP_KEYS.has(key)) continue
           localStorage.removeItem(key)
         }
-      } catch { /* about:blank has no origin */ }
+      } catch (error) { console.error('Error:', error) /* about:blank has no origin */  }
     },
     { user: u },
   )
@@ -733,7 +733,7 @@ export async function setLiveColdMode(page: Page, user?: typeof mockUser): Promi
   // Clear IndexedDB caches
   await page.addInitScript(() => {
     for (const name of ['kc_cache', 'kubestellar-cache']) {
-      try { indexedDB.deleteDatabase(name) } catch { /* ignore */ }
+      try { indexedDB.deleteDatabase(name) } catch (error) { console.error('Error:', error) /* ignore */  }
     }
   })
 }
@@ -786,7 +786,7 @@ export async function setMode(page: Page, mode: 'demo' | 'live' | 'live+cache', 
           if (key && key.endsWith('-dashboard-cards')) keysToRemove.push(key)
         }
         keysToRemove.forEach(k => localStorage.removeItem(k))
-      } catch { /* about:blank has no origin */ }
+      } catch (error) { console.error('Error:', error) /* about:blank has no origin */  }
     },
     lsValues,
   )

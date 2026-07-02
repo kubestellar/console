@@ -52,7 +52,8 @@ async function ensureKubectlCard(page: Page) {
       const parsed = existing ? JSON.parse(existing) : null
       if (Array.isArray(parsed)) cards = parsed
       else if (parsed && Array.isArray(parsed.cards)) cards = parsed.cards
-    } catch {
+    } catch (error) {
+      console.error('Failed to parse kubectl cache:', error)
       cards = []
     }
     const hasKubectl = cards.some((c) => c?.card_type === 'kubectl')
@@ -75,16 +76,16 @@ test.describe('Kubectl Card', () => {
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const kubectlCard = page.locator('[data-card-type="kubectl"]')
-    const visible = await kubectlCard.first().isVisible({ timeout: KUBECTL_CARD_TIMEOUT_MS }).catch(() => false)
+    const visible = await kubectlCard.first().isVisible({ timeout: KUBECTL_CARD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!visible) {
       // The dashboard layout persistence shape varies between builds; if the
       // injection didn't take, navigate directly to a kubectl-centric route.
-      await page.goto('/kubectl').catch(() => {})
+      await page.goto('/kubectl').catch((error) => { console.error(\'Promise catch:\', error) })
       await page.waitForLoadState('domcontentloaded')
     }
     // The card OR a fallback terminal placeholder should surface somewhere.
     const kubectlSurface = page.locator('[data-card-type="kubectl"], input[placeholder*="kubectl command"]').first()
-    const surfaced = await kubectlSurface.isVisible({ timeout: KUBECTL_CARD_TIMEOUT_MS }).catch(() => false)
+    const surfaced = await kubectlSurface.isVisible({ timeout: KUBECTL_CARD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!surfaced) { test.skip(true, 'Kubectl card is not included in the current demo dashboard layout'); return }
     await expect(kubectlSurface).toBeVisible()
   })
@@ -96,7 +97,7 @@ test.describe('Kubectl Card', () => {
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const commandInput = page.locator('input[placeholder*="Enter kubectl command"]').first()
-    const hasInput = await commandInput.isVisible({ timeout: KUBECTL_CARD_TIMEOUT_MS }).catch(() => false)
+    const hasInput = await commandInput.isVisible({ timeout: KUBECTL_CARD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasInput) { test.skip(true, 'Kubectl command input not visible — card not in default layout'); return }
 
     // Input must accept keyboard entry.
@@ -119,7 +120,7 @@ test.describe('Kubectl Card', () => {
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const commandInput = page.locator('input[placeholder*="Enter kubectl command"]').first()
-    const hasInput = await commandInput.isVisible({ timeout: KUBECTL_CARD_TIMEOUT_MS }).catch(() => false)
+    const hasInput = await commandInput.isVisible({ timeout: KUBECTL_CARD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasInput) { test.skip(true, 'Kubectl card not rendered in current layout'); return }
 
     // In demo mode the card injects a synthetic context so we can't always
@@ -140,7 +141,7 @@ test.describe('Kubectl Card', () => {
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const commandInput = page.locator('input[placeholder*="Enter kubectl command"]').first()
-    const hasInput = await commandInput.isVisible({ timeout: KUBECTL_CARD_TIMEOUT_MS }).catch(() => false)
+    const hasInput = await commandInput.isVisible({ timeout: KUBECTL_CARD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasInput) { test.skip(true, 'Kubectl card not rendered'); return }
 
     // Single char.
@@ -173,7 +174,7 @@ test.describe('Kubectl Card', () => {
 
     // If the history search surfaces, assert it filters.
     const historySearch = page.locator('input[placeholder*="history" i]').first()
-    const hasHistory = await historySearch.isVisible({ timeout: KUBECTL_OUTPUT_TIMEOUT_MS }).catch(() => false)
+    const hasHistory = await historySearch.isVisible({ timeout: KUBECTL_OUTPUT_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasHistory) { test.skip(true, 'History search not visible (card collapsed)'); return }
     await historySearch.fill('nodes')
     await expect(historySearch).toHaveValue('nodes')

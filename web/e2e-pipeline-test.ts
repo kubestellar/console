@@ -99,8 +99,8 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
   const realSubmit = page.locator('button[type="submit"]:has-text("Submit")')
   const loginSubmit = page.locator('button:has-text("Login to Submit")')
 
-  const isAuthenticated = await realSubmit.isVisible().catch(() => false)
-  const needsLogin = await loginSubmit.isVisible().catch(() => false)
+  const isAuthenticated = await realSubmit.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+  const needsLogin = await loginSubmit.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
   let issueNumber = ''
   let issueUrl: string | undefined
@@ -113,14 +113,14 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
 
     // Check for success message
     const successMsg = page.locator('text=Request Submitted')
-    const success = await successMsg.isVisible({ timeout: 5000 }).catch(() => false)
+    const success = await successMsg.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (success) {
       console.log('  Bug report submitted successfully via UI!')
 
       // Get the GitHub issue link from the success message
       const ghLink = page.locator('a:has-text("View on GitHub")')
-      if (await ghLink.isVisible().catch(() => false)) {
+      if (await ghLink.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })) {
         issueUrl = await ghLink.getAttribute('href') || ''
         const match = issueUrl.match(/\/issues\/(\d+)/)
         issueNumber = match ? match[1] : ''
@@ -209,8 +209,8 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
         await screenshot(page, `08-pipeline-active-check${i}`)
         if (copilotAssigned) break
       }
-    } catch {
-      // continue
+    } catch (error) {
+      console.error('Failed to check pipeline:', error)
     }
   }
 
@@ -256,7 +256,7 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
 
         // Activity tab
         const activityTab = page.locator('button:has-text("Activity")')
-        if (await activityTab.isVisible().catch(() => false)) {
+        if (await activityTab.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })) {
           await activityTab.click()
           await sleep(500)
           await screenshot(page, '11-console-activity')
@@ -269,7 +269,9 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
         await browser.close()
         return
       }
-    } catch { /* continue */ }
+    } catch (error) {
+      console.error('Failed to check for Copilot PR:', error)
+    }
 
     console.log(`  [${new Date().toLocaleTimeString()}] No PR yet (${i + 1}/24)`)
 

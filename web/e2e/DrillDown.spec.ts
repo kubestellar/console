@@ -14,18 +14,18 @@ const TAB_SWITCH_SETTLE_MS = 250
  */
 async function openDrillDown(page: Page): Promise<boolean> {
   const firstCard = page.locator('[data-card-type]').first()
-  const hasCard = await firstCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+  const hasCard = await firstCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
   if (!hasCard) return false
 
   await firstCard.hover()
   const expandBtn = firstCard
     .locator('button[aria-label*="full screen"], button[title*="full screen"], button[title*="xpand"]')
     .first()
-  const hasExpand = await expandBtn.isVisible({ timeout: DRILLDOWN_TIMEOUT_MS }).catch(() => false)
+  const hasExpand = await expandBtn.isVisible({ timeout: DRILLDOWN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
   if (hasExpand) {
     await expandBtn.click()
     const modal = page.getByTestId('drilldown-modal')
-    const visible = await modal.isVisible({ timeout: DRILLDOWN_TIMEOUT_MS }).catch(() => false)
+    const visible = await modal.isVisible({ timeout: DRILLDOWN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (visible) return true
   }
   return false
@@ -185,7 +185,7 @@ test.describe('PodDrillDown WebSocket — regression for #19503', () => {
     await expect(modal).toBeVisible()
 
     const relatedTab = modal.locator('button').filter({ hasText: /related.*resources/i }).first()
-    const hasRelated = await relatedTab.isVisible({ timeout: 2_000 }).catch(() => false)
+    const hasRelated = await relatedTab.isVisible({ timeout: 2_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasRelated) {
       test.skip(true, 'No Related Resources tab in this drilldown')
       return

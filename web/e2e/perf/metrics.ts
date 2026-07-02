@@ -115,8 +115,8 @@ export async function waitForCardContent(
       { timeout }
     )
     return { skeletonDuration: Date.now() - startTime, timedOut: false }
-  } catch {
-    return { skeletonDuration: Date.now() - startTime, timedOut: true }
+  } catch (error) { console.error('Error:', error)
+    return { skeletonDuration: Date.now() - startTime, timedOut: true  }
   }
 }
 
