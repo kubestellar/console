@@ -44,9 +44,9 @@ async function isBackendAvailable(): Promise<boolean> {
     const data = await response.json() as { no_local_agent?: boolean }
     // Backend must NOT be in demo-only mode (no_local_agent: true means no SSE endpoints available)
     return !data.no_local_agent
-  } catch {
+  } catch (error) { console.error('Error:', error)
     return false
-  }
+   }
 }
 
 test.describe.configure({ mode: 'serial' })
@@ -103,7 +103,7 @@ test.describe('SSE stream reconnection (live backend)', () => {
 
     // Trigger a refresh to get new SSE stream
     const refreshButton = page.locator('button[aria-label*="Refresh"]').or(page.locator('button:has-text("Refresh")')).first()
-    if (await refreshButton.isVisible().catch(() => false)) {
+    if (await refreshButton.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })) {
       await refreshButton.click()
       await page.waitForTimeout(SSE_CHUNK_WAIT_MS)
 

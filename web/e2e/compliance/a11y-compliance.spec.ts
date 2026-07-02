@@ -119,8 +119,8 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
       // Wait for sidebar/content to render
       try {
         await page.waitForSelector('[data-testid="sidebar"], main, [data-card-type]', { timeout: 8_000 })
-      } catch {
-        // Some routes may not have these elements
+      } catch (error) {
+        console.error('Element interaction failed:', error)
       }
       await page.waitForLoadState('networkidle', { timeout: ROUTE_SETTLE_MS }).catch(() => { /* settle timeout is best-effort */ })
 
@@ -223,7 +223,9 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: 8_000 })
-  } catch { /* continue */ }
+  } catch (error) {
+    console.error('Operation failed:', error)
+  }
   await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
   // Tab through page and check for visible focus indicators
@@ -324,7 +326,8 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
           severity: 'moderate',
         })
       }
-    } catch {
+    } catch (error) {
+      console.error('Failed to take snapshot:', error)
       addCheck({
         route: '/',
         routeName: 'Dashboard',

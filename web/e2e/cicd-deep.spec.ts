@@ -97,8 +97,8 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
       try {
         await expect(el).toBeVisible({ timeout: 2000 })
         visibleCount++
-      } catch {
-        // Element not visible
+      } catch (error) {
+        console.error(`Stat element "${name}" not visible:`, error)
       }
     }
 
@@ -128,8 +128,8 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
         // Each visible stat block should contain a numeric or textual value
         const text = await block.textContent()
         expect((text || '').length).toBeGreaterThan(0)
-      } catch {
-        // Block not visible, skip
+      } catch (error) {
+        console.error('Stat block not visible:', error)
       }
     }
 
@@ -179,8 +179,8 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
     const subtitle = page.getByText(PAGE_SUBTITLE).first()
     try {
       await expect(subtitle).toBeVisible({ timeout: 5000 })
-    } catch {
-      // Subtitle not visible, that's OK
+    } catch (error) {
+      console.error('Subtitle not visible:', error)
     }
   })
 
@@ -216,9 +216,9 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
     const allPill = page.getByRole('button', { name: 'All' }).first()
     try {
       await expect(allPill).toBeVisible({ timeout: 5000 })
-    } catch {
-      // All pill not visible
-    }
+    } catch (error) {
+        console.error('Element not visible:', error)
+      }
     // Dashboard should render regardless
     await expect(page.getByTestId('dashboard-header')).toBeVisible({
       timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
@@ -229,7 +229,8 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
     const allPill = page.getByRole('button', { name: 'All' }).first()
     try {
       await expect(allPill).toBeVisible({ timeout: 5000 })
-    } catch {
+    } catch (error) {
+      console.error('Filter bar not visible, skipping pill test:', error)
       // Filter bar may not be visible in this config — skip gracefully
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
         timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
@@ -244,9 +245,9 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
     try {
       await expect(filterBar).toBeVisible({ timeout: 5000 })
       filterBarVisible = true
-    } catch {
-      // Filter bar not visible
-    }
+    } catch (error) {
+        console.error('Element not visible:', error)
+      }
     const pillContainer = filterBarVisible ? filterBar : page.locator('nav').first()
     const repoPills = pillContainer.locator('button').filter({ hasNotText: /^All$|^Add repo$|^Refresh$/ })
     const pillCount = await repoPills.count()
@@ -276,7 +277,8 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
 
     try {
       await expect(addButton).toBeVisible({ timeout: 5000 })
-    } catch {
+    } catch (error) {
+      console.error('Add repo button not visible in filter bar:', error)
       // Filter bar may not render "Add repo" in demo gated mode —
       // verify the page still renders the CI/CD dashboard correctly
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -294,8 +296,8 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
     const input = page.getByPlaceholder(ADD_REPO_PLACEHOLDER).first()
     try {
       await expect(input).toBeVisible({ timeout: 5000 })
-    } catch {
-      // Input didn't appear, skip test
+    } catch (error) {
+      console.error('Add repo input not visible, skipping test:', error)
       return
     }
 
@@ -312,9 +314,9 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
     const newPill = page.getByRole('button', { name: /testrepo/i }).first()
     try {
       await expect(newPill).toBeVisible({ timeout: 5000 })
-    } catch {
-      // New pill not visible
-    }
+    } catch (error) {
+        console.error('Element not visible:', error)
+      }
     }
   )
 })

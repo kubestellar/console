@@ -89,8 +89,8 @@ async function measureDashboard(
   if (dashboard.id !== 'gpu') {
     try {
       await page.waitForSelector('[data-testid="sidebar"]', { timeout: 10_000 })
-    } catch {
-      // If sidebar doesn't appear, log but continue — we'll still measure what renders
+    } catch (error) {
+      console.error(\'Operation failed:\', error)
     }
   }
 
@@ -190,13 +190,13 @@ async function measureDashboard(
     )
 
     perfResult = (await handle.jsonValue()) as PerfResult
-  } catch {
+  } catch (error) { console.error('Error:', error)
     // Timeout — collect partial results from window.__perf
     try {
       perfResult = await page.evaluate(() => {
         const w = window as Window & {
           __perf?: {
-            tracked: Record<string, { ct: string; demo: boolean; t: number | null }>
+            tracked: Record<string, { ct: string; demo: boolean; t: number | null  }>
           }
         }
         if (!w.__perf) return { cards: [], loadTimes: {} }
@@ -210,8 +210,8 @@ async function measureDashboard(
         }
         return r
       })
-    } catch {
-      // Page might have crashed
+    } catch (error) {
+      console.error(\'Operation failed:\', error)
     }
     for (const card of perfResult.cards) {
       if (perfResult.loadTimes[card.cardId] === undefined) timedOutCards.add(card.cardId)
@@ -233,7 +233,7 @@ async function measureDashboard(
         bodyText: (document.body.textContent || '').slice(0, 500),
       }))
       console.log(`  NO CARDS on ${dashboard.name}: ${JSON.stringify(debugState)}`)
-    } catch { /* page unavailable */ }
+    } catch (error) { console.error(\'Operation failed:\', error) }
   }
 
   // --- Build CardMetric array ---
@@ -260,8 +260,8 @@ async function measureDashboard(
           return { found: true, loading: card.getAttribute('data-loading'), pulses, textLen: text.length, text: text.slice(0, 200) }
         }, `[data-card-id="${info.cardId}"]`)
         console.log(`  TIMEOUT DEBUG [${info.cardType}/${info.cardId}]:`, JSON.stringify(debugInfo, null, 2))
-      } catch {
-        console.log(`  TIMEOUT DEBUG [${info.cardType}/${info.cardId}]: page unavailable`)
+      } catch (error) { console.error('Error:', error)
+        console.log(`  TIMEOUT DEBUG [${info.cardType }/${info.cardId}]: page unavailable`)
       }
     }
 
@@ -330,7 +330,7 @@ test('warmup (demo live live+cache) — prime Vite module cache', async ({ page 
     await page.goto(route, { waitUntil: 'domcontentloaded' })
     try {
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch { /* ignore — just warming up */ }
+    } catch (error) { console.error(\'Operation failed:\', error) }
   }
 })
 
@@ -432,9 +432,9 @@ test.afterAll(async () => {
   let baselineContent: string | null = null
   try {
     baselineContent = fs.readFileSync(baselinePath, 'utf-8')
-  } catch {
-    // File does not exist yet — will be created below
-  }
+  } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
 
   if (baselineContent !== null) {
     console.log('[Perf] Comparing against baseline...')

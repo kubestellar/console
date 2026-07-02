@@ -10,7 +10,7 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
     await setupDemoAndNavigate(page, '/')
     // Look for Console Studio trigger — button text, gear icon, or customizer toggle
     const studioBtn = page.locator('button:has-text("Console Studio"), button:has-text("Customize"), button[aria-label*="studio" i], button[aria-label*="customize" i]')
-    const hasBtn = await studioBtn.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasBtn = await studioBtn.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     test.info().annotations.push({
       type: 'ux-finding',
       description: JSON.stringify({
@@ -27,19 +27,19 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
     await setupDemoAndNavigate(page, '/')
     // Try multiple paths to open Console Studio
     const studioBtn = page.locator('button:has-text("Console Studio"), button:has-text("Customize"), button[aria-label*="studio" i]')
-    const hasDirectBtn = await studioBtn.first().isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasDirectBtn = await studioBtn.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasDirectBtn) {
       await studioBtn.first().click()
     } else {
       // Fallback: try sidebar "Add more..." or settings gear
       const addMore = page.locator('button:has-text("Add more")')
-      const hasAddMore = await addMore.isVisible({ timeout: 2_000 }).catch(() => false)
+      const hasAddMore = await addMore.isVisible({ timeout: 2_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
       if (hasAddMore) {
         await addMore.click()
       }
     }
     const studio = page.getByTestId('console-studio')
-    const isOpen = await studio.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)
+    const isOpen = await studio.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     // Studio may open as modal or inline panel
     if (isOpen) {
       await expect(studio).toBeVisible()
@@ -49,11 +49,11 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
   test('studio sidebar shows sections', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
-    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     const studioSidebar = page.getByTestId('studio-sidebar')
-    const hasStudioSidebar = await studioSidebar.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)
+    const hasStudioSidebar = await studioSidebar.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasStudioSidebar) {
       const text = await studioSidebar.textContent()
       expect(text?.length).toBeGreaterThan(0)
@@ -63,11 +63,11 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
   test('studio preview area shows content', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
-    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     const preview = page.getByTestId('studio-preview')
-    const hasPreview = await preview.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)
+    const hasPreview = await preview.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasPreview) {
       const text = await preview.textContent()
       expect(text?.length).toBeGreaterThan(0)
@@ -77,12 +77,12 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
   test('studio has searchable card catalog', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
-    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     // Look for search input within the studio
     const studioSearch = page.locator('[data-testid="console-studio"] input[type="text"], [data-testid="console-studio"] input[type="search"], [role="dialog"] input[type="text"]')
-    const hasSearch = await studioSearch.first().isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)
+    const hasSearch = await studioSearch.first().isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     test.info().annotations.push({
       type: 'ux-finding',
       description: JSON.stringify({
@@ -98,26 +98,26 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
   test('close studio returns to dashboard', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
-    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     const studio = page.getByTestId('console-studio')
-    const isOpen = await studio.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)
+    const isOpen = await studio.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (isOpen) {
       // Close via Escape or close button
       await page.keyboard.press('Escape')
       await page.waitForTimeout(500)
-      const stillOpen = await studio.isVisible().catch(() => false)
+      const stillOpen = await studio.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (stillOpen) {
         // Try close button
         const closeBtn = page.locator('[data-testid="console-studio"] button:has-text("Close"), [role="dialog"] button[aria-label*="close" i]')
-        const hasClose = await closeBtn.first().isVisible().catch(() => false)
+        const hasClose = await closeBtn.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
         if (hasClose) await closeBtn.first().click()
       }
     }
     // Dashboard should be visible again — check for any card rather than a specific testid
     const anyCard = page.locator('[data-card-type]').first()
-    const hasDashboard = await anyCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasDashboard = await anyCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasDashboard) {
       await expect(anyCard).toBeVisible()
     }
@@ -126,11 +126,11 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
   test('no overflow when studio panels are open', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
-    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     const studio = page.getByTestId('console-studio')
-    const isOpen = await studio.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)
+    const isOpen = await studio.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (isOpen) {
       await assertNoLayoutOverflow(page)
     }
@@ -139,11 +139,11 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
   test('studio sidebar sections are clickable', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
-    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasTrigger) { test.skip(true, 'Studio trigger button not visible'); return }
     await addMore.first().click()
     const studioSidebar = page.getByTestId('studio-sidebar')
-    const hasStudioSidebar = await studioSidebar.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch(() => false)
+    const hasStudioSidebar = await studioSidebar.isVisible({ timeout: STUDIO_OPEN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasStudioSidebar) {
       const buttons = studioSidebar.locator('button, a, [role="tab"]')
       const count = await buttons.count()
@@ -159,7 +159,7 @@ test.describe('Console Studio — "Customize my dashboard"', () => {
     const checkErrors = collectConsoleErrors(page)
     await setupDemoAndNavigate(page, '/')
     const addMore = page.locator('button:has-text("Add more"), button:has-text("Console Studio"), button:has-text("Customize")')
-    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasTrigger = await addMore.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasTrigger) {
       await addMore.first().click()
       await page.waitForTimeout(1_000)

@@ -46,8 +46,8 @@ test.describe.skip('Hardware Health retry functionality (#11772)', () => {
     const errorMessage = hwCard.locator('[role="alert"], [data-testid="card-error"]').or(hwCard.getByText(/error|failed|unavailable/i))
 
     // Either retry button or error message should appear when fetch fails
-    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch(() => false)
-    const hasError = await errorMessage.isVisible({ timeout: 5000 }).catch(() => false)
+    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasError = await errorMessage.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     expect(hasRetry || hasError).toBe(true)
   })
@@ -77,7 +77,7 @@ test.describe.skip('Hardware Health retry functionality (#11772)', () => {
 
     // Find and click retry button
     const retryButton = hwCard.getByRole('button', { name: /retry/i })
-    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch(() => false)
+    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (!hasRetry) {
       // No retry button - card might be working fine
@@ -111,7 +111,7 @@ test.describe.skip('Hardware Health retry functionality (#11772)', () => {
     await expect(hwCard).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const retryButton = hwCard.getByRole('button', { name: /retry/i })
-    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch(() => false)
+    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (!hasRetry) {
       return
@@ -122,7 +122,7 @@ test.describe.skip('Hardware Health retry functionality (#11772)', () => {
 
     // Look for loading/spinning icon (RefreshCw with animate-spin)
     const spinner = hwCard.locator('[class*="animate-spin"]')
-    const hasSpinner = await spinner.isVisible({ timeout: 2000 }).catch(() => false)
+    const hasSpinner = await spinner.isVisible({ timeout: 2000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     test.info().annotations.push({
       type: 'ux-finding',
@@ -154,7 +154,7 @@ test.describe.skip('Hardware Health retry functionality (#11772)', () => {
     await expect(hwCard).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const retryButton = hwCard.getByRole('button', { name: /retry/i })
-    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch(() => false)
+    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (!hasRetry) {
       return

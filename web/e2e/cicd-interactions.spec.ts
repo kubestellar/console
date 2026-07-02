@@ -31,7 +31,7 @@ function manageReposButton(page: Page) {
 
 async function assertInstallGateOrResetMenu(page: Page): Promise<'install-gate' | 'reset-menu'> {
   const installDialog = page.getByRole('dialog', { name: INSTALL_DIALOG_NAME })
-  if (await installDialog.isVisible({ timeout: 1_000 }).catch(() => false)) {
+  if (await installDialog.isVisible({ timeout: 1_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
     await expect(installDialog).toBeVisible()
     return 'install-gate'
   }
@@ -62,7 +62,7 @@ test.describe('CI/CD repo removal and hiding (#11013)', () => {
 
     // Verify repo pills render (the "All" button is always present)
     const allPill = page.getByRole('button', { name: 'All' }).first()
-    const allVisible = await allPill.isVisible().catch(() => false)
+    const allVisible = await allPill.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     if (allVisible) {
       const count = await removeButtons.count()
       // In demo mode, remove buttons should NOT be rendered
@@ -107,7 +107,7 @@ test.describe('CI/CD repo removal and hiding (#11013)', () => {
     const pillsAfter = await page.getByRole('button', { name: /Remove repo/i }).count()
     // Either the pill count decreased, or the removed repo pill is no longer visible
     const repoButton = page.getByRole('button', { name: new RegExp(repoName, 'i') }).first()
-    const repoStillVisible = await repoButton.isVisible().catch(() => false)
+    const repoStillVisible = await repoButton.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     expect(pillsAfter < pillsBefore || !repoStillVisible).toBe(true)
 
     await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -119,7 +119,7 @@ test.describe('CI/CD repo removal and hiding (#11013)', () => {
     // The manage/reset button (RotateCcw icon) appears when repos are customized
     // In demo mode this may be gated, so we check gracefully
     const manageButton = manageReposButton(page)
-    const manageVisible = await manageButton.isVisible().catch(() => false)
+    const manageVisible = await manageButton.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (!manageVisible) {
       // No customization present yet — the manage button only appears with changes
@@ -136,7 +136,7 @@ test.describe('CI/CD repo removal and hiding (#11013)', () => {
 
     // Verify the dropdown also lists hidden/removed repos (not just the reset option)
     const dropdown = page.locator('[role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]').first()
-    const dropdownVisible = await dropdown.isVisible().catch(() => false)
+    const dropdownVisible = await dropdown.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     if (dropdownVisible) {
       const dropdownText = await dropdown.textContent()
       // The dropdown should contain more than just "Reset to defaults"
@@ -166,7 +166,7 @@ test.describe('CI/CD reset to defaults (#11014)', () => {
   test('reset to defaults button is accessible from manage menu', async ({ page }) => {
     // With customization seeded, the manage (RotateCcw) button should appear
     const manageButton = manageReposButton(page)
-    const manageVisible = await manageButton.isVisible().catch(() => false)
+    const manageVisible = await manageButton.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (!manageVisible) {
       // Manage button not visible — filter bar may not be rendered in this mode
@@ -184,7 +184,7 @@ test.describe('CI/CD reset to defaults (#11014)', () => {
 
   test('clicking reset to defaults restores original repo list', async ({ page }) => {
     const manageButton = manageReposButton(page)
-    const manageVisible = await manageButton.isVisible().catch(() => false)
+    const manageVisible = await manageButton.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (!manageVisible) {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -223,7 +223,7 @@ test.describe('CI/CD reset to defaults (#11014)', () => {
     })
 
     const manageButton = manageReposButton(page)
-    const manageVisible = await manageButton.isVisible().catch(() => false)
+    const manageVisible = await manageButton.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (!manageVisible) {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -277,7 +277,7 @@ test.describe('CI/CD refresh loading state (#11015)', () => {
     // After clicking, verify the icon gained the animate-spin class OR the button became disabled
     // (indicating a state change occurred)
     const classAfterClick = await refreshIcon.getAttribute('class') || ''
-    const buttonDisabled = await refreshButton.isDisabled().catch(() => false)
+    const buttonDisabled = await refreshButton.isDisabled().catch((error) => { console.error(\'Promise error:\', error); return false })
     const stateChanged = classAfterClick !== classBeforeClick
       || classAfterClick.includes('animate-spin')
       || buttonDisabled
@@ -359,8 +359,8 @@ test.describe('CI/CD Live Runs expand and details (#11016)', () => {
     // Look for the "in flight" counter text that PipelineFlow renders.
     const inFlightText = page.getByText(/\d+ in flight/)
     const noRunsText = page.getByText('No runs in flight.')
-    const hasInFlight = await inFlightText.isVisible().catch(() => false)
-    const hasNoRuns = await noRunsText.isVisible().catch(() => false)
+    const hasInFlight = await inFlightText.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasNoRuns = await noRunsText.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
     // Either we see runs or the "no runs" empty state — both are valid
     expect(hasInFlight || hasNoRuns).toBe(true)
@@ -374,7 +374,7 @@ test.describe('CI/CD Live Runs expand and details (#11016)', () => {
 
     for (const event of eventTypes) {
       const el = page.getByText(event, { exact: false }).first()
-      const isVisible = await el.isVisible().catch(() => false)
+      const isVisible = await el.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (isVisible) {
         foundEvent = true
         break
@@ -383,7 +383,7 @@ test.describe('CI/CD Live Runs expand and details (#11016)', () => {
 
     // In demo mode, we should see at least event types or the empty state
     const noRunsText = page.getByText('No runs in flight.')
-    const hasNoRuns = await noRunsText.isVisible().catch(() => false)
+    const hasNoRuns = await noRunsText.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     expect(foundEvent || hasNoRuns).toBe(true)
   })
 
@@ -454,7 +454,7 @@ test.describe('CI/CD Live Runs expand and details (#11016)', () => {
 
     // Check if runs are visible — if so, SVGs for flow visualization must exist
     const inFlightText = page.getByText(/\d+ in flight/)
-    const hasInFlight = await inFlightText.isVisible().catch(() => false)
+    const hasInFlight = await inFlightText.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (hasInFlight) {
       // When runs are in flight, the flow visualization should have SVG connectors
@@ -487,7 +487,7 @@ test.describe('CI/CD Live Runs expand and details (#11016)', () => {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
         timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
       })
-    } else if (await inlineRunState.isVisible().catch(() => false)) {
+    } else if (await inlineRunState.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })) {
       await expect(inlineRunState).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
         timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
@@ -495,7 +495,7 @@ test.describe('CI/CD Live Runs expand and details (#11016)', () => {
     } else {
       // No runs to expand — verify empty state
       const noRunsText = page.getByText('No runs in flight.')
-      const hasNoRuns = await noRunsText.isVisible().catch(() => false)
+      const hasNoRuns = await noRunsText.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       expect(hasNoRuns).toBe(true)
     }
   })
@@ -523,7 +523,7 @@ test.describe('CI/CD Logs modal (#11017)', () => {
     // Failures section should render (even if empty with "No recent failures 🎉")
     const noFailures = page.getByText('No recent failures')
     const hasFailures = count > 0
-    const hasEmpty = await noFailures.isVisible().catch(() => false)
+    const hasEmpty = await noFailures.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     expect(hasFailures || hasEmpty).toBe(true)
   })
 
@@ -648,10 +648,10 @@ test.describe('CI/CD Logs modal (#11017)', () => {
     // The modal header shows the title, repo name, and job ID
     // Check that the modal contains the "job #" pattern
     const jobInfo = modal.getByText(/job #\d+/)
-    const hasJobInfo = await jobInfo.isVisible().catch(() => false)
+    const hasJobInfo = await jobInfo.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     // Also check for Copy button presence as a structural check
     const copyButton = modal.getByText('Copy')
-    const hasCopy = await copyButton.isVisible().catch(() => false)
+    const hasCopy = await copyButton.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
     expect(hasJobInfo || hasCopy).toBe(true)
   })
@@ -711,7 +711,7 @@ test.describe('CI/CD Logs modal (#11017)', () => {
     const errorIndicator = modal.locator('.text-red-400, .text-destructive')
     await expect(preContent).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     const text = await preContent.textContent()
-    const errorVisible = await errorIndicator.isVisible().catch(() => false)
+    const errorVisible = await errorIndicator.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     // Assert the content specifically indicates an error state
     const hasErrorIndicator = /error|not available|failed|unavailable|could not/i.test(text || '')
     const handledEmptyDemoState = (text || '').trim() === '(no matching lines)'

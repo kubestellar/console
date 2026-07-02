@@ -130,7 +130,7 @@ test.describe('Scan Progress Overlay', () => {
         'button:has-text("Import"), button:has-text("Browse"), [data-testid*="import"]'
       ).first()
 
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await importButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
         await importButton.click()
 
         const fileInput = page.locator('input[type="file"]').first()
@@ -147,7 +147,7 @@ test.describe('Scan Progress Overlay', () => {
             'text=/scanning/i, text=/validating/i, text=/scan passed/i, [data-testid*="scan"]'
           )
           // Scan may be fast; check within timeout
-          const appeared = await scanIndicator.first().isVisible({ timeout: 8000 }).catch(() => false)
+          const appeared = await scanIndicator.first().isVisible({ timeout: 8000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
           expect.soft(appeared).toBeTruthy()
         }
       } else {
@@ -162,7 +162,7 @@ test.describe('Scan Progress Overlay', () => {
         'button:has-text("Import"), button:has-text("Browse"), [data-testid*="import"]'
       ).first()
 
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await importButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
         await importButton.click()
 
         const fileInput = page.locator('input[type="file"]').first()
@@ -176,7 +176,7 @@ test.describe('Scan Progress Overlay', () => {
 
           // Look for the animated spinner (Loader2 icon has animate-spin)
           const spinner = page.locator('.animate-spin, [data-testid*="scan-spinner"]')
-          const spinnerSeen = await spinner.first().isVisible({ timeout: 5000 }).catch(() => false)
+          const spinnerSeen = await spinner.first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
           // Spinner may already be gone if scan is fast
           expect.soft(spinnerSeen).toBeTruthy()
         }
@@ -194,7 +194,7 @@ test.describe('Scan Progress Overlay', () => {
         'button:has-text("Import"), button:has-text("Browse"), [data-testid*="import"]'
       ).first()
 
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await importButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
         await importButton.click()
 
         const fileInput = page.locator('input[type="file"]').first()
@@ -228,7 +228,7 @@ test.describe('Scan Progress Overlay', () => {
         'button:has-text("Import"), button:has-text("Browse"), [data-testid*="import"]'
       ).first()
 
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await importButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
         await importButton.click()
 
         const fileInput = page.locator('input[type="file"]').first()
@@ -262,7 +262,7 @@ test.describe('Scan Progress Overlay', () => {
         'button:has-text("Import"), button:has-text("Browse"), [data-testid*="import"]'
       ).first()
 
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await importButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
         await importButton.click()
 
         const fileInput = page.locator('input[type="file"]').first()
@@ -296,18 +296,18 @@ test.describe('Scan Progress Overlay', () => {
         'button:has-text("Import"), button:has-text("Browse"), [data-testid*="import"]'
       ).first()
 
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await importButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
         await importButton.click()
 
         // Check for proper dialog role
         const dialog = page.locator('[role="dialog"]')
-        if (await dialog.first().isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (await dialog.first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
           await expect(dialog.first()).toBeVisible()
 
           // Verify dialog has accessible label
           const hasAriaLabel = await dialog.first().getAttribute('aria-label')
           const hasAriaLabelledBy = await dialog.first().getAttribute('aria-labelledby')
-          const hasTitle = await dialog.locator('h1, h2, h3, [role="heading"]').first().isVisible().catch(() => false)
+          const hasTitle = await dialog.locator('h1, h2, h3, [role="heading"]').first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
           // Dialog should have some form of accessible labeling
           expect(hasAriaLabel || hasAriaLabelledBy || hasTitle).toBeTruthy()

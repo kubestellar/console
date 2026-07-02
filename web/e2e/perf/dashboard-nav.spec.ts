@@ -121,9 +121,9 @@ async function waitForRoute(page: Page, route: string, timeout = URL_CHANGE_TIME
       await page.waitForURL(`**${route}`, { timeout })
     }
     return true
-  } catch {
+  } catch (error) { console.error('Error:', error)
     return false
-  }
+   }
 }
 
 async function waitForDashboardToSettle(page: Page, timeout = DASHBOARD_SETTLE_TIMEOUT_MS): Promise<void> {
@@ -184,12 +184,12 @@ async function waitForDashboardToSettle(page: Page, timeout = DASHBOARD_SETTLE_T
       },
       { timeout: timeout + DASHBOARD_SETTLE_GRACE_MS, polling: DASHBOARD_SETTLE_POLL_MS }
     )
-  } catch {
-    // Best effort only: perf tests should continue collecting partial metrics.
-  } finally {
+  } catch (error) {
+      console.error(\'Operation failed:\', error)
+    } finally {
     await page.evaluate(() => {
       delete (window as Window & { __dashboardSettle?: unknown }).__dashboardSettle
-    }).catch(() => {})
+    }).catch((error) => { console.error(\'Promise catch:\', error) })
   }
 }
 
@@ -220,16 +220,16 @@ async function measureNavigation(
     await link.waitFor({ state: 'attached', timeout: LINK_ATTACH_TIMEOUT_MS })
     await link.scrollIntoViewIfNeeded()
     await link.waitFor({ state: 'visible', timeout: LINK_VISIBLE_TIMEOUT_MS })
-  } catch {
+  } catch (error) { console.error('Error:', error)
     // Distinguish "sidebar missing (page crashed)" from "link not in primaryNav
     // for this dashboard config". Only reload in the crash case — when the sidebar
     // itself is missing. If the sidebar is present but the link isn't, the route
     // simply isn't configured in primaryNav, so skip fast without a 10s reload.
     const sidebar = page.locator('[data-testid="sidebar"]').first()
     const sidebarPresent = await sidebar
-      .waitFor({ state: 'attached', timeout: SIDEBAR_PRESENCE_TIMEOUT_MS })
+      .waitFor({ state: 'attached', timeout: SIDEBAR_PRESENCE_TIMEOUT_MS  })
       .then(() => true)
-      .catch(() => false)
+      .catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (sidebarPresent) {
       console.log(`  SKIP ${target.name}: not in primary nav (${linkSelector})`)
@@ -243,8 +243,8 @@ async function measureNavigation(
       await link.waitFor({ state: 'attached', timeout: LINK_ATTACH_TIMEOUT_MS })
       await link.scrollIntoViewIfNeeded()
       await link.waitFor({ state: 'visible', timeout: LINK_VISIBLE_TIMEOUT_MS })
-    } catch {
-      console.log(`  SKIP ${target.name}: sidebar link not found after recovery (${linkSelector})`)
+    } catch (error) { console.error('Error:', error)
+      console.log(`  SKIP ${target.name }: sidebar link not found after recovery (${linkSelector})`)
       return null
     }
   }
@@ -262,13 +262,13 @@ async function measureNavigation(
   const clickTime = Date.now()
   try {
     await freshLink.click({ timeout: 5_000 })
-  } catch {
+  } catch (error) { console.error('Error:', error)
     // Element may have been detached by a re-render — retry with force
-    console.log(`  RETRY ${target.name}: click failed, retrying with force`)
+    console.log(`  RETRY ${target.name }: click failed, retrying with force`)
     try {
       await page.locator(linkSelector).first().click({ force: true, timeout: 5_000 })
-    } catch {
-      console.log(`  SKIP ${target.name}: click failed after retry`)
+    } catch (error) { console.error('Error:', error)
+      console.log(`  SKIP ${target.name }: click failed after retry`)
       return null
     }
   }
@@ -285,9 +285,9 @@ async function measureNavigation(
       if (!urlChanged) {
         console.log(`  TIMEOUT ${target.name}: URL did not change to ${target.route} within ${URL_CHANGE_TIMEOUT_MS}ms`)
       }
-    } catch {
+    } catch (error) { console.error('Error:', error)
       urlChangeTime = Date.now()
-    }
+     }
   }
 
   const clickToUrlChangeMs = urlChangeTime - clickTime
@@ -414,7 +414,7 @@ async function measureNavigation(
     )
 
     cardResult = (await handle.jsonValue()) as CardResult
-  } catch {
+  } catch (error) { console.error('Error:', error)
     // Timeout — collect partial results
     try {
       cardResult = await page.evaluate(() => {
@@ -423,7 +423,7 @@ async function measureNavigation(
             firstCardAt: number | null
             startedAt: number
             tracked: Record<string, number | null>
-          }
+           }
         }
         if (!win.__navPerf) return { firstCardMs: -1, allCardsMs: -1, cardsFound: 0, cardsLoaded: 0, cardsTimedOut: 0 }
         const ids = Object.keys(win.__navPerf.tracked)
@@ -436,7 +436,7 @@ async function measureNavigation(
           cardsTimedOut: ids.length - loadedCount,
         }
       })
-    } catch { /* page crashed */ }
+    } catch (error) { console.error(\'Operation failed:\', error) }
   }
 
   const totalMs = cardResult.allCardsMs >= 0
@@ -506,14 +506,14 @@ test('warmup — prime module cache', async ({ page }, testInfo) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-  } catch { /* continue */ }
+  } catch (error) { console.error(\'Operation failed:\', error) }
 
   const warmupRoutes = ['/deploy', '/ai-ml', '/compliance', '/ci-cd', '/arcade']
   for (const route of warmupRoutes) {
     await page.goto(route, { waitUntil: 'domcontentloaded' })
     try {
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch { /* ignore — just warming up */ }
+    } catch (error) { console.error(\'Operation failed:\', error) }
   }
 })
 
@@ -531,7 +531,7 @@ test('cold-nav — first visit to each dashboard via sidebar', async ({ page }, 
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
     await waitForDashboardToSettle(page)
-  } catch { /* continue */ }
+  } catch (error) { console.error(\'Operation failed:\', error) }
 
   let currentRoute = '/'
 
@@ -571,7 +571,7 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-  } catch { /* continue */ }
+  } catch (error) { console.error(\'Operation failed:\', error) }
 
   // Pre-visit all dashboards to warm up chunks
   for (let i = 0; i < DASHBOARDS.length; i++) {
@@ -582,7 +582,7 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
     await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
     try {
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch { /* some dashboards have no cards */ }
+    } catch (error) { console.error(\'Operation failed:\', error) }
   }
 
   // Now navigate back home and measure warm re-visits via sidebar clicks
@@ -591,7 +591,7 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
     await waitForDashboardToSettle(page)
-  } catch { /* continue */ }
+  } catch (error) { console.error(\'Operation failed:\', error) }
 
   let currentRoute = '/'
 
@@ -630,12 +630,12 @@ test('from-main — navigate away from Main Dashboard to various dashboards', as
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-  } catch { /* continue */ }
+  } catch (error) { console.error(\'Operation failed:\', error) }
   for (const dashboard of DASHBOARDS) {
     try {
       await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch { /* ignore pre-warm failures */ }
+    } catch (error) { console.error(\'Operation failed:\', error) }
   }
 
   // Diverse set of target dashboards to navigate TO from Main Dashboard
@@ -652,7 +652,7 @@ test('from-main — navigate away from Main Dashboard to various dashboards', as
         await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
         await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
         await waitForDashboardToSettle(page)
-      } catch { /* continue */ }
+      } catch (error) { console.error(\'Operation failed:\', error) }
 
       // Now measure the navigation FROM / TO the target
       const metric = await measureNavigation(page, '/', target, 'from-main')
@@ -689,12 +689,12 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-  } catch { /* continue */ }
+  } catch (error) { console.error(\'Operation failed:\', error) }
   for (const dashboard of DASHBOARDS) {
     try {
       await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch { /* ignore pre-warm failures */ }
+    } catch (error) { console.error(\'Operation failed:\', error) }
   }
 
   // Diverse set of target dashboards to navigate TO from My Clusters
@@ -713,7 +713,7 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
         await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
         await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
         await waitForDashboardToSettle(page)
-      } catch { /* continue */ }
+      } catch (error) { console.error(\'Operation failed:\', error) }
 
       // Now measure the navigation FROM /clusters TO the target
       const metric = await measureNavigation(page, '/clusters', target, 'from-clusters')
@@ -750,12 +750,12 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-  } catch { /* continue */ }
+  } catch (error) { console.error(\'Operation failed:\', error) }
   for (const dashboard of DASHBOARDS) {
     try {
       await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch { /* ignore pre-warm failures */ }
+    } catch (error) { console.error(\'Operation failed:\', error) }
   }
 
   // Navigate home
@@ -764,7 +764,7 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
     await waitForDashboardToSettle(page)
-  } catch { /* continue */ }
+  } catch (error) { console.error(\'Operation failed:\', error) }
 
   // Rapid-click through 10 dashboards, advancing as soon as each route changes.
   // Pick a diverse set of dashboards
@@ -780,9 +780,9 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
     const link = page.locator(linkSelector).first()
     try {
       await link.waitFor({ state: 'visible', timeout: 2_000 })
-    } catch {
+    } catch (error) { console.error('Error:', error)
       continue
-    }
+     }
 
     const clickTime = Date.now()
     await link.click()
@@ -863,8 +863,8 @@ test('back-button navigation through 10 dashboards', async ({ page }) => {
     try {
       await page.waitForSelector('[data-card-id]', { timeout: 5_000 })
       cardsFound = await page.locator('[data-card-id]').count()
-    } catch {
-      // Some pages may not have cards
+    } catch (error) {
+      console.error(\'Operation failed:\', error)
     }
     const cardLoadMs = Date.now() - cardStart
 
