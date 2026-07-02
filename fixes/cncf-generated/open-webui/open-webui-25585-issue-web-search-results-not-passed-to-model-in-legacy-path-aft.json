@@ -1,0 +1,75 @@
+{
+  "version": "kc-mission-v1",
+  "name": "open-webui-25585-issue-web-search-results-not-passed-to-model-in-legacy-path-aft",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "open-webui: issue: Web search results not passed to model in legacy path after upgrading to v0.9.6",
+    "description": "issue: Web search results not passed to model in legacy path after upgrading to v0.9.6. This issue affects 16+ users.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify open-webui troubleshoot symptoms",
+        "description": "Check for the issue in your open-webui deployment:\n```bash\nkubectl get pods -n open-webui -l app.kubernetes.io/name=open-webui\nkubectl logs -l app.kubernetes.io/name=open-webui -n open-webui --tail=100 | grep -i error\n```\nLook for errors or warnings in the logs that may indicate the issue."
+      },
+      {
+        "title": "Review open-webui configuration",
+        "description": "Inspect the relevant open-webui configuration:\n```bash\nkubectl get all -n open-webui -l app.kubernetes.io/name=open-webui\nkubectl get configmap -n open-webui -l app.kubernetes.io/part-of=open-webui\n```\n### Check Existing Issues\n\n### Installation Method\n\nDocker\n\n### Open WebUI Version\n\n0.96\n\n### Ollama Version (if applicable)\n\n_No response_\n\n### Operating System\n\nUbuntu 24.04\n\n### Browser (if applicable)\n\nChrome\n\n### Confirmation\n\n- Start with the"
+      },
+      {
+        "title": "Apply the fix for issue: Web search results not passed to model in legacy…",
+        "description": "for everyone affected here, the (unsafe) temporary workaround is setting this env var:\n\nENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS=true\n\nOr, better: do not use the legacy tool calling system anymore. This is not supported anymore\n\nthe proper fix will be a small PR that will edit ~2 line of code.\n```yaml\nopenwebui  | 2026-06-02 08:30:29.474 | INFO     | uvicorn.protocols.http.httptools_impl:send:483 - 192.168.1.1:0 - \"GET /_app/version.json HTTP/1.1\" 304\nopenwebui  | 2026-06-02 08:30:30.274 | INFO     | uvicorn.protocols.http.httptools_impl:send:483 - 192.168.1.1:0 - \"GET /api/v1/chats/?page=1 HTTP/1.1\" 200\nopenwebui  | 2026-06-02 08:30:45.325 | INFO     | uvicorn.protocols.http.httptools_impl:send:483 - 192.168.1.1:0 - \"POST /api/chat/completions HTTP/1.1\" 200\nopenwebui  | 2026-06-02 08:30:45.678 | INFO     | uvicorn.protocols.http.httptools_impl:send:483 - 192.168.1.1:0 - \"POST /api/v1/chats\n```"
+      },
+      {
+        "title": "Confirm issue: Web search results not passed to model in… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=open-webui -n open-webui --tail=50 --since=5m\nkubectl get events -n open-webui --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that the issue symptoms are gone."
+      }
+    ],
+    "resolution": {
+      "summary": "for everyone affected here, the (unsafe) temporary workaround is setting this env var:\n\nENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS=true\n\nOr, better: do not use the legacy tool calling system anymore. This is not supported anymore\n\nthe proper fix will be a small PR that will edit ~2 line of code.",
+      "codeSnippets": [
+        "openwebui  | 2026-06-02 08:30:29.474 | INFO     | uvicorn.protocols.http.httptools_impl:send:483 - 192.168.1.1:0 - \"GET /_app/version.json HTTP/1.1\" 304\nopenwebui  | 2026-06-02 08:30:30.274 | INFO     | uvicorn.protocols.http.httptools_impl:send:483 - 192.168.1.1:0 - \"GET /api/v1/chats/?page=1 HTTP/1.1\" 200\nopenwebui  | 2026-06-02 08:30:45.325 | INFO     | uvicorn.protocols.http.httptools_impl:send:483 - 192.168.1.1:0 - \"POST /api/chat/completions HTTP/1.1\" 200\nopenwebui  | 2026-06-02 08:30:45.678 | INFO     | uvicorn.protocols.http.httptools_impl:send:483 - 192.168.1.1:0 - \"POST /api/v1/chats/1c2e3c5e-80bd-40d6-b230-b170a28e8c2e HTTP/1.1\" 200\nopenwebui  | 2026-06-02 08:30:46.383 | INFO     | uvicorn.protocols.http.httptools_impl:send:483 - 192.168.1.1:0 - \"GET /_app/version.json HTTP/1.1\"",
+        "services:\n  open-webui:\n    environment:\n      DEFAULT_MODEL_PARAMS: '{\"function_calling\": \"native\", \"temperature\": 0.7}'\n      DEFAULT_MODEL_METADATA: '{\"capabilities\": {\"web_search\": true}}'"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "open-webui",
+      "community",
+      "ai-app",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "open-webui"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "community",
+    "sourceUrls": {
+      "issue": "https://github.com/open-webui/open-webui/issues/25585",
+      "repo": "https://github.com/open-webui/open-webui"
+    },
+    "reactions": 16,
+    "comments": 54,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with open-webui installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-02T07:32:36.523Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
