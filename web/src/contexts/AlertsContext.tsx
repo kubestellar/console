@@ -200,8 +200,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(fetchCronJobResults, POLL_INTERVAL_SLOW_MS)
     return () => {
       unmounted = true
-      clearTimeout(timer)
       clearInterval(interval)
+      clearTimeout(timer)
     }
   }, [])
 
@@ -231,8 +231,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(fetchNightlyE2E, NIGHTLY_E2E_POLL_INTERVAL_MS)
     return () => {
       unmounted = true
-      clearTimeout(timer)
       clearInterval(interval)
+      clearTimeout(timer)
     }
   }, [])
 

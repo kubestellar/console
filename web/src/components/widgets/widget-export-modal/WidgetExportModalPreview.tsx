@@ -66,6 +66,8 @@ const PREV_CARD_PAD = '8px 12px' // standard card padding (vertical=SM, horizont
 const PREV_DOTS_GAP = '2px'     // sub-grid gap for tightly-packed status-dot rows
 const PREV_BAR_GAP = '3px'      // gap between adjacent bar-chart columns
 const PREV_HAIRLINE_GAP = '1px' // minimal gap between stacked bar segments
+const PREV_BORDER_THIN = '3px'  // thin accent border for status indicators
+const PREV_BORDER_STD = '4px'   // standard accent border for alerts and highlights
 // Font sizes used in preview components — extracted to pass the hex/magic-number ratchet
 const PREV_FS_HERO = '28px'     // large hero number (GPU %)
 const PREV_FS_HEADLINE = '24px' // headline stat (cost total, CI pass %)
@@ -198,11 +200,11 @@ function CardPreview({ cardType }: { cardType: string }) {
         <div style={ps.card}>
           <div style={ps.title}><span style={ps.dot(ps.colors.warning)} /> Cluster Health</div>
           <div style={ps.row}>
-            <div style={{ ...ps.statBlock, borderLeft: `3px solid ${ps.colors.healthy}` }}>
+            <div style={{ ...ps.statBlock, borderLeft: `${PREV_BORDER_THIN} solid ${ps.colors.healthy}` }}>
               <span style={{ ...ps.statVal, color: ps.colors.healthy }}>3</span>
               <span style={ps.statLbl}>{t('common.healthy')}</span>
             </div>
-            <div style={{ ...ps.statBlock, borderLeft: `3px solid ${ps.colors.error}` }}>
+            <div style={{ ...ps.statBlock, borderLeft: `${PREV_BORDER_THIN} solid ${ps.colors.error}` }}>
               <span style={{ ...ps.statVal, color: ps.colors.error }}>1</span>
               <span style={ps.statLbl}>{t('common.unhealthy')}</span>
             </div>
@@ -258,26 +260,26 @@ function CardPreview({ cardType }: { cardType: string }) {
         <div style={ps.card}>
           <div style={ps.title}><span style={ps.dot(ps.colors.warning)} /> Hardware Health</div>
           <div style={{ ...ps.row, marginBottom: PREV_SM }}>
-            <div style={{ ...ps.statBlock, borderLeft: `4px solid ${ps.colors.healthy}` }}>
+            <div style={{ ...ps.statBlock, borderLeft: `${PREV_BORDER_STD} solid ${ps.colors.healthy}` }}>
               <span style={ps.statVal}>4</span>
               <span style={ps.statLbl}>{t('common.nodes')}</span>
             </div>
-            <div style={{ ...ps.statBlock, borderLeft: `4px solid ${ps.colors.purple}` }}>
+            <div style={{ ...ps.statBlock, borderLeft: `${PREV_BORDER_STD} solid ${ps.colors.purple}` }}>
               <span style={{ ...ps.statVal, color: ps.colors.purple }}>16</span>
               <span style={ps.statLbl}>{t('common.gpus')}</span>
             </div>
-            <div style={{ ...ps.statBlock, borderLeft: `4px solid ${ps.colors.info}` }}>
+            <div style={{ ...ps.statBlock, borderLeft: `${PREV_BORDER_STD} solid ${ps.colors.info}` }}>
               <span style={{ ...ps.statVal, color: ps.colors.info }}>8</span>
               <span style={ps.statLbl}>NICs</span>
             </div>
           </div>
           <div style={ps.col}>
             <div style={{ fontSize: PREV_FS_MICRO, fontWeight: 600, color: PREV_CLR_MUTED, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alerts (2)</div>
-            <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${ps.colors.error}` }}>
+            <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_STD} solid ${ps.colors.error}` }}>
               <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.error, fontWeight: 600 }}>GPU</span>
               <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: PREV_XS }}>worker-3 (-2)</span>
             </div>
-            <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${ps.colors.warning}` }}>
+            <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_STD} solid ${ps.colors.warning}` }}>
               <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.warning, fontWeight: 600 }}>NIC</span>
               <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: PREV_XS }}>worker-1 (-1)</span>
             </div>
@@ -317,7 +319,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { name: 'PodCrashLooping', severity: 'warning', ns: 'default' },
               { name: 'NodeDiskPressure', severity: 'warning', ns: 'kube-system' },
             ].map((a) => (
-              <div key={a.name} className="px-2 py-1" style={{ ...ps.row, backgroundColor: a.severity === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${a.severity === 'critical' ? ps.colors.error : ps.colors.warning}` }}>
+              <div key={a.name} className="px-2 py-1" style={{ ...ps.row, backgroundColor: a.severity === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_STD} solid ${a.severity === 'critical' ? ps.colors.error : ps.colors.warning}` }}>
                 <span style={{ fontSize: PREV_FS_CAPTION, color: a.severity === 'critical' ? ps.colors.error : ps.colors.warning, fontWeight: 600 }}>{a.name}</span>
                 <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: 'auto' }}>{a.ns}</span>
               </div>
@@ -566,7 +568,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { wf: 'nightly-test-suite', step: 'e2e-tests', ago: '2h ago' },
               { wf: 'build', step: 'lint', ago: '5h ago' },
             ].map((f) => (
-              <div key={f.wf} className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `3px solid ${ps.colors.error}` }}>
+              <div key={f.wf} className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_THIN} solid ${ps.colors.error}` }}>
                 <div style={WIDGET_EXPORT_MODAL_DIV_STYLE_2}>
                   <div style={{ fontSize: PREV_FS_CAPTION, fontWeight: 600, color: ps.colors.error }}>{f.wf}</div>
                   <div style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED }}>Failed at: {f.step}</div>
@@ -764,7 +766,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               <span style={ps.statLbl}>GPUs down</span>
             </div>
           </div>
-          <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `3px solid ${ps.colors.error}`, marginTop: PREV_SM }}>
+          <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_THIN} solid ${ps.colors.error}`, marginTop: PREV_SM }}>
             <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.error, fontWeight: 600 }}>worker-4</span>
             <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: 'auto' }}>unreachable 12m</span>
           </div>
