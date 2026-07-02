@@ -78,7 +78,7 @@ test.describe('Navbar dropdown visibility', () => {
       const trigger = page.getByTestId(dropdown.triggerTestId)
 
       // Some dropdowns may not be rendered at this viewport (e.g. hidden on certain views)
-      if (!(await trigger.isVisible().catch(() => false))) {
+      if (!(await trigger.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false }))) {
         test.skip()
         return
       }
@@ -120,7 +120,7 @@ test.describe('Navbar dropdown visibility', () => {
       // Verify the dropdown is not obscured by clicking an element inside it.
       // Playwright's click() will fail if another element intercepts the click.
       const firstClickable = panel.locator('button, a, input, [role="menuitem"]').first()
-      if (await firstClickable.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)) {
+      if (await firstClickable.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
         await firstClickable.click({ trial: true, timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
       }
 

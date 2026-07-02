@@ -416,7 +416,7 @@ test('security compliance — frontend security audit', async ({ page }, testInf
     try {
       const url = new URL(r.url)
       return url.searchParams.has('token') || url.searchParams.has('access_token')
-    } catch { return false }
+    } catch (error) { console.error('Error:', error) return false  }
   })
 
   if (tokenInUrl.length === 0) {
@@ -516,8 +516,8 @@ test('security compliance — frontend security audit', async ({ page }, testInf
         evalCalled = true
         return originalEval.apply(window, args)
       }
-    } catch {
-      // CSP may prevent override
+    } catch (error) {
+      console.error(\'Operation failed:\', error)
     }
     return { evalDetectable: !evalCalled }
   })
@@ -641,8 +641,8 @@ test('security compliance — frontend security audit', async ({ page }, testInf
       window.postMessage('security-test', testOrigin)
       window.removeEventListener('message', handler)
       messageListeners = handledUnsafe ? 1 : 0
-    } catch {
-      // Can't test
+    } catch (error) {
+      console.error(\'Operation failed:\', error)
     }
     return { messageListeners }
   })
@@ -830,10 +830,10 @@ test('security compliance — frontend security audit', async ({ page }, testInf
       addCheck('AuthBypass', 'Unauthenticated access blocked', 'fail',
         `${protectedContent.realDataPatternsFound} real data patterns visible without auth: ${protectedContent.matchedPatterns.join(', ')}`, 'critical')
     }
-  } catch {
+  } catch (error) { console.error('Error:', error)
     addCheck('AuthBypass', 'Unauthenticated access blocked', 'pass',
       'Page failed to load without auth (expected behavior)', 'critical')
-  } finally {
+   } finally {
     await noAuthPage.close()
     await noAuthContext.close()
   }

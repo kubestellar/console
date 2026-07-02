@@ -87,8 +87,8 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
       try {
         const msg = JSON.parse(String(data))
         ws.send(JSON.stringify({ id: msg.id, type: 'result', payload: { output: '{}', exitCode: 0 } }))
-      } catch {
-        // ignore
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error)
       }
     })
   })

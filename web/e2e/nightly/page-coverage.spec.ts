@@ -204,16 +204,16 @@ test.describe('Nightly Page Coverage — Untested Feature Pages', () => {
       await page.goto(route.path)
       try {
         await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS })
-      } catch {
-        // networkidle may not fire if SSE streams are open — continue anyway
-      }
+      } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
 
       // Wait for page content to settle — look for card elements to appear
       try {
         await page.waitForSelector('[data-card-id]', { timeout: PAGE_SETTLE_MS })
-      } catch {
-        // Some pages may not have cards — continue to metrics collection
-      }
+      } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
 
       const renderTimeMs = Date.now() - startTime
 

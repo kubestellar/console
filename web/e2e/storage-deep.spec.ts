@@ -107,7 +107,7 @@ test.describe('Storage Deep Tests (/storage)', () => {
     test('clicking PVC stat opens PVC list modal', async ({ page }) => {
       // The PVC count stat has sublabel "persistent volume claims" and is clickable
       const pvcStat = page.getByText('persistent volume claims')
-      const isVisible = await pvcStat.first().isVisible().catch(() => false)
+      const isVisible = await pvcStat.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (!isVisible) {
         test.skip()
         return
@@ -124,7 +124,7 @@ test.describe('Storage Deep Tests (/storage)', () => {
 
     test('PVC modal shows search input', async ({ page }) => {
       const pvcStat = page.getByText('persistent volume claims')
-      const isVisible = await pvcStat.first().isVisible().catch(() => false)
+      const isVisible = await pvcStat.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (!isVisible) {
         test.skip()
         return
@@ -143,7 +143,7 @@ test.describe('Storage Deep Tests (/storage)', () => {
 
     test('PVC modal lists PVCs with name and status', async ({ page }) => {
       const pvcStat = page.getByText('persistent volume claims')
-      const isVisible = await pvcStat.first().isVisible().catch(() => false)
+      const isVisible = await pvcStat.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (!isVisible) {
         test.skip()
         return
@@ -159,22 +159,22 @@ test.describe('Storage Deep Tests (/storage)', () => {
       const pendingBadge = page.getByText('Pending')
       const lostBadge = page.getByText('Lost')
 
-      const hasBound = await boundBadge.first().isVisible().catch(() => false)
-      const hasPending = await pendingBadge.first().isVisible().catch(() => false)
-      const hasLost = await lostBadge.first().isVisible().catch(() => false)
+      const hasBound = await boundBadge.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const hasPending = await pendingBadge.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const hasLost = await lostBadge.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
       // At least one PVC status should be visible if PVCs exist in demo data
       const hasAnyPVC = hasBound || hasPending || hasLost
       // If no PVCs, the empty state message appears instead
       const emptyMsg = page.getByText('No PVCs found matching the criteria')
-      const hasEmpty = await emptyMsg.isVisible().catch(() => false)
+      const hasEmpty = await emptyMsg.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
       expect(hasAnyPVC || hasEmpty).toBe(true)
     })
 
     test('PVC modal search filters results', async ({ page }) => {
       const pvcStat = page.getByText('persistent volume claims')
-      const isVisible = await pvcStat.first().isVisible().catch(() => false)
+      const isVisible = await pvcStat.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (!isVisible) {
         test.skip()
         return
@@ -196,7 +196,7 @@ test.describe('Storage Deep Tests (/storage)', () => {
 
     test('PVC modal shows status badges with colors', async ({ page }) => {
       const pvcStat = page.getByText('persistent volume claims')
-      const isVisible = await pvcStat.first().isVisible().catch(() => false)
+      const isVisible = await pvcStat.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (!isVisible) {
         test.skip()
         return
@@ -228,7 +228,7 @@ test.describe('Storage Deep Tests (/storage)', () => {
 
     test('PVC modal shows empty state when no matches', async ({ page }) => {
       const pvcStat = page.getByText('persistent volume claims')
-      const isVisible = await pvcStat.first().isVisible().catch(() => false)
+      const isVisible = await pvcStat.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (!isVisible) {
         test.skip()
         return
@@ -249,7 +249,7 @@ test.describe('Storage Deep Tests (/storage)', () => {
 
     test('PVC modal closes on close button', async ({ page }) => {
       const pvcStat = page.getByText('persistent volume claims')
-      const isVisible = await pvcStat.first().isVisible().catch(() => false)
+      const isVisible = await pvcStat.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (!isVisible) {
         test.skip()
         return
@@ -262,7 +262,7 @@ test.describe('Storage Deep Tests (/storage)', () => {
 
       // BaseModal has a close button — look for button with aria-label or X icon
       const closeButton = page.locator('button[aria-label="Close"]')
-      const hasAriaClose = await closeButton.isVisible().catch(() => false)
+      const hasAriaClose = await closeButton.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
       if (hasAriaClose) {
         await closeButton.click()
@@ -314,8 +314,8 @@ test.describe('Storage Deep Tests (/storage)', () => {
       const errorText = page.getByText('Error loading storage data')
 
       await expect.poll(async () => {
-        const isHeaderVisible = await header.isVisible().catch(() => false)
-        const isErrorVisible = await errorText.isVisible().catch(() => false)
+        const isHeaderVisible = await header.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+        const isErrorVisible = await errorText.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
         return isHeaderVisible || isErrorVisible
       }, {
         timeout: ELEMENT_VISIBLE_TIMEOUT_MS,

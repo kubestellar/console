@@ -103,7 +103,8 @@ async function isBackendAvailable(
     // The real health endpoint returns JSON with a "status" field (#10140).
     const body = await res.text()
     return body.includes('"status"')
-  } catch {
+  } catch (error) {
+    console.error('Health check failed:', error)
     return false
   }
 }
@@ -450,7 +451,8 @@ test.describe('Nightly E2E Status — localhost live data', () => {
         test.skip(true, 'Backend not reachable — skipping live nightly data test')
         return
       }
-    } catch {
+    } catch (error) {
+      console.error('Test condition failed:', error)
       test.skip(true, 'Backend not reachable — skipping live nightly data test')
       return
     }
@@ -524,7 +526,8 @@ async function fetchNightlyData(
       return null
     }
     return data as { guides: Array<Record<string, unknown>> }
-  } catch {
+  } catch (error) {
+    console.error('Failed to parse nightly E2E JSON:', error)
     console.log(`  Nightly E2E response is not valid JSON (${text.slice(0, 120)}...) — skipping`)
     return null
   }

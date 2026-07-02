@@ -33,14 +33,14 @@ test.describe('Onboarding Tour', () => {
     })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Look for tour prompt, welcome dialog, or onboarding modal
     const tourPrompt = page.getByRole('dialog')
       .or(page.getByTestId('tour-tooltip'))
       .or(page.getByText(/welcome|take a tour|get started/i))
 
-    const hasTour = await tourPrompt.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    const hasTour = await tourPrompt.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasTour) {
       test.info().annotations.push({ type: 'ux-finding', description: 'No tour prompt shown for fresh user — may be disabled or deferred' })
     }
@@ -56,12 +56,12 @@ test.describe('Onboarding Tour', () => {
     })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     const tooltip = page.getByTestId('tour-tooltip')
       .or(page.locator('[class*="tour"], [class*="joyride"], [class*="onboarding"]'))
 
-    const hasTooltip = await tooltip.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    const hasTooltip = await tooltip.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasTooltip) {
       test.skip()
       return
@@ -82,13 +82,13 @@ test.describe('Onboarding Tour', () => {
     })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Scope the tour tooltip container before looking for Next — a broad
     // getByRole('button', { name: /next/i }) matches pagination/wizard buttons
     // outside the tour and clicking the wrong one navigates away, crashing the test.
     const tourContainer = page.locator('[class*="tour"], [class*="joyride"], [class*="onboarding"]').first()
-    const hasTour = await tourContainer.isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    const hasTour = await tourContainer.isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasTour) {
       test.skip()
       return
@@ -96,7 +96,7 @@ test.describe('Onboarding Tour', () => {
 
     // Only look for Next within the tour tooltip
     const nextBtn = tourContainer.getByRole('button', { name: /next/i })
-    const hasNext = await nextBtn.isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    const hasNext = await nextBtn.isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasNext) {
       test.skip()
       return
@@ -125,10 +125,10 @@ test.describe('Onboarding Tour', () => {
     })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     const skipBtn = page.getByRole('button', { name: /skip|dismiss|close/i })
-    const hasSkip = await skipBtn.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    const hasSkip = await skipBtn.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasSkip) {
       test.skip()
       return
@@ -150,11 +150,11 @@ test.describe('Onboarding Tour', () => {
     })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Dismiss tour via skip or complete it
     const skipBtn = page.getByRole('button', { name: /skip|dismiss|close|done|finish/i })
-    const hasSkip = await skipBtn.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    const hasSkip = await skipBtn.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasSkip) {
       await skipBtn.first().click()
     }
@@ -172,7 +172,7 @@ test.describe('Onboarding Tour', () => {
 
     // setupDemoMode sets demo-user-onboarded=true — verify no tour
     const tooltip = page.locator('[class*="tour"], [class*="joyride"], [class*="onboarding"]')
-    const hasTour = await tooltip.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    const hasTour = await tooltip.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     expect(hasTour, 'Tour should not appear for returning users').toBe(false)
   })
@@ -187,10 +187,10 @@ test.describe('Onboarding Tour', () => {
     })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     const tooltip = page.locator('[class*="tour"], [class*="joyride"], [class*="onboarding"]')
-    const hasTooltip = await tooltip.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    const hasTooltip = await tooltip.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (hasTooltip) {
       await assertNoLayoutOverflow(page)
@@ -208,7 +208,7 @@ test.describe('Onboarding Tour', () => {
 
     // Sidebar should be clickable
     const sidebarLink = page.locator('nav a, [data-testid*="sidebar"] a').first()
-    const hasSidebar = await sidebarLink.isVisible().catch(() => false)
+    const hasSidebar = await sidebarLink.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasSidebar) { test.skip(true, 'No sidebar link visible to verify usability'); return }
     await expect(sidebarLink).toBeEnabled()
   })

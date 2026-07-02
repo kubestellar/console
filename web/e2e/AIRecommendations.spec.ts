@@ -47,7 +47,7 @@ test.describe('AI Card Recommendations — rendering & interactivity', () => {
 
   test('panel renders when high AI mode is set and demo data has remediable issues', async ({ page }) => {
     const panel = await recommendationsPanel(page)
-    const visible = await panel.first().isVisible({ timeout: RECOMMENDATIONS_TIMEOUT_MS }).catch(() => false)
+    const visible = await panel.first().isVisible({ timeout: RECOMMENDATIONS_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!visible) {
       test.skip(true, 'Recommendations panel did not surface for this demo dataset')
       return
@@ -57,7 +57,7 @@ test.describe('AI Card Recommendations — rendering & interactivity', () => {
 
   test('renders at least one recommendation chip with a non-empty title', async ({ page }) => {
     const panel = await recommendationsPanel(page)
-    const visible = await panel.first().isVisible({ timeout: RECOMMENDATIONS_TIMEOUT_MS }).catch(() => false)
+    const visible = await panel.first().isVisible({ timeout: RECOMMENDATIONS_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!visible) { test.skip(true, 'Recommendations panel not visible in demo'); return }
 
     // Chips are buttons with `aria-haspopup="menu"` (see CardRecommendations).
@@ -71,7 +71,7 @@ test.describe('AI Card Recommendations — rendering & interactivity', () => {
 
   test('clicking a recommendation chip opens the inline dropdown menu with actions', async ({ page }) => {
     const panel = await recommendationsPanel(page)
-    const visible = await panel.first().isVisible({ timeout: RECOMMENDATIONS_TIMEOUT_MS }).catch(() => false)
+    const visible = await panel.first().isVisible({ timeout: RECOMMENDATIONS_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!visible) { test.skip(true, 'No recommendations to open'); return }
 
     const chips = panel.first().locator('button[aria-haspopup="menu"]')
@@ -125,7 +125,7 @@ test.describe('AI Card Recommendations — rendering & interactivity', () => {
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const panelAfter = await recommendationsPanel(page)
-    const afterVisible = await panelAfter.first().isVisible({ timeout: RECOMMENDATIONS_TIMEOUT_MS }).catch(() => false)
+    const afterVisible = await panelAfter.first().isVisible({ timeout: RECOMMENDATIONS_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     // Panel may legitimately hide if no recommendations remain. Either
     // outcome is valid; we only assert no crash (dashboard still rendered).
     void afterVisible

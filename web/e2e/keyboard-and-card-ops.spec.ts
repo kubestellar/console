@@ -45,10 +45,10 @@ test.describe('Keyboard Shortcuts', () => {
 
     try {
       await expect(addCardBtn.first()).toBeVisible({ timeout: 5000 })
-    } catch {
+    } catch (error) { console.error('Error:', error)
       test.skip()
       return
-    }
+     }
 
     await addCardBtn.first().click()
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: MODAL_TIMEOUT_MS })
@@ -106,9 +106,9 @@ test.describe('Card Operations', () => {
       const card = cards.nth(i)
       try {
         await expect(card).toBeVisible({ timeout: 2000 })
-      } catch {
+      } catch (error) { console.error('Error:', error)
         continue
-      }
+       }
 
       const textContent = await card.textContent()
       if (textContent && textContent.trim().length > 0) {
@@ -158,8 +158,8 @@ test.describe('Card Operations', () => {
     // Either categories or search should be visible
     try {
       await expect(categories.first()).toBeVisible({ timeout: 5000 })
-    } catch {
-      await expect(search.first()).toBeVisible({ timeout: 5000 })
+    } catch (error) { console.error('Error:', error)
+      await expect(search.first()).toBeVisible({ timeout: 5000  })
     }
 
     await page.keyboard.press('Escape')
@@ -171,10 +171,10 @@ test.describe('Card Operations', () => {
 
     try {
       await expect(addCardBtn.first()).toBeVisible({ timeout: 5000 })
-    } catch {
+    } catch (error) { console.error('Error:', error)
       test.skip()
       return
-    }
+     }
 
     await addCardBtn.first().click()
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: MODAL_TIMEOUT_MS })
@@ -189,10 +189,10 @@ test.describe('Card Operations', () => {
     const firstCard = page.getByTestId('dashboard-cards-grid').locator('> div').first()
     try {
       await expect(firstCard).toBeVisible({ timeout: 5000 })
-    } catch {
+    } catch (error) { console.error('Error:', error)
       test.skip()
       return
-    }
+     }
 
     // Hover to reveal the card menu icon
     await firstCard.hover()
@@ -204,10 +204,10 @@ test.describe('Card Operations', () => {
 
     try {
       await expect(menuTrigger.first()).toBeVisible({ timeout: 5000 })
-    } catch {
+    } catch (error) { console.error('Error:', error)
       test.skip()
       return
-    }
+     }
 
     await menuTrigger.first().click()
 
@@ -224,10 +224,10 @@ test.describe('Card Operations', () => {
     const firstCard = page.getByTestId('dashboard-cards-grid').locator('> div').first()
     try {
       await expect(firstCard).toBeVisible({ timeout: 5000 })
-    } catch {
+    } catch (error) { console.error('Error:', error)
       test.skip()
       return
-    }
+     }
 
     await firstCard.hover()
 
@@ -238,10 +238,10 @@ test.describe('Card Operations', () => {
 
     try {
       await expect(menuTrigger.first()).toBeVisible({ timeout: 5000 })
-    } catch {
+    } catch (error) { console.error('Error:', error)
       test.skip()
       return
-    }
+     }
 
     await menuTrigger.first().click()
 

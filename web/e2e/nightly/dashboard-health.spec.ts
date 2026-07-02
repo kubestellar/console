@@ -225,16 +225,16 @@ test.describe('Nightly Dashboard Health', () => {
       await page.goto(route.path)
       try {
         await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS })
-      } catch {
-        // networkidle may not fire if SSE streams are open — continue anyway
-      }
+      } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
 
       // Wait for cards to settle — look for card elements to appear
       try {
         await page.waitForSelector('[data-card-id]', { timeout: CARD_SETTLE_MS })
-      } catch {
-        // Some pages may not have cards — continue to metrics collection
-      }
+      } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
 
       // Collect metrics
       const metrics = await getDashboardMetrics(page)
