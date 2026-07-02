@@ -123,6 +123,7 @@ export function SpireStatus() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    error,
     lastRefresh,
   } = useCachedSpire()
 
@@ -140,6 +141,7 @@ export function SpireStatus() {
     hasAnyData,
     isFailed,
     consecutiveFailures,
+    errorMessage: error ?? undefined,
     lastRefresh,
   })
 

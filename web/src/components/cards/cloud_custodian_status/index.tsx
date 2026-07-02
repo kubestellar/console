@@ -203,6 +203,7 @@ export function CloudCustodianStatus() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    error,
     lastRefresh,
   } = useCachedCloudCustodian()
 
@@ -220,6 +221,7 @@ export function CloudCustodianStatus() {
     hasAnyData,
     isFailed,
     consecutiveFailures,
+    errorMessage: error ?? undefined,
     lastRefresh,
   })
 

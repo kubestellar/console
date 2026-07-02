@@ -86,6 +86,7 @@ export function RookStatus() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    error,
     lastRefresh,
   } = useCachedRook()
 
@@ -104,6 +105,7 @@ export function RookStatus() {
     hasAnyData,
     isFailed,
     consecutiveFailures,
+    errorMessage: error ?? undefined,
     lastRefresh,
   })
 

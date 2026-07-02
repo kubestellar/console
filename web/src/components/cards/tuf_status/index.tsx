@@ -150,6 +150,7 @@ export function TufStatus() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    error,
     lastRefresh,
   } = useCachedTuf()
 
@@ -167,6 +168,7 @@ export function TufStatus() {
     hasAnyData,
     isFailed,
     consecutiveFailures,
+    errorMessage: error ?? undefined,
     lastRefresh,
   })
 

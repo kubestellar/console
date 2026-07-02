@@ -28,6 +28,7 @@ const QualityDashboard: React.FC = () => {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    error,
   } = useCachedQuality();
 
   // Report loading state to CardWrapper for skeleton/refresh behavior.
@@ -39,7 +40,8 @@ const QualityDashboard: React.FC = () => {
     isRefreshing,
     isDemoData: isDemoFallback,
     isFailed,
-    consecutiveFailures
+    consecutiveFailures,
+    errorMessage: error ?? undefined,
   });
 
   if (loadingState.showSkeleton) {

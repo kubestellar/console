@@ -80,6 +80,7 @@ export function ContainerdStatus() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    error,
     lastRefresh,
   } = useCachedContainerd()
 
@@ -92,6 +93,7 @@ export function ContainerdStatus() {
     hasAnyData,
     isFailed,
     consecutiveFailures,
+    errorMessage: error ?? undefined,
     lastRefresh,
   })
 
