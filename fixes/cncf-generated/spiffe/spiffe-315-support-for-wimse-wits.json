@@ -1,0 +1,72 @@
+{
+  "version": "kc-mission-v1",
+  "name": "spiffe-315-support-for-wimse-wits",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "spiffe: Support for WIMSE WITs",
+    "description": "Support for WIMSE WITs. Requested by 7+ users.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current spiffe deployment",
+        "description": "Verify your spiffe version and configuration:\n```bash\nkubectl get pods -n spiffe -l app.kubernetes.io/name=spiffe\nhelm list -n spiffe 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working spiffe installation."
+      },
+      {
+        "title": "Review spiffe configuration",
+        "description": "Inspect the relevant spiffe configuration:\n```bash\nkubectl get all -n spiffe -l app.kubernetes.io/name=spiffe\nkubectl get configmap -n spiffe -l app.kubernetes.io/part-of=spiffe\n```\nThe [IETF WIMSE working group](https://datatracker.ietf.org/group/wimse/about/) defines a set of protocols for workload authentication/authorization."
+      },
+      {
+        "title": "Apply the fix for Support for WIMSE WITs",
+        "description": "It seems that WIMSE has already [made a decision](https://github.com/ietf-wg-wimse/draft-ietf-wimse-s2s-protocol/issues/53) here:\n```\nThe draft already states that the WIT MUST NOT be used as a bearer token and it defines new headers for the WIT and WPT so\nthere is no conflict with existing tokens so they could be presented at the same time. I think this issue could be closed, but we\ncould also add text to the document describing that bearer tokens in existing headers can be presented in the\n\nSee the source issue for community-verified solutions."
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n spiffe -l app.kubernetes.io/name=spiffe\nkubectl get events -n spiffe --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Support for WIMSE WITs\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "It seems that WIMSE has already [made a decision](https://github.com/ietf-wg-wimse/draft-ietf-wimse-s2s-protocol/issues/53) here:\n```\nThe draft already states that the WIT MUST NOT be used as a bearer token and it defines new headers for the WIT and WPT so\nthere is no conflict with existing tokens so they could be presented at the same time.",
+      "codeSnippets": []
+    }
+  },
+  "metadata": {
+    "tags": [
+      "spiffe",
+      "graduated",
+      "security",
+      "feature"
+    ],
+    "cncfProjects": [
+      "spiffe"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/spiffe/spiffe/issues/315",
+      "repo": "https://github.com/spiffe/spiffe"
+    },
+    "reactions": 7,
+    "comments": 48,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with spiffe installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-02T07:08:49.420Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
