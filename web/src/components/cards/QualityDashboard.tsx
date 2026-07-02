@@ -9,8 +9,10 @@ import {
   ShieldCheck, 
   Zap,
   TrendingUp,
-  Search
+  Search,
+  RefreshCw
 } from 'lucide-react';
+import { Button } from '../ui/Button';
 
 /**
  * QualityDashboard displays real-time metrics for state integrity and AI bug sweeps.
@@ -29,6 +31,7 @@ const QualityDashboard: React.FC = () => {
     isFailed,
     consecutiveFailures,
     error,
+    refetch,
   } = useCachedQuality();
 
   // Report loading state to CardWrapper for skeleton/refresh behavior.
@@ -55,12 +58,21 @@ const QualityDashboard: React.FC = () => {
 
   if (loadingState.showEmptyState) {
     return (
-      <div className="flex items-center justify-center h-48">
+      <div className="flex flex-col items-center justify-center h-48 gap-2">
         <div className="text-center text-muted-foreground">
           <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-red-400" />
           <p className="text-sm font-medium">{t('quality.fetchFailed', 'Failed to fetch quality data')}</p>
           <p className="text-xs mt-1">{t('quality.tryAgain', 'Please refresh the page or try again later.')}</p>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => refetch()}
+          className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+        >
+          <RefreshCw className="w-3 h-3" />
+          {t('common.retry', 'Retry')}
+        </Button>
       </div>
     );
   }

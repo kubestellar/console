@@ -205,6 +205,7 @@ export function CloudCustodianStatus() {
     consecutiveFailures,
     error,
     lastRefresh,
+    refetch,
   } = useCachedCloudCustodian()
 
   // Rule: never show demo data while still loading
@@ -240,9 +241,17 @@ export function CloudCustodianStatus() {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-3">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">{t('cloudCustodianStatus.fetchFailed', 'Failed to fetch Cloud Custodian status')}</p>
+        {error && <p className="text-xs text-muted-foreground max-w-xs text-center">{error}</p>}
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm"
+        >
+          <RefreshCw className="w-4 h-4" />
+          {t('common.retry', 'Retry')}
+        </button>
       </div>
     )
   }
