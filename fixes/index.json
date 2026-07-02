@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-02T07:40:59.393Z",
-  "count": 1624,
+  "generatedAt": "2026-07-02T07:59:59.096Z",
+  "count": 1625,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -60255,6 +60255,44 @@
         "Service"
       ],
       "difficulty": "expert",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/spiffe/spiffe-315-support-for-wimse-wits.json",
+      "title": "spiffe: Support for WIMSE WITs",
+      "description": "Support for WIMSE WITs. Requested by 7+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "spiffe",
+        "graduated",
+        "security",
+        "feature"
+      ],
+      "cncfProjects": [
+        "spiffe"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "advanced",
       "issueTypes": [
         "feature"
       ],
