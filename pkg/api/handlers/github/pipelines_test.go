@@ -184,7 +184,7 @@ func TestGHPHistory_MergeAndTrim(t *testing.T) {
 		t.Fatalf("expected success conclusion, got %v", day.Conclusion)
 	}
 	// Trim retention: insert an ancient day and verify it's dropped
-	ancient := time.Now().AddDate(0, 0, -(ghpHistoryRetentionDays+10)).Format("2006-01-02") + "T00:00:00Z"
+	ancient := time.Now().UTC().AddDate(0, 0, -(ghpHistoryRetentionDays+10)).Format("2006-01-02") + "T00:00:00Z"
 	h.merge([]ghpWorkflowRun{
 		{ID: 99, Repo: "kubestellar/console", Name: "Release", Conclusion: &success, CreatedAt: ancient, HTMLURL: "old"},
 	})
