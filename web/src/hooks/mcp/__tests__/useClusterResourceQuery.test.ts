@@ -39,10 +39,14 @@ vi.mock('../shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as Parameters<typeof fetch>)),
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
-  MCP_HOOK_TIMEOUT_MS: 5_000,
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    MCP_HOOK_TIMEOUT_MS: 5_000,
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+  }
+})
 
 // ---------------------------------------------------------------------------
 // Import under test (after mocks)

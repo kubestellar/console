@@ -53,11 +53,15 @@ vi.mock('../useCachedData/demoData', () => ({
   getDemoCoreDNSStatus: () => [],
 }))
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
     createCachedHook: vi.fn(),
-  FETCH_DEFAULT_TIMEOUT_MS: 5000,
-  KUBECTL_EXTENDED_TIMEOUT_MS: 60000,
-}))
+    FETCH_DEFAULT_TIMEOUT_MS: 5000,
+    KUBECTL_EXTENDED_TIMEOUT_MS: 60000,
+  }
+})
 
 import { useCachedNodes, useCachedCoreDNSStatus, useCachedAllNodes } from '../useCachedNodes'
 import { fetchAPI, getClusterFetcher } from '../../lib/cache/fetcherUtils'

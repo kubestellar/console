@@ -28,10 +28,14 @@ vi.mock('../../lib/api', () => ({
 vi.mock('../../lib/cache', () => ({
     createCachedHook: vi.fn(), useCache: (...args: unknown[]) => mockUseCache(...args), createCachedHook: (_config: unknown) => () => mockUseCache(_config) }))
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
     createCachedHook: vi.fn(),
-  FETCH_DEFAULT_TIMEOUT_MS: 5000,
-}))
+    FETCH_DEFAULT_TIMEOUT_MS: 5000,
+  }
+})
 
 vi.mock('../../lib/constants/time', () => ({
     createCachedHook: vi.fn(),

@@ -31,10 +31,14 @@ vi.mock('../../lib/cache', () => ({
   createCachedHook: (_config: unknown) => () => mockUseCache(_config),
 }))
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
     createCachedHook: vi.fn(),
-  FETCH_DEFAULT_TIMEOUT_MS: 5000,
-}))
+    FETCH_DEFAULT_TIMEOUT_MS: 5000,
+  }
+})
 
 import { useCachedRook, __testables } from '../useCachedRook'
 

@@ -42,9 +42,13 @@ vi.mock('../../../lib/constants', async (importOriginal) => {
   return { ...actual, LOCAL_AGENT_HTTP_URL: 'http://localhost:8089' }
 })
 
-vi.mock('../../../lib/constants/network', () => ({
-  FETCH_DEFAULT_TIMEOUT_MS: 10_000,
-}))
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+  }
+})
 
 vi.mock('../../../lib/cache/fetcherUtils', () => ({
   AGENT_HTTP_TIMEOUT_MS: 5_000,
