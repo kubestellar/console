@@ -447,7 +447,8 @@ export const SERVICES_CACHE_TTL_MS = 60_000
  * SERVICES_CACHE_TTL_MS. */
 export const SERVICES_CACHE_STALE_MS = 30_000
 
-export { MS_PER_SECOND } from './time'
+/** Milliseconds per second constant (re-export from time.ts moved inline to fix vitest importOriginal mocking) */
+export const MS_PER_SECOND = 1_000
 
 // ============================================================================
 // Network Latency Classification (issue #13249)
