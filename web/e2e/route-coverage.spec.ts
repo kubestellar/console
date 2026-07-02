@@ -35,7 +35,7 @@ async function loadRouteAndAssertNoErrors(
 ): Promise<{ errors: string[]; warnings: string[] }> {
   const collector = setupErrorCollector(page)
   await page.goto(path)
-  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
   await waitForAppContent(page)
   await expect(page.locator('body')).toBeVisible()
 
@@ -77,7 +77,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows marketplace content', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/marketplace')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/marketplace')
 
       // Marketplace should have cards or list items
@@ -89,11 +89,11 @@ test.describe('Route Coverage Tests', () => {
     test('has search or filter capability', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/marketplace')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Look for search input or filter controls
       const searchOrFilter = page.locator('input[type="search"], input[placeholder*="earch"], input[placeholder*="ilter"], [role="search"], [data-testid*="search"], [data-testid*="filter"], button:has-text("Filter")')
-      const hasSearchOrFilter = await searchOrFilter.first().isVisible({ timeout: SOFT_CHECK_TIMEOUT_MS }).catch(() => false)
+      const hasSearchOrFilter = await searchOrFilter.first().isVisible({ timeout: SOFT_CHECK_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
       // Even if no search, page should at least be interactive (clickable elements)
       const interactiveElements = page.locator('button, a[href], [role="tab"], [role="button"]')
@@ -114,7 +114,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows arcade layout with content', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/arcade')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/arcade')
 
       // Arcade should have a heading or distinct layout
@@ -125,7 +125,7 @@ test.describe('Route Coverage Tests', () => {
     test('has interactive elements', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/arcade')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       const interactiveElements = page.locator('button, a[href], [role="tab"], [role="button"], [class*="interactive"]')
       const count = await interactiveElements.count()
@@ -133,7 +133,7 @@ test.describe('Route Coverage Tests', () => {
 
       // Try clicking the first available button
       const firstButton = page.locator('button:visible').first()
-      if (await firstButton.isVisible({ timeout: SOFT_CHECK_TIMEOUT_MS }).catch(() => false)) {
+      if (await firstButton.isVisible({ timeout: SOFT_CHECK_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
         await firstButton.click()
         // Page should not crash after interaction
         await expect(page.locator('body')).toBeVisible()
@@ -153,7 +153,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows insight cards or panels', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/insights')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/insights')
 
       const heading = page.locator('h1, h2, h3').first()
@@ -163,11 +163,11 @@ test.describe('Route Coverage Tests', () => {
     test('renders data or empty state', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/insights')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Should show insight data, charts, or an empty state message
       const contentIndicators = page.locator('[class*="card"], [class*="Card"], [class*="chart"], [class*="insight"], [class*="empty"], [class*="Empty"]')
-      const hasContent = await contentIndicators.first().isVisible({ timeout: SOFT_CHECK_TIMEOUT_MS }).catch(() => false)
+      const hasContent = await contentIndicators.first().isVisible({ timeout: SOFT_CHECK_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
       // At minimum the page body should have substantial content
       const bodyText = await page.textContent('body')
@@ -187,7 +187,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows onboarding content', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/welcome')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/welcome')
 
       // Welcome page should have a heading
@@ -198,11 +198,11 @@ test.describe('Route Coverage Tests', () => {
     test('has a get-started or call-to-action element', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/welcome')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Look for CTA buttons or links
       const cta = page.locator('button:has-text("Get Started"), button:has-text("Start"), button:has-text("Continue"), a:has-text("Get Started"), a:has-text("Start"), a:has-text("Dashboard"), button:has-text("Explore"), a:has-text("Explore")')
-      const hasCta = await cta.first().isVisible({ timeout: SOFT_CHECK_TIMEOUT_MS }).catch(() => false)
+      const hasCta = await cta.first().isVisible({ timeout: SOFT_CHECK_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
       // Even without a specific CTA, should have clickable elements
       const buttons = page.locator('button:visible, a[href]:visible')
@@ -223,7 +223,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows workload list or content', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/workloads')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/workloads')
 
       const heading = page.locator('h1, h2, h3').first()
@@ -234,7 +234,7 @@ test.describe('Route Coverage Tests', () => {
       await setupDemoMode(page)
       const { errors } = setupErrorCollector(page)
       await page.goto('/workloads')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Should show a list, table, or empty state -- not crash
       const contentOrEmpty = page.locator('table, [role="table"], [role="grid"], [class*="empty"], [class*="Empty"], [class*="list"], [class*="List"], [class*="card"], [class*="Card"]')
@@ -252,7 +252,7 @@ test.describe('Route Coverage Tests', () => {
       await setupDemoMode(page)
       const { errors } = setupErrorCollector(page)
       await page.goto('/operators')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await expect(page.locator('body')).toBeVisible()
 
       // Operators page may produce backend errors in CI (no real cluster)
@@ -265,7 +265,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows operator list or content', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/operators')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/operators')
 
       const heading = page.locator('h1, h2, h3').first()
@@ -275,7 +275,7 @@ test.describe('Route Coverage Tests', () => {
     test('handles empty state gracefully', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/operators')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Page should render real content, not be blank
       const bodyText = await page.textContent('body')
@@ -295,7 +295,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows Helm releases or content', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/helm')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/helm')
 
       const heading = page.locator('h1, h2, h3').first()
@@ -306,7 +306,7 @@ test.describe('Route Coverage Tests', () => {
       await setupDemoMode(page)
       const { errors } = setupErrorCollector(page)
       await page.goto('/helm')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       const bodyText = await page.textContent('body')
       expect(bodyText?.length).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
@@ -326,7 +326,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows log viewer UI', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/logs')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/logs')
 
       const heading = page.locator('h1, h2, h3').first()
@@ -337,7 +337,7 @@ test.describe('Route Coverage Tests', () => {
       await setupDemoMode(page)
       const { errors } = setupErrorCollector(page)
       await page.goto('/logs')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Should show a prompt to select a pod/container or an empty state
       const bodyText = await page.textContent('body')
@@ -363,7 +363,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows cost dashboard content', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/cost')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/cost')
 
       const heading = page.locator('h1, h2, h3').first()
@@ -373,11 +373,11 @@ test.describe('Route Coverage Tests', () => {
     test('has time range or filter controls', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/cost')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Look for time range selector, date picker, or filter controls
       const controls = page.locator('select, [role="combobox"], button:has-text("Day"), button:has-text("Week"), button:has-text("Month"), button:has-text("7d"), button:has-text("30d"), [data-testid*="time"], [data-testid*="range"], [class*="filter"], [class*="Filter"]')
-      const hasControls = await controls.first().isVisible({ timeout: SOFT_CHECK_TIMEOUT_MS }).catch(() => false)
+      const hasControls = await controls.first().isVisible({ timeout: SOFT_CHECK_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
       // At minimum, interactive elements should exist
       const interactiveElements = page.locator('button:visible, a[href]:visible, select:visible')
@@ -398,7 +398,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows GPU allocation cards or content', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/gpu-reservations')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/gpu-reservations')
 
       const heading = page.locator('h1, h2, h3').first()
@@ -409,7 +409,7 @@ test.describe('Route Coverage Tests', () => {
       await setupDemoMode(page)
       const { errors } = setupErrorCollector(page)
       await page.goto('/gpu-reservations')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Should show GPU cards, charts, or allocation data
       const visualElements = page.locator('[class*="card"], [class*="Card"], [class*="chart"], [class*="Chart"], canvas, svg, table, [role="table"]')
@@ -431,7 +431,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows tenancy overview content', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/multi-tenancy')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/multi-tenancy')
 
       const heading = page.locator('h1, h2, h3').first()
@@ -441,7 +441,7 @@ test.describe('Route Coverage Tests', () => {
     test('has interactive elements for tenant management', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/multi-tenancy')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       const interactiveElements = page.locator('button:visible, a[href]:visible, [role="tab"]:visible, select:visible')
       const count = await interactiveElements.count()
@@ -461,7 +461,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows pipeline cards or content', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/ci-cd')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/ci-cd')
 
       const heading = page.locator('h1, h2, h3').first()
@@ -471,7 +471,7 @@ test.describe('Route Coverage Tests', () => {
     test('has interactive pipeline elements', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/ci-cd')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       const interactiveElements = page.locator('button:visible, a[href]:visible, [role="tab"]:visible, [role="button"]:visible')
       const count = await interactiveElements.count()
@@ -491,7 +491,7 @@ test.describe('Route Coverage Tests', () => {
     test('shows agent list or content', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/ai-agents')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
       await assertPageHasContent(page, '/ai-agents')
 
       const heading = page.locator('h1, h2, h3').first()
@@ -501,7 +501,7 @@ test.describe('Route Coverage Tests', () => {
     test('has interactive agent elements', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/ai-agents')
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
       const interactiveElements = page.locator('button:visible, a[href]:visible, [role="tab"]:visible, [role="button"]:visible')
       const count = await interactiveElements.count()

@@ -69,7 +69,7 @@ test.describe('Sidebar Workflow — "Navigate and customize sidebar"', () => {
     const widthBefore = await sidebar.evaluate((el) => el.getBoundingClientRect().width)
 
     const collapseBtn = page.getByTestId('sidebar-collapse-toggle')
-    const hasCollapse = await collapseBtn.isVisible().catch(() => false)
+    const hasCollapse = await collapseBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasCollapse) {
       await collapseBtn.click()
       await page.waitForTimeout(TRANSITION_SETTLE_MS)
@@ -83,7 +83,7 @@ test.describe('Sidebar Workflow — "Navigate and customize sidebar"', () => {
     const sidebar = page.getByTestId('sidebar')
     await expect(sidebar).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     const collapseBtn = page.getByTestId('sidebar-collapse-toggle')
-    const hasCollapse = await collapseBtn.isVisible().catch(() => false)
+    const hasCollapse = await collapseBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasCollapse) {
       const widthBefore = await sidebar.evaluate((el) => el.getBoundingClientRect().width)
       await collapseBtn.click()
@@ -103,7 +103,7 @@ test.describe('Sidebar Workflow — "Navigate and customize sidebar"', () => {
     await expect(sidebar).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     // Pin button is next to the collapse toggle
     const pinBtn = page.locator('button[title*="pin" i], button[title*="Pin" i]')
-    const hasPin = await pinBtn.first().isVisible().catch(() => false)
+    const hasPin = await pinBtn.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasPin) {
       await pinBtn.first().click()
       await page.waitForTimeout(TRANSITION_SETTLE_MS)
@@ -115,12 +115,12 @@ test.describe('Sidebar Workflow — "Navigate and customize sidebar"', () => {
   test('add card button is accessible', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const addCard = page.getByTestId('sidebar-add-card')
-    const hasAddCard = await addCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasAddCard = await addCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasAddCard) {
       await addCard.click()
       // Should open a dialog or modal
       const dialog = page.locator('[role="dialog"]')
-      const hasDialog = await dialog.isVisible({ timeout: 3_000 }).catch(() => false)
+      const hasDialog = await dialog.isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
       expect(hasDialog).toBeTruthy()
     }
   })
@@ -128,7 +128,7 @@ test.describe('Sidebar Workflow — "Navigate and customize sidebar"', () => {
   test('cluster status section shows counts', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const clusterStatus = page.getByTestId('sidebar-cluster-status')
-    const hasStatus = await clusterStatus.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasStatus = await clusterStatus.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasStatus) {
       // Should show numeric counts for healthy/unhealthy/offline
       const text = await clusterStatus.textContent()
@@ -141,7 +141,7 @@ test.describe('Sidebar Workflow — "Navigate and customize sidebar"', () => {
     await setupDemoAndNavigate(page, '/')
     // On mobile, sidebar should be hidden by default
     const sidebar = page.getByTestId('sidebar')
-    const isVisible = await sidebar.isVisible().catch(() => false)
+    const isVisible = await sidebar.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     test.info().annotations.push({
       type: 'ux-finding',
       description: JSON.stringify({

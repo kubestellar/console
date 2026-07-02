@@ -81,7 +81,7 @@ test.describe('Tour/Onboarding', () => {
         .or(page.locator('button:has-text("Next")'))
         .or(page.locator('button:has-text("Get Started")'))
         .or(page.locator('button:has-text("Skip")'))
-      const tourShown = await tourOverlay.first().isVisible({ timeout: 5000 }).catch(() => false)
+      const tourShown = await tourOverlay.first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
       if (tourShown) {
         // Walk through at least the first step
@@ -89,7 +89,7 @@ test.describe('Tour/Onboarding', () => {
 
         const nextBtn = page.locator('button:has-text("Next")')
           .or(page.locator('button:has-text("Get Started")'))
-        const hasNext = await nextBtn.first().isVisible({ timeout: 3000 }).catch(() => false)
+        const hasNext = await nextBtn.first().isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
         if (hasNext) {
           await nextBtn.first().click()
           // After advancing, the page should still be stable
@@ -170,23 +170,23 @@ test.describe('Tour/Onboarding', () => {
         .or(page.locator('button:has-text("Finish")'))
 
       const hasTour = await skipBtn.or(nextBtn).first()
-        .isVisible({ timeout: 5000 }).catch(() => false)
+        .isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
       if (hasTour) {
         // Advance through steps (max 20 to avoid infinite loop)
         for (let step = 0; step < 20; step++) {
           const finishBtn = page.locator('button:has-text("Finish")')
-          if (await finishBtn.isVisible({ timeout: 500 }).catch(() => false)) {
+          if (await finishBtn.isVisible({ timeout: 500 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
             await finishBtn.click()
             break
           }
           const next = page.locator('button:has-text("Next")')
-          if (await next.isVisible({ timeout: 500 }).catch(() => false)) {
+          if (await next.isVisible({ timeout: 500 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
             await next.click()
             continue
           }
           // If neither Next nor Finish, try skip
-          if (await skipBtn.first().isVisible({ timeout: 500 }).catch(() => false)) {
+          if (await skipBtn.first().isVisible({ timeout: 500 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
             await skipBtn.first().click()
             break
           }

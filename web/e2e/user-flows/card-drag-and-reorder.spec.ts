@@ -37,7 +37,7 @@ test.describe('Card Drag and Reorder', () => {
 
   test('cards have drag handles visible on hover', async ({ page }) => {
     const firstCard = page.locator('[data-testid*="card-wrapper"], [data-testid*="dashboard-card"]').first()
-    const isVisible = await firstCard.isVisible().catch(() => false)
+    const isVisible = await firstCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!isVisible) {
       test.skip()
       return
@@ -46,7 +46,7 @@ test.describe('Card Drag and Reorder', () => {
     await firstCard.hover()
 
     const dragHandle = firstCard.locator('[data-testid*="drag"], [class*="drag"], [aria-grabbed], .drag-handle, [draggable="true"]')
-    const hasDragHandle = await dragHandle.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasDragHandle = await dragHandle.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     // Soft assertion — drag handles may not be implemented yet
     if (!hasDragHandle) {
@@ -153,7 +153,7 @@ test.describe('Card Drag and Reorder', () => {
     ).not.toBeNull()
 
     await page.reload()
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     const orderAfter = await page.evaluate(
       (key) => localStorage.getItem(key),
@@ -165,7 +165,7 @@ test.describe('Card Drag and Reorder', () => {
 
   test('touch targets on drag handles meet 44px minimum', async ({ page }) => {
     const firstCard = page.locator('[data-testid*="card-wrapper"], [data-testid*="dashboard-card"]').first()
-    const isVisible = await firstCard.isVisible().catch(() => false)
+    const isVisible = await firstCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!isVisible) {
       test.skip()
       return
@@ -174,7 +174,7 @@ test.describe('Card Drag and Reorder', () => {
     await firstCard.hover()
 
     const dragHandle = firstCard.locator('[data-testid*="drag"], [class*="drag"], .drag-handle, [draggable="true"]').first()
-    const hasDragHandle = await dragHandle.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasDragHandle = await dragHandle.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (!hasDragHandle) {
       test.info().annotations.push({ type: 'ux-finding', description: 'No drag handle found — cannot verify touch target size' })
@@ -186,7 +186,7 @@ test.describe('Card Drag and Reorder', () => {
 
   test('cards remain interactive after failed drag', async ({ page }) => {
     const firstCard = page.locator('[data-testid*="card-wrapper"], [data-testid*="dashboard-card"]').first()
-    const isVisible = await firstCard.isVisible().catch(() => false)
+    const isVisible = await firstCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!isVisible) {
       test.skip()
       return

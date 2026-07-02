@@ -147,14 +147,14 @@ test.describe('Mission System Regression Tests', () => {
         .or(page.locator('[data-tour="ai-missions-toggle"]'))
         .or(page.locator('button:has-text("Missions")'))
 
-      if (await missionToggle.first().isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await missionToggle.first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
         await missionToggle.first().click()
 
         // Look for the completed mission
         const completedMission = page.locator('text=Deploy App')
           .or(page.locator('[data-testid*="mission"][data-testid*="completed"]'))
 
-        if (await completedMission.first().isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (await completedMission.first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
           await completedMission.first().click()
 
           // Wait for mission content to load in the sidebar
@@ -186,12 +186,12 @@ test.describe('Mission System Regression Tests', () => {
         .or(page.locator('button:has-text("Browse")'))
         .or(page.locator('a[href*="browse=missions"]'))
 
-      if (await browseButton.first().isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await browseButton.first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
         await browseButton.first().click()
 
         // Wait for the browse dialog/panel to appear
         const folderElements = page.locator('[data-testid*="folder"], [class*="tree-node"][class*="folder"]')
-        await expect(folderElements.first()).toBeVisible({ timeout: 5000 }).catch(() => {})
+        await expect(folderElements.first()).toBeVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise catch:\', error) })
 
         // Count folder entries with the same name
         const count = await folderElements.count()

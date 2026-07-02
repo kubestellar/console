@@ -72,7 +72,7 @@ test.describe('AI Agents Deep Tests (/ai-agents)', () => {
     const statsSection = page.getByTestId('stats-overview')
       .or(page.locator('[data-testid*="stat-block"]'))
 
-    const hasStats = await statsSection.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasStats = await statsSection.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasStats) {
       // Stats may not render when there is no data — skip gracefully
       test.skip()
@@ -92,8 +92,8 @@ test.describe('AI Agents Deep Tests (/ai-agents)', () => {
     const kagentiTab = page.getByRole('button', { name: /kagenti/i })
     const kagentTab = page.getByRole('button', { name: /kagent/i })
 
-    const hasKagenti = await kagentiTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-    const hasKagent = await kagentTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasKagenti = await kagentiTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasKagent = await kagentTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     // At least one tab should be visible
     expect(hasKagenti || hasKagent).toBe(true)
@@ -106,8 +106,8 @@ test.describe('AI Agents Deep Tests (/ai-agents)', () => {
     const kagentiTab = page.getByRole('button', { name: /kagenti/i })
     const kagentTab = page.getByRole('button', { name: /kagent/i })
 
-    const hasKagentiTab = await kagentiTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-    const hasKagentTab = await kagentTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasKagentiTab = await kagentiTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasKagentTab = await kagentTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (!hasKagentiTab && !hasKagentTab) {
       test.skip()
@@ -160,7 +160,7 @@ test.describe('AI Agents Deep Tests (/ai-agents)', () => {
     const cardsGrid = page.getByTestId('dashboard-cards-grid')
       .or(page.locator('[data-testid*="cards-grid"]'))
 
-    const hasGrid = await cardsGrid.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasGrid = await cardsGrid.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (hasGrid) {
       // Grid should have card children or an empty-state prompt
@@ -168,13 +168,13 @@ test.describe('AI Agents Deep Tests (/ai-agents)', () => {
       const childCount = await children.count()
 
       const emptyState = page.getByText(/no cards|add your first card|get started/i)
-      const hasEmpty = await emptyState.first().isVisible().catch(() => false)
+      const hasEmpty = await emptyState.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
       expect(childCount > 0 || hasEmpty).toBe(true)
     } else {
       // An empty state message may be displayed instead of a grid
       const emptyState = page.getByText(/no cards|empty|get started|add card/i)
-      const hasEmpty = await emptyState.first().isVisible().catch(() => false)
+      const hasEmpty = await emptyState.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       // An empty state message should be displayed when no grid is found
       expect(hasEmpty).toBe(true)
     }
@@ -189,7 +189,7 @@ test.describe('AI Agents Deep Tests (/ai-agents)', () => {
       .or(page.locator('[data-testid*="demo"]'))
       .or(page.getByText(/demo/i))
 
-    const hasDemoBadge = await demoBadge.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasDemoBadge = await demoBadge.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     // Demo mode is expected — the badge should be visible or the page should
     // render content without error (fallback to demo data is transparent)
@@ -204,7 +204,7 @@ test.describe('AI Agents Deep Tests (/ai-agents)', () => {
 
     // Disabled tabs render an "Install" link next to their label
     const installLink = page.getByRole('link', { name: /install/i })
-    const hasInstall = await installLink.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasInstall = await installLink.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (!hasInstall) {
       // No disabled tabs at the moment — skip gracefully

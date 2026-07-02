@@ -155,7 +155,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
       const gridBtn = page.locator('button[title="Grid view"]')
       const listBtn = page.locator('button[title="List view"]')
       // These only appear when items are loaded; use a soft check
-      const gridVisible = await gridBtn.isVisible().catch(() => false)
+      const gridVisible = await gridBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       // If marketplace has items, both should be visible
       if (gridVisible) {
         await expect(gridBtn).toBeVisible()
@@ -165,7 +165,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
 
     test('clicking list toggle switches view', async ({ page }) => {
       const listBtn = page.locator('button[title="List view"]')
-      if (await listBtn.isVisible().catch(() => false)) {
+      if (await listBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })) {
         await listBtn.click()
         // After clicking, the list button should have the active style
         // Verify localStorage was updated
@@ -180,7 +180,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
     test('clicking grid toggle switches back', async ({ page }) => {
       const listBtn = page.locator('button[title="List view"]')
       const gridBtn = page.locator('button[title="Grid view"]')
-      if (await listBtn.isVisible().catch(() => false)) {
+      if (await listBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })) {
         // First switch to list
         await listBtn.click()
         // Then switch back to grid
@@ -233,7 +233,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
     test('shows CNCF Project Coverage banner', async ({ page }) => {
       const banner = page.locator('text=CNCF Project Coverage').first()
       // Banner only appears when cncfStats.total > 0; gracefully handle absence
-      const isVisible = await banner.isVisible().catch(() => false)
+      const isVisible = await banner.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (isVisible) {
         await expect(banner).toBeVisible()
       }
@@ -241,10 +241,10 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
 
     test('banner shows completion percentage', async ({ page }) => {
       const banner = page.locator('text=CNCF Project Coverage').first()
-      if (await banner.isVisible().catch(() => false)) {
+      if (await banner.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })) {
         // Look for percentage text (e.g. "42%")
         const pctText = page.getByText(/\d+%/).first()
-        const isVisible = await pctText.isVisible().catch(() => false)
+        const isVisible = await pctText.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
         // Percentage is shown near the banner header
         if (isVisible) {
           await expect(pctText).toBeVisible()
@@ -254,7 +254,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
 
     test('banner can be collapsed', async ({ page }) => {
       const bannerButton = page.locator('button').filter({ hasText: 'CNCF Project Coverage' }).first()
-      if (await bannerButton.isVisible().catch(() => false)) {
+      if (await bannerButton.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })) {
         // Click to collapse
         await bannerButton.click()
         const collapsed = await page.evaluate(
@@ -293,7 +293,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
     test('items show name and type badge', async ({ page }) => {
       // Each card has an h3 for the name and a type badge (Dashboard/Card Preset/Theme)
       const firstCard = page.locator('.bg-card').filter({ has: page.locator('h3') }).first()
-      if (await firstCard.isVisible().catch(() => false)) {
+      if (await firstCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })) {
         const name = firstCard.locator('h3').first()
         await expect(name).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
         const nameText = await name.textContent()
@@ -304,9 +304,9 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
     test('items show description', async ({ page }) => {
       // Description is a <p> with class "line-clamp-2" inside cards
       const firstCard = page.locator('.bg-card').filter({ has: page.locator('h3') }).first()
-      if (await firstCard.isVisible().catch(() => false)) {
+      if (await firstCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })) {
         const desc = firstCard.locator('p').first()
-        if (await desc.isVisible().catch(() => false)) {
+        if (await desc.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })) {
           const descText = await desc.textContent()
           expect((descText ?? '').length).toBeGreaterThan(0)
         }
@@ -322,7 +322,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
     test('sort controls are visible', async ({ page }) => {
       // Sort label "Sort:" appears when items are loaded
       const sortLabel = page.locator('text=Sort:').first()
-      const isVisible = await sortLabel.isVisible().catch(() => false)
+      const isVisible = await sortLabel.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (isVisible) {
         await expect(sortLabel).toBeVisible()
         // Verify sort buttons exist (Name, Type, Author)
@@ -350,8 +350,8 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
       const helpWantedBtn = page.locator('button').filter({ hasText: 'Help Wanted' }).first()
       const browseIssuesLink = page.locator('a').filter({ hasText: 'Browse Issues' }).first()
 
-      const helpVisible = await helpWantedBtn.isVisible().catch(() => false)
-      const browseVisible = await browseIssuesLink.isVisible().catch(() => false)
+      const helpVisible = await helpWantedBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const browseVisible = await browseIssuesLink.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
 
       if (browseVisible) {
         const href = await browseIssuesLink.getAttribute('href')

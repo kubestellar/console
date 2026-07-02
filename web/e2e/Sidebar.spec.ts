@@ -169,7 +169,7 @@ test.describe('Sidebar Navigation', () => {
       await expect(collapseToggle).toHaveAttribute('aria-expanded', 'true')
 
       // Wait for network idle to ensure no DOM re-renders during click
-      await page.waitForLoadState('networkidle').catch(() => {})
+      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Use evaluate(el.click()) — Playwright's synthetic click can miss React's
       // event delegation on webkit when the component tree is mid-render.
@@ -190,7 +190,7 @@ test.describe('Sidebar Navigation', () => {
       const collapseToggle = page.getByTestId('sidebar-collapse-toggle')
 
       // Wait for network idle before first collapse
-      await page.waitForLoadState('networkidle').catch(() => {})
+      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Collapse first — force:true bypasses webkit/firefox actionability
       // check while the sidebar polls for data (#nightly-playwright).
@@ -200,7 +200,7 @@ test.describe('Sidebar Navigation', () => {
       await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible({ timeout: 10000 })
 
       // Wait for network idle before re-expanding
-      await page.waitForLoadState('networkidle').catch(() => {})
+      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Click again to expand
       await collapseToggle.evaluate((el) => (el as HTMLElement).click())
@@ -220,7 +220,7 @@ test.describe('Sidebar Navigation', () => {
       const collapseToggle = page.getByTestId('sidebar-collapse-toggle')
 
       // Wait for network idle before collapse
-      await page.waitForLoadState('networkidle').catch(() => {})
+      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Collapse sidebar — force:true for webkit/firefox stability
       await collapseToggle.evaluate((el) => (el as HTMLElement).click())
@@ -241,7 +241,7 @@ test.describe('Sidebar Navigation', () => {
       // #12090 — Use timeout instead of catch to differentiate between
       // "feature disabled" and "slow hydration"
       const clusterStatus = page.getByTestId('sidebar-cluster-status')
-      const isVisible = await clusterStatus.isVisible({ timeout: 30000 }).catch(() => false)
+      const isVisible = await clusterStatus.isVisible({ timeout: 30000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
       if (isVisible) {
         // Should show healthy/unhealthy labels inside the cluster status section
@@ -257,7 +257,7 @@ test.describe('Sidebar Navigation', () => {
 
       // #12090 — Use timeout instead of catch
       const clusterStatus = page.getByTestId('sidebar-cluster-status')
-      const isVisible = await clusterStatus.isVisible({ timeout: 30000 }).catch(() => false)
+      const isVisible = await clusterStatus.isVisible({ timeout: 30000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
       if (!isVisible) {
         test.skip()
@@ -276,7 +276,7 @@ test.describe('Sidebar Navigation', () => {
 
       // #12090 — Use timeout instead of catch
       const clusterStatus = page.getByTestId('sidebar-cluster-status')
-      const isVisible = await clusterStatus.isVisible({ timeout: 30000 }).catch(() => false)
+      const isVisible = await clusterStatus.isVisible({ timeout: 30000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
       if (!isVisible) {
         test.skip()
@@ -285,7 +285,7 @@ test.describe('Sidebar Navigation', () => {
 
       // Click unhealthy status button
       const unhealthyBtn = clusterStatus.locator('button').filter({ hasText: /Unhealthy/i }).first()
-      const unhealthyVisible = await unhealthyBtn.isVisible({ timeout: 30000 }).catch(() => false)
+      const unhealthyVisible = await unhealthyBtn.isVisible({ timeout: 30000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
       if (!unhealthyVisible) { test.skip(); return }
 
       await unhealthyBtn.click()
@@ -322,7 +322,7 @@ test.describe('Sidebar Navigation', () => {
 
       // The "Add more..." button opens the SidebarCustomizer
       const addMoreBtn = page.getByTestId('sidebar').locator('button').filter({ hasText: /Add more/i }).first()
-      const isVisible = await addMoreBtn.isVisible().catch(() => false)
+      const isVisible = await addMoreBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (!isVisible) {
         // Button may not be visible if sidebar is collapsed
         test.skip()
@@ -335,14 +335,14 @@ test.describe('Sidebar Navigation', () => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
       const addMoreBtn = page.getByTestId('sidebar').locator('button').filter({ hasText: /Add more/i }).first()
-      const isVisible = await addMoreBtn.isVisible().catch(() => false)
+      const isVisible = await addMoreBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (!isVisible) {
         test.skip()
         return
       }
 
       // Wait for network idle before clicking
-      await page.waitForLoadState('networkidle').catch(() => {})
+      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Click Add more — use native el.click() for webkit/firefox where CSS
       // transitions can cause actionability checks to stall (#nightly-playwright).
@@ -356,14 +356,14 @@ test.describe('Sidebar Navigation', () => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
       const addMoreBtn = page.getByTestId('sidebar').locator('button').filter({ hasText: /Add more/i }).first()
-      const isVisible = await addMoreBtn.isVisible().catch(() => false)
+      const isVisible = await addMoreBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
       if (!isVisible) {
         test.skip()
         return
       }
 
       // Wait for network idle before clicking
-      await page.waitForLoadState('networkidle').catch(() => {})
+      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Open customizer — use native el.click() for webkit/firefox where CSS
       // transitions can cause actionability checks to stall (#nightly-playwright).
@@ -427,7 +427,7 @@ test.describe('Sidebar Navigation', () => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
       // Wait for network idle before collapse
-      await page.waitForLoadState('networkidle').catch(() => {})
+      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Collapse sidebar — native el.click() for webkit React event reliability (#nightly-playwright)
       const COLLAPSE_TIMEOUT_MS = 15_000
@@ -442,7 +442,7 @@ test.describe('Sidebar Navigation', () => {
       await page.goto('/clusters')
       await page.waitForLoadState('domcontentloaded')
       // Wait for network idle on new page
-      await page.waitForLoadState('networkidle').catch(() => {})
+      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
 
       // Sidebar should still be collapsed (Add Card hidden)
       // Firefox/webkit may need extra time to apply persisted sidebar state. #10134
