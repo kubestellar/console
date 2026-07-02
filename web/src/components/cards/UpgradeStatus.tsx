@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { ArrowUp, Rocket, AlertTriangle } from 'lucide-react'
+import { ArrowUp, Rocket, AlertTriangle, RefreshCw } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -47,6 +47,7 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
     isRefreshing,
     isFailed,
     consecutiveFailures,
+    refetch,
   } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { startMission } = useMissions()
@@ -254,9 +255,20 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
 
   if (showEmptyState) {
     return (
-      <CardEmptyState icon={<AlertTriangle className="w-6 h-6 text-red-400" />}>
-        <p className="text-sm text-red-400">{t('common.fetchFailed', 'Failed to fetch upgrade status')}</p>
-      </CardEmptyState>
+      <div className="flex flex-col items-center justify-center h-full gap-2">
+        <CardEmptyState icon={<AlertTriangle className="w-6 h-6 text-red-400" />}>
+          <p className="text-sm text-red-400">{t('common.fetchFailed', 'Failed to fetch upgrade status')}</p>
+        </CardEmptyState>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => refetch()}
+          className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+        >
+          <RefreshCw className="w-3 h-3" />
+          {t('common.retry', 'Retry')}
+        </Button>
+      </div>
     )
   }
 

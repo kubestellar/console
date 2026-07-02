@@ -199,7 +199,7 @@ function setupDefaults({
     isRefreshing,
     isFailed,
     consecutiveFailures,
-    error: null,
+    error: false,
     lastRefresh: null,
   })
   mockUseCardLoadingState.mockReturnValue({})

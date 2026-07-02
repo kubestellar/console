@@ -28,7 +28,7 @@ vi.mock('../../ui/Skeleton', () => ({
 function setup(overrides?: Record<string, unknown>) {
   mockUseFlatcarStatus.mockReturnValue({
     data: null,
-    error: null,
+    error: false,
     isRefreshing: false,
     showSkeleton: false,
     showEmptyState: false,
@@ -56,7 +56,7 @@ describe('FlatcarStatus', () => {
   })
 
   it('renders empty state when no Flatcar nodes found', () => {
-    setup({ error: null, showEmptyState: true })
+    setup({ error: false, showEmptyState: true })
     render(<FlatcarStatus />)
 
     expect(screen.getByText('flatcar.noFlatcarNodes')).toBeTruthy()

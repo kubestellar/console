@@ -27,7 +27,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
-    error: null,
+    error: false,
   })),
 }))
 
@@ -148,7 +148,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       // LB count = 1
@@ -168,7 +168,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       expect(screen.getByText('my-svc')).toBeTruthy()
@@ -184,7 +184,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       expect(screen.getByTestId('cluster-badge')).toBeTruthy()
@@ -199,7 +199,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       expect(screen.getByText('LoadBalancer')).toBeTruthy()
@@ -214,7 +214,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       expect(screen.getByText('443/TCP, 80/TCP')).toBeTruthy()
@@ -229,7 +229,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       fireEvent.click(screen.getByText('my-svc'))

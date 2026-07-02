@@ -73,8 +73,8 @@ describe('PredictiveHealth', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
   })
 
   it('renders without crashing', () => {
@@ -115,8 +115,8 @@ describe('PredictiveHealth', () => {
       { name: 'pod-1', cluster: 'cluster-a', restarts: 0 },
       { name: 'pod-2', cluster: 'cluster-b', restarts: 0 },
     ]
-    mockNodes.mockReturnValue({ nodes: testNodes, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockPods.mockReturnValue({ pods: testPods, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockNodes.mockReturnValue({ nodes: testNodes, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockPods.mockReturnValue({ pods: testPods, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
 
     render(<PredictiveHealth />)
 
@@ -139,8 +139,8 @@ describe('PredictiveHealth', () => {
       { name: 'pod-a', cluster: 'cluster-a', restarts: 0 },
       { name: 'pod-b', cluster: 'cluster-b', restarts: 0 },
     ]
-    mockNodes.mockReturnValue({ nodes: testNodes, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockPods.mockReturnValue({ pods: testPods, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockNodes.mockReturnValue({ nodes: testNodes, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockPods.mockReturnValue({ pods: testPods, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
 
     const { container } = render(<PredictiveHealth />)
 
@@ -159,8 +159,8 @@ describe('PredictiveHealth', () => {
     const testPods = [
       { name: 'pod-a', cluster: 'cluster-a', restarts: 10 },
     ]
-    mockNodes.mockReturnValue({ nodes: testNodes, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockPods.mockReturnValue({ pods: testPods, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockNodes.mockReturnValue({ nodes: testNodes, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockPods.mockReturnValue({ pods: testPods, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
 
     const { container } = render(<PredictiveHealth />)
 

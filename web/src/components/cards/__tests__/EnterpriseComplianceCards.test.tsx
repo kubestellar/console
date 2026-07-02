@@ -127,7 +127,7 @@ describe('EnterpriseComplianceCards', () => {
 
   describe('NISTCard (Pattern B - useCache)', () => {
     it('renders loading state when data is null and no error', () => {
-      (useCache as any).mockReturnValue({ data: null, error: null });
+      (useCache as any).mockReturnValue({ data: null, error: false });
 
       render(
         <MemoryRouter>
@@ -155,7 +155,7 @@ describe('EnterpriseComplianceCards', () => {
     it('renders success state and navigates on click', async () => {
       const user = userEvent.setup();
       const mockData = { overall_score: 72, implemented_controls: 50, partial_controls: 10, planned_controls: 5, total_controls: 65 };
-      (useCache as any).mockReturnValue({ data: mockData, error: null });
+      (useCache as any).mockReturnValue({ data: mockData, error: false });
 
       render(
         <MemoryRouter>

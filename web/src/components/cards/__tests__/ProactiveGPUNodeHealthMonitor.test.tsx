@@ -53,7 +53,7 @@ vi.mock('../CardDataContext', () => ({
 const mockGPUNodeHealth = vi.fn()
 vi.mock('../../../hooks/useCachedData', () => ({
   useCachedGPUNodeHealth: () => mockGPUNodeHealth(),
-  useGPUHealthCronJob: () => ({ status: null, isLoading: false, error: null, actionInProgress: false, install: vi.fn(), uninstall: vi.fn(), refetch: vi.fn() }),
+  useGPUHealthCronJob: () => ({ status: null, isLoading: false, error: false, actionInProgress: false, install: vi.fn(), uninstall: vi.fn(), refetch: vi.fn() }),
 }))
 
 const mockDrillDown = vi.fn()
@@ -68,7 +68,7 @@ describe('ProactiveGPUNodeHealthMonitor', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockGPUNodeHealth.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockGPUNodeHealth.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
     mockDrillDown.mockReturnValue({ drillToGPU: vi.fn() })
   })
 
@@ -102,13 +102,13 @@ describe('ProactiveGPUNodeHealthMonitor', () => {
 
   it('renders during background refresh with cached data', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockGPUNodeHealth.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockGPUNodeHealth.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
     const { container } = render(<ProactiveGPUNodeHealthMonitor />)
     expect(container).toBeTruthy()
   })
 
   it('reports demo fallback state', () => {
-    mockGPUNodeHealth.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockGPUNodeHealth.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
     render(<ProactiveGPUNodeHealthMonitor />)
     expect(mockUseCardLoadingState).toHaveBeenCalled()
   })

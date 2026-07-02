@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Plus, AlertTriangle } from 'lucide-react'
+import { Plus, AlertTriangle, RefreshCw } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
 import {
   useClusters,
@@ -13,6 +13,7 @@ import { useCachedNamespaces } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
 import { StatusBadge } from '../ui/StatusBadge'
 import { CardEmptyState } from '../ui/CardEmptyState'
+import { Button } from '../ui/Button'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { CardControlsRow } from '../../lib/cards/CardComponents'
 import { useCardData, type SortDirection } from '../../lib/cards/cardHooks'
@@ -252,9 +253,20 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
 
   if (showEmptyState) {
     return (
-      <CardEmptyState icon={<AlertTriangle className="w-6 h-6 text-red-400" />}>
-        <p className="text-sm text-red-400">{t('common.fetchFailed', 'Failed to fetch data')}</p>
-      </CardEmptyState>
+      <div className="flex flex-col items-center justify-center h-full gap-2">
+        <CardEmptyState icon={<AlertTriangle className="w-6 h-6 text-red-400" />}>
+          <p className="text-sm text-red-400">{t('common.fetchFailed', 'Failed to fetch data')}</p>
+        </CardEmptyState>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => refetchQuotas()}
+          className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+        >
+          <RefreshCw className="w-3 h-3" />
+          {t('common.retry', 'Retry')}
+        </Button>
+      </div>
     )
   }
 

@@ -224,7 +224,7 @@ describe('PodIssues', () => {
     })
 
     it('shows fallback error message when error is null', () => {
-      setupDefaults({ isFailed: true, error: null, issues: [] })
+      setupDefaults({ isFailed: true, error: false, issues: [] })
       render(<PodIssues />)
       expect(screen.getByText('podIssues.apiUnavailable')).toBeInTheDocument()
     })

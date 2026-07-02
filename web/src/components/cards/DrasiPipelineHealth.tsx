@@ -81,6 +81,7 @@ export function DrasiPipelineHealth({ config: _config }: DrasiPipelineHealthProp
     isDemoData,
     isFailed,
     consecutiveFailures,
+    error,
     lastRefresh,
     refetch,
   } = useCachedDrasiHealth()
@@ -95,6 +96,7 @@ export function DrasiPipelineHealth({ config: _config }: DrasiPipelineHealthProp
     isDemoData,
     isFailed,
     consecutiveFailures,
+    errorMessage: error ?? undefined,
     lastRefresh,
   })
 

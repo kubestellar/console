@@ -98,6 +98,7 @@ export function VitessStatus() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    error,
     lastRefresh,
   } = useCachedVitess()
 
@@ -116,6 +117,7 @@ export function VitessStatus() {
     hasAnyData,
     isFailed,
     consecutiveFailures,
+    errorMessage: error ?? undefined,
     lastRefresh,
   })
 

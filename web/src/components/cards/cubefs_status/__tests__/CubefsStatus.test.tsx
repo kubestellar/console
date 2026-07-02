@@ -82,7 +82,7 @@ describe('CubefsStatus', () => {
     mockHookReturn = {
       data: CUBEFS_DEMO_DATA,
       isRefreshing: false,
-      error: null,
+      error: false,
       showSkeleton: false,
       showEmptyState: false,
       lastRefresh: Date.now(),

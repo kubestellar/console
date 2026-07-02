@@ -78,7 +78,7 @@ vi.mock('../../../../hooks/useCachedData', () => ({
 }))
 
 vi.mock('../../CardDataContext', () => ({
-  useCardLoadingState: () => ({ data: [], isLoading: false, error: null }),
+  useCardLoadingState: () => ({ data: [], isLoading: false, error: false }),
   useCardDemoState: () => ({ shouldUseDemoData: null }),
   useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
 }))

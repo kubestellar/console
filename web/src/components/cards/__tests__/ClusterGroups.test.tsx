@@ -135,7 +135,7 @@ describe('ClusterGroups', () => {
       isRefreshing: false,
       isFailed: false,
       consecutiveFailures: 0,
-      error: null,
+      error: false,
       lastRefresh: Date.now(),
     })
   })
@@ -170,7 +170,7 @@ describe('ClusterGroups', () => {
       isRefreshing: false,
       isFailed: false,
       consecutiveFailures: 0,
-      error: null,
+      error: false,
       lastRefresh: Date.now(),
     })
     const { container } = render(<ClusterGroups />)

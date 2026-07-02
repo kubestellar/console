@@ -107,7 +107,7 @@ function setupMocks(overrides: {
       }
     ],
     isLoading: overrides.quotasLoading ?? false,
-    error: null,
+    error: false,
     refetch: vi.fn(),
     isDemoFallback: overrides.isDemoFallback ?? false,
   })
@@ -130,7 +130,7 @@ function setupMocks(overrides: {
       }
     ],
     isLoading: overrides.limitsLoading ?? false,
-    error: null,
+    error: false,
     refetch: vi.fn(),
   })
 
@@ -139,7 +139,7 @@ function setupMocks(overrides: {
     isLoading: overrides.namespacesLoading ?? false,
     isRefreshing: false,
     isDemoFallback: false,
-    error: null,
+    error: false,
     isFailed: false,
     consecutiveFailures: 0,
   })

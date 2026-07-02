@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, X, Filter, ChevronDown, ChevronRight, Flag, Sparkles, Lock, Unlock, Eye, RefreshCw } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton } from '../../lib/cards/CardComponents'
+import { Button } from '../ui/Button'
 import { useACMM } from '../acmm/ACMMProvider'
 import { useMissions } from '../../hooks/useMissions'
 import { ALL_CRITERIA, SOURCES_BY_ID } from '../../lib/acmm/sources'
@@ -249,11 +250,20 @@ export function ACMMFeedbackLoops() {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex items-center justify-center p-4">
+      <div className="h-full flex flex-col items-center justify-center p-4 gap-2">
         <div className="text-center text-muted-foreground">
           <p className="text-sm font-medium">{t('cards:acmmFeedbackLoops.loadFailed', 'Failed to load criteria')}</p>
           <p className="text-xs mt-1">{t('cards:acmmFeedbackLoops.tryRefresh', 'Please refresh the page or try again later.')}</p>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => scan.refetch()}
+          className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+        >
+          <RefreshCw className="w-3 h-3" />
+          {t('common.retry', 'Retry')}
+        </Button>
       </div>
     )
   }

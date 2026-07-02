@@ -43,7 +43,7 @@ vi.mock('../../../../lib/llmd/mockData', () => ({
 
 vi.mock('../../CardDataContext', () => ({
   useCardDemoState: () => ({ shouldUseDemoData: null, showDemoBadge: null }),
-  useReportCardDataState: () => ({ data: [], isLoading: false, error: null }),
+  useReportCardDataState: () => ({ data: [], isLoading: false, error: false }),
   useReportCardDataState: () => {},
 }))
 

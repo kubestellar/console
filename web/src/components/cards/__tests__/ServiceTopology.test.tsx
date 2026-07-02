@@ -60,7 +60,7 @@ describe('ServiceTopology', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockTopology.mockReturnValue({ nodes: [], edges: [], isLoading: false, error: null })
+    mockTopology.mockReturnValue({ nodes: [], edges: [], isLoading: false, error: false })
   })
 
   it('renders without crashing', () => {

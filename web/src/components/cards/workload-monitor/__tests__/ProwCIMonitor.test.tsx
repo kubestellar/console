@@ -82,7 +82,7 @@ vi.mock('../../../../lib/cn', () => ({
 }))
 
 vi.mock('../../../cards/CardDataContext', () => ({
-  useCardLoadingState: () => ({ data: [], isLoading: false, error: null }),
+  useCardLoadingState: () => ({ data: [], isLoading: false, error: false }),
   useCardDemoState: () => ({ shouldUseDemoData: null }),
   useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
 }))

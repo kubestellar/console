@@ -90,15 +90,15 @@ describe('NamespaceMonitor', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockNamespaces.mockReturnValue({ namespaces: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockDeployments.mockReturnValue({ deployments: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockServices.mockReturnValue({ services: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockConfigMaps.mockReturnValue({ configmaps: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockSecrets.mockReturnValue({ secrets: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockJobs.mockReturnValue({ jobs: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+    mockNamespaces.mockReturnValue({ namespaces: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockDeployments.mockReturnValue({ deployments: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockServices.mockReturnValue({ services: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockConfigMaps.mockReturnValue({ configmaps: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockSecrets.mockReturnValue({ secrets: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockJobs.mockReturnValue({ jobs: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
+    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: false, lastRefresh: Date.now() })
     mockDrillDown.mockReturnValue({ drillToNamespace: vi.fn() })
   })
 
@@ -127,7 +127,7 @@ describe('NamespaceMonitor', () => {
   it('renders with cluster data available', () => {
     mockUseClusters.mockReturnValue({
       clusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }], deduplicatedClusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
-      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+      isLoading: false, isRefreshing: false, error: false, lastRefresh: Date.now(),
     })
     const { container } = render(<NamespaceMonitor />)
     expect(container).toBeTruthy()
