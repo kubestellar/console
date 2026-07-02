@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, memo } from 'react'
+import i18next from 'i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { sodDashboardConfig } from '../../config/dashboards/segregation-of-duties'
 import {
@@ -140,11 +141,11 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
             <Filter className="w-4 h-4 text-muted-foreground" />
             <div className="w-40">
               <Select value={filterSeverity} onChange={e => setFilterSeverity(e.target.value)} selectSize="sm">
-                <option value="all">All severities</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="all">{i18next.t('common:severityFilters.all', 'All severities')}</option>
+                <option value="critical">{i18next.t('common:severityFilters.critical', 'Critical')}</option>
+                <option value="high">{i18next.t('common:severityFilters.high', 'High')}</option>
+                <option value="medium">{i18next.t('common:severityFilters.medium', 'Medium')}</option>
+                <option value="low">{i18next.t('common:severityFilters.low', 'Low')}</option>
               </Select>
             </div>
           </div>
