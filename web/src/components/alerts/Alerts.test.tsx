@@ -7,6 +7,7 @@ import { MemoryRouter } from 'react-router-dom'
 import '../../test/utils/setupMocks'
 
 let mockClustersLoading = false
+let mockClustersError: string | null = null
 
 vi.mock('../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: ({ title, subtitle, children, isLoading }: { title: string; subtitle?: string; children?: React.ReactNode; isLoading?: boolean }) => (
@@ -28,7 +29,7 @@ vi.mock('../../hooks/useAlerts', () => ({
 
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => ({
-    deduplicatedClusters: [], isLoading: mockClustersLoading, isRefreshing: false, refetch: vi.fn(), error: null,
+    deduplicatedClusters: [], isLoading: mockClustersLoading, isRefreshing: false, refetch: vi.fn(), error: mockClustersError,
   }),
 }))
 
@@ -80,5 +81,13 @@ describe('Alerts Component', () => {
     renderAlerts()
     expect(screen.getByTestId('dashboard-page')).toHaveAttribute('data-loading', 'true')
     mockClustersLoading = false
+  })
+
+  it('displays error message when cluster data fetch fails', () => {
+    mockClustersError = 'Failed to connect to cluster'
+    renderAlerts()
+    expect(screen.getByText('alerts.errorLoading')).toBeInTheDocument()
+    expect(screen.getByText('Failed to connect to cluster')).toBeInTheDocument()
+    mockClustersError = null
   })
 })

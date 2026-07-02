@@ -18,17 +18,15 @@ on:
 # workflow level because the `notify` job calls the reusable
 # `_perf-regression-issue.yml` workflow, and reusable workflows cannot
 # receive more permissions than their caller.
-permissions:
-  contents: read
-  actions: read
-  issues: write
-
+permissions: read-all  # default read; writes scoped to job below
 env:
   CI: true
   PERF_SIGNAL: ttfi-all-cards
 
 jobs:
   all-cards-ttfi:
+    permissions:
+      issues: write
     name: All Cards TTFI (Hard Gate)
     runs-on: ubuntu-latest
     timeout-minutes: 45
