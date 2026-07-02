@@ -115,7 +115,7 @@ export const HIPAADashboardContent = memo(function HIPAADashboardContent() {
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
+      <button onClick={fetchData} className="px-4 py-2 min-h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
     </div>
   )
 

@@ -127,7 +127,7 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
 
       <div className="flex gap-1 border-b border-border pb-0">
         {(['violations', 'principals', 'rules'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab ? 'bg-secondary text-foreground border-b-2 border-indigo-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 min-h-11 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab ? 'bg-secondary text-foreground border-b-2 border-indigo-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}>
             {tab === 'violations' && `Violations (${violations.length})`}
             {tab === 'principals' && `Principals (${principals.length})`}
             {tab === 'rules' && `Rules (${rules.length})`}
