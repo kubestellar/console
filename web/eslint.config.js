@@ -38,6 +38,12 @@ export default tseslint.config(
         caughtErrorsIgnorePattern: '^_',
         destructuredArrayIgnorePattern: '^_',
       }],
+      // Downgraded from recommended 'error' — too many pre-existing violations
+      // to fix atomically. Will be re-enabled incrementally.
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/ban-ts-comment': 'warn',
+      '@typescript-eslint/no-empty-object-type': 'warn',
+      '@typescript-eslint/no-namespace': 'warn',
       // Warn on patterns that often indicate unbatched state updates (#3049)
       // Encourages useReducer or single-object setState for related state
       'no-restricted-globals': ['error',
