@@ -13,7 +13,7 @@
  */
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, Box, CheckCircle, PauseCircle, Server, StopCircle } from 'lucide-react'
+import { AlertTriangle, Box, CheckCircle, PauseCircle, RefreshCw, Server, StopCircle } from 'lucide-react'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedContainerd } from '../../../hooks/useCachedContainerd'
@@ -82,6 +82,7 @@ export function ContainerdStatus() {
     consecutiveFailures,
     error,
     lastRefresh,
+    refetch,
   } = useCachedContainerd()
 
   const hasAnyData = data.containers.length > 0
@@ -112,9 +113,17 @@ export function ContainerdStatus() {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-3">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">{t('containerdStatus.fetchFailed', 'Failed to fetch containerd status')}</p>
+        {error && <p className="text-xs text-muted-foreground max-w-xs text-center">{error}</p>}
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm"
+        >
+          <RefreshCw className="w-4 h-4" />
+          {t('common.retry', 'Retry')}
+        </button>
       </div>
     )
   }

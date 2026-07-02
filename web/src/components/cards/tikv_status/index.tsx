@@ -87,6 +87,7 @@ export function TikvStatus() {
     consecutiveFailures,
     error,
     lastRefresh,
+    refetch,
   } = useCachedTikv()
 
   // Rule: never show demo data while still loading
@@ -119,7 +120,18 @@ export function TikvStatus() {
   if (showEmptyState) {
     return (
       <div className="h-full flex items-center justify-center p-4">
-        <EmptyState icon={<AlertTriangle className="w-8 h-8 text-red-400" />} title={t('tikvStatus.fetchFailed', 'Failed to fetch TiKV status')} />
+        <div className="flex flex-col items-center gap-3">
+          <AlertTriangle className="w-8 h-8 text-red-400" />
+          <p className="text-sm font-medium text-red-400">{t('tikvStatus.fetchFailed', 'Failed to fetch TiKV status')}</p>
+          {error && <p className="text-xs text-muted-foreground max-w-xs text-center">{error}</p>}
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm"
+          >
+            <RefreshCw className="w-4 h-4" />
+            {t('common.retry', 'Retry')}
+          </button>
+        </div>
       </div>
     )
   }
