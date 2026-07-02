@@ -82,7 +82,6 @@ func TestStellarStream_ReturnsUnauthorizedWithoutUser(t *testing.T) {
 	app.Get("/api/stellar/stream", h.Stream)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, 2000)
@@ -201,7 +200,6 @@ func TestStellarListObservations_EmptyReturnsEmptyList(t *testing.T) {
 	app, _ := newStellarTestApp(t)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/stellar/observations", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, stellarTestFiberTimeoutMs)
@@ -222,7 +220,6 @@ func TestStellarListObservations_AppliesLimitParam(t *testing.T) {
 	app, _ := newStellarTestApp(t)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/stellar/observations?limit=7", nil)
-	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, stellarTestFiberTimeoutMs)
@@ -254,7 +251,6 @@ func TestStellarIngestEvent_RequiresAuth(t *testing.T) {
 
 	body := `{"cluster":"c1","namespace":"ns","name":"pod-a","type":"Warning","reason":"CrashLoop","message":"back-off"}`
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/events", strings.NewReader(body))
-	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")

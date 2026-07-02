@@ -52,7 +52,6 @@ func TestGenerateClusterQuery_PromptTooLong(t *testing.T) {
 			data, _ := json.Marshal(payload)
 
 			req, err := http.NewRequest("POST", "/api/cluster-groups/ai-query", bytes.NewReader(data))
-	req.Host = "localhost"
 			require.NoError(t, err)
 			req.Host = "localhost"
 			req.Header.Set("Content-Type", "application/json")
@@ -82,7 +81,6 @@ func TestGenerateClusterQuery_EmptyPrompt(t *testing.T) {
 	data, _ := json.Marshal(payload)
 
 	req, err := http.NewRequest("POST", "/api/cluster-groups/ai-query", bytes.NewReader(data))
-	req.Host = "localhost"
 	require.NoError(t, err)
 	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
@@ -309,7 +307,6 @@ func TestGenerateClusterQuery_AIRateLimiter(t *testing.T) {
 	makeRequest := func() *http.Response {
 		payload, _ := json.Marshal(map[string]string{"prompt": "list healthy clusters"})
 		req, err := http.NewRequest(http.MethodPost, "/api/cluster-groups/ai-query", bytes.NewReader(payload))
-	req.Host = "localhost"
 		require.NoError(t, err)
 		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
@@ -378,7 +375,6 @@ func TestGenerateClusterQuery_AIRateLimiter_IndependentPerIP(t *testing.T) {
 	makeRequest := func() *http.Response {
 		payload, _ := json.Marshal(map[string]string{"prompt": "list healthy clusters"})
 		req, err := http.NewRequest(http.MethodPost, "/api/cluster-groups/ai-query", bytes.NewReader(payload))
-	req.Host = "localhost"
 		require.NoError(t, err)
 		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
