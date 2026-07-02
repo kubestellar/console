@@ -725,7 +725,7 @@ jobs:
   # ════════════════════════════════════════════════════════════════
   auto-review:
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     needs: [plan, collect, integration-test]
     if: |
