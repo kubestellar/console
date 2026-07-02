@@ -185,8 +185,8 @@ jobs:
 
   collect:
     permissions:
-      contents: read
-      pull-requests: read
+      contents: write
+      pull-requests: write
     needs: [plan, generate]
     if: ${{ needs.plan.outputs.dry_run != 'true' }}
     runs-on: ubuntu-latest
