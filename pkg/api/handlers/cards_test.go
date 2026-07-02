@@ -555,7 +555,6 @@ func TestCreateCard_LimitReached_Returns429(t *testing.T) {
 
 	body := `{"card_type":"cluster_health","position":{"x":0,"y":0,"w":4,"h":3}}`
 	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
-	req.Host = "localhost"
 		strings.NewReader(body))
 	require.NoError(t, err)
 	req.Host = "localhost"
@@ -576,7 +575,6 @@ func TestCreateCard_UnknownCardType_Returns400(t *testing.T) {
 
 	body := `{"card_type":"not_a_real_card","position":{"x":0,"y":0,"w":4,"h":3}}`
 	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
-	req.Host = "localhost"
 		strings.NewReader(body))
 	require.NoError(t, err)
 	req.Host = "localhost"
@@ -648,7 +646,6 @@ func TestCreateCard_UserStoreError_Returns500(t *testing.T) {
 
 	body := `{"card_type":"cluster_health","position":{"x":0,"y":0,"w":4,"h":3}}`
 	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
-	req.Host = "localhost"
 		strings.NewReader(body))
 	require.NoError(t, err)
 	req.Host = "localhost"
