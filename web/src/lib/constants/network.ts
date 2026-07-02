@@ -15,7 +15,7 @@
  * On Netlify, agent URLs are disabled — there is no local kc-agent.
  * Duplicated from demoMode.ts to avoid circular imports (demoMode → constants → network).
  */
-export function isTestEnvironment(): boolean {
+function isTestEnvironment(): boolean {
   return typeof process !== 'undefined' && process.env.NODE_ENV === 'test'
 }
 
@@ -101,7 +101,7 @@ function stripTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '')
 }
 
-export function getLocalAgentURLs(agentBaseURL?: string): { httpURL: string; wsURL: string } {
+function getLocalAgentURLs(agentBaseURL?: string): { httpURL: string; wsURL: string } {
   const configuredBaseURL = stripTrailingSlash((agentBaseURL || '').trim())
   if (!configuredBaseURL) {
     return {
@@ -466,3 +466,5 @@ export const LATENCY_ACCEPTABLE_MS = 300
 /** Separator inserted between a port name and its port/protocol string
  * when rendering a named port (e.g. `http: 80/TCP`). */
 export const PORT_NAME_SEPARATOR = ': '
+
+export { isTestEnvironment, getLocalAgentURLs }

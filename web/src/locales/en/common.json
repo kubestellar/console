@@ -5525,5 +5525,33 @@
     "deploy": "Deploy",
     "marketplace": "Marketplace",
     "cost": "Cost"
-  }
+  },
+  "sizes": {
+    "extraSmall": "Extra Small",
+    "small": "Small",
+    "medium": "Medium"
+  },
+  "stories": {
+    "collapsibleContent": "This is the content of the collapsible section.",
+    "hiddenByDefault": "This content is hidden by default.",
+    "podSecurityPass": "Pod Security Standards: Pass",
+    "networkPoliciesPass": "Network Policies: Pass",
+    "resourceLimitsPass": "Resource Limits: Pass",
+    "deprecatedAPIUsage": "Deprecated API usage detected"
+  },
+  "scope": "Scope",
+  "severityFilters": {
+    "allSeverities": "All Severities",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "all": "All severities"
+  },
+  "statusFilters": {
+    "allStatuses": "All statuses",
+    "approved": "Approved",
+    "unapproved": "Unapproved"
+  },
+  "clearSelection": "Clear selection"
 }

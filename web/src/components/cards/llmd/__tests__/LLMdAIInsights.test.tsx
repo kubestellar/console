@@ -34,7 +34,8 @@ vi.mock('../../../../hooks/useTokenUsage', () => ({
   tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
 }))
 
-vi.mock('../../../../lib/constants/network', () => ({
+vi.mock('../../../../lib/constants/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/constants/network')>()),
   PROGRESS_SIMULATION_MS: 1,
 }))
 
