@@ -311,8 +311,8 @@ export function AlertRulesCard() {
                       ? <span className="text-xs font-medium px-0.5">{t('alertRules.confirmDelete')}</span>
                       : <Trash2 className="w-4 h-4" />}
                   </button>
-                </div>
-              </div>
+                </FlexRow>
+              </FlexRow>
             </div>
           ))
         )}
