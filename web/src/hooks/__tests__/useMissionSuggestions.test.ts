@@ -35,9 +35,13 @@ vi.mock('../useSnoozedMissions', () => ({
   }),
 }))
 
-vi.mock('../../lib/constants/network', () => ({
-  MISSION_SUGGEST_INTERVAL_MS: 120_000,
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    MISSION_SUGGEST_INTERVAL_MS: 120_000,
+  }
+})
 
 import { useMissionSuggestions } from '../useMissionSuggestions'
 
