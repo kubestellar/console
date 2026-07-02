@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   Bug, Sparkles, ExternalLink,
   Eye, Pencil, Settings, Maximize2,
-  AlertTriangle, Monitor, BookOpen, FileText, Lock,
+  AlertTriangle, Monitor, BookOpen, FileText, Lock, Loader2,
 } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { cn } from '@/lib/cn'
