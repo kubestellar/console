@@ -45,11 +45,12 @@ describe('ConfirmMissionPromptDialog', () => {
     const { ConfirmMissionPromptDialog } = await import('./ConfirmMissionPromptDialog')
     const { container } = render(
       <ConfirmMissionPromptDialog
-        isOpen={true}
-        onClose={vi.fn()}
+        open={true}
+        onCancel={vi.fn()}
         onConfirm={vi.fn()}
-        title="Confirm"
-        description="Are you sure?"
+        missionTitle="Confirm"
+        missionDescription="Are you sure?"
+        initialPrompt="Test prompt"
       />
     )
     expect(container).toBeTruthy()
@@ -59,12 +60,19 @@ describe('ConfirmMissionPromptDialog', () => {
 describe('ImproveMissionDialog', () => {
   it('renders without errors', async () => {
     const { ImproveMissionDialog } = await import('./ImproveMissionDialog')
+    const mockMission = {
+      version: '1.0',
+      title: 'Test Mission',
+      description: 'Test description',
+      type: 'troubleshoot' as const,
+      tags: [],
+      steps: [],
+    }
     const { container } = render(
       <ImproveMissionDialog
         isOpen={true}
         onClose={vi.fn()}
-        onSubmit={vi.fn()}
-        missionTitle="Test Mission"
+        mission={mockMission}
       />
     )
     expect(container).toBeTruthy()
@@ -74,12 +82,22 @@ describe('ImproveMissionDialog', () => {
 describe('SaveResolutionDialog', () => {
   it('renders without errors', async () => {
     const { SaveResolutionDialog } = await import('./SaveResolutionDialog')
+    const mockMission = {
+      id: 'test-mission-123',
+      title: 'Test Mission',
+      description: 'Test description',
+      type: 'troubleshoot' as const,
+      status: 'complete' as const,
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
     const { container } = render(
       <SaveResolutionDialog
         isOpen={true}
         onClose={vi.fn()}
-        onSave={vi.fn()}
-        initialTitle=""
+        onSaved={vi.fn()}
+        mission={mockMission}
       />
     )
     expect(container).toBeTruthy()
@@ -89,18 +107,40 @@ describe('SaveResolutionDialog', () => {
 describe('ShareMissionDialog', () => {
   it('renders without errors', async () => {
     const { ShareMissionDialog } = await import('./ShareMissionDialog')
-    const mockMission = {
-      title: 'Test Mission',
-      description: 'Test',
-      type: 'custom' as const,
-      steps: [],
-      version: '1.0.0',
+    const mockResolution = {
+      id: 'test-res-123',
+      missionId: 'test-mission-123',
+      userId: 'test-user',
+      title: 'Test Resolution',
+      visibility: 'private' as const,
+      issueSignature: {
+        name: 'test-issue',
+        namespace: 'default',
+        kind: 'Pod',
+        cluster: 'test-cluster',
+        type: 'CrashLoopBackOff',
+        keywords: [],
+      },
+      resolution: {
+        title: 'Resolution',
+        summary: 'Test summary',
+        steps: [],
+      },
+      context: {
+        kubeContext: 'test',
+        namespace: 'default',
+      },
+      effectiveness: {
+        verified: false,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
     const { container } = render(
       <ShareMissionDialog
         isOpen={true}
         onClose={vi.fn()}
-        mission={mockMission}
+        resolution={mockResolution}
       />
     )
     expect(container).toBeTruthy()
@@ -124,18 +164,40 @@ describe('StandaloneOrbitDialog', () => {
 describe('SubmitToKBDialog', () => {
   it('renders without errors', async () => {
     const { SubmitToKBDialog } = await import('./SubmitToKBDialog')
-    const mockMission = {
-      title: 'Test Mission',
-      description: 'Test',
-      type: 'custom' as const,
-      steps: [],
-      version: '1.0.0',
+    const mockResolution = {
+      id: 'test-res-123',
+      missionId: 'test-mission-123',
+      userId: 'test-user',
+      title: 'Test Resolution',
+      visibility: 'private' as const,
+      issueSignature: {
+        name: 'test-issue',
+        namespace: 'default',
+        kind: 'Pod',
+        cluster: 'test-cluster',
+        type: 'CrashLoopBackOff',
+        keywords: [],
+      },
+      resolution: {
+        title: 'Resolution',
+        summary: 'Test summary',
+        steps: [],
+      },
+      context: {
+        kubeContext: 'test',
+        namespace: 'default',
+      },
+      effectiveness: {
+        verified: false,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
     const { container } = render(
       <SubmitToKBDialog
         isOpen={true}
         onClose={vi.fn()}
-        mission={mockMission}
+        resolution={mockResolution}
       />
     )
     expect(container).toBeTruthy()

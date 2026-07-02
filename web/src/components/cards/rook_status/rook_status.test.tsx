@@ -28,7 +28,7 @@ vi.mock('../../ui/Skeleton', () => ({
   SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
-function setup(overrides?: Record<string, unknown>) {
+function setup(overrides?: Record<string, unknown>, loadingState?: { showSkeleton?: boolean; showEmptyState?: boolean }) {
   mockUseCachedRook.mockReturnValue({
     data: {
       health: 'healthy',
@@ -54,7 +54,10 @@ function setup(overrides?: Record<string, unknown>) {
     error: false,
     ...overrides,
   })
-  mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false })
+  mockUseCardLoadingState.mockReturnValue({
+    showSkeleton: loadingState?.showSkeleton ?? false,
+    showEmptyState: loadingState?.showEmptyState ?? false,
+  })
 }
 
 describe('RookStatus', () => {
@@ -63,11 +66,10 @@ describe('RookStatus', () => {
   })
 
   it('renders skeleton when loading', () => {
-    setup({ isLoading: true })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false })
+    setup({ isLoading: true }, { showSkeleton: true })
     render(<RookStatus />)
 
-    expect(screen.getByTestId('skeleton-stats')).toBeTruthy()
+    expect(screen.getByTestId('skeleton-card-with-refresh')).toBeTruthy()
   })
 
   it('renders without error when data is loaded', () => {

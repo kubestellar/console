@@ -32,10 +32,22 @@ function setup(overrides?: Record<string, unknown>) {
   mockUseCachedSpiffe.mockReturnValue({
     data: {
       health: 'healthy',
-      identities: [],
-      bundles: [],
       entries: [],
       federatedDomains: [],
+      stats: {
+        x509SvidCount: 0,
+        jwtSvidCount: 0,
+        registrationEntryCount: 0,
+        agentCount: 0,
+        serverVersion: '1.0.0',
+      },
+      summary: {
+        trustDomain: 'example.org',
+        totalSvids: 0,
+        totalFederatedDomains: 0,
+        totalEntries: 0,
+      },
+      lastCheckTime: new Date().toISOString(),
     },
     isLoading: false,
     isRefreshing: false,
