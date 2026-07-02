@@ -22,6 +22,8 @@ on:
     - cron: "30 6 * * *"
   workflow_dispatch:
 
+permissions: read-all
+
 permissions:
   contents: read
 

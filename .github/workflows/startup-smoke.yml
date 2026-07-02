@@ -28,6 +28,8 @@ on:
       - '.github/workflows/startup-smoke.yml'
   workflow_dispatch: {}
 
+permissions: read-all
+
 permissions:
   contents: read
 

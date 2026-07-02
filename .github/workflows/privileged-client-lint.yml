@@ -41,6 +41,8 @@ on:
       - '.github/allowlist-privileged-client-callers.txt'
   workflow_dispatch:
 
+permissions: read-all
+
 permissions:
   contents: read
 

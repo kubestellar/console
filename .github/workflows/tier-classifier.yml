@@ -17,6 +17,8 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened]
 
+permissions: read-all
+
 concurrency:
   group: tier-classifier-${{ github.event.pull_request.number }}
   cancel-in-progress: true

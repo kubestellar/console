@@ -22,6 +22,8 @@ on:
       - 'web/vite.config.ts'
   workflow_dispatch:
 
+permissions: read-all
+
 concurrency:
   group: coverage-report-${{ github.ref }}
   cancel-in-progress: true

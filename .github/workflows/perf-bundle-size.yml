@@ -5,6 +5,8 @@ name: Perf — Bundle size
 # auto-issue workflow files/updates an issue.
 #
 # Budget derivation:
+
+permissions: read-all
 #   At branch point (2026-04-10) the total gzipped JS size was ~2,930,697
 #   bytes (~2.80 MB). PERF_BUDGET_BUNDLE_GZIP_BYTES is set ~10% above that
 #   (3,225,000 bytes ≈ 3.08 MB) so normal feature work has headroom but a

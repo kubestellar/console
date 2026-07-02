@@ -34,6 +34,8 @@ on:
           - pok-prod
           - none
 
+permissions: read-all
+
 # Cancel superseded PR validation runs, but never cancel a main deploy mid-flight.
 # Cluster deploys themselves are serialized by per-job concurrency below.
 

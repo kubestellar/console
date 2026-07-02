@@ -27,6 +27,8 @@ on:
 
 permissions: read-all
 
+permissions: read-all
+
 concurrency:
   group: nightly-llmd-guides
   cancel-in-progress: false

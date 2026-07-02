@@ -14,6 +14,8 @@ on:
     # `[perf-regression] ttfi-all-cards` issue via the reusable workflow.
     - cron: '15 */2 * * *'
 
+permissions: read-all
+
 # Least-privilege: read + issues:write. issues:write is required at the
 # workflow level because the `notify` job calls the reusable
 # `_perf-regression-issue.yml` workflow, and reusable workflows cannot

@@ -26,6 +26,8 @@ on:
         default: false
         type: boolean
 
+permissions: read-all
+
 # Least-privilege: read-only by default; jobs declare write scopes individually
 permissions:
   contents: read

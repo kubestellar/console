@@ -19,6 +19,8 @@ on:
         default: false
         type: boolean
 
+permissions: read-all
+
 env:
   CI: true
   NODE_VERSION: '22'

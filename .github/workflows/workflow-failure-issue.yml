@@ -25,6 +25,8 @@ on:
     types:
       - completed
 
+permissions: read-all
+
 permissions: read-all  # default read; writes scoped to job below
 
 jobs:

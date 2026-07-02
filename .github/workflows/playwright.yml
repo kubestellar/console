@@ -18,6 +18,8 @@ on:
         default: ''
         type: string
 
+permissions: read-all
+
 # Least-privilege: read-only by default; jobs declare write scopes individually
 permissions: read-all
 

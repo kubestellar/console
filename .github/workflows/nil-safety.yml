@@ -21,6 +21,8 @@ on:
         default: false
         type: boolean
 
+permissions: read-all
+
 env:
   GO_VERSION: "1.26.4"
 

@@ -65,6 +65,8 @@ on:
 
 permissions: read-all
 
+permissions: read-all
+
 concurrency:
   group: "gh-aw-${{ github.workflow }}-${{ github.event.issue.number || github.run_id }}"
 

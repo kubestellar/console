@@ -25,6 +25,8 @@ on:
         default: '10'
         type: string
 
+permissions: read-all
+
 env:
   ISSUE_PREFIX: "[GA4-Regression]"
   SPIKE_THRESHOLD_PCT: 25

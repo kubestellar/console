@@ -25,6 +25,8 @@ on:
       - '.github/workflows/rewards-types-drift.yml'
   workflow_dispatch:
 
+permissions: read-all
+
 # Cancel superseded runs on the same PR/branch so we don't queue stale work.
 concurrency:
   group: rewards-types-drift-${{ github.ref }}

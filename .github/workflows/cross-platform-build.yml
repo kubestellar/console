@@ -30,6 +30,8 @@ on:
       - 'go.sum'
       - '.github/workflows/cross-platform-build.yml'
 
+permissions: read-all
+
 permissions:
   contents: read
 

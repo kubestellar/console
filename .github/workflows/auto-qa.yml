@@ -36,6 +36,8 @@ on:
         default: ''
         type: string
 
+permissions: read-all
+
 env:
   BUNDLE_SIZE_LIMIT_KB: 5120
   MAX_ISSUES_PER_RUN: 3

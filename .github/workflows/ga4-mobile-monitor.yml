@@ -28,6 +28,8 @@ on:
         default: '5'
         type: string
 
+permissions: read-all
+
 env:
   ISSUE_TAG: "[GA4-Mobile]"
   # Minimum mobile traffic percentage expected (below this = potential crash)

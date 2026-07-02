@@ -24,6 +24,8 @@ on:
     - cron: '17 */2 * * *'
   workflow_dispatch: {}
 
+permissions: read-all
+
 permissions:
   contents: read
   actions: read

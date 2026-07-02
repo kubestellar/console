@@ -31,6 +31,8 @@ on:
       - 'scripts/testdata/check-go-coverage-ratchet/**'
   workflow_dispatch:
 
+permissions: read-all
+
 # Cancel superseded runs on the same PR/branch so we don't queue stale work.
 concurrency:
   group: go-test-${{ github.workflow }}-${{ github.ref }}

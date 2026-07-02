@@ -17,6 +17,8 @@ on:
       - 'scripts/check-test-coverage.sh'
       - '.github/workflows/test-coverage-check.yml'
 
+permissions: read-all
+
 permissions:
   contents: read
   pull-requests: write

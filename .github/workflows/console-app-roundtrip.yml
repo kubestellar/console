@@ -17,6 +17,8 @@ on:
     - cron: "0 6 * * *"
   workflow_dispatch:
 
+permissions: read-all
+
 permissions: read-all  # default read; writes scoped to job below
 
 concurrency:

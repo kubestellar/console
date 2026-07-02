@@ -23,6 +23,8 @@ on:
         default: false
         type: boolean
 
+permissions: read-all
+
 env:
   TARGET_URL: ${{ inputs.target_url || 'https://console.kubestellar.io' }}
 

@@ -25,6 +25,8 @@ on:
         default: '5'
         type: string
 
+permissions: read-all
+
 env:
   ISSUE_PREFIX: "[GA4-Error]"
   # Minimum errors in the lookback window to create an issue

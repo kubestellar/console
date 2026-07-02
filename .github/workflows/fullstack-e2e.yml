@@ -21,6 +21,8 @@ on:
       - 'web/e2e/fullstack-smoke.spec.ts'
       - '.github/workflows/fullstack-e2e.yml'
 
+permissions: read-all
+
 permissions:
   contents: read
 
