@@ -61,6 +61,7 @@ let mockDeploymentIssues: MockDeploymentIssue[] = []
 let mockDeployments: MockDeployment[] = []
 let mockClusters: MockCluster[] = []
 let mockIsLoading = false
+let mockHookError: string | null = null
 let mockAgentStatus: 'connected' | 'disconnected' = 'connected'
 let mockIsDemoMode = true
 
@@ -92,10 +93,10 @@ vi.mock('../../../lib/dashboards/DashboardPage', () => ({
 }))
 
 vi.mock('../../../hooks/useMCP', () => ({
-  usePodIssues: () => ({ issues: mockPodIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
-  useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
-  useDeployments: () => ({ deployments: mockDeployments, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
-  useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters, isLoading: mockIsLoading, lastUpdated: null, refetch: vi.fn() }),
+  usePodIssues: () => ({ issues: mockPodIssues, isLoading: mockIsLoading, isRefreshing: false, error: mockHookError, lastUpdated: null, refetch: vi.fn() }),
+  useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: mockIsLoading, isRefreshing: false, error: mockHookError, lastUpdated: null, refetch: vi.fn() }),
+  useDeployments: () => ({ deployments: mockDeployments, isLoading: mockIsLoading, isRefreshing: false, error: mockHookError, lastUpdated: null, refetch: vi.fn() }),
+  useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters, isLoading: mockIsLoading, error: mockHookError, lastUpdated: null, refetch: vi.fn() }),
 }))
 
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
@@ -191,6 +192,7 @@ describe('Workloads Add Workload button', () => {
     mockDeployments = []
     mockClusters = []
     mockIsLoading = false
+    mockHookError = null
     mockAgentStatus = 'connected'
     mockIsDemoMode = true
     showToastSpy.mockClear()
@@ -228,5 +230,14 @@ describe('Workloads Add Workload button', () => {
 
     expect(screen.getByTestId('workload-import-dialog')).toBeTruthy()
     expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it('renders workload error state when workload queries fail', () => {
+    mockHookError = 'cluster fetch failed'
+    renderWorkloads()
+
+    expect(screen.getByText('Could not load workload data')).toBeInTheDocument()
+    expect(screen.getByText('cluster fetch failed')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
   })
 })

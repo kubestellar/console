@@ -34,16 +34,18 @@ vi.mock('../../lib/dashboards/DashboardPage', () => ({
   ),
 }))
 
+let mockLogsError: string | null = null
+
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => ({
-    clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, refetch: vi.fn(),
+    clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: mockLogsError, refetch: vi.fn(),
   }),
 }))
 
 vi.mock('../../hooks/useCachedData', () => ({
   useCachedEvents: () => ({
     // lastRefresh: null → no lastUpdated timestamp available in test environment
-    events: [], isLoading: false, isRefreshing: false, lastRefresh: null, refetch: vi.fn(),
+    events: [], isLoading: false, isRefreshing: false, error: mockLogsError, lastRefresh: null, refetch: vi.fn(),
   }),
 }))
 
@@ -95,5 +97,15 @@ describe('Logs Component', () => {
     renderLogs()
     const page = screen.getByTestId('dashboard-page')
     expect(page.getAttribute('data-subtitle')).toBeTruthy()
+  })
+
+  it('renders retryable error state when log data fails to load', () => {
+    mockLogsError = 'events api offline'
+    renderLogs()
+
+    expect(screen.getByText('logs.errorLoading')).toBeInTheDocument()
+    expect(screen.getByText('events api offline')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'common.retry' })).toBeInTheDocument()
+    mockLogsError = null
   })
 })

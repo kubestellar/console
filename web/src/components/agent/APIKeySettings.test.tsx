@@ -74,6 +74,14 @@ describe('APIKeySettings Component', () => {
     expect(typeof APIKeySettings).toBe('function')
   })
 
+  it('shows a loading spinner while provider data is in flight', () => {
+    vi.mocked(globalThis.fetch).mockReturnValue(new Promise(() => {}) as Promise<Response>)
+
+    const { container } = render(<APIKeySettings isOpen={true} onClose={vi.fn()} />)
+
+    expect(container.querySelector('.animate-spin')).toBeTruthy()
+  })
+
   it('shows the empty state when no providers are available after filtering', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue({
       ok: true,
@@ -92,6 +100,15 @@ describe('APIKeySettings Component', () => {
     expect(screen.getByText('OPENAI_API_KEY=sk-...')).toBeInTheDocument()
     expect(screen.getByText('GEMINI_API_KEY=...')).toBeInTheDocument()
     expect(screen.queryByText('Custom')).not.toBeInTheDocument()
+  })
+
+  it('shows the connection error state when provider fetch fails', async () => {
+    vi.mocked(globalThis.fetch).mockRejectedValue(new Error('connection refused'))
+
+    render(<APIKeySettings isOpen={true} onClose={vi.fn()} />)
+
+    expect(await screen.findByText('agent.localAgentRequired')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry Connection' })).toBeInTheDocument()
   })
 
   it('retries fetching provider data from the empty state', async () => {

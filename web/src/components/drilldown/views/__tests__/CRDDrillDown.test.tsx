@@ -97,6 +97,17 @@ describe('CRDDrillDown interactions', () => {
     })
   })
 
+  it('shows versions loading state while CRD details are still loading', async () => {
+    mockRunKubectl.mockReturnValue(new Promise(() => {}))
+    const { container } = renderWithDrillDown(<CRDDrillDown data={BASE_DATA} />)
+
+    fireEvent.click(screen.getByRole('tab', { name: /Versions \(0\)/ }))
+
+    await waitFor(() => {
+      expect(container.querySelector('.animate-spin')).toBeTruthy()
+    })
+  })
+
   it('renders the versions list when the versions tab is selected', async () => {
     renderWithDrillDown(<CRDDrillDown data={BASE_DATA} />)
 

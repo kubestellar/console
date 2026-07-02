@@ -68,6 +68,13 @@ function mockFetchFailure() {
 describe('DataResidency', () => {
   beforeEach(() => { vi.restoreAllMocks() })
 
+  it('shows loading state before residency endpoints resolve', () => {
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}) as Promise<Response>)
+    render(<DataResidency />)
+
+    expect(document.querySelector('.animate-spin')).toBeTruthy()
+  })
+
   it('renders summary cards with correct values', async () => {
     mockFetchSuccess()
     render(<DataResidency />)

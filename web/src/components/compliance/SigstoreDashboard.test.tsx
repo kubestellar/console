@@ -86,6 +86,13 @@ describe('SigstoreDashboard', () => {
     vi.resetAllMocks()
   })
 
+  it('shows loading state before Sigstore data resolves', async () => {
+    mockedAuthFetch.mockReturnValue(new Promise(() => {}) as Promise<Response>)
+    render(<SigstoreDashboardContent />)
+
+    expect(screen.getByText('Loading Sigstore data…')).toBeInTheDocument()
+  })
+
   it('renders signatures tab and summary after successful fetch', async () => {
     mockSuccessResponses()
     render(<SigstoreDashboardContent />)
