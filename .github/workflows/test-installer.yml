@@ -15,8 +15,7 @@ on:
     types: [published]
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   test-version-resolution:

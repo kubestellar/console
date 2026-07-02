@@ -4,8 +4,7 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: pre-merge-${{ github.head_ref || github.ref }}

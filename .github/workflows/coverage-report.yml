@@ -26,8 +26,7 @@ concurrency:
   group: coverage-report-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 env:
   NODE_VERSION: '22'

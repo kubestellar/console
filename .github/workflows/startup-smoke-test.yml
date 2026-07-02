@@ -14,8 +14,7 @@ on:
       - 'web/vite.config.ts'
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   startup-check:
