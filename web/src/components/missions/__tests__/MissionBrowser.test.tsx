@@ -385,6 +385,13 @@ describe('MissionBrowser', () => {
     expect(emptyStates.length).toBeGreaterThanOrEqual(1)
   })
 
+  it('shows recommendation loading spinner while cache search is still running', () => {
+    browserMockState.missionCache.fixesDone = false
+    const { container } = render(<MissionBrowser {...defaultProps} />)
+
+    expect(container.querySelector('.animate-spin')).toBeTruthy()
+  })
+
   it('switches recommended missions to list layout when list view is selected', async () => {
     addRecommendedMission()
     render(<MissionBrowser {...defaultProps} />)

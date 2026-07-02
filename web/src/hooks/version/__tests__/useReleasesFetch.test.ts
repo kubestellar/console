@@ -17,11 +17,15 @@ vi.mock('../../../lib/constants/time', () => ({
   MS_PER_MINUTE: 60_000,
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
-  FETCH_DEFAULT_TIMEOUT_MS: 10_000,
-  FETCH_EXTERNAL_TIMEOUT_MS: 15_000,
-  MCP_HOOK_TIMEOUT_MS: 5_000,
-}))
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+    FETCH_EXTERNAL_TIMEOUT_MS: 15_000,
+    MCP_HOOK_TIMEOUT_MS: 5_000,
+  }
+})
 
 const mockAuthFetch = vi.fn()
 vi.mock('../../../lib/api', () => ({

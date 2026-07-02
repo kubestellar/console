@@ -136,6 +136,19 @@ describe('GitOps Component', () => {
     expect(screen.getByText('gitops.integrationTitle')).toBeInTheDocument()
   })
 
+  it('shows checking state while drift detection is running', async () => {
+    mockClusters = [{ name: 'only', context: 'only' }]
+    driftFetchHandler = () => new Promise(() => {})
+    renderGitOps()
+
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('gitops.checking').length).toBeGreaterThan(0)
+      },
+      { timeout: ASYNC_WAIT_TIMEOUT_MS }
+    )
+  })
+
   // #6155 — in demo mode we must NOT be stuck in perpetual "checking".
   it('does not leave cards stuck in checking state in demo mode (#6155)', async () => {
     demoModeFlag = true

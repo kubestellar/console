@@ -70,13 +70,17 @@ vi.mock('../../../lib/constants', () => ({
   KUBECTL_MAX_TIMEOUT_MS: 30_000,
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
-  MCP_HOOK_TIMEOUT_MS: 10_000,
-  METRICS_SERVER_TIMEOUT_MS: 5_000,
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:4201',
-  KUBECTL_MAX_TIMEOUT_MS: 30_000,
-  FOCUS_DELAY_MS: 100,
-}))
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    MCP_HOOK_TIMEOUT_MS: 10_000,
+    METRICS_SERVER_TIMEOUT_MS: 5_000,
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:4201',
+    KUBECTL_MAX_TIMEOUT_MS: 30_000,
+    FOCUS_DELAY_MS: 100,
+  }
+})
 
 // ── Setup ─────────────────────────────────────────────────────────────────
 

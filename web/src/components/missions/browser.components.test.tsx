@@ -3,7 +3,9 @@ import React from 'react'
  * Render tests for browser subdirectory components
  */
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+
+const resetMissionCacheSpy = vi.fn()
+import { render, screen, fireEvent } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -12,12 +14,18 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('./browser/missionCache', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./browser/missionCache')>()),
+  resetMissionCache: resetMissionCacheSpy,
+}))
+
 describe('DirectoryListing', () => {
   it('renders without errors', async () => {
     const { DirectoryListing } = await import('./browser/DirectoryListing')
     const { container } = render(
       <DirectoryListing
-        items={[]}
+        entries={[]}
+        viewMode="grid"
         onSelect={vi.fn()}
       />
     )
@@ -47,14 +55,27 @@ describe('EmptyState', () => {
   })
 })
 
+describe('MissionFetchErrorBanner', () => {
+  it('shows retry loading state after retry click', async () => {
+    resetMissionCacheSpy.mockClear()
+    const { MissionFetchErrorBanner } = await import('./browser/EmptyState')
+    const { container } = render(<MissionFetchErrorBanner message="boom" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'missions.browser.emptyState.retry' }))
+
+    expect(resetMissionCacheSpy).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('.animate-spin')).toBeTruthy()
+  })
+})
+
 describe('RecommendationCard', () => {
   it('renders without errors', async () => {
     const { RecommendationCard } = await import('./browser/RecommendationCard')
     const { container } = render(
       <RecommendationCard
-        title="Test Recommendation"
-        description="Test description"
-        onClick={vi.fn()}
+        match={{ mission: { title: 'Test Recommendation', description: 'Test description', type: 'repair', tags: [], metadata: {} }, score: 1, matchPercent: 75, matchReasons: [] }}
+        onSelect={vi.fn()}
+        onImport={vi.fn()}
       />
     )
     expect(container).toBeTruthy()
@@ -64,9 +85,9 @@ describe('RecommendationCard', () => {
     const { RecommendationCard } = await import('./browser/RecommendationCard')
     render(
       <RecommendationCard
-        title="Install Prometheus"
-        description="Monitoring solution"
-        onClick={vi.fn()}
+        match={{ mission: { title: 'Install Prometheus', description: 'Monitoring solution', type: 'deploy', tags: [], metadata: {} }, score: 2, matchPercent: 90, matchReasons: ['Matched'] }}
+        onSelect={vi.fn()}
+        onImport={vi.fn()}
       />
     )
     expect(screen.getByText('Install Prometheus')).toBeInTheDocument()
@@ -122,9 +143,9 @@ describe('VirtualizedMissionGrid', () => {
     const { VirtualizedMissionGrid } = await import('./browser/VirtualizedMissionGrid')
     const { container } = render(
       <VirtualizedMissionGrid
-        missions={[]}
-        onSelect={vi.fn()}
-        onImport={vi.fn()}
+        items={[]}
+        viewMode="grid"
+        renderItem={() => null}
       />
     )
     expect(container).toBeTruthy()

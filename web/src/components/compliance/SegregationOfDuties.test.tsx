@@ -39,6 +39,13 @@ function mockFetchSuccess() {
 describe('SegregationOfDuties', () => {
   beforeEach(() => { vi.restoreAllMocks() })
 
+  it('shows loading state before SoD endpoints resolve', () => {
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}) as Promise<Response>)
+    render(<SegregationOfDuties />)
+
+    expect(document.querySelector('.animate-spin')).toBeTruthy()
+  })
+
   it('renders header and compliance score', async () => {
     mockFetchSuccess()
     render(<SegregationOfDuties />)

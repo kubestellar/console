@@ -1,11 +1,13 @@
 package providers
 
 import (
+	"context"
 	"crypto/tls"
 	"math"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kubestellar/console/pkg/agent/prompts"
 	"github.com/kubestellar/console/pkg/ai"

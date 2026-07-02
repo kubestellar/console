@@ -1,6 +1,7 @@
 package github
 
 import (
+	"fmt"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -170,13 +171,17 @@ func TestGHPHistory_MergeAndTrim(t *testing.T) {
 	h := newGHPHistory()
 	success := "success"
 	failure := "failure"
+	// Use a recent date (5 days ago) so it stays within 90-day retention
+	recentDay := time.Now().UTC().AddDate(0, 0, -5).Format("2006-01-02")
+	recentTS1 := recentDay + "T05:00:00Z"
+	recentTS2 := recentDay + "T06:00:00Z"
 	// Two runs on the same day — newer ID wins
 	h.merge([]ghpWorkflowRun{
-		{ID: 1, Repo: "kubestellar/console", Name: "Release", Conclusion: &failure, CreatedAt: "2026-04-01T05:00:00Z", HTMLURL: "url-1"},
-		{ID: 2, Repo: "kubestellar/console", Name: "Release", Conclusion: &success, CreatedAt: "2026-04-01T06:00:00Z", HTMLURL: "url-2"},
+		{ID: 1, Repo: "kubestellar/console", Name: "Release", Conclusion: &failure, CreatedAt: recentTS1, HTMLURL: "url-1"},
+		{ID: 2, Repo: "kubestellar/console", Name: "Release", Conclusion: &success, CreatedAt: recentTS2, HTMLURL: "url-2"},
 	})
 	snap := h.snapshot()
-	day := snap["kubestellar/console"]["Release"]["2026-04-01"]
+	day := snap["kubestellar/console"]["Release"][recentDay]
 	if day.RunID != 2 {
 		t.Fatalf("expected newer run ID to win, got %d", day.RunID)
 	}
@@ -184,7 +189,7 @@ func TestGHPHistory_MergeAndTrim(t *testing.T) {
 		t.Fatalf("expected success conclusion, got %v", day.Conclusion)
 	}
 	// Trim retention: insert an ancient day and verify it's dropped
-	ancient := time.Now().AddDate(0, 0, -(ghpHistoryRetentionDays+10)).Format("2006-01-02") + "T00:00:00Z"
+	ancient := time.Now().UTC().AddDate(0, 0, -(ghpHistoryRetentionDays + 10)).Format("2006-01-02") + "T00:00:00Z"
 	h.merge([]ghpWorkflowRun{
 		{ID: 99, Repo: "kubestellar/console", Name: "Release", Conclusion: &success, CreatedAt: ancient, HTMLURL: "old"},
 	})
@@ -356,5 +361,22 @@ func TestGHPGetRepos(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestGHPHistory_MergePreservesRecentDays(t *testing.T) {
+	h := newGHPHistory()
+	success := "success"
+	// Add entries for recent days that should survive retention trim
+	for i := 1; i <= 5; i++ {
+		day := time.Now().UTC().AddDate(0, 0, -i).Format("2006-01-02")
+		h.merge([]ghpWorkflowRun{
+			{ID: int64(i), Repo: "kubestellar/console", Name: "CI", Conclusion: &success, CreatedAt: day + "T12:00:00Z", HTMLURL: fmt.Sprintf("url-%d", i)},
+		})
+	}
+	snap := h.snapshot()
+	byWF := snap["kubestellar/console"]["CI"]
+	if len(byWF) != 5 {
+		t.Fatalf("expected 5 recent days preserved, got %d", len(byWF))
 	}
 }

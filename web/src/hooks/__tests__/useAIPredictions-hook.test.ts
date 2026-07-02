@@ -56,15 +56,19 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   }
 })
 
-vi.mock('../../lib/constants/network', () => ({
-  FETCH_DEFAULT_TIMEOUT_MS: 10000,
-  AI_PREDICTION_TIMEOUT_MS: 30000,
-  WS_RECONNECT_DELAY_MS: 5000,
-  UI_FEEDBACK_TIMEOUT_MS: 500,
-  RETRY_DELAY_MS: 100,
-  MAX_WS_RECONNECT_ATTEMPTS: 5,
-  getWsBackoffDelay: (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 30000),
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FETCH_DEFAULT_TIMEOUT_MS: 10000,
+    AI_PREDICTION_TIMEOUT_MS: 30000,
+    WS_RECONNECT_DELAY_MS: 5000,
+    UI_FEEDBACK_TIMEOUT_MS: 500,
+    RETRY_DELAY_MS: 100,
+    MAX_WS_RECONNECT_ATTEMPTS: 5,
+    getWsBackoffDelay: (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 30000),
+  }
+})
 
 import { useAIPredictions, getRawAIPredictions, isWSConnected, syncSettingsToBackend } from '../useAIPredictions'
 

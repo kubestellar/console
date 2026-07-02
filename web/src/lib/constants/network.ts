@@ -7,6 +7,14 @@
  */
 
 // ============================================================================
+// Time Constants (needed for vitest importOriginal pattern)
+// ============================================================================
+
+/** Milliseconds per second. Defined here (not re-exported from time.ts) so
+ * vitest importOriginal() includes it when mocking network.ts. */
+export const MS_PER_SECOND = 1_000
+
+// ============================================================================
 // URLs
 // ============================================================================
 
@@ -446,8 +454,6 @@ export const SERVICES_CACHE_TTL_MS = 60_000
  * (shown as a "Cached • Ns ago" / "Stale" badge). Strictly less than
  * SERVICES_CACHE_TTL_MS. */
 export const SERVICES_CACHE_STALE_MS = 30_000
-
-export { MS_PER_SECOND } from './time'
 
 // ============================================================================
 // Network Latency Classification (issue #13249)

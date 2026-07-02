@@ -42,9 +42,13 @@ vi.mock('../dedup', () => ({
   deduplicateClustersByServer: (clusters: unknown[]) => mockDeduplicateClustersByServer(clusters),
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+  }
+})
 
 // ---------------------------------------------------------------------------
 // Import under test (after mocks)

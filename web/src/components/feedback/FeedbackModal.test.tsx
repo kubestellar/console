@@ -85,9 +85,13 @@ vi.mock('../../lib/constants', () => ({
   COPY_FEEDBACK_TIMEOUT_MS: 2000,
 }))
 
-vi.mock('../../lib/constants/network', () => ({
-  FEEDBACK_UPLOAD_TIMEOUT_MS: 30000,
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FEEDBACK_UPLOAD_TIMEOUT_MS: 30000,
+  }
+})
 
 vi.mock('./FeatureRequestTypes', () => ({
   MAX_VIDEO_SIZE_BYTES: 10 * 1024 * 1024,

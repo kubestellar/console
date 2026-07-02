@@ -22,11 +22,15 @@ const { mockIsAgentUnavailable, mockIsClusterModeBackend, mockFetchSSE } = vi.ho
 // Module mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('../../../../lib/constants/network', () => ({
-  MCP_HOOK_TIMEOUT_MS: 5000,
-  LOCAL_AGENT_HTTP_URL: '',         // empty → triggers early-exit branch
-  RETRY_DELAY_MS: 0,
-}))
+vi.mock('../../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    MCP_HOOK_TIMEOUT_MS: 5000,
+    LOCAL_AGENT_HTTP_URL: '',         // empty → triggers early-exit branch
+    RETRY_DELAY_MS: 0,
+  }
+})
 
 vi.mock('../../../../lib/sseClient', () => ({
   fetchSSE: (...args: unknown[]) => mockFetchSSE(...args),
