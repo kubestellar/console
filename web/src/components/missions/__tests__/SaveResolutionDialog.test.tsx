@@ -33,7 +33,8 @@ vi.mock('../../../lib/utils/wsAuth', () => ({
   getWsAuthParams: mockGetWsAuthParams,
 }))
 
-vi.mock('../../../lib/constants', () => ({
+vi.mock('../../../lib/constants', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/constants')>()),
   LOCAL_AGENT_WS_URL: 'ws://localhost:8585/ws',
 }))
 

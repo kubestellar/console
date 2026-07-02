@@ -466,3 +466,5 @@ export const LATENCY_ACCEPTABLE_MS = 300
 /** Separator inserted between a port name and its port/protocol string
  * when rendering a named port (e.g. `http: 80/TCP`). */
 export const PORT_NAME_SEPARATOR = ': '
+
+export { isTestEnvironment, getLocalAgentURLs }
