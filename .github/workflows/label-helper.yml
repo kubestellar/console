@@ -11,5 +11,105 @@ permissions:
 
 jobs:
   label-helper:
-    uses: kubestellar/infra/.github/workflows/reusable-label-helper.yml@1a04a3fd17771e78e5cf6d42a3fda84e3ba478f3 # pinned 2026-06-29 from main
-    secrets: inherit
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Check for invalid label commands
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        env:
+          VALID_KINDS: 'api-change,bug,cleanup,deprecation,documentation,failing-test,feature,flake,regression,support,test'
+          VALID_AREAS: 'dependency,cli,api-lifecycle,core,sharding,workspace,scheduler,placement,policy,syncer,licensing'
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const comment = context.payload.comment?.body || '';
+            const itemNumber = context.payload.issue?.number;
+            const commentAuthor = context.payload.comment?.user?.login;
+
+            if (!comment || !itemNumber) {
+              console.log('No comment or item number found');
+              return;
+            }
+
+            // Skip bot comments
+            if (commentAuthor?.endsWith('[bot]') || commentAuthor === 'github-actions') {
+              console.log(`Skipping bot comment from ${commentAuthor}`);
+              return;
+            }
+
+            const validKinds = process.env.VALID_KINDS.split(',').map(k => k.trim());
+            const validAreas = process.env.VALID_AREAS.split(',').map(a => a.trim());
+
+            // Handle /help-wanted, /good-first-issue, /hacktober-fest commands
+            const labelCommands = {
+              '/help-wanted': 'help wanted',
+              '/good-first-issue': 'good first issue',
+              '/hacktober-fest': 'hacktober-fest'
+            };
+
+            const trimmedComment = comment.trim().toLowerCase();
+            if (labelCommands[trimmedComment]) {
+              const label = labelCommands[trimmedComment];
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: itemNumber,
+                labels: [label]
+              });
+              console.log(`Added label: ${label}`);
+              return;
+            }
+
+            // Check for /kind commands
+            const kindMatches = comment.match(/\/kind\s+(\S+)/gi) || [];
+            const areaMatches = comment.match(/\/area\s+(\S+)/gi) || [];
+
+            const invalidKinds = [];
+            const invalidAreas = [];
+
+            for (const match of kindMatches) {
+              const kindValue = match.replace(/\/kind\s+/i, '').trim();
+              if (!validKinds.includes(kindValue)) {
+                invalidKinds.push(kindValue);
+              }
+            }
+
+            for (const match of areaMatches) {
+              const areaValue = match.replace(/\/area\s+/i, '').trim();
+              if (!validAreas.includes(areaValue)) {
+                invalidAreas.push(areaValue);
+              }
+            }
+
+            if (invalidKinds.length === 0 && invalidAreas.length === 0) {
+              console.log('No invalid label commands found');
+              return;
+            }
+
+            // Build response message
+            let message = `@${commentAuthor} `;
+
+            if (invalidKinds.length > 0) {
+              message += `\n\n**Invalid kind label(s):** \`${invalidKinds.join('`, `')}\`\n\n`;
+              message += '**Valid `/kind` options:**\n';
+              message += validKinds.map(k => `- \`/kind ${k}\``).join('\n');
+            }
+
+            if (invalidAreas.length > 0) {
+              message += `\n\n**Invalid area label(s):** \`${invalidAreas.join('`, `')}\`\n\n`;
+              message += '**Valid `/area` options:**\n';
+              message += validAreas.map(a => `- \`/area ${a}\``).join('\n');
+            }
+
+            message += '\n\n*Use one of the valid options above to label this issue/PR.*';
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: itemNumber,
+              body: message
+            });
+
+            console.log('Posted label helper response');

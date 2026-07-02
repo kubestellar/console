@@ -40,9 +40,10 @@ permissions: read-all
 permissions:
   contents: read
   issues: write
-
 jobs:
   evaluate:
+    permissions:
+      issues: write
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:

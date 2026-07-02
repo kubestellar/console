@@ -194,4 +194,20 @@ describe('ClusterCosts', () => {
     // Banner must show $7,000 (all 7 clusters), not $5,000 (page 1 only)
     expect(screen.getByText('$7,000')).toBeTruthy()
   })
+
+  it('displays error state when cluster data fetch fails', () => {
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: [],
+      isLoading: false,
+      isRefreshing: false,
+      isFailed: true,
+      consecutiveFailures: 1,
+      error: 'Failed to fetch cluster data',
+    })
+    mockUseCardData.mockReturnValue({ ...baseCardData, items: [], totalItems: 0 })
+    
+    render(<ClusterCosts />)
+    
+    expect(screen.queryByText('$')).toBeNull()
+  })
 })
