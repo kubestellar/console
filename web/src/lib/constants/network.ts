@@ -7,6 +7,14 @@
  */
 
 // ============================================================================
+// Time Constants (needed for vitest importOriginal pattern)
+// ============================================================================
+
+/** Milliseconds per second. Defined here (not re-exported from time.ts) so
+ * vitest importOriginal() includes it when mocking network.ts. */
+export const MS_PER_SECOND = 1_000
+
+// ============================================================================
 // URLs
 // ============================================================================
 
