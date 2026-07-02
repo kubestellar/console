@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http/httptest"
 	"testing"
 
@@ -24,10 +25,10 @@ func TestRequireAdmin(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:    uuid.New(),
-					Login: "admin-user",
-					Role:  models.RoleAdmin,
+					GitHubLogin: "admin-user",
+					Role:  models.UserRoleAdmin,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -37,11 +38,11 @@ func TestRequireAdmin(t *testing.T) {
 			name: "editor user blocked",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "editor-user",
-					Role:  models.RoleEditor,
+					ID:          uuid.New(),
+					GitHubGitHubLogin: "editor-user",
+					Role:        models.UserRoleEditor,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -52,10 +53,10 @@ func TestRequireAdmin(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:    uuid.New(),
-					Login: "viewer-user",
-					Role:  models.RoleViewer,
+					GitHubLogin: "viewer-user",
+					Role:  models.UserRoleViewer,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -104,10 +105,10 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:    uuid.New(),
-					Login: "admin-user",
-					Role:  models.RoleAdmin,
+					GitHubLogin: "admin-user",
+					Role:  models.UserRoleAdmin,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -118,10 +119,10 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:    uuid.New(),
-					Login: "editor-user",
-					Role:  models.RoleEditor,
+					GitHubLogin: "editor-user",
+					Role:  models.UserRoleEditor,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -132,10 +133,10 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:    uuid.New(),
-					Login: "viewer-user",
-					Role:  models.RoleViewer,
+					GitHubLogin: "viewer-user",
+					Role:  models.UserRoleViewer,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -177,10 +178,10 @@ func TestRequireViewerOrAbove(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:    uuid.New(),
-					Login: "admin-user",
-					Role:  models.RoleAdmin,
+					GitHubLogin: "admin-user",
+					Role:  models.UserRoleAdmin,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -191,10 +192,10 @@ func TestRequireViewerOrAbove(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:    uuid.New(),
-					Login: "editor-user",
-					Role:  models.RoleEditor,
+					GitHubLogin: "editor-user",
+					Role:  models.UserRoleEditor,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -205,10 +206,10 @@ func TestRequireViewerOrAbove(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:    uuid.New(),
-					Login: "viewer-user",
-					Role:  models.RoleViewer,
+					GitHubLogin: "viewer-user",
+					Role:  models.UserRoleViewer,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -257,10 +258,10 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:    uuid.New(),
-					Login: "admin-user",
-					Role:  models.RoleAdmin,
+					GitHubLogin: "admin-user",
+					Role:  models.UserRoleAdmin,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -271,10 +272,10 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:    uuid.New(),
-					Login: "editor-user",
-					Role:  models.RoleEditor,
+					GitHubLogin: "editor-user",
+					Role:  models.UserRoleEditor,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -285,10 +286,10 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:    uuid.New(),
-					Login: "viewer-user",
-					Role:  models.RoleViewer,
+					GitHubLogin: "viewer-user",
+					Role:  models.UserRoleViewer,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
 				return user.ID
 			},
