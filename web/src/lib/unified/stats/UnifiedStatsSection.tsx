@@ -127,7 +127,6 @@ export function UnifiedStatsSection({
     try {
       const saved = localStorage.getItem(`${storageKey}-blocks`)
       if (saved) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCustomBlocks(JSON.parse(saved))
       }
       setConfigError(null)
