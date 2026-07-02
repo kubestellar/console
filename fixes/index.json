@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-01T20:02:25.205Z",
-  "count": 1623,
+  "generatedAt": "2026-07-02T07:40:59.393Z",
+  "count": 1624,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -53052,6 +53052,44 @@
       ],
       "targetResourceKinds": [],
       "difficulty": "intermediate",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "community",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/open-webui/open-webui-25585-issue-web-search-results-not-passed-to-model-in-legacy-path-aft.json",
+      "title": "open-webui: issue: Web search results not passed to model in legacy path after upgrading to v0.9.6",
+      "description": "issue: Web search results not passed to model in legacy path after upgrading to v0.9.6. This issue affects 16+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "open-webui",
+        "community",
+        "ai-app",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "open-webui"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "advanced",
       "issueTypes": [
         "troubleshoot"
       ],
