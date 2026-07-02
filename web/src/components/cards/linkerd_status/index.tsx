@@ -113,7 +113,7 @@ export function LinkerdStatus() {
   const { t } = useTranslation('cards')
   const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedLinkerd()
 
-  useReportCardDataState({ isFailed, consecutiveFailures, errorMessage: error ?? undefined, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
 
