@@ -26,12 +26,11 @@ on:
 env:
   TARGET_URL: ${{ inputs.target_url || 'https://console.kubestellar.io' }}
 
-permissions:
-  contents: read
-  issues: write
-
+permissions: read-all  # default read; writes scoped to job below
 jobs:
   zap-baseline:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: OWASP ZAP Baseline Scan
     runs-on: ubuntu-latest
@@ -264,6 +263,8 @@ jobs:
             }
 
   nuclei-scan:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: Nuclei Vulnerability Scan
     runs-on: ubuntu-latest

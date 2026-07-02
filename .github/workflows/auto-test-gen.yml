@@ -9,12 +9,11 @@ on:
       - 'web/src/hooks/**/*.ts'
       - 'web/src/hooks/**/*.tsx'
 
-permissions:
-  contents: read
-  pull-requests: write
-
+permissions: read-all  # default read; writes scoped to job below
 jobs:
   detect-untested:
+    permissions:
+      pull-requests: write
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15

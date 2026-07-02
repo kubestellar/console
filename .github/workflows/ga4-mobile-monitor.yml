@@ -42,12 +42,11 @@ env:
   MIN_DAILY_SESSIONS: 200
   LOOKBACK_DAYS: 7
 
-permissions:
-  contents: read
-  issues: write
-
+permissions: read-all  # default read; writes scoped to job below
 jobs:
   monitor:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
     timeout-minutes: 5

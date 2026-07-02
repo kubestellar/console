@@ -24,11 +24,7 @@ on:
     - cron: '17 */2 * * *'
   workflow_dispatch: {}
 
-permissions:
-  contents: read
-  actions: read
-  issues: write
-
+permissions: read-all  # default read; writes scoped to job below
 concurrency:
   group: perf-react-commits-idle
   cancel-in-progress: true
@@ -38,6 +34,8 @@ env:
 
 jobs:
   react-commits-idle:
+    permissions:
+      issues: write
     name: React commits per second (idle)
     runs-on: ubuntu-latest
     timeout-minutes: 20

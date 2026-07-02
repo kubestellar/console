@@ -52,9 +52,7 @@ on:
     types:
     - assigned
 
-permissions:
-  issues: write
-
+permissions: read-all  # default read; writes scoped to job below
 concurrency:
   group: "gh-aw-${{ github.workflow }}-${{ github.event.issue.number || github.run_id }}"
 
@@ -1364,6 +1362,8 @@ jobs:
             }
 
   pre_activation:
+    permissions:
+      issues: write
     runs-on: ubuntu-slim
     outputs:
       activated: ${{ steps.check_membership.outputs.is_team_member == 'true' }}
