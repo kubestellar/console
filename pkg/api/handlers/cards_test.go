@@ -509,7 +509,6 @@ func TestCreateCard_AdminAllowed(t *testing.T) {
 
 	body := `{"card_type":"cluster_health","config":{"cluster":"prod"},"position":{"x":0,"y":0,"w":4,"h":3}}`
 	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
-	req.Host = "localhost"
 		strings.NewReader(body))
 	require.NoError(t, err)
 	req.Host = "localhost"
