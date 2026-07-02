@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,16 +20,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// generateTestRSAKey creates a 2048-bit RSA key pair for testing.
-func generateTestRSAKey(t *testing.T) (*rsa.PrivateKey, []byte) {
+// testRSAKey caches a single RSA key pair for all tests in this file.
+var (
+	testRSAKeyOnce sync.Once
+	testRSAKey     *rsa.PrivateKey
+	testRSAKeyPEM  []byte
+)
+
+func getTestRSAKey(t *testing.T) (*rsa.PrivateKey, []byte) {
 	t.Helper()
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-	pemBytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	testRSAKeyOnce.Do(func() {
+		var err error
+		testRSAKey, err = rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			panic("failed to generate test RSA key: " + err.Error())
+		}
+		testRSAKeyPEM = pem.EncodeToMemory(&pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(testRSAKey),
+		})
 	})
-	return key, pemBytes
+	return testRSAKey, testRSAKeyPEM
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -65,7 +76,7 @@ func TestNewGitHubAppTokenProvider_MissingEnvVars(t *testing.T) {
 }
 
 func TestNewGitHubAppTokenProvider_AllEnvVarsSet(t *testing.T) {
-	_, pemBytes := generateTestRSAKey(t)
+	_, pemBytes := getTestRSAKey(t)
 
 	t.Setenv(appIDEnv, "12345")
 	t.Setenv(appInstallationIDEnv, "67890")
@@ -97,13 +108,14 @@ func TestExpectedAppSlug_Override(t *testing.T) {
 // ─────────────────────────────────────────────────────────────────────
 
 func TestSignAppJWT_ValidKey(t *testing.T) {
-	key, pemBytes := generateTestRSAKey(t)
+	key, pemBytes := getTestRSAKey(t)
 
 	provider := &GitHubAppTokenProvider{
 		appID:         "99999",
 		privateKeyPEM: pemBytes,
 	}
 
+	before := time.Now()
 	tokenString, err := provider.signAppJWT()
 	require.NoError(t, err)
 	require.NotEmpty(t, tokenString)
@@ -126,17 +138,16 @@ func TestSignAppJWT_ValidKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "99999", iss)
 
-	// Verify iat is in the past (with 60s clock skew tolerance)
+	// Verify iat is in the past (code sets iat = now - 60s)
 	iat, err := claims.GetIssuedAt()
 	require.NoError(t, err)
-	assert.True(t, iat.Before(time.Now()), "iat should be in the past")
+	assert.True(t, iat.Before(before), "iat should be before test start")
 
-	// Verify exp is in the future
+	// Verify exp is in the future (code sets exp = now + appJWTLifetime)
 	exp, err := claims.GetExpirationTime()
 	require.NoError(t, err)
-	assert.True(t, exp.After(time.Now()), "exp should be in the future")
-	// exp should be approximately appJWTLifetime from now (minus clock skew)
-	assert.WithinDuration(t, time.Now().Add(appJWTLifetime-60*time.Second), exp.Time, 30*time.Second)
+	assert.True(t, exp.After(before), "exp should be after test start")
+	assert.WithinDuration(t, before.Add(appJWTLifetime), exp.Time, 5*time.Second)
 }
 
 func TestSignAppJWT_InvalidKey(t *testing.T) {
@@ -156,13 +167,12 @@ func TestSignAppJWT_InvalidKey(t *testing.T) {
 // ─────────────────────────────────────────────────────────────────────
 
 func TestToken_Success(t *testing.T) {
-	_, pemBytes := generateTestRSAKey(t)
+	_, pemBytes := getTestRSAKey(t)
 
 	expiresAt := time.Now().Add(60 * time.Minute)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Verify request
 		assert.Equal(t, "POST", r.Method)
-		assert.Contains(t, r.URL.Path, "/app/installations/67890/access_tokens")
+		assert.True(t, strings.HasSuffix(r.URL.Path, "/app/installations/67890/access_tokens"))
 		assert.True(t, strings.HasPrefix(r.Header.Get("Authorization"), "Bearer "))
 		assert.Equal(t, "application/vnd.github+json", r.Header.Get("Accept"))
 
@@ -176,6 +186,7 @@ func TestToken_Success(t *testing.T) {
 	defer server.Close()
 
 	// Override GITHUB_URL to point at our test server
+	// resolveGitHubAPIBase() appends /api/v3 for non-github.com hosts
 	t.Setenv("GITHUB_URL", server.URL)
 
 	provider := &GitHubAppTokenProvider{
@@ -191,7 +202,7 @@ func TestToken_Success(t *testing.T) {
 }
 
 func TestToken_CacheHit(t *testing.T) {
-	_, pemBytes := generateTestRSAKey(t)
+	_, pemBytes := getTestRSAKey(t)
 
 	callCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -229,7 +240,7 @@ func TestToken_CacheHit(t *testing.T) {
 }
 
 func TestToken_RefreshOnExpiry(t *testing.T) {
-	_, pemBytes := generateTestRSAKey(t)
+	_, pemBytes := getTestRSAKey(t)
 
 	callCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -263,7 +274,7 @@ func TestToken_RefreshOnExpiry(t *testing.T) {
 }
 
 func TestToken_HTTPError(t *testing.T) {
-	_, pemBytes := generateTestRSAKey(t)
+	_, pemBytes := getTestRSAKey(t)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -287,7 +298,7 @@ func TestToken_HTTPError(t *testing.T) {
 }
 
 func TestToken_EmptyTokenInResponse(t *testing.T) {
-	_, pemBytes := generateTestRSAKey(t)
+	_, pemBytes := getTestRSAKey(t)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
@@ -315,7 +326,7 @@ func TestToken_EmptyTokenInResponse(t *testing.T) {
 }
 
 func TestToken_InvalidJSONResponse(t *testing.T) {
-	_, pemBytes := generateTestRSAKey(t)
+	_, pemBytes := getTestRSAKey(t)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
@@ -339,10 +350,9 @@ func TestToken_InvalidJSONResponse(t *testing.T) {
 }
 
 func TestToken_ContextCancellation(t *testing.T) {
-	_, pemBytes := generateTestRSAKey(t)
+	_, pemBytes := getTestRSAKey(t)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Simulate a slow server
 		time.Sleep(5 * time.Second)
 		w.WriteHeader(http.StatusCreated)
 	}))
@@ -391,7 +401,7 @@ func TestEnvVarNames(t *testing.T) {
 // ─────────────────────────────────────────────────────────────────────
 
 func TestToken_CustomGitHubURL(t *testing.T) {
-	_, pemBytes := generateTestRSAKey(t)
+	_, pemBytes := getTestRSAKey(t)
 
 	var receivedPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -405,13 +415,8 @@ func TestToken_CustomGitHubURL(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Set GITHUB_URL to our test server (as if GHE)
+	// Set GITHUB_URL to our test server (treated as GHE, gets /api/v3 appended)
 	t.Setenv("GITHUB_URL", server.URL)
-
-	// Clear any old env var state
-	os.Unsetenv(appIDEnv)
-	os.Unsetenv(appInstallationIDEnv)
-	os.Unsetenv(appPrivateKeyEnv)
 
 	provider := &GitHubAppTokenProvider{
 		appID:          "12345",
@@ -423,5 +428,6 @@ func TestToken_CustomGitHubURL(t *testing.T) {
 	tok, err := provider.Token(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "ghs_custom_url_token", tok)
-	assert.Equal(t, "/app/installations/inst-42/access_tokens", receivedPath)
+	// resolveGitHubAPIBase appends /api/v3 for non-github.com hosts
+	assert.Equal(t, "/api/v3/app/installations/inst-42/access_tokens", receivedPath)
 }
