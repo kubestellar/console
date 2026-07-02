@@ -379,4 +379,26 @@ describe('useDrasiResources', () => {
       expect(kinds).toContain('POSTGRES')
     })
   })
+
+  describe('loading and error state exposure', () => {
+    it('exposes isLoading state to consumers', async () => {
+      mockActive.current = {
+        id: 'test', name: 'test', mode: 'server',
+        url: 'http://test:8080', createdAt: 1,
+      }
+      const { result } = renderHook(() => useDrasiResources())
+      expect(result.current).toHaveProperty('isLoading')
+      expect(typeof result.current.isLoading).toBe('boolean')
+    })
+
+    it('exposes error state to consumers', async () => {
+      mockActive.current = {
+        id: 'test', name: 'test', mode: 'server',
+        url: 'http://test:8080', createdAt: 1,
+      }
+      const { result } = renderHook(() => useDrasiResources())
+      expect(result.current).toHaveProperty('error')
+      expect(result.current.error === null || typeof result.current.error === 'string').toBe(true)
+    })
+  })
 })

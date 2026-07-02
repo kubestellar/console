@@ -258,4 +258,22 @@ describe('useDrasiQueryStream', () => {
       expect(result.current.connected).toBe(false)
     })
   })
+
+  describe('loading and error state exposure', () => {
+    it('exposes connected state (loading indicator) to consumers', () => {
+      const { result } = renderHook(() => useDrasiQueryStream({
+        mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
+      }))
+      expect(result.current).toHaveProperty('connected')
+      expect(typeof result.current.connected).toBe('boolean')
+    })
+
+    it('exposes error state to consumers', () => {
+      const { result } = renderHook(() => useDrasiQueryStream({
+        mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
+      }))
+      expect(result.current).toHaveProperty('error')
+      expect(result.current.error === null || typeof result.current.error === 'string').toBe(true)
+    })
+  })
 })
