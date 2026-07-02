@@ -427,13 +427,13 @@ async function checkCriterionF(page: Page): Promise<CriterionResult> {
                 }
               }
             }
-          } catch {
-            resolve({ localStorageCount, idbCount: 0, cacheKeys })
+          } catch (error) { console.error('Error:', error)
+            resolve({ localStorageCount, idbCount: 0, cacheKeys  })
           }
         }
         req.onerror = () => resolve({ localStorageCount, idbCount: 0, cacheKeys })
-      } catch {
-        resolve({ localStorageCount, idbCount: 0, cacheKeys })
+      } catch (error) { console.error('Error:', error)
+        resolve({ localStorageCount, idbCount: 0, cacheKeys  })
       }
     })
   })

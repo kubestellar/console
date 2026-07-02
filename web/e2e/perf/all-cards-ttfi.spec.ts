@@ -244,9 +244,9 @@ async function setupLiveMocks(page: Page) {
       try {
         const msg = JSON.parse(String(data))
         ws.send(JSON.stringify({ id: msg.id, type: 'result', payload: { output: '{"items":[]}', exitCode: 0 } }))
-      } catch {
-        // ignore
-      }
+      } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
     })
   })
 }
@@ -277,7 +277,7 @@ async function setMode(page: Page, mode: PerfMode) {
             }
           }
         }
-      } catch { /* about:blank has no origin */ }
+      } catch (error) { console.error(\'Operation failed:\', error) }
     },
     { demo: isDemo, warm: isWarm, user: mockUser }
   )
@@ -288,9 +288,9 @@ async function setMode(page: Page, mode: PerfMode) {
       for (const name of databases) {
         try {
           indexedDB.deleteDatabase(name)
-        } catch {
-          // ignore
-        }
+        } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
       }
     })
   }
@@ -300,14 +300,14 @@ async function getManifestForBatch(page: Page, batch: number, batchSize: number)
   await page.goto(`/__perf/all-cards?batch=${batch + 1}&size=${batchSize}`, { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForFunction(() => !!window.__TTFI_MANIFEST__, { timeout: 60_000 })
-  } catch {
+  } catch (error) { console.error('Error:', error)
     const debug = await page.evaluate(() => ({
       path: window.location.pathname,
       hasManifestEl: !!document.querySelector('[data-testid="ttfi-manifest"]'),
       hasSidebar: !!document.querySelector('[data-testid="sidebar"]'),
       bodyPreview: (document.body.textContent || '').slice(0, 300),
       hasLoginForm: !!document.querySelector('input[type="password"]'),
-    }))
+     }))
     throw new Error(`TTFI manifest did not load: ${JSON.stringify(debug)}`)
   }
 
@@ -494,9 +494,9 @@ test.afterAll(async () => {
   const baselineContent = (() => {
     try {
       return fs.readFileSync(TTFI_BASELINE_PATH, 'utf-8')
-    } catch {
+    } catch (error) { console.error('Error:', error)
       return null
-    }
+     }
   })()
   if (!baselineContent) {
     // Baseline intentionally absent — skip the gate rather than fail. The spec

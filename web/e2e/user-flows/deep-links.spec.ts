@@ -140,7 +140,7 @@ test.describe('Deep Links — Navigation Integrity', () => {
 
     // Navigate to clusters
     await page.goto('/clusters')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Demo mode flag should still be set
     const demoMode = await page.evaluate(() => localStorage.getItem('kc-demo-mode'))
@@ -148,7 +148,7 @@ test.describe('Deep Links — Navigation Integrity', () => {
 
     // Navigate to settings
     await page.goto('/settings')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     const demoModeAfter = await page.evaluate(() => localStorage.getItem('kc-demo-mode'))
     expect(demoModeAfter).toBe('true')

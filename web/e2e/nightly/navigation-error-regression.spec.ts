@@ -247,15 +247,15 @@ test.describe('Navigation Error Toast Regression (#4011)', () => {
     // Wait for sidebar to confirm the app has booted
     try {
       await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-    } catch {
-      // If sidebar never appears, the test will fail on navigation anyway
+    } catch (error) {
+      console.error(\'Operation failed:\', error)
     }
 
     // Let the initial page fully settle before we start navigating
     try {
       await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS })
-    } catch {
-      // networkidle may not fire with SSE — continue
+    } catch (error) {
+      console.error(\'Operation failed:\', error)
     }
     // intentional delay: allow async effects to resolve before checking for error toasts
     await page.waitForTimeout(POST_IDLE_SETTLE_MS)
@@ -282,9 +282,9 @@ test.describe('Navigation Error Toast Regression (#4011)', () => {
         await link.waitFor({ state: 'visible', timeout: SIDEBAR_LINK_TIMEOUT_MS })
         await link.scrollIntoViewIfNeeded()
         await link.click()
-      } catch {
+      } catch (error) { console.error('Error:', error)
         // Sidebar link not found — fall back to direct navigation
-        console.log(`[nav-regression] sidebar link for ${route.name} not found, using goto`)
+        console.log(`[nav-regression] sidebar link for ${route.name } not found, using goto`)
         await page.goto(route.path, { waitUntil: 'domcontentloaded' })
       }
 
@@ -292,23 +292,23 @@ test.describe('Navigation Error Toast Regression (#4011)', () => {
       if (route.path === '/') {
         try {
           await page.waitForURL((url) => url.pathname === '/', { timeout: SIDEBAR_LINK_TIMEOUT_MS })
-        } catch {
-          // URL may already be at "/" — continue
-        }
+        } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
       } else {
         try {
           await page.waitForURL(`**${route.path}`, { timeout: SIDEBAR_LINK_TIMEOUT_MS })
-        } catch {
-          // URL change timed out — continue and check for errors anyway
-        }
+        } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
       }
 
       // Let the page settle: wait for network idle, then extra quiet time
       try {
         await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS })
-      } catch {
-        // SSE streams may keep the connection open — continue
-      }
+      } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
       // intentional delay: allow async effects to resolve before checking for error toasts
       await page.waitForTimeout(POST_IDLE_SETTLE_MS)
 
@@ -372,15 +372,15 @@ test.describe('Navigation Error Toast Regression (#4011)', () => {
 
     try {
       await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-    } catch {
-      // continue
+    } catch (error) {
+      console.error(\'Operation failed:\', error)
     }
 
     // Let the initial page settle
     try {
       await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS })
-    } catch {
-      // continue
+    } catch (error) {
+      console.error(\'Operation failed:\', error)
     }
     // intentional delay: allow async effects to resolve before starting rapid navigation
     await page.waitForTimeout(POST_IDLE_SETTLE_MS)
@@ -402,9 +402,9 @@ test.describe('Navigation Error Toast Regression (#4011)', () => {
       try {
         await link.waitFor({ state: 'visible', timeout: SIDEBAR_LINK_TIMEOUT_MS })
         await link.click()
-      } catch {
+      } catch (error) { console.error('Error:', error)
         // Link not visible — try goto
-        await page.goto(route.path, { waitUntil: 'domcontentloaded' })
+        await page.goto(route.path, { waitUntil: 'domcontentloaded'  })
       }
 
       // intentional delay: simulate rapid user clicks — brief pause between navigations
@@ -414,8 +414,8 @@ test.describe('Navigation Error Toast Regression (#4011)', () => {
     // Now let the final page settle completely
     try {
       await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS })
-    } catch {
-      // continue
+    } catch (error) {
+      console.error(\'Operation failed:\', error)
     }
     // intentional delay: toasts auto-dismiss after 3s — wait for them to appear if they were going to
     await page.waitForTimeout(TOAST_VISIBLE_WINDOW_MS + POST_IDLE_SETTLE_MS)

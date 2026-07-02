@@ -939,7 +939,7 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
 
     // IMPORTANT: Wait for network to stabilize before navigating to next page (#12095)
     // Sequential page.goto() without stabilization causes navigation race conditions
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // 2. Visit / and assert the Clusters stat block matches the
     //    row count from /clusters.
@@ -1039,7 +1039,7 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
     const drilldownModal = page.getByTestId('drilldown-modal')
     const openedDrilldown = await drilldownModal
       .isVisible({ timeout: DIALOG_TIMEOUT_MS })
-      .catch(() => false)
+      .catch((error) => { console.error(\'Promise error:\', error); return false })
     const navigatedToClusters = /\/clusters(?:\?.*)?$/.test(page.url())
 
     expect(openedDrilldown || navigatedToClusters).toBe(true)

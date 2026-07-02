@@ -41,7 +41,7 @@ test.describe('Add Card — card appears in layout (#11792)', () => {
     // Find a card item in the catalog and click to add it.
     // The unified card catalog lists card types as clickable items.
     const cardCatalogItem = page.locator('[data-testid="console-studio"] [data-card-type]').first()
-    const catalogItemVisible = await cardCatalogItem.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch(() => false)
+    const catalogItemVisible = await cardCatalogItem.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (catalogItemVisible) {
       // Get the card type being added
@@ -51,14 +51,14 @@ test.describe('Add Card — card appears in layout (#11792)', () => {
 
       // Look for an "Add" or "Apply" button to confirm the selection
       const applyButton = page.locator('button:has-text("Add"), button:has-text("Apply"), button:has-text("Save")').first()
-      const hasApply = await applyButton.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch(() => false)
+      const hasApply = await applyButton.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
       if (hasApply) {
         await applyButton.click()
       }
 
       // Close the customizer if still open
       const closeButton = page.locator('[data-testid="console-studio"] button[aria-label*="close" i], button:has-text("Close"), button:has-text("Done")').first()
-      const hasClose = await closeButton.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch(() => false)
+      const hasClose = await closeButton.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
       if (hasClose) {
         await closeButton.click()
       } else {
@@ -82,7 +82,7 @@ test.describe('Add Card — card appears in layout (#11792)', () => {
     } else {
       // If no catalog items with data-card-type, try clicking any list item in the studio
       const anyItem = page.locator('[data-testid="console-studio"] button, [data-testid="console-studio"] [role="button"]').first()
-      const hasItem = await anyItem.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch(() => false)
+      const hasItem = await anyItem.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
       if (hasItem) {
         await anyItem.click()
@@ -136,14 +136,14 @@ test.describe('DashboardCustomizer — open and apply (#11793)', () => {
 
     // Find a toggleable card item (checkbox or switch) in the customizer
     const toggle = page.locator('[data-testid="console-studio"] input[type="checkbox"], [data-testid="console-studio"] [role="switch"]').first()
-    const hasToggle = await toggle.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch(() => false)
+    const hasToggle = await toggle.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (hasToggle) {
       await toggle.click()
 
       // Apply/save changes
       const applyButton = page.locator('button:has-text("Apply"), button:has-text("Save"), button:has-text("Done")').first()
-      const hasApply = await applyButton.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch(() => false)
+      const hasApply = await applyButton.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
       if (hasApply) {
         await applyButton.click()
       } else {
@@ -210,7 +210,7 @@ test.describe('Drag-and-drop — layout reorder and persistence (#11794)', () =>
     const firstHandle = dragHandles.first()
     const secondCard = page.locator('[data-card-id]').nth(1)
 
-    const handleVisible = await firstHandle.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch(() => false)
+    const handleVisible = await firstHandle.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!handleVisible) {
       // Drag handles may only appear on hover — skip if not accessible
       test.skip()
@@ -272,7 +272,7 @@ test.describe('Drag-and-drop — layout reorder and persistence (#11794)', () =>
     await page.waitForTimeout(500)
 
     const firstHandle = dragHandles.first()
-    const handleVisible = await firstHandle.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch(() => false)
+    const handleVisible = await firstHandle.isVisible({ timeout: CARD_RENDER_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!handleVisible) {
       test.skip()
       return

@@ -247,7 +247,7 @@ async function captureColdSnapshots(page: Page, cardIds: string[]): Promise<Cold
       // Wait before retrying to let the page settle
       await new Promise((r) => setTimeout(r, EVALUATE_RETRY_DELAY_MS))
       // Re-wait for page to be stable
-      await page.waitForLoadState('domcontentloaded', { timeout: BATCH_LOAD_TIMEOUT_MS }).catch(() => { /* best-effort */ })
+      await page.waitForLoadState('domcontentloaded', { timeout: BATCH_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Best-effort operation failed:', error) })
     }
   }
   // TypeScript: unreachable but needed for type safety
@@ -356,9 +356,9 @@ async function captureWarmSnapshotsResilient(
           firstContentTime[s.id] = elapsed
         }
       }
-    } catch {
-      // page context may have been destroyed during navigation — skip this tick
-    }
+    } catch (error) {
+        console.error('Operation failed:', error)
+      }
     await page.waitForTimeout(WARM_POLL_INTERVAL_MS)
   }
 
@@ -396,7 +396,8 @@ async function captureWarmSnapshotsResilient(
       }
       return results
     })
-  } catch {
+  } catch (error) {
+    console.error('Failed to capture warm snapshots:', error)
     return cardIds.map((id) => ({
       cardId: id, cardType: '', textLength: 0,
       hasVisualContent: false, hasContent: false,
@@ -475,7 +476,7 @@ async function softNavigateToBatch(
     () => typeof (window as Window & { __COMPLIANCE_SET_BATCH__?: unknown }).__COMPLIANCE_SET_BATCH__ === 'function',
     undefined,
     { timeout: SOFT_NAV_SETTER_TIMEOUT_MS }
-  ).then(() => true).catch(() => false)
+  ).then(() => true).catch((error) => { console.error(\'Promise error:\', error); return false })
 
   if (hasSetter) {
     await page.evaluate(
@@ -650,12 +651,14 @@ async function snapshotCacheState(page: Page): Promise<{
               resolve(entries)
             }
             all.onerror = () => { db.close(); resolve([]) }
-          } catch {
+          } catch (error) {
+            console.error('Failed to access IndexedDB entries:', error)
             resolve([])
           }
         }
         req.onerror = () => resolve([])
-      } catch {
+      } catch (error) {
+        console.error('Failed to open IndexedDB:', error)
         resolve([])
       }
     })
@@ -854,7 +857,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
   const totalBatches = Math.ceil(totalCards / BATCH_SIZE)
   console.log(`[CacheTest] Total cards: ${totalCards}, batches: ${totalBatches}`)
   // Wait for warmup batch to fully load
-  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch((error) => { console.error('Best-effort operation failed:', error) })
 
   // ── Phase 3: Cold load all batches ─────────────────────────────────────
   console.log('[CacheTest] Phase 3: Cold load — loading all batches with network')
@@ -874,7 +877,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
     // Allow lazy (code-split) components to mount and report state.
     // StackContext cards dynamically report isDemoData via useReportCardDataState —
     // wait for cards to settle before capturing cold snapshot.
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => { /* best-effort */ })
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch((error) => { console.error('Best-effort operation failed:', error) })
 
     // Capture cold load state
     const snapshots = await captureColdSnapshots(page, cardIds)
@@ -925,11 +928,12 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
   try {
     await softNavigateToBatch(page, 0)
     console.log('[CacheTest] Phase 5: Soft navigated to batch 0 — React Query cache intact')
-  } catch {
+  } catch (error) {
+    console.error('Soft navigation failed:', error)
     console.log('[CacheTest] Phase 5: Soft nav failed, cache may be partially lost')
   }
   // Wait for soft navigation to settle
-  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => { /* best-effort */ })
+  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch((error) => { console.error('Best-effort operation failed:', error) })
 
   // ── Phase 5.5: Informational only ─────────────────────────────────────
   // page.reload() kills React Query in-memory cache. We log this but skip
@@ -957,7 +961,8 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
       try {
         manifest = await softNavigateToBatch(page, batch)
         console.log(`[CacheTest] Phase 6 batch ${batch}: soft nav OK`)
-      } catch {
+      } catch (error) {
+        console.error(`Soft nav failed for batch ${batch}:`, error)
         console.log(`[CacheTest] Phase 6 batch ${batch}: soft nav failed, falling back to page.goto`)
         manifest = await navigateToBatch(page, batch, BATCH_NAV_TIMEOUT_MS)
       }

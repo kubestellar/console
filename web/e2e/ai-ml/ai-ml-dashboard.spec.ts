@@ -104,7 +104,9 @@ async function waitForStackDiscovery(page: Page): Promise<unknown[]> {
           if (parsed.stacks && parsed.stacks.length > 0) {
             return parsed.stacks
           }
-        } catch { /* ignore */ }
+        } catch (error) {
+          console.error('Failed to parse stack cache:', error)
+        }
       }
       return []
     })
@@ -116,7 +118,7 @@ async function waitForStackDiscovery(page: Page): Promise<unknown[]> {
   const finalStacks = await page.evaluate(() => {
     const cached = localStorage.getItem('kubestellar-stack-cache')
     if (cached) {
-      try { return JSON.parse(cached).stacks || [] } catch { return [] }
+      try { return JSON.parse(cached).stacks || [] } catch (error) { console.error('Failed to parse JSON:', error); return [] }
     }
     return []
   })
@@ -140,7 +142,8 @@ test.describe('AI/ML Dashboard — page structure', () => {
         test.skip(true, 'Backend not reachable — skipping AI/ML page structure tests')
         return
       }
-    } catch {
+    } catch (error) {
+      console.error('Backend health check failed:', error)
       test.skip(true, 'Backend not reachable — skipping AI/ML page structure tests')
       return
     }
@@ -156,7 +159,8 @@ test.describe('AI/ML Dashboard — page structure', () => {
         EXPECTED_CARD_COUNT,
         { timeout: STACK_DISCOVERY_TIMEOUT_MS },
       )
-    } catch {
+    } catch (error) {
+      console.error('Timed out waiting for AI/ML cards:', error)
       const actual = await page.locator('[data-card-type]').count()
       test.skip(true, `Only ${actual}/${EXPECTED_CARD_COUNT} AI/ML cards rendered — LLM-d stacks likely unavailable`)
       return
@@ -176,7 +180,8 @@ test.describe('AI/ML Dashboard — page structure', () => {
         test.skip(true, 'Backend not reachable — skipping AI/ML page structure tests')
         return
       }
-    } catch {
+    } catch (error) {
+      console.error('Backend health check failed:', error)
       test.skip(true, 'Backend not reachable — skipping AI/ML page structure tests')
       return
     }
@@ -187,7 +192,8 @@ test.describe('AI/ML Dashboard — page structure', () => {
         () => document.querySelectorAll('[data-card-type]').length >= 3,
         { timeout: CARD_CONTENT_TIMEOUT_MS },
       )
-    } catch {
+    } catch (error) {
+      console.error('Timed out waiting for hero cards:', error)
       const actual = await page.locator('[data-card-type]').count()
       test.skip(true, `Only ${actual} cards rendered — LLM-d hero cards likely unavailable`)
       return
@@ -225,7 +231,8 @@ test.describe('AI/ML Dashboard — stack discovery', () => {
         test.skip(true, 'Backend not reachable — skipping stack discovery tests')
         return
       }
-    } catch {
+    } catch (error) {
+      console.error('Backend health check failed:', error)
       test.skip(true, 'Backend not reachable — skipping stack discovery tests')
       return
     }
@@ -255,7 +262,7 @@ test.describe('AI/ML Dashboard — stack discovery', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
-    } catch { test.skip(true, 'Backend not reachable'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable'); return }
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     const stacks = await waitForStackDiscovery(page)
@@ -299,7 +306,7 @@ test.describe('AI/ML Dashboard — stack discovery', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
-    } catch { test.skip(true, 'Backend not reachable'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable'); return }
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     const stacks = await waitForStackDiscovery(page)
@@ -338,7 +345,7 @@ test.describe('AI/ML Dashboard — stack discovery', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
-    } catch { test.skip(true, 'Backend not reachable'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable'); return }
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     const stacks = await waitForStackDiscovery(page)
@@ -366,7 +373,7 @@ test.describe('AI/ML Dashboard — stack discovery', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
-    } catch { test.skip(true, 'Backend not reachable'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable'); return }
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
@@ -401,7 +408,7 @@ test.describe('AI/ML Dashboard — complete stack coverage', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
-    } catch { test.skip(true, 'Backend not reachable'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable'); return }
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     const stacks = await waitForStackDiscovery(page)
@@ -483,7 +490,7 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable — no Prometheus without backend'); return }
-    } catch { test.skip(true, 'Backend not reachable — no Prometheus without backend'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable — no Prometheus without backend'); return }
 
     const promCalls: string[] = []
     page.on('request', (req) => {
@@ -528,7 +535,7 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
-    } catch { test.skip(true, 'Backend not reachable'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable'); return }
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
@@ -557,7 +564,7 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
-    } catch { test.skip(true, 'Backend not reachable'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable'); return }
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
@@ -584,7 +591,7 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
-    } catch { test.skip(true, 'Backend not reachable'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable'); return }
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
@@ -623,7 +630,7 @@ test.describe('AI/ML Dashboard — component health', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
-    } catch { test.skip(true, 'Backend not reachable'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable'); return }
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
@@ -658,7 +665,7 @@ test.describe('AI/ML Dashboard — component health', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
-    } catch { test.skip(true, 'Backend not reachable'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable'); return }
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     await page.waitForFunction(
@@ -687,7 +694,7 @@ test.describe('AI/ML Dashboard — component health', () => {
     try {
       const healthCheck = await request.get('http://127.0.0.1:8080/api/health', { timeout: 5_000 })
       if (!healthCheck.ok()) { test.skip(true, 'Backend not reachable'); return }
-    } catch { test.skip(true, 'Backend not reachable'); return }
+    } catch (error) { console.error('Backend health check failed:', error); test.skip(true, 'Backend not reachable'); return }
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)

@@ -45,7 +45,7 @@ test.describe('Onboarding flow after login', () => {
     }, { tour: TOUR_COMPLETED_KEY, onboarded: ONBOARDED_KEY })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     const body = page.locator('body')
     await expect(body).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
@@ -68,7 +68,7 @@ test.describe('Onboarding flow after login', () => {
     // Tour overlay selectors mirror onboarding-tour.spec.ts so the matcher
     // stays in sync with the Tour component's rendered DOM.
     const tourOverlay = page.locator('[class*="tour"], [class*="joyride"], [class*="onboarding"]')
-    const hasTour = await tourOverlay.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    const hasTour = await tourOverlay.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     expect(hasTour, 'Tour must not render for returning users with tour-completed=true').toBe(false)
   })
 })
