@@ -612,4 +612,12 @@ describe('WebSocket auto-reconnect backoff arithmetic', () => {
       vi.useRealTimers()
     }
   })
+
+  describe('loading state exposure', () => {
+    it('exposes agentsLoading state to consumers', () => {
+      const { result } = renderHook(() => useMissions(), { wrapper })
+      expect(result.current).toHaveProperty('agentsLoading')
+      expect(typeof result.current.agentsLoading).toBe('boolean')
+    })
+  })
 })

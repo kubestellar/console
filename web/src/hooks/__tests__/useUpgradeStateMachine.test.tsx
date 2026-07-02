@@ -432,4 +432,18 @@ describe('useUpgradeStateMachine — Cleanup', () => {
     expect(mockVersionWsHandle.destroy).toHaveBeenCalledTimes(1)
     spyClearInterval.mockRestore()
   })
+
+  describe('loading state exposure', () => {
+    it('exposes fetchCompleted state (loading indicator) to consumers', () => {
+      const { result } = renderHook(() => useUpgradeStateMachine({
+        allClusters: [],
+        agentConnected: false,
+        isDemoMode: false,
+        openTrackedWs: vi.fn(),
+        parseWsMessage: vi.fn(),
+      }))
+      expect(result.current).toHaveProperty('fetchCompleted')
+      expect(typeof result.current.fetchCompleted).toBe('boolean')
+    })
+  })
 })

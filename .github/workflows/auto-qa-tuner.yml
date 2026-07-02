@@ -39,7 +39,7 @@ jobs:
     permissions:
       contents: write
       issues: write
-      pull-requests: read
+      pull-requests: write
     if: >
       github.event.schedule == '0 3 * * *' ||
       (github.event_name == 'workflow_dispatch' &&
@@ -342,14 +342,21 @@ jobs:
           echo "Repeat patterns: $REPEAT_TITLE_COUNT"
 
       - name: Commit tuning config
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "$CONFIG_FILE"
           git diff --cached --quiet && echo "No changes to commit" && exit 0
+          BRANCH="auto-qa-tuner/daily-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
           git commit -s -m "chore: update auto-qa tuning config (daily feedback)"
-          git pull --rebase origin main || true
-          git push
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore: auto-qa tuning config update (daily feedback) $(date +%Y-%m-%d)" \
+            --body "Automated daily feedback update from the Auto-QA Tuner workflow." \
+            --base main
 
   # ============================================================
   # Job B: Weekly Analysis — broader patterns, create report issue
@@ -358,7 +365,7 @@ jobs:
     permissions:
       contents: write
       issues: write
-      pull-requests: read
+      pull-requests: write
     needs: daily-feedback
     if: >
       !failure() && !cancelled() &&
@@ -594,14 +601,21 @@ jobs:
           ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
 
       - name: Commit tuning config
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "$CONFIG_FILE"
           git diff --cached --quiet && echo "No changes to commit" && exit 0
+          BRANCH="auto-qa-tuner/weekly-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
           git commit -s -m "chore: update auto-qa tuning config (weekly analysis)"
-          git pull --rebase origin main || true
-          git push
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore: auto-qa tuning config update (weekly analysis) $(date +%Y-%m-%d)" \
+            --body "Automated weekly analysis update from the Auto-QA Tuner workflow." \
+            --base main
 
   # ============================================================
   # Job C: CNCF Intelligence — scan landscape repos for patterns
@@ -610,7 +624,7 @@ jobs:
     permissions:
       contents: write
       issues: write
-      pull-requests: read
+      pull-requests: write
     needs: weekly-analysis
     if: >
       !failure() && !cancelled() &&
@@ -889,11 +903,18 @@ jobs:
           ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
 
       - name: Commit tuning config
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "$CONFIG_FILE"
           git diff --cached --quiet && echo "No changes to commit" && exit 0
+          BRANCH="auto-qa-tuner/cncf-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
           git commit -s -m "chore: update auto-qa tuning config (CNCF intelligence)"
-          git pull --rebase origin main || true
-          git push
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore: auto-qa tuning config update (CNCF intelligence) $(date +%Y-%m-%d)" \
+            --body "Automated CNCF intelligence update from the Auto-QA Tuner workflow." \
+            --base main

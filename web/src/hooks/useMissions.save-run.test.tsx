@@ -1018,4 +1018,12 @@ describe('cancelling mission receives terminal messages', () => {
     expect(mission?.status).toBe('cancelled')
     expect(mission?.messages.some(m => m.content.includes('backend unreachable'))).toBe(true)
   })
+
+  describe('loading state exposure', () => {
+    it('exposes agentsLoading state to consumers', () => {
+      const { result } = renderHook(() => useMissions(), { wrapper })
+      expect(result.current).toHaveProperty('agentsLoading')
+      expect(typeof result.current.agentsLoading).toBe('boolean')
+    })
+  })
 })

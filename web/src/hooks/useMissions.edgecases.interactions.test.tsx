@@ -611,6 +611,14 @@ describe('unread tracking: active mission not marked unread', () => {
     expect(result.current.unreadMissionIds.has(missionId)).toBe(false)
     expect(result.current.unreadMissionCount).toBe(0)
   })
+
+  describe('loading state exposure', () => {
+    it('exposes agentsLoading state to consumers', () => {
+      const { result } = renderHook(() => useMissions(), { wrapper })
+      expect(result.current).toHaveProperty('agentsLoading')
+      expect(typeof result.current.agentsLoading).toBe('boolean')
+    })
+  })
 })
 
 // ── WebSocket close: fails pending missions, clears pendingRequests ─────────
