@@ -12,16 +12,24 @@ function kubectl(args: string[], kubeconfigPath?: string): string {
   return execFileSync('kubectl', fullArgs, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
 }
 
-function writeTempKubeconfig(): string | undefined {
-  if (process.env.KUBECONFIG_PATH) return process.env.KUBECONFIG_PATH
+interface TempKubeconfig {
+  path?: string
+  cleanup: () => void
+}
+
+function writeTempKubeconfig(): TempKubeconfig {
+  if (process.env.KUBECONFIG_PATH) return { path: process.env.KUBECONFIG_PATH, cleanup: () => {} }
   const content = process.env.KUBECONFIG_B64
     ? Buffer.from(process.env.KUBECONFIG_B64, 'base64').toString('utf8')
     : process.env.KUBECONFIG_CONTENT
-  if (!content) return undefined
+  if (!content) return { cleanup: () => {} }
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'visual-login-kubeconfig-'))
   const kubeconfigPath = path.join(dir, 'config')
   fs.writeFileSync(kubeconfigPath, content, { mode: 0o600 })
-  return kubeconfigPath
+  return {
+    path: kubeconfigPath,
+    cleanup: () => fs.rmSync(dir, { recursive: true, force: true }),
+  }
 }
 
 function jsonList<T>(args: string[], kubeconfigPath?: string): T[] {
@@ -60,11 +68,12 @@ export function collectK8sGroundTruth(runId = process.env.GITHUB_RUN_ID || Strin
     }
   }
 
-  let kubeconfigPath: string | undefined
+  let kubeconfig: TempKubeconfig = { cleanup: () => {} }
   try {
-    kubeconfigPath = writeTempKubeconfig()
+    kubeconfig = writeTempKubeconfig()
     execFileSync('kubectl', ['version', '--client=true'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
   } catch {
+    kubeconfig.cleanup()
     return {
       runId,
       skipped: 'kubectl is unavailable or kubeconfig is not configured.',
@@ -76,32 +85,37 @@ export function collectK8sGroundTruth(runId = process.env.GITHUB_RUN_ID || Strin
     }
   }
 
-  const contexts = configuredContexts(kubeconfigPath)
-  const reachable = contexts.filter(context => {
-    try {
-      kubectl(['--context', context, 'get', 'namespaces', '--request-timeout=10s'], kubeconfigPath)
-      return true
-    } catch {
-      return false
-    }
-  })
+  try {
+    const kubeconfigPath = kubeconfig.path
+    const contexts = configuredContexts(kubeconfigPath)
+    const reachable = contexts.filter(context => {
+      try {
+        kubectl(['--context', context, 'get', 'namespaces', '--request-timeout=10s'], kubeconfigPath)
+        return true
+      } catch {
+        return false
+      }
+    })
 
-  const groundTruth = normalizeK8sState({
-    runId,
-    contextNames: contexts,
-    reachableContexts: reachable,
-    nodes: jsonListAcrossContexts<K8sNode>(reachable, ['get', 'nodes'], kubeconfigPath),
-    pods: jsonListAcrossContexts<K8sPod>(reachable, ['get', 'pods', '-A'], kubeconfigPath),
-    namespaces: jsonListAcrossContexts<unknown>(reachable, ['get', 'namespaces'], kubeconfigPath),
-    deployments: jsonListAcrossContexts<K8sDeployment>(reachable, ['get', 'deployments', '-A'], kubeconfigPath),
-    createdNamespaces: [],
-  })
+    const groundTruth = normalizeK8sState({
+      runId,
+      contextNames: contexts,
+      reachableContexts: reachable,
+      nodes: jsonListAcrossContexts<K8sNode>(reachable, ['get', 'nodes'], kubeconfigPath),
+      pods: jsonListAcrossContexts<K8sPod>(reachable, ['get', 'pods', '-A'], kubeconfigPath),
+      namespaces: jsonListAcrossContexts<unknown>(reachable, ['get', 'namespaces'], kubeconfigPath),
+      deployments: jsonListAcrossContexts<K8sDeployment>(reachable, ['get', 'deployments', '-A'], kubeconfigPath),
+      createdNamespaces: [],
+    })
 
-  const redacted = redactK8sGroundTruth(groundTruth)
-  const outDir = path.resolve(process.cwd(), 'test-results/reports')
-  fs.mkdirSync(outDir, { recursive: true })
-  fs.writeFileSync(path.join(outDir, 'groundtruth.json'), safeJsonStringify(redacted))
-  return redacted
+    const redacted = redactK8sGroundTruth(groundTruth)
+    const outDir = path.resolve(process.cwd(), 'test-results/reports')
+    fs.mkdirSync(outDir, { recursive: true })
+    fs.writeFileSync(path.join(outDir, 'groundtruth.json'), safeJsonStringify(redacted))
+    return redacted
+  } finally {
+    kubeconfig.cleanup()
+  }
 }
 
 if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module) {

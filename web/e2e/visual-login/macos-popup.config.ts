@@ -1,4 +1,10 @@
 import { defineConfig } from '@playwright/test'
+import {
+  CI_EXPECT_TIMEOUT_MS,
+  CI_LIVE_TEST_TIMEOUT_MS,
+  LOCAL_EXPECT_TIMEOUT_MS,
+  LOCAL_LIVE_TEST_TIMEOUT_MS,
+} from './playwrightTiming'
 
 const isCI = Boolean(process.env.CI)
 const baseURL = process.env.LIVE_CANARY_CONSOLE_URL
@@ -10,8 +16,8 @@ const baseURL = process.env.LIVE_CANARY_CONSOLE_URL
 export default defineConfig({
   testDir: '.',
   testMatch: ['macos-popup/*.spec.ts'],
-  timeout: isCI ? 180_000 : 120_000,
-  expect: { timeout: isCI ? 15_000 : 10_000 },
+  timeout: isCI ? CI_LIVE_TEST_TIMEOUT_MS : LOCAL_LIVE_TEST_TIMEOUT_MS,
+  expect: { timeout: isCI ? CI_EXPECT_TIMEOUT_MS : LOCAL_EXPECT_TIMEOUT_MS },
   fullyParallel: false,
   forbidOnly: isCI,
   retries: 0,

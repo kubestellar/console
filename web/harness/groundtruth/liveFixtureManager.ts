@@ -7,6 +7,7 @@ import { safeJsonStringify } from '../evidence/sanitizeEvidence'
 const DEFAULT_NAMESPACE = 'ks-live-ui-fixtures'
 const FIXTURE_LABEL = 'kubestellar.io/live-ui-fixture=true'
 let fixtureKubeconfigPath: string | undefined
+let fixtureKubeconfigCleanup: (() => void) | undefined
 
 export interface LiveFixtureReport {
   enabled: boolean
@@ -38,12 +39,14 @@ function kubectl(args: string[], input?: string): string {
 }
 
 function writeTempKubeconfig(): string | undefined {
-  if (fixtureKubeconfigPath || process.env.KUBECONFIG_PATH) return fixtureKubeconfigPath
+  if (fixtureKubeconfigPath) return fixtureKubeconfigPath
+  if (process.env.KUBECONFIG_PATH) return process.env.KUBECONFIG_PATH
   if (process.env.LIVE_CLUSTER_FIXTURE_KUBECONFIG_B64) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'live-fixture-kubeconfig-'))
     const kubeconfigPath = path.join(dir, 'config')
     fs.writeFileSync(kubeconfigPath, Buffer.from(process.env.LIVE_CLUSTER_FIXTURE_KUBECONFIG_B64, 'base64').toString('utf8'), { mode: 0o600 })
     fixtureKubeconfigPath = kubeconfigPath
+    fixtureKubeconfigCleanup = () => fs.rmSync(dir, { recursive: true, force: true })
     return fixtureKubeconfigPath
   }
   if (process.env.KUBECONFIG) return undefined
@@ -55,7 +58,14 @@ function writeTempKubeconfig(): string | undefined {
   const kubeconfigPath = path.join(dir, 'config')
   fs.writeFileSync(kubeconfigPath, content, { mode: 0o600 })
   fixtureKubeconfigPath = kubeconfigPath
+  fixtureKubeconfigCleanup = () => fs.rmSync(dir, { recursive: true, force: true })
   return fixtureKubeconfigPath
+}
+
+function cleanupFixtureKubeconfig() {
+  fixtureKubeconfigCleanup?.()
+  fixtureKubeconfigCleanup = undefined
+  fixtureKubeconfigPath = undefined
 }
 
 function fixtureContext(): string | undefined {
@@ -251,14 +261,26 @@ export function cleanupLiveFixtures(): LiveFixtureReport {
   const namespace = fixtureNamespace()
   const resources = fixtureNames()
   if (process.env.LIVE_CLUSTER_FIXTURES !== 'true') {
-    return writeReport({ enabled: false, skipped: 'LIVE_CLUSTER_FIXTURES is not true.', namespace, resources })
+    try {
+      return writeReport({ enabled: false, skipped: 'LIVE_CLUSTER_FIXTURES is not true.', namespace, resources })
+    } finally {
+      cleanupFixtureKubeconfig()
+    }
   }
   if (process.env.LIVE_CLUSTER_FIXTURE_CLEANUP === 'false') {
-    return collectLiveFixtureState()
+    try {
+      return collectLiveFixtureState()
+    } finally {
+      cleanupFixtureKubeconfig()
+    }
   }
 
-  writeTempKubeconfig()
-  const context = fixtureContext()
-  kubectl(withContext(['delete', 'namespace', namespace, '--ignore-not-found', '--wait=false'], context))
-  return writeReport({ enabled: true, namespace, context, resources })
+  try {
+    writeTempKubeconfig()
+    const context = fixtureContext()
+    kubectl(withContext(['delete', 'namespace', namespace, '--ignore-not-found', '--wait=false'], context))
+    return writeReport({ enabled: true, namespace, context, resources })
+  } finally {
+    cleanupFixtureKubeconfig()
+  }
 }

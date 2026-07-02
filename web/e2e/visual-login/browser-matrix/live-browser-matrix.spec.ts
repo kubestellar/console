@@ -149,17 +149,33 @@ async function waitForRouteStateText(page: Page): Promise<void> {
   }).not.toBe('')
 }
 
+const ROUTE_HANDSHAKE_RETRY_DELAY_MS = 1_500
+
+async function routeHandshakeState(page: Page): Promise<'blank' | 'loading' | 'error' | 'settled'> {
+  const text = (await readBodyText(page, 500)).replace(/\s+/g, ' ').trim()
+  if (/infrastructure connection error|too many requests|rate limited|http 429/i.test(text)) return 'error'
+  if (/connecting to infrastructure|checking backend connectivity/i.test(text)) return 'loading'
+  return text ? 'settled' : 'blank'
+}
+
 async function waitForRouteHandshakeSettled(page: Page): Promise<void> {
   await waitForRouteStateText(page)
   await expect.poll(async () => {
-    const text = (await readBodyText(page, 500)).replace(/\s+/g, ' ').trim()
-    if (/infrastructure connection error|too many requests|rate limited|http 429/i.test(text)) return 'error'
-    if (/connecting to infrastructure|checking backend connectivity/i.test(text)) return 'loading'
-    return text ? 'settled' : 'blank'
+    const state = await routeHandshakeState(page)
+    return state === 'loading' ? 'loading' : 'ready'
   }, {
     message: 'live browser matrix route should leave the startup loading handshake before classification',
     timeout: 25_000,
-  }).not.toBe('loading')
+  })
+    .toBe('ready')
+
+  if (await routeHandshakeState(page) === 'error') {
+    await page.waitForTimeout(ROUTE_HANDSHAKE_RETRY_DELAY_MS)
+    await expect.poll(() => routeHandshakeState(page), {
+      message: 'live browser matrix route should recover from a transient startup error before classification',
+      timeout: 10_000,
+    }).not.toBe('error')
+  }
 }
 
 async function waitForExpectedMarkers(

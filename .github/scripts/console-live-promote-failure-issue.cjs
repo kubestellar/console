@@ -19,6 +19,44 @@ const LIVE_CANARY_WORKFLOWS = new Set([
   'Console Live macOS Canary',
 ])
 const IMAGE_REPOSITORY = process.env.CONSOLE_LIVE_IMAGE_REPOSITORY || 'ghcr.io/kubestellar/console'
+// Keep table/log excerpts compact enough for GitHub issue rendering and notification emails.
+const DEFAULT_TEXT_TRUNCATE_LENGTH = 2_400
+const MAX_MARKDOWN_TABLE_CELL_LENGTH = 300
+const FALLBACK_ERROR_EXCERPT_LENGTH = 2_500
+const SELECTED_LOG_EXCERPT_LENGTH = 3_500
+// GitHub issue bodies are capped near 65k characters; leave room for the signature marker.
+const MAX_GITHUB_ISSUE_BODY_LENGTH = 60_000
+const TRUNCATED_GITHUB_ISSUE_BODY_LENGTH = 59_000
+
+const DEFAULT_ISSUE_LABELS = ['console-live', 'live-canary', 'test-failure', 'needs-fix']
+const LIVE_UI_AREAS = ['web/src/components/**', 'web/src/components/dashboard/**', 'web/src/components/ui/**', 'web/e2e/visual-login/helpers/liveSiteAssertions.ts']
+const BROWSER_LAYOUT_AREAS = ['web/src/components/layout/**', 'web/src/components/ui/**', 'web/src/components/dashboard/**', 'web/e2e/visual-login/macos-popup/**', 'web/e2e/visual-login/browser-matrix/**']
+const BROWSER_CONTENT_AREAS = ['web/src/pages/**', 'web/src/components/**', 'web/src/hooks/**', 'cmd/console/**']
+const FAILURE_TYPE_METADATA = {
+  'live-ui-overlap': { short: 'visible text overlap blocks promotion', areas: LIVE_UI_AREAS },
+  'live-ui-forbidden-artifact': { short: 'live UI shows demo or local-only artifact', areas: LIVE_UI_AREAS },
+  'live-ui-warning-flood': { short: 'live UI shows warning flood', areas: LIVE_UI_AREAS },
+  'live-network-error': { short: 'live UI has unexpected network errors', areas: ['web/src/hooks/**', 'web/src/lib/**', 'web/src/components/cards/**', 'cmd/console/**'], browserMatrix: true },
+  'optional-live-integration-unreachable': { short: 'optional live integration is unavailable or rate-limited', areas: ['web/src/hooks/**', 'web/src/components/cards/**', 'web/src/components/stellar/**', 'web/e2e/visual-login/helpers/liveSiteAssertions.ts'] },
+  'live-rate-limit-data-loss': { short: 'resource API rate limiting causes live data loss', areas: ['cmd/console/**', 'web/src/hooks/**', 'web/src/components/namespaces/**', 'web/e2e/visual-login/helpers/liveSiteAssertions.ts'] },
+  'ui-api-mismatch': { short: 'UI does not match authenticated API data', areas: ['web/src/components/**', 'web/src/hooks/**', 'web/src/lib/dashboards/**'] },
+  'local-agent-status-unreachable': { short: 'local agent status endpoint is unreachable', areas: ['web/src/hooks/**', 'web/src/components/cards/**', 'cmd/console/**'] },
+  'weak-test-assertion': { short: 'live canary failed because the assertion was too weak', areas: ['web/e2e/visual-login/**', 'web/harness/**'] },
+  'safari-z-index': { short: 'WebKit overlay or text stacking differs from Chromium', areas: BROWSER_LAYOUT_AREAS, browserMatrix: true, reproduction: 'safari' },
+  'macos-popup-clipped': { short: 'macOS WebKit popup is clipped', areas: BROWSER_LAYOUT_AREAS, browserMatrix: true, reproduction: 'macos-popup' },
+  'macos-top-layer-hidden': { short: 'macOS WebKit popup is hidden behind page content', areas: BROWSER_LAYOUT_AREAS, browserMatrix: true, reproduction: 'macos-popup' },
+  'browser-layout-drift': { short: 'browser layout differs significantly from Chromium', areas: BROWSER_LAYOUT_AREAS, browserMatrix: true, reproduction: 'browser-matrix' },
+  'browser-semantic-field-mismatch': { short: 'browser semantic fields differ from expected live data', areas: ['web/src/components/**', 'web/src/hooks/**', 'web/src/lib/dashboards/**', 'web/e2e/visual-login/browser-matrix/**'], browserMatrix: true, reproduction: 'browser-matrix' },
+  'browser-content-missing': { short: 'browser is missing expected live content', areas: BROWSER_CONTENT_AREAS, browserMatrix: true, reproduction: 'browser-matrix' },
+  'browser-interaction-broken': { short: 'browser interaction is broken', areas: BROWSER_LAYOUT_AREAS, browserMatrix: true, reproduction: 'browser-matrix' },
+  'browser-visual-baseline': { short: 'browser screenshot differs from its baseline', areas: ['web/e2e/visual-login/browser-matrix/**', 'web/src/components/**'], browserMatrix: true, reproduction: 'browser-matrix' },
+  'dashboard-groundtruth-mismatch': { short: 'Dashboard stats do not match live Kubernetes groundtruth', areas: ['web/src/hooks/useUniversalStats.ts', 'web/src/config/dashboards/main.ts', 'web/src/components/ui/StatsOverview.tsx', 'cmd/console/**'] },
+  'core-page-live-data-missing': { short: 'core live page is missing expected live data', areas: BROWSER_CONTENT_AREAS },
+  'interactive-surface-broken': { short: 'interactive live UI surface is broken', areas: ['web/src/components/layout/**', 'web/src/components/ui/**', 'web/src/components/search/**', 'web/src/components/dashboard/**'] },
+  'fixture-state-mismatch': { short: 'controlled fixture state is missing or mislabeled', areas: ['web/harness/groundtruth/liveFixtureManager.ts', 'web/e2e/visual-login/semantic/live-fixtures.spec.ts', 'web/src/components/**', 'web/src/hooks/**'] },
+  'groundtruth-mismatch': { short: 'live UI does not match cluster groundtruth', areas: ['web/src/components/**', 'web/harness/groundtruth/**', 'web/e2e/visual-login/semantic/live-canary-ui.spec.ts'] },
+  'auth-boundary': { short: 'production auth boundary failed', areas: ['web/src/lib/auth.tsx', 'cmd/console/**', 'deploy/helm/kubestellar-console/**', '.github/workflows/console-live-promote.yml'], browserMatrix: true },
+}
 
 function walk(dir) {
   if (!fs.existsSync(dir)) return []
@@ -37,7 +75,7 @@ function readJsonFile(file) {
   }
 }
 
-function truncate(value, limit = 2400) {
+function truncate(value, limit = DEFAULT_TEXT_TRUNCATE_LENGTH) {
   const text = String(value || '')
   return text.length > limit ? `${text.slice(0, limit)}\n...truncated...` : text
 }
@@ -47,7 +85,7 @@ function escapeCell(value) {
     .replace(/\\/g, '\\\\')
     .replace(/\r?\n/g, ' ')
     .replace(/\|/g, '\\|')
-    .slice(0, 300)
+    .slice(0, MAX_MARKDOWN_TABLE_CELL_LENGTH)
 }
 
 function stripAnsi(value) {
@@ -523,129 +561,13 @@ function classifyFailure({ failures, evidenceItems, liveUiFailures, logText }) {
 }
 
 function likelyAreasFor(type) {
-  if (type === 'live-ui-overlap' || type === 'live-ui-forbidden-artifact' || type === 'live-ui-warning-flood') {
-    return [
-      'web/src/components/**',
-      'web/src/components/dashboard/**',
-      'web/src/components/ui/**',
-      'web/e2e/visual-login/helpers/liveSiteAssertions.ts',
-    ]
-  }
-  if (type === 'live-network-error') {
-    return ['web/src/hooks/**', 'web/src/lib/**', 'web/src/components/cards/**', 'cmd/console/**']
-  }
-  if (type === 'optional-live-integration-unreachable') {
-    return ['web/src/hooks/**', 'web/src/components/cards/**', 'web/src/components/stellar/**', 'web/e2e/visual-login/helpers/liveSiteAssertions.ts']
-  }
-  if (type === 'live-rate-limit-data-loss') {
-    return ['cmd/console/**', 'web/src/hooks/**', 'web/src/components/namespaces/**', 'web/e2e/visual-login/helpers/liveSiteAssertions.ts']
-  }
-  if (type === 'ui-api-mismatch') {
-    return ['web/src/components/**', 'web/src/hooks/**', 'web/src/lib/dashboards/**']
-  }
-  if (type === 'local-agent-status-unreachable') {
-    return ['web/src/hooks/**', 'web/src/components/cards/**', 'cmd/console/**']
-  }
-  if (type === 'weak-test-assertion') {
-    return ['web/e2e/visual-login/**', 'web/harness/**']
-  }
-  if (type === 'safari-z-index' || type === 'macos-popup-clipped' || type === 'macos-top-layer-hidden' || type === 'browser-layout-drift' || type === 'browser-interaction-broken') {
-    return [
-      'web/src/components/layout/**',
-      'web/src/components/ui/**',
-      'web/src/components/dashboard/**',
-      'web/e2e/visual-login/macos-popup/**',
-      'web/e2e/visual-login/browser-matrix/**',
-    ]
-  }
-  if (type === 'browser-content-missing') {
-    return [
-      'web/src/pages/**',
-      'web/src/components/**',
-      'web/src/hooks/**',
-      'cmd/console/**',
-    ]
-  }
-  if (type === 'browser-semantic-field-mismatch') {
-    return [
-      'web/src/components/**',
-      'web/src/hooks/**',
-      'web/src/lib/dashboards/**',
-      'web/e2e/visual-login/browser-matrix/**',
-    ]
-  }
-  if (type === 'browser-visual-baseline') {
-    return [
-      'web/e2e/visual-login/browser-matrix/**',
-      'web/src/components/**',
-    ]
-  }
-  if (type === 'dashboard-groundtruth-mismatch') {
-    return [
-      'web/src/hooks/useUniversalStats.ts',
-      'web/src/config/dashboards/main.ts',
-      'web/src/components/ui/StatsOverview.tsx',
-      'cmd/console/**',
-    ]
-  }
-  if (type === 'core-page-live-data-missing') {
-    return [
-      'web/src/pages/**',
-      'web/src/components/**',
-      'web/src/hooks/**',
-      'cmd/console/**',
-    ]
-  }
-  if (type === 'interactive-surface-broken') {
-    return [
-      'web/src/components/layout/**',
-      'web/src/components/ui/**',
-      'web/src/components/search/**',
-      'web/src/components/dashboard/**',
-    ]
-  }
-  if (type === 'fixture-state-mismatch') {
-    return [
-      'web/harness/groundtruth/liveFixtureManager.ts',
-      'web/e2e/visual-login/semantic/live-fixtures.spec.ts',
-      'web/src/components/**',
-      'web/src/hooks/**',
-    ]
-  }
-  if (type === 'groundtruth-mismatch') {
-    return ['web/src/components/**', 'web/harness/groundtruth/**', 'web/e2e/visual-login/semantic/live-canary-ui.spec.ts']
-  }
-  if (type === 'auth-boundary') {
-    return ['web/src/lib/auth.tsx', 'cmd/console/**', 'deploy/helm/kubestellar-console/**', '.github/workflows/console-live-promote.yml']
-  }
-  return ['.github/workflows/console-live-promote.yml', 'web/e2e/visual-login/**', 'deploy/helm/kubestellar-console/**']
+  return FAILURE_TYPE_METADATA[type]?.areas
+    || ['.github/workflows/console-live-promote.yml', 'web/e2e/visual-login/**', 'deploy/helm/kubestellar-console/**']
 }
 
 function shortFailure(type, failures) {
   const firstError = failures[0]?.error || ''
-  if (type === 'live-ui-overlap') return 'visible text overlap blocks promotion'
-  if (type === 'live-ui-forbidden-artifact') return 'live UI shows demo or local-only artifact'
-  if (type === 'live-ui-warning-flood') return 'live UI shows warning flood'
-  if (type === 'live-network-error') return 'live UI has unexpected network errors'
-  if (type === 'optional-live-integration-unreachable') return 'optional live integration is unavailable or rate-limited'
-  if (type === 'live-rate-limit-data-loss') return 'resource API rate limiting causes live data loss'
-  if (type === 'ui-api-mismatch') return 'UI does not match authenticated API data'
-  if (type === 'local-agent-status-unreachable') return 'local agent status endpoint is unreachable'
-  if (type === 'weak-test-assertion') return 'live canary failed because the assertion was too weak'
-  if (type === 'safari-z-index') return 'WebKit overlay or text stacking differs from Chromium'
-  if (type === 'macos-popup-clipped') return 'macOS WebKit popup is clipped'
-  if (type === 'macos-top-layer-hidden') return 'macOS WebKit popup is hidden behind page content'
-  if (type === 'browser-layout-drift') return 'browser layout differs significantly from Chromium'
-  if (type === 'browser-semantic-field-mismatch') return 'browser semantic fields differ from expected live data'
-  if (type === 'browser-content-missing') return 'browser is missing expected live content'
-  if (type === 'browser-interaction-broken') return 'browser interaction is broken'
-  if (type === 'browser-visual-baseline') return 'browser screenshot differs from its baseline'
-  if (type === 'dashboard-groundtruth-mismatch') return 'Dashboard stats do not match live Kubernetes groundtruth'
-  if (type === 'core-page-live-data-missing') return 'core live page is missing expected live data'
-  if (type === 'interactive-surface-broken') return 'interactive live UI surface is broken'
-  if (type === 'fixture-state-mismatch') return 'controlled fixture state is missing or mislabeled'
-  if (type === 'groundtruth-mismatch') return 'live UI does not match cluster groundtruth'
-  if (type === 'auth-boundary') return 'production auth boundary failed'
+  if (FAILURE_TYPE_METADATA[type]?.short) return FAILURE_TYPE_METADATA[type].short
   return sanitizeText(firstError.split('\n')[0] || 'canary setup failed').slice(0, 80)
 }
 
@@ -698,7 +620,7 @@ function logExcerpt(logs) {
         for (let i = Math.max(0, index - 4); i <= Math.min(lines.length - 1, index + 8); i += 1) matched.add(i)
       })
       const selected = [...matched].sort((a, b) => a - b).map((index) => lines[index]).join('\n')
-      if (selected) excerpts.push(`### ${log.job}\n\n\`\`\`text\n${truncate(selected, 3500)}\n\`\`\``)
+      if (selected) excerpts.push(`### ${log.job}\n\n\`\`\`text\n${truncate(selected, SELECTED_LOG_EXCERPT_LENGTH)}\n\`\`\``)
     }
     return excerpts
   }
@@ -753,8 +675,8 @@ function artifactRows(artifacts, runUrlBase, runId) {
 }
 
 function labelsForFailureType(failureType) {
-  const labels = ['console-live', 'live-canary', 'test-failure', 'needs-fix']
-  if (/^(auth-boundary|live-network-error|safari-z-index|macos-popup-clipped|macos-top-layer-hidden|browser-layout-drift|browser-semantic-field-mismatch|browser-content-missing|browser-interaction-broken|browser-visual-baseline)$/.test(failureType)) {
+  const labels = [...DEFAULT_ISSUE_LABELS]
+  if (FAILURE_TYPE_METADATA[failureType]?.browserMatrix) {
     labels.push('browser-matrix')
   }
   return labels
@@ -779,7 +701,8 @@ function summarizeNetworkEvidence(evidenceItems, liveUiFailures = {}) {
 }
 
 function buildReproductionCommand(failureType) {
-  if (/^(macos-popup-clipped|macos-top-layer-hidden)$/.test(failureType)) {
+  const reproduction = FAILURE_TYPE_METADATA[failureType]?.reproduction || 'live'
+  if (reproduction === 'macos-popup') {
     return [
       '```bash',
       'cd web',
@@ -793,7 +716,7 @@ function buildReproductionCommand(failureType) {
       '```',
     ].join('\n')
   }
-  if (failureType === 'safari-z-index') {
+  if (reproduction === 'safari') {
     return [
       '```bash',
       'cd web',
@@ -817,7 +740,7 @@ function buildReproductionCommand(failureType) {
       '```',
     ].join('\n')
   }
-  if (/^(browser-layout-drift|browser-semantic-field-mismatch|browser-content-missing|browser-interaction-broken|browser-visual-baseline)$/.test(failureType)) {
+  if (reproduction === 'browser-matrix') {
     return [
       '```bash',
       'cd web',
@@ -1037,7 +960,7 @@ module.exports = async ({ github, context, core }) => {
       project: 'not parsed',
       status: 'failed',
       retry: 0,
-      error: sanitizeText(truncate(logExcerpt(logs), 2500)),
+      error: sanitizeText(truncate(logExcerpt(logs), FALLBACK_ERROR_EXCERPT_LENGTH)),
       attachments: [],
     })
   }
@@ -1061,7 +984,7 @@ module.exports = async ({ github, context, core }) => {
   ].join('|') || `console-live-promote:${runId}`
   const signature = crypto.createHash('sha256').update(signatureSource).digest('hex').slice(0, 16)
   const marker = `<!-- console-live-promote-signature:${signature} -->`
-  const browserMatrixFailure = /^(auth-boundary|live-network-error|safari-z-index|macos-popup-clipped|macos-top-layer-hidden|browser-layout-drift|browser-semantic-field-mismatch|browser-content-missing|browser-interaction-broken|browser-visual-baseline)$/.test(failureType)
+  const browserMatrixFailure = Boolean(FAILURE_TYPE_METADATA[failureType]?.browserMatrix)
   const titlePrefix = browserMatrixFailure ? '[console-live][browser-matrix]' : '[console-live][canary-blocked]'
   const title = `${titlePrefix}[${failureType}] ${shortFailure(failureType, failures)}`
   const issueLabels = labelsForFailureType(failureType)
@@ -1086,7 +1009,7 @@ module.exports = async ({ github, context, core }) => {
     runUrlBase,
     runId,
   })
-  if (body.length > 60000) body = `${body.slice(0, 59000)}\n\n...body truncated...\n${marker}`
+  if (body.length > MAX_GITHUB_ISSUE_BODY_LENGTH) body = `${body.slice(0, TRUNCATED_GITHUB_ISSUE_BODY_LENGTH)}\n\n...body truncated...\n${marker}`
 
   const issues = await github.paginate(github.rest.issues.listForRepo, {
     owner,

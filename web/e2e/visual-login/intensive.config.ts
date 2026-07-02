@@ -1,4 +1,11 @@
 import { defineConfig, devices } from '@playwright/test'
+import {
+  CI_EXPECT_TIMEOUT_MS,
+  CI_INTENSIVE_TEST_TIMEOUT_MS,
+  DEV_SERVER_TIMEOUT_MS,
+  LOCAL_EXPECT_TIMEOUT_MS,
+  LOCAL_INTENSIVE_TEST_TIMEOUT_MS,
+} from './playwrightTiming'
 
 const isCI = Boolean(process.env.CI)
 const baseURL = process.env.VISUAL_LOGIN_BASE_URL
@@ -18,8 +25,8 @@ const isLiveSiteRun = process.env.LIVE_SITE_TESTS === 'true' || process.env.LIVE
 
 export default defineConfig({
   testDir: '.',
-  timeout: isCI ? 90_000 : 75_000,
-  expect: { timeout: isCI ? 15_000 : 10_000 },
+  timeout: isCI ? CI_INTENSIVE_TEST_TIMEOUT_MS : LOCAL_INTENSIVE_TEST_TIMEOUT_MS,
+  expect: { timeout: isCI ? CI_EXPECT_TIMEOUT_MS : LOCAL_EXPECT_TIMEOUT_MS },
   fullyParallel: false,
   forbidOnly: isCI,
   retries: isLiveSiteRun ? 0 : isCI ? 1 : 0,
@@ -63,7 +70,7 @@ export default defineConfig({
     : {
         command: 'npm run dev -- --host 127.0.0.1 --port 4173',
         url: baseURL,
-        timeout: 120_000,
+        timeout: DEV_SERVER_TIMEOUT_MS,
         reuseExistingServer: !isCI,
         stdout: 'pipe',
         stderr: 'pipe',

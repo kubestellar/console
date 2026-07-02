@@ -2,6 +2,12 @@
 
 const crypto = require('node:crypto')
 
+const DEFAULT_TTL_SECONDS = 1_800
+const MIN_TTL_SECONDS = 60
+const MAX_TTL_SECONDS = 7_200
+// Allow small CI clock differences between the runner and live service.
+const CLOCK_SKEW_SECONDS = 5
+
 function requiredEnv(name) {
   const value = process.env[name]
   if (!value || !value.trim()) {
@@ -19,10 +25,10 @@ const userId = requiredEnv('CONSOLE_LIVE_TEST_USER_ID')
 const githubLogin = requiredEnv('CONSOLE_LIVE_TEST_GITHUB_LOGIN')
 const role = (process.env.CONSOLE_LIVE_TEST_USER_ROLE || 'admin').trim() || 'admin'
 const now = Math.floor(Date.now() / 1000)
-const ttlSeconds = Number(process.env.CONSOLE_LIVE_TEST_SESSION_TTL_SECONDS || '1800')
+const ttlSeconds = Number(process.env.CONSOLE_LIVE_TEST_SESSION_TTL_SECONDS || String(DEFAULT_TTL_SECONDS))
 
-if (!Number.isFinite(ttlSeconds) || ttlSeconds < 60 || ttlSeconds > 7200) {
-  throw new Error('CONSOLE_LIVE_TEST_SESSION_TTL_SECONDS must be between 60 and 7200 seconds')
+if (!Number.isFinite(ttlSeconds) || ttlSeconds < MIN_TTL_SECONDS || ttlSeconds > MAX_TTL_SECONDS) {
+  throw new Error(`CONSOLE_LIVE_TEST_SESSION_TTL_SECONDS must be between ${MIN_TTL_SECONDS} and ${MAX_TTL_SECONDS} seconds`)
 }
 
 const header = { alg: 'HS256', typ: 'JWT' }
@@ -35,7 +41,7 @@ const payload = {
   aud: 'kubestellar-console',
   jti: crypto.randomUUID(),
   iat: now,
-  nbf: now - 5,
+  nbf: now - CLOCK_SKEW_SECONDS,
   exp: now + ttlSeconds,
 }
 
