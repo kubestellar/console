@@ -200,10 +200,12 @@ func TestMarkNotificationRead_MissingID(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/%20/read", http.NoBody)
 	require.NoError(t, err)
+	require.NotNil(t, req)
 	req.Host = "localhost"
 
 	resp, err := app.Test(req, stellarNotificationTestTimeoutMs)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	defer resp.Body.Close()
 
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)

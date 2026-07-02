@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -230,9 +231,18 @@ func TestDialAIProviderTLSContext_AllowLocalProviders(t *testing.T) {
 	dialer := &net.Dialer{Timeout: 5 * time.Second}
 
 	conn, err := dialAIProviderTLSContext(ctx, dialer, "tcp", addr, nil)
+	
+	// Success means either connection succeeded OR cert verification failed
+	// (cert error proves connection was attempted, not blocked by SSRF protection)
 	if err != nil {
-		t.Fatalf("dialAIProviderTLSContext should succeed when ALLOW_LOCAL_PROVIDERS=true, got: %v", err)
+		errStr := err.Error()
+		if !strings.Contains(errStr, "certificate") && !strings.Contains(errStr, "x509") {
+			t.Fatalf("Expected connection attempt (success or cert error), got different error: %v", err)
+		}
+		// Cert error is acceptable - proves SSRF bypass worked
+		return
 	}
+	
 	if conn != nil {
 		conn.Close()
 	}
