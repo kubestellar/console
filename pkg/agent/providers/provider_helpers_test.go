@@ -3,7 +3,6 @@ package providers
 import (
 	"crypto/tls"
 	"math"
-	"net/http"
 	"strings"
 	"testing"
 
