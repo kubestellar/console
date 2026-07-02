@@ -23,11 +23,6 @@ export default tseslint.config(
       // rules to 'error' by merging after our overrides).
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      // React Compiler rules (new in eslint-plugin-react-hooks v7) —
-      // downgrade to warnings until codebase is incrementally migrated.
-      'react-hooks/purity': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/static-components': 'warn',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
@@ -38,6 +33,10 @@ export default tseslint.config(
         caughtErrorsIgnorePattern: '^_',
         destructuredArrayIgnorePattern: '^_',
       }],
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/ban-ts-comment': 'warn',
+      '@typescript-eslint/no-empty-object-type': 'warn',
+      '@typescript-eslint/no-namespace': 'warn',
       // Warn on patterns that often indicate unbatched state updates (#3049)
       // Encourages useReducer or single-object setState for related state
       'no-restricted-globals': ['error',
