@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "generated": "2026-07-02T17:45:00Z",
+  "comment": "Per-rule ESLint warning baseline. Update with: cd web && npm run lint:update-baseline",
+  "rules": {}
+}

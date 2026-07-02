@@ -57,7 +57,9 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test:visual": "playwright test --config e2e/visual/app-visual.config.ts",
-    "test:visual:update": "playwright test --config e2e/visual/app-visual.config.ts --update-snapshots"
+    "test:visual:update": "playwright test --config e2e/visual/app-visual.config.ts --update-snapshots",
+    "lint:baseline": "node scripts/lint-baseline-check.mjs",
+    "lint:update-baseline": "node scripts/lint-baseline-check.mjs --update"
   },
   "dependencies": {
     "@codemirror/legacy-modes": "^6.5.3",

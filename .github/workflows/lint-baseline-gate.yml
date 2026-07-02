@@ -1,0 +1,47 @@
+name: Lint Baseline Gate
+
+# Per-rule lint regression detection.
+# Tracks warning counts per ESLint rule against .eslint-baseline.json.
+# Fails PRs that introduce new warnings for any rule.
+# See issue #20113 for context.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/src/**'
+      - 'web/eslint.config.*'
+      - 'web/scripts/lint-baseline-check.mjs'
+      - '.eslint-baseline.json'
+      - '.github/workflows/lint-baseline-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'web/src/**'
+      - 'web/eslint.config.*'
+      - '.eslint-baseline.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-baseline:
+    name: Per-rule lint baseline check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci --ignore-scripts
+
+      - name: Run per-rule baseline check
+        run: node scripts/lint-baseline-check.mjs
