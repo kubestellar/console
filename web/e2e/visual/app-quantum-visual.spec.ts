@@ -56,9 +56,9 @@ test.describe('Quantum dashboard cards', () => {
     await page.addInitScript((key: string) => {
       try {
         window.localStorage.removeItem(key)
-      } catch {
-        // localStorage unavailable; baseline still works since component falls back to 100%.
-      }
+      } catch (error) {
+      console.error(\'Operation failed:\', error)
+    }
     }, CIRCUIT_ZOOM_STORAGE_KEY)
 
     await setupQuantumPage(page)

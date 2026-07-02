@@ -43,7 +43,7 @@ async function setupComputeDashboard(page: Page) {
 /** Check if the Overview tab is visible on the page */
 async function isGpuCardVisible(page: Page): Promise<boolean> {
   const overviewTab = page.getByRole('tab', { name: 'Overview' })
-  return overviewTab.first().isVisible({ timeout: GPU_CARD_VISIBILITY_TIMEOUT_MS }).catch(() => false)
+  return overviewTab.first().isVisible({ timeout: GPU_CARD_VISIBILITY_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
 }
 
 /**

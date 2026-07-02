@@ -254,7 +254,8 @@ test.describe('ClusterResourceTree', () => {
       // Card may or may not be visible on default dashboard — skip if not present
       try {
         await expect(treeCard).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) {
+        console.error('Cluster resource tree card not visible, skipping test:', error)
         test.skip()
         return
       }
@@ -272,10 +273,10 @@ test.describe('ClusterResourceTree', () => {
       const treeCard = page.locator('[data-card-type="cluster_resource_tree"]')
       try {
         await expect(treeCard).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) { console.error('Error:', error)
         test.skip()
         return
-      }
+       }
 
       // Expand the clusters root node
       const clustersRoot = treeCard.getByText('Clusters').first()
@@ -285,7 +286,8 @@ test.describe('ClusterResourceTree', () => {
       const clusterLabel = treeCard.getByText(MOCK_CLUSTER).first()
       try {
         await expect(clusterLabel).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) {
+        console.error('Cluster label not visible, attempting to expand clusters root:', error)
         // Clusters root may need to be expanded first
         await clustersRoot.click()
         await expect(clusterLabel).toBeVisible({ timeout: 5000 })
@@ -316,10 +318,10 @@ test.describe('ClusterResourceTree', () => {
       const treeCard = page.locator('[data-card-type="cluster_resource_tree"]')
       try {
         await expect(treeCard).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) { console.error('Error:', error)
         test.skip()
         return
-      }
+       }
 
       // Expand the tree: Clusters root -> cluster -> nodes
       const clustersRoot = treeCard.getByText('Clusters').first()
@@ -329,7 +331,8 @@ test.describe('ClusterResourceTree', () => {
       const clusterLabel = treeCard.getByText(MOCK_CLUSTER).first()
       try {
         await expect(clusterLabel).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) {
+        console.error('Cluster label not visible, attempting to expand clusters root:', error)
         await clustersRoot.click()
         await expect(clusterLabel).toBeVisible({ timeout: 5000 })
       }
@@ -368,10 +371,10 @@ test.describe('ClusterResourceTree', () => {
       const treeCard = page.locator('[data-card-type="cluster_resource_tree"]')
       try {
         await expect(treeCard).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) { console.error('Error:', error)
         test.skip()
         return
-      }
+       }
 
       // Expand cluster and time the render
       const clustersRoot = treeCard.getByText('Clusters').first()
@@ -380,9 +383,9 @@ test.describe('ClusterResourceTree', () => {
       const clusterLabel = treeCard.getByText(MOCK_CLUSTER).first()
       try {
         await expect(clusterLabel).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) { console.error('Error:', error)
         await clustersRoot.click()
-        await expect(clusterLabel).toBeVisible({ timeout: 5000 })
+        await expect(clusterLabel).toBeVisible({ timeout: 5000  })
       }
 
       const startTime = Date.now()
@@ -416,10 +419,10 @@ test.describe('ClusterResourceTree', () => {
       const treeCard = page.locator('[data-card-type="cluster_resource_tree"]')
       try {
         await expect(treeCard).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) { console.error('Error:', error)
         test.skip()
         return
-      }
+       }
 
       // Expand cluster
       const clustersRoot = treeCard.getByText('Clusters').first()
@@ -428,7 +431,8 @@ test.describe('ClusterResourceTree', () => {
       const clusterLabel = treeCard.getByText(MOCK_CLUSTER).first()
       try {
         await expect(clusterLabel).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) {
+        console.error('Cluster label not visible in perf test, attempting to expand clusters root:', error)
         await clustersRoot.click()
         await expect(clusterLabel).toBeVisible({ timeout: 5000 })
       }
@@ -455,7 +459,8 @@ test.describe('ClusterResourceTree', () => {
       const treeCard = page.locator('[data-card-type="cluster_resource_tree"]')
       try {
         await expect(treeCard).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) {
+        console.error('Cluster resource tree card not visible, skipping lens filter test:', error)
         test.skip()
         return
       }
@@ -467,8 +472,9 @@ test.describe('ClusterResourceTree', () => {
         await issuesButton.click()
         // The issues lens should filter the view -- page should not crash
         await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 3000 })
-      } catch {
-        // Issues button not visible
+      } catch (error) {
+        console.error('Issues button not visible:', error)
+      }
       }
     })
   })

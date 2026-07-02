@@ -42,7 +42,7 @@ test.describe('Dashboard Overview — "What is happening with my clusters?"', ()
     const sidebar = page.getByTestId('sidebar')
     await expect(sidebar).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     const clusterStatus = page.getByTestId('sidebar-cluster-status')
-    const hasStatus = await clusterStatus.isVisible().catch(() => false)
+    const hasStatus = await clusterStatus.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasStatus) {
       // Should show healthy/unhealthy/offline counts
       await expect(clusterStatus).toContainText(/healthy|offline/i)
@@ -61,12 +61,12 @@ test.describe('Dashboard Overview — "What is happening with my clusters?"', ()
   test('clicking expand on a card opens drilldown modal', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const firstCard = page.locator('[data-card-type]').first()
-    const hasCard = await firstCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasCard = await firstCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasCard) { test.skip(true, 'No cards rendered in demo mode'); return }
     await firstCard.hover()
     // Expand button appears in the card header on hover
     const expandBtn = firstCard.locator('button[aria-label*="full screen"], button[title*="full screen"], button[title*="xpand"]').first()
-    const hasExpand = await expandBtn.isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasExpand = await expandBtn.isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasExpand) { test.skip(true, 'Expand button not visible on hover'); return }
     await expandBtn.click()
     const modal = page.getByTestId('drilldown-modal')
@@ -76,11 +76,11 @@ test.describe('Dashboard Overview — "What is happening with my clusters?"', ()
   test('drilldown close button works', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const firstCard = page.locator('[data-card-type]').first()
-    const hasCard = await firstCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasCard = await firstCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasCard) { test.skip(true, 'No cards rendered'); return }
     await firstCard.hover()
     const expandBtn = firstCard.locator('button[aria-label*="full screen"], button[title*="full screen"], button[title*="xpand"]').first()
-    const hasExpand = await expandBtn.isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasExpand = await expandBtn.isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasExpand) { test.skip(true, 'Expand button not visible'); return }
     await expandBtn.click()
     const modal = page.getByTestId('drilldown-modal')
@@ -93,11 +93,11 @@ test.describe('Dashboard Overview — "What is happening with my clusters?"', ()
   test('drilldown closes on Escape key', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     const firstCard = page.locator('[data-card-type]').first()
-    const hasCard = await firstCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasCard = await firstCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasCard) { test.skip(true, 'No cards rendered'); return }
     await firstCard.hover()
     const expandBtn = firstCard.locator('button[aria-label*="full screen"], button[title*="full screen"], button[title*="xpand"]').first()
-    const hasExpand = await expandBtn.isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasExpand = await expandBtn.isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (!hasExpand) { test.skip(true, 'Expand button not visible'); return }
     await expandBtn.click()
     const modal = page.getByTestId('drilldown-modal')
@@ -112,11 +112,11 @@ test.describe('Dashboard Overview — "What is happening with my clusters?"', ()
     await expect(firstCard).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     await firstCard.hover()
     const expandBtn = firstCard.locator('button[title*="xpand"], button[aria-label*="xpand"], button[aria-label*="full screen"], button[title*="full screen"]').first()
-    const hasExpand = await expandBtn.isVisible({ timeout: 2_000 }).catch(() => false)
+    const hasExpand = await expandBtn.isVisible({ timeout: 2_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasExpand) {
       await expandBtn.click()
       const tabs = page.getByTestId('drilldown-tabs')
-      const hasTabs = await tabs.isVisible({ timeout: DRILLDOWN_TIMEOUT_MS }).catch(() => false)
+      const hasTabs = await tabs.isVisible({ timeout: DRILLDOWN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
       if (hasTabs) {
         const tabButtons = tabs.locator('button')
         const tabCount = await tabButtons.count()
@@ -143,7 +143,7 @@ test.describe('Dashboard Overview — "What is happening with my clusters?"', ()
     await page.setViewportSize({ width: MOBILE_WIDTH, height: MOBILE_HEIGHT })
     await setupDemoAndNavigate(page, '/')
     const grid = page.getByTestId('dashboard-cards-grid')
-    const isVisible = await grid.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const isVisible = await grid.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (isVisible) {
       await assertNoLayoutOverflow(page)
     }
@@ -153,7 +153,7 @@ test.describe('Dashboard Overview — "What is happening with my clusters?"', ()
     const checkErrors = collectConsoleErrors(page)
     await setupDemoAndNavigate(page, '/')
     // Wait for any card to render rather than relying on a specific testid
-    await page.locator('[data-card-type]').first().waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => {})
+    await page.locator('[data-card-type]').first().waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
     await page.waitForTimeout(1_000)
     checkErrors()
   })

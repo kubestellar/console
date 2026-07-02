@@ -449,7 +449,7 @@ test.describe('Mission Explorer Import (Nightly)', () => {
 
     const buttonVisible = await importButton
       .isVisible({ timeout: 5_000 })
-      .catch(() => false)
+      .catch((error) => { console.error(\'Promise error:\', error); return false })
 
     if (!buttonVisible) {
       console.log(
@@ -498,7 +498,7 @@ test.describe('Mission Explorer Import (Nightly)', () => {
       try {
         // Click the i-th import button
         const btn = importActions.nth(i)
-        if (!(await btn.isVisible({ timeout: 3_000 }).catch(() => false))) continue
+        if (!(await btn.isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false }))) continue
 
         await btn.click()
 
@@ -508,7 +508,7 @@ test.describe('Mission Explorer Import (Nightly)', () => {
         const success = page.locator(
           'text=/scan passed/i, text=/imported/i, text=/success/i, text=/added/i'
         )
-        const scanVisible = await success.first().isVisible({ timeout: 5_000 }).catch(() => false)
+        const scanVisible = await success.first().isVisible({ timeout: 5_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
 
         if (scanVisible) {
           console.log(`  [PASS] UI import ${i + 1}/${toTest} succeeded`)
@@ -521,15 +521,15 @@ test.describe('Mission Explorer Import (Nightly)', () => {
         const closeBtn = page.locator(
           '[role="dialog"] button[aria-label="Close"], [role="dialog"] button:has-text("Close"), [role="dialog"] button:has-text("Cancel")'
         ).first()
-        if (await closeBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        if (await closeBtn.isVisible({ timeout: 2_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
           await closeBtn.click()
           // Wait for dialog to close
-          await expect(dialog.first()).not.toBeVisible({ timeout: 5_000 }).catch(() => {})
+          await expect(dialog.first()).not.toBeVisible({ timeout: 5_000 }).catch((error) => { console.error(\'Promise catch:\', error) })
         }
 
         // Re-open dialog if needed for next iteration
         if (i < toTest - 1) {
-          const dialogStillOpen = await dialog.first().isVisible().catch(() => false)
+          const dialogStillOpen = await dialog.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
           if (!dialogStillOpen) {
             await importButton.click()
             await expect(dialog.first()).toBeVisible({ timeout: 10_000 })

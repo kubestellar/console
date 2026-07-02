@@ -87,7 +87,7 @@ test.describe('Kagenti error handling — agent not installed', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Page should not crash — it should render with demo data or show an install prompt
     await expect(page.locator('body')).toBeVisible()
@@ -121,14 +121,14 @@ test.describe('Kagenti error handling — agent not installed', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Dashboard header and refresh button should still be usable
     const header = page.getByTestId('dashboard-header')
-    const hasHeader = await header.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasHeader = await header.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasHeader) {
       const refreshBtn = page.getByTestId('dashboard-refresh-button')
-      const hasRefresh = await refreshBtn.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+      const hasRefresh = await refreshBtn.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
       if (hasRefresh) {
         await refreshBtn.click()
         await expect(refreshBtn).toBeVisible()
@@ -152,7 +152,7 @@ test.describe('Kagenti error handling — agent unreachable', () => {
     await mockAllKagentiEndpoints(page, (route) => route.abort('failed'))
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Page should not crash
     await expect(page.locator('body')).toBeVisible()
@@ -171,7 +171,7 @@ test.describe('Kagenti error handling — agent unreachable', () => {
     await mockAllKagentiEndpoints(page, (route) => route.abort('timedout'))
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Page should not crash — should fall back to demo data
     await expect(page.locator('body')).toBeVisible()
@@ -186,7 +186,7 @@ test.describe('Kagenti error handling — agent unreachable', () => {
     await mockAllKagentiEndpoints(page, (route) => route.abort('connectionrefused'))
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     await expect(page.locator('body')).toBeVisible()
     const bodyText = await page.textContent('body')
@@ -212,7 +212,7 @@ test.describe('Kagenti error handling — authentication failures', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Page should not crash — it should degrade gracefully
     await expect(page.locator('body')).toBeVisible()
@@ -237,7 +237,7 @@ test.describe('Kagenti error handling — authentication failures', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Page should not crash
     await expect(page.locator('body')).toBeVisible()
@@ -276,7 +276,7 @@ test.describe('Kagenti error handling — authentication failures', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Page should render without crashing
     await expect(page.locator('body')).toBeVisible()
@@ -302,7 +302,7 @@ test.describe('Kagenti error handling — server errors', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Page should not crash — should fall back to demo data
     await expect(page.locator('body')).toBeVisible()
@@ -324,7 +324,7 @@ test.describe('Kagenti error handling — server errors', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     await expect(page.locator('body')).toBeVisible()
     const bodyText = await page.textContent('body')
@@ -343,7 +343,7 @@ test.describe('Kagenti error handling — server errors', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     await expect(page.locator('body')).toBeVisible()
     const bodyText = await page.textContent('body')
@@ -363,7 +363,7 @@ test.describe('Kagenti error handling — real network failures', () => {
     await mockAllKagentiEndpoints(page, (route) => route.abort('failed'))
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Page should render with demo data fallback
     await expect(page.locator('body')).toBeVisible()
@@ -372,7 +372,7 @@ test.describe('Kagenti error handling — real network failures', () => {
 
     // Tab navigation should still work even with network failures
     const kagentiTab = page.getByRole('button', { name: /kagenti/i })
-    const hasTab = await kagentiTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasTab = await kagentiTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasTab) {
       await kagentiTab.click()
       await expect(kagentiTab).toBeVisible()
@@ -400,7 +400,7 @@ test.describe('Kagenti error handling — real network failures', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     await expect(page.locator('body')).toBeVisible()
     const bodyText = await page.textContent('body')
@@ -427,7 +427,7 @@ test.describe('Kagenti error handling — real network failures', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Page should not crash even with invalid JSON
     await expect(page.locator('body')).toBeVisible()
@@ -467,7 +467,7 @@ test.describe('Kagenti error handling — combined scenarios', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Page should degrade gracefully with partial data or demo fallback
     await expect(page.locator('body')).toBeVisible()
@@ -488,14 +488,14 @@ test.describe('Kagenti error handling — combined scenarios', () => {
     )
 
     await page.goto(AI_AGENTS_ROUTE)
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
 
     // Page should render (with demo data or error state)
     await expect(page.locator('body')).toBeVisible()
 
     // Refresh button should be clickable and not crash the page
     const refreshBtn = page.getByTestId('dashboard-refresh-button')
-    const hasRefresh = await refreshBtn.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const hasRefresh = await refreshBtn.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
     if (hasRefresh) {
       await refreshBtn.click()
       // Page should still be visible and functional after refresh

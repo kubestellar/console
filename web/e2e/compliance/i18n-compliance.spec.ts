@@ -676,8 +676,8 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
             `Expected text "${expected}" not found on ${route} — may be untranslated or missing`, 'medium')
         }
       }
-    } catch {
-      addCheck('SpotCheck', `Route ${route}`, 'skip',
+    } catch (error) { console.error('Error:', error)
+      addCheck('SpotCheck', `Route ${route }`, 'skip',
         `Could not load ${route} for spot-check`, 'low')
     }
   }
