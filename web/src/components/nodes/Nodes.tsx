@@ -76,12 +76,10 @@ export function Nodes() {
   // so the cascade is bounded and the pattern is the simplest one compatible
   // with the react-hooks/refs rule (which forbids reading `.current` during
   // render).
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (hasCpuCapacity) setCachedCpuUtil(currentCpuUtil)
     if (hasMemoryCapacity) setCachedMemoryUtil(currentMemoryUtil)
   }, [currentCpuUtil, currentMemoryUtil, hasCpuCapacity, hasMemoryCapacity])
-  /* eslint-enable react-hooks/set-state-in-effect */
   const cpuUtilization = hasCpuCapacity ? currentCpuUtil : (cachedCpuUtil ?? 0)
   const memoryUtilization = hasMemoryCapacity ? currentMemoryUtil : (cachedMemoryUtil ?? 0)
 

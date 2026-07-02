@@ -127,7 +127,6 @@ export function UnifiedStatsSection({
     try {
       const saved = localStorage.getItem(`${storageKey}-blocks`)
       if (saved) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCustomBlocks(JSON.parse(saved))
       }
       setConfigError(null)
@@ -291,6 +290,7 @@ function StatsConfigModal({
               key={block.id}
               className="flex items-center gap-3 p-2 rounded hover:bg-secondary/50 cursor-pointer"
             >
+              {/* eslint-disable-next-line no-restricted-syntax -- TODO: Input component doesn't support type="checkbox" */}
               <input
                 type="checkbox"
                 checked={block.visible !== false}

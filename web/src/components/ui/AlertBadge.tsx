@@ -40,7 +40,6 @@ export function AnimatedCounter({ value, className }: { value: number; className
   useEffect(() => {
     if (value !== prevValueRef.current) {
       // Animation state must flip immediately when the badge count changes.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAnimState({ isAnimating: true, direction: value > prevValueRef.current ? 'up' : 'down' })
       const exitTimer = setTimeout(() => {
         setDisplayValue(value)
