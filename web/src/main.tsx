@@ -1,5 +1,6 @@
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
 import App from './App.tsx'
 import './index.css'
 // Initialize i18n before rendering
@@ -22,6 +23,17 @@ import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dy
 import { STORAGE_KEY_SQLITE_MIGRATED } from './lib/constants'
 import { initAnalytics } from './lib/analytics'
 import { prefetchTopDashboards } from './lib/dashboardVisits'
+
+function BootstrapLoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-primary" aria-hidden="true" />
+        <p className="text-sm text-muted-foreground">Loading console…</p>
+      </div>
+    </div>
+  )
+}
 
 // ── Chunk load error recovery ─────────────────────────────────────────────
 // When a new build is deployed, chunk filenames change (content hashes).
@@ -126,6 +138,11 @@ const enableMocking = async () => {
   }
 }
 
+const rootElement = document.getElementById('root')!
+const root = ReactDOM.createRoot(rootElement)
+
+root.render(<BootstrapLoadingScreen />)
+
 // Render app after mocking is set up (or fails gracefully)
 enableMocking()
   .catch((error) => {
@@ -139,7 +156,7 @@ enableMocking()
     initAnalytics()
 
     // ── Render FIRST — don't block on async work ──────────────────────
-    ReactDOM.createRoot(document.getElementById('root')!).render(
+    root.render(
       <BrowserRouter>
         <App />
       </BrowserRouter>,

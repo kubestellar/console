@@ -18,7 +18,7 @@ export function Alerts() {
   const { t } = useTranslation()
   const { stats, evaluateConditions } = useAlerts()
   const { rules } = useAlertRules()
-  const { isRefreshing: dataRefreshing, refetch, error } = useClusters()
+  const { isLoading: dataLoading, isRefreshing: dataRefreshing, refetch, error } = useClusters()
   const { drillToAllAlerts } = useDrillDownActions()
 
   // Local state for last updated time
@@ -94,7 +94,7 @@ export function Alerts() {
       statsType="alerts"
       getStatValue={getStatValue}
       onRefresh={handleRefresh}
-      isLoading={false}
+      isLoading={dataLoading}
       isRefreshing={dataRefreshing}
       lastUpdated={lastUpdated}
       hasData={stats.firing > 0 || enabledRulesCount > 0}

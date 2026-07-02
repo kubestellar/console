@@ -564,9 +564,10 @@ export function SubmitForm({
             </summary>
             <div className="mt-3 space-y-2">
               {isCheckingParentIssueAccess ? (
-                <p className="text-2xs text-muted-foreground">
-                  {t('feedback.checkingIssueLinkAccess', 'Checking repository access…')}
-                </p>
+                <div className="flex items-center gap-2 text-2xs text-muted-foreground">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <p>{t('feedback.checkingIssueLinkAccess', 'Checking repository access…')}</p>
+                </div>
               ) : canLinkParentIssue ? (
                 <>
                   <label htmlFor="feedback-parent-issue" className="block text-xs font-medium text-muted-foreground">
