@@ -10,11 +10,13 @@ import (
 func TestRunAsyncGitHubOp_SemaphoreLimit(t *testing.T) {
 	completedCount := 0
 	done := make(chan struct{})
+	finished := make(chan struct{}, maxConcurrentGitHubOps)
 
 	// Fill the semaphore to capacity
 	for i := 0; i < maxConcurrentGitHubOps; i++ {
 		runAsyncGitHubOp("test-fill", func(ctx context.Context) {
 			<-done // Block until we signal
+			finished <- struct{}{}
 		})
 	}
 
@@ -25,6 +27,11 @@ func TestRunAsyncGitHubOp_SemaphoreLimit(t *testing.T) {
 
 	// Release all blocking operations
 	close(done)
+
+	// Wait for all blocking operations to complete
+	for i := 0; i < maxConcurrentGitHubOps; i++ {
+		<-finished
+	}
 
 	// The dropped operation should not have run
 	// Note: This is a best-effort test - timing issues may cause flakiness

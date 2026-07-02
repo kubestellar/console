@@ -49,6 +49,21 @@ describe('PodAiAnalysis', () => {
     expect(container).toBeTruthy()
   })
 
+  it('renders retryable error state when AI analysis fails', () => {
+    render(
+      <PodAiAnalysis
+        aiAnalysis={null}
+        aiAnalysisLoading={false}
+        aiAnalysisError="analysis backend offline"
+        fetchAiAnalysis={vi.fn()}
+        handleRepairPod={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('analysis backend offline')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'common.retry' })).toBeInTheDocument()
+  })
+
   it('disables action buttons when backend actions are unavailable', () => {
     render(
       <PodAiAnalysis

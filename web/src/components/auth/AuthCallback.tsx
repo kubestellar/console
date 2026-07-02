@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { Loader2 } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { getLastRoute } from '../../hooks/useLastRoute'
@@ -181,7 +182,7 @@ export function AuthCallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-terminal">
       <div className="text-center">
-        <div className="spinner w-12 h-12 mx-auto mb-4" role="status" />
+        <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-primary" role="status" aria-label={status} />
         <p className="text-muted-foreground">{status}</p>
       </div>
     </div>

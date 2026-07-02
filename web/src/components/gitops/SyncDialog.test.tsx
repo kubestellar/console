@@ -89,6 +89,16 @@ describe('SyncDialog Component', () => {
     expect(screen.getByText('GitOps Sync: test-app')).toBeInTheDocument()
   })
 
+  it('shows loading state while drift detection is still running', async () => {
+    fetchMock = makeFetchMock(() => new Promise<Response>(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { container } = render(<SyncDialog {...defaultProps} />)
+
+    expect(await screen.findByText('gitops.detectingDrift')).toBeInTheDocument()
+    expect(container.querySelector('.animate-spin')).toBeTruthy()
+  })
+
   // #6159 — substantive integration test: calls the real fetch endpoint the
   // component actually uses (NOT `api.post`). Updated for #7993 Phase 4:
   // the component now targets kc-agent's /gitops/detect-drift route.

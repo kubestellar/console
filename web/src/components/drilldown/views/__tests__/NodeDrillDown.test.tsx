@@ -55,8 +55,11 @@ vi.mock('../../../../lib/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }))
 
+const mockNodeLoading = false
+let mockNodeFailed = false
+
 vi.mock('../../../../hooks/useCachedData', () => ({
-  useCachedNodes: () => ({ nodes: [], isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, lastRefresh: Date.now(), refetch: vi.fn() }),
+  useCachedNodes: () => ({ nodes: [], isLoading: mockNodeLoading, isFailed: mockNodeFailed, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, lastRefresh: Date.now(), refetch: vi.fn() }),
 }))
 
 import { NodeDrillDown } from '../NodeDrillDown'
@@ -65,5 +68,13 @@ describe('NodeDrillDown', () => {
   it('renders without crashing', () => {
     const { container } = render(<NodeDrillDown data={{ cluster: 'c1', node: 'node1' }} />)
     expect(container).toBeTruthy()
+  })
+
+  it('shows node data error state when cached node lookup fails', () => {
+    mockNodeFailed = true
+    const { getByText } = render(<NodeDrillDown data={{ cluster: 'c1', node: 'node1' }} />)
+
+    expect(getByText('drilldown.nodeDetail.unableToLoad')).toBeInTheDocument()
+    mockNodeFailed = false
   })
 })

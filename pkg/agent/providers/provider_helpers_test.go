@@ -1,11 +1,13 @@
 package providers
 
 import (
+	"context"
 	"crypto/tls"
 	"math"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kubestellar/console/pkg/agent/prompts"
 	"github.com/kubestellar/console/pkg/ai"
@@ -436,3 +438,116 @@ func TestEstimateChatTokenUsage_HistoryIncreasesInputTokens(t *testing.T) {
 			usageNoHist.OutputTokens, usageWithHist.OutputTokens)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// SSRF Protection Tests — resolveAIProviderTargets
+// ---------------------------------------------------------------------------
+
+func TestResolveAIProviderTargets_BlocksPrivateIPs(t *testing.T) {
+	privateIPs := []string{
+		"127.0.0.1",
+		"10.0.0.1",
+		"172.16.0.1",
+		"192.168.1.1",
+		"169.254.1.1", // link-local
+		"::1",         // IPv6 loopback
+		"fd00::1",     // IPv6 ULA
+	}
+
+	for _, ip := range privateIPs {
+		t.Run(ip, func(t *testing.T) {
+			_, err := resolveAIProviderTargets(context.Background(), ip, "443")
+			if err == nil {
+				t.Errorf("expected error blocking private IP %s, got nil", ip)
+			}
+			if err != nil && !strings.Contains(err.Error(), "private/internal") {
+				t.Errorf("expected 'private/internal' error for %s, got: %v", ip, err)
+			}
+		})
+	}
+}
+
+func TestResolveAIProviderTargets_AllowsPublicIPs(t *testing.T) {
+	publicIPs := []string{
+		"8.8.8.8",
+		"1.1.1.1",
+		"142.250.185.46", // google.com
+	}
+
+	for _, ip := range publicIPs {
+		t.Run(ip, func(t *testing.T) {
+			targets, err := resolveAIProviderTargets(context.Background(), ip, "443")
+			if err != nil {
+				t.Errorf("expected no error for public IP %s, got: %v", ip, err)
+			}
+			if len(targets) == 0 {
+				t.Errorf("expected at least one target for %s", ip)
+			}
+		})
+	}
+}
+
+func TestResolveAIProviderTargets_AllowsLoopbackInTests(t *testing.T) {
+	// Enable loopback for tests
+	original := AllowLoopbackForTests
+	AllowLoopbackForTests = true
+	defer func() { AllowLoopbackForTests = original }()
+
+	loopbackIPs := []string{"127.0.0.1", "::1"}
+	for _, ip := range loopbackIPs {
+		t.Run(ip, func(t *testing.T) {
+			targets, err := resolveAIProviderTargets(context.Background(), ip, "8080")
+			if err != nil {
+				t.Errorf("expected loopback %s to be allowed with AllowLoopbackForTests=true, got: %v", ip, err)
+			}
+			if len(targets) == 0 {
+				t.Errorf("expected at least one target for loopback %s", ip)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SSRF Protection Tests — HTTP Client Transport
+// ---------------------------------------------------------------------------
+
+func TestNewRestrictedAIProviderHTTPClient_BlocksRedirects(t *testing.T) {
+	client := NewRestrictedAIProviderHTTPClient(10 * time.Second)
+	if client.CheckRedirect == nil {
+		t.Fatal("expected non-nil CheckRedirect function")
+	}
+
+	// Verify redirect is blocked
+	err := client.CheckRedirect(nil, nil)
+	if err != http.ErrUseLastResponse {
+		t.Errorf("expected http.ErrUseLastResponse, got: %v", err)
+	}
+}
+
+func TestNewRestrictedAIProviderHTTPClient_HasTimeout(t *testing.T) {
+	timeout := 42 * time.Second
+	client := NewRestrictedAIProviderHTTPClient(timeout)
+	if client.Timeout != timeout {
+		t.Errorf("expected timeout %v, got %v", timeout, client.Timeout)
+	}
+}
+
+func TestNewRestrictedAIProviderHTTPClient_HasCustomTransport(t *testing.T) {
+	client := NewRestrictedAIProviderHTTPClient(10 * time.Second)
+	if client.Transport == nil {
+		t.Fatal("expected non-nil Transport")
+	}
+
+	// Transport should be configured with custom DialContext
+	transport, ok := client.Transport.(*http.Transport)
+	if !ok {
+		t.Fatal("expected *http.Transport")
+	}
+	if transport.DialContext == nil {
+		t.Error("expected custom DialContext for SSRF protection")
+	}
+	if transport.DialTLSContext == nil {
+		t.Error("expected custom DialTLSContext for SSRF protection")
+	}
+}
+

@@ -38,6 +38,13 @@ function mockFetchSuccess() {
 describe('ChangeControlAudit', () => {
   beforeEach(() => { vi.restoreAllMocks() })
 
+  it('shows loading state before change-control endpoints resolve', () => {
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}) as Promise<Response>)
+    render(<ChangeControlAudit />)
+
+    expect(document.querySelector('.animate-spin')).toBeTruthy()
+  })
+
   it('renders header and summary cards', async () => {
     mockFetchSuccess()
     render(<ChangeControlAudit />)

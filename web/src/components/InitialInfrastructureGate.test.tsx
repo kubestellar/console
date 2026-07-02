@@ -52,6 +52,19 @@ describe('InitialInfrastructureGate', () => {
     })
   })
 
+  it('renders loading state before the initial handshake resolves', () => {
+    mockGetState.mockReturnValue(new Promise(() => {}))
+    mockFetchKagentStatus.mockReturnValue(new Promise(() => {}))
+
+    render(
+      <InitialInfrastructureGate>
+        <div>Ready</div>
+      </InitialInfrastructureGate>
+    )
+
+    expect(screen.getByText('Connecting to infrastructure')).toBeInTheDocument()
+  })
+
   it('renders children after the initial handshake succeeds', async () => {
     mockGetState.mockResolvedValue({ generatedAt: 'now' })
     mockFetchKagentStatus.mockResolvedValue({ available: false, reason: 'not installed' })

@@ -130,6 +130,15 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('AuthCallback /auth/refresh contract (#6590)', () => {
+  it('renders loading state while auth refresh is pending', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
+
+    const { getByRole, getByText } = renderAuthCallback()
+
+    expect(getByRole('status')).toBeInTheDocument()
+    expect(getByText('authCallback.fetchingUserInfo')).toBeInTheDocument()
+  })
+
   it('navigates to home when response has { refreshed: true, onboarded: true }', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,

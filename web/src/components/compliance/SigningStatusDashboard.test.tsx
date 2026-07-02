@@ -96,6 +96,13 @@ describe('SigningStatusDashboard', () => {
     vi.resetAllMocks()
   })
 
+  it('shows loading state before signing endpoints resolve', () => {
+    mockedAuthFetch.mockReturnValue(new Promise(() => {}) as Promise<Response>)
+    render(<SigningStatusDashboard />)
+
+    expect(screen.getByText('Loading signing status…')).toBeInTheDocument()
+  })
+
   it('renders summary and image tab data after successful fetch', async () => {
     mockSuccessResponses()
     render(<SigningStatusDashboard />)
