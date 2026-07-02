@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, memo, useRef } from 'react'
+import i18next from 'i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { changeControlDashboardConfig } from '../../config/dashboards/change-control'
 import {
@@ -187,9 +188,9 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
             <Filter className="w-4 h-4 text-muted-foreground" />
             <div className="w-44">
               <Select value={filterApproval} onChange={e => setFilterApproval(e.target.value)} selectSize="sm">
-                <option value="all">All statuses</option>
-                <option value="approved">Approved</option>
-                <option value="unapproved">Unapproved</option>
+                <option value="all">{i18next.t('common:statusFilters.allStatuses', 'All statuses')}</option>
+                <option value="approved">{i18next.t('common:statusFilters.approved', 'Approved')}</option>
+                <option value="unapproved">{i18next.t('common:statusFilters.unapproved', 'Unapproved')}</option>
                 <option value="emergency">Emergency</option>
                 <option value="pending">Pending</option>
               </Select>

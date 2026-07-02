@@ -109,6 +109,7 @@ jobs:
         id: changes
         run: |
           LATEST_TAG="${{ steps.latest_tag.outputs.latest_tag }}"
+          RELEASE_TYPE="${{ steps.type.outputs.release_type }}"
 
           # Check for any changes since last tag
           if [ "$LATEST_TAG" = "v0.0.0" ]; then
@@ -119,7 +120,12 @@ jobs:
 
           # Check for any changes at all
           TOTAL_CHANGES=$(git rev-list "$LATEST_TAG"..HEAD --count)
-          if [ "$TOTAL_CHANGES" -gt 0 ]; then
+          
+          # Nightly releases always proceed (to keep tag fresh even without code changes)
+          if [ "$RELEASE_TYPE" = "nightly" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Nightly release: always proceeding (commits since last tag: $TOTAL_CHANGES)"
+          elif [ "$TOTAL_CHANGES" -gt 0 ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "Total commits since last release: $TOTAL_CHANGES"
           else

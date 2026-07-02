@@ -116,7 +116,8 @@ vi.mock('../../ui/Tooltip', () => ({
   ),
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
+vi.mock('../../../lib/constants/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/constants/network')>()),
   CARD_LOADING_TIMEOUT_MS: 30000,
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
 }))

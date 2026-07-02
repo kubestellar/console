@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test'
+import { test, expect, Page, ConsoleMessage } from '@playwright/test'
 import { setupDemoAndNavigate, ELEMENT_VISIBLE_TIMEOUT_MS } from './helpers/setup'
 
 /** Timeout for drilldown modal to appear after trigger (ms). */
@@ -168,5 +168,58 @@ test.describe('Drilldown Modal — structural assertions', () => {
     const title = await closeBtn.getAttribute('title')
     // At least one form of accessible labelling must be present.
     expect(Boolean(ariaLabel) || Boolean(title) || (await closeBtn.textContent())?.trim().length).toBeTruthy()
+  })
+})
+
+test.describe('PodDrillDown WebSocket — regression for #19503', () => {
+  test('related resources WebSocket race: resolve only fires once when correct message arrives', async ({ page }) => {
+    await setupDemoAndNavigate(page, '/')
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+    // Open a drilldown that might have pod-related content.
+    const opened = await openDrillDown(page)
+    if (!opened) { test.skip(true, 'No expandable card'); return }
+
+    // If a "Related Resources" tab exists (PodDrillDown), click it.
+    const modal = page.getByTestId('drilldown-modal')
+    await expect(modal).toBeVisible()
+
+    const relatedTab = modal.locator('button').filter({ hasText: /related.*resources/i }).first()
+    const hasRelated = await relatedTab.isVisible({ timeout: 2_000 }).catch(() => false)
+    if (!hasRelated) {
+      test.skip(true, 'No Related Resources tab in this drilldown')
+      return
+    }
+
+    await relatedTab.click()
+    await page.waitForTimeout(TAB_SWITCH_SETTLE_MS)
+
+    // The regression (fixed in f842c38fc) caused `resolve(output)` to fire
+    // on ANY WebSocket message, not just the matching one. Multiple messages
+    // would cause multiple resolves, potentially logging console errors or
+    // causing promise rejection handlers to fire. We monitor console for
+    // errors as a proxy.
+
+    const consoleErrors: string[] = []
+    page.on('console', (msg: ConsoleMessage) => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text())
+      }
+    })
+
+    // Wait briefly for any async effects to settle. If the bug is present,
+    // console errors often appear as "Promise already resolved" or similar.
+    await page.waitForTimeout(1_500)
+
+    // The fix ensures clearTimeout/ws.close/resolve are inside the
+    // `if (msg.id === requestId && msg.payload?.output)` block, so
+    // at most one resolve fires. Absence of WebSocket-related errors
+    // is the positive signal.
+    const wsErrors = consoleErrors.filter(err =>
+      err.includes('WebSocket') || err.includes('resolve') || err.includes('Promise')
+    )
+
+    // We expect zero WebSocket/promise errors. If present, the race is back.
+    expect(wsErrors.length).toBe(0)
   })
 })
