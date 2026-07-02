@@ -174,7 +174,7 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
 
       <div className="flex gap-1 border-b border-border pb-0">
         {(['changes', 'violations', 'policies'] as const).map(tab => (
-          <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab ? 'bg-secondary text-foreground border-b-2 border-indigo-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}>
+          <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`px-4 py-2 min-h-11 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab ? 'bg-secondary text-foreground border-b-2 border-indigo-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}>
             {tab === 'changes' && `Changes (${changes.length})`}
             {tab === 'violations' && `Violations (${violations.length})`}
             {tab === 'policies' && `Policies (${policies.length})`}
