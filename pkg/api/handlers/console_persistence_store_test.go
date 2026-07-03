@@ -51,7 +51,7 @@ func (m *MockPersistenceStore) GetActiveClient(ctx context.Context) (dynamic.Int
 	return args.Get(0).(dynamic.Interface), args.Get(1).(*rest.Config), args.Error(2)
 }
 
-func TestRequireAdmin(t *testing.T) {
+func TestConsolePersistenceHandlers_RequireAdmin(t *testing.T) {
 	tests := []struct {
 		name          string
 		setupUserID   bool
