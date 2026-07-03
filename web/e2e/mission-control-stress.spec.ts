@@ -1178,7 +1178,7 @@ and Prometheus monitoring to track memory usage over time.
             overlay: state.overlay,
             title: state.title,
           }
-        } catch (error) { console.error('Error:', error) return null  }
+        } catch (error) { console.error('Error:', error); return null; }
       }, MC_STORAGE_KEY)
 
       expect(recovered).not.toBeNull()
