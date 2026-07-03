@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-03T01:18:40.421Z",
-  "count": 1624,
+  "generatedAt": "2026-07-03T07:38:09.490Z",
+  "count": 1625,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -7598,6 +7598,47 @@
       "targetResourceKinds": [
         "Service",
         "Ingress",
+        "Namespace"
+      ],
+      "difficulty": "beginner",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/cilium/cilium-30667-cfp-expose-configurable-envoy-access-logs-for-l7-observability-and-.json",
+      "title": "cilium: CFP: Expose configurable Envoy Access Logs for L7 observability and Gateway API",
+      "description": "CFP: Expose configurable Envoy Access Logs for L7 observability and Gateway API. Requested by 36+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "cilium",
+        "graduated",
+        "networking",
+        "feature"
+      ],
+      "cncfProjects": [
+        "cilium"
+      ],
+      "targetResourceKinds": [
+        "Pod",
         "Namespace"
       ],
       "difficulty": "beginner",
