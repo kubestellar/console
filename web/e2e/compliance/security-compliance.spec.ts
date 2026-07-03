@@ -416,7 +416,7 @@ test('security compliance — frontend security audit', async ({ page }, testInf
     try {
       const url = new URL(r.url)
       return url.searchParams.has('token') || url.searchParams.has('access_token')
-    } catch (error) { console.error('Error:', error) return false  }
+    } catch (error) { console.error('Error:', error); return false; }
   })
 
   if (tokenInUrl.length === 0) {

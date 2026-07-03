@@ -395,7 +395,7 @@ async function getMissionStatus(page: Page, missionId?: string): Promise<string 
       if (!Array.isArray(missions)) return null
       const mission = id ? missions.find((m: { id: string }) => m.id === id) : missions[0]
       return mission?.status || null
-    } catch (error) { console.error('Error:', error) return null  }
+    } catch (error) { console.error('Error:', error); return null; }
   }, { id: missionId || null, key: MISSIONS_STORAGE_KEY })
 }
 
@@ -406,7 +406,7 @@ async function getMissionCount(page: Page): Promise<number> {
     try {
       const missions = JSON.parse(raw)
       return Array.isArray(missions) ? missions.length : 0
-    } catch (error) { console.error('Error:', error) return 0  }
+    } catch (error) { console.error('Error:', error); return 0; }
   }, MISSIONS_STORAGE_KEY)
 }
 
@@ -420,7 +420,7 @@ async function getActiveMissions(page: Page): Promise<Array<{ id: string; status
       return missions
         .filter((m: { status: string }) => !['completed', 'failed', 'cancelled', 'saved'].includes(m.status))
         .map((m: { id: string; status: string; title: string }) => ({ id: m.id, status: m.status, title: m.title }))
-    } catch (error) { console.error('Error:', error) return []  }
+    } catch (error) { console.error('Error:', error); return []; }
   }, MISSIONS_STORAGE_KEY)
 }
 

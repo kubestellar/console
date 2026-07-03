@@ -129,24 +129,11 @@ export default defineConfig(({ mode }) => ({
             ['cards-cluster', ['/src/components/cards/cluster_health/', '/src/components/cards/cluster_capacity/', '/src/components/cards/cluster_nodes/']],
             ['cards-cost', ['/src/components/cards/cost/', '/src/components/cards/kubecost_status/']],
             ['cards-data', ['/src/components/cards/postgresql_status/', '/src/components/cards/mysql_status/', '/src/components/cards/mongodb_status/']],
-            // Split cards-misc into smaller domain chunks to reduce 2.4M bundle
-            ['cards-service-mesh', ['/src/components/cards/istio_status/', '/src/components/cards/consul_status/']],
-            ['cards-backup', ['/src/components/cards/velero_status/', '/src/components/cards/kasten_status/']],
-            ['cards-build', ['/src/components/cards/tekton_status/', '/src/components/cards/jenkins_status/']],
-            ['cards-policy', ['/src/components/cards/policy/', '/src/components/cards/pod_security/']],
-            ['cards-cert', ['/src/components/cards/cert_manager_status/', '/src/components/cards/vault_status/']],
-            ['cards-edge', ['/src/components/cards/kubeedge_status/', '/src/components/cards/k3s_status/']],
-            ['cards-batch', ['/src/components/cards/job_status/', '/src/components/cards/cronjob_status/']],
-            ['cards-ingress', ['/src/components/cards/nginx_ingress_status/', '/src/components/cards/traefik_status/']],
-            ['cards-virtualization', ['/src/components/cards/kubevirt_status/', '/src/components/cards/kata_status/']],
             ['cards-misc', ['/src/components/cards/']],
-            // Split drilldown views by type to reduce 456KB chunk
-            ['drilldown-terminal', ['/src/components/drilldown/views/PodTerminal', '/src/components/drilldown/views/ShellView']],
-            ['drilldown-logs', ['/src/components/drilldown/views/PodLogs', '/src/components/drilldown/views/LogViewer']],
-            ['drilldown-k8s', ['/src/components/drilldown/views/PodEvents', '/src/components/drilldown/views/NamespaceDetails', '/src/components/drilldown/views/NodeDetails']],
-            ['drilldown-data', ['/src/components/drilldown/views/MetricsViewer', '/src/components/drilldown/views/EventTimeline', '/src/components/drilldown/views/TraceViewer']],
+            // Split drilldown views by type to reduce chunk size
+            ['drilldown-k8s', ['/src/components/drilldown/views/PodLogs', '/src/components/drilldown/views/PodEvents', '/src/components/drilldown/views/PodTerminal', '/src/components/drilldown/views/NamespaceDetails']],
+            ['drilldown-data', ['/src/components/drilldown/views/LogViewer', '/src/components/drilldown/views/MetricsViewer', '/src/components/drilldown/views/EventTimeline']],
             ['drilldown-ui', ['/src/components/drilldown/DrillDownModal', '/src/components/drilldown/DrillDownHeader', '/src/components/drilldown/DrillDownStack']],
-            ['drilldown-views', ['/src/components/drilldown/views/']],
             ['drilldown', ['/src/components/drilldown/']],
             // Dashboard and layout split by concern
             ['dashboard-customizer', ['/src/components/dashboard/customizer/', '/src/components/dashboard/shared/cardCatalog']],
@@ -164,11 +151,10 @@ export default defineConfig(({ mode }) => ({
             ['lib-cache', ['/src/lib/cache/']],
             ['lib-utils', ['/src/lib/utils', '/src/lib/cn.ts', '/src/lib/constants.ts']],
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
-            // Split app shell to reduce massive 5.5M app-routes chunk
+            // Split app shell to reduce massive app-routes chunk
             ['app-router', ['/src/components/router/', '/src/lib/router/']],
-            ['app-lazy-routes', ['/src/routes/lazyRoutes.ts']],
-            ['app-routes', ['/src/routes/AppRoutes.tsx']],
-            ['app-shell', ['/src/hooks/usePersistedSettings', '/src/hooks/useAppInit', '/src/App.tsx']],
+            ['app-routes', ['/src/App.tsx']],
+            ['app-shell', ['/src/hooks/usePersistedSettings', '/src/hooks/useAppInit']],
             ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
           ] as const
           for (const [chunkName, needles] of sourceChunkRules) {
@@ -183,23 +169,18 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/react-router/')) return 'react-router-vendor'
           if (id.includes('/react-reconciler/')) return 'react-reconciler-vendor'
           if (id.includes('/react/')) return 'react-vendor'
-          // three.js ecosystem (split into smaller chunks to reduce 1MB drei-core chunk)
+          // three.js ecosystem (split into smaller chunks to reduce three-core and three-drei)
           if (id.includes('/three-stdlib/')) return 'three-stdlib-vendor'
           if (id.includes('/@react-three/fiber/')) return 'three-fiber-vendor'
-          // Split drei more aggressively to reduce 1012KB drei-core-vendor chunk
-          if (id.includes('/@react-three/drei/') && id.includes('/core/shapes')) return 'drei-shapes-vendor'
-          if (id.includes('/@react-three/drei/') && id.includes('/core/misc')) return 'drei-misc-vendor'
+          // Split drei into sub-chunks to reduce 304KB chunk
           if (id.includes('/@react-three/drei/') && id.includes('/core/')) return 'drei-core-vendor'
           if (id.includes('/@react-three/drei/') && id.includes('/web/')) return 'drei-web-vendor'
-          if (id.includes('/@react-three/drei/') && id.includes('/shaders')) return 'drei-shaders-vendor'
           if (id.includes('/@react-three/drei/')) return 'drei-helpers-vendor'
           if (id.includes('/@react-three/') || id.includes('/zustand/') || id.includes('/stats-gl/')) return 'three-react-vendor'
-          // Split three.js core modules to reduce bundle
+          // Split three.js core modules to reduce 708KB chunk
           if (id.includes('/three/build/three.module.js')) return 'three-core-vendor'
           if (id.includes('/three/src/math/')) return 'three-math-vendor'
           if (id.includes('/three/src/loaders/')) return 'three-loaders-vendor'
-          if (id.includes('/three/src/geometries/')) return 'three-geometries-vendor'
-          if (id.includes('/three/src/materials/')) return 'three-materials-vendor'
           if (id.includes('/three/')) return 'three-extras-vendor'
           // Chart libraries
           if (id.includes('/zrender/')) return 'zrender-vendor'
