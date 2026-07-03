@@ -9,6 +9,7 @@ import { copyToClipboard } from '../../lib/clipboard'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { Skeleton } from '../ui/Skeleton'
 import { Button } from '../ui/Button'
+import { TextArea } from '../ui/TextArea'
 
 /** Number of skeleton rows to display while chat loads */
 const CHAT_SKELETON_ROWS = 3
@@ -341,13 +342,15 @@ export function CardChat({
           {/* Input */}
           <div className="flex gap-2">
             <div className="flex-1 relative">
-              <textarea
+              <TextArea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={t('cardChat.askOrCommand')}
-                className="w-full px-4 py-3 pr-12 rounded-xl bg-secondary border border-border text-foreground text-sm resize-none h-12 max-h-32"
+                textAreaSize="lg"
+                resizable={false}
+                className="pr-12 rounded-xl h-12 max-h-32 border-border"
                 rows={1}
                 disabled={isLoading}
               />
