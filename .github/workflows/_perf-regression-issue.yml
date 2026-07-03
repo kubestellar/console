@@ -39,7 +39,10 @@ on:
         required: true
         type: string
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
+  actions: read
+  issues: write
 jobs:
   notify:
     permissions:
