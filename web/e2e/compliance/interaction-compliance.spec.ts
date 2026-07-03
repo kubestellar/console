@@ -74,7 +74,7 @@ async function navigateAndSettle(page: Page, route: string) {
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
   try {
     await page.waitForSelector('[data-testid="sidebar"], main, [data-card-type]', { timeout: 8_000 })
-  } catch (error) { console.error(\'Operation failed:\', error) }
+  } catch (error) { console.error('Operation failed:', error) }
   await page.waitForLoadState('networkidle', { timeout: SETTLE_MS }).catch(() => { /* settle timeout is best-effort */ })
 }
 
@@ -360,7 +360,7 @@ test.describe('Interaction Compliance', () => {
       await refreshButton.click()
 
       // Check for loading indicator (spinner, skeleton, etc.)
-      const hasLoadingIndicator = await card.locator('.animate-spin, [data-loading="true"], .skeleton, [class*="loading"]').first().waitFor({ state: 'visible', timeout: 2_000 }).then(() => true).catch((error) => { console.error(\'Promise error:\', error); return false })
+      const hasLoadingIndicator = await card.locator('.animate-spin, [data-loading="true"], .skeleton, [class*="loading"]').first().waitFor({ state: 'visible', timeout: 2_000 }).then(() => true).catch((error) => { console.error('Promise error:', error); return false })
 
       // Wait for content to reload
       await card.locator('[data-loading="false"], .text-sm, p, table, li').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => { /* content may not appear */ })

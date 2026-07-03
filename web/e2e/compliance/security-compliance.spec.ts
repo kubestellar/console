@@ -517,7 +517,7 @@ test('security compliance — frontend security audit', async ({ page }, testInf
         return originalEval.apply(window, args)
       }
     } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
     return { evalDetectable: !evalCalled }
   })
@@ -642,7 +642,7 @@ test('security compliance — frontend security audit', async ({ page }, testInf
       window.removeEventListener('message', handler)
       messageListeners = handledUnsafe ? 1 : 0
     } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
     return { messageListeners }
   })
