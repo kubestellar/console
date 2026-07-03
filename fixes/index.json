@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-02T18:31:42.673Z",
+  "generatedAt": "2026-07-03T00:27:45.130Z",
   "count": 1624,
   "missions": [
     {
@@ -22548,7 +22548,7 @@
     {
       "path": "fixes/platform-install/platform-eks.json",
       "title": "Install and Configure Amazon Elastic Kubernetes Service (EKS)",
-      "description": "Amazon Elastic Kubernetes Service (EKS) is a managed Kubernetes service that simplifies the process of running Kubernetes on AWS. It is ideal for users who want to leverage AWS's infrastructure and se",
+      "description": "Amazon Elastic Kubernetes Service (EKS) is a managed Kubernetes service that simplifies the process of running Kubernetes on AWS. It provides a highly available and scalable Kubernetes control plane, ",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
@@ -22576,7 +22576,7 @@
       "installMethods": [
         "cli"
       ],
-      "qualityScore": 100,
+      "qualityScore": 96,
       "qualityPass": true,
       "qualityBreakdown": {
         "clarity": 100,
@@ -23086,7 +23086,7 @@
         "Deployment",
         "Service"
       ],
-      "difficulty": "beginner",
+      "difficulty": "intermediate",
       "issueTypes": [
         "installation",
         "configuration"
