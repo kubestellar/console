@@ -48,6 +48,7 @@ jobs:
     if: github.repository == 'kubestellar/console'
     runs-on: [self-hosted, kc, openshift]
     timeout-minutes: 60
+    continue-on-error: true  # Infra failures (runner unavailable) shouldn't block other workflows
     strategy:
       fail-fast: false
       matrix:
@@ -66,8 +67,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
+      - name: Verify runner health
+        id: runner-check
+        timeout-minutes: 2
+        run: |
+          echo "::group::Runner Health Check"
+          # Check if we can access OpenShift cluster
+          if ! command -v oc &>/dev/null; then
+            echo "::warning::OpenShift CLI (oc) not available — runner may not be properly configured"
+            echo "healthy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          # Verify cluster connectivity (with short timeout)
+          if ! timeout 30 oc cluster-info &>/dev/null; then
+            echo "::warning::OpenShift cluster not reachable — runner connectivity issue"
+            echo "healthy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          echo "healthy=true" >> "$GITHUB_OUTPUT"
+          echo "::endgroup::"
+
       - name: Run guide E2E
         id: guide
+        if: steps.runner-check.outputs.healthy == 'true'
         timeout-minutes: 45
         env:
           GUIDE_NAME: ${{ matrix.guide }}
@@ -83,6 +107,11 @@ jobs:
             echo "status=skipped" >> "$GITHUB_OUTPUT"
             echo "duration=0" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+          
+          # Verify script is executable
+          if [ ! -x "$SCRIPT" ]; then
+            chmod +x "$SCRIPT"
           fi
           echo "::endgroup::"
 
@@ -104,6 +133,13 @@ jobs:
             echo "status=fail" >> "$GITHUB_OUTPUT"
           fi
           echo "::endgroup::"
+
+      - name: Mark runner unhealthy result
+        if: steps.runner-check.outputs.healthy != 'true'
+        id: runner-skip
+        run: |
+          echo "status=runner-unavailable" >> "$GITHUB_OUTPUT"
+          echo "duration=0" >> "$GITHUB_OUTPUT"
 
       - name: Upload result artifact
         if: always()
@@ -166,6 +202,11 @@ jobs:
                 ;;
               skipped)
                 STATUS="⏭️ SKIP"
+                SKIPPED=$((SKIPPED + 1))
+                ;;
+              cancelled)
+                # Job cancelled due to continue-on-error + runner unavailability
+                STATUS="⚠️ RUNNER N/A"
                 SKIPPED=$((SKIPPED + 1))
                 ;;
               *)
