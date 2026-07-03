@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http/httptest"
 	"testing"
 
@@ -13,21 +14,22 @@ import (
 
 func TestRequireAdmin(t *testing.T) {
 	s := store.OpenTestDB(t)
+	ctx := context.Background()
 
 	tests := []struct {
 		name       string
-		setupUser  func(t *testing.T, s store.Store) uuid.UUID
+		setupUser  func(t *testing.T, s *store.SQLiteStore) uuid.UUID
 		wantStatus int
 	}{
 		{
 			name: "admin user passes",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "admin-user",
-					Role:  models.RoleAdmin,
+					ID:          uuid.New(),
+					GitHubLogin: "admin-user",
+					Role:        models.UserRoleAdmin,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -35,13 +37,13 @@ func TestRequireAdmin(t *testing.T) {
 		},
 		{
 			name: "editor user blocked",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "editor-user",
-					Role:  models.RoleEditor,
+					ID:          uuid.New(),
+					GitHubLogin: "editor-user",
+					Role:        models.UserRoleEditor,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -49,13 +51,13 @@ func TestRequireAdmin(t *testing.T) {
 		},
 		{
 			name: "viewer user blocked",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "viewer-user",
-					Role:  models.RoleViewer,
+					ID:          uuid.New(),
+					GitHubLogin: "viewer-user",
+					Role:        models.UserRoleViewer,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -63,7 +65,7 @@ func TestRequireAdmin(t *testing.T) {
 		},
 		{
 			name: "no user blocked",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				return uuid.New()
 			},
 			wantStatus: fiber.StatusUnauthorized,
@@ -93,21 +95,22 @@ func TestRequireAdmin(t *testing.T) {
 
 func TestRequireEditorOrAdmin(t *testing.T) {
 	s := store.OpenTestDB(t)
+	ctx := context.Background()
 
 	tests := []struct {
 		name       string
-		setupUser  func(t *testing.T, s store.Store) uuid.UUID
+		setupUser  func(t *testing.T, s *store.SQLiteStore) uuid.UUID
 		wantStatus int
 	}{
 		{
 			name: "admin user passes",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "admin-user",
-					Role:  models.RoleAdmin,
+					ID:          uuid.New(),
+					GitHubLogin: "admin-user",
+					Role:        models.UserRoleAdmin,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -115,13 +118,13 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 		},
 		{
 			name: "editor user passes",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "editor-user",
-					Role:  models.RoleEditor,
+					ID:          uuid.New(),
+					GitHubLogin: "editor-user",
+					Role:        models.UserRoleEditor,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -129,13 +132,13 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 		},
 		{
 			name: "viewer user blocked",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "viewer-user",
-					Role:  models.RoleViewer,
+					ID:          uuid.New(),
+					GitHubLogin: "viewer-user",
+					Role:        models.UserRoleViewer,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -166,21 +169,22 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 
 func TestRequireViewerOrAbove(t *testing.T) {
 	s := store.OpenTestDB(t)
+	ctx := context.Background()
 
 	tests := []struct {
 		name       string
-		setupUser  func(t *testing.T, s store.Store) uuid.UUID
+		setupUser  func(t *testing.T, s *store.SQLiteStore) uuid.UUID
 		wantStatus int
 	}{
 		{
 			name: "admin user passes",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "admin-user",
-					Role:  models.RoleAdmin,
+					ID:          uuid.New(),
+					GitHubLogin: "admin-user",
+					Role:        models.UserRoleAdmin,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -188,13 +192,13 @@ func TestRequireViewerOrAbove(t *testing.T) {
 		},
 		{
 			name: "editor user passes",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "editor-user",
-					Role:  models.RoleEditor,
+					ID:          uuid.New(),
+					GitHubLogin: "editor-user",
+					Role:        models.UserRoleEditor,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -202,13 +206,13 @@ func TestRequireViewerOrAbove(t *testing.T) {
 		},
 		{
 			name: "viewer user passes",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "viewer-user",
-					Role:  models.RoleViewer,
+					ID:          uuid.New(),
+					GitHubLogin: "viewer-user",
+					Role:        models.UserRoleViewer,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -216,7 +220,7 @@ func TestRequireViewerOrAbove(t *testing.T) {
 		},
 		{
 			name: "no user blocked",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				return uuid.New()
 			},
 			wantStatus: fiber.StatusUnauthorized,
@@ -246,21 +250,22 @@ func TestRequireViewerOrAbove(t *testing.T) {
 
 func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 	s := store.OpenTestDB(t)
+	ctx := context.Background()
 
 	tests := []struct {
 		name       string
-		setupUser  func(t *testing.T, s store.Store) uuid.UUID
+		setupUser  func(t *testing.T, s *store.SQLiteStore) uuid.UUID
 		wantStatus int
 	}{
 		{
 			name: "admin user passes middleware",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "admin-user",
-					Role:  models.RoleAdmin,
+					ID:          uuid.New(),
+					GitHubLogin: "admin-user",
+					Role:        models.UserRoleAdmin,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -268,13 +273,13 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 		},
 		{
 			name: "editor user passes middleware",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "editor-user",
-					Role:  models.RoleEditor,
+					ID:          uuid.New(),
+					GitHubLogin: "editor-user",
+					Role:        models.UserRoleEditor,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
@@ -282,13 +287,13 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 		},
 		{
 			name: "viewer user blocked by middleware",
-			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
+			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
-					Login: "viewer-user",
-					Role:  models.RoleViewer,
+					ID:          uuid.New(),
+					GitHubLogin: "viewer-user",
+					Role:        models.UserRoleViewer,
 				}
-				err := s.CreateUser(user)
+				err := s.CreateUser(ctx, user)
 				require.NoError(t, err)
 				return user.ID
 			},
