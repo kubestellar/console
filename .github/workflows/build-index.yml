@@ -9,8 +9,7 @@ on:
       - 'runbooks/**'
   workflow_dispatch:
 
-permissions:
-  contents: read  # default read-only; writes scoped to job below
+permissions: read-all  # default read-only; writes scoped to job below
 
 jobs:
   build-index:
