@@ -53,7 +53,7 @@ describe('ShareMissionDialog', () => {
         missionTitle="Test"
       />
     )
-    expect(screen.getByText(new RegExp(url))).toBeInTheDocument()
+    expect(screen.getByText(url)).toBeInTheDocument()
   })
 
   it('calls onClose when close button is clicked', () => {
