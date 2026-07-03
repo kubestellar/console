@@ -1,4 +1,4 @@
-import { afterEach, vi } from 'vitest'
+import { afterEach, afterAll, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 
@@ -195,12 +195,6 @@ if (isBrowserEnvironment) {
 }
 
 // Cleanup after each test.
-// NOTE: vi.unstubAllGlobals() IS called when running in sharded mode (CI).
-// In sharded runs, multiple test files share the same worker, so global stubs
-// from one file can leak into another. Without cleanup, test file A's stubbed
-// fetch can break test file B's expectations in the same shard.
-// In non-sharded local runs, each file gets its own worker, so cleanup is less
-// critical but still safe (tests re-stub in beforeEach if needed).
 afterEach(() => {
   if (isBrowserEnvironment) {
     cleanup()
@@ -208,6 +202,15 @@ afterEach(() => {
     window.sessionStorage?.clear()
   }
   vi.unstubAllEnvs()
-  vi.unstubAllGlobals()
   vi.clearAllMocks()
+})
+
+// Cleanup after all tests in the file.
+// NOTE: vi.unstubAllGlobals() runs once per file (not per test) to prevent
+// cross-file stub leaks in sharded mode while preserving within-file stubs.
+// In sharded runs, multiple test files share the same worker. Without cleanup,
+// test file A's stubbed fetch can leak into test file B. Moving to afterAll
+// fixes the leak while allowing tests within a file to set stubs at file scope.
+afterAll(() => {
+  vi.unstubAllGlobals()
 })
