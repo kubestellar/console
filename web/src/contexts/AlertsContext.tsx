@@ -1,4 +1,4 @@
-/**
+successfully downloaded text file (SHA: 3c4de92e748f1bbda9852e3abcd29c1eefe10fb5)/**
  * Alerts Context
  *
  * Category: domain state.
@@ -651,6 +651,7 @@ Please provide:
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const __alertsTestables = {
   shallowEqualRecords,
   alertDedupKey,
