@@ -1,0 +1,77 @@
+{
+  "version": "kc-mission-v1",
+  "name": "cilium-30667-cfp-expose-configurable-envoy-access-logs-for-l7-observability-and-",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "cilium: CFP: Expose configurable Envoy Access Logs for L7 observability and Gateway API",
+    "description": "CFP: Expose configurable Envoy Access Logs for L7 observability and Gateway API. Requested by 36+ users.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current cilium deployment",
+        "description": "Verify your cilium version and configuration:\n```bash\nkubectl get pods -n cilium -l app.kubernetes.io/name=cilium\nhelm list -n cilium 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working cilium installation."
+      },
+      {
+        "title": "Review cilium configuration",
+        "description": "Inspect the relevant cilium configuration:\n```bash\nkubectl get all -n cilium -l app.kubernetes.io/name=cilium\nkubectl get configmap -n cilium -l app.kubernetes.io/part-of=cilium\n```\n## Cilium Feature Proposal\n\n**Is your proposed feature related to a problem?**\n\nUnable to expose or configure the Envoy Access Logs described here: https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage\n\nEnabling"
+      },
+      {
+        "title": "Apply the fix for CFP: Expose configurable Envoy Access Logs for L7…",
+        "description": "A decent workaround is using hubble export for these flow logs, when configured like this, they appear in the cilium pod stdout as json: (see https://github.com/cilium/cilium/issues/31357#issuecomment-3746772007 for reference)\n```\n    hubble:  \n      export:\n        dynamic:\n          enabled:\n```yaml\nhubble:  \n      export:\n        dynamic:\n          enabled: true\n          config:\n            enabled: true\n            content:\n              # https://docs.cilium.io/en/stable/_api/v1/flow/README/\n              - name: \"l7-http-stdout\"\n                filePath: \"/dev/stdout\"\n                # imaginative value for stream to not rotate /dev/stdout\n                fileMaxSizeMb: 2137\n                fileMaxBackups: 0\n                fieldMask:\n                  - time\n                  - verdict\n                  - IP\n                  - l7.type\n                  - l7.latency_ns\n             \n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n cilium -l app.kubernetes.io/name=cilium\nkubectl get events -n cilium --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"CFP: Expose configurable Envoy Access Logs for L7…\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "A decent workaround is using hubble export for these flow logs, when configured like this, they appear in the cilium pod stdout as json: (see https://github.com/cilium/cilium/issues/31357#issuecomment-3746772007 for reference)\n```\n    hubble:  \n      export:\n        dynamic:\n          enabled: true\n          config:\n            enabled: true\n            content:\n              #",
+      "codeSnippets": [
+        "hubble:  \n      export:\n        dynamic:\n          enabled: true\n          config:\n            enabled: true\n            content:\n              # https://docs.cilium.io/en/stable/_api/v1/flow/README/\n              - name: \"l7-http-stdout\"\n                filePath: \"/dev/stdout\"\n                # imaginative value for stream to not rotate /dev/stdout\n                fileMaxSizeMb: 2137\n                fileMaxBackups: 0\n                fieldMask:\n                  - time\n                  - verdict\n                  - IP\n                  - l7.type\n                  - l7.latency_ns\n                  - l7.http.code\n                  - l7.http.method\n                  - l7.http.url\n                  - l7.http.protocol\n                  - Summary\n                  - destination.pod_name\n       "
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "cilium",
+      "graduated",
+      "networking",
+      "feature"
+    ],
+    "cncfProjects": [
+      "cilium"
+    ],
+    "targetResourceKinds": [
+      "Pod",
+      "Namespace"
+    ],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/cilium/cilium/issues/30667",
+      "repo": "https://github.com/cilium/cilium"
+    },
+    "reactions": 36,
+    "comments": 10,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with cilium installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-03T07:08:25.536Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
