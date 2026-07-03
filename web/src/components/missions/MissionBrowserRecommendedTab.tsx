@@ -10,6 +10,7 @@
  */
 
 import { Loader2, Sparkles, RefreshCw, ExternalLink } from 'lucide-react'
+import { cn } from '../../lib/cn'
 import { emitFixerGitHubLink } from '../../lib/analytics'
 import { useTranslation } from 'react-i18next'
 import { CollapsibleSection } from '../ui/CollapsibleSection'
@@ -179,7 +180,7 @@ export function MissionBrowserRecommendedTab({
                 className="p-0.5 rounded hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
                 title={tWithFallback('missions.recommended.refreshRecommendations', 'Refresh recommendations')}
               >
-                <RefreshCw className="w-3 h-3" />
+                <RefreshCw className={cn('w-3 h-3', loadingRecommendations && 'animate-spin')} />
               </button>
             </span>
           }
