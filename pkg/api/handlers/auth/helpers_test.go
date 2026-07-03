@@ -24,7 +24,7 @@ func TestAuthHelpers(t *testing.T) {
 		}{
 			{"AdminAllowed", models.UserRoleAdmin, true, false, false, http.StatusOK},
 			{"ViewerForbidden", models.UserRoleViewer, true, false, false, http.StatusForbidden},
-			{"UserNotFound", models.UserRole(""), false, false, false, http.StatusForbidden},
+			{"UserNotFound", models.UserRole(""), false, false, false, http.StatusUnauthorized},
 			{"StoreError", models.UserRole(""), false, true, false, http.StatusInternalServerError},
 			{"NilStoreAllowed", models.UserRole(""), false, false, true, http.StatusOK},
 		}
@@ -75,7 +75,7 @@ func TestAuthHelpers(t *testing.T) {
 			{"AdminAllowed", models.UserRoleAdmin, true, false, false, http.StatusOK},
 			{"EditorAllowed", models.UserRoleEditor, true, false, false, http.StatusOK},
 			{"ViewerForbidden", models.UserRoleViewer, true, false, false, http.StatusForbidden},
-			{"UserNotFound", models.UserRole(""), false, false, false, http.StatusForbidden},
+			{"UserNotFound", models.UserRole(""), false, false, false, http.StatusUnauthorized},
 			{"StoreError", models.UserRole(""), false, true, false, http.StatusInternalServerError},
 			{"NilStoreAllowed", models.UserRole(""), false, false, true, http.StatusOK},
 		}
@@ -145,7 +145,7 @@ func TestAuthHelpers(t *testing.T) {
 			{"EditorAllowed", models.UserRoleEditor, true, http.StatusOK},
 			{"ViewerAllowed", models.UserRoleViewer, true, http.StatusOK},
 			{"InvalidRoleForbidden", models.UserRole("invalid"), true, http.StatusForbidden},
-			{"UserNotFound", models.UserRole(""), false, http.StatusForbidden},
+			{"UserNotFound", models.UserRole(""), false, http.StatusUnauthorized},
 		}
 
 		for _, tt := range tests {

@@ -154,9 +154,9 @@ func TestSIEMHandler_RegisterRoutesRequiresAdmin(t *testing.T) {
 			wantStatus: http.StatusForbidden,
 		},
 		{
-			name:       "UnknownUserIsForbidden",
+			name:       "UnknownUserIsUnauthorized",
 			user:       nil,
-			wantStatus: http.StatusForbidden,
+			wantStatus: http.StatusUnauthorized,
 		},
 	}
 
