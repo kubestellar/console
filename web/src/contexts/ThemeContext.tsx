@@ -212,6 +212,7 @@ const {
   createFallbackValue: createDefaultThemeContextValue,
 })
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { ThemeContext, useTheme }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
