@@ -2,7 +2,11 @@ package feedback
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,9 +19,9 @@ import (
 
 func TestNewGitHubAppTokenProvider(t *testing.T) {
 	tests := []struct {
-		name       string
-		envVars    map[string]string
-		expectNil  bool
+		name      string
+		envVars   map[string]string
+		expectNil bool
 	}{
 		{
 			name: "all credentials present",
@@ -140,7 +144,7 @@ func TestGitHubAppTokenProvider_Token(t *testing.T) {
 	defer srv.Close()
 
 	// Override GitHub API base for testing
-	t.Setenv("GITHUB_API_BASE", srv.URL)
+	t.Setenv("GITHUB_URL", srv.URL)
 
 	provider := &GitHubAppTokenProvider{
 		appID:          "123456",
@@ -175,7 +179,7 @@ func TestGitHubAppTokenProvider_Token_Refresh(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("GITHUB_API_BASE", srv.URL)
+	t.Setenv("GITHUB_URL", srv.URL)
 
 	provider := &GitHubAppTokenProvider{
 		appID:          "123456",
@@ -210,7 +214,7 @@ func TestGitHubAppTokenProvider_Token_APIError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("GITHUB_API_BASE", srv.URL)
+	t.Setenv("GITHUB_URL", srv.URL)
 
 	provider := &GitHubAppTokenProvider{
 		appID:          "123456",
@@ -258,44 +262,15 @@ func TestExpectedAppSlug(t *testing.T) {
 	}
 }
 
-// generateTestPrivateKey generates a test RSA private key in PEM format
+// generateTestPrivateKey generates a fresh RSA private key in PEM format.
 func generateTestPrivateKey(t *testing.T) string {
 	t.Helper()
-	// This is a test-only RSA private key (DO NOT use in production)
-	return `-----BEGIN RSA PRIVATE KEY-----
-MIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn/hhNL6zWkMKfhAC/QUyE5OKoZzR5tLCLD
-PCy7PGLBZLJWQNeJZS4SRJqLpCrVdNp2R/HTGpL6KmFmLZ9FWQJKXkrJR3cLgPqw
-zELCxm1dxP/gu/J4bkx8U5VqBcVP8zEBo6rJg5fxFp8l9OJcMrZNPRh8U5wZnKhF
-WfJy9qTg5qDRJkFxCLqd4R9WF7SgNkNJg9WRFLGmvQPvYE5l3gJLMqXLOQkDp8PZ
-vx3bJLLpWQ8vJQCYh0TZkhgKBr6OI8DzBqQZ8JvJLv7YUqKu5CbBbgQC3xLQ4mPL
-hJvVXWDmXRZJkqqNlvHW8mJKqfRCgkKmLFqKswIDAQABAoIBAHx8OgK5pLrZjKmh
-kpQKQy1JLHPhfW4CqbYNWqQPDXmFfVLZpbAZ6jVZrNb3aNTnNKlLwjMFuCq3xmdb
-q6KEqQZ7ILqZABR5BcVcCJQPvVqKKqCzAFKZWJMhVQHGClb7OkEhk8v9LLXnqQXK
-rPUZNPfEQKF0KNWfCCJLPQhJqEQM0ZPNBVz9L8q4WQJqLKVNDXFyKbWz6aq8EqQP
-XqLJPpZ3qXKQKEJqBQPxLPWzBmXWZF0QFvLqZXpRqJZK0VQqKqJpZFLpQZKpLVPQ
-QKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLV
-PQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLkCgYEA7Zq3xmQK
-0qqLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQK
-qJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLp
-QKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKq
-LpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQ
-KqLpQKqJpZFLpQZKqLVPQQKqLkCgYEA4qLpQZKqLVPQQKqLpQKqJpZFLpQZKqLV
-PQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKq
-LVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZ
-KqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLp
-QZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLkCgYEAvq
-LpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJp
-ZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKq
-JpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQ
-KqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqL
-kCgYBqqLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKq
-LpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQ
-KqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVP
-QQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqL
-VPQQKqLkCgYBqqLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKq
-LVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZ
-KqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLp
-QZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZFLpQZKqLVPQQKqLpQKqJpZF
-LpQZKqLVPQQKqLg==
------END RSA PRIVATE KEY-----`
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	keyBytes := x509.MarshalPKCS1PrivateKey(key)
+	pemBlock := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: keyBytes,
+	}
+	return string(pem.EncodeToMemory(pemBlock))
 }
