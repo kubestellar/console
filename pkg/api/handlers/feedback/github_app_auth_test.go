@@ -2,7 +2,11 @@ package feedback
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -140,7 +144,7 @@ func TestGitHubAppTokenProvider_Token(t *testing.T) {
 	defer srv.Close()
 
 	// Override GitHub API base for testing
-	t.Setenv("GITHUB_API_BASE", srv.URL)
+	t.Setenv("GITHUB_URL", srv.URL)
 
 	provider := &GitHubAppTokenProvider{
 		appID:          "123456",
@@ -175,7 +179,7 @@ func TestGitHubAppTokenProvider_Token_Refresh(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("GITHUB_API_BASE", srv.URL)
+	t.Setenv("GITHUB_URL", srv.URL)
 
 	provider := &GitHubAppTokenProvider{
 		appID:          "123456",
@@ -210,7 +214,7 @@ func TestGitHubAppTokenProvider_Token_APIError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("GITHUB_API_BASE", srv.URL)
+	t.Setenv("GITHUB_URL", srv.URL)
 
 	provider := &GitHubAppTokenProvider{
 		appID:          "123456",
