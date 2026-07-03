@@ -395,7 +395,7 @@ async function getMissionStatus(page: Page, missionId?: string): Promise<string 
       if (!Array.isArray(missions)) return null
       const mission = id ? missions.find((m: { id: string }) => m.id === id) : missions[0]
       return mission?.status || null
-    } catch (error) { console.error('Error:', error) return null  }
+    } catch (error) { console.error('Error:', error); return null; }
   }, { id: missionId || null, key: MISSIONS_STORAGE_KEY })
 }
 
