@@ -308,7 +308,7 @@ async function getManifestForBatch(page: Page, batch: number, batchSize: number)
       bodyPreview: (document.body.textContent || '').slice(0, 300),
       hasLoginForm: !!document.querySelector('input[type="password"]'),
      }))
-    throw new Error(`TTFI manifest did not load: ${JSON.stringify(debug)}`)
+    throw new Error(`TTFI manifest did not load: ${JSON.stringify(debug)}`, { cause: error })
   }
 
   const manifest = await page.evaluate(() => window.__TTFI_MANIFEST__)
