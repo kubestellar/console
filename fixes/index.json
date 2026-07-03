@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-03T07:38:09.490Z",
+  "generatedAt": "2026-07-03T12:35:41.833Z",
   "count": 1625,
   "missions": [
     {
@@ -33612,7 +33612,7 @@
     {
       "path": "fixes/platform-install/platform-vke.json",
       "title": "Install and Configure Vultr Kubernetes Engine (VKE)",
-      "description": "This mission guides you through installing the Vultr Kubernetes Engine (VKE), a managed Kubernetes service that simplifies the deployment and management of Kubernetes clusters on Vultr's infrastructur",
+      "description": "This mission guides you through installing the Vultr Kubernetes Engine (VKE), a managed Kubernetes service that simplifies cluster management on Vultr's infrastructure. It is ideal for users looking f",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
