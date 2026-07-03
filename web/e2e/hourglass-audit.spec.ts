@@ -75,7 +75,7 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
   for (const dashboard of DASHBOARDS_WITH_REFRESH) {
     test(`${dashboard.name} (${dashboard.route}) has refresh button`, async ({ page }) => {
       await page.goto(dashboard.route)
-      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
+      await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
 
       const refreshButton = page.locator('button[data-testid="dashboard-refresh-button"]')
       await expect(refreshButton.first()).toBeVisible({ timeout: 10000 })
@@ -83,7 +83,7 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
 
     test(`${dashboard.name} (${dashboard.route}) has auto-refresh checkbox`, async ({ page }) => {
       await page.goto(dashboard.route)
-      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
+      await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
 
       const autoCheckbox = page.locator('label:has-text("Auto") input[type="checkbox"]')
       await expect(autoCheckbox.first()).toBeVisible({ timeout: 10000 })
@@ -91,7 +91,7 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
 
     test(`${dashboard.name} (${dashboard.route}) refresh button is functional`, async ({ page }) => {
       await page.goto(dashboard.route)
-      await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
+      await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
 
       const refreshButton = page.locator('button[data-testid="dashboard-refresh-button"]')
       await expect(refreshButton.first()).toBeVisible({ timeout: 10000 })

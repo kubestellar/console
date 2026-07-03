@@ -279,7 +279,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
     })
 
     const visible = await page.getByText(/Define Mission|Chart Course|Flight Plan|Define Your|Chart Your|Launch/i)
-      .first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      .first().isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     if (visible) break
 
     // If dialog didn't open, try scrolling sidebar and retrying

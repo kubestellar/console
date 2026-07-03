@@ -394,7 +394,7 @@ test.describe('Clusters Page', () => {
 
       // Click the Offline tab (may be labeled "Offline" or "Unreachable")
       const offlineTab = page.getByRole('button', { name: /Offline|Unreachable/i }).first()
-      const tabVisible = await offlineTab.isVisible({ timeout: 10_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      const tabVisible = await offlineTab.isVisible({ timeout: 10_000 }).catch((error) => { console.error('Promise error:', error); return false })
       if (!tabVisible) { test.skip(true, 'Offline filter tab not visible'); return }
 
       await offlineTab.click()
@@ -415,18 +415,18 @@ test.describe('Clusters Page', () => {
 
       // Look for the dedicated sort selector before falling back to generic buttons
       const sortSelect = page.getByRole('combobox', { name: /sort/i }).first()
-      const sortSelectVisible = await sortSelect.isVisible({ timeout: 10_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      const sortSelectVisible = await sortSelect.isVisible({ timeout: 10_000 }).catch((error) => { console.error('Promise error:', error); return false })
 
       if (sortSelectVisible) {
         // Change sort to "name"
         await sortSelect.selectOption({ label: /name/i }).catch(() =>
-          sortSelect.selectOption('name').catch((error) => { console.error(\'Promise catch:\', error) })
+          sortSelect.selectOption('name').catch((error) => { console.error('Promise catch:', error) })
         )
         await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10_000 })
       } else {
         // Sort may be rendered as buttons — look for sort-related controls
         const sortBtn = page.locator('button[aria-label*="sort" i], button[aria-label*="Sort"]').first()
-        const sortBtnVisible = await sortBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+        const sortBtnVisible = await sortBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })
         if (sortBtnVisible) {
           await sortBtn.click()
           await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10_000 })
@@ -439,7 +439,7 @@ test.describe('Clusters Page', () => {
 
       // Look for sort direction toggle button
       const sortDirBtn = page.locator('button[aria-label*="ascending" i], button[aria-label*="descending" i], button[aria-label*="Sort direction" i]').first()
-      const sortDirVisible = await sortDirBtn.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      const sortDirVisible = await sortDirBtn.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
 
       if (sortDirVisible) {
         await sortDirBtn.click()
@@ -458,7 +458,7 @@ test.describe('Clusters Page', () => {
       
       // Ensure at least one button is visible before counting (#12097)
       // Immediate count() may execute before DOM fully renders
-      await expect(layoutBtns.first()).toBeVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise catch:\', error) })
+      await expect(layoutBtns.first()).toBeVisible({ timeout: 5000 }).catch((error) => { console.error('Promise catch:', error) })
       const count = await layoutBtns.count()
 
       if (count > 1) {
@@ -484,12 +484,12 @@ test.describe('Clusters Page', () => {
       // Look for the collapse/expand chevron button in the cluster info section
       const collapseBtn = page.locator('button[aria-label*="collapse" i], button[aria-label*="expand" i], button[aria-label*="toggle" i]').first()
         .or(page.getByTestId('cluster-info-collapse'))
-      const collapseVisible = await collapseBtn.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      const collapseVisible = await collapseBtn.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
 
       if (!collapseVisible) {
         // Try a chevron icon button near the info cards section
         const chevronBtn = page.locator('[data-testid*="info-cards"] button, [data-testid*="cluster-info"] button').first()
-        const chevronVisible = await chevronBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+        const chevronVisible = await chevronBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })
         if (!chevronVisible) { test.skip(true, 'Cluster info collapse button not visible'); return }
         await chevronBtn.click()
         await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 5000 })
@@ -550,14 +550,14 @@ test.describe('Clusters Page', () => {
       ).or(
         page.getByRole('alert').filter({ hasText: /stale|prune/i }).first()
       )
-      const bannerVisible = await banner.isVisible({ timeout: 10_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      const bannerVisible = await banner.isVisible({ timeout: 10_000 }).catch((error) => { console.error('Promise error:', error); return false })
 
       if (bannerVisible) {
         await expect(banner).toBeVisible()
 
         // Look for Prune Kubeconfig button
         const pruneBtn = page.getByRole('button', { name: /Prune/i }).first()
-        const pruneVisible = await pruneBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+        const pruneVisible = await pruneBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })
         if (pruneVisible) {
           await pruneBtn.click()
           // Should open API key modal or mission prompt

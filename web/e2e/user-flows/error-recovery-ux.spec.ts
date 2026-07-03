@@ -43,7 +43,7 @@ test.describe('Error Recovery', () => {
     const checkErrors = collectConsoleErrors(page)
 
     await setupDemoAndNavigate(page, '/')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
     await expect(page.locator('[data-card-type]').first()).toBeVisible({
       timeout: NETWORK_IDLE_TIMEOUT_MS,
     })
@@ -57,14 +57,14 @@ test.describe('Error Recovery', () => {
 
     // Navigate to a sub-route
     const sidebarLink = page.locator('nav a, [data-testid*="sidebar"] a').first()
-    const hasLink = await sidebarLink.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasLink = await sidebarLink.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (!hasLink) {
       test.skip()
       return
     }
 
     await sidebarLink.click()
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
     // Page should not show an error boundary
     const errorBoundary = page.getByText(/something went wrong|application error|unhandled error/i)
@@ -81,13 +81,13 @@ test.describe('Error Recovery', () => {
     const refreshBtn = page.getByTestId('dashboard-refresh-button')
       .or(page.getByRole('button', { name: /refresh|reload/i }))
 
-    const hasRefresh = await refreshBtn.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasRefresh = await refreshBtn.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasRefresh) { test.skip(true, 'No refresh button found on dashboard'); return }
 
     await refreshBtn.first().click()
 
     // Page should not crash after refresh
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
     const errorBoundary = page.getByText(/something went wrong|application error/i)
     await expect(errorBoundary).not.toBeVisible()
   })
@@ -97,18 +97,18 @@ test.describe('Error Recovery', () => {
 
     // Navigate to settings
     await page.goto('/settings')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
     // Go back
     await page.goBack()
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
     const errorBoundary = page.getByText(/something went wrong|application error/i)
     await expect(errorBoundary).not.toBeVisible()
 
     // Go forward
     await page.goForward()
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
     await expect(errorBoundary).not.toBeVisible()
   })

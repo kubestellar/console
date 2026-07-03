@@ -97,7 +97,7 @@ test.describe('Mission Control Pipeline', () => {
     await page.waitForLoadState('domcontentloaded')
 
     const trigger = page.getByTestId('mission-sidebar-toggle')
-    if (await trigger.isVisible({ timeout: VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+    if (await trigger.isVisible({ timeout: VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })) {
       await trigger.click()
       await expect(page.getByTestId('mission-sidebar')).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS })
     }

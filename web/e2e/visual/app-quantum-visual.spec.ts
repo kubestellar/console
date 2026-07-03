@@ -57,7 +57,7 @@ test.describe('Quantum dashboard cards', () => {
       try {
         window.localStorage.removeItem(key)
       } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
     }, CIRCUIT_ZOOM_STORAGE_KEY)
 

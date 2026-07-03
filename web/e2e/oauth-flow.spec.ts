@@ -60,7 +60,7 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
 
     await page
       .waitForURL(/\/auth\/github(?:$|\?)/, { timeout: NAV_INTERCEPT_TIMEOUT_MS })
-      .catch((error) => { console.error(\'Promise catch:\', error) })
+      .catch((error) => { console.error('Promise catch:', error) })
     expect(page.url()).toMatch(/\/auth\/github(?:$|\?)/)
   })
 

@@ -11,12 +11,12 @@ const MISSION_LOAD_TIMEOUT_MS = 5_000
 
 async function ensureMissionBrowserVisible(page: Page): Promise<boolean> {
   const browser = page.getByTestId('mission-browser')
-  if (await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+  if (await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })) {
     return true
   }
 
   const missionToggle = page.getByTestId('navbar-ai-missions-btn')
-  if (!(await missionToggle.isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false }))) {
+  if (!(await missionToggle.isVisible({ timeout: 3_000 }).catch((error) => { console.error('Promise error:', error); return false }))) {
     return false
   }
 
@@ -44,10 +44,10 @@ test.describe('Mission Exploration — "Find and use a mission"', () => {
   test('mission search input is functional', async ({ page }) => {
     await setupDemoAndNavigate(page, '/missions')
     const browser = page.getByTestId('mission-browser')
-    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasBrowser) { test.skip(true, 'Mission browser not visible'); return }
     const searchInput = page.getByTestId('mission-search')
-    const hasSearch = await searchInput.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasSearch = await searchInput.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (!hasSearch) { test.skip(true, 'Mission search input not visible'); return }
     await searchInput.fill('deploy')
     await page.waitForTimeout(500)
@@ -58,10 +58,10 @@ test.describe('Mission Exploration — "Find and use a mission"', () => {
   test('mission directory tree renders', async ({ page }) => {
     await setupDemoAndNavigate(page, '/missions')
     const browser = page.getByTestId('mission-browser')
-    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasBrowser) { test.skip(true, 'Mission browser not visible'); return }
     const tree = page.getByTestId('mission-tree')
-    const hasTree = await tree.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasTree = await tree.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (!hasTree) { test.skip(true, 'Mission tree not visible'); return }
     const text = await tree.textContent()
     expect(text?.length).toBeGreaterThan(0)
@@ -70,10 +70,10 @@ test.describe('Mission Exploration — "Find and use a mission"', () => {
   test('mission grid shows missions', async ({ page }) => {
     await setupDemoAndNavigate(page, '/missions')
     const browser = page.getByTestId('mission-browser')
-    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasBrowser) { test.skip(true, 'Mission browser not visible'); return }
     const grid = page.getByTestId('mission-grid')
-    const hasGrid = await grid.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasGrid = await grid.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (!hasGrid) { test.skip(true, 'Mission grid not visible'); return }
     const text = await grid.textContent()
     expect(text?.length).toBeGreaterThan(0)
@@ -82,14 +82,14 @@ test.describe('Mission Exploration — "Find and use a mission"', () => {
   test('clicking a mission shows detail view', async ({ page }) => {
     await setupDemoAndNavigate(page, '/missions')
     const browser = page.getByTestId('mission-browser')
-    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasBrowser) { test.skip(true, 'Mission browser not visible'); return }
     const grid = page.getByTestId('mission-grid')
-    const hasGrid = await grid.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasGrid = await grid.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (!hasGrid) { test.skip(true, 'Mission grid not visible'); return }
     // Click the first clickable mission item
     const missionItem = grid.locator('button, a, [role="button"], [class*="cursor-pointer"]').first()
-    const hasMission = await missionItem.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasMission = await missionItem.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (!hasMission) { test.skip(true, 'No clickable mission item found'); return }
     await missionItem.click()
     await page.waitForTimeout(500)
@@ -102,14 +102,14 @@ test.describe('Mission Exploration — "Find and use a mission"', () => {
   test('category filter works in mission tree', async ({ page }) => {
     await setupDemoAndNavigate(page, '/missions')
     const browser = page.getByTestId('mission-browser')
-    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasBrowser) { test.skip(true, 'Mission browser not visible'); return }
     const tree = page.getByTestId('mission-tree')
-    const hasTree = await tree.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasTree = await tree.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (!hasTree) { test.skip(true, 'Mission tree not visible'); return }
     // Click first category in tree to filter
     const treeItem = tree.locator('button, [role="treeitem"], li').first()
-    const hasItem = await treeItem.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasItem = await treeItem.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (!hasItem) { test.skip(true, 'No tree item found to click'); return }
     await treeItem.click()
     await page.waitForTimeout(500)
@@ -120,10 +120,10 @@ test.describe('Mission Exploration — "Find and use a mission"', () => {
   test('search clears properly', async ({ page }) => {
     await setupDemoAndNavigate(page, '/missions')
     const browser = page.getByTestId('mission-browser')
-    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasBrowser = await browser.isVisible({ timeout: MISSION_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasBrowser) { test.skip(true, 'Mission browser not visible'); return }
     const searchInput = page.getByTestId('mission-search')
-    const hasSearch = await searchInput.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasSearch = await searchInput.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (!hasSearch) { test.skip(true, 'Mission search input not visible'); return }
     await searchInput.fill('test-query')
     await page.waitForTimeout(300)

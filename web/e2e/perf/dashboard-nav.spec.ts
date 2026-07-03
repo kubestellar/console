@@ -185,11 +185,11 @@ async function waitForDashboardToSettle(page: Page, timeout = DASHBOARD_SETTLE_T
       { timeout: timeout + DASHBOARD_SETTLE_GRACE_MS, polling: DASHBOARD_SETTLE_POLL_MS }
     )
   } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     } finally {
     await page.evaluate(() => {
       delete (window as Window & { __dashboardSettle?: unknown }).__dashboardSettle
-    }).catch((error) => { console.error(\'Promise catch:\', error) })
+    }).catch((error) => { console.error('Promise catch:', error) })
   }
 }
 
@@ -229,7 +229,7 @@ async function measureNavigation(
     const sidebarPresent = await sidebar
       .waitFor({ state: 'attached', timeout: SIDEBAR_PRESENCE_TIMEOUT_MS  })
       .then(() => true)
-      .catch((error) => { console.error(\'Promise error:\', error); return false })
+      .catch((error) => { console.error('Promise error:', error); return false })
 
     if (sidebarPresent) {
       console.log(`  SKIP ${target.name}: not in primary nav (${linkSelector})`)
@@ -436,7 +436,7 @@ async function measureNavigation(
           cardsTimedOut: ids.length - loadedCount,
         }
       })
-    } catch (error) { console.error(\'Operation failed:\', error) }
+    } catch (error) { console.error('Operation failed:', error) }
   }
 
   const totalMs = cardResult.allCardsMs >= 0
@@ -506,14 +506,14 @@ test('warmup — prime module cache', async ({ page }, testInfo) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-  } catch (error) { console.error(\'Operation failed:\', error) }
+  } catch (error) { console.error('Operation failed:', error) }
 
   const warmupRoutes = ['/deploy', '/ai-ml', '/compliance', '/ci-cd', '/arcade']
   for (const route of warmupRoutes) {
     await page.goto(route, { waitUntil: 'domcontentloaded' })
     try {
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch (error) { console.error(\'Operation failed:\', error) }
+    } catch (error) { console.error('Operation failed:', error) }
   }
 })
 
@@ -531,7 +531,7 @@ test('cold-nav — first visit to each dashboard via sidebar', async ({ page }, 
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
     await waitForDashboardToSettle(page)
-  } catch (error) { console.error(\'Operation failed:\', error) }
+  } catch (error) { console.error('Operation failed:', error) }
 
   let currentRoute = '/'
 
@@ -571,7 +571,7 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-  } catch (error) { console.error(\'Operation failed:\', error) }
+  } catch (error) { console.error('Operation failed:', error) }
 
   // Pre-visit all dashboards to warm up chunks
   for (let i = 0; i < DASHBOARDS.length; i++) {
@@ -582,7 +582,7 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
     await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
     try {
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch (error) { console.error(\'Operation failed:\', error) }
+    } catch (error) { console.error('Operation failed:', error) }
   }
 
   // Now navigate back home and measure warm re-visits via sidebar clicks
@@ -591,7 +591,7 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
     await waitForDashboardToSettle(page)
-  } catch (error) { console.error(\'Operation failed:\', error) }
+  } catch (error) { console.error('Operation failed:', error) }
 
   let currentRoute = '/'
 
@@ -630,12 +630,12 @@ test('from-main — navigate away from Main Dashboard to various dashboards', as
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-  } catch (error) { console.error(\'Operation failed:\', error) }
+  } catch (error) { console.error('Operation failed:', error) }
   for (const dashboard of DASHBOARDS) {
     try {
       await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch (error) { console.error(\'Operation failed:\', error) }
+    } catch (error) { console.error('Operation failed:', error) }
   }
 
   // Diverse set of target dashboards to navigate TO from Main Dashboard
@@ -652,7 +652,7 @@ test('from-main — navigate away from Main Dashboard to various dashboards', as
         await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
         await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
         await waitForDashboardToSettle(page)
-      } catch (error) { console.error(\'Operation failed:\', error) }
+      } catch (error) { console.error('Operation failed:', error) }
 
       // Now measure the navigation FROM / TO the target
       const metric = await measureNavigation(page, '/', target, 'from-main')
@@ -689,12 +689,12 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-  } catch (error) { console.error(\'Operation failed:\', error) }
+  } catch (error) { console.error('Operation failed:', error) }
   for (const dashboard of DASHBOARDS) {
     try {
       await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch (error) { console.error(\'Operation failed:\', error) }
+    } catch (error) { console.error('Operation failed:', error) }
   }
 
   // Diverse set of target dashboards to navigate TO from My Clusters
@@ -713,7 +713,7 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
         await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
         await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
         await waitForDashboardToSettle(page)
-      } catch (error) { console.error(\'Operation failed:\', error) }
+      } catch (error) { console.error('Operation failed:', error) }
 
       // Now measure the navigation FROM /clusters TO the target
       const metric = await measureNavigation(page, '/clusters', target, 'from-clusters')
@@ -750,12 +750,12 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-  } catch (error) { console.error(\'Operation failed:\', error) }
+  } catch (error) { console.error('Operation failed:', error) }
   for (const dashboard of DASHBOARDS) {
     try {
       await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch (error) { console.error(\'Operation failed:\', error) }
+    } catch (error) { console.error('Operation failed:', error) }
   }
 
   // Navigate home
@@ -764,7 +764,7 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
     await waitForDashboardToSettle(page)
-  } catch (error) { console.error(\'Operation failed:\', error) }
+  } catch (error) { console.error('Operation failed:', error) }
 
   // Rapid-click through 10 dashboards, advancing as soon as each route changes.
   // Pick a diverse set of dashboards
@@ -864,7 +864,7 @@ test('back-button navigation through 10 dashboards', async ({ page }) => {
       await page.waitForSelector('[data-card-id]', { timeout: 5_000 })
       cardsFound = await page.locator('[data-card-id]').count()
     } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
     const cardLoadMs = Date.now() - cardStart
 

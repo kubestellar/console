@@ -476,7 +476,7 @@ async function softNavigateToBatch(
     () => typeof (window as Window & { __COMPLIANCE_SET_BATCH__?: unknown }).__COMPLIANCE_SET_BATCH__ === 'function',
     undefined,
     { timeout: SOFT_NAV_SETTER_TIMEOUT_MS }
-  ).then(() => true).catch((error) => { console.error(\'Promise error:\', error); return false })
+  ).then(() => true).catch((error) => { console.error('Promise error:', error); return false })
 
   if (hasSetter) {
     await page.evaluate(

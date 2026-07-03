@@ -217,7 +217,7 @@ test.describe('RBACExplorer card — demo mode', () => {
 
     // Only "ci-bot" finding should be visible
     await expect(page.getByText('ci-bot')).toBeVisible()
-    await expect(page.getByText('dev-team')).not.toBeVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await expect(page.getByText('dev-team')).not.toBeVisible({ timeout: 3000 }).catch((error) => { console.error('Promise catch:', error) })
   })
 
   test('search filters findings by cluster name', async ({ page }) => {
@@ -232,7 +232,7 @@ test.describe('RBACExplorer card — demo mode', () => {
 
     // Only prod-eu-west cluster findings should be visible (monitoring SA in demo data)
     await expect(page.getByText('monitoring').first()).toBeVisible()
-    await expect(page.getByText('dev-team')).not.toBeVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await expect(page.getByText('dev-team')).not.toBeVisible({ timeout: 3000 }).catch((error) => { console.error('Promise catch:', error) })
   })
 
   test('demo mode shows demo data, not live cluster data', async ({ page }) => {
@@ -294,7 +294,7 @@ test.describe('RBACExplorer card — live mode, no clusters', () => {
     await page.waitForLoadState('domcontentloaded')
 
     // Should NOT show demo findings (e.g., "dev-team" from demo data)
-    await expect(page.getByText('dev-team')).not.toBeVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await expect(page.getByText('dev-team')).not.toBeVisible({ timeout: 5000 }).catch((error) => { console.error('Promise catch:', error) })
 
     // Should show empty/no-data state or skeleton that resolves to empty
     // The card either shows a skeleton then empty, or goes straight to empty
@@ -307,7 +307,7 @@ test.describe('RBACExplorer card — live mode, no clusters', () => {
     await page.waitForLoadState('domcontentloaded')
 
     // Verify none of the well-known demo cluster names appear in RBAC context
-    await expect(page.getByText('prod-us-east')).not.toBeVisible({ timeout: 8000 }).catch((error) => { console.error(\'Promise catch:\', error) })
-    await expect(page.getByText('prod-eu-west')).not.toBeVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await expect(page.getByText('prod-us-east')).not.toBeVisible({ timeout: 8000 }).catch((error) => { console.error('Promise catch:', error) })
+    await expect(page.getByText('prod-eu-west')).not.toBeVisible({ timeout: 3000 }).catch((error) => { console.error('Promise catch:', error) })
   })
 })

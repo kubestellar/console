@@ -34,7 +34,7 @@ test.describe('Settings Configuration — "Change my preferences"', () => {
     await page.getByTestId('settings-page').waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     // Find theme toggle — could be a button, switch, or select
     const themeToggle = page.locator('button:has-text("Theme"), button:has-text("Dark"), button:has-text("Light"), [aria-label*="theme" i], button:has-text("theme")')
-    const hasToggle = await themeToggle.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasToggle = await themeToggle.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasToggle) { test.skip(true, 'Theme toggle not visible'); return }
     const htmlClassBefore = await page.locator('html').getAttribute('class') ?? ''
     await themeToggle.first().click()
@@ -57,7 +57,7 @@ test.describe('Settings Configuration — "Change my preferences"', () => {
     await page.getByTestId('settings-page').waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     // Look for AI-related settings
     const aiSection = page.locator('text=/AI|Intelligence|Smart|Agent/i')
-    const hasAI = await aiSection.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasAI = await aiSection.first().isVisible({ timeout: 3_000 }).catch((error) => { console.error('Promise error:', error); return false })
     test.info().annotations.push({
       type: 'ux-finding',
       description: JSON.stringify({
@@ -75,7 +75,7 @@ test.describe('Settings Configuration — "Change my preferences"', () => {
     await page.getByTestId('settings-page').waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     // Toggle something if available
     const toggle = page.locator('button[role="switch"], input[type="checkbox"]').first()
-    const hasToggle = await toggle.isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasToggle = await toggle.isVisible({ timeout: 3_000 }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasToggle) { test.skip(true, 'No toggle switch visible'); return }
     const checkedBefore = await toggle.getAttribute('aria-checked') ?? await toggle.isChecked().catch(() => null)
     await toggle.click()
@@ -99,7 +99,7 @@ test.describe('Settings Configuration — "Change my preferences"', () => {
     await setupDemoAndNavigate(page, '/settings')
     await page.getByTestId('settings-page').waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     const closeBtn = page.getByTestId('settings-close-desktop')
-    const hasClose = await closeBtn.isVisible({ timeout: 3_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasClose = await closeBtn.isVisible({ timeout: 3_000 }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasClose) { test.skip(true, 'Settings close button not visible'); return }
     await closeBtn.click()
     await page.waitForTimeout(500)

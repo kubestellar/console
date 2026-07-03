@@ -153,7 +153,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
   // which would trigger a fresh-session reset and overwrite the seeded state (#16079).
   await page.goto('/?mission-control=restore')
   await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_TIMEOUT_MS })
-  await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+  await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
   await expect(
     page.getByText(/Define Mission|Chart Course|Flight Plan|Define Your|Chart Your|Launch|Dry Run/i).first()
@@ -180,7 +180,7 @@ async function navigateTo(page: Page) {
   })
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_TIMEOUT_MS })
-  await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+  await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
   await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
 }
 

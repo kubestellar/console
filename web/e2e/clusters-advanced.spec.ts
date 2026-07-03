@@ -15,7 +15,7 @@ test.describe('Clusters: URL query parameters (#11774)', () => {
     
     // Find the Healthy cluster status link in the sidebar
     const healthyLink = page.locator('[href*="/clusters?status=healthy"], [href*="/clusters"][class*="healthy"]').first()
-    const hasLink = await healthyLink.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasLink = await healthyLink.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasLink) {
       test.skip(true, 'Healthy cluster status link not found in sidebar')
@@ -41,7 +41,7 @@ test.describe('Clusters: URL query parameters (#11774)', () => {
     await setupDemoAndNavigate(page, '/')
     
     const unhealthyLink = page.locator('[href*="/clusters?status=unhealthy"], [href*="/clusters"][class*="unhealthy"]').first()
-    const hasLink = await unhealthyLink.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasLink = await unhealthyLink.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasLink) {
       test.skip(true, 'Unhealthy cluster status link not found in sidebar')
@@ -67,7 +67,7 @@ test.describe('Clusters: Offline/Unreachable filter tab (#11775)', () => {
     
     // Look for Offline or Unreachable filter tab
     const offlineTab = page.getByRole('button', { name: /Offline|Unreachable/i })
-    const hasTab = await offlineTab.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasTab = await offlineTab.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasTab) {
       test.skip(true, 'Offline filter tab not visible')
@@ -81,7 +81,7 @@ test.describe('Clusters: Offline/Unreachable filter tab (#11775)', () => {
     await setupDemoAndNavigate(page, '/clusters')
     
     const offlineTab = page.getByRole('button', { name: /Offline|Unreachable/i }).first()
-    const hasTab = await offlineTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasTab = await offlineTab.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasTab) {
       test.skip(true, 'Offline filter tab not visible')
@@ -111,7 +111,7 @@ test.describe('Clusters: Sort, asc/desc toggle, and layout modes (#11776)', () =
     
     // Look for sort controls (select, dropdown, or buttons)
     const sortControl = page.locator('[data-testid*="sort"], select[aria-label*="sort"], button[aria-label*="sort"]').first()
-    const hasSortControl = await sortControl.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasSortControl = await sortControl.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasSortControl) {
       test.skip(true, 'Sort control not visible')
@@ -145,7 +145,7 @@ test.describe('Clusters: Sort, asc/desc toggle, and layout modes (#11776)', () =
     
     // Look for asc/desc toggle (often an arrow icon button)
     const toggleButton = page.locator('button[aria-label*="direction"], button[aria-label*="ascending"], button[aria-label*="descending"], [data-testid*="sort-direction"]').first()
-    const hasToggle = await toggleButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasToggle = await toggleButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasToggle) {
       test.skip(true, 'Sort direction toggle not visible')
@@ -192,7 +192,7 @@ test.describe('Clusters: Collapsible Cluster Info Cards section (#11777)', () =>
     
     // Look for the Cluster Info Cards section (typically above the cluster grid)
     const infoSection = page.locator('[data-testid*="cluster-info"], [data-testid*="cluster-cards"], [class*="cluster-info"]').first()
-    const hasSection = await infoSection.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasSection = await infoSection.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasSection) {
       test.skip(true, 'Cluster Info Cards section not visible')
@@ -207,7 +207,7 @@ test.describe('Clusters: Collapsible Cluster Info Cards section (#11777)', () =>
     
     // Look for collapse button (chevron icon)
     const collapseButton = page.locator('button[aria-label*="collapse"], button[aria-label*="hide"], [data-testid*="collapse-cards"]').first()
-    const hasButton = await collapseButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasButton = await collapseButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasButton) {
       test.skip(true, 'Collapse button not visible')
@@ -216,7 +216,7 @@ test.describe('Clusters: Collapsible Cluster Info Cards section (#11777)', () =>
     
     // Get info section before collapse — it should be visible initially
     const infoSection = page.locator('[data-testid*="cluster-info"], [data-testid*="cluster-cards"]').first()
-    const initiallyVisible = await infoSection.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const initiallyVisible = await infoSection.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     
     if (!initiallyVisible) {
       // If the section is not initially visible, the collapse feature may not
@@ -238,7 +238,7 @@ test.describe('Clusters: Collapsible Cluster Info Cards section (#11777)', () =>
     await setupDemoAndNavigate(page, '/clusters')
     
     const collapseButton = page.locator('button[aria-label*="collapse"], button[aria-label*="hide"], [data-testid*="collapse-cards"]').first()
-    const hasButton = await collapseButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasButton = await collapseButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasButton) {
       test.skip(true, 'Collapse button not visible')
@@ -252,11 +252,11 @@ test.describe('Clusters: Collapsible Cluster Info Cards section (#11777)', () =>
     // Navigate away and back
     // IMPORTANT: Wait for first navigation to stabilize before navigating again (#12095)
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch((error) => { console.error('Promise catch:', error) })
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     
     await page.goto('/clusters')
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch((error) => { console.error('Promise catch:', error) })
     await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     
     // Verify state persisted (collapsed or expanded - either is valid, key is it persisted)
@@ -295,7 +295,7 @@ test.describe('Clusters: Stale kubeconfig banner and Prune flow (#11778)', () =>
     
     // Look for the stale kubeconfig warning banner by its content instead of theme classes.
     const banner = page.getByText(/kubeconfig context.*never connected|never connected.*deleted clusters/i)
-    const hasBanner = await banner.first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasBanner = await banner.first().isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasBanner) {
       test.skip(true, 'Stale kubeconfig banner not visible')
@@ -331,7 +331,7 @@ test.describe('Clusters: Stale kubeconfig banner and Prune flow (#11778)', () =>
     
     // Look for Prune Kubeconfig button
     const pruneButton = page.getByRole('button', { name: /prune|clean|remove.*kubeconfig/i })
-    const hasButton = await pruneButton.first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasButton = await pruneButton.first().isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasButton) {
       test.skip(true, 'Prune Kubeconfig button not visible')
@@ -365,7 +365,7 @@ test.describe('Clusters: Stale kubeconfig banner and Prune flow (#11778)', () =>
     await page.waitForLoadState('domcontentloaded')
     
     const pruneButton = page.getByRole('button', { name: /prune|clean|remove.*kubeconfig/i }).first()
-    const hasButton = await pruneButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasButton = await pruneButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasButton) {
       test.skip(true, 'Prune Kubeconfig button not visible')
@@ -377,7 +377,7 @@ test.describe('Clusters: Stale kubeconfig banner and Prune flow (#11778)', () =>
     
     // Look for API key modal or mission prompt
     const modal = page.locator('[role="dialog"], [data-testid*="modal"], [data-testid*="api-key"]')
-    const hasModal = await modal.first().isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasModal = await modal.first().isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })
     
     if (hasModal) {
       await expect(modal.first()).toBeVisible()

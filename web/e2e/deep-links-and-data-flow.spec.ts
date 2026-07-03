@@ -175,7 +175,7 @@ test.describe('Data Flow and State', () => {
     let cardsWithContent = 0
     for (let i = 0; i < cardCount; i++) {
       const card = cards.nth(i)
-      const isVisible = await card.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const isVisible = await card.isVisible().catch((error) => { console.error('Promise error:', error); return false })
       if (!isVisible) continue
 
       const text = await card.textContent()
@@ -250,7 +250,7 @@ test.describe('Data Flow and State', () => {
 test.describe('Auth Flow', () => {
   test('unauthenticated user redirected to /login', async ({ page }) => {
     // Probe backend health — auth redirect requires the backend
-    const backendUp = await page.request.get('/health').then((r) => r.ok()).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const backendUp = await page.request.get('/health').then((r) => r.ok()).catch((error) => { console.error('Promise error:', error); return false })
     test.skip(!backendUp, 'Backend not running — auth redirect tests require OAuth mode')
 
     // Clear all storage to ensure no auth state
@@ -292,7 +292,7 @@ test.describe('Auth Flow', () => {
 
   test('clearing token and navigating triggers redirect to login', async ({ page }) => {
     // Probe backend health — auth redirect requires the backend
-    const backendUp = await page.request.get('/health').then((r) => r.ok()).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const backendUp = await page.request.get('/health').then((r) => r.ok()).catch((error) => { console.error('Promise error:', error); return false })
     test.skip(!backendUp, 'Backend not running — auth redirect tests require OAuth mode')
 
     // First, set up authenticated state

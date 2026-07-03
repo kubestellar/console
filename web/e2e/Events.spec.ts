@@ -78,7 +78,7 @@ test.describe('Events Page', () => {
       // Wait for dashboard header (Events uses DashboardPage)
       const header = page.getByTestId('dashboard-header')
         .or(page.getByTestId('dashboard-page'))
-      const headerVisible = await header.first().isVisible({ timeout: 10000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      const headerVisible = await header.first().isVisible({ timeout: 10000 }).catch((error) => { console.error('Promise error:', error); return false })
       if (!headerVisible) {
         test.skip()
         return
@@ -170,7 +170,7 @@ test.describe('Events Page', () => {
     test('page has heading', async ({ page }) => {
       const header = page.getByTestId('dashboard-header')
         .or(page.getByTestId('dashboard-page'))
-      const headerVisible = await header.first().isVisible({ timeout: 10000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      const headerVisible = await header.first().isVisible({ timeout: 10000 }).catch((error) => { console.error('Promise error:', error); return false })
       if (!headerVisible) {
         test.skip()
         return

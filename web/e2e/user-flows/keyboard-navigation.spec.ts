@@ -78,7 +78,7 @@ test.describe('Keyboard Navigation', () => {
     }
 
     await page.keyboard.press('Enter')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
     // URL may or may not change depending on which link was focused,
     // but the page should not crash
@@ -105,7 +105,7 @@ test.describe('Keyboard Navigation', () => {
       .or(page.getByRole('button', { name: /settings/i }))
       .or(page.locator('[aria-label*="settings" i]'))
 
-    const hasSettings = await settingsBtn.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasSettings = await settingsBtn.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasSettings) {
       test.skip()
       return
@@ -113,7 +113,7 @@ test.describe('Keyboard Navigation', () => {
 
     await settingsBtn.first().click()
     const dialog = page.getByRole('dialog')
-    const hasDialog = await dialog.isVisible({ timeout: MODAL_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasDialog = await dialog.isVisible({ timeout: MODAL_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasDialog) {
       test.skip()
       return

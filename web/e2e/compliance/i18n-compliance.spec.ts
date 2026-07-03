@@ -119,7 +119,7 @@ function safeGetByPath(obj: Record<string, unknown>, dotPath: string): unknown {
  */
 function escapeMdCell(text: string): string {
   return text
-    .replace(/\\/g, '\\\\')
+    .replace(/\\/g, '\\\')
     .replace(/\|/g, '\\|')
     .replace(/`/g, '\\`')
     .replace(/</g, '&lt;')

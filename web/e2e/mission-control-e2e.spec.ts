@@ -435,11 +435,11 @@ async function openMissionControl(page: Page) {
 
   if (toggled) {
     // Wait for sidebar animation to complete
-    await expect(page.locator('[data-testid="mission-sidebar-toggle"], [data-tour="ai-missions-toggle"]').first()).toBeVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await expect(page.locator('[data-testid="mission-sidebar-toggle"], [data-tour="ai-missions-toggle"]').first()).toBeVisible({ timeout: 3000 }).catch((error) => { console.error('Promise catch:', error) })
   }
 
   const mcButton = page.getByText('Mission Control', { exact: false }).first()
-  if (await mcButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+  if (await mcButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
     await mcButton.click()
   } else {
     await page.goto('/?mission-control=open')
@@ -513,12 +513,12 @@ async function expandSampleRunbooks(page: Page) {
   const argocdFileText = getMissionTree(page).getByText(/argocd-application/i).first()
   const argocdFileLink = getMissionTree(page).getByRole('link', { name: /argocd-application/i })
   
-  let fileVisibleAfterFirstClick = await argocdFileButton.isVisible({ timeout: 10_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+  let fileVisibleAfterFirstClick = await argocdFileButton.isVisible({ timeout: 10_000 }).catch((error) => { console.error('Promise error:', error); return false })
   if (!fileVisibleAfterFirstClick) {
-    fileVisibleAfterFirstClick = await argocdFileText.isVisible({ timeout: 2_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    fileVisibleAfterFirstClick = await argocdFileText.isVisible({ timeout: 2_000 }).catch((error) => { console.error('Promise error:', error); return false })
   }
   if (!fileVisibleAfterFirstClick) {
-    fileVisibleAfterFirstClick = await argocdFileLink.isVisible({ timeout: 2_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    fileVisibleAfterFirstClick = await argocdFileLink.isVisible({ timeout: 2_000 }).catch((error) => { console.error('Promise error:', error); return false })
   }
 
   // If files aren't visible yet, wait a bit for lazy loading then click again
@@ -527,12 +527,12 @@ async function expandSampleRunbooks(page: Page) {
     await repoNode.click()
     
     // Try all selectors again with longer timeout
-    let fileFound = await argocdFileButton.isVisible({ timeout: 15_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    let fileFound = await argocdFileButton.isVisible({ timeout: 15_000 }).catch((error) => { console.error('Promise error:', error); return false })
     if (!fileFound) {
-      fileFound = await argocdFileText.isVisible({ timeout: 2_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      fileFound = await argocdFileText.isVisible({ timeout: 2_000 }).catch((error) => { console.error('Promise error:', error); return false })
     }
     if (!fileFound) {
-      fileFound = await argocdFileLink.isVisible({ timeout: 2_000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      fileFound = await argocdFileLink.isVisible({ timeout: 2_000 }).catch((error) => { console.error('Promise error:', error); return false })
     }
     
     if (!fileFound) {
@@ -593,7 +593,7 @@ test.describe('Mission Control E2E', () => {
       const descInput = page.getByPlaceholder(/describe|goal|solution/i).first()
       await descInput.fill('Set up a secure observability stack with monitoring, tracing, and log aggregation across all my clusters')
       const askAI = page.getByRole('button', { name: /ask ai|suggest|plan/i }).first()
-      if (await askAI.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) await askAI.click()
+      if (await askAI.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) await askAI.click()
     }
 
     // Verify projects appear
@@ -615,7 +615,7 @@ test.describe('Mission Control E2E', () => {
     }
 
     const nextButton = page.getByRole('button', { name: /next|continue|assign/i }).first()
-    if (await nextButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) await nextButton.click()
+    if (await nextButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) await nextButton.click()
 
     // Verify cluster assignments
     await expect(page.getByText(/prod-cluster|staging-cluster/i).first()).toBeVisible({ timeout: AI_RESPONSE_TIMEOUT_MS })
@@ -632,7 +632,7 @@ test.describe('Mission Control E2E', () => {
     }
 
     const blueprintButton = page.getByRole('button', { name: /next|blueprint|flight/i }).first()
-    if (await blueprintButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) await blueprintButton.click()
+    if (await blueprintButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) await blueprintButton.click()
 
     // Verify SVG blueprint renders
     const svg = page.locator('svg').first()
@@ -748,7 +748,7 @@ test.describe('Mission Control E2E', () => {
 
     // Go back
     const backButton = page.getByRole('button', { name: /back to listing/i }).first()
-    if (await backButton.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+    if (await backButton.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) {
       await backButton.click()
       await expect(argocdFile).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
     }
@@ -825,7 +825,7 @@ test.describe('Mission Control E2E', () => {
     await expandSampleRunbooks(page)
 
     const refreshButton = getMissionTree(page).getByTitle('Refresh contents').first()
-    if (await refreshButton.isVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+    if (await refreshButton.isVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })) {
       await refreshButton.click()
       await expect(getMissionTreeButton(page, /argocd-application/i)).toBeVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS })
       await expect(getMissionTreeButton(page, /fluxcd-helmrele/i)).toBeVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS })

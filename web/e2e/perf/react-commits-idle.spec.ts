@@ -99,7 +99,7 @@ test('react idle commit rate stays under budget', async ({ page }) => {
         window.localStorage.setItem(tokenKey, tokenValue)
         window.localStorage.setItem('kc-agent-setup-dismissed', 'true')
       } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
     },
     {

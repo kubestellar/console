@@ -128,7 +128,7 @@ test.describe('Navbar responsive layout', () => {
     
     // Wait for network idle to ensure all initial requests settle before
     // interacting. This prevents DOM detach during hook re-renders.
-    await page.waitForLoadState('networkidle').catch((error) => { console.error(\'Promise catch:\', error) })
+    await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
     
     // Use native el.click() for maximum cross-browser compatibility —
     // Playwright's synthetic clicks can miss React event handlers on

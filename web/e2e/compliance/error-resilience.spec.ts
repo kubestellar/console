@@ -90,7 +90,7 @@ function loadAllResults(): ResilienceResult[] {
       const raw = fs.readFileSync(path.join(RESULTS_DIR, f), 'utf8')
       results.push(JSON.parse(raw) as ResilienceResult)
     } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
   }
   return results
@@ -100,7 +100,7 @@ function clearResults() {
   if (!fs.existsSync(RESULTS_DIR)) return
   for (const f of fs.readdirSync(RESULTS_DIR)) {
     if (f.endsWith('.json')) {
-      try { fs.unlinkSync(path.join(RESULTS_DIR, f)) } catch (error) { console.error(\'Operation failed:\', error) }
+      try { fs.unlinkSync(path.join(RESULTS_DIR, f)) } catch (error) { console.error('Operation failed:', error) }
     }
   }
 }
@@ -113,7 +113,7 @@ async function navigateAndSettle(page: Page, route: string) {
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
   try {
     await page.waitForSelector('[data-testid="sidebar"], main, [data-card-type]', { timeout: 8_000 })
-  } catch (error) { console.error(\'Operation failed:\', error) }
+  } catch (error) { console.error('Operation failed:', error) }
   await page.waitForLoadState('networkidle', { timeout: SETTLE_MS }).catch(() => { /* settle timeout is best-effort */ })
 }
 
@@ -456,9 +456,9 @@ test.describe('Error Resilience', () => {
         localStorage.removeItem('kc-has-session')
         localStorage.removeItem('kc-user-cache-validated')
         localStorage.removeItem('github_token')
-        try { sessionStorage.removeItem('token') } catch (error) { console.error(\'Operation failed:\', error) }
-        try { sessionStorage.removeItem('kc-agent-token') } catch (error) { console.error(\'Operation failed:\', error) }
-        try { sessionStorage.removeItem('kc-user-cache') } catch (error) { console.error(\'Operation failed:\', error) }
+        try { sessionStorage.removeItem('token') } catch (error) { console.error('Operation failed:', error) }
+        try { sessionStorage.removeItem('kc-agent-token') } catch (error) { console.error('Operation failed:', error) }
+        try { sessionStorage.removeItem('kc-user-cache') } catch (error) { console.error('Operation failed:', error) }
       })
 
       // Mock /api/me and all SSE/streaming endpoints to return 401 so cached

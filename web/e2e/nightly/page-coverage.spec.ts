@@ -205,14 +205,14 @@ test.describe('Nightly Page Coverage — Untested Feature Pages', () => {
       try {
         await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS })
       } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
 
       // Wait for page content to settle — look for card elements to appear
       try {
         await page.waitForSelector('[data-card-id]', { timeout: PAGE_SETTLE_MS })
       } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
 
       const renderTimeMs = Date.now() - startTime

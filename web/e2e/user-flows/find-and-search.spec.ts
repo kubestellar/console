@@ -81,7 +81,7 @@ test.describe('Find and Search — "I need to find something"', () => {
     await page.waitForTimeout(500)
     const urlAfter = page.url()
     const searchResults = page.getByTestId('global-search-results')
-    const stillVisible = await searchResults.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const stillVisible = await searchResults.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     // Either navigated or results closed
     expect(urlAfter !== urlBefore || !stillVisible).toBeTruthy()
   })
@@ -127,7 +127,7 @@ test.describe('Find and Search — "I need to find something"', () => {
     // On mobile, the search input may be hidden (behind hamburger menu or
     // collapsed navbar). If not visible, the mobile layout correctly hides
     // the desktop search — skip the overflow check.
-    const inputVisible = await searchInput.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const inputVisible = await searchInput.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (!inputVisible) {
       test.info().annotations.push({
         type: 'ux-finding',
@@ -144,7 +144,7 @@ test.describe('Find and Search — "I need to find something"', () => {
     await searchInput.click()
     await searchInput.fill('cluster')
     const results = page.getByTestId('global-search-results')
-    const isVisible = await results.isVisible({ timeout: SEARCH_RESULTS_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const isVisible = await results.isVisible({ timeout: SEARCH_RESULTS_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (isVisible) {
       await assertNoLayoutOverflow(page)
     }
