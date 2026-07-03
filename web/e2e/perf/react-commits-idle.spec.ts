@@ -98,9 +98,10 @@ test('react idle commit rate stays under budget', async ({ page }) => {
         window.localStorage.setItem(demoKey, demoValue)
         window.localStorage.setItem(tokenKey, tokenValue)
         window.localStorage.setItem('kc-agent-setup-dismissed', 'true')
-      } catch (error) {
-      console.error(\'Operation failed:\', error)
-    }
+      } catch (error) { console.error('Error:', error)
+        // Ignore: happens when the test storage partition is not yet
+        // available. The next page load will still see the attempt.
+       }
     },
     {
       demoKey: DEMO_MODE_STORAGE_KEY,
