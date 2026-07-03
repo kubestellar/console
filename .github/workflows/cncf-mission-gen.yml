@@ -33,7 +33,10 @@ on:
         required: false
         default: '10'
 
-permissions: read-all  # default read-only; writes scoped to job below
+permissions:
+  contents: write
+  pull-requests: read
+  issues: read
 
 jobs:
   # Compute batch matrix from total project count
