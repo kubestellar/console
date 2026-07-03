@@ -5,7 +5,6 @@ import {
   weeksSinceProjectStart,
   daysSinceProjectStart,
   isAIContribution,
-  AI_AUTHORS,
   AI_LABEL,
   MAX_WEEKS_OF_HISTORY,
   PROJECT_START_DATE,
