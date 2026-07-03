@@ -590,7 +590,7 @@ export function SaveResolutionDialog({
               disabled={isBusy}
               className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 rounded transition-colors disabled:opacity-50"
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className={cn('w-3 h-3', isBusy && 'animate-spin')} />
               {t('common.retry')}
             </button>
           </div>

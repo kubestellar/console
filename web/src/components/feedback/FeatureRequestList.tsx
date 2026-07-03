@@ -11,6 +11,7 @@ import {
   Clock,
   RefreshCw,
 } from 'lucide-react'
+import { cn } from '../../lib/cn'
 import {
   useFeatureRequests,
   STATUS_LABELS,
@@ -216,7 +217,7 @@ export function FeatureRequestList() {
           className="p-1 rounded hover:bg-secondary/50 text-muted-foreground"
           title={t('common.refresh')}
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
         </button>
       </div>
 
