@@ -10,9 +10,7 @@ on:
         required: false
         default: 'false'
 
-permissions:
-  actions: read
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   detect-stuck:

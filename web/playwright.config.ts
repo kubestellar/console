@@ -28,9 +28,8 @@ export default defineConfig({
   // with the file itself. No project declared `dependencies: ['setup']`, so
   // the file was dead code. All tests handle auth mocking inline via
   // `helpers/setup.ts::setupDemoMode`.
-  // Visual regression tests require Storybook to be built and served
-  // separately. They have their own configs (visual.config.ts,
-  // app-visual.config.ts) and must not run in the main chromium shards.
+  // Visual regression and live-canary suites run separately. They have their
+  // own configs/setup and must not run in the main chromium shards.
   //
   // Mission tests (deeplink, explorer-import) use Playwright's `page.request`
   // (Node.js-level HTTP) to hit real backend endpoints — they cannot run when
@@ -39,6 +38,7 @@ export default defineConfig({
   // (see webServer config below), so mission tests can run locally.
   testIgnore: [
     '**/visual/**',
+    '**/visual-login/**',
     ...(env.PLAYWRIGHT_BASE_URL
       ? [
           // Nightly-only tests — have their own config (nightly.config.ts)

@@ -6,9 +6,7 @@ on:
   issues:
     types: [labeled, unlabeled]
 
-permissions:
-  issues: read
-  pull-requests: read
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   check-hold-issues:

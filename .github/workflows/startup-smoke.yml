@@ -28,8 +28,7 @@ on:
       - '.github/workflows/startup-smoke.yml'
   workflow_dispatch: {}
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: startup-smoke-${{ github.ref }}

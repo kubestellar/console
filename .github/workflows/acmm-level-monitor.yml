@@ -11,8 +11,7 @@ on:
         required: false
         default: '5'
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   check-acmm-level:

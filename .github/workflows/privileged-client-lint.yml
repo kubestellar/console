@@ -41,8 +41,7 @@ on:
       - '.github/allowlist-privileged-client-callers.txt'
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   verify:
