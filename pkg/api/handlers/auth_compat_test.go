@@ -74,7 +74,7 @@ func TestRequireAdmin(t *testing.T) {
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				return uuid.New()
 			},
-			wantStatus: fiber.StatusUnauthorized,
+			wantStatus: fiber.StatusForbidden,
 		},
 	}
 
@@ -241,7 +241,7 @@ func TestRequireViewerOrAbove(t *testing.T) {
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
 				return uuid.New()
 			},
-			wantStatus: fiber.StatusUnauthorized,
+			wantStatus: fiber.StatusForbidden,
 		},
 	}
 

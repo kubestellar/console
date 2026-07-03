@@ -4,7 +4,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-permissions: read-all
+permissions:
+  statuses: write
+  pull-requests: read
 
 jobs:
   copilot-dco:

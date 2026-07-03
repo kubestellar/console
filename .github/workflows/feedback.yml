@@ -4,7 +4,8 @@ on:
   pull_request:
     types: [closed]
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  pull-requests: write
 jobs:
   feedback:
     permissions:

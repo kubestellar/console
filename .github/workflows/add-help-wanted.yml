@@ -4,7 +4,8 @@ on:
   issues:
     types: [labeled]
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  issues: write
 jobs:
   label:
     permissions:
