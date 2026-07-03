@@ -112,6 +112,9 @@ func requireAdmin(c *fiber.Ctx, s store.Store) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
 	}
+	if user == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Authentication required")
+	}
 	return requireAdminCheck(user)
 }
 
@@ -178,7 +181,7 @@ func RequireViewerOrAbove(c *fiber.Ctx, s store.Store) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify user role")
 	}
 	if user == nil {
-		return fiber.NewError(fiber.StatusForbidden, "User not found")
+		return fiber.NewError(fiber.StatusUnauthorized, "Authentication required")
 	}
 	switch user.Role {
 	case models.UserRoleAdmin, models.UserRoleEditor, models.UserRoleViewer:
