@@ -485,9 +485,7 @@ export function Login() {
                                 icon={copiedStep === idx ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
                                 title="Copy"
                                 className="shrink-0 self-start p-1.5"
-                              >
-                                )}
-                              </button>
+                              />
                             </div>
                           </div>
                         ) : (
