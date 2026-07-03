@@ -181,7 +181,7 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
 
   for (const route of ROUTES_TO_SCAN) {
     await page.goto(route, { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS })
-      .catch(() => page.waitForLoadState('domcontentloaded').catch((error) => { console.error(\'Promise catch:\', error) }))
+      .catch(() => page.waitForLoadState('domcontentloaded').catch((error) => { console.error('Promise catch:', error) }))
 
     // Firefox may destroy the execution context during navigation between
     // routes. Wrap every page.evaluate() in a try/catch so a single
@@ -244,7 +244,7 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   }
 
   // 2d: No inline scripts (global check on /)
-  await page.goto('/', { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+  await page.goto('/', { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
   try {
     const inlineScripts = await page.evaluate(() => {
       const scripts = document.querySelectorAll('script:not([src])')
@@ -283,7 +283,7 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   for (const payload of MARKDOWN_XSS_PAYLOADS) {
     try {
       // Ensure the page context is usable before each evaluate (#10958)
-      await page.waitForLoadState('domcontentloaded').catch((error) => { console.error(\'Promise catch:\', error) })
+      await page.waitForLoadState('domcontentloaded').catch((error) => { console.error('Promise catch:', error) })
 
       const result = await page.evaluate((md) => {
         // Create a temporary div and check what ReactMarkdown would render
@@ -312,7 +312,7 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
         'warn', `Skipped — execution context destroyed (navigation): ${String(e).slice(0, 120)}`, 'info')
 
       // Re-navigate so the next iteration has a valid execution context (#10958)
-      await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+      await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
     }
   }
 
@@ -335,7 +335,7 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   )
 
   // After loading any page, check the DOM for escaped XSS
-  await page.goto('/', { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+  await page.goto('/', { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
   // Firefox may still have a destroyed context after the XSS loop navigations (#10958)
   const postLoadJsLinks = await page.evaluate(() =>
@@ -448,7 +448,7 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   })
 
   // Reload to capture WebSocket connections
-  await page.goto('/', { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+  await page.goto('/', { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
   const ALLOWED_WS_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
   const externalWS = wsConnections.filter(url => {
@@ -512,7 +512,7 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   // navigation. Catch and re-navigate to settle on the final URL. (#10828)
   const response = await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
     .catch(async () => {
-      await page.waitForLoadState('domcontentloaded').catch((error) => { console.error(\'Promise catch:\', error) })
+      await page.waitForLoadState('domcontentloaded').catch((error) => { console.error('Promise catch:', error) })
       return null
     })
   const csp = response?.headers()['content-security-policy'] || ''
@@ -561,17 +561,17 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   for (const char of SHELL_METACHARACTERS) {
     const encoded = encodeURIComponent(char)
     const testUrl = `/?filter=${encoded}test`
-    await page.goto(testUrl, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+    await page.goto(testUrl, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
     // Page should still be functional (not crashed or error state).
     // Firefox may destroy the execution context during rapid navigations —
     // retry once after re-navigating before treating as a real failure. (#10994)
-    let isAlive = await page.evaluate(() => document.body !== null).catch((error) => { console.error(\'Promise error:\', error); return false })
+    let isAlive = await page.evaluate(() => document.body !== null).catch((error) => { console.error('Promise error:', error); return false })
     if (!isAlive) {
       // Re-navigate to stabilise the execution context and retry
-      await page.goto(testUrl, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
-      await page.waitForLoadState('domcontentloaded').catch((error) => { console.error(\'Promise catch:\', error) })
-      isAlive = await page.evaluate(() => document.body !== null).catch((error) => { console.error(\'Promise error:\', error); return false })
+      await page.goto(testUrl, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
+      await page.waitForLoadState('domcontentloaded').catch((error) => { console.error('Promise catch:', error) })
+      isAlive = await page.evaluate(() => document.body !== null).catch((error) => { console.error('Promise error:', error); return false })
     }
     if (isAlive) {
       addCheck('Command Injection', `Shell metachar "${char}" in URL param`, 'pass',
@@ -585,14 +585,14 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   }
 
   // Path traversal
-  await page.goto('/../../../etc/passwd', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+  await page.goto('/../../../etc/passwd', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
   const noTraversal = await page.evaluate(() => !document.body.textContent?.includes('root:')).catch(() => true)
   addCheck('Command Injection', 'Path traversal blocked', noTraversal ? 'pass' : 'fail',
     noTraversal ? 'No file contents leaked' : 'Possible path traversal!', 'critical')
 
   // Null byte injection
-  await page.goto('/%00', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
-  const nullByteOk = await page.evaluate(() => document.body !== null).catch((error) => { console.error(\'Promise error:\', error); return false })
+  await page.goto('/%00', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
+  const nullByteOk = await page.evaluate(() => document.body !== null).catch((error) => { console.error('Promise error:', error); return false })
   addCheck('Command Injection', 'Null byte injection handled', nullByteOk ? 'pass' : 'warn',
     nullByteOk ? 'Page handles null bytes gracefully' : 'Page crashed on null byte', 'medium')
 

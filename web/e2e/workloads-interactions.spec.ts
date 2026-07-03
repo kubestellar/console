@@ -129,7 +129,7 @@ test.describe.serial('Workloads interactions (/workloads)', () => {
       const buttonVisible = await deployBtn
         .waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
         .then(() => true)
-        .catch((error) => { console.error(\'Promise error:\', error); return false })
+        .catch((error) => { console.error('Promise error:', error); return false })
 
       test.skip(!buttonVisible, 'Empty state deploy button is not shown when workloads exist')
 

@@ -114,7 +114,7 @@ test.describe('Mission Sharing', () => {
       // Look for a share button on the dashboard or mission card
       const shareButton = page.locator('button:has-text("Share"), button[aria-label*="share" i], button[aria-label*="Share" i], [data-testid*="share"]').first()
 
-      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await shareButton.click()
         // Dialog should appear
         const dialog = page.locator('[role="dialog"], [data-testid*="share-dialog"], [data-testid*="share"]')
@@ -135,7 +135,7 @@ test.describe('Mission Sharing', () => {
       // Attempt to open share dialog
       const shareButton = page.locator('button:has-text("Share"), button[aria-label*="share" i]').first()
 
-      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await shareButton.click()
 
         // Check for content selection checkboxes (messages, context, resolution)
@@ -155,12 +155,12 @@ test.describe('Mission Sharing', () => {
 
       const shareButton = page.locator('button:has-text("Share"), button[aria-label*="share" i]').first()
 
-      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await shareButton.click()
 
         // Look for format toggle (Markdown / JSON / etc)
         const formatToggle = page.locator('button:has-text("Markdown"), button:has-text("JSON"), [data-testid*="format"]')
-        if (await formatToggle.first().isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+        if (await formatToggle.first().isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) {
           await formatToggle.first().click()
           // Toggle should remain interactive
           await expect(formatToggle.first()).toBeVisible()
@@ -179,7 +179,7 @@ test.describe('Mission Sharing', () => {
 
       const shareButton = page.locator('button:has-text("Share"), button[aria-label*="share" i]').first()
 
-      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await shareButton.click()
 
         // Look for channel options (File, Clipboard, GitHub, Slack, etc.)
@@ -187,7 +187,7 @@ test.describe('Mission Sharing', () => {
         for (const label of channelLabels) {
           const channel = page.locator(`text=${label}`).first()
           // At least some channels should be present
-          const visible = await channel.isVisible({ timeout: 2000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+          const visible = await channel.isVisible({ timeout: 2000 }).catch((error) => { console.error('Promise error:', error); return false })
           if (visible) {
             await expect(channel).toBeVisible()
           }
@@ -207,14 +207,14 @@ test.describe('Mission Sharing', () => {
 
       const shareButton = page.locator('button:has-text("Share"), button[aria-label*="share" i]').first()
 
-      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await shareButton.click()
 
         const githubChannel = page.locator('button:has-text("GitHub"), [data-testid*="github-channel"]')
-        if (await githubChannel.first().isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+        if (await githubChannel.first().isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) {
           // GitHub channel should be disabled or show auth prompt
-          const isDisabled = await githubChannel.first().isDisabled().catch((error) => { console.error(\'Promise error:\', error); return false })
-          const hasAuthLabel = await page.locator('text=/sign in|authenticate|connect/i').isVisible({ timeout: 2000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+          const isDisabled = await githubChannel.first().isDisabled().catch((error) => { console.error('Promise error:', error); return false })
+          const hasAuthLabel = await page.locator('text=/sign in|authenticate|connect/i').isVisible({ timeout: 2000 }).catch((error) => { console.error('Promise error:', error); return false })
           expect(isDisabled || hasAuthLabel).toBeTruthy()
         }
       } else {
@@ -231,12 +231,12 @@ test.describe('Mission Sharing', () => {
 
       const shareButton = page.locator('button:has-text("Share"), button[aria-label*="share" i]').first()
 
-      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await shareButton.click()
 
         const fileButton = page.locator('button:has-text("Save to File"), button:has-text("Download"), button:has-text("File"), [data-testid*="download"]').first()
 
-        if (await fileButton.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+        if (await fileButton.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) {
           const downloadPromise = page.waitForEvent('download', { timeout: 5000 }).catch(() => null)
           await fileButton.click()
           const download = await downloadPromise
@@ -262,12 +262,12 @@ test.describe('Mission Sharing', () => {
 
       const shareButton = page.locator('button:has-text("Share"), button[aria-label*="share" i]').first()
 
-      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await shareButton.click()
 
         const copyButton = page.locator('button:has-text("Copy"), button:has-text("Clipboard"), [data-testid*="clipboard"], [data-testid*="copy"]').first()
 
-        if (await copyButton.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+        if (await copyButton.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) {
           await copyButton.click()
 
           // Look for success toast/notification
@@ -290,14 +290,14 @@ test.describe('Mission Sharing', () => {
 
       const shareButton = page.locator('button:has-text("Share"), button[aria-label*="share" i]').first()
 
-      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await shareButton.click()
 
         // Look for scan progress overlay
         const scanOverlay = page.locator('text=/scanning/i, text=/validating/i, [data-testid*="scan-progress"]')
 
         // Scan may appear briefly during share process
-        const scanVisible = await scanOverlay.first().isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+        const scanVisible = await scanOverlay.first().isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
         // Scan may have already completed; either state is acceptable
         expect.soft(scanVisible).toBeTruthy()
       } else {
@@ -312,12 +312,12 @@ test.describe('Mission Sharing', () => {
 
       const shareButton = page.locator('button:has-text("Share"), button[aria-label*="share" i]').first()
 
-      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await shareButton.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await shareButton.click()
 
         // After scan completes, look for green success indicator
         const passedIndicator = page.locator('text=/scan passed/i, text=/clean/i, .text-green-400, [data-testid*="scan-passed"]')
-        const passed = await passedIndicator.first().isVisible({ timeout: 8000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+        const passed = await passedIndicator.first().isVisible({ timeout: 8000 }).catch((error) => { console.error('Promise error:', error); return false })
 
         // The scan should complete successfully for clean mission data
         if (passed) {

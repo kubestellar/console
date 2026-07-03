@@ -238,8 +238,8 @@ test.describe('Dashboard Error State (#11796)', () => {
     const demoBadge = page.locator('text=Demo').first()
     const errorIndicator = page.locator('[data-testid*="error"], [data-testid*="retry"], text=/error|retry|failed/i').first()
 
-    const hasDemoBadge = await demoBadge.isVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
-    const hasErrorIndicator = await errorIndicator.isVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasDemoBadge = await demoBadge.isVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
+    const hasErrorIndicator = await errorIndicator.isVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
 
     // At least one signal of graceful error handling must be present
     expect(

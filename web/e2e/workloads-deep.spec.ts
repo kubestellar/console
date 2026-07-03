@@ -89,7 +89,7 @@ test.describe.serial('Workloads Deep Tests (/workloads)', () => {
 
     test('shows stats overview', async ({ page }) => {
       const statsArea = getStatsLabel(page, STAT_NAMESPACES_SUBLABEL)
-      const isVisible = await statsArea.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const isVisible = await statsArea.isVisible().catch((error) => { console.error('Promise error:', error); return false })
       if (isVisible) {
         await expect(statsArea).toBeVisible()
       }
@@ -113,7 +113,7 @@ test.describe.serial('Workloads Deep Tests (/workloads)', () => {
   test.describe('Content', () => {
     test('renders workload rows or empty state', async ({ page }) => {
       const hasRows = (await page.getByTestId('workload-row').count()) > 0
-      const hasEmpty = await page.getByTestId('workloads-empty-state').isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const hasEmpty = await page.getByTestId('workloads-empty-state').isVisible().catch((error) => { console.error('Promise error:', error); return false })
       expect(hasRows || hasEmpty).toBe(true)
     })
 
@@ -146,7 +146,7 @@ test.describe.serial('Workloads Deep Tests (/workloads)', () => {
   test.describe('Refresh', () => {
     test('refresh button is clickable', async ({ page }) => {
       const refreshBtn = page.getByTestId('dashboard-refresh-button')
-      const isVisible = await refreshBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const isVisible = await refreshBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })
       if (isVisible) {
         await expect(refreshBtn).toBeEnabled()
         await refreshBtn.click()

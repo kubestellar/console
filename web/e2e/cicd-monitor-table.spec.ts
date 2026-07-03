@@ -21,7 +21,7 @@ test.describe.skip('CI/CD GitHub CI Monitor table (#11771)', () => {
 
     // Look for GitHub CI Monitor card/table
     const monitorCard = page.locator('[data-card-type*="github"], [data-card-type*="ci_monitor"], [data-testid*="ci-monitor"], [data-testid*="github-monitor"]').first()
-    const hasCard = await monitorCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasCard = await monitorCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasCard) {
       return
@@ -49,7 +49,7 @@ test.describe.skip('CI/CD GitHub CI Monitor table (#11771)', () => {
     })
 
     const monitorCard = page.locator('[data-card-type*="github"], [data-card-type*="ci_monitor"], [data-testid*="ci-monitor"], [data-testid*="github-monitor"]').first()
-    const hasCard = await monitorCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasCard = await monitorCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasCard) {
       return
@@ -66,7 +66,7 @@ test.describe.skip('CI/CD GitHub CI Monitor table (#11771)', () => {
 
     // Verify first sort control is clickable
     const firstControl = sortControls.first()
-    const isClickable = await firstControl.isEnabled().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const isClickable = await firstControl.isEnabled().catch((error) => { console.error('Promise error:', error); return false })
     expect(isClickable).toBe(true)
   })
 
@@ -76,7 +76,7 @@ test.describe.skip('CI/CD GitHub CI Monitor table (#11771)', () => {
     })
 
     const monitorCard = page.locator('[data-card-type*="github"], [data-card-type*="ci_monitor"], [data-testid*="ci-monitor"], [data-testid*="github-monitor"]').first()
-    const hasCard = await monitorCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasCard = await monitorCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasCard) {
       return
@@ -132,7 +132,7 @@ test.describe.skip('CI/CD GitHub CI Monitor table (#11771)', () => {
     })
 
     const monitorCard = page.locator('[data-card-type*="github"], [data-card-type*="ci_monitor"], [data-testid*="ci-monitor"], [data-testid*="github-monitor"]').first()
-    const hasCard = await monitorCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasCard = await monitorCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasCard) {
       return
@@ -140,7 +140,7 @@ test.describe.skip('CI/CD GitHub CI Monitor table (#11771)', () => {
 
     // Look for pagination controls (next/prev buttons, page numbers, or "Load More")
     const paginationControls = monitorCard.locator('[data-testid*="pagination"], [aria-label*="next"], [aria-label*="previous"], button:has-text("Load"), button:has-text("More")')
-    const hasPagination = await paginationControls.first().isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasPagination = await paginationControls.first().isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasPagination) {
       // No pagination - table might show all items or have no data
@@ -152,7 +152,7 @@ test.describe.skip('CI/CD GitHub CI Monitor table (#11771)', () => {
 
     // Click the first pagination control (could be "Next", "Load More", or page 2)
     const paginationButton = paginationControls.first()
-    const isEnabled = await paginationButton.isEnabled().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const isEnabled = await paginationButton.isEnabled().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!isEnabled) {
       // Button disabled (e.g., already on last page)

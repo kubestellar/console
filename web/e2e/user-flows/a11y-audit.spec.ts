@@ -40,7 +40,7 @@ for (const { path, label } of AUDIT_ROUTES) {
       await setupDemoAndNavigate(page, path)
 
       // Wait for dynamic content to settle
-      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+      await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
       const results = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

@@ -245,7 +245,7 @@ async function setupLiveMocks(page: Page) {
         const msg = JSON.parse(String(data))
         ws.send(JSON.stringify({ id: msg.id, type: 'result', payload: { output: '{"items":[]}', exitCode: 0 } }))
       } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
     })
   })
@@ -277,7 +277,7 @@ async function setMode(page: Page, mode: PerfMode) {
             }
           }
         }
-      } catch (error) { console.error(\'Operation failed:\', error) }
+      } catch (error) { console.error('Operation failed:', error) }
     },
     { demo: isDemo, warm: isWarm, user: mockUser }
   )
@@ -289,7 +289,7 @@ async function setMode(page: Page, mode: PerfMode) {
         try {
           indexedDB.deleteDatabase(name)
         } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
       }
     })

@@ -54,8 +54,8 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
     await expect(allTab.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     
     // Check if Healthy/Unhealthy tabs are also visible
-    const hasHealthyTab = await healthyTab.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
-    const hasUnhealthyTab = await unhealthyTab.first().isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasHealthyTab = await healthyTab.first().isVisible().catch((error) => { console.error('Promise error:', error); return false })
+    const hasUnhealthyTab = await unhealthyTab.first().isVisible().catch((error) => { console.error('Promise error:', error); return false })
     
     expect(hasHealthyTab || hasUnhealthyTab).toBe(true)
   })
@@ -68,7 +68,7 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
     
     // Find the Healthy filter tab
     const healthyTab = page.getByRole('button', { name: /Healthy/i }).first()
-    const hasHealthyTab = await healthyTab.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasHealthyTab = await healthyTab.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     
     if (!hasHealthyTab) {
       test.skip(true, 'Healthy filter tab not visible')
@@ -89,11 +89,11 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
     await setupDemoAndNavigate(page, '/clusters')
     // Look for clickable cluster elements
     const clusterItem = page.locator('[data-card-type] button, [data-testid*="cluster-row"], [class*="cursor-pointer"]').first()
-    const hasItem = await clusterItem.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasItem = await clusterItem.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (hasItem) {
       await clusterItem.click()
       const drilldown = page.getByTestId('drilldown-modal')
-      const hasModal = await drilldown.isVisible({ timeout: DRILLDOWN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      const hasModal = await drilldown.isVisible({ timeout: DRILLDOWN_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
       if (hasModal) {
         await expect(drilldown).toBeVisible()
       }
@@ -103,11 +103,11 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
   test('drilldown has tabs for different views', async ({ page }) => {
     await setupDemoAndNavigate(page, '/clusters')
     const clusterItem = page.locator('[data-card-type] button, [data-testid*="cluster-row"], [class*="cursor-pointer"]').first()
-    const hasItem = await clusterItem.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasItem = await clusterItem.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (!hasItem) { test.skip(true, 'No clickable cluster item visible'); return }
     await clusterItem.click()
     const tabs = page.getByTestId('drilldown-tabs')
-    const hasTabs = await tabs.isVisible({ timeout: DRILLDOWN_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasTabs = await tabs.isVisible({ timeout: DRILLDOWN_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (hasTabs) {
       const tabButtons = tabs.locator('button')
       const tabCount = await tabButtons.count()
@@ -128,7 +128,7 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
   test('cluster page header and title visible', async ({ page }) => {
     await setupDemoAndNavigate(page, '/clusters')
     const header = page.getByTestId('dashboard-header')
-    const hasHeader = await header.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasHeader = await header.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
     if (hasHeader) {
       const title = page.getByTestId('dashboard-title')
       await expect(title).toBeVisible()

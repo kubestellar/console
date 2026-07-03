@@ -69,7 +69,7 @@ test.describe('Network Deep Tests (/network)', () => {
     // #12090 — Wait for data hydration instead of skipping assertion
     const subtitle = page.locator('text=' + PAGE_SUBTITLE).first()
     // Subtitle may be in a responsive-hidden element on mobile; check if visible with timeout
-    const subtitleVisible = await subtitle.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const subtitleVisible = await subtitle.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     if (subtitleVisible) {
       await expect(subtitle).toBeVisible()
     } else {
@@ -151,7 +151,7 @@ test.describe('Network Deep Tests (/network)', () => {
     // Check for error message — it may or may not appear depending on demo mode fallback
     // This is a legitimate conditional since error state depends on data availability
     const errorAlert = page.locator('text=' + ERROR_MESSAGE_TEXT).first()
-    const errorVisible = await errorAlert.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const errorVisible = await errorAlert.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     // If the error is shown, verify it is displayed properly
     if (errorVisible) {
       await expect(errorAlert).toBeVisible()

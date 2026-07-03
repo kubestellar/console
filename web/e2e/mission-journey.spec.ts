@@ -333,7 +333,7 @@ async function navigateToDashboard(page: Page) {
   // If stuck on login, retry auth
   const MAX_AUTH_RETRIES = 3
   for (let i = 0; i < MAX_AUTH_RETRIES; i++) {
-    const onLogin = await page.getByText('Continue with GitHub').isVisible({ timeout: 2000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const onLogin = await page.getByText('Continue with GitHub').isVisible({ timeout: 2000 }).catch((error) => { console.error('Promise error:', error); return false })
     if (!onLogin) break
     await seedAuth(page)
     await page.goto('/')
@@ -368,7 +368,7 @@ async function openMissionSidebar(page: Page) {
     await btn.click({ force: true })
   }
   const sidebar = page.locator('[data-testid="mission-sidebar"], [class*="mission-sidebar"]').first()
-  await sidebar.waitFor({ state: 'visible', timeout: UI_ANIMATION_SETTLE_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+  await sidebar.waitFor({ state: 'visible', timeout: UI_ANIMATION_SETTLE_MS }).catch((error) => { console.error('Promise catch:', error) })
   await expect(page.getByTestId('mission-chat-composer')).toBeVisible({ timeout: UI_SETTLE_MS })
 }
 
@@ -537,7 +537,7 @@ test.describe('Mission Control Journey Tests', () => {
 
       // Look for the mission input area
       const chatInput = getMissionComposerInput(page)
-      const inputVisible = await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      const inputVisible = await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
 
       if (inputVisible) {
         await chatInput.fill('Check pod health in production namespace')
@@ -583,7 +583,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Run pod health check')
         await chatInput.press('Enter')
         // Wait for stream content to appear in the UI
@@ -620,7 +620,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Run extended diagnostics on production')
         await chatInput.press('Enter')
 
@@ -628,13 +628,13 @@ test.describe('Mission Control Journey Tests', () => {
         await page.waitForTimeout(EVENT_SETTLE_MS) // No observable DOM signal — verifying absence of a state
 
         // Verify no "completed" text appears prematurely
-        const prematureComplete = await page.getByText('Mission completed').isVisible({ timeout: 500 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+        const prematureComplete = await page.getByText('Mission completed').isVisible({ timeout: 500 }).catch((error) => { console.error('Promise error:', error); return false })
         expect(prematureComplete).toBe(false)
 
         // Wait for delayed runbook response to arrive
         await expect.poll(
           () => page.locator('[class*="mission"], [class*="chat"], [class*="message"]')
-            .last().textContent().then(t => (t || '').length > 0).catch((error) => { console.error(\'Promise error:\', error); return false }),
+            .last().textContent().then(t => (t || '').length > 0).catch((error) => { console.error('Promise error:', error); return false }),
           { timeout: SLOW_RUNBOOK_DELAY_MS + SLOW_RUNBOOK_PADDING_MS }
         ).toBeTruthy()
       }
@@ -670,7 +670,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Run step-by-step analysis')
         await chatInput.press('Enter')
         // Wait for progress updates to accumulate
@@ -711,7 +711,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Fix crashed pods in production')
         await chatInput.press('Enter')
 
@@ -755,7 +755,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Diagnose OOM kills')
         await chatInput.press('Enter')
         // Wait for lifecycle to settle — error should prevent AI processing
@@ -795,7 +795,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Analyze cluster security posture')
         await chatInput.press('Enter')
 
@@ -842,7 +842,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Audit production namespace')
         await chatInput.press('Enter')
         
@@ -854,8 +854,8 @@ test.describe('Mission Control Journey Tests', () => {
         const streamContent = page.getByText(/Starting|Found|analysis|deployments|pods/i).first()
         const messageContent = page.locator('[class*="message"], [class*="chat"], [class*="stream"]').last()
         
-        const streamVisible = await streamContent.isVisible({ timeout: STREAM_SETTLE_MS * 2 }).catch((error) => { console.error(\'Promise error:\', error); return false })
-        const messageVisible = await messageContent.isVisible({ timeout: 2000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+        const streamVisible = await streamContent.isVisible({ timeout: STREAM_SETTLE_MS * 2 }).catch((error) => { console.error('Promise error:', error); return false })
+        const messageVisible = await messageContent.isVisible({ timeout: 2000 }).catch((error) => { console.error('Promise error:', error); return false })
         
         // At least one should be visible - if not, log for debugging but don't fail hard
         if (!streamVisible && !messageVisible) {
@@ -928,7 +928,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Check cluster health')
         await chatInput.press('Enter')
         // Wait for agent response despite MCP failure
@@ -986,7 +986,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Run 10-step diagnostic')
         await chatInput.press('Enter')
 
@@ -998,13 +998,13 @@ test.describe('Mission Control Journey Tests', () => {
         const streamContent = page.getByText(/Starting|Step|analysis|diagnostic/i).first()
         const messageContent = page.locator('[class*="message"], [class*="chat"], [class*="stream"]').last()
         
-        const streamVisible = await streamContent.isVisible({ timeout: RENDER_SETTLE_MS * 2 }).catch((error) => { console.error(\'Promise error:\', error); return false })
-        const messageVisible = await messageContent.isVisible({ timeout: 2000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+        const streamVisible = await streamContent.isVisible({ timeout: RENDER_SETTLE_MS * 2 }).catch((error) => { console.error('Promise error:', error); return false })
+        const messageVisible = await messageContent.isVisible({ timeout: 2000 }).catch((error) => { console.error('Promise error:', error); return false })
         
         if (streamVisible || messageVisible) {
           // Click cancel/stop button
           const stopBtn = getMissionTerminateButton(page)
-          if (await stopBtn.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+          if (await stopBtn.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) {
             await stopBtn.click()
             // Wait for cancel acknowledgement to propagate
             try {
@@ -1052,13 +1052,13 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Long running task')
         await chatInput.press('Enter')
 
         // Wait for mission to be persisted and stop button to appear
         const stopBtn = getMissionTerminateButton(page)
-        if (await stopBtn.isVisible({ timeout: PERSIST_SETTLE_MS + 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+        if (await stopBtn.isVisible({ timeout: PERSIST_SETTLE_MS + 3000 }).catch((error) => { console.error('Promise error:', error); return false })) {
           await stopBtn.click()
           // Wait for cancel to propagate
           try {
@@ -1103,7 +1103,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         // Rapid-fire the same mission
         for (let i = 0; i < RAPID_CLICK_COUNT; i++) {
           await chatInput.fill('Check pods')
@@ -1148,13 +1148,13 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Start long task')
         await chatInput.press('Enter')
 
         // Look for a stop/cancel button appearing (indicates mission is running)
         const stopBtn = getMissionTerminateButton(page)
-        const isRunning = await stopBtn.isVisible({ timeout: EVENT_SETTLE_MS + 2000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+        const isRunning = await stopBtn.isVisible({ timeout: EVENT_SETTLE_MS + 2000 }).catch((error) => { console.error('Promise error:', error); return false })
 
         if (isRunning) {
           // Verify we can see the running state
@@ -1191,7 +1191,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Long running diagnostic')
         await chatInput.press('Enter')
         // Wait for mission to be persisted to localStorage
@@ -1255,7 +1255,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('Reconnection test')
         await chatInput.press('Enter')
         // Wait for WS drop + reconnect cycle
@@ -1289,7 +1289,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         // Create two missions
         await chatInput.fill('Mission Alpha')
         await chatInput.press('Enter')
@@ -1343,7 +1343,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         // Try submitting empty
         await chatInput.fill('')
         await chatInput.press('Enter')
@@ -1377,7 +1377,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         const LONG_PROMPT_CHAR_COUNT = 5000
         const longPrompt = 'Check pod health. '.repeat(Math.ceil(LONG_PROMPT_CHAR_COUNT / 18)).slice(0, LONG_PROMPT_CHAR_COUNT)
         await chatInput.fill(longPrompt)
@@ -1432,7 +1432,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         // XSS-like input
         const dialogs: string[] = []
         page.on('dialog', d => { dialogs.push(d.message()); d.dismiss() })
@@ -1473,7 +1473,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       const chatInput = getMissionComposerInput(page)
-      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await chatInput.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await chatInput.fill('First concurrent mission')
         await chatInput.press('Enter')
         // Wait for first message to be received by agent

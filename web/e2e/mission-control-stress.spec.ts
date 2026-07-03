@@ -525,7 +525,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
 async function ensureDashboard(page: Page) {
   // Retry auth up to 3 times if stuck on login page
   for (let attempt = 0; attempt < 3; attempt++) {
-    const onLogin = await page.getByText('Continue with GitHub').isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const onLogin = await page.getByText('Continue with GitHub').isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })
     if (!onLogin) return // Dashboard loaded
     await page.evaluate(() => {
     localStorage.setItem('token', 'demo-token')
@@ -646,11 +646,11 @@ test.describe('Mission Control STRESS Tests', () => {
 
       // Navigate to Phase 2 (assign)
       const assignTab = page.getByText(/assign|chart|course/i).first()
-      if (await assignTab.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) await assignTab.click()
+      if (await assignTab.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) await assignTab.click()
       
       // Wait for content to settle
       await page.waitForTimeout(2000)
-      await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+      await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
       
       // Wait for assignment content to render - try istio or fallback to any content
       const assignmentContent = page.getByText(/istio|assign|projects/i).first()
@@ -696,7 +696,7 @@ test.describe('Mission Control STRESS Tests', () => {
 
       // Navigate to blueprint phase
       const bpTab = page.getByText(/blueprint|flight/i).first()
-      if (await bpTab.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) await bpTab.click()
+      if (await bpTab.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) await bpTab.click()
 
       // Verify SVG blueprint renders with dependency edges
       const svg = page.locator('svg:not([class*="lucide"]):not([width="24"])').first()
@@ -754,11 +754,11 @@ test.describe('Mission Control STRESS Tests', () => {
 
       // Navigate to assignment phase
       const assignTab = page.getByText(/assign|chart|course/i).first()
-      if (await assignTab.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) await assignTab.click()
+      if (await assignTab.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) await assignTab.click()
       
       // Wait for page to settle after tab change
       await page.waitForTimeout(2000)
-      await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+      await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
       
       // Wait for either cluster content or "no clusters" message to appear
       const clusterContent = page.getByText(/prod-us-east|No healthy clusters/i).first()
@@ -803,7 +803,7 @@ test.describe('Mission Control STRESS Tests', () => {
 
       // Navigate to blueprint
       const bpTab = page.getByText(/blueprint|flight/i).first()
-      if (await bpTab.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) await bpTab.click()
+      if (await bpTab.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) await bpTab.click()
       // Wait for blueprint content to render
       await expect(page.locator('svg:not([class*="lucide"]):not([width="24"])').first()).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
 
@@ -813,7 +813,7 @@ test.describe('Mission Control STRESS Tests', () => {
 
       // Verify deploy mode toggle is present and YOLO is active
       const yoloOption = page.getByText(/yolo/i).first()
-      if (await yoloOption.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+      if (await yoloOption.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         // Verify it's the selected mode
         expect(bodyText).toMatch(/yolo/i)
       }
@@ -848,11 +848,11 @@ test.describe('Mission Control STRESS Tests', () => {
       })
 
       const bpTab = page.getByText(/blueprint|flight/i).first()
-      if (await bpTab.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) await bpTab.click()
+      if (await bpTab.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) await bpTab.click()
       
       // Wait for content to settle
       await page.waitForTimeout(2000)
-      await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch((error) => { console.error(\'Promise catch:\', error) })
+      await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
       // Verify SVG renders with at least 2 cluster zones
       const svg = page.locator('svg:not([class*="lucide"]):not([width="24"])').first()
@@ -1365,14 +1365,14 @@ and Prometheus monitoring to track memory usage over time.
       })
 
       const bpTab = page.getByText(/blueprint|flight/i).first()
-      if (await bpTab.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) await bpTab.click()
+      if (await bpTab.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) await bpTab.click()
       // Wait for blueprint SVG to render
       await expect(page.locator('svg:not([class*="lucide"]):not([width="24"])').first()).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
 
       const overlays = ['architecture', 'compute', 'storage', 'network', 'security']
       for (const overlay of overlays) {
         const btn = page.getByText(new RegExp(overlay, 'i')).first()
-        if (await btn.isVisible({ timeout: 2000 }).catch((error) => { console.error(\'Promise error:\', error); return false })) {
+        if (await btn.isVisible({ timeout: 2000 }).catch((error) => { console.error('Promise error:', error); return false })) {
           await btn.click()
           // Wait for SVG to re-render after overlay toggle
           await expect(page.locator('svg:not([class*="lucide"]):not([width="24"])').first()).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
@@ -1381,7 +1381,7 @@ and Prometheus monitoring to track memory usage over time.
 
       // After cycling all overlays, page should still render correctly
       const svg = page.locator('svg:not([class*="lucide"]):not([width="24"])').first()
-      const svgVisible = await svg.isVisible({ timeout: 5000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+      const svgVisible = await svg.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
       expect(svgVisible).toBe(true)
 
       await page.screenshot({ path: 'test-results/stress-overlay-toggle.png', fullPage: true })

@@ -226,14 +226,14 @@ test.describe('Nightly Dashboard Health', () => {
       try {
         await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS })
       } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
 
       // Wait for cards to settle — look for card elements to appear
       try {
         await page.waitForSelector('[data-card-id]', { timeout: CARD_SETTLE_MS })
       } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
 
       // Collect metrics

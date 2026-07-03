@@ -127,7 +127,7 @@ test.describe('Settings Page', () => {
 
       // Look for AI mode section
       const aiSection = page.getByText(/ai.*mode|intelligence/i).first()
-      const hasAiSection = await aiSection.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const hasAiSection = await aiSection.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
       // AI mode section should be visible
       expect(hasAiSection).toBe(true)

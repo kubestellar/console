@@ -21,7 +21,7 @@ test.describe('CI/CD Workflow Matrix interactions (#11769)', () => {
 
     // Check if Workflow Matrix card is present
     const matrixCard = page.locator('[data-card-type="workflow_matrix"], [data-testid*="workflow-matrix"]').first()
-    const hasMatrix = await matrixCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasMatrix = await matrixCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasMatrix) {
       // Matrix not visible - skip gracefully
@@ -44,7 +44,7 @@ test.describe('CI/CD Workflow Matrix interactions (#11769)', () => {
 
     // Find the Workflow Matrix card
     const matrixCard = page.locator('[data-card-type="workflow_matrix"], [data-testid*="workflow-matrix"]').first()
-    const hasMatrix = await matrixCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasMatrix = await matrixCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasMatrix) {
       test.skip(true, 'Workflow Matrix card not visible')
@@ -53,7 +53,7 @@ test.describe('CI/CD Workflow Matrix interactions (#11769)', () => {
 
     // Find clickable cells (buttons, links, or elements with cursor-pointer)
     const clickableCell = matrixCard.locator('button, a, [role="button"], [class*="cursor-pointer"]').first()
-    const hasClickable = await clickableCell.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasClickable = await clickableCell.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasClickable) {
       // No clickable cells - matrix might be empty or read-only
@@ -68,7 +68,7 @@ test.describe('CI/CD Workflow Matrix interactions (#11769)', () => {
     // 2. URL changes (navigation)
     // 3. A tooltip/popover shows
     const drilldown = page.getByTestId('drilldown-modal')
-    const hasDrilldown = await drilldown.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasDrilldown = await drilldown.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })
 
     // Verify SOMETHING happened (either drilldown or navigation or element update)
     if (hasDrilldown) {
@@ -85,7 +85,7 @@ test.describe('CI/CD Workflow Matrix interactions (#11769)', () => {
     })
 
     const matrixCard = page.locator('[data-card-type="workflow_matrix"], [data-testid*="workflow-matrix"]').first()
-    const hasMatrix = await matrixCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasMatrix = await matrixCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasMatrix) {
       test.skip(true, 'Workflow Matrix card not visible')

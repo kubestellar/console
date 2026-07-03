@@ -33,7 +33,7 @@ test.describe('Workflow Matrix interactions (#11769)', () => {
   test('renders matrix with workflow rows and heatmap cells', async ({ page }) => {
     // The Workflow Matrix card is rendered with data-card-type="workflow_matrix"
     const matrixCard = page.locator('[data-card-type="workflow_matrix"]')
-    const matrixVisible = await matrixCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const matrixVisible = await matrixCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!matrixVisible) {
       // Card may not be installed on this dashboard config — verify page still loads
@@ -60,7 +60,7 @@ test.describe('Workflow Matrix interactions (#11769)', () => {
 
   test('range selector buttons switch the time range', async ({ page }) => {
     const matrixCard = page.locator('[data-card-type="workflow_matrix"]')
-    const matrixVisible = await matrixCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const matrixVisible = await matrixCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!matrixVisible) {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -71,7 +71,7 @@ test.describe('Workflow Matrix interactions (#11769)', () => {
 
     // The matrix has range buttons: 14d, 30d, 90d
     const btn30d = matrixCard.getByRole('button', { name: '30d' })
-    const btn30Visible = await btn30d.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const btn30Visible = await btn30d.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (btn30Visible) {
       await btn30d.click()
@@ -82,7 +82,7 @@ test.describe('Workflow Matrix interactions (#11769)', () => {
     }
 
     const btn14d = matrixCard.getByRole('button', { name: '14d' })
-    const btn14Visible = await btn14d.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const btn14Visible = await btn14d.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (btn14Visible) {
       await btn14d.click()
       await expect(btn14d).toBeVisible()
@@ -91,7 +91,7 @@ test.describe('Workflow Matrix interactions (#11769)', () => {
 
   test('clicking a heatmap cell navigates or shows tooltip', async ({ page }) => {
     const matrixCard = page.locator('[data-card-type="workflow_matrix"]')
-    const matrixVisible = await matrixCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const matrixVisible = await matrixCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!matrixVisible) {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -131,7 +131,7 @@ test.describe('Workflow Matrix interactions (#11769)', () => {
 
   test('legend displays conclusion categories', async ({ page }) => {
     const matrixCard = page.locator('[data-card-type="workflow_matrix"]')
-    const matrixVisible = await matrixCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const matrixVisible = await matrixCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!matrixVisible) {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -145,7 +145,7 @@ test.describe('Workflow Matrix interactions (#11769)', () => {
     let foundCount = 0
     for (const label of legendLabels) {
       const el = matrixCard.getByText(label, { exact: false }).first()
-      const visible = await el.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const visible = await el.isVisible().catch((error) => { console.error('Promise error:', error); return false })
       if (visible) foundCount++
     }
     expect(foundCount).toBeGreaterThan(0)
@@ -166,12 +166,12 @@ test.describe('Recent Failures card interactions (#11770)', () => {
     // The Recent Failures card uses data-card-type but the card wrapper sets it
     // Look for the card by its content pattern
     const failuresCard = page.locator('[data-card-type="recent_failures"]')
-    const cardVisible = await failuresCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const cardVisible = await failuresCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!cardVisible) {
       // Fallback: look for "failures" text on page indicating card rendered
       const failuresText = page.getByText(/\d+ failures/).first()
-      const textVisible = await failuresText.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const textVisible = await failuresText.isVisible().catch((error) => { console.error('Promise error:', error); return false })
       if (!textVisible) {
         await expect(page.getByTestId('dashboard-header')).toBeVisible({
           timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
@@ -182,7 +182,7 @@ test.describe('Recent Failures card interactions (#11770)', () => {
 
     // The card should display a table with failure rows or "No recent failures"
     const noFailures = page.getByText('No recent failures').first()
-    const noFailuresVisible = await noFailures.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const noFailuresVisible = await noFailures.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (noFailuresVisible) {
       // Demo data has no failures — that's a valid state
@@ -209,7 +209,7 @@ test.describe('Recent Failures card interactions (#11770)', () => {
 
   test('failure row shows Log button for items with failed step', async ({ page }) => {
     const failuresCard = page.locator('[data-card-type="recent_failures"]')
-    const cardVisible = await failuresCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const cardVisible = await failuresCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     const container = cardVisible ? failuresCard : page.locator('body')
 
     // Look for Log buttons (rendered when failedStep exists)
@@ -224,14 +224,14 @@ test.describe('Recent Failures card interactions (#11770)', () => {
 
       // Modal should appear (or dialog)
       const modal = page.locator('[role="dialog"], [data-testid="logs-modal"]')
-      const modalVisible = await modal.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const modalVisible = await modal.isVisible().catch((error) => { console.error('Promise error:', error); return false })
       if (modalVisible) {
         await expect(modal).toBeVisible()
         // Close the modal
         const closeBtn = modal.getByRole('button', { name: /close/i }).or(
           modal.locator('button').filter({ has: page.locator('svg') }).first()
         )
-        const closeVisible = await closeBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+        const closeVisible = await closeBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })
         if (closeVisible) {
           await closeBtn.click()
         } else {
@@ -248,7 +248,7 @@ test.describe('Recent Failures card interactions (#11770)', () => {
 
   test('failure row has external link to GitHub run', async ({ page }) => {
     const failuresCard = page.locator('[data-card-type="recent_failures"]')
-    const cardVisible = await failuresCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const cardVisible = await failuresCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     const container = cardVisible ? failuresCard : page.locator('body')
 
     // External links to GitHub (title="Open run on GitHub")
@@ -274,12 +274,12 @@ test.describe('Recent Failures card interactions (#11770)', () => {
 
   test('refresh button triggers data reload', async ({ page }) => {
     const failuresCard = page.locator('[data-card-type="recent_failures"]')
-    const cardVisible = await failuresCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const cardVisible = await failuresCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     const container = cardVisible ? failuresCard : page.locator('body')
 
     // Refresh button with aria-label="Refresh"
     const refreshBtn = container.locator('button[aria-label="Refresh"]').first()
-    const refreshVisible = await refreshBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const refreshVisible = await refreshBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (refreshVisible) {
       await refreshBtn.click()
@@ -307,7 +307,7 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
   test('renders workflow run items in the monitor', async ({ page }) => {
     const monitorCard = page.locator('[data-card-type="github_ci_monitor"]')
-    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!monitorVisible) {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -329,7 +329,7 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
   test('sort control changes item order', async ({ page }) => {
     const monitorCard = page.locator('[data-card-type="github_ci_monitor"]')
-    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!monitorVisible) {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -340,7 +340,7 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
     // CardControls renders a sort selector — look for the sort dropdown/select
     const sortSelect = monitorCard.locator('select').first()
-    const sortSelectVisible = await sortSelect.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const sortSelectVisible = await sortSelect.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (sortSelectVisible) {
       // Get initial item order
@@ -378,7 +378,7 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
   test('sort direction toggle reverses order', async ({ page }) => {
     const monitorCard = page.locator('[data-card-type="github_ci_monitor"]')
-    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!monitorVisible) {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -389,7 +389,7 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
     // The sort direction button has a specific aria-label
     const sortDirBtn = monitorCard.locator('button[aria-label*="Sort"]').first()
-    const sortDirVisible = await sortDirBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const sortDirVisible = await sortDirBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (sortDirVisible) {
       // Get items before toggling direction
@@ -426,7 +426,7 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
   test('pagination controls navigate between pages', async ({ page }) => {
     const monitorCard = page.locator('[data-card-type="github_ci_monitor"]')
-    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!monitorVisible) {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -437,7 +437,7 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
     // Check if pagination is rendered (only when items exceed page size)
     const nextBtn = monitorCard.getByRole('button', { name: /next/i }).first()
-    const nextVisible = await nextBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const nextVisible = await nextBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (nextVisible) {
       // Get text of first item on page 1
@@ -463,7 +463,7 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
       // Go back to previous page
       const prevBtn = monitorCard.getByRole('button', { name: /previous/i }).first()
-      const prevVisible = await prevBtn.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const prevVisible = await prevBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })
       if (prevVisible) {
         await prevBtn.click()
         await expect(monitorCard).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
@@ -477,7 +477,7 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
   test('stats grid shows pass rate and failure count', async ({ page }) => {
     const monitorCard = page.locator('[data-card-type="github_ci_monitor"]')
-    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!monitorVisible) {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -488,12 +488,12 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
     // Stats grid should show Pass Rate percentage
     const passRate = monitorCard.getByText('Pass Rate').first()
-    const passRateVisible = await passRate.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const passRateVisible = await passRate.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (passRateVisible) {
       await expect(passRate).toBeVisible()
       // Should have a percentage value nearby
       const percentText = monitorCard.getByText(/%/).first()
-      const percentVisible = await percentText.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+      const percentVisible = await percentText.isVisible().catch((error) => { console.error('Promise error:', error); return false })
       if (percentVisible) {
         await expect(percentText).toBeVisible()
       }
@@ -502,7 +502,7 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
   test('search input filters workflow items', async ({ page }) => {
     const monitorCard = page.locator('[data-card-type="github_ci_monitor"]')
-    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const monitorVisible = await monitorCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!monitorVisible) {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -513,7 +513,7 @@ test.describe('GitHub CI Monitor table sort/pagination (#11771)', () => {
 
     // CardSearchInput renders a search input
     const searchInput = monitorCard.locator('input[type="text"], input[type="search"]').first()
-    const searchVisible = await searchInput.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const searchVisible = await searchInput.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (searchVisible) {
       // Type a search term that should filter results

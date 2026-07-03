@@ -90,7 +90,7 @@ async function measureDashboard(
     try {
       await page.waitForSelector('[data-testid="sidebar"]', { timeout: 10_000 })
     } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
   }
 
@@ -211,7 +211,7 @@ async function measureDashboard(
         return r
       })
     } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
     for (const card of perfResult.cards) {
       if (perfResult.loadTimes[card.cardId] === undefined) timedOutCards.add(card.cardId)
@@ -233,7 +233,7 @@ async function measureDashboard(
         bodyText: (document.body.textContent || '').slice(0, 500),
       }))
       console.log(`  NO CARDS on ${dashboard.name}: ${JSON.stringify(debugState)}`)
-    } catch (error) { console.error(\'Operation failed:\', error) }
+    } catch (error) { console.error('Operation failed:', error) }
   }
 
   // --- Build CardMetric array ---
@@ -330,7 +330,7 @@ test('warmup (demo live live+cache) — prime Vite module cache', async ({ page 
     await page.goto(route, { waitUntil: 'domcontentloaded' })
     try {
       await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
-    } catch (error) { console.error(\'Operation failed:\', error) }
+    } catch (error) { console.error('Operation failed:', error) }
   }
 })
 
@@ -433,7 +433,7 @@ test.afterAll(async () => {
   try {
     baselineContent = fs.readFileSync(baselinePath, 'utf-8')
   } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
 
   if (baselineContent !== null) {

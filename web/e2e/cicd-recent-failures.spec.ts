@@ -21,7 +21,7 @@ test.describe('CI/CD Recent Failures interactions (#11770)', () => {
 
     // Check if Recent Failures card is present
     const failuresCard = page.locator('[data-card-type*="recent_failure"], [data-card-type*="failures"], [data-testid*="recent-failure"]').first()
-    const hasCard = await failuresCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasCard = await failuresCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasCard) {
       // Card not visible - skip gracefully
@@ -60,7 +60,7 @@ test.describe('CI/CD Recent Failures interactions (#11770)', () => {
     })
 
     const failuresCard = page.locator('[data-card-type*="recent_failure"], [data-card-type*="failures"], [data-testid*="recent-failure"]').first()
-    const hasCard = await failuresCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasCard = await failuresCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasCard) {
       test.skip(true, 'Recent Failures card not visible')
@@ -69,7 +69,7 @@ test.describe('CI/CD Recent Failures interactions (#11770)', () => {
 
     // Find clickable failure items (buttons or links)
     const clickableItem = failuresCard.locator('button, a, [role="button"], [class*="cursor-pointer"]').first()
-    const hasClickable = await clickableItem.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasClickable = await clickableItem.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasClickable) {
       // No clickable items - failures list might be empty
@@ -87,7 +87,7 @@ test.describe('CI/CD Recent Failures interactions (#11770)', () => {
     // 2. URL changes (navigation to detail page or external link)
     // 3. An expanded section appears
     const drilldown = page.getByTestId('drilldown-modal')
-    const hasDrilldown = await drilldown.isVisible({ timeout: 3000 }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasDrilldown = await drilldown.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })
 
     const urlChanged = page.url() !== initialUrl
 
@@ -109,7 +109,7 @@ test.describe('CI/CD Recent Failures interactions (#11770)', () => {
     })
 
     const failuresCard = page.locator('[data-card-type*="recent_failure"], [data-card-type*="failures"], [data-testid*="recent-failure"]').first()
-    const hasCard = await failuresCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error(\'Promise error:\', error); return false })
+    const hasCard = await failuresCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch((error) => { console.error('Promise error:', error); return false })
 
     if (!hasCard) {
       test.skip(true, 'Recent Failures card not visible')

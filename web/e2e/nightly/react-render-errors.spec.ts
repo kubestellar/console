@@ -206,7 +206,7 @@ test.describe('React Render Error Detection', () => {
       try {
         await page.waitForSelector('[data-card-type]', { timeout: CARD_SETTLE_MS })
       } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
 
       // Exercise pagination to trigger useLayoutEffect cascades
@@ -281,7 +281,7 @@ test.describe('React Render Error Detection', () => {
       try {
         await page.waitForSelector('[data-card-type]', { timeout: CARD_SETTLE_MS })
       } catch (error) {
-      console.error(\'Operation failed:\', error)
+      console.error('Operation failed:', error)
     }
 
       // Also check for error boundary rendering
