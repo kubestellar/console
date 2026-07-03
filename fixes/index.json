@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-03T12:58:39.766Z",
+  "generatedAt": "2026-07-03T18:29:19.293Z",
   "count": 1625,
   "missions": [
     {
@@ -23842,7 +23842,7 @@
     {
       "path": "fixes/platform-install/platform-charmed-kubernetes.json",
       "title": "Install and Configure Charmed Kubernetes",
-      "description": "Charmed Kubernetes is a distribution of Kubernetes that is designed for ease of deployment and management using Juju. It is ideal for users who want a fully managed Kubernetes experience on Ubuntu wit",
+      "description": "Charmed Kubernetes is a distribution of Kubernetes that is designed for easy deployment and management using Juju. It is ideal for users looking for a robust Kubernetes solution that integrates well w",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
@@ -23870,7 +23870,7 @@
       "installMethods": [
         "cli"
       ],
-      "qualityScore": 96,
+      "qualityScore": 93,
       "qualityPass": true,
       "qualityBreakdown": {
         "clarity": 100,
@@ -29695,7 +29695,7 @@
     {
       "path": "fixes/platform-install/platform-microk8s.json",
       "title": "Install and Configure MicroK8s",
-      "description": "MicroK8s is a lightweight, single-package Kubernetes distribution designed for simplicity and speed, ideal for development, IoT, and edge computing. It provides a fully conformant Kubernetes experienc",
+      "description": "MicroK8s is a lightweight, single-package Kubernetes distribution designed for developers and edge computing. It is ideal for local development, CI/CD pipelines, and IoT applications due to its simpli",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
@@ -31669,7 +31669,7 @@
     {
       "path": "fixes/platform-install/platform-prometheus-operator.json",
       "title": "Install and Configure Prometheus Operator / kube-prometheus-stack",
-      "description": "The Prometheus Operator simplifies the deployment and management of Prometheus monitoring stacks on Kubernetes using custom resources. It is ideal for users who want to automate the configuration of P",
+      "description": "The Prometheus Operator simplifies the deployment and management of Prometheus monitoring stacks on Kubernetes. It allows users to configure Prometheus and related components using Kubernetes custom r",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
@@ -33521,7 +33521,7 @@
     {
       "path": "fixes/platform-install/platform-tanzu.json",
       "title": "Install and Configure VMware Tanzu Kubernetes Grid",
-      "description": "VMware Tanzu Kubernetes Grid is a distribution that provides a robust framework for deploying and managing Kubernetes clusters in an enterprise environment. It leverages Carvel packaging and plugins f",
+      "description": "VMware Tanzu Kubernetes Grid is a distribution that provides a robust platform for deploying and managing Kubernetes clusters in an enterprise environment. It leverages the Tanzu Framework and Carvel ",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
