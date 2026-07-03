@@ -378,7 +378,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
                   className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {tokenTesting ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <RefreshCw className={`w-4 h-4 ${tokenTesting ? 'animate-spin' : ''}`} />
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
