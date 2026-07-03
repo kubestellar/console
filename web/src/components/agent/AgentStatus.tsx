@@ -6,6 +6,7 @@ import { useModal } from '@/hooks/useModal'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { emitInstallCommandCopied } from '@/lib/analytics'
 import { copyToClipboard } from '../../lib/clipboard'
+import { Button } from '../ui/Button'
 
 export function AgentStatus() {
   const { t } = useTranslation('common')
@@ -32,12 +33,14 @@ export function AgentStatus() {
           <p className="mt-2 text-sm text-muted-foreground">
             {error || t('agentStatus.demoModeDefaultMessage')}
           </p>
-          <button
+          <Button
             onClick={setupDialog.open}
-            className="mt-2 text-sm text-yellow-500 hover:text-yellow-400 underline underline-offset-2 transition-colors"
+            variant="ghost"
+            size="sm"
+            className="mt-2 text-yellow-500 hover:text-yellow-400 underline underline-offset-2 h-auto p-0"
           >
             {t('agentStatus.howToConnect')}
-          </button>
+          </Button>
         </div>
         <SetupInstructionsDialog isOpen={setupDialog.isOpen} onClose={setupDialog.close} />
       </>
@@ -75,12 +78,13 @@ export function AgentInstallBanner() {
           <code className="flex-1 rounded bg-muted px-4 py-3 text-sm font-mono select-all">
             {installCommand}
           </code>
-          <button
+          <Button
             onClick={() => { copyToClipboard(installCommand); emitInstallCommandCopied('agent_install_banner', installCommand) }}
-            className="rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            variant="primary"
+            size="md"
           >
             {t('agentSetup.copy')}
-          </button>
+          </Button>
         </div>
       </div>
 

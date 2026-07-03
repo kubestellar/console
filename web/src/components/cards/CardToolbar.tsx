@@ -2,6 +2,7 @@ import { Bug, ChevronDown, ChevronRight, Maximize2, RefreshCw } from 'lucide-rea
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { CardActionMenu, type CardActionMenuProps } from './card-wrapper/CardActionMenu'
+import { Button } from '../ui/Button'
 
 // CardWrapper owns useCardLoadingState and passes the derived state into this presentational helper.
 
@@ -43,49 +44,45 @@ export function CardToolbar({
 
   return (
     <div className="flex shrink-0 items-center gap-1.5" role="toolbar" aria-label={t('cardWrapper.cardControls', { title })}>
-      <button
+      <Button
         onClick={onToggleCollapse}
-        className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+        variant="ghost"
+        size="sm"
+        icon={isCollapsed ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
         aria-label={isCollapsed ? t('cardWrapper.expandCard') : t('cardWrapper.collapseCard')}
         aria-expanded={!isCollapsed}
         title={isCollapsed ? t('cardWrapper.expandCard') : t('cardWrapper.collapseCard')}
-      >
-        {isCollapsed ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
-      </button>
+      />
       {onRefresh && (
-        <button
+        <Button
           onClick={onRefresh}
           disabled={isRefreshDisabled}
+          variant="ghost"
+          size="sm"
+          icon={<RefreshCw className={cn('h-4 w-4', isRefreshSpinning && 'animate-spin')} aria-hidden="true" />}
           className={cn(
-            'rounded-lg p-1.5 transition-colors',
-            isRefreshDisabled
-              ? 'cursor-not-allowed text-blue-400'
-              : isFailed
-                ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
-                : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+            isFailed && !isRefreshDisabled && 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
           )}
           aria-label={isFailed ? t('cardWrapper.refreshFailedRetry', { count: consecutiveFailures }) : t('cardWrapper.refreshData')}
           title={isFailed ? t('cardWrapper.refreshFailedRetry', { count: consecutiveFailures }) : t('cardWrapper.refreshData')}
-        >
-          <RefreshCw className={cn('h-4 w-4', isRefreshSpinning && 'animate-spin')} aria-hidden="true" />
-        </button>
+        />
       )}
-      <button
+      <Button
         onClick={onExpandFullscreen}
-        className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+        variant="ghost"
+        size="sm"
+        icon={<Maximize2 className="h-4 w-4" aria-hidden="true" />}
         aria-label={t('cardWrapper.expandFullScreen')}
         title={t('cardWrapper.expandFullScreen')}
-      >
-        <Maximize2 className="h-4 w-4" aria-hidden="true" />
-      </button>
-      <button
+      />
+      <Button
         onClick={onOpenBugReport}
-        className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+        variant="ghost"
+        size="sm"
+        icon={<Bug className="h-4 w-4" aria-hidden="true" />}
         aria-label={t('cardWrapper.reportIssue')}
         title={t('cardWrapper.reportIssue')}
-      >
-        <Bug className="h-4 w-4" aria-hidden="true" />
-      </button>
+      />
       <CardActionMenu
         cardId={cardId}
         cardType={cardType}
