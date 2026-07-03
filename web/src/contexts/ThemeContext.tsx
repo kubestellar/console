@@ -53,6 +53,15 @@ function getSystemPrefersDark(): boolean {
 function applyTheme(theme: Theme) {
   if (!theme || !theme.colors) {
     console.error('Invalid theme object:', theme)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('theme-error', {
+        detail: { 
+          error: 'Invalid theme object', 
+          timestamp: Date.now(),
+          context: 'theme-validation',
+        }
+      }))
+    }
     return
   }
 
@@ -203,6 +212,7 @@ const {
   createFallbackValue: createDefaultThemeContextValue,
 })
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { ThemeContext, useTheme }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

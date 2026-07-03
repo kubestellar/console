@@ -13,6 +13,7 @@ import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
 import { safeLazy } from '@/lib/safeLazy'
 import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
+import { Button } from '../ui/Button'
 
 // Lazy load the heavy Three.js globe animation.
 // safeLazy() handles chunk errors and retries automatically.
@@ -437,17 +438,15 @@ export function Login() {
 
               {/* Expandable setup wizard */}
               <div className="px-4 pb-3">
-                <button
+                <Button
                   onClick={() => setOauthSetupExpanded(!oauthSetupExpanded)}
-                  className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  variant="ghost"
+                  size="sm"
+                  icon={oauthSetupExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                  className="text-blue-400 hover:text-blue-300 h-auto p-0"
                 >
-                  {oauthSetupExpanded ? (
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  ) : (
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  )}
                   {t('login.showSetupSteps')}
-                </button>
+                </Button>
 
                 {oauthSetupExpanded && (
                   <div className="mt-2 space-y-2">
@@ -479,17 +478,14 @@ export function Login() {
                               <pre className="flex-1 rounded bg-muted px-3 py-1.5 font-mono text-foreground select-all overflow-x-auto whitespace-pre text-xs">
                                 {step.command}
                               </pre>
-                              <button
+                              <Button
                                 onClick={() => handleCopyStep(step.command, idx)}
-                                className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors self-start"
+                                variant="ghost"
+                                size="sm"
+                                icon={copiedStep === idx ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
                                 title="Copy"
-                              >
-                                {copiedStep === idx ? (
-                                  <Check className="w-3.5 h-3.5 text-green-400" />
-                                ) : (
-                                  <Copy className="w-3.5 h-3.5" />
-                                )}
-                              </button>
+                                className="shrink-0 self-start p-1.5"
+                              />
                             </div>
                           </div>
                         ) : (
@@ -527,16 +523,19 @@ export function Login() {
 
           {/* GitHub login button — shown when OAuth IS configured */}
           {!showOAuthSetup && (
-            <button
+            <Button
               data-testid="github-login-button"
               onClick={() => { if (!isHostedDemoLogin) { emitLogin('github'); login() } }}
               disabled={isHostedDemoLogin}
               title={isHostedDemoLogin ? 'Not available in the hosted demo — self-host to enable GitHub OAuth' : undefined}
-              className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-800 disabled:hover:shadow-none"
+              variant="secondary"
+              size="lg"
+              fullWidth
+              icon={<Github className="w-5 h-5" />}
+              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 hover:shadow-lg disabled:hover:bg-white dark:disabled:hover:bg-gray-800 disabled:hover:shadow-none"
             >
-              <Github className="w-5 h-5" />
               {t('login.continueWithGitHub')}
-            </button>
+            </Button>
           )}
 
           {/* Two-button layout when OAuth is not configured:
@@ -555,28 +554,36 @@ export function Login() {
                 {t('login.signInToGitHubFirst')}
                 <ExternalLink className="w-3 h-3 inline ml-1 -mt-0.5" />
               </a>
-              <button
+              <Button
                 data-testid="github-setup-button"
                 onClick={() => { window.location.href = '/auth/manifest/setup' }}
-                className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-lg"
+                variant="secondary"
+                size="lg"
+                fullWidth
+                icon={<Github className="w-5 h-5" />}
+                className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 hover:shadow-lg"
               >
-                <Github className="w-5 h-5" />
                 {t('login.setupGitHubSignIn')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setOauthSetupExpanded(!oauthSetupExpanded)}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto block"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground mx-auto h-auto p-0"
               >
                 {oauthSetupExpanded ? t('login.hideManualSetup') : t('login.showManualSetup')}
-              </button>
-              <button
+              </Button>
+              <Button
                 data-testid="demo-mode-button"
                 onClick={() => { emitLogin('demo-from-login'); login() }}
-                className="w-full flex items-center justify-center gap-3 text-muted-foreground font-medium py-2.5 px-4 rounded-lg border border-border/50 hover:bg-secondary/50 hover:text-foreground transition-all duration-200"
+                variant="secondary"
+                size="md"
+                fullWidth
+                icon={<Monitor className="w-4 h-4" />}
+                className="text-muted-foreground border border-border/50 hover:bg-secondary/50 hover:text-foreground"
               >
-                <Monitor className="w-4 h-4" />
                 {t('login.continueInDemoMode')}
-              </button>
+              </Button>
             </div>
           )}
 

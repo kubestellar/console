@@ -12,6 +12,7 @@ import { RefreshCw, Maximize2, Download } from 'lucide-react'
 import { useClusters, useGPUNodes, usePodIssues } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
+import { Button } from '../ui/Button'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { ROUTES } from '../../config/routes'
 import { agentFetch } from '../../hooks/mcp/shared'
@@ -287,21 +288,23 @@ export function MiniDashboard() {
               {lastUpdated.toLocaleTimeString()}
             </span>
           )}
-          <button
+          <Button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white transition-colors disabled:opacity-50"
+            variant="ghost"
+            size="sm"
+            icon={<RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />}
             title={t('common.refresh')}
-          >
-            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
-          </button>
-          <button
+            aria-label={t('common.refresh')}
+          />
+          <Button
             onClick={openFullDashboard}
-            className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white transition-colors"
+            variant="ghost"
+            size="sm"
+            icon={<Maximize2 className="w-4 h-4" />}
             title="Open full dashboard"
-          >
-            <Maximize2 className="w-4 h-4" />
-          </button>
+            aria-label="Open full dashboard"
+          />
         </div>
       </div>
 
@@ -358,10 +361,13 @@ export function MiniDashboard() {
             {podIssues?.slice(0, 5).map((issue, i) => {
               const isCritical = issue.status === 'CrashLoopBackOff' || issue.status === 'OOMKilled' || issue.status === 'Error'
               return (
-                <button
+                <Button
                   key={i}
                   onClick={() => openInBrowser(`/pods?search=${encodeURIComponent(issue.name)}`)}
-                  className="w-full flex items-center gap-2 text-xs p-2 rounded bg-secondary/50 border border-border/30 hover:bg-secondary/70 hover:border-border transition-colors text-left"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  className="justify-start border border-border/30 hover:border-border"
                 >
                   <span
                     className={cn(
@@ -371,7 +377,7 @@ export function MiniDashboard() {
                   />
                   <span className="truncate text-foreground">{issue.name}</span>
                   <span className="text-muted-foreground ml-auto shrink-0">{issue.reason || issue.status}</span>
-                </button>
+                </Button>
               )
             })}
           </div>
@@ -383,13 +389,15 @@ export function MiniDashboard() {
         {/* Footer / Install Prompt */}
         <div className="p-3 bg-background/90 border-t border-border/50 shrink-0">
         {!isInstalled && installPrompt ? (
-          <button
+          <Button
             onClick={handleInstall}
-            className="w-full py-2 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+            variant="accent"
+            size="md"
+            fullWidth
+            icon={<Download className="w-4 h-4" />}
           >
-            <Download className="w-4 h-4" />
             Install as Desktop Widget
-          </button>
+          </Button>
         ) : !isInstalled ? (
           <div className="text-center text-xs text-muted-foreground space-y-1">
             {isSafariBrowser ? (
@@ -404,13 +412,15 @@ export function MiniDashboard() {
         ) : (
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{t('miniDashboard.nodesWidget')}</span>
-            <button
+            <Button
               onClick={openFullDashboard}
-              className="flex items-center gap-1 hover:text-muted-foreground transition-colors"
+              variant="ghost"
+              size="sm"
+              icon={<Maximize2 className="w-3 h-3" />}
+              className="h-auto p-0"
             >
-              <Maximize2 className="w-3 h-3" />
               {t('miniDashboard.openFullDashboard')}
-            </button>
+            </Button>
           </div>
         )}
       </div>

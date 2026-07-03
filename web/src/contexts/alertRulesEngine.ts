@@ -256,7 +256,19 @@ export function createAlertRulesEngine({
     queueMicrotask(() => {
       const enabledChannels = getEnabledChannels(rule)
       if (enabledChannels.length > 0) {
-        localSendNotifications(newAlert, enabledChannels).catch(error => console.error('[AlertsContext] firing notification send failed:', error))
+        localSendNotifications(newAlert, enabledChannels).catch(error => {
+          console.error('[AlertsContext] firing notification send failed:', error)
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('alert-notification-error', {
+              detail: { 
+                error: error instanceof Error ? error.message : String(error), 
+                timestamp: Date.now(),
+                context: 'firing-notification',
+                ruleId: rule.id,
+              }
+            }))
+          }
+        })
       }
     })
   }
