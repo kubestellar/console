@@ -134,6 +134,12 @@ test.describe('Onboarding Tour', () => {
       return
     }
 
+    // Wait for any modal/overlay backdrop to disappear before clicking
+    const overlay = page.locator('.fixed.inset-0, [class*="backdrop"], [class*="overlay"]').first()
+    await overlay.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {
+      // Overlay might not exist or already hidden - safe to proceed
+    })
+
     await skipBtn.first().click()
 
     const tooltip = page.locator('[class*="tour"], [class*="joyride"], [class*="onboarding"]')
