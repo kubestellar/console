@@ -24,9 +24,9 @@ func TestRequireAdmin(t *testing.T) {
 			name: "admin user passes",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
+					ID:          uuid.New(),
 					GitHubLogin: "admin-user",
-					Role:  models.UserRoleAdmin,
+					Role:        models.UserRoleAdmin,
 				}
 				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestRequireAdmin(t *testing.T) {
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
 					ID:          uuid.New(),
-					GitHubGitHubLogin: "editor-user",
+					GitHubLogin: "editor-user",
 					Role:        models.UserRoleEditor,
 				}
 				err := s.CreateUser(context.Background(), user)
@@ -52,9 +52,9 @@ func TestRequireAdmin(t *testing.T) {
 			name: "viewer user blocked",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
+					ID:          uuid.New(),
 					GitHubLogin: "viewer-user",
-					Role:  models.UserRoleViewer,
+					Role:        models.UserRoleViewer,
 				}
 				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
@@ -104,9 +104,9 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 			name: "admin user passes",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
+					ID:          uuid.New(),
 					GitHubLogin: "admin-user",
-					Role:  models.UserRoleAdmin,
+					Role:        models.UserRoleAdmin,
 				}
 				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
@@ -118,9 +118,9 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 			name: "editor user passes",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
+					ID:          uuid.New(),
 					GitHubLogin: "editor-user",
-					Role:  models.UserRoleEditor,
+					Role:        models.UserRoleEditor,
 				}
 				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
@@ -132,9 +132,9 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 			name: "viewer user blocked",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
+					ID:          uuid.New(),
 					GitHubLogin: "viewer-user",
-					Role:  models.UserRoleViewer,
+					Role:        models.UserRoleViewer,
 				}
 				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
@@ -177,9 +177,9 @@ func TestRequireViewerOrAbove(t *testing.T) {
 			name: "admin user passes",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
+					ID:          uuid.New(),
 					GitHubLogin: "admin-user",
-					Role:  models.UserRoleAdmin,
+					Role:        models.UserRoleAdmin,
 				}
 				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
@@ -191,9 +191,9 @@ func TestRequireViewerOrAbove(t *testing.T) {
 			name: "editor user passes",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
+					ID:          uuid.New(),
 					GitHubLogin: "editor-user",
-					Role:  models.UserRoleEditor,
+					Role:        models.UserRoleEditor,
 				}
 				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
@@ -205,9 +205,9 @@ func TestRequireViewerOrAbove(t *testing.T) {
 			name: "viewer user passes",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
+					ID:          uuid.New(),
 					GitHubLogin: "viewer-user",
-					Role:  models.UserRoleViewer,
+					Role:        models.UserRoleViewer,
 				}
 				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
@@ -257,9 +257,9 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 			name: "admin user passes middleware",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
+					ID:          uuid.New(),
 					GitHubLogin: "admin-user",
-					Role:  models.UserRoleAdmin,
+					Role:        models.UserRoleAdmin,
 				}
 				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
@@ -271,9 +271,9 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 			name: "editor user passes middleware",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
+					ID:          uuid.New(),
 					GitHubLogin: "editor-user",
-					Role:  models.UserRoleEditor,
+					Role:        models.UserRoleEditor,
 				}
 				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
@@ -285,9 +285,9 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 			name: "viewer user blocked by middleware",
 			setupUser: func(t *testing.T, s store.Store) uuid.UUID {
 				user := &models.User{
-					ID:    uuid.New(),
+					ID:          uuid.New(),
 					GitHubLogin: "viewer-user",
-					Role:  models.UserRoleViewer,
+					Role:        models.UserRoleViewer,
 				}
 				err := s.CreateUser(context.Background(), user)
 				require.NoError(t, err)
