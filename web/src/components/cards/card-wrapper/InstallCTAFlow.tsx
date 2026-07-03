@@ -34,14 +34,6 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   const { status: agentStatus } = useLocalAgent()
   const isAgentConnected = agentStatus === 'connected'
   const { isDemoMode } = useDemoMode()
-
-  // Hide the CTA when demo mode is off
-  if (!isDemoMode) {
-    return null
-  }
-
-  const installInfo = CARD_INSTALL_MAP[cardType]
-
   const { isOpen: showClusterSelect, open: openClusterSelect, close: closeClusterSelect } = useModalState()
   const [showInstallGuide, setShowInstallGuide] = useState<{
     mission: { mission?: { title?: string; description?: string; steps?: { title?: string; description?: string }[] } }
@@ -52,6 +44,13 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   } | null>(null)
   const [isPreparingInstall, setIsPreparingInstall] = useState(false)
   const [installError, setInstallError] = useState<string | null>(null)
+
+  // Hide the CTA when demo mode is off
+  if (!isDemoMode) {
+    return null
+  }
+
+  const installInfo = CARD_INSTALL_MAP[cardType]
 
   const installProjectName = installInfo?.project ?? t('cards:installFlow.componentsFallback', 'components')
   const installCtaLabel = isPreparingInstall
@@ -88,7 +87,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   return (
     <>
       {/* Install CTA button */}
-      <div className="mt-auto border-t border-yellow-500/10 pt-2">
+      <div className="border-t border-yellow-500/10 pt-2">
         <button
           onClick={(e) => { e.stopPropagation(); void handleClick() }}
           disabled={isPreparingInstall}
