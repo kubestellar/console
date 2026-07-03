@@ -1,4 +1,4 @@
-const { describe, it, expect } = require('vitest')
+import { describe, it, expect } from 'vitest'
 
 // Import the module to test internals via function extraction
 // compareBrowserMatrix.cjs uses module-level execution, so we test its helper functions
