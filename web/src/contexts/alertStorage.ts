@@ -179,6 +179,17 @@ export function saveAlerts(alerts: Alert[]): void {
       }
     } else {
       console.error(`Failed to save ${ALERTS_KEY} to localStorage:`, e)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('storage-error', {
+          detail: { 
+            operation: 'setItem', 
+            key: ALERTS_KEY, 
+            error: e instanceof Error ? e.message : String(e), 
+            timestamp: Date.now(), 
+            severity: 'warning'
+          }
+        }))
+      }
     }
   }
 }
