@@ -24,9 +24,11 @@ func TestRequireAdmin(t *testing.T) {
 		{
 			name: "admin user passes",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "admin-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "admin-user-" + id.String()[:8],
 					Role:        models.UserRoleAdmin,
 				}
 				err := s.CreateUser(ctx, user)
@@ -38,9 +40,11 @@ func TestRequireAdmin(t *testing.T) {
 		{
 			name: "editor user blocked",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "editor-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "editor-user-" + id.String()[:8],
 					Role:        models.UserRoleEditor,
 				}
 				err := s.CreateUser(ctx, user)
@@ -52,9 +56,11 @@ func TestRequireAdmin(t *testing.T) {
 		{
 			name: "viewer user blocked",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "viewer-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "viewer-user-" + id.String()[:8],
 					Role:        models.UserRoleViewer,
 				}
 				err := s.CreateUser(ctx, user)
@@ -105,9 +111,11 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 		{
 			name: "admin user passes",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "admin-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "admin-user-" + id.String()[:8],
 					Role:        models.UserRoleAdmin,
 				}
 				err := s.CreateUser(ctx, user)
@@ -119,9 +127,11 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 		{
 			name: "editor user passes",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "editor-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "editor-user-" + id.String()[:8],
 					Role:        models.UserRoleEditor,
 				}
 				err := s.CreateUser(ctx, user)
@@ -133,9 +143,11 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 		{
 			name: "viewer user blocked",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "viewer-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "viewer-user-" + id.String()[:8],
 					Role:        models.UserRoleViewer,
 				}
 				err := s.CreateUser(ctx, user)
@@ -179,9 +191,11 @@ func TestRequireViewerOrAbove(t *testing.T) {
 		{
 			name: "admin user passes",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "admin-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "admin-user-" + id.String()[:8],
 					Role:        models.UserRoleAdmin,
 				}
 				err := s.CreateUser(ctx, user)
@@ -193,9 +207,11 @@ func TestRequireViewerOrAbove(t *testing.T) {
 		{
 			name: "editor user passes",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "editor-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "editor-user-" + id.String()[:8],
 					Role:        models.UserRoleEditor,
 				}
 				err := s.CreateUser(ctx, user)
@@ -207,9 +223,11 @@ func TestRequireViewerOrAbove(t *testing.T) {
 		{
 			name: "viewer user passes",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "viewer-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "viewer-user-" + id.String()[:8],
 					Role:        models.UserRoleViewer,
 				}
 				err := s.CreateUser(ctx, user)
@@ -260,9 +278,11 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 		{
 			name: "admin user passes middleware",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "admin-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "admin-user-" + id.String()[:8],
 					Role:        models.UserRoleAdmin,
 				}
 				err := s.CreateUser(ctx, user)
@@ -274,9 +294,11 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 		{
 			name: "editor user passes middleware",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "editor-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "editor-user-" + id.String()[:8],
 					Role:        models.UserRoleEditor,
 				}
 				err := s.CreateUser(ctx, user)
@@ -288,9 +310,11 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 		{
 			name: "viewer user blocked by middleware",
 			setupUser: func(t *testing.T, s *store.SQLiteStore) uuid.UUID {
+				id := uuid.New()
 				user := &models.User{
-					ID:          uuid.New(),
-					GitHubLogin: "viewer-user",
+					ID:          id,
+					GitHubID:    id.String(),
+					GitHubLogin: "viewer-user-" + id.String()[:8],
 					Role:        models.UserRoleViewer,
 				}
 				err := s.CreateUser(ctx, user)
