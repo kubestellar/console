@@ -783,7 +783,7 @@ export function AgentSelector({
                           onClick={() => retry(() => closeDropdown())}
                           className="flex items-center gap-1 text-xs text-primary hover:text-primary/80"
                         >
-                          <RefreshCw className={`w-3 h-3 ${connectionState.phase === 'starting' || connectionState.phase === 'handshake' ? 'animate-spin' : ''}`} />
+                          <RefreshCw className="w-3 h-3" />
                           {t("agent.providerRetry")}
                         </button>
                         <span className="text-xs text-muted-foreground/40">
