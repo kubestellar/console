@@ -45,17 +45,12 @@ fi
 # even when all tests pass. Capture the output and check for actual failures.
 # Run with forks so worker heaps are isolated instead of sharing one threaded heap.
 # Use project directory for output file to avoid /tmp restrictions (#16250).
-# Limit to 3 workers on CI to prevent OOM while keeping runtime reasonable.
-# Forked Vitest workers typically use a few hundred MB of RSS each, so 3 forks
-# fit within the 7 GB runner even though the Node heap limit is 8 GB per worker.
-# This keeps the nightly unit suite from timing out as file count continues growing.
+# Worker count is controlled by vite.config.ts (maxWorkers/minWorkers),
+# not by CLI args — CLI override was causing OOM by forcing 3 workers when
+# vite.config correctly limited to 1 for CI memory constraints (#20007).
 OUTPUT_FILE="vitest-output.log"
 EXIT_CODE=0
-WORKER_ARGS=""
-if [ -n "${CI:-}" ]; then
-  WORKER_ARGS="--maxWorkers=3"
-fi
-npx vitest run $EXTRA_ARGS --pool=forks $WORKER_ARGS --testTimeout=30000 --reporter=verbose 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
+npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --reporter=verbose 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
 
 if [ "$EXIT_CODE" -ne 0 ]; then
   # Check if all tests actually passed despite the non-zero exit
