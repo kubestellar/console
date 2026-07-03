@@ -7,7 +7,10 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  security-events: write  # required for SARIF upload
+  contents: read
+  actions: read
 jobs:
   analysis:
     permissions:
