@@ -754,7 +754,7 @@ export function UpdateSettingsForm({ state }: UpdateSettingsFormProps) {
               onClick={handleReloadWindow}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               {t('settings.updates.refreshBrowser')}
             </button>
           </div>
