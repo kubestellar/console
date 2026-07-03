@@ -8,6 +8,7 @@ import { ConfirmMissionPromptDialog } from '../../missions/ConfirmMissionPromptD
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useModalState } from '../../../lib/modals'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 /** Timeout for fetching KB guide data (ms) */
 const KB_FETCH_TIMEOUT_MS = 10_000
@@ -24,14 +25,20 @@ export interface InstallCTAFlowProps {
  * 3. ConfirmMissionPromptDialog (review/edit prompt)
  * 4. Manual install guide modal (when agent not connected)
  *
- * This component does not fetch card data or own demo-mode state. It is only
- * rendered by cards that are already in a demo/live state decided upstream.
+ * This component subscribes to demo mode state to hide itself when demo mode
+ * is toggled off, ensuring the CTA doesn't persist after switching to live data.
  */
 export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { startMission, openSidebar } = useMissions()
   const { status: agentStatus } = useLocalAgent()
   const isAgentConnected = agentStatus === 'connected'
+  const { isDemoMode } = useDemoMode()
+
+  // Hide the CTA when demo mode is off
+  if (!isDemoMode) {
+    return null
+  }
 
   const installInfo = CARD_INSTALL_MAP[cardType]
 
