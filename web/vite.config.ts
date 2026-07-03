@@ -120,41 +120,20 @@ export default defineConfig(({ mode }) => ({
             ['cards-quantum', ['/src/components/cards/quantum/', '/src/components/cards/cardRegistry.quantum']],
             ['cards-networking', ['/src/components/cards/cilium_status/', '/src/components/cards/linkerd_status/', '/src/components/cards/envoy_status/', '/src/components/cards/contour_status/', '/src/components/cards/cni_status/', '/src/components/cards/coredns_status/', '/src/components/cards/nats_status/', '/src/components/cards/grpc_status/']],
             ['cards-platform', ['/src/components/cards/crossplane-status/', '/src/components/cards/knative_status/', '/src/components/cards/keda_status/', '/src/components/cards/dapr_status/', '/src/components/cards/kubevela_status/', '/src/components/cards/harbor_status/', '/src/components/cards/strimzi_status/', '/src/components/cards/volcano_status/', '/src/components/cards/openkruise_status/', '/src/components/cards/cardRegistry.platform']],
-            // Split remaining cards into smaller groups to avoid oversized cards-misc
-            ['cards-workloads', ['/src/components/cards/workload-detection/', '/src/components/cards/workload-monitor/']],
-            ['cards-storage', ['/src/components/cards/vitess_status/', '/src/components/cards/minio_status/', '/src/components/cards/etcd_status/']],
-            ['cards-messaging', ['/src/components/cards/kafka_status/', '/src/components/cards/rabbitmq_status/', '/src/components/cards/redis_status/']],
-            // Split cards-misc further to reduce bundle size
-            ['cards-monitoring', ['/src/components/cards/prometheus_status/', '/src/components/cards/grafana_status/', '/src/components/cards/alertmanager_status/']],
-            ['cards-cluster', ['/src/components/cards/cluster_health/', '/src/components/cards/cluster_capacity/', '/src/components/cards/cluster_nodes/']],
-            ['cards-cost', ['/src/components/cards/cost/', '/src/components/cards/kubecost_status/']],
-            ['cards-data', ['/src/components/cards/postgresql_status/', '/src/components/cards/mysql_status/', '/src/components/cards/mongodb_status/']],
             ['cards-misc', ['/src/components/cards/']],
-            // Split drilldown views by type to reduce chunk size
-            ['drilldown-k8s', ['/src/components/drilldown/views/PodLogs', '/src/components/drilldown/views/PodEvents', '/src/components/drilldown/views/PodTerminal', '/src/components/drilldown/views/NamespaceDetails']],
-            ['drilldown-data', ['/src/components/drilldown/views/LogViewer', '/src/components/drilldown/views/MetricsViewer', '/src/components/drilldown/views/EventTimeline']],
-            ['drilldown-ui', ['/src/components/drilldown/DrillDownModal', '/src/components/drilldown/DrillDownHeader', '/src/components/drilldown/DrillDownStack']],
             ['drilldown', ['/src/components/drilldown/']],
-            // Dashboard and layout split by concern
-            ['dashboard-customizer', ['/src/components/dashboard/customizer/', '/src/components/dashboard/shared/cardCatalog']],
-            ['dashboard-grid', ['/src/components/dashboard/CardGrid', '/src/components/dashboard/DashboardGrid']],
             ['dashboard-core', ['/src/components/dashboard/', '/src/lib/dashboards/', '/src/lib/unified/dashboard/']],
-            ['layout-header', ['/src/components/layout/Header', '/src/components/layout/TopBar', '/src/components/layout/UserMenu']],
-            ['layout-sidebar', ['/src/components/layout/Sidebar', '/src/components/layout/Navigation', '/src/components/layout/MobileMenu']],
             ['layout-shell', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
-            // Split contexts and providers into smaller groups
-            ['contexts-dashboard', ['/src/contexts/DashboardProvider', '/src/contexts/DrillDownProvider', '/src/contexts/AlertsProvider']],
-            ['contexts-global', ['/src/contexts/GlobalFiltersProvider', '/src/contexts/ThemeProvider', '/src/contexts/AuthProvider']],
-            ['contexts-providers', ['/src/contexts/', '/src/hooks/useDrillDown', '/src/hooks/useRewards', '/src/hooks/useMissions', '/src/hooks/useGlobalFilters']],
-            ['hooks-data', ['/src/hooks/useCached', '/src/hooks/useCache', '/src/hooks/useCluster', '/src/hooks/useDashboard']],
+            ['contexts-providers', ['/src/contexts/']],
+            ['hooks-data', ['/src/hooks/']],
             ['lib-cache', ['/src/lib/cache/']],
             ['lib-utils', ['/src/lib/utils', '/src/lib/cn.ts', '/src/lib/constants.ts']],
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
             // Split app shell to reduce massive app-routes chunk
             ['app-router', ['/src/components/router/', '/src/lib/router/']],
             ['app-routes', ['/src/App.tsx']],
-            ['app-shell', ['/src/hooks/usePersistedSettings', '/src/hooks/useAppInit']],
+            ['app-shell', ['/src/hooks/usePersistedSettings']],
             ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
           ] as const
           for (const [chunkName, needles] of sourceChunkRules) {
