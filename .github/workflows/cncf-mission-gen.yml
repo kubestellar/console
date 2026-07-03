@@ -34,9 +34,7 @@ on:
         default: '10'
 
 permissions:
-  contents: write
-  pull-requests: read
-  issues: read
+  contents: read
 
 jobs:
   # Compute batch matrix from total project count
