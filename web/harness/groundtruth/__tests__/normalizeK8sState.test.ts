@@ -69,7 +69,6 @@ describe('normalizeK8sState', () => {
   })
 
   it('handles deployment with no status', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const deployments = [{ status: undefined }, {}] as Array<Record<string, unknown>>
     const result = normalizeK8sState({ ...baseInput, deployments })
     // availableReplicas defaults to 0, replicas defaults to 0 — 0 >= 0 is true
@@ -92,7 +91,6 @@ describe('normalizeK8sState', () => {
   })
 
   it('handles nodes with missing status gracefully', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const nodes = [{ status: undefined }, {}] as Array<Record<string, unknown>>
     const result = normalizeK8sState({ ...baseInput, nodes })
     expect(result.nodes).toEqual({ total: 2, ready: 0, notReady: 2 })
