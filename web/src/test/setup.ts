@@ -195,11 +195,12 @@ if (isBrowserEnvironment) {
 }
 
 // Cleanup after each test.
-// NOTE: vi.unstubAllGlobals() is intentionally NOT called here. Each test file
-// runs in its own vitest worker so global stubs cannot leak between files.
-// Calling unstubAllGlobals() here would remove file-level stubs (e.g.
-// vi.stubGlobal('fetch', mockFetch)) after the first test in a file, breaking
-// all subsequent tests that rely on that stub.
+// NOTE: vi.unstubAllGlobals() IS called when running in sharded mode (CI).
+// In sharded runs, multiple test files share the same worker, so global stubs
+// from one file can leak into another. Without cleanup, test file A's stubbed
+// fetch can break test file B's expectations in the same shard.
+// In non-sharded local runs, each file gets its own worker, so cleanup is less
+// critical but still safe (tests re-stub in beforeEach if needed).
 afterEach(() => {
   if (isBrowserEnvironment) {
     cleanup()
@@ -207,5 +208,6 @@ afterEach(() => {
     window.sessionStorage?.clear()
   }
   vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
   vi.clearAllMocks()
 })
