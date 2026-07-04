@@ -9,7 +9,6 @@ import (
 	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
