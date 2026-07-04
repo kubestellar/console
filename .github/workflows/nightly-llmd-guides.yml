@@ -246,16 +246,21 @@ jobs:
 
       - name: Find or create tracking issue
         id: issue
+        # continue-on-error: reporting infra failures must not mark passing guide runs as failed
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           LABEL="${TRACKING_ISSUE_LABEL}"
           TITLE="${TRACKING_ISSUE_TITLE}"
 
-          # Ensure label exists
+          # Ensure labels exist (|| true already on label create, also create hold)
           gh label create "$LABEL" \
             --description "Nightly llm-d guide E2E results" \
             --color "5319e7" 2>/dev/null || true
+          gh label create "hold" \
+            --description "Hold: do not auto-close" \
+            --color "e4e669" 2>/dev/null || true
 
           # Find existing open issue
           EXISTING=$(gh issue list \
@@ -282,16 +287,19 @@ jobs:
             ISSUE_BODY+="- custom-metrics"$'\n\n'
             ISSUE_BODY+="---"$'\n'
             ISSUE_BODY+="_Results are posted as comments below, newest first._"
-            NEW_ISSUE=$(gh issue create \
+            # Capture URL; grep exits 1 on no match so guard with || true
+            ISSUE_URL=$(gh issue create \
               --title "$TITLE" \
               --label "$LABEL" \
               --label "hold" \
-              --body "$ISSUE_BODY" \
-              | grep -oP '\d+$')
+              --body "$ISSUE_BODY") || true
+            NEW_ISSUE=$(echo "$ISSUE_URL" | grep -oP '\d+$' || true)
             echo "issue_number=$NEW_ISSUE" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Post results to tracking issue
+        # Only run if tracking issue was found/created successfully
+        if: steps.issue.outputs.issue_number != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
