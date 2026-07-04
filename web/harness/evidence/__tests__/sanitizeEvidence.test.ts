@@ -1,15 +1,17 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { sanitizeText, sanitizeJson, safeJsonStringify } from '../sanitizeEvidence'
 
 describe('sanitizeText', () => {
   const originalEnv = process.env
 
   beforeEach(() => {
+    vi.clearAllMocks()
     process.env = { ...originalEnv }
   })
 
   afterEach(() => {
     process.env = originalEnv
+    vi.restoreAllMocks()
   })
 
   it('returns empty string for null/undefined input', () => {
