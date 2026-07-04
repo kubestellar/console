@@ -228,7 +228,12 @@ jobs:
     needs: [determine_version, test]
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    if: ${{ github.event.inputs.dry_run != 'true' && needs.determine_version.outputs.has_changes == 'true' }}
+    # For scheduled releases (nightly/weekly), proceed even if tests fail
+    # For manual releases, require tests to pass
+    if: |
+      github.event.inputs.dry_run != 'true' &&
+      needs.determine_version.outputs.has_changes == 'true' &&
+      (github.event_name == 'schedule' || needs.test.result == 'success')
     permissions:
       contents: write
       packages: write
