@@ -7,6 +7,26 @@ vi.mock('../../lib/demoMode', () => ({
   isDemoMode: vi.fn(() => true),
 }))
 
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}))
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/', search: '' }),
+}))
+
+vi.mock('../../lib/api', () => ({
+  api: { post: vi.fn(), get: vi.fn() },
+}))
+
+vi.mock('../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}))
+
 describe('MissionTypeExplainer', () => {
   it('renders the title', () => {
     render(<MissionTypeExplainer />)

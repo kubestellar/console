@@ -11,6 +11,19 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/', search: '' }),
+}))
+
+vi.mock('../../lib/api', () => ({
+  api: { post: vi.fn(), get: vi.fn() },
+}))
+
+vi.mock('../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}))
+
 const mockMission: MissionExport = {
   title: 'Install Prometheus',
   description: 'Install Prometheus monitoring stack',

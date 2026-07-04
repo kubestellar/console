@@ -10,6 +10,26 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ResolutionErrorBoundary } from '../ResolutionErrorBoundary'
 
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}))
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/', search: '' }),
+}))
+
+vi.mock('../../../lib/api', () => ({
+  api: { post: vi.fn(), get: vi.fn() },
+}))
+
+vi.mock('../../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}))
+
 const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
   if (shouldThrow) {
     throw new Error('Test error')

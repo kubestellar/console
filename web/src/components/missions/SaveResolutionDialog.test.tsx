@@ -10,6 +10,11 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/', search: '' }),
+}))
+
 vi.mock('../../lib/api', () => ({
   api: {
     post: vi.fn(),
