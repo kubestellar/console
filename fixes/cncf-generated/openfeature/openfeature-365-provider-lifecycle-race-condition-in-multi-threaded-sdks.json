@@ -1,0 +1,72 @@
+{
+  "version": "kc-mission-v1",
+  "name": "openfeature-365-provider-lifecycle-race-condition-in-multi-threaded-sdks",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "openfeature: Provider lifecycle race condition in multi-threaded SDKs",
+    "description": "Provider lifecycle race condition in multi-threaded SDKs. Community-reported issue.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify openfeature troubleshoot symptoms",
+        "description": "Check for the issue in your openfeature deployment:\n```bash\nkubectl get pods -n openfeature -l app.kubernetes.io/name=openfeature\nkubectl logs -l app.kubernetes.io/name=openfeature -n openfeature --tail=100 | grep -i error\n```\nLook for errors or warnings in the logs that may indicate the issue."
+      },
+      {
+        "title": "Review openfeature configuration",
+        "description": "Inspect the relevant openfeature configuration:\n```bash\nkubectl get all -n openfeature -l app.kubernetes.io/name=openfeature\nkubectl get configmap -n openfeature -l app.kubernetes.io/part-of=openfeature\n```\nI've been digging provider lifecycle in Go and Swift SDKs, and I believe there's a couple of things in OF spec that make it hard to implement it correctly in the presence of true multi-threading."
+      },
+      {
+        "title": "Apply the fix for Provider lifecycle race condition in multi-threaded SDKs",
+        "description": "I did some reasearch:\n\n# Survey and PoC\n\n**Spec Issue:** [#365](https://github.com/open-feature/spec/issues/365)\n**Date:** 2026-03-11\n\n## 1. Spec Changes\n\n### New requirements (Section 2, Providers)\n\n### Modified requirements\n\n| Requirement | Current                                                                                      | Change                                                                     |\n| ----------- |\n\nSee the source issue for community-verified solutions."
+      },
+      {
+        "title": "Confirm Provider lifecycle race condition in… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=openfeature -n openfeature --tail=50 --since=5m\nkubectl get events -n openfeature --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that the issue symptoms are gone."
+      }
+    ],
+    "resolution": {
+      "summary": "I did some reasearch:\n\n# Survey and PoC\n\n**Spec Issue:** [#365](https://github.com/open-feature/spec/issues/365)\n**Date:** 2026-03-11\n\n## 1.",
+      "codeSnippets": []
+    }
+  },
+  "metadata": {
+    "tags": [
+      "openfeature",
+      "incubating",
+      "app-definition",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "openfeature"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "incubating",
+    "sourceUrls": {
+      "issue": "https://github.com/open-feature/spec/issues/365",
+      "repo": "https://github.com/open-feature/spec"
+    },
+    "reactions": 1,
+    "comments": 15,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with openfeature installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-04T07:11:10.258Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
