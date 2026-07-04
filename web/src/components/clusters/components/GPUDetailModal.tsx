@@ -487,8 +487,8 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
           {gpuNodes.length === 0 && !isLoading && (
             <div className="text-center py-8 text-muted-foreground">
               <Zap className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>{t('gpu.noGpuNodesDetected')}</p>
-              <p className="text-sm mt-1">{t('gpu.gpuNodesHint')}</p>
+              <div>{t('gpu.noGpuNodesDetected')}</div>
+              <div className="text-sm mt-1">{t('gpu.gpuNodesHint')}</div>
             </div>
           )}
 

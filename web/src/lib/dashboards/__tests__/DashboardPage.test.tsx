@@ -77,7 +77,7 @@ vi.mock('../../../components/dashboard/ConfigureCardModal', () => ({
 
 vi.mock('../../../components/dashboard/FloatingDashboardActions', () => ({
   FloatingDashboardActions: ({ onOpenCustomizer }: { onOpenCustomizer?: () => void }) => (
-    <button data-testid="floating-actions" onClick={onOpenCustomizer}>FAB</button>
+    <div role="button" tabIndex={0} data-testid="floating-actions" onClick={onOpenCustomizer}>FAB</div>
   ),
 }))
 
@@ -89,13 +89,15 @@ vi.mock('../../../components/dashboard/customizer/DashboardCustomizer', () => ({
   }) => (
     isOpen ? (
       <div data-testid="dashboard-customizer">
-        <button data-testid="customizer-close" onClick={onClose}>{TEST_STRINGS.dashboard.close}</button>
-        <button
+        <div role="button" tabIndex={0} data-testid="customizer-close" onClick={onClose}>{TEST_STRINGS.dashboard.close}</div>
+        <div
+          role="button"
+          tabIndex={0}
           data-testid="customizer-add-card"
           onClick={() => onAddCards([{ type: 'new_card', title: 'New Card', config: {} }])}
         >
           {TEST_STRINGS.dashboard.add}
-        </button>
+        </div>
         <button
           data-testid="customizer-apply-template"
           onClick={() => onApplyTemplate({
