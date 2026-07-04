@@ -1,12 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import * as childProcess from 'node:child_process'
-import * as fs from 'node:fs'
 
-vi.mock('node:child_process')
-vi.mock('node:fs')
+// Use explicit mock factories so references remain stable after vi.resetModules()
+const mockExecFileSync = vi.fn()
+const mockWriteFileSync = vi.fn()
+const mockMkdirSync = vi.fn()
+const mockMkdtempSync = vi.fn(() => '/tmp/mock-kubeconfig-dir')
+const mockRmSync = vi.fn()
 
-const mockedExecFileSync = vi.mocked(childProcess.execFileSync)
-const mockedFs = vi.mocked(fs)
+vi.mock('node:child_process', () => ({
+  execFileSync: mockExecFileSync,
+}))
+
+vi.mock('node:fs', () => ({
+  writeFileSync: mockWriteFileSync,
+  mkdirSync: mockMkdirSync,
+  mkdtempSync: mockMkdtempSync,
+  rmSync: mockRmSync,
+}))
 
 describe('liveFixtureManager', () => {
   const originalEnv = process.env
@@ -14,11 +24,11 @@ describe('liveFixtureManager', () => {
   beforeEach(() => {
     vi.resetModules()
     process.env = { ...originalEnv }
-    mockedExecFileSync.mockReset()
-    mockedFs.writeFileSync.mockImplementation(() => undefined)
-    mockedFs.mkdirSync.mockImplementation(() => '' as unknown as string)
-    mockedFs.mkdtempSync.mockReturnValue('/tmp/mock-kubeconfig-dir')
-    mockedFs.rmSync.mockImplementation(() => undefined)
+    mockExecFileSync.mockReset()
+    mockWriteFileSync.mockImplementation(() => undefined)
+    mockMkdirSync.mockImplementation(() => '' as unknown as string)
+    mockMkdtempSync.mockReturnValue('/tmp/mock-kubeconfig-dir')
+    mockRmSync.mockImplementation(() => undefined)
   })
 
   afterEach(() => {
@@ -58,12 +68,12 @@ describe('liveFixtureManager', () => {
       process.env.LIVE_CLUSTER_FIXTURES = 'true'
       process.env.KUBECONFIG_PATH = '/mock/kubeconfig'
       process.env.LIVE_CLUSTER_FIXTURE_CONTEXT = 'test-context'
-      mockedExecFileSync.mockReturnValue('')
+      mockExecFileSync.mockReturnValue('')
       const { applyLiveFixtures } = await loadModule()
       const report = applyLiveFixtures()
       expect(report.enabled).toBe(true)
       expect(report.context).toBe('test-context')
-      expect(mockedExecFileSync).toHaveBeenCalledWith(
+      expect(mockExecFileSync).toHaveBeenCalledWith(
         'kubectl',
         expect.arrayContaining(['--kubeconfig', '/mock/kubeconfig', '--context', 'test-context', 'apply', '-f', '-']),
         expect.objectContaining({ encoding: 'utf8' }),
@@ -75,7 +85,7 @@ describe('liveFixtureManager', () => {
       process.env.KUBECONFIG_PATH = '/mock/kubeconfig'
       delete process.env.LIVE_CLUSTER_FIXTURE_CONTEXT
       process.env.LIVE_CLUSTER_CONTEXTS = 'ctx-a, ctx-b, ctx-c'
-      mockedExecFileSync.mockReturnValue('')
+      mockExecFileSync.mockReturnValue('')
       const { applyLiveFixtures } = await loadModule()
       const report = applyLiveFixtures()
       expect(report.context).toBe('ctx-a')
@@ -95,8 +105,9 @@ describe('liveFixtureManager', () => {
       process.env.LIVE_CLUSTER_FIXTURES = 'true'
       process.env.KUBECONFIG_PATH = '/mock/kubeconfig'
       process.env.LIVE_CLUSTER_FIXTURE_CONTEXT = 'test-ctx'
-      mockedExecFileSync.mockImplementation((_cmd, args: string[]) => {
-        if (args.includes('pods')) {
+      mockExecFileSync.mockImplementation((_cmd: unknown, args: unknown) => {
+        const a = args as string[]
+        if (a.includes('pods')) {
           return JSON.stringify({
             items: [
               { metadata: { name: 'pod-a' }, status: { phase: 'Running' } },
@@ -104,7 +115,7 @@ describe('liveFixtureManager', () => {
             ],
           })
         }
-        if (args.includes('deployment')) {
+        if (a.includes('deployment')) {
           return JSON.stringify({ status: { availableReplicas: 2, replicas: 2 } })
         }
         return ''
@@ -122,9 +133,10 @@ describe('liveFixtureManager', () => {
       process.env.LIVE_CLUSTER_FIXTURES = 'true'
       process.env.KUBECONFIG_PATH = '/mock/kubeconfig'
       process.env.LIVE_CLUSTER_FIXTURE_CONTEXT = 'ctx'
-      mockedExecFileSync.mockImplementation((_cmd, args: string[]) => {
-        if (args.includes('pods')) return JSON.stringify({ items: [] })
-        if (args.includes('deployment')) return JSON.stringify({ status: { availableReplicas: 0, replicas: 2 } })
+      mockExecFileSync.mockImplementation((_cmd: unknown, args: unknown) => {
+        const a = args as string[]
+        if (a.includes('pods')) return JSON.stringify({ items: [] })
+        if (a.includes('deployment')) return JSON.stringify({ status: { availableReplicas: 0, replicas: 2 } })
         return ''
       })
       const { collectLiveFixtureState } = await loadModule()
@@ -146,17 +158,18 @@ describe('liveFixtureManager', () => {
       process.env.LIVE_CLUSTER_FIXTURE_CLEANUP = 'false'
       process.env.KUBECONFIG_PATH = '/mock/kubeconfig'
       process.env.LIVE_CLUSTER_FIXTURE_CONTEXT = 'ctx'
-      mockedExecFileSync.mockImplementation((_cmd, args: string[]) => {
-        if (args.includes('pods')) return JSON.stringify({ items: [] })
-        if (args.includes('deployment')) return JSON.stringify({ status: { availableReplicas: 1, replicas: 1 } })
+      mockExecFileSync.mockImplementation((_cmd: unknown, args: unknown) => {
+        const a = args as string[]
+        if (a.includes('pods')) return JSON.stringify({ items: [] })
+        if (a.includes('deployment')) return JSON.stringify({ status: { availableReplicas: 1, replicas: 1 } })
         return ''
       })
       const { cleanupLiveFixtures } = await loadModule()
       const report = cleanupLiveFixtures()
       expect(report.enabled).toBe(true)
       // Should NOT have called 'delete namespace'
-      const deleteCall = mockedExecFileSync.mock.calls.find(call =>
-        Array.isArray(call[1]) && call[1].includes('delete'),
+      const deleteCall = mockExecFileSync.mock.calls.find((call: unknown[]) =>
+        Array.isArray(call[1]) && (call[1] as string[]).includes('delete'),
       )
       expect(deleteCall).toBeUndefined()
     })
@@ -166,15 +179,15 @@ describe('liveFixtureManager', () => {
       delete process.env.LIVE_CLUSTER_FIXTURE_CLEANUP
       process.env.KUBECONFIG_PATH = '/mock/kubeconfig'
       process.env.LIVE_CLUSTER_FIXTURE_CONTEXT = 'test-ctx'
-      mockedExecFileSync.mockReturnValue('')
+      mockExecFileSync.mockReturnValue('')
       const { cleanupLiveFixtures } = await loadModule()
       const report = cleanupLiveFixtures()
       expect(report.enabled).toBe(true)
-      const deleteCall = mockedExecFileSync.mock.calls.find(call =>
-        Array.isArray(call[1]) && call[1].includes('delete'),
+      const deleteCall = mockExecFileSync.mock.calls.find((call: unknown[]) =>
+        Array.isArray(call[1]) && (call[1] as string[]).includes('delete'),
       )
       expect(deleteCall).toBeDefined()
-      expect(deleteCall?.[1]).toContain('ks-live-ui-fixtures')
+      expect((deleteCall as unknown[])?.[1]).toContain('ks-live-ui-fixtures')
     })
 
     it('uses KUBECONFIG_B64 to write temp kubeconfig', async () => {
@@ -183,10 +196,10 @@ describe('liveFixtureManager', () => {
       delete process.env.LIVE_CLUSTER_FIXTURE_KUBECONFIG_B64
       process.env.KUBECONFIG_B64 = Buffer.from('mock-kubeconfig-content').toString('base64')
       process.env.LIVE_CLUSTER_FIXTURE_CONTEXT = 'ctx'
-      mockedExecFileSync.mockReturnValue('')
+      mockExecFileSync.mockReturnValue('')
       const { cleanupLiveFixtures } = await loadModule()
       cleanupLiveFixtures()
-      expect(mockedFs.writeFileSync).toHaveBeenCalledWith(
+      expect(mockWriteFileSync).toHaveBeenCalledWith(
         '/tmp/mock-kubeconfig-dir/config',
         'mock-kubeconfig-content',
         { mode: 0o600 },
@@ -199,8 +212,8 @@ describe('liveFixtureManager', () => {
       delete process.env.LIVE_CLUSTER_FIXTURES
       const { applyLiveFixtures } = await loadModule()
       applyLiveFixtures()
-      const writeCall = mockedFs.writeFileSync.mock.calls.find(call =>
-        typeof call[0] === 'string' && call[0].includes('live-fixtures.json'),
+      const writeCall = mockWriteFileSync.mock.calls.find((call: unknown[]) =>
+        typeof call[0] === 'string' && (call[0] as string).includes('live-fixtures.json'),
       )
       expect(writeCall).toBeDefined()
       const written = JSON.parse(writeCall![1] as string)
