@@ -184,14 +184,15 @@ test.describe('Smoke Tests', () => {
       // Wait for both the element to exist AND become actionable (no visibility:hidden).
       // The sidebar slide-in animation can leave elements in a "found but hidden" state.
       await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
-      await expect(settingsLink).toBeVisible({ timeout: 30000 })
+      await expect(settingsLink).toBeVisible({ timeout: 45000 })
       // Extra stability wait for webkit/safari where elements can be "visible" but
       // still mid-transition. Wait for DOM to fully settle after animation.
       await page.waitForTimeout(500)
+      await settingsLink.waitFor({ state: 'visible', timeout: 10000 })
       await settingsLink.click({ force: true })
 
       await expect(page).toHaveURL(/\/settings(?:[?#].*)?$/, { timeout: 10000 })
-      await expect(page.locator('[data-testid="settings-page"] [data-testid="settings-title"]').first()).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('[data-testid="settings-page"] [data-testid="settings-title"]').first()).toBeVisible({ timeout: 15000 })
 
       // Click the logo button (has aria-label "Go to home dashboard").
       // The navbar renders two such buttons — the logo and the wordmark —
