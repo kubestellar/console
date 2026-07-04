@@ -17,6 +17,8 @@ import { useTrestle, type OscalControlResult } from '../../../hooks/useTrestle'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { useDrillDown } from '../../../hooks/useDrillDown'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { Input } from '../../ui/Input'
+import { Select } from '../../ui/Select'
 import { cn } from '../../../lib/cn'
 import { TOUCH_TARGET_HEIGHT_CLASS, TOUCH_TARGET_SIZE_CLASS } from '../../../lib/constants/ui'
 
@@ -311,18 +313,18 @@ export function ComplianceDrillDown({ data }: Props) {
         {/* Search + filter toggle */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
+            <Input
               type="text"
               placeholder="Search by control ID, title, or description..."
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); resetPage() }}
-              className={cn('w-full rounded-lg border border-border bg-card/50 py-2 pl-9 pr-8 text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary', TOUCH_TARGET_HEIGHT_CLASS)}
+              leadingIcon={<Search className="w-4 h-4" />}
+              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
             />
             {searchQuery && (
               <button
                 onClick={() => { setSearchQuery(''); resetPage() }}
-                className={cn('absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground', TOUCH_TARGET_SIZE_CLASS)}
+                className={cn('absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-10', TOUCH_TARGET_SIZE_CLASS)}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -351,47 +353,47 @@ export function ComplianceDrillDown({ data }: Props) {
         {/* Filter dropdowns */}
         {showFilters && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
-            <select
+            <Select
               value={statusFilter}
               onChange={e => { setStatusFilter(e.target.value); resetPage() }}
-              className={cn('rounded-lg border border-border bg-card/50 px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary', TOUCH_TARGET_HEIGHT_CLASS)}
+              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
             >
               <option value="">{t('drilldown.compliance.allStatuses')}</option>
               {uniqueStatuses.map(s => (
                 <option key={s} value={s}>{statusLabel(s)}</option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
               value={severityFilter}
               onChange={e => { setSeverityFilter(e.target.value); resetPage() }}
-              className={cn('rounded-lg border border-border bg-card/50 px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary', TOUCH_TARGET_HEIGHT_CLASS)}
+              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
             >
               <option value="">{t('drilldown.compliance.allSeverities')}</option>
               <option value="critical">{t('drilldown.compliance.critical')}</option>
               <option value="high">{t('drilldown.compliance.high')}</option>
               <option value="medium">{t('drilldown.compliance.medium')}</option>
               <option value="low">{t('drilldown.compliance.low')}</option>
-            </select>
-            <select
+            </Select>
+            <Select
               value={clusterFilter}
               onChange={e => { setClusterFilter(e.target.value); resetPage() }}
-              className={cn('rounded-lg border border-border bg-card/50 px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary', TOUCH_TARGET_HEIGHT_CLASS)}
+              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
             >
               <option value="">{t('drilldown.compliance.allClusters')}</option>
               {uniqueClusters.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
               value={profileFilter}
               onChange={e => { setProfileFilter(e.target.value); resetPage() }}
-              className={cn('rounded-lg border border-border bg-card/50 px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary', TOUCH_TARGET_HEIGHT_CLASS)}
+              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
             >
               <option value="">{t('drilldown.compliance.allProfiles')}</option>
               {uniqueProfiles.map(p => (
                 <option key={p} value={p}>{p}</option>
               ))}
-            </select>
+            </Select>
 
             {activeFilters > 0 && (
               <button
