@@ -102,9 +102,9 @@ export function ComparisonTable({
     <section className="max-w-5xl mx-auto px-6 py-16">
       <h2 className="text-3xl font-bold text-center mb-4">{title}</h2>
       {subtitle && (
-        <p className="text-slate-400 text-center mb-12">
+        <div className="text-slate-400 text-center mb-12">
           {subtitle}
-        </p>
+        </div>
       )}
 
       <div className="-mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">
