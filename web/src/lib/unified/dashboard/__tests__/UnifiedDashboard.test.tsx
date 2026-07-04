@@ -27,8 +27,8 @@ vi.mock('../../../modals/ConfirmDialog', () => ({
       <div data-testid="confirm-dialog">
         <span>{title}</span>
         <span>{message}</span>
-        <button onClick={onClose}>cancel-confirm</button>
-        <button onClick={onConfirm}>{confirmLabel || 'confirm'}</button>
+        <div role="button" tabIndex={0} onClick={onClose}>cancel-confirm</div>
+        <div role="button" tabIndex={0} onClick={onConfirm}>{confirmLabel || 'confirm'}</div>
       </div>
     ) : null
   ),

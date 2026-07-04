@@ -64,9 +64,9 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
       />
 
       <BaseModal.Content>
-        <p className="text-sm text-muted-foreground mb-4">
+        <div className="text-sm text-muted-foreground mb-4">
           {t('cluster.renameContext.currentLabel')} <span className="text-foreground font-mono text-xs break-all">{currentDisplayName}</span>
-        </p>
+        </div>
 
         <div className="mb-4">
           <label htmlFor="new-context-name" className="block text-sm text-muted-foreground mb-1">{t('cluster.renameContext.newNameLabel')}</label>
@@ -82,9 +82,9 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
           />
         </div>
 
-        {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
+        {error && <div className="text-sm text-red-400 mb-4">{error}</div>}
 
-        <p className="text-xs text-muted-foreground">{t('cluster.renameContext.updatesKubeconfigHint')}</p>
+        <div className="text-xs text-muted-foreground">{t('cluster.renameContext.updatesKubeconfigHint')}</div>
       </BaseModal.Content>
 
       <BaseModal.Footer showKeyboardHints>

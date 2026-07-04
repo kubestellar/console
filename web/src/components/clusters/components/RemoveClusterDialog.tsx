@@ -65,15 +65,15 @@ export function RemoveClusterDialog({
         <p className="text-sm text-muted-foreground mb-2">
           {t('cluster.removeClusterContext')}
         </p>
-        <p className="text-foreground font-mono text-xs break-all mb-4">{displayName}</p>
+        <div className="text-foreground font-mono text-xs break-all mb-4">{displayName}</div>
 
         {status.error && (
-          <p className="text-sm text-red-400 mb-2" role="alert">
+          <div className="text-sm text-red-400 mb-2" role="alert">
             {status.error}
-          </p>
+          </div>
         )}
 
-        <p className="text-xs text-muted-foreground">{t('cluster.removeClusterDesc')}</p>
+        <div className="text-xs text-muted-foreground">{t('cluster.removeClusterDesc')}</div>
       </BaseModal.Content>
 
       <BaseModal.Footer>

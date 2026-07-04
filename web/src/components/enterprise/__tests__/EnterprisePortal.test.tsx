@@ -18,7 +18,7 @@ vi.mock('../../shared/DashboardHeader', () => ({
   DashboardHeader: ({ title, subtitle }: { title: string; subtitle?: string }) => (
     <div>
       <h1>{title}</h1>
-      {subtitle ? <p>{subtitle}</p> : null}
+      {subtitle ? <div>{subtitle}</div> : null}
     </div>
   ),
 }))
