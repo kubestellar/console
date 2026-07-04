@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, vi } from 'vitest'
+import { afterAll, afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 
@@ -205,15 +205,13 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-// Clear stubs when transitioning to a new test file.
-// In vitest, setupFiles afterAll runs once per worker (not per file), so stubs
-// from FileA leak into FileB. This beforeEach tracks file transitions and clears
-// stubs only when a new file starts, fixing cross-file contamination without
-// requiring changes to individual test files.
-let lastFile = ''
-beforeEach(({ task }) => {
-  if (task.file.name !== lastFile) {
-    vi.unstubAllGlobals()
-    lastFile = task.file.name
-  }
+// Clear global stubs after every test file.
+// In vitest 4.x with pool:'forks'/isolate:false and maxWorkers:1 (CI), all test
+// files in a shard share one worker process, so vi.stubGlobal() calls in one
+// file's beforeAll leak into subsequent files.
+// afterAll in setupFiles runs once per worker (end of shard), not once per file,
+// so this only partially mitigates contamination — see issue #20256 for the
+// full architectural fix (pool:'forks', isolate:true).
+afterAll(() => {
+  vi.unstubAllGlobals()
 })
