@@ -1,6 +1,14 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { redactK8sGroundTruth } from '../redactK8sGroundTruth'
 import type { K8sGroundTruth } from '../k8sTypes'
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('redactK8sGroundTruth', () => {
   const baseGroundTruth: K8sGroundTruth = {
