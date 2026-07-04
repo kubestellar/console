@@ -37,8 +37,8 @@ vi.mock('../BaseModal', () => {
   }) => (
     <div data-testid="modal-header">
       <span data-testid="modal-title">{title}</span>
-      {showBack && onBack && <button data-testid="back-btn" onClick={onBack}>Back</button>}
-      {onClose && <button data-testid="close-btn" onClick={onClose}>Close</button>}
+      {showBack && onBack && <div role="button" tabIndex={0} data-testid="back-btn" onClick={onBack}>Back</div>}
+      {onClose && <div role="button" tabIndex={0} data-testid="close-btn" onClick={onClose}>Close</div>}
       {children}
     </div>
   )

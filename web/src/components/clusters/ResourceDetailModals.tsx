@@ -552,7 +552,7 @@ export function GPUDetailModal({
         ) : gpuNodes.length === 0 ? (
           <div className="text-center py-12">
             <HardDrive className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-            <p className="text-muted-foreground">No GPUs available in this cluster</p>
+            <div className="text-muted-foreground">No GPUs available in this cluster</div>
           </div>
         ) : (
           <>
