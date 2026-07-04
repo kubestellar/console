@@ -30,6 +30,11 @@ import { CardDataReportContext } from '../CardDataContext'
 import type { DetectionRun, DetectionRunsData } from '../../../hooks/useAgenticDetectionRuns'
 import { AgenticDetectionRuns } from '../AgenticDetectionRuns'
 
+const ITEMS_PER_PAGE = 10
+const GITHUB_ISSUE_URL = 'https://github.com/kubestellar/console/issues/16283'
+const GITHUB_WORKFLOW_URL = 'https://github.com/kubestellar/console/actions/runs/12345'
+const MS_PER_HOUR = 60 * 60 * 1000
+
 function makeRun(overrides: Partial<DetectionRun> = {}): DetectionRun {
   return {
     conclusion: 'success',
