@@ -30,6 +30,14 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('lucide-react', () => ({
+  ChevronDown: () => <span>ChevronDown</span>,
+  ChevronRight: () => <span>ChevronRight</span>,
+  RefreshCw: () => <span>RefreshCw</span>,
+  Maximize2: () => <span>Maximize2</span>,
+  Bug: () => <span>Bug</span>,
+}))
+
 vi.mock('../card-wrapper/CardActionMenu', () => ({
   CardActionMenu: () => <div data-testid="card-action-menu-stub" />,
 }))

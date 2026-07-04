@@ -40,3 +40,9 @@ jobs:
       - name: Frontend lint
         working-directory: web
         run: npm run lint:check
+
+      - name: Frontend test (gate subset)
+        working-directory: web
+        run: npx vitest run --exclude 'harness/**' --exclude 'src/components/missions/**' --exclude 'src/components/mission-control/**' --exclude 'src/lib/__tests__/demoMode*' --exclude 'src/lib/dynamic-cards/**' --exclude 'src/hooks/__tests__/useDemoMode*' --exclude 'src/hooks/__tests__/useStackDiscovery*' --exclude 'src/hooks/mcp/**' --exclude 'src/contexts/__tests__/**' --exclude 'src/components/teams/**' --exclude 'src/config/cards/**' --exclude 'src/components/cards/grpc_status/**' --exclude 'src/components/cards/linkerd_status/**' --exclude 'src/components/cards/rook_status/**' --exclude 'src/components/cards/spiffe_status/**' --exclude 'src/components/cards/quantum/**' --exclude 'src/components/cards/llmd/**' --exclude 'src/lib/constants/__tests__/**'
+        env:
+          CI: true
