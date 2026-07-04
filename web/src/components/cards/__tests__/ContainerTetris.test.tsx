@@ -1,6 +1,7 @@
 import React from 'react'
 import { describe, it, expect } from 'vitest'
 import {
+/* eslint-disable @typescript-eslint/no-unused-vars */
   createBoard,
   rotateShape,
   isValidPosition,

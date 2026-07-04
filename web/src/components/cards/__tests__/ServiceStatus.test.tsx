@@ -5,6 +5,7 @@ import { ServiceStatus } from '../ServiceStatus'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 const makeService = (overrides = {}) => ({
   name: 'my-svc',
   namespace: 'default',

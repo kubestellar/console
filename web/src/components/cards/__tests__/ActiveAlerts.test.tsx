@@ -5,6 +5,7 @@ import { ActiveAlerts } from '../ActiveAlerts'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 const { mockAcknowledgeAlerts, mockRunAIDiagnosis } = vi.hoisted(() => ({
   mockAcknowledgeAlerts: vi.fn(),
   mockRunAIDiagnosis: vi.fn()

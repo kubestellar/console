@@ -5,8 +5,12 @@ import { renderHook } from '@testing-library/react'
 // Each mock is assigned to a variable so individual tests can override
 // return values via mockReturnValue / mockReturnValueOnce.
 
-const { mockUseClusters, mockUsePodIssues, mockUseDeployments, mockUseDeploymentIssues, mockUsePVCs, mockUseServices, mockUseEvents, mockUseWarningEvents, mockUseSecurityIssues, mockUseHelmReleases, mockUseOperatorSubscriptions, mockUseOperators, mockUseGPUNodes } = vi.hoisted(() => ({
-  mockUseClusters: vi.fn(() => ({,
+const { mockUseClusters, mockUsePodIssues, mockUseDeployments, mockUseDeploymentIssues, mockUsePVCs, mockUseServices, mockUseEvents, mockUseWarningEvents, mockUseSecurityIssues, mockUseHelmReleases, mockUseOperatorSubscriptions, mockUseOperators, mockUseGPUNodes, mockUseAlerts, mockUseAlertRules } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn(() => ({
+    deduplicatedClusters: [] as unknown[],
+    clusters: [] as unknown[],
+    isLoading: false,
+  })),
   mockUsePodIssues: vi.fn(() => ({ issues: [] as unknown[], isLoading: false })),
   mockUseDeployments: vi.fn(() => ({ deployments: [] as unknown[], isLoading: false })),
   mockUseDeploymentIssues: vi.fn(() => ({ issues: [] as unknown[], isLoading: false })),
@@ -18,11 +22,9 @@ const { mockUseClusters, mockUsePodIssues, mockUseDeployments, mockUseDeployment
   mockUseHelmReleases: vi.fn(() => ({ releases: [] as unknown[], isLoading: false })),
   mockUseOperatorSubscriptions: vi.fn(() => ({ subscriptions: [] as unknown[], isLoading: false })),
   mockUseOperators: vi.fn(() => ({ operators: [] as unknown[], isLoading: false })),
-  mockUseGPUNodes: vi.fn(() => ({ nodes: [] as unknown[], isLoading: false }))
-  deduplicatedClusters: [] as unknown[],
-  clusters: [] as unknown[],
-  isLoading: false,
-  }))
+  mockUseGPUNodes: vi.fn(() => ({ nodes: [] as unknown[], isLoading: false })),
+  mockUseAlerts: vi.fn(() => ({ alerts: [], stats: undefined as never, isLoading: false })),
+  mockUseAlertRules: vi.fn(() => ({ rules: [] as unknown[], isLoading: false })),
 }))
 
 const mockUseAlerts = vi.fn(() => ({ alerts: [], stats: undefined as never, isLoading: false }))

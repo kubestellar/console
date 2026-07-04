@@ -5,6 +5,7 @@ import { ArgoCDApplicationSets } from '../ArgoCDApplicationSets'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 const makeAppSet = (overrides = {}) => ({
   name: 'my-appset',
   namespace: 'argocd',

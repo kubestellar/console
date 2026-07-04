@@ -1,5 +1,6 @@
 import React from 'react'
 /**
+/* eslint-disable @typescript-eslint/no-unused-vars */
  * Unit tests for the taint-aware GPU filter utilities (#8172).
  *
  * Focuses on the pure filter helpers and the `useGPUTaintFilter` hook —

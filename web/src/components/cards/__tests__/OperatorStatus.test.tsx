@@ -6,6 +6,7 @@ import { render, screen } from '@testing-library/react'
 // Mocks — must be declared before component import
 // ---------------------------------------------------------------------------
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({

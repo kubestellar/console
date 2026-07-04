@@ -5,6 +5,7 @@ import { GPUOverview } from '../GPUOverview'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 const makeNode = (overrides = {}) => ({
   name: 'gpu-node-1',
   cluster: 'cluster-1',

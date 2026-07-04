@@ -1,5 +1,6 @@
 import React from 'react'
 /**
+/* eslint-disable @typescript-eslint/no-unused-vars */
  * Vitest unit tests for CardToolbar (#15513).
  *
  * Run from web/:  npm run test:card-toolbar

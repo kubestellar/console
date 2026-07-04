@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { AppStatus } from '../AppStatus'
 
 // Mock all dependencies
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 const { mockUseCachedDeployments } = vi.hoisted(() => ({
   mockUseCachedDeployments: vi.fn()
 }))

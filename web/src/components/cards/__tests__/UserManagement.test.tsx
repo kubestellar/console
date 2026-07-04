@@ -7,6 +7,7 @@ import type { ConsoleUser, UserRole } from '../../../types/users'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 const { mockUpdateUserRole, mockDeleteUser, mockDrillToRBAC, mockShowToast, mockState } = vi.hoisted(() => ({
   mockUpdateUserRole: vi.fn(),
   mockDeleteUser: vi.fn(),

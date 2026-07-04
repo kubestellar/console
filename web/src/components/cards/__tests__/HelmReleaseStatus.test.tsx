@@ -5,6 +5,7 @@ import { HelmReleaseStatus } from '../HelmReleaseStatus'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 const makeRelease = (overrides = {}) => ({
   name: 'prometheus',
   namespace: 'monitoring',

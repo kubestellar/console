@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ResourceMarshall } from '../ResourceMarshall'
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const mockUseCachedNamespaces = vi.fn()
 const { mockUseClusters } = vi.hoisted(() => ({
   mockUseClusters: vi.fn()

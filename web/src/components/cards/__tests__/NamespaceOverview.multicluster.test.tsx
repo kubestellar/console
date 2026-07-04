@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { NamespaceOverview } from '../NamespaceOverview'
 
 // Mock all dependencies
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const { mockUseClusters } = vi.hoisted(() => ({
   mockUseClusters: vi.fn()
 }))

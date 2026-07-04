@@ -14,15 +14,15 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // Mocks — declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
 
-const { mockUseDemoMode } = vi.hoisted(() => ({
-  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
-const mockUseClusters = vi.fn(() => ({
-  clusters: [],
-  deduplicatedClusters: [],
-  isLoading: false,
-  }))
+const { mockUseDemoMode, mockUseClusters, mockKubectlProxy } = vi.hoisted(() => ({
+  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })),
+  mockUseClusters: vi.fn(() => ({
+    clusters: [],
+    deduplicatedClusters: [],
+    isLoading: false,
+  })),
+  mockKubectlProxy: { exec: vi.fn() },
 }))
-const mockKubectlProxy = { exec: vi.fn() }
 
 vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),

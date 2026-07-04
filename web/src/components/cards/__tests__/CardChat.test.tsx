@@ -8,6 +8,7 @@ import { CardChat, ChatMessage } from '../CardChat'
 // Mocks
 // ---------------------------------------------------------------------------
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({

@@ -5,6 +5,7 @@ import { GitOpsDrift } from '../GitOpsDrift'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 const makeDrift = (overrides = {}) => ({
   resource: 'my-deployment',
   kind: 'Deployment',

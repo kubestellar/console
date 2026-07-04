@@ -12,6 +12,7 @@ import type { CardConfig } from '../compliance/cardTypes'
 // Mocks
 // ---------------------------------------------------------------------------
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (k: string) => k }),

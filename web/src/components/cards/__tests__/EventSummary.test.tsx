@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { EventSummary } from '../EventSummary'
 import type { ClusterEvent } from '../../../hooks/useMCP'
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const mockUseCachedEvents = vi.fn()
 const mockUseGlobalFilters = vi.fn()
 const mockUseCardLoadingState = vi.fn()

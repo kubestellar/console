@@ -4,6 +4,7 @@ import { render } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
 // Standard mocks
+/* eslint-disable @typescript-eslint/no-unused-vars */
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),

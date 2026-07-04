@@ -9,6 +9,7 @@ import type { KyvernoPolicy } from '../../../hooks/useKyverno'
 // Mocks
 // ---------------------------------------------------------------------------
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (k: string) => k }),

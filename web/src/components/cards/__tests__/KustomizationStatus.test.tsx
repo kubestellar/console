@@ -5,6 +5,7 @@ import { KustomizationStatus } from '../KustomizationStatus'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 const mockDrillToKustomization = vi.fn()
 
 vi.mock('../../../hooks/useMCP', () => ({

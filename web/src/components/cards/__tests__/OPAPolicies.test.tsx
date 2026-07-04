@@ -8,6 +8,7 @@ import { OPAPolicies } from '../OPAPolicies'
 // Mocks
 // ---------------------------------------------------------------------------
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key }),

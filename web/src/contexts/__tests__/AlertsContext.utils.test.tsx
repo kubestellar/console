@@ -67,15 +67,21 @@ let mockMCPData: {
   error: string | null
 } = { gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null }
 
-vi.mock('../AlertsDataFetcher', () => ({
-  __esModule: true,
-  default: ({ onData }: { onData: (d: typeof mockMCPData) => void }) => {
-     
-    const { useEffect } = require('react')
-    useEffect(() => { onData(mockMCPData) }, [onData])
-    return null
-  },
-}))
+vi.mock('../AlertsDataFetcher', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useEffect } = require('react')
+  return {
+    __esModule: true,
+    default: ({ onData }: { onData: (d: typeof mockMCPData) => void }) => {
+      // Renamed to avoid react-hooks/rules-of-hooks violation
+      function MockAlertsDataFetcher() {
+        useEffect(() => { onData(mockMCPData) }, [onData])
+        return null
+      }
+      return <MockAlertsDataFetcher />
+    },
+  }
+})
 
 // ── Import after mocks ────────────────────────────────────────────────────
 

@@ -5,6 +5,7 @@ import { ControlPlaneHealth } from '../ControlPlaneHealth'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const makePod = (overrides = {}) => ({
   name: 'kube-apiserver-node1',
   namespace: 'kube-system',

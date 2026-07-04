@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
-const { mockUseAuth } = vi.hoisted(() => ({
-  mockUseAuth: vi.fn(() => ({ user: null }))
-const mockGetOrCreateAnonymousId = vi.fn(() => 'anonymous-user-id')
+const { mockUseAuth, mockGetOrCreateAnonymousId } = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(() => ({ user: null })),
+  mockGetOrCreateAnonymousId: vi.fn(() => 'anonymous-user-id'),
+}))
 
 vi.mock('../../lib/auth', () => ({
   useAuth: () => mockUseAuth(),
-  }))
 }))
 
 vi.mock('../../lib/analytics-session', async (importOriginal) => ({

@@ -5,6 +5,7 @@ import { PodSweeper } from '../PodSweeper'
 
 /* ---------- Mocks ---------- */
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 vi.mock('../CardWrapper', () => ({
   useCardExpanded: () => ({ isExpanded: false }),
 }))

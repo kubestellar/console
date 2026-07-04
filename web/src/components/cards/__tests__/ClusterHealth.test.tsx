@@ -9,6 +9,7 @@ import type { ClusterInfo } from '../../../hooks/useMCP'
 // Mocks
 // ---------------------------------------------------------------------------
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => opts ? `${k}:${JSON.stringify(opts)}` : k }),

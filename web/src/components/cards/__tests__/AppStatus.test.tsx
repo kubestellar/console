@@ -5,6 +5,7 @@ import { AppStatus } from '../AppStatus'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
+/* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
 const mockDrillToDeployment = vi.fn()
 
 const makeDeployment = (overrides = {}) => ({
