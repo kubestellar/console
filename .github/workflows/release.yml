@@ -222,15 +222,20 @@ jobs:
 
       - name: Lint frontend
         working-directory: web
-        run: npm run lint
+        # Use lint:check (baseline script) to match pre-merge-gate behavior;
+        # raw `lint` (eslint .) fails on pre-existing baseline errors and blocks releases.
+        run: npm run lint:check
 
   release:
     needs: [determine_version, test]
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # For scheduled releases (nightly/weekly), proceed even if tests fail
-    # For manual releases, require tests to pass
+    # For scheduled releases (nightly/weekly), proceed even if tests fail.
+    # For manual releases, require tests to pass.
+    # always() is required so GitHub Actions evaluates the if condition
+    # even when the `test` job fails (without it the job is unconditionally skipped).
     if: |
+      always() &&
       github.event.inputs.dry_run != 'true' &&
       needs.determine_version.outputs.has_changes == 'true' &&
       (github.event_name == 'schedule' || needs.test.result == 'success')
