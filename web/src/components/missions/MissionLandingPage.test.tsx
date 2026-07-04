@@ -21,6 +21,14 @@ vi.mock('../../hooks/useDemoMode', () => ({
   }),
 }))
 
+vi.mock('../../lib/api', () => ({
+  api: { post: vi.fn(), get: vi.fn() },
+}))
+
+vi.mock('../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}))
+
 describe('MissionLandingPage', () => {
   it('renders without errors', () => {
     const { container } = render(<MissionLandingPage />)

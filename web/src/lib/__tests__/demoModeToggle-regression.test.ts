@@ -14,6 +14,20 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
+// Mock CustomEvent for demo mode event dispatch tests
+if (typeof global.CustomEvent === 'undefined') {
+  global.CustomEvent = class CustomEvent<T = unknown> extends Event {
+    detail: T
+    constructor(type: string, init?: CustomEventInit<T>) {
+      super(type, init)
+      this.detail = init?.detail as T
+    }
+  } as unknown as typeof CustomEvent
+}
+
+// Unmock demoMode to test the REAL implementation (setup.ts globally mocks it)
+vi.unmock('../../lib/demoMode')
+
 // ---------------------------------------------------------------------------
 // Constants (mirror source values)
 // ---------------------------------------------------------------------------
