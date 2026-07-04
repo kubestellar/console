@@ -13,7 +13,6 @@ import (
 )
 
 func TestRequireAdmin(t *testing.T) {
-	s := store.OpenTestDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -80,6 +79,7 @@ func TestRequireAdmin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			s := store.OpenTestDB(t)
 			app := fiber.New()
 			userID := tt.setupUser(t, s)
 
@@ -100,7 +100,6 @@ func TestRequireAdmin(t *testing.T) {
 }
 
 func TestRequireEditorOrAdmin(t *testing.T) {
-	s := store.OpenTestDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -160,6 +159,7 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			s := store.OpenTestDB(t)
 			app := fiber.New()
 			userID := tt.setupUser(t, s)
 
@@ -180,7 +180,6 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 }
 
 func TestRequireViewerOrAbove(t *testing.T) {
-	s := store.OpenTestDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -247,6 +246,7 @@ func TestRequireViewerOrAbove(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			s := store.OpenTestDB(t)
 			app := fiber.New()
 			userID := tt.setupUser(t, s)
 
@@ -267,7 +267,6 @@ func TestRequireViewerOrAbove(t *testing.T) {
 }
 
 func TestRequireEditorOrAdminMiddleware(t *testing.T) {
-	s := store.OpenTestDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -327,6 +326,7 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			s := store.OpenTestDB(t)
 			app := fiber.New()
 			userID := tt.setupUser(t, s)
 
