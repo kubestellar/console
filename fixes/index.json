@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-04T00:24:33.807Z",
-  "count": 1625,
+  "generatedAt": "2026-07-04T07:34:01.960Z",
+  "count": 1626,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -53717,6 +53717,44 @@
         "feature"
       ],
       "type": "feature",
+      "installMethods": [],
+      "maturity": "incubating",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/openfeature/openfeature-365-provider-lifecycle-race-condition-in-multi-threaded-sdks.json",
+      "title": "openfeature: Provider lifecycle race condition in multi-threaded SDKs",
+      "description": "Provider lifecycle race condition in multi-threaded SDKs. Community-reported issue.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "openfeature",
+        "incubating",
+        "app-definition",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "openfeature"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "advanced",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
       "installMethods": [],
       "maturity": "incubating",
       "qualityScore": 100,
