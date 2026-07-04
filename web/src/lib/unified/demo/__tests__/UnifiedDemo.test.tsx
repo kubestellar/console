@@ -62,9 +62,9 @@ function ContextConsumer() {
       <span data-testid="is-demo">{String(ctx.isDemoMode)}</span>
       <span data-testid="is-switching">{String(ctx.isModeSwitching)}</span>
       <span data-testid="mode-version">{ctx.modeVersion}</span>
-      <button data-testid="toggle" onClick={ctx.toggleDemoMode}>Toggle</button>
-      <button data-testid="regen-all" onClick={ctx.regenerateAll}>RegenAll</button>
-      <button data-testid="regen" onClick={() => ctx.regenerate('test-id')}>Regen</button>
+      <div role="button" tabIndex={0} data-testid="toggle" onClick={ctx.toggleDemoMode}>Toggle</div>
+      <div role="button" tabIndex={0} data-testid="regen-all" onClick={ctx.regenerateAll}>RegenAll</div>
+      <div role="button" tabIndex={0} data-testid="regen" onClick={() => ctx.regenerate('test-id')}>Regen</div>
     </div>
   )
 }

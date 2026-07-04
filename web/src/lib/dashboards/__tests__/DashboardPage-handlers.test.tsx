@@ -65,22 +65,24 @@ vi.mock('../DashboardComponents', () => ({
   }) => (
     <div data-testid={`sortable-card-${card.id}`}>
       {onConfigure && (
-        <button data-testid={`configure-${card.id}`} onClick={onConfigure}>
+        <div role="button" tabIndex={0} data-testid={`configure-${card.id}`} onClick={onConfigure}>
           Configure
-        </button>
+        </div>
       )}
       {onRemove && (
-        <button data-testid={`remove-${card.id}`} onClick={onRemove}>
+        <div role="button" tabIndex={0} data-testid={`remove-${card.id}`} onClick={onRemove}>
           Remove
-        </button>
+        </div>
       )}
       {onWidthChange && (
-        <button
+        <div
+          role="button"
+          tabIndex={0}
           data-testid={`width-${card.id}`}
           onClick={() => onWidthChange(8)}
         >
           Width
-        </button>
+        </div>
       )}
       {onHeightChange && (
         <button

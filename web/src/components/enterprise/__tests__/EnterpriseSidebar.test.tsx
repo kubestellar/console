@@ -20,8 +20,8 @@ vi.mock('../../layout/SidebarShell', () => ({
       {navSections.flatMap((section) => section.items).map((item) => (
         <a key={item.id} href={item.href}>{item.label}</a>
       ))}
-      <button onClick={onAddCard}>Add card</button>
-      <button onClick={onAddMore}>Add more</button>
+      <div role="button" tabIndex={0} onClick={onAddCard}>Add card</div>
+      <div role="button" tabIndex={0} onClick={onAddMore}>Add more</div>
     </div>
   ),
 }))
