@@ -1,12 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import * as childProcess from 'node:child_process'
-import * as fs from 'node:fs'
 
-vi.mock('node:child_process')
-vi.mock('node:fs')
+// Use explicit mock factories so references remain stable after vi.resetModules()
+const mockExecFileSync = vi.fn()
+const mockWriteFileSync = vi.fn()
+const mockMkdirSync = vi.fn()
+const mockMkdtempSync = vi.fn(() => '/tmp/mock-kubeconfig-dir')
+const mockRmSync = vi.fn()
+const mockExistsSync = vi.fn(() => false)
+const mockReadFileSync = vi.fn(() => '')
 
-const mockedExecFileSync = vi.mocked(childProcess.execFileSync)
-const mockedFs = vi.mocked(fs)
+vi.mock('node:child_process', () => ({
+  execFileSync: mockExecFileSync,
+}))
+
+vi.mock('node:fs', () => ({
+  writeFileSync: mockWriteFileSync,
+  mkdirSync: mockMkdirSync,
+  mkdtempSync: mockMkdtempSync,
+  rmSync: mockRmSync,
+  existsSync: mockExistsSync,
+  readFileSync: mockReadFileSync,
+}))
 
 describe('collectK8sGroundTruth', () => {
   const originalEnv = process.env
@@ -14,11 +28,11 @@ describe('collectK8sGroundTruth', () => {
   beforeEach(() => {
     vi.resetModules()
     process.env = { ...originalEnv }
-    mockedExecFileSync.mockReset()
-    mockedFs.writeFileSync.mockImplementation(() => undefined)
-    mockedFs.mkdirSync.mockImplementation(() => '' as unknown as string)
-    mockedFs.mkdtempSync.mockReturnValue('/tmp/mock-kubeconfig-dir')
-    mockedFs.rmSync.mockImplementation(() => undefined)
+    mockExecFileSync.mockReset()
+    mockWriteFileSync.mockImplementation(() => undefined)
+    mockMkdirSync.mockImplementation(() => '' as unknown as string)
+    mockMkdtempSync.mockReturnValue('/tmp/mock-kubeconfig-dir')
+    mockRmSync.mockImplementation(() => undefined)
   })
 
   afterEach(() => {
@@ -44,7 +58,7 @@ describe('collectK8sGroundTruth', () => {
 
     it('returns skipped result when kubectl is unavailable', async () => {
       process.env.LIVE_CLUSTER_TESTS = 'true'
-      mockedExecFileSync.mockImplementation(() => {
+      mockExecFileSync.mockImplementation(() => {
         throw new Error('kubectl not found')
       })
       const { collectK8sGroundTruth } = await loadModule()
@@ -65,7 +79,7 @@ describe('collectK8sGroundTruth', () => {
     it('uses KUBECONFIG_PATH directly when set', async () => {
       process.env.LIVE_CLUSTER_TESTS = 'true'
       process.env.KUBECONFIG_PATH = '/custom/kubeconfig'
-      mockedExecFileSync.mockImplementation((_cmd, args) => {
+      mockExecFileSync.mockImplementation((_cmd: unknown, args: unknown) => {
         if (Array.isArray(args) && args.includes('--client=true')) return 'Client Version: v1.28.0'
         if (Array.isArray(args) && args.includes('get-contexts')) return 'ctx-1\nctx-2'
         if (Array.isArray(args) && args.includes('namespaces') && args.includes('--request-timeout=10s')) return ''
@@ -73,8 +87,8 @@ describe('collectK8sGroundTruth', () => {
       })
       const { collectK8sGroundTruth } = await loadModule()
       collectK8sGroundTruth('test')
-      const kubeconfigCalls = mockedExecFileSync.mock.calls.filter(
-        call => Array.isArray(call[1]) && call[1].includes('--kubeconfig'),
+      const kubeconfigCalls = mockExecFileSync.mock.calls.filter(
+        (call: unknown[]) => Array.isArray(call[1]) && call[1].includes('--kubeconfig'),
       )
       for (const call of kubeconfigCalls) {
         expect(call[1]).toContain('/custom/kubeconfig')
@@ -85,14 +99,14 @@ describe('collectK8sGroundTruth', () => {
       process.env.LIVE_CLUSTER_TESTS = 'true'
       delete process.env.KUBECONFIG_PATH
       process.env.KUBECONFIG_B64 = Buffer.from('apiVersion: v1\nkind: Config').toString('base64')
-      mockedExecFileSync.mockImplementation((_cmd, args) => {
+      mockExecFileSync.mockImplementation((_cmd: unknown, args: unknown) => {
         if (Array.isArray(args) && args.includes('--client=true')) return 'Client Version: v1.28.0'
         if (Array.isArray(args) && args.includes('get-contexts')) return ''
         return JSON.stringify({ items: [] })
       })
       const { collectK8sGroundTruth } = await loadModule()
       collectK8sGroundTruth('test')
-      expect(mockedFs.writeFileSync).toHaveBeenCalledWith(
+      expect(mockWriteFileSync).toHaveBeenCalledWith(
         '/tmp/mock-kubeconfig-dir/config',
         'apiVersion: v1\nkind: Config',
         { mode: 0o600 },
@@ -105,7 +119,7 @@ describe('collectK8sGroundTruth', () => {
       process.env.LIVE_CLUSTER_TESTS = 'true'
       process.env.KUBECONFIG_PATH = '/mock/kc'
       process.env.LIVE_CLUSTER_CONTEXTS = 'ctx-a, ctx-c'
-      mockedExecFileSync.mockImplementation((_cmd, args) => {
+      mockExecFileSync.mockImplementation((_cmd: unknown, args: unknown) => {
         if (Array.isArray(args) && args.includes('--client=true')) return ''
         if (Array.isArray(args) && args.includes('get-contexts')) return 'ctx-a\nctx-b\nctx-c\nctx-d'
         if (Array.isArray(args) && args.includes('--request-timeout=10s')) return ''
@@ -124,7 +138,7 @@ describe('collectK8sGroundTruth', () => {
       process.env.KUBECONFIG_PATH = '/mock/kc'
       delete process.env.LIVE_CLUSTER_CONTEXTS
       let callCount = 0
-      mockedExecFileSync.mockImplementation((_cmd, args) => {
+      mockExecFileSync.mockImplementation((_cmd: unknown, args: unknown) => {
         if (Array.isArray(args) && args.includes('--client=true')) return ''
         if (Array.isArray(args) && args.includes('get-contexts')) return 'ctx-a\nctx-b'
         if (Array.isArray(args) && args.includes('--request-timeout=10s')) {
@@ -146,7 +160,7 @@ describe('collectK8sGroundTruth', () => {
       process.env.LIVE_CLUSTER_TESTS = 'true'
       process.env.KUBECONFIG_PATH = '/mock/kc'
       process.env.LIVE_CLUSTER_CONTEXTS = 'ctx-1'
-      mockedExecFileSync.mockImplementation((_cmd, args) => {
+      mockExecFileSync.mockImplementation((_cmd: unknown, args: unknown) => {
         if (Array.isArray(args) && args.includes('--client=true')) return ''
         if (Array.isArray(args) && args.includes('get-contexts')) return 'ctx-1'
         if (Array.isArray(args) && args.includes('--request-timeout=10s')) return ''
@@ -203,7 +217,7 @@ describe('collectK8sGroundTruth', () => {
       process.env.LIVE_CLUSTER_TESTS = 'true'
       process.env.KUBECONFIG_PATH = '/mock/kc'
       process.env.LIVE_CLUSTER_CONTEXTS = 'my-secret-cluster'
-      mockedExecFileSync.mockImplementation((_cmd, args) => {
+      mockExecFileSync.mockImplementation((_cmd: unknown, args: unknown) => {
         if (Array.isArray(args) && args.includes('--client=true')) return ''
         if (Array.isArray(args) && args.includes('get-contexts')) return 'my-secret-cluster'
         if (Array.isArray(args) && args.includes('--request-timeout=10s')) return ''
@@ -211,8 +225,8 @@ describe('collectK8sGroundTruth', () => {
       })
       const { collectK8sGroundTruth } = await loadModule()
       collectK8sGroundTruth('test')
-      const writeCall = mockedFs.writeFileSync.mock.calls.find(
-        call => typeof call[0] === 'string' && call[0].includes('groundtruth.json'),
+      const writeCall = mockWriteFileSync.mock.calls.find(
+        (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('groundtruth.json'),
       )
       expect(writeCall).toBeDefined()
       const written = JSON.parse(writeCall![1] as string)
@@ -226,7 +240,7 @@ describe('collectK8sGroundTruth', () => {
       delete process.env.KUBECONFIG_PATH
       process.env.KUBECONFIG_B64 = Buffer.from('content').toString('base64')
       let callCount = 0
-      mockedExecFileSync.mockImplementation((_cmd, args) => {
+      mockExecFileSync.mockImplementation((_cmd: unknown, args: unknown) => {
         if (Array.isArray(args) && args.includes('--client=true')) return ''
         if (Array.isArray(args) && args.includes('get-contexts')) {
           callCount++
@@ -240,7 +254,7 @@ describe('collectK8sGroundTruth', () => {
       })
       const { collectK8sGroundTruth } = await loadModule()
       collectK8sGroundTruth('test')
-      expect(mockedFs.rmSync).toHaveBeenCalledWith(
+      expect(mockRmSync).toHaveBeenCalledWith(
         '/tmp/mock-kubeconfig-dir',
         { recursive: true, force: true },
       )
