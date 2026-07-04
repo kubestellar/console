@@ -31,12 +31,15 @@ Required vars:
 - `CONSOLE_LIVE_IMAGE_REPOSITORY`
 - `CONSOLE_LIVE_ALLOWED_GITHUB_LOGINS`
 - `CONSOLE_LIVE_ADMIN_GITHUB_LOGINS`
-- `CONSOLE_LIVE_TEST_USER_ROLE`
 - `LIVE_CLUSTER_CONTEXTS`
 - `LIVE_CLUSTER_EXPECTED_CONTEXTS`
 - `LIVE_CLUSTER_EXPECTED_READY_NODES`
 - `LIVE_CANARY_ROUTE_DELAY_MS`
 - `LIVE_CANARY_PHASE_COOLDOWN_MS`
+
+Optional vars:
+
+- `CONSOLE_LIVE_TEST_USER_ROLE` defaults to `admin`.
 
 ## OAuth And Canary Account
 
@@ -53,7 +56,7 @@ The OAuth app must be owned by project maintainers.
 
 The deploy kubeconfig should be scoped to the `kubestellar-console-live` namespace and must support Helm upgrades for the live release.
 
-The groundtruth kubeconfig should be read-only and must support `get`, `list`, and `watch` for:
+The groundtruth kubeconfig in `KUBECONFIG_B64` should be read-only and must support `get`, `list`, and `watch` for:
 
 - nodes
 - namespaces
@@ -62,6 +65,8 @@ The groundtruth kubeconfig should be read-only and must support `get`, `list`, a
 - events
 
 `LIVE_CLUSTER_CONTEXTS` must match the contexts in the groundtruth kubeconfig. `LIVE_CLUSTER_EXPECTED_CONTEXTS` and `LIVE_CLUSTER_EXPECTED_READY_NODES` must describe the expected project-owned live cluster state.
+
+The promote workflow creates or updates the in-cluster `kc-live-kubeconfig` Secret from `KUBECONFIG_B64` before Helm upgrades, so the deployed Console and the groundtruth collector read the same cluster contexts.
 
 ## Issue Loop
 

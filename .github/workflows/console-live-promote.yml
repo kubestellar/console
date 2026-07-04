@@ -138,6 +138,7 @@ jobs:
           CONSOLE_LIVE_OAUTH_CLIENT_ID: ${{ secrets.CONSOLE_LIVE_OAUTH_CLIENT_ID }}
           CONSOLE_LIVE_OAUTH_CLIENT_SECRET: ${{ secrets.CONSOLE_LIVE_OAUTH_CLIENT_SECRET }}
           CONSOLE_LIVE_JWT_SECRET: ${{ secrets.CONSOLE_LIVE_JWT_SECRET }}
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
           CONSOLE_LIVE_TEST_USER_ID: ${{ env.CONSOLE_LIVE_TEST_USER_ID }}
           CONSOLE_LIVE_TEST_GITHUB_LOGIN: ${{ env.CONSOLE_LIVE_TEST_GITHUB_LOGIN }}
         shell: bash
@@ -149,6 +150,7 @@ jobs:
             CONSOLE_LIVE_OAUTH_CLIENT_ID \
             CONSOLE_LIVE_OAUTH_CLIENT_SECRET \
             CONSOLE_LIVE_JWT_SECRET \
+            KUBECONFIG_B64 \
             CONSOLE_LIVE_TEST_USER_ID \
             CONSOLE_LIVE_TEST_GITHUB_LOGIN \
             CONSOLE_LIVE_ALLOWED_GITHUB_LOGINS \
@@ -186,11 +188,7 @@ jobs:
         run: |
           set -euo pipefail
           groundtruth_kubeconfig="$RUNNER_TEMP/console-live/groundtruth-kubeconfig"
-          if [ -n "${GROUNDTRUTH_KUBECONFIG_B64:-}" ]; then
-            printf '%s' "$GROUNDTRUTH_KUBECONFIG_B64" | base64 -d > "$groundtruth_kubeconfig"
-          else
-            cp "$DEPLOY_KUBECONFIG" "$groundtruth_kubeconfig"
-          fi
+          printf '%s' "$GROUNDTRUTH_KUBECONFIG_B64" | base64 -d > "$groundtruth_kubeconfig"
           chmod 600 "$groundtruth_kubeconfig"
           echo "path=$groundtruth_kubeconfig" >> "$GITHUB_OUTPUT"
 
@@ -266,6 +264,7 @@ jobs:
           CONSOLE_LIVE_OAUTH_CLIENT_ID: ${{ secrets.CONSOLE_LIVE_OAUTH_CLIENT_ID }}
           CONSOLE_LIVE_OAUTH_CLIENT_SECRET: ${{ secrets.CONSOLE_LIVE_OAUTH_CLIENT_SECRET }}
           CONSOLE_LIVE_JWT_SECRET: ${{ secrets.CONSOLE_LIVE_JWT_SECRET }}
+          GROUNDTRUTH_KUBECONFIG_PATH: ${{ steps.groundtruth-kubeconfig.outputs.path }}
         shell: bash
         run: |
           set -euo pipefail
@@ -274,6 +273,9 @@ jobs:
             --from-literal=github-client-id="$CONSOLE_LIVE_OAUTH_CLIENT_ID" \
             --from-literal=github-client-secret="$CONSOLE_LIVE_OAUTH_CLIENT_SECRET" \
             --from-literal=jwt-secret="$CONSOLE_LIVE_JWT_SECRET" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n "$LIVE_NAMESPACE" create secret generic "$KUBECONFIG_SECRET_NAME" \
+            --from-file=config="$GROUNDTRUTH_KUBECONFIG_PATH" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy candidate to private canary
