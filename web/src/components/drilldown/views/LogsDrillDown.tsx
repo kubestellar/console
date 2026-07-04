@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { Loader2, AlertCircle, Server, Layers, Box, RefreshCw, Filter, ChevronLeft } from 'lucide-react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
+import { Select } from '../../ui/Select'
+import { Input } from '../../ui/Input'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
@@ -239,24 +241,26 @@ export function LogsDrillDown({ data }: Props) {
       {/* Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <select
+          <Select
             value={tailLines}
             onChange={(e) => setTailLines(Number(e.target.value))}
             disabled={isLoading}
-            className="px-3 py-2 rounded-lg bg-card/50 border border-border text-foreground text-sm disabled:opacity-50"
+            className="w-auto bg-card/50 border-border disabled:opacity-50"
+            selectSize="md"
             aria-label={t('drilldown.logs.tailLinesLabel')}
           >
             {TAIL_LINE_OPTIONS.map((n) => (
               <option key={n} value={n}>{t('drilldown.logs.tailLinesOption', { count: n })}</option>
             ))}
-          </select>
+          </Select>
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
-            <select
+            <Select
               value={logLevel}
               onChange={(e) => setLogLevel(e.target.value as LogLevel)}
               disabled={isLoading}
-              className="px-3 py-2 rounded-lg bg-card/50 border border-border text-foreground text-sm disabled:opacity-50"
+              className="w-auto bg-card/50 border-border disabled:opacity-50"
+              selectSize="md"
               aria-label={t('drilldown.logs.severityFilterLabel')}
             >
               {LOG_LEVELS.map((level) => (
@@ -264,12 +268,12 @@ export function LogsDrillDown({ data }: Props) {
                   {level === 'ALL' ? t('drilldown.logs.allLevels') : level}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <input
+            <Input
               type="checkbox"
-              className="rounded"
+              className="w-auto rounded"
               disabled={isLoading}
               checked={follow}
               onChange={(e) => setFollow(e.target.checked)}
