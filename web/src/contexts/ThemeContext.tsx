@@ -161,7 +161,7 @@ function applyTheme(theme: Theme) {
       root.classList.remove('theme-gradient-accents')
     }
   } catch (error: unknown) {
-    console.error('Error applying theme:', error)
+    console.warn('Error applying theme:', error)
     // Dispatch event for monitoring (theme errors shouldn't break the app)
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('theme-error', {

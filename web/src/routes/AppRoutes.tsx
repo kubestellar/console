@@ -22,6 +22,7 @@ import { GlobalFiltersProvider } from '../hooks/useGlobalFilters'
 import { MissionProvider } from '../hooks/useMissions'
 import { CardEventProvider } from '../lib/cardEvents'
 import { ToastProvider } from '../components/ui/Toast'
+import { ErrorToastListener } from '../components/ui/ErrorToastListener'
 import { AlertsProvider } from '../contexts/AlertsContext'
 import { RewardsProvider } from '../hooks/useRewards'
 import { NPSSurvey } from '../components/feedback'
@@ -250,6 +251,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
     <UnifiedDemoProvider>
       <RewardsProvider>
       <ToastProvider>
+      <ErrorToastListener />
       <GlobalFiltersProvider>
       <MissionProvider>
       <CardEventProvider>
