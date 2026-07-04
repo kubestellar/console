@@ -3,7 +3,6 @@ import { redactK8sGroundTruth } from '../redactK8sGroundTruth'
 import type { K8sGroundTruth } from '../k8sTypes'
 
 beforeEach(() => {
-  vi.resetModules()
   vi.clearAllMocks()
 })
 
