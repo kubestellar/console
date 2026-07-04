@@ -534,8 +534,8 @@ jobs:
           last_health_code=""
           last_healthz_code=""
           for attempt in $(seq 1 60); do
-            last_health_code="$(curl -k -sS -o /dev/null -w '%{http_code}' "$LIVE_URL/health" || true)"
-            last_healthz_code="$(curl -k -sS -o /dev/null -w '%{http_code}' "$LIVE_URL/healthz" || true)"
+            last_health_code="$(curl -sS -o /dev/null -w '%{http_code}' "$LIVE_URL/health" || true)"
+            last_healthz_code="$(curl -sS -o /dev/null -w '%{http_code}' "$LIVE_URL/healthz" || true)"
             if [[ "$last_health_code" =~ ^2[0-9][0-9]$ ]] || [[ "$last_healthz_code" =~ ^2[0-9][0-9]$ ]]; then
               health_ready=true
               break
@@ -550,7 +550,7 @@ jobs:
 
           api_code=""
           for attempt in $(seq 1 30); do
-            api_code="$(curl -k -sS -o /dev/null -w '%{http_code}' "$LIVE_URL/api/me" || true)"
+            api_code="$(curl -sS -o /dev/null -w '%{http_code}' "$LIVE_URL/api/me" || true)"
             if [ "$api_code" = "401" ]; then
               break
             fi
@@ -566,7 +566,7 @@ jobs:
           oauth_code=""
           oauth_redirect=""
           for attempt in $(seq 1 30); do
-            oauth_response="$(curl -k -sS -o /dev/null -w '%{http_code} %{redirect_url}' "$LIVE_URL/auth/github" || true)"
+            oauth_response="$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' "$LIVE_URL/auth/github" || true)"
             oauth_code="${oauth_response%% *}"
             oauth_redirect="${oauth_response#* }"
             case "$oauth_code" in
