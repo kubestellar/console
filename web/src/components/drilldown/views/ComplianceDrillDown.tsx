@@ -15,6 +15,7 @@ import {
   Search, X, Filter } from 'lucide-react'
 import { useTrestle, type OscalControlResult } from '../../../hooks/useTrestle'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
+import { useDrillDown } from '../../../hooks/useDrillDown'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { cn } from '../../../lib/cn'
 import { TOUCH_TARGET_HEIGHT_CLASS, TOUCH_TARGET_SIZE_CLASS } from '../../../lib/constants/ui'
@@ -94,6 +95,7 @@ export function ComplianceDrillDown({ data }: Props) {
   const filterStatus = normalizeComplianceStatus(data.filterStatus as string | undefined)
   const { statuses } = useTrestle()
   const { selectedClusters } = useGlobalFilters()
+  const { state, pop } = useDrillDown()
 
   const summaryCounts = useMemo(() => {
     const passing = parseCount(data.passing)
@@ -234,6 +236,20 @@ export function ComplianceDrillDown({ data }: Props) {
     <div className="flex flex-col h-full -m-6">
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
+        <div className="flex items-center gap-6 text-sm mb-4">
+          {state.stack.length > 1 && (
+            <button
+              type="button"
+              onClick={pop}
+              className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
+              aria-label={t('drilldown.goBack')}
+              title={t('drilldown.goBack')}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>{t('common.back')}</span>
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-3 mb-4">
           <Shield className="w-6 h-6 text-teal-400" />
           <div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Loader2, AlertCircle, Server, Layers, Box, RefreshCw, Filter } from 'lucide-react'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { Loader2, AlertCircle, Server, Layers, Box, RefreshCw, Filter, ChevronLeft } from 'lucide-react'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
 
@@ -91,6 +91,7 @@ export function LogsDrillDown({ data }: Props) {
   const pod = data.pod as string
   const container = data.container as string | undefined
   const { drillToCluster, drillToNamespace, drillToPod } = useDrillDownActions()
+  const { state, pop } = useDrillDown()
   const clusterShort = cluster?.split('/').pop() || cluster
   const [tailLines, setTailLines] = useState<number>(DEFAULT_TAIL_LINES)
   const [logLevel, setLogLevel] = useState<LogLevel>(DEFAULT_LOG_LEVEL)
@@ -192,6 +193,18 @@ export function LogsDrillDown({ data }: Props) {
       {/* Contextual Navigation */}
       {cluster && (
         <div className="flex items-center gap-6 text-sm">
+          {state.stack.length > 1 && (
+            <button
+              type="button"
+              onClick={pop}
+              className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
+              aria-label={t('drilldown.goBack')}
+              title={t('drilldown.goBack')}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>{t('common.back')}</span>
+            </button>
+          )}
           {pod && (
             <button
               onClick={() => drillToPod(cluster, namespace, pod)}

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Copy, Check, Download, RefreshCw, Server, Layers } from 'lucide-react'
+import { Copy, Check, Download, RefreshCw, Server, Layers, ChevronLeft } from 'lucide-react'
 import { api } from '../../../lib/api'
 import { useToast } from '../../ui/Toast'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -22,6 +22,7 @@ export function YAMLDrillDown({ data }: Props) {
   const resourceType = typeof data.resourceType === 'string' ? data.resourceType : ''
   const resourceName = typeof data.resourceName === 'string' ? data.resourceName : ''
   const { drillToCluster, drillToNamespace } = useDrillDownActions()
+  const { state, pop } = useDrillDown()
   const clusterShort = cluster.split('/').pop() || cluster
   const hasRequiredContext = Boolean(cluster && resourceType && resourceName)
   const resourceTypeLabel = resourceType || t('drilldown.yaml.resourceTypeFallback', 'resource')
@@ -132,6 +133,18 @@ export function YAMLDrillDown({ data }: Props) {
     <div className="space-y-4">
       {/* Contextual Navigation */}
       <div className="flex items-center gap-6 text-sm">
+        {state.stack.length > 1 && (
+          <button
+            type="button"
+            onClick={pop}
+            className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
+            aria-label={t('drilldown.goBack')}
+            title={t('drilldown.goBack')}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>{t('common.back')}</span>
+          </button>
+        )}
         {namespace && cluster && (
           <div
             role="button"
