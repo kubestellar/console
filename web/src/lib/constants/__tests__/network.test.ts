@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// Mock process.env before importing the module
+vi.stubEnv('NODE_ENV', 'test')
+
 import {
   LOCAL_AGENT_WS_URL,
   LOCAL_AGENT_HTTP_URL,
@@ -216,11 +220,8 @@ describe('getLocalAgentURLs', () => {
 
 describe('suppressLocalAgent', () => {
   it('suppresses agent URLs when called with true', () => {
-    const initialWsUrl = LOCAL_AGENT_WS_URL
-    const initialHttpUrl = LOCAL_AGENT_HTTP_URL
-    
     suppressLocalAgent(true)
-    
+
     expect(LOCAL_AGENT_WS_URL).toBe('ws://localhost:1/disabled')
     expect(LOCAL_AGENT_HTTP_URL).toBe('')
     expect(isLocalAgentSuppressed()).toBe(true)
@@ -229,7 +230,7 @@ describe('suppressLocalAgent', () => {
   it('does not un-suppress once suppressed', () => {
     suppressLocalAgent(true)
     expect(isLocalAgentSuppressed()).toBe(true)
-    
+
     suppressLocalAgent(false)
     expect(isLocalAgentSuppressed()).toBe(true)
   })
@@ -244,7 +245,7 @@ describe('suppressOptionalPollers', () => {
   it('remains suppressed once set', () => {
     suppressOptionalPollers(true)
     expect(areOptionalPollersSuppressed()).toBe(true)
-    
+
     suppressOptionalPollers(false)
     expect(areOptionalPollersSuppressed()).toBe(true)
   })
@@ -255,7 +256,7 @@ describe('getWsBackoffDelay', () => {
     const delay = getWsBackoffDelay(0)
     const expectedMin = WS_RECONNECT_BASE_DELAY_MS
     const expectedMax = WS_RECONNECT_BASE_DELAY_MS + WS_BACKOFF_JITTER_MAX_MS
-    
+
     expect(delay).toBeGreaterThanOrEqual(expectedMin)
     expect(delay).toBeLessThan(expectedMax)
   })
@@ -263,13 +264,13 @@ describe('getWsBackoffDelay', () => {
   it('returns exponential backoff for successive attempts', () => {
     const delay1 = getWsBackoffDelay(1)
     const delay2 = getWsBackoffDelay(2)
-    
+
     const expectedMin1 = WS_RECONNECT_BASE_DELAY_MS * 2
     const expectedMax1 = WS_RECONNECT_BASE_DELAY_MS * 2 + WS_BACKOFF_JITTER_MAX_MS
-    
+
     const expectedMin2 = WS_RECONNECT_BASE_DELAY_MS * 4
     const expectedMax2 = WS_RECONNECT_BASE_DELAY_MS * 4 + WS_BACKOFF_JITTER_MAX_MS
-    
+
     expect(delay1).toBeGreaterThanOrEqual(expectedMin1)
     expect(delay1).toBeLessThan(expectedMax1)
     expect(delay2).toBeGreaterThanOrEqual(expectedMin2)
@@ -280,7 +281,7 @@ describe('getWsBackoffDelay', () => {
     const delay = getWsBackoffDelay(10)
     const expectedMin = WS_RECONNECT_MAX_DELAY_MS
     const expectedMax = WS_RECONNECT_MAX_DELAY_MS + WS_BACKOFF_JITTER_MAX_MS
-    
+
     expect(delay).toBeGreaterThanOrEqual(expectedMin)
     expect(delay).toBeLessThan(expectedMax)
   })
@@ -288,7 +289,7 @@ describe('getWsBackoffDelay', () => {
   it('adds random jitter on each call', () => {
     const delays = Array.from({ length: 5 }, () => getWsBackoffDelay(0))
     const uniqueDelays = new Set(delays)
-    
+
     expect(uniqueDelays.size).toBeGreaterThan(1)
   })
 })

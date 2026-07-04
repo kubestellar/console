@@ -9,6 +9,26 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { VirtualizedMissionGrid } from '../VirtualizedMissionGrid'
 
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}))
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/', search: '' }),
+}))
+
+vi.mock('../../../lib/api', () => ({
+  api: { post: vi.fn(), get: vi.fn() },
+}))
+
+vi.mock('../../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}))
+
 interface TestItem {
   id: string
   title: string

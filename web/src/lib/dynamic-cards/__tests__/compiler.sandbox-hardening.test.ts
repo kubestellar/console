@@ -8,8 +8,28 @@
  * - Prototype chain freezing in deepFreeze
  * - Async createCardComponent (blob URL ES module approach)
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createCardComponent } from '../compiler'
+
+// Mock browser APIs for Node environment
+beforeEach(() => {
+  if (typeof global.Blob === 'undefined') {
+    global.Blob = class Blob {
+      constructor(public parts: BlobPart[], public options?: BlobPropertyBag) {}
+      size = 0
+      type = this.options?.type || ''
+      slice() { return new Blob(this.parts, this.options) }
+      async text() { return this.parts.join('') }
+      async arrayBuffer() { return new ArrayBuffer(0) }
+      stream() { return new ReadableStream() }
+    } as unknown as typeof Blob
+  }
+  
+  if (typeof global.URL.createObjectURL === 'undefined') {
+    global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
+    global.URL.revokeObjectURL = vi.fn()
+  }
+})
 
 // Mock sucrase (transform is not invoked for createCardComponent)
 vi.mock('sucrase', () => ({

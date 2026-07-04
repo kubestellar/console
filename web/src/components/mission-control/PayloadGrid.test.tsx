@@ -5,7 +5,23 @@ import { PayloadGrid } from './PayloadGrid'
 import type { PayloadProject } from './types'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}))
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/', search: '' }),
+}))
+
+vi.mock('../../lib/api', () => ({
+  api: { post: vi.fn(), get: vi.fn() },
+}))
+
+vi.mock('../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
 }))
 
 const mockProjects: PayloadProject[] = [

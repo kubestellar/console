@@ -1,5 +1,25 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { compileCardCode, createCardComponent } from '../compiler'
+
+// Mock browser APIs needed for compiler (Blob, URL.createObjectURL)
+beforeEach(() => {
+  if (typeof global.Blob === 'undefined') {
+    global.Blob = class Blob {
+      constructor(public parts: BlobPart[], public options?: BlobPropertyBag) {}
+      size = 0
+      type = this.options?.type || ''
+      slice() { return new Blob(this.parts, this.options) }
+      async text() { return this.parts.join('') }
+      async arrayBuffer() { return new ArrayBuffer(0) }
+      stream() { return new ReadableStream() }
+    } as unknown as typeof Blob
+  }
+  
+  if (typeof global.URL.createObjectURL === 'undefined') {
+    global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
+    global.URL.revokeObjectURL = vi.fn()
+  }
+})
 
 // Mock sucrase
 vi.mock('sucrase', () => ({
