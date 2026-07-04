@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// Mock process.env before importing the module
+vi.stubEnv('NODE_ENV', 'test')
+
 import {
   LOCAL_AGENT_WS_URL,
   LOCAL_AGENT_HTTP_URL,

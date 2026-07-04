@@ -1,5 +1,29 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { waitFor } from '@testing-library/react'
+
+// Mock StorageEvent for cross-tab sync tests
+if (typeof global.StorageEvent === 'undefined') {
+  global.StorageEvent = class StorageEvent extends Event {
+    key: string | null
+    newValue: string | null
+    oldValue: string | null
+    url: string
+    storageArea: Storage | null
+    
+    constructor(type: string, init?: StorageEventInit) {
+      super(type, init)
+      this.key = init?.key ?? null
+      this.newValue = init?.newValue ?? null
+      this.oldValue = init?.oldValue ?? null
+      this.url = init?.url ?? ''
+      this.storageArea = init?.storageArea ?? null
+    }
+  } as unknown as typeof StorageEvent
+}
+
+// Unmock demoMode to test the REAL implementation (setup.ts globally mocks it)
+vi.unmock('../demoMode')
+
 import {
   isDemoMode,
   isDemoToken,
