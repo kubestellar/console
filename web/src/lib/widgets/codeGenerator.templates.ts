@@ -315,7 +315,7 @@ ${wrapOpen}
                               ))}
                             </div>
                           )}
-                          {r.htmlUrl && <div style={{borderTop: '1px solid #334155', paddingTop: 3, marginTop: 2}}><a href={r.htmlUrl + '#logs'} onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}#logs"\`); }} style={{color: '#60a5fa', fontSize: '9px'}}>View Logs</a></div>}
+                          {r.htmlUrl && <div style={{borderTop: '1px solid #334155', paddingTop: 3, marginTop: 2}}><a href={r.htmlUrl + '#logs'} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}#logs"\`); }} style={{color: '#60a5fa', fontSize: '9px'}}>View Logs</a></div>}
                         </span>
                         <span style={{
                           width: 7, height: 7, borderRadius: '50%', display: 'inline-block', cursor: 'pointer',
