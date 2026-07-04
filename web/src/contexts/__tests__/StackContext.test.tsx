@@ -105,6 +105,7 @@ function createStack(overrides: Partial<LLMdStack> = {}): LLMdStack {
 // ── Setup / Teardown ─────────────────────────────────────────────────────
 
 beforeEach(() => {
+  vi.clearAllMocks()
   localStorage.clear()
   mockIsDemoMode = true
   mockDiscoveredStacks = []
@@ -117,6 +118,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  localStorage.clear()
 })
 
 // ═══════════════════════════════════════════════════════════════════════════
