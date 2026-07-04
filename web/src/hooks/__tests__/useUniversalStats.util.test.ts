@@ -19,10 +19,10 @@ const { mockUseClusters, mockUsePodIssues, mockUseDeployments, mockUseDeployment
   mockUseOperatorSubscriptions: vi.fn(() => ({ subscriptions: [] as unknown[], isLoading: false })),
   mockUseOperators: vi.fn(() => ({ operators: [] as unknown[], isLoading: false })),
   mockUseGPUNodes: vi.fn(() => ({ nodes: [] as unknown[], isLoading: false }))
-}))
   deduplicatedClusters: [] as unknown[],
   clusters: [] as unknown[],
   isLoading: false,
+  }))
 }))
 
 const mockUseAlerts = vi.fn(() => ({ alerts: [], stats: undefined as never, isLoading: false }))

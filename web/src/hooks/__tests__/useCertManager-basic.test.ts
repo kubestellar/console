@@ -16,11 +16,11 @@ import { renderHook, waitFor } from '@testing-library/react'
 
 const { mockUseDemoMode } = vi.hoisted(() => ({
   mockUseDemoMode: vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
-}))
 const mockUseClusters = vi.fn(() => ({
   clusters: [],
   deduplicatedClusters: [],
   isLoading: false,
+  }))
 }))
 const mockKubectlProxy = { exec: vi.fn() }
 

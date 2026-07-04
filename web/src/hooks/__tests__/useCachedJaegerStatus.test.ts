@@ -11,7 +11,6 @@ import { renderHook } from '@testing-library/react'
 // Mock the cache factory
 const { mockUseCache } = vi.hoisted(() => ({
   mockUseCache: vi.fn(() => ({
-}))
   data: {
     status: 'Healthy',
     version: '1.50.0',
@@ -38,6 +37,7 @@ const { mockUseCache } = vi.hoisted(() => ({
   refetch: vi.fn(),
   retryFetch: vi.fn(),
   clearAndRefetch: vi.fn(),
+  }))
 }))
 
 vi.mock('../../lib/cache', () => ({

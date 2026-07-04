@@ -15,12 +15,12 @@ import { renderHook, act } from '@testing-library/react'
 
 const { mockGlobalFilters } = vi.hoisted(() => ({
   mockGlobalFilters: vi.fn(() => ({
-}))
   filterByCluster: <T>(items: T[]) => items,
   filterByStatus: <T>(items: T[]) => items,
   customFilter: '',
   selectedClusters: [] as string[],
   isAllClustersSelected: true,
+  }))
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({

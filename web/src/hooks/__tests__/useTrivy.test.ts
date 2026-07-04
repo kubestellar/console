@@ -10,10 +10,10 @@ vi.setConfig({ testTimeout: 15_000 })
 
 const { mockUseClusters } = vi.hoisted(() => ({
   mockUseClusters: vi.fn(() => ({
-}))
   deduplicatedClusters: [] as Array<{ name: string; reachable: boolean }>,
   clusters: [] as Array<{ name: string; reachable: boolean }>,
   isLoading: false,
+  }))
 }))
 
 vi.mock('../useMCP', () => ({

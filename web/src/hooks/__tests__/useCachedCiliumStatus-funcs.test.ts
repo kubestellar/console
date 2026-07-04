@@ -42,7 +42,6 @@ vi.mock('../useDemoMode', async (importOriginal) => ({
 
 const { mockUseCache } = vi.hoisted(() => ({
   mockUseCache: vi.fn(() => ({
-}))
   data: null,
   isLoading: false,
   isRefreshing: false,
@@ -52,6 +51,7 @@ const { mockUseCache } = vi.hoisted(() => ({
   consecutiveFailures: 0,
   lastRefresh: null,
   refetch: vi.fn(),
+  }))
 }))
 
 vi.mock('../../lib/cache', () => ({

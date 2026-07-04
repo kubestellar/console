@@ -49,15 +49,15 @@ vi.mock('react-i18next', () => ({
 
 const { mockUseLocalAgent } = vi.hoisted(() => ({
   mockUseLocalAgent: vi.fn(() => ({
-}))
-  status: '',
-  health: {},
-  connectionEvents: [],
-  isConnected: false,
-  isDegraded: false,
-  isAuthError: false,
-  dataErrorCount: 0,
-  lastDataError: null,
+    status: '',
+    health: {},
+    connectionEvents: [],
+    isConnected: false,
+    isDegraded: false,
+    isAuthError: false,
+    dataErrorCount: 0,
+    lastDataError: null,
+  }))
 }))
 
 vi.mock('../../../../hooks/useLocalAgent', () => ({

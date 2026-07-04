@@ -48,7 +48,6 @@ vi.mock('../../components/cards/change_timeline/demoData', () => ({
 
 const { mockUseCache } = vi.hoisted(() => ({
   mockUseCache: vi.fn(() => ({
-}))
   data: [],
   isLoading: false,
   isRefreshing: false,
@@ -58,6 +57,7 @@ const { mockUseCache } = vi.hoisted(() => ({
   consecutiveFailures: 0,
   lastRefresh: null,
   refetch: vi.fn(),
+  }))
 }))
 
 vi.mock('../../lib/cache', () => ({

@@ -13,7 +13,7 @@ import { authFetch, safeJson } from '../../../lib/api';
 import { useCache } from '../../../lib/cache';
 
 const { mockNavigate } = vi.hoisted(() => ({
-  mockNavigate: vi.fn();
+  mockNavigate: vi.fn()
 }))
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal();
