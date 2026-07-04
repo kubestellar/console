@@ -66,19 +66,14 @@ func TestNewGitHubAppTokenProvider(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clear env vars before each test
-			os.Unsetenv("KUBESTELLAR_CONSOLE_APP_ID")
-			os.Unsetenv("KUBESTELLAR_CONSOLE_APP_INSTALLATION_ID")
-			os.Unsetenv("KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY")
+			t.Setenv("KUBESTELLAR_CONSOLE_APP_ID", "")
+			t.Setenv("KUBESTELLAR_CONSOLE_APP_INSTALLATION_ID", "")
+			t.Setenv("KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY", "")
 
 			// Set test env vars
 			for k, v := range tt.envVars {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range tt.envVars {
-					os.Unsetenv(k)
-				}
-			}()
 
 			provider := NewGitHubAppTokenProvider()
 
@@ -250,10 +245,9 @@ func TestExpectedAppSlug(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.envValue != "" {
-				os.Setenv("KUBESTELLAR_CONSOLE_APP_SLUG", tt.envValue)
-				defer os.Unsetenv("KUBESTELLAR_CONSOLE_APP_SLUG")
+				t.Setenv("KUBESTELLAR_CONSOLE_APP_SLUG", tt.envValue)
 			} else {
-				os.Unsetenv("KUBESTELLAR_CONSOLE_APP_SLUG")
+				t.Setenv("KUBESTELLAR_CONSOLE_APP_SLUG", "")
 			}
 
 			slug := ExpectedAppSlug()
