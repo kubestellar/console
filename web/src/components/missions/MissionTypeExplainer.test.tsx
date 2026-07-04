@@ -2,6 +2,7 @@ import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MissionTypeExplainer } from './MissionTypeExplainer'
+import { isDemoMode } from '../../lib/demoMode'
 
 vi.mock('../../lib/demoMode', () => ({
   isDemoMode: vi.fn(() => true),
@@ -55,8 +56,7 @@ describe('MissionTypeExplainer', () => {
   })
 
   it('does not render in non-demo mode', () => {
-    const { isDemoMode } = require('../../lib/demoMode')
-    isDemoMode.mockReturnValue(false)
+    vi.mocked(isDemoMode).mockReturnValue(false)
     const { container } = render(<MissionTypeExplainer />)
     expect(container.firstChild).toBeNull()
   })
