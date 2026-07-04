@@ -6,9 +6,11 @@ import React, { createRef } from 'react'
 // jsdom has no real scroll/layout, so useVirtualizer returns 0 items.
 // We control the virtual items list via mockVirtualItems.
 
-const mockMeasureElement = vi.fn()
-const mockGetTotalSize = vi.fn(() => 600)
-const mockGetVirtualItems = vi.fn()
+const { mockMeasureElement, mockGetTotalSize, mockGetVirtualItems } = vi.hoisted(() => ({
+  mockMeasureElement: vi.fn(),
+  mockGetTotalSize: vi.fn(() => 600),
+  mockGetVirtualItems: vi.fn()
+}))
 
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: vi.fn((opts: { overscan?: number }) => {

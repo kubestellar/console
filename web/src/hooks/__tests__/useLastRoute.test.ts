@@ -16,7 +16,9 @@ const REMEMBER_POSITION_KEY = 'kubestellar-remember-position'
 
 let mockPathname = '/'
 let mockSearch = ''
-const mockNavigate = vi.fn()
+const { mockNavigate } = vi.hoisted(() => ({
+  mockNavigate: vi.fn()
+}))
 
 vi.mock('react-router-dom', () => ({
   useLocation: () => ({ pathname: mockPathname, search: mockSearch }),

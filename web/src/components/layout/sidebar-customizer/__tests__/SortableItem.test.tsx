@@ -3,7 +3,9 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { SidebarItem } from '../../../../hooks/useSidebarConfig'
 
-const mockUseSortable = vi.fn()
+const { mockUseSortable } = vi.hoisted(() => ({
+  mockUseSortable: vi.fn()
+}))
 
 vi.mock('@dnd-kit/sortable', () => ({
   useSortable: (args: unknown) => mockUseSortable(args),

@@ -7,8 +7,10 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
   POLL_INTERVAL_SLOW_MS: 60000,
 } })
 
-const mockEmitSnoozed = vi.fn()
-const mockEmitUnsnoozed = vi.fn()
+const { mockEmitSnoozed, mockEmitUnsnoozed } = vi.hoisted(() => ({
+  mockEmitSnoozed: vi.fn(),
+  mockEmitUnsnoozed: vi.fn()
+}))
 
 vi.mock('../../lib/analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/analytics')>()),

@@ -5,7 +5,9 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // Mocks
 // ============================================================================
 
-const mockGet = vi.fn()
+const { mockGet } = vi.hoisted(() => ({
+  mockGet: vi.fn()
+}))
 const mockGetDemoMode = vi.fn(() => false)
 const mockHasRealToken = vi.fn(() => true)
 

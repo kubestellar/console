@@ -17,8 +17,10 @@ vi.mock('framer-motion', () => ({
   useReducedMotion: () => true,
 }))
 
-const mockUsePipelineFlow = vi.fn()
-const mockRunMutation = vi.fn()
+const { mockUsePipelineFlow, mockRunMutation } = vi.hoisted(() => ({
+  mockUsePipelineFlow: vi.fn(),
+  mockRunMutation: vi.fn()
+}))
 vi.mock('../../../../hooks/useGitHubPipelines', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../hooks/useGitHubPipelines')>()
   return {

@@ -24,8 +24,10 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
   return { ...actual, FETCH_DEFAULT_TIMEOUT_MS: 10000 }
 })
 
-const mockFetchKagentStatus = vi.fn()
-const mockFetchKagentAgents = vi.fn()
+const { mockFetchKagentStatus, mockFetchKagentAgents } = vi.hoisted(() => ({
+  mockFetchKagentStatus: vi.fn(),
+  mockFetchKagentAgents: vi.fn()
+}))
 const mockFetchKagentiProviderStatus = vi.fn()
 const mockFetchKagentiProviderAgents = vi.fn()
 

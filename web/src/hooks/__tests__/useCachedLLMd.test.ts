@@ -21,8 +21,10 @@ const { mockClusterCacheRef } = vi.hoisted(() => ({
   },
 }))
 
-const mockUseCache = vi.fn()
-const mockCreateCachedHook = vi.fn((config: Record<string, unknown>) => () => mockUseCache(config))
+const { mockUseCache, mockCreateCachedHook } = vi.hoisted(() => ({
+  mockUseCache: vi.fn(),
+  mockCreateCachedHook: vi.fn((config: Record<string, unknown>) => () => mockUseCache(config))
+}))
 const mockKubectlProxy = { exec: vi.fn() }
 const mockSettledWithConcurrency = vi.fn()
 

@@ -4,7 +4,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fetchJson, NOT_INSTALLED_STATUSES } from '../fetchJson'
 
-const mockAuthFetch = vi.fn()
+const { mockAuthFetch } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn()
+}))
 
 vi.mock('../api', () => ({
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),

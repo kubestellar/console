@@ -5,12 +5,14 @@ import { renderHook, act } from '@testing-library/react'
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockPodIssues = vi.fn(() => ({ issues: [] }))
-const mockDeploymentIssues = vi.fn(() => ({ issues: [] }))
-const mockSecurityIssues = vi.fn(() => ({ issues: [] }))
-const mockClusters = vi.fn(() => ({ clusters: [], deduplicatedClusters: [] }))
-const mockNodes = vi.fn(() => ({ nodes: [] }))
-const mockPods = vi.fn(() => ({ pods: [] }))
+const { mockPodIssues, mockDeploymentIssues, mockSecurityIssues, mockClusters, mockNodes, mockPods } = vi.hoisted(() => ({
+  mockPodIssues: vi.fn(() => ({ issues: [] })),
+  mockDeploymentIssues: vi.fn(() => ({ issues: [] })),
+  mockSecurityIssues: vi.fn(() => ({ issues: [] })),
+  mockClusters: vi.fn(() => ({ clusters: [], deduplicatedClusters: [] })),
+  mockNodes: vi.fn(() => ({ nodes: [] })),
+  mockPods: vi.fn(() => ({ pods: [] }))
+}))
 
 vi.mock('../useMCP', () => ({
   usePodIssues: () => mockPodIssues(),
@@ -21,8 +23,10 @@ vi.mock('../useMCP', () => ({
   usePods: () => mockPods(),
 }))
 
-const mockIsSnoozed = vi.fn((_id: string) => false)
-const mockIsDismissed = vi.fn((_id: string) => false)
+const { mockIsSnoozed, mockIsDismissed } = vi.hoisted(() => ({
+  mockIsSnoozed: vi.fn((_id: string) => false),
+  mockIsDismissed: vi.fn((_id: string) => false)
+}))
 const mockSnoozedMissions: unknown[] = []
 const mockDismissedMissions: unknown[] = []
 

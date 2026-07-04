@@ -5,23 +5,25 @@ import { renderHook } from '@testing-library/react'
 // Each mock is assigned to a variable so individual tests can override
 // return values via mockReturnValue / mockReturnValueOnce.
 
-const mockUseClusters = vi.fn(() => ({
+const { mockUseClusters, mockUsePodIssues, mockUseDeployments, mockUseDeploymentIssues, mockUsePVCs, mockUseServices, mockUseEvents, mockUseWarningEvents, mockUseSecurityIssues, mockUseHelmReleases, mockUseOperatorSubscriptions, mockUseOperators, mockUseGPUNodes } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn(() => ({,
+  mockUsePodIssues: vi.fn(() => ({ issues: [] as unknown[], isLoading: false })),
+  mockUseDeployments: vi.fn(() => ({ deployments: [] as unknown[], isLoading: false })),
+  mockUseDeploymentIssues: vi.fn(() => ({ issues: [] as unknown[], isLoading: false })),
+  mockUsePVCs: vi.fn(() => ({ pvcs: [] as unknown[], isLoading: false })),
+  mockUseServices: vi.fn(() => ({ services: [] as unknown[], isLoading: false })),
+  mockUseEvents: vi.fn(() => ({ events: [] as unknown[], isLoading: false })),
+  mockUseWarningEvents: vi.fn(() => ({ events: [] as unknown[], isLoading: false })),
+  mockUseSecurityIssues: vi.fn(() => ({ issues: [] as unknown[], isLoading: false })),
+  mockUseHelmReleases: vi.fn(() => ({ releases: [] as unknown[], isLoading: false })),
+  mockUseOperatorSubscriptions: vi.fn(() => ({ subscriptions: [] as unknown[], isLoading: false })),
+  mockUseOperators: vi.fn(() => ({ operators: [] as unknown[], isLoading: false })),
+  mockUseGPUNodes: vi.fn(() => ({ nodes: [] as unknown[], isLoading: false }))
+}))
   deduplicatedClusters: [] as unknown[],
   clusters: [] as unknown[],
   isLoading: false,
 }))
-const mockUsePodIssues = vi.fn(() => ({ issues: [] as unknown[], isLoading: false }))
-const mockUseDeployments = vi.fn(() => ({ deployments: [] as unknown[], isLoading: false }))
-const mockUseDeploymentIssues = vi.fn(() => ({ issues: [] as unknown[], isLoading: false }))
-const mockUsePVCs = vi.fn(() => ({ pvcs: [] as unknown[], isLoading: false }))
-const mockUseServices = vi.fn(() => ({ services: [] as unknown[], isLoading: false }))
-const mockUseEvents = vi.fn(() => ({ events: [] as unknown[], isLoading: false }))
-const mockUseWarningEvents = vi.fn(() => ({ events: [] as unknown[], isLoading: false }))
-const mockUseSecurityIssues = vi.fn(() => ({ issues: [] as unknown[], isLoading: false }))
-const mockUseHelmReleases = vi.fn(() => ({ releases: [] as unknown[], isLoading: false }))
-const mockUseOperatorSubscriptions = vi.fn(() => ({ subscriptions: [] as unknown[], isLoading: false }))
-const mockUseOperators = vi.fn(() => ({ operators: [] as unknown[], isLoading: false }))
-const mockUseGPUNodes = vi.fn(() => ({ nodes: [] as unknown[], isLoading: false }))
 
 const mockUseAlerts = vi.fn(() => ({ alerts: [], stats: undefined as never, isLoading: false }))
 const mockUseAlertRules = vi.fn(() => ({ rules: [] as unknown[], isLoading: false }))

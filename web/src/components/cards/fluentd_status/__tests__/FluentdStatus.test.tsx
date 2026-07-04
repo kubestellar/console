@@ -7,7 +7,9 @@ import { render, screen } from '@testing-library/react'
 import { FluentdStatus } from '../FluentdStatus'
 import type { FluentdStatus as FluentdStatusData } from '../useFluentdStatus'
 
-const mockUseFluentdStatus = vi.fn()
+const { mockUseFluentdStatus } = vi.hoisted(() => ({
+  mockUseFluentdStatus: vi.fn()
+}))
 
 vi.mock('../useFluentdStatus', () => ({
   useFluentdStatus: () => mockUseFluentdStatus(),

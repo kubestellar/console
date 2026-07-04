@@ -50,7 +50,9 @@ vi.mock('../../lib/cache', () => ({
 }))
 
 /** Global mock for authFetch used by useGadgetStatus and fetchGadgetTrace */
-const mockAuthFetch = vi.fn()
+const { mockAuthFetch } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn()
+}))
 vi.mock('../../lib/api', () => ({
     createCachedHook: vi.fn(),
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),

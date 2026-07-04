@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
-const mockEmitClusterInventory = vi.fn()
+const { mockEmitClusterInventory } = vi.hoisted(() => ({
+  mockEmitClusterInventory: vi.fn()
+}))
 
 vi.mock('../../../lib/analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../lib/analytics')>()),

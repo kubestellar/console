@@ -3,7 +3,9 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { SnoozedRecommendation } from '../../../hooks/useSnoozedRecommendations'
 
-const mockFormatElapsedTime = vi.fn()
+const { mockFormatElapsedTime } = vi.hoisted(() => ({
+  mockFormatElapsedTime: vi.fn()
+}))
 
 vi.mock('../../../hooks/useSnoozedRecommendations', () => ({
   formatElapsedTime: (value: number) => mockFormatElapsedTime(value),

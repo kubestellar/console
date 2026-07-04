@@ -12,10 +12,12 @@ import { type ReactNode } from 'react'
 import { STORAGE_KEY_DASHBOARD_AUTO_REFRESH } from '../../../lib/constants'
 
 // ── Minimal mock surface ────────────────────────────────────────────
-const mockSafeGetItem = vi.fn().mockReturnValue(null)
-const mockSafeSetItem = vi.fn()
-const mockSafeSetJSON = vi.fn().mockReturnValue(true)
-const mockSafeRemoveItem = vi.fn()
+const { mockSafeGetItem, mockSafeSetItem, mockSafeSetJSON, mockSafeRemoveItem } = vi.hoisted(() => ({
+  mockSafeGetItem: vi.fn().mockReturnValue(null),
+  mockSafeSetItem: vi.fn(),
+  mockSafeSetJSON: vi.fn().mockReturnValue(true),
+  mockSafeRemoveItem: vi.fn()
+}))
 
 vi.mock('../../../lib/utils/localStorage', () => ({
   safeGetItem: (...args: unknown[]) => mockSafeGetItem(...args),

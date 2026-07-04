@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
-const mockUseCache = vi.fn()
+const { mockUseCache } = vi.hoisted(() => ({
+  mockUseCache: vi.fn()
+}))
 vi.mock('../../lib/cache', async (importOriginal) => {
     const actual = await importOriginal<typeof import('../../lib/cache')>()
     return {

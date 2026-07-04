@@ -4,7 +4,9 @@ import { render, screen } from '@testing-library/react'
 import { AppStatus } from '../AppStatus'
 
 // Mock all dependencies
-const mockUseCachedDeployments = vi.fn()
+const { mockUseCachedDeployments } = vi.hoisted(() => ({
+  mockUseCachedDeployments: vi.fn()
+}))
 const mockUseCardLoadingState = vi.fn()
 const mockUseGlobalFilters = vi.fn()
 const mockUseDrillDownActions = vi.fn()

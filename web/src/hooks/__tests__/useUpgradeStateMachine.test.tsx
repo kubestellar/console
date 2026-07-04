@@ -30,7 +30,9 @@ vi.mock('../useUpgradeWebSocket', () => ({
 // ---------------------------------------------------------------------------
 // Mock upgradeHelpers module using the correct relative path
 // ---------------------------------------------------------------------------
-const mockGetDemoVersionForCluster = vi.fn((name) => `${name}-demo`)
+const { mockGetDemoVersionForCluster } = vi.hoisted(() => ({
+  mockGetDemoVersionForCluster: vi.fn((name) => `${name}-demo`)
+}))
 
 vi.mock('../../components/cards/upgradeHelpers', () => ({
   getDemoVersionForCluster: (name: string) => mockGetDemoVersionForCluster(name),

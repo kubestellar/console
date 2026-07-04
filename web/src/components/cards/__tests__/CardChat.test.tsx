@@ -15,7 +15,9 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockShowToast = vi.fn()
+const { mockShowToast } = vi.hoisted(() => ({
+  mockShowToast: vi.fn()
+}))
 vi.mock('../../ui/Toast', () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }))

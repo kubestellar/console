@@ -27,7 +27,9 @@ vi.mock('../../../lib/cache/fetcherUtils', () => ({
   isClusterModeBackend: () => mockIsClusterMode,
 }))
 
-const mockKubectlExec = vi.fn()
+const { mockKubectlExec } = vi.hoisted(() => ({
+  mockKubectlExec: vi.fn()
+}))
 vi.mock('../../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: (...args: unknown[]) => mockKubectlExec(...args) },
 }))

@@ -17,7 +17,9 @@ const MOCK_LATENCY_MS = 200
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
-const mockAgentFetch = vi.fn()
+const { mockAgentFetch } = vi.hoisted(() => ({
+  mockAgentFetch: vi.fn()
+}))
 vi.mock('../../../hooks/mcp/shared', () => ({
   agentFetch: vi.fn((...args) => mockAgentFetch(...args)),
 }))

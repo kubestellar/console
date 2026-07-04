@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useTenantIsolationSetup } from '../useTenantIsolationSetup'
 
-const mockUseOvnStatus = vi.fn()
+const { mockUseOvnStatus } = vi.hoisted(() => ({
+  mockUseOvnStatus: vi.fn()
+}))
 const mockUseKubeFlexStatus = vi.fn()
 const mockUseK3sStatus = vi.fn()
 const mockUseKubevirtStatus = vi.fn()

@@ -7,7 +7,9 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const mockPrefetchCache = vi.fn().mockResolvedValue(undefined)
+const { mockPrefetchCache } = vi.hoisted(() => ({
+  mockPrefetchCache: vi.fn().mockResolvedValue(undefined)
+}))
 const mockIsDemoMode = vi.fn(() => false)
 
 vi.mock('../cache', () => ({

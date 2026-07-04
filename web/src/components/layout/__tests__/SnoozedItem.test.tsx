@@ -3,7 +3,9 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { SnoozedSwap } from '../../../hooks/useSnoozedCards'
 
-const mockFormatTimeRemaining = vi.fn()
+const { mockFormatTimeRemaining } = vi.hoisted(() => ({
+  mockFormatTimeRemaining: vi.fn()
+}))
 
 vi.mock('../../../hooks/useSnoozedCards', () => ({
   formatTimeRemaining: (value: number) => mockFormatTimeRemaining(value),

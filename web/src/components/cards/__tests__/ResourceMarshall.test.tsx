@@ -4,7 +4,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ResourceMarshall } from '../ResourceMarshall'
 
 const mockUseCachedNamespaces = vi.fn()
-const mockUseClusters = vi.fn()
+const { mockUseClusters } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn()
+}))
 const mockUseWorkloads = vi.fn()
 const mockUseResolveDependencies = vi.fn()
 const mockUseCardLoadingState = vi.fn()

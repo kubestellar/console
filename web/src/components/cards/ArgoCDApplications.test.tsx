@@ -34,8 +34,10 @@ vi.mock('react-i18next', () => ({
 }))
 
 // useArgoCD hooks
-const mockUseArgoCDApplications = vi.fn()
-const mockTriggerSync = vi.fn()
+const { mockUseArgoCDApplications, mockTriggerSync } = vi.hoisted(() => ({
+  mockUseArgoCDApplications: vi.fn(),
+  mockTriggerSync: vi.fn()
+}))
 const mockSyncState: { isSyncing: boolean; lastResult: TriggerSyncResult | null } = {
   isSyncing: false,
   lastResult: null,

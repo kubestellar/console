@@ -12,7 +12,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
-const mockUseCache = vi.fn()
+const { mockUseCache } = vi.hoisted(() => ({
+  mockUseCache: vi.fn()
+}))
 vi.mock('../../../../lib/cache', () => ({
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))

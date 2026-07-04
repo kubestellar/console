@@ -5,10 +5,12 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // Mocks
 // ============================================================================
 
-const mockGet = vi.fn()
-const mockPost = vi.fn()
-const mockPut = vi.fn()
-const mockDelete = vi.fn()
+const { mockGet, mockPost, mockPut, mockDelete } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPost: vi.fn(),
+  mockPut: vi.fn(),
+  mockDelete: vi.fn()
+}))
 
 vi.mock('../../lib/api', () => ({
   api: {
@@ -19,7 +21,9 @@ vi.mock('../../lib/api', () => ({
   },
 }))
 
-const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+const { mockUseDemoMode } = vi.hoisted(() => ({
+  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+}))
 vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),

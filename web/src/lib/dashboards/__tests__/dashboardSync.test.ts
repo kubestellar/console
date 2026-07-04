@@ -5,10 +5,12 @@ const { mockGetStoredAuthToken } = vi.hoisted(() => ({
 }))
 
 // Mock the api module
-const mockApiGet = vi.fn()
-const mockApiPost = vi.fn()
-const mockApiPut = vi.fn()
-const mockApiDelete = vi.fn()
+const { mockApiGet, mockApiPost, mockApiPut, mockApiDelete } = vi.hoisted(() => ({
+  mockApiGet: vi.fn(),
+  mockApiPost: vi.fn(),
+  mockApiPut: vi.fn(),
+  mockApiDelete: vi.fn()
+}))
 
 vi.mock('../../api', () => ({
   api: {

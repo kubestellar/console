@@ -58,7 +58,9 @@ vi.mock('../../../ui/Button', () => ({
   Button: ({ children, ...props }: ComponentProps<'button'>) => <button {...props}>{children}</button>,
 }))
 
-const mockStartMission = vi.fn()
+const { mockStartMission } = vi.hoisted(() => ({
+  mockStartMission: vi.fn()
+}))
 vi.mock('../../../../hooks/useMissions', () => ({
   useMissions: () => ({ startMission: mockStartMission }),
 }))

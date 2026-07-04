@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
-const mockUseAlerts = vi.fn()
+const { mockUseAlerts } = vi.hoisted(() => ({
+  mockUseAlerts: vi.fn()
+}))
 const mockUseClusters = vi.fn()
 const mockUsePodIssues = vi.fn()
 const mockUseBackendHealth = vi.fn()

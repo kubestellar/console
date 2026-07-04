@@ -6,9 +6,11 @@ import { renderHook, act } from '@testing-library/react'
 // ---------------------------------------------------------------------------
 
 const mockFullSync = vi.fn<(key: string) => Promise<import('../types').DashboardCard[] | null>>()
-const mockSaveCards = vi.fn()
-const mockIsAuthenticated = vi.fn(() => false)
-const mockClearCache = vi.fn()
+const { mockSaveCards, mockIsAuthenticated, mockClearCache } = vi.hoisted(() => ({
+  mockSaveCards: vi.fn(),
+  mockIsAuthenticated: vi.fn(() => false),
+  mockClearCache: vi.fn()
+}))
 
 vi.mock('../dashboardSync', () => ({
   dashboardSync: {

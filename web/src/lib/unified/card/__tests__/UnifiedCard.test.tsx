@@ -71,7 +71,9 @@ vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => mockDrillDownActions,
 }))
 
-const mockUseReportCardDataState = vi.fn()
+const { mockUseReportCardDataState } = vi.hoisted(() => ({
+  mockUseReportCardDataState: vi.fn()
+}))
 vi.mock('../../../../components/cards/CardDataContext', () => ({
   useReportCardDataState: (state: unknown) => mockUseReportCardDataState(state),
 }))

@@ -3,8 +3,10 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const mockGet = vi.fn()
-const mockPost = vi.fn()
+const { mockGet, mockPost } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPost: vi.fn()
+}))
 
 vi.mock('../api', () => ({
   api: { get: (...a: unknown[]) => mockGet(...a), post: (...a: unknown[]) => mockPost(...a) },

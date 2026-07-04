@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 // Mock useMissions
-const mockStartMission = vi.fn(() => 'mission-123')
-const mockSendMessage = vi.fn()
-const mockCancelMission = vi.fn()
+const { mockStartMission, mockSendMessage, mockCancelMission } = vi.hoisted(() => ({
+  mockStartMission: vi.fn(() => 'mission-123'),
+  mockSendMessage: vi.fn(),
+  mockCancelMission: vi.fn()
+}))
 // Mutable missions store — completeMission() replaces this with a new array
 // so React detects a reference change and re-triggers the useEffect (#7290).
 let mockMissionsStore: Array<{ id: string; status: string }> = []

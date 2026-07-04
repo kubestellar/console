@@ -10,7 +10,9 @@ import { useQASMFiles } from '../useQASMFiles'
 
 // ---------- Mocks ----------
 
-const mockIsAuthenticated = vi.fn(() => true)
+const { mockIsAuthenticated } = vi.hoisted(() => ({
+  mockIsAuthenticated: vi.fn(() => true)
+}))
 const mockIsQuantumForcedToDemo = vi.fn(() => false)
 
 vi.mock('../../lib/auth', () => ({

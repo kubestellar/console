@@ -14,7 +14,9 @@ import type { ReactNode } from 'react'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
-const mockStartMission = vi.fn(() => 'mission-123')
+const { mockStartMission } = vi.hoisted(() => ({
+  mockStartMission: vi.fn(() => 'mission-123')
+}))
 
 vi.mock('../../hooks/useMissions', () => ({
   useMissions: () => ({ startMission: mockStartMission }),

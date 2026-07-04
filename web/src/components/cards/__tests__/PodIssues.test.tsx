@@ -14,7 +14,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-const mockUseCachedPodIssues = vi.fn()
+const { mockUseCachedPodIssues } = vi.hoisted(() => ({
+  mockUseCachedPodIssues: vi.fn()
+}))
 vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPodIssues: () => mockUseCachedPodIssues(),
 }))

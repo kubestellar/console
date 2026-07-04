@@ -28,8 +28,10 @@ const DEFAULT_GROUP_COLOR = 'blue'
 
 const AVAILABLE_CLUSTERS = ['cluster-a', 'cluster-b', 'cluster-c']
 
-const mockPreviewQuery = vi.fn()
-const mockGenerateAIQuery = vi.fn()
+const { mockPreviewQuery, mockGenerateAIQuery } = vi.hoisted(() => ({
+  mockPreviewQuery: vi.fn(),
+  mockGenerateAIQuery: vi.fn()
+}))
 
 vi.mock('../../../hooks/useClusterGroups', async () => {
   const actual = await vi.importActual<typeof import('../../../hooks/useClusterGroups')>(

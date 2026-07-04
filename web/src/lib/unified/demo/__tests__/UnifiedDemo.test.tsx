@@ -21,8 +21,10 @@ import { useUnifiedDemoContext } from '../UnifiedDemoContext'
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockToggleDemoMode = vi.fn()
-const mockSetDemoMode = vi.fn()
+const { mockToggleDemoMode, mockSetDemoMode } = vi.hoisted(() => ({
+  mockToggleDemoMode: vi.fn(),
+  mockSetDemoMode: vi.fn()
+}))
 let mockIsDemoMode = false
 
 vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({

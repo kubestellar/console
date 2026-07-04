@@ -6,8 +6,10 @@ import { CanIChecker } from '../CanIChecker'
 
 /* ---------- Mocks ---------- */
 
-const mockCheckPermission = vi.fn()
-const mockReset = vi.fn()
+const { mockCheckPermission, mockReset } = vi.hoisted(() => ({
+  mockCheckPermission: vi.fn(),
+  mockReset: vi.fn()
+}))
 
 vi.mock('../../../hooks/usePermissions', () => ({
   useCanI: () => ({

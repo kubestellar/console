@@ -11,8 +11,10 @@ import { buildDeepLinkURL, sendNotificationWithDeepLink } from '../useDeepLink'
 
 // ── Mocks ──────────────────────────────────────────────────────────────
 
-const mockNavigate = vi.fn()
-const mockSetSearchParams = vi.fn()
+const { mockNavigate, mockSetSearchParams } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+  mockSetSearchParams: vi.fn()
+}))
 let mockSearchParams = new URLSearchParams()
 
 vi.mock('react-router-dom', () => ({
@@ -20,11 +22,13 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }))
 
-const mockDrillToNode = vi.fn()
-const mockDrillToPod = vi.fn()
-const mockDrillToCluster = vi.fn()
-const mockDrillToDeployment = vi.fn()
-const mockDrillToNamespace = vi.fn()
+const { mockDrillToNode, mockDrillToPod, mockDrillToCluster, mockDrillToDeployment, mockDrillToNamespace } = vi.hoisted(() => ({
+  mockDrillToNode: vi.fn(),
+  mockDrillToPod: vi.fn(),
+  mockDrillToCluster: vi.fn(),
+  mockDrillToDeployment: vi.fn(),
+  mockDrillToNamespace: vi.fn()
+}))
 
 vi.mock('../useDrillDown', () => ({
   useDrillDownActions: () => ({

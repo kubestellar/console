@@ -5,7 +5,9 @@ import { AIAgents } from '../AIAgents'
 
 /* ---------- Mocks ---------- */
 
-const mockRefetch = vi.fn()
+const { mockRefetch } = vi.hoisted(() => ({
+  mockRefetch: vi.fn()
+}))
 
 vi.mock('../../../hooks/mcp/kagenti', () => ({
   useKagentiSummary: () => ({

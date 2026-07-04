@@ -17,7 +17,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-const mockUseTrivy = vi.fn()
+const { mockUseTrivy } = vi.hoisted(() => ({
+  mockUseTrivy: vi.fn()
+}))
 vi.mock('../../../hooks/useTrivy', () => ({
   useTrivy: () => mockUseTrivy(),
 }))

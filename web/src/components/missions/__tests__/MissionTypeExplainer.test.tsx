@@ -4,7 +4,9 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { MissionTypeExplainer } from '../MissionTypeExplainer'
 
 // Mock isDemoMode to control visibility
-const mockIsDemoMode = vi.fn()
+const { mockIsDemoMode } = vi.hoisted(() => ({
+  mockIsDemoMode: vi.fn()
+}))
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
 }))

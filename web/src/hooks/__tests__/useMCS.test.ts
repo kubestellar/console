@@ -20,7 +20,9 @@ vi.mock('../useDemoMode', async (importOriginal) => ({
   getDemoMode: vi.fn(() => false),
 }))
 
-const mockApiGet = vi.fn()
+const { mockApiGet } = vi.hoisted(() => ({
+  mockApiGet: vi.fn()
+}))
 
 vi.mock('../../lib/api', () => {
   // BackendUnavailableError must be defined inside the factory because

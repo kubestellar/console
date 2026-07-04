@@ -5,10 +5,12 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // Mocks — only external dependencies, never the hook itself
 // ---------------------------------------------------------------------------
 
-const mockGet = vi.fn()
-const mockPut = vi.fn()
-const mockPost = vi.fn()
-const mockDelete = vi.fn()
+const { mockGet, mockPut, mockPost, mockDelete } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPut: vi.fn(),
+  mockPost: vi.fn(),
+  mockDelete: vi.fn()
+}))
 
 vi.mock('../../lib/api', () => ({
   api: {
@@ -25,7 +27,9 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   return { ...actual, STORAGE_KEY_TOKEN: 'kc-auth-token' }
 })
 
-const mockGetDemoMode = vi.fn(() => false)
+const { mockGetDemoMode } = vi.hoisted(() => ({
+  mockGetDemoMode: vi.fn(() => false)
+}))
 vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),
   getDemoMode: () => mockGetDemoMode(),

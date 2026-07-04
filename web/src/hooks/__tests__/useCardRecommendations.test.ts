@@ -12,12 +12,14 @@ import { renderHook, act } from '@testing-library/react'
 // Mocks — declared before the module under test is imported.
 // ---------------------------------------------------------------------------
 
-const mockUsePodIssues = vi.fn()
-const mockUseDeploymentIssues = vi.fn()
-const mockUseWarningEvents = vi.fn()
-const mockUseGPUNodes = vi.fn()
-const mockUseClusters = vi.fn()
-const mockUseSecurityIssues = vi.fn()
+const { mockUsePodIssues, mockUseDeploymentIssues, mockUseWarningEvents, mockUseGPUNodes, mockUseClusters, mockUseSecurityIssues } = vi.hoisted(() => ({
+  mockUsePodIssues: vi.fn(),
+  mockUseDeploymentIssues: vi.fn(),
+  mockUseWarningEvents: vi.fn(),
+  mockUseGPUNodes: vi.fn(),
+  mockUseClusters: vi.fn(),
+  mockUseSecurityIssues: vi.fn()
+}))
 
 vi.mock('../useMCP', () => ({
   usePodIssues: () => mockUsePodIssues(),
@@ -28,7 +30,9 @@ vi.mock('../useMCP', () => ({
   useSecurityIssues: () => mockUseSecurityIssues(),
 }))
 
-const mockUseAIMode = vi.fn()
+const { mockUseAIMode } = vi.hoisted(() => ({
+  mockUseAIMode: vi.fn()
+}))
 vi.mock('../useAIMode', () => ({
   useAIMode: () => mockUseAIMode(),
 }))

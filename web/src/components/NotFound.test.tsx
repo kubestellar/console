@@ -34,7 +34,9 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock react-router-dom
-const mockNavigate = vi.fn()
+const { mockNavigate } = vi.hoisted(() => ({
+  mockNavigate: vi.fn()
+}))
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {

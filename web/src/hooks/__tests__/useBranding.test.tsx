@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import React from 'react'
 
-const mockMergeBranding = vi.fn((overrides: Record<string, unknown>) => ({
+const { mockMergeBranding } = vi.hoisted(() => ({
+  mockMergeBranding: vi.fn((overrides: Record<string, unknown>) => ({
+}))
   appName: 'KubeStellar Console',
   appShortName: 'KubeStellar',
   tagline: 'multi-cluster first, saving time and tokens',
@@ -58,7 +60,9 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
 } })
 
-const mockUpdateAnalyticsIds = vi.fn()
+const { mockUpdateAnalyticsIds } = vi.hoisted(() => ({
+  mockUpdateAnalyticsIds: vi.fn()
+}))
 vi.mock('../../lib/analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/analytics')>()),
   updateAnalyticsIds: (...args: unknown[]) => mockUpdateAnalyticsIds(...args),

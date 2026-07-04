@@ -45,10 +45,12 @@ vi.mock('../../lib/demoMode', () => ({
   isDemoModeForced: false,
 }))
 
-const mockEmitAgentConnected = vi.fn()
-const mockEmitAgentDisconnected = vi.fn()
-const mockEmitAgentProvidersDetected = vi.fn()
-const mockEmitConversionStep = vi.fn()
+const { mockEmitAgentConnected, mockEmitAgentDisconnected, mockEmitAgentProvidersDetected, mockEmitConversionStep } = vi.hoisted(() => ({
+  mockEmitAgentConnected: vi.fn(),
+  mockEmitAgentDisconnected: vi.fn(),
+  mockEmitAgentProvidersDetected: vi.fn(),
+  mockEmitConversionStep: vi.fn()
+}))
 
 vi.mock('../../lib/analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/analytics')>()),

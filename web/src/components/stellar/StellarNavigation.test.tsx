@@ -9,7 +9,9 @@ import {
   STELLAR_NAVIGATION_EVENT,
 } from './navigation'
 
-const mockNavigate = vi.fn()
+const { mockNavigate } = vi.hoisted(() => ({
+  mockNavigate: vi.fn()
+}))
 const mockLocation = vi.hoisted(() => ({
   pathname: '/',
   hash: '',

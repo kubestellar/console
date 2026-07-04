@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MiniDashboard } from './MiniDashboard'
 
-const mockUseClusters = vi.fn()
-const mockUseGPUNodes = vi.fn()
-const mockUsePodIssues = vi.fn()
+const { mockUseClusters, mockUseGPUNodes, mockUsePodIssues } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn(),
+  mockUseGPUNodes: vi.fn(),
+  mockUsePodIssues: vi.fn()
+}))
 const mockAgentFetch = vi.fn()
 
 vi.mock('../../hooks/useMCP', () => ({

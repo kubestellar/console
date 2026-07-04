@@ -9,7 +9,9 @@ import { createCardCachedHook } from '../cache/createCardCachedHook'
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockUseCache = vi.fn()
+const { mockUseCache } = vi.hoisted(() => ({
+  mockUseCache: vi.fn()
+}))
 const mockUseCardLoadingState = vi.fn()
 
 vi.mock('../cache/index', () => ({

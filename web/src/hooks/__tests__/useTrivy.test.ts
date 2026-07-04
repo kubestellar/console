@@ -8,7 +8,9 @@ vi.setConfig({ testTimeout: 15_000 })
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockUseClusters = vi.fn(() => ({
+const { mockUseClusters } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn(() => ({
+}))
   deduplicatedClusters: [] as Array<{ name: string; reachable: boolean }>,
   clusters: [] as Array<{ name: string; reachable: boolean }>,
   isLoading: false,
@@ -18,7 +20,9 @@ vi.mock('../useMCP', () => ({
   useClusters: (...args: unknown[]) => mockUseClusters(...args),
 }))
 
-const mockExec = vi.fn()
+const { mockExec } = vi.hoisted(() => ({
+  mockExec: vi.fn()
+}))
 vi.mock('../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },
 }))

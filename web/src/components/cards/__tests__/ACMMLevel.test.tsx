@@ -10,7 +10,9 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseACMM = vi.fn()
+const { mockUseACMM } = vi.hoisted(() => ({
+  mockUseACMM: vi.fn()
+}))
 
 vi.mock('../../acmm/ACMMProvider', () => ({
   useACMM: () => mockUseACMM(),

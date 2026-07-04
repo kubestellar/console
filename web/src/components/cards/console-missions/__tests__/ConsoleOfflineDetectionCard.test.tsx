@@ -30,7 +30,9 @@ vi.mock('react-i18next', () => ({
 }))
 
 const mockStartMission = vi.fn()
-const mockUseMissions = vi.fn()
+const { mockUseMissions } = vi.hoisted(() => ({
+  mockUseMissions: vi.fn()
+}))
 vi.mock('../../../../hooks/useMissions', () => ({
   useMissions: () => mockUseMissions(),
 }))

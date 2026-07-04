@@ -10,7 +10,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
-const mockNavigate = vi.fn()
+const { mockNavigate } = vi.hoisted(() => ({
+  mockNavigate: vi.fn()
+}))
 const mockOpenAddCardModal = vi.fn()
 
 vi.mock('react-router-dom', async () => {

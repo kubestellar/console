@@ -3,7 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
 const mockUseCachedNamespaces = vi.fn()
-const mockUseClusters = vi.fn()
+const { mockUseClusters } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn()
+}))
 const mockUseWorkloads = vi.fn()
 const mockUseResolveDependencies = vi.fn()
 const mockUseCardLoadingState = vi.fn()

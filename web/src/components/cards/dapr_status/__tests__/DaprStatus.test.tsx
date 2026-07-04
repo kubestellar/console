@@ -7,7 +7,9 @@ import type { DaprStatusData } from '../demoData'
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockUseCachedDapr = vi.fn()
+const { mockUseCachedDapr } = vi.hoisted(() => ({
+  mockUseCachedDapr: vi.fn()
+}))
 vi.mock('../../../../hooks/useCachedDapr', () => ({
   useCachedDapr: (...args: unknown[]) => mockUseCachedDapr(...args),
 }))

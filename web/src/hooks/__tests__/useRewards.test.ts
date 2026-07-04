@@ -11,7 +11,9 @@ import { renderHook, act } from '@testing-library/react'
 
 // ---------- Mocks ----------
 
-const mockGetDemoMode = vi.fn(() => false)
+const { mockGetDemoMode } = vi.hoisted(() => ({
+  mockGetDemoMode: vi.fn(() => false)
+}))
 vi.mock('../../lib/demoMode', () => ({
   getDemoMode: () => mockGetDemoMode(),
 }))
@@ -24,7 +26,9 @@ vi.mock('../../lib/analytics', async (importOriginal) => ({
 ))
 
 const mockUser = { id: 'test-user-123', github_login: 'tester' }
-const mockUseAuth = vi.fn(() => ({ user: mockUser, isAuthenticated: true }))
+const { mockUseAuth } = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(() => ({ user: mockUser, isAuthenticated: true }))
+}))
 vi.mock('../../lib/auth', () => ({
   useAuth: () => mockUseAuth(),
 }))

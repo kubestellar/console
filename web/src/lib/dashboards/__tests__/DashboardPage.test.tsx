@@ -10,8 +10,10 @@ import { TEST_STRINGS } from '../../test-strings'
 
 // react-router-dom
 const mockSearchParams = new URLSearchParams()
-const mockSetSearchParams = vi.fn()
-const mockNavigate = vi.fn()
+const { mockSetSearchParams, mockNavigate } = vi.hoisted(() => ({
+  mockSetSearchParams: vi.fn(),
+  mockNavigate: vi.fn()
+}))
 vi.mock('react-router-dom', () => ({
   useSearchParams: () => [mockSearchParams, mockSetSearchParams],
   useLocation: () => ({ pathname: '/test-dashboard' }),

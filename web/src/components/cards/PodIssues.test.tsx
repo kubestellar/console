@@ -28,7 +28,9 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseCachedPodIssues = vi.fn()
+const { mockUseCachedPodIssues } = vi.hoisted(() => ({
+  mockUseCachedPodIssues: vi.fn()
+}))
 vi.mock('../../hooks/useCachedData', () => ({
   useCachedPodIssues: () => mockUseCachedPodIssues(),
 }))

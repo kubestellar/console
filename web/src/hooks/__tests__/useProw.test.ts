@@ -5,7 +5,9 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // Mocks
 // ============================================================================
 
-const mockExec = vi.fn()
+const { mockExec } = vi.hoisted(() => ({
+  mockExec: vi.fn()
+}))
 
 vi.mock('../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },
@@ -16,7 +18,9 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
   return { ...actual, KUBECTL_EXTENDED_TIMEOUT_MS: 30000 }
 })
 
-const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+const { mockUseDemoMode } = vi.hoisted(() => ({
+  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+}))
 vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),

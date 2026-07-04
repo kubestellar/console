@@ -47,7 +47,9 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-const mockUseLocalAgent = vi.fn(() => ({
+const { mockUseLocalAgent } = vi.hoisted(() => ({
+  mockUseLocalAgent: vi.fn(() => ({
+}))
   status: '',
   health: {},
   connectionEvents: [],

@@ -2,7 +2,9 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 
-const mockUseQuantumQubitGridData = vi.fn()
+const { mockUseQuantumQubitGridData } = vi.hoisted(() => ({
+  mockUseQuantumQubitGridData: vi.fn()
+}))
 vi.mock('../../../../hooks/useCachedQuantum', () => ({
   useQuantumQubitGridData: (...args: unknown[]) => mockUseQuantumQubitGridData(...args),
   DEMO_QUANTUM_QUBITS: { num_qubits: 5, pattern: '01010' },

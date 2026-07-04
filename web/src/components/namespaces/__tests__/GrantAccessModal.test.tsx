@@ -17,7 +17,9 @@ const DISCARD_CONFIRM_TIMEOUT_MS = 2000
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
-const mockAuthFetch = vi.fn()
+const { mockAuthFetch } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn()
+}))
 vi.mock('../../../lib/api', () => ({
   authFetch: vi.fn((...args) => mockAuthFetch(...args)),
 }))

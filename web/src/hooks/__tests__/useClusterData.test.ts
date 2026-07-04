@@ -13,15 +13,17 @@ import { renderHook } from '@testing-library/react'
 // Each MCP hook returns an object with a specific property name.
 // ---------------------------------------------------------------------------
 
-const mockUseClusters = vi.fn()
-const mockUseAllPods = vi.fn()
-const mockUseDeployments = vi.fn()
-const mockUseNamespaces = vi.fn()
+const { mockUseClusters, mockUseAllPods, mockUseDeployments, mockUseNamespaces, mockUseHelmReleases, mockUseOperatorSubscriptions, mockUseSecurityIssues } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn(),
+  mockUseAllPods: vi.fn(),
+  mockUseDeployments: vi.fn(),
+  mockUseNamespaces: vi.fn(),
+  mockUseHelmReleases: vi.fn(),
+  mockUseOperatorSubscriptions: vi.fn(),
+  mockUseSecurityIssues: vi.fn()
+}))
 const mockUseCachedEvents = vi.fn()
 const mockUseCachedWarningEvents = vi.fn()
-const mockUseHelmReleases = vi.fn()
-const mockUseOperatorSubscriptions = vi.fn()
-const mockUseSecurityIssues = vi.fn()
 
 vi.mock('../useMCP', () => ({
   useClusters: (...args: unknown[]) => mockUseClusters(...args),

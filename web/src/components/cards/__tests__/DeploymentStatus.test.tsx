@@ -14,7 +14,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-const mockDrillToDeployment = vi.fn()
+const { mockDrillToDeployment } = vi.hoisted(() => ({
+  mockDrillToDeployment: vi.fn()
+}))
 vi.mock('../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToDeployment: mockDrillToDeployment }),
 }))

@@ -22,11 +22,13 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseClusters = vi.fn()
-const mockUseResourceQuotas = vi.fn()
-const mockUseLimitRanges = vi.fn()
-const mockCreateOrUpdateResourceQuota = vi.fn()
-const mockDeleteResourceQuota = vi.fn()
+const { mockUseClusters, mockUseResourceQuotas, mockUseLimitRanges, mockCreateOrUpdateResourceQuota, mockDeleteResourceQuota } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn(),
+  mockUseResourceQuotas: vi.fn(),
+  mockUseLimitRanges: vi.fn(),
+  mockCreateOrUpdateResourceQuota: vi.fn(),
+  mockDeleteResourceQuota: vi.fn()
+}))
 
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),

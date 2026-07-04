@@ -5,9 +5,11 @@ import { renderHook, act } from '@testing-library/react'
 // Mocks — analytics
 // ---------------------------------------------------------------------------
 
-const mockEmitNudgeShown = vi.fn()
-const mockEmitNudgeDismissed = vi.fn()
-const mockEmitNudgeActioned = vi.fn()
+const { mockEmitNudgeShown, mockEmitNudgeDismissed, mockEmitNudgeActioned } = vi.hoisted(() => ({
+  mockEmitNudgeShown: vi.fn(),
+  mockEmitNudgeDismissed: vi.fn(),
+  mockEmitNudgeActioned: vi.fn()
+}))
 
 vi.mock('../../lib/analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/analytics')>()),

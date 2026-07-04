@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-const mockEmitWsAuthMissing = vi.fn()
+const { mockEmitWsAuthMissing } = vi.hoisted(() => ({
+  mockEmitWsAuthMissing: vi.fn()
+}))
 const mockGetAgentToken = vi.fn(async () => '')
 let mockIsLocalAgentSuppressed = false
 

@@ -23,7 +23,9 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseAdmissionWebhooks = vi.fn()
+const { mockUseAdmissionWebhooks } = vi.hoisted(() => ({
+  mockUseAdmissionWebhooks: vi.fn()
+}))
 vi.mock('../../hooks/useAdmissionWebhooks', () => ({
   useAdmissionWebhooks: () => mockUseAdmissionWebhooks(),
 }))

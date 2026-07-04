@@ -4,7 +4,9 @@ import type { EPPStatusSummary } from '../../../../hooks/useCachedEPPStatus'
 import type { LLMdServer } from '../../../../hooks/useLLMd'
 
 const mockRefetch = vi.fn()
-const mockUseCachedEPPStatus = vi.fn()
+const { mockUseCachedEPPStatus } = vi.hoisted(() => ({
+  mockUseCachedEPPStatus: vi.fn()
+}))
 const mockUseCardLoadingState = vi.fn()
 
 vi.mock('../../../../hooks/useCachedEPPStatus', () => ({

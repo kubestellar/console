@@ -4,8 +4,10 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // ---------------------------------------------------------------------------
 // Mock the api module
 // ---------------------------------------------------------------------------
-const mockGet = vi.fn()
-const mockPost = vi.fn()
+const { mockGet, mockPost } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPost: vi.fn()
+}))
 
 vi.mock('../../lib/api', () => ({
   api: {

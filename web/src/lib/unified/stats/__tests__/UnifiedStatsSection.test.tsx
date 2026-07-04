@@ -32,7 +32,9 @@ vi.mock('../UnifiedStatBlock', () => ({
   ),
 }))
 
-const mockResolveStatValue = vi.fn().mockReturnValue({
+const { mockResolveStatValue } = vi.hoisted(() => ({
+  mockResolveStatValue: vi.fn().mockReturnValue({
+}))
   value: 42,
   formatted: '42',
   isDemo: false,

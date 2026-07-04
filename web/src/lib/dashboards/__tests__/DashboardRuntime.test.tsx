@@ -40,7 +40,9 @@ vi.mock('@dnd-kit/sortable', () => ({
 }))
 
 // Dashboard hooks
-const mockUseDashboard = vi.fn()
+const { mockUseDashboard } = vi.hoisted(() => ({
+  mockUseDashboard: vi.fn()
+}))
 vi.mock('../dashboardHooks', () => ({
   useDashboard: (...args: unknown[]) => mockUseDashboard(...args),
 }))

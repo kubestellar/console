@@ -5,7 +5,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TeamMemberManager } from '../TeamMemberManager'
 import type { TeamMemberInfo, TeamRole } from '../../../types/teams'
 
-const mockT = vi.fn((key: string) => key)
+const { mockT } = vi.hoisted(() => ({
+  mockT: vi.fn((key: string) => key)
+}))
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

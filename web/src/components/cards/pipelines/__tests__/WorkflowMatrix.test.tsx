@@ -14,7 +14,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
-const mockUsePipelineMatrix = vi.fn()
+const { mockUsePipelineMatrix } = vi.hoisted(() => ({
+  mockUsePipelineMatrix: vi.fn()
+}))
 vi.mock('../../../../hooks/useGitHubPipelines', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../hooks/useGitHubPipelines')>()
   return {

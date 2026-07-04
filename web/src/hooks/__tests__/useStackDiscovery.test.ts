@@ -3,7 +3,9 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockGetDemoMode = vi.fn(() => false)
+const { mockGetDemoMode } = vi.hoisted(() => ({
+  mockGetDemoMode: vi.fn(() => false)
+}))
 const mockExec = vi.fn()
 
 vi.mock('../useDemoMode', async (importOriginal) => ({

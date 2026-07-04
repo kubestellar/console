@@ -10,7 +10,9 @@ vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-const mockUseCachedCiliumStatus = vi.fn()
+const { mockUseCachedCiliumStatus } = vi.hoisted(() => ({
+  mockUseCachedCiliumStatus: vi.fn()
+}))
 vi.mock('../../../../hooks/useCachedCiliumStatus', () => ({
     useCachedCiliumStatus: () => mockUseCachedCiliumStatus(),
 }))

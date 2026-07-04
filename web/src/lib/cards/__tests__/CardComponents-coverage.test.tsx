@@ -21,10 +21,12 @@ vi.mock('../../../components/cards/CardWrapper', () => ({
   useCardType: () => 'test-card',
 }))
 
-const mockEmitCardSearchUsed = vi.fn()
-const mockEmitCardClusterFilterChanged = vi.fn()
-const mockEmitCardListItemClicked = vi.fn()
-const mockEmitCardPaginationUsed = vi.fn()
+const { mockEmitCardSearchUsed, mockEmitCardClusterFilterChanged, mockEmitCardListItemClicked, mockEmitCardPaginationUsed } = vi.hoisted(() => ({
+  mockEmitCardSearchUsed: vi.fn(),
+  mockEmitCardClusterFilterChanged: vi.fn(),
+  mockEmitCardListItemClicked: vi.fn(),
+  mockEmitCardPaginationUsed: vi.fn()
+}))
 
 vi.mock('../../analytics', () => ({
   emitCardSearchUsed: (...args: unknown[]) => mockEmitCardSearchUsed(...args),

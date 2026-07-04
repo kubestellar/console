@@ -16,7 +16,9 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseDeployMissions = vi.fn()
+const { mockUseDeployMissions } = vi.hoisted(() => ({
+  mockUseDeployMissions: vi.fn()
+}))
 vi.mock('../../../hooks/useDeployMissions', () => ({
   useDeployMissions: () => mockUseDeployMissions(),
 }))

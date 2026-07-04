@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
-const mockHookResult = vi.fn()
+const { mockHookResult } = vi.hoisted(() => ({
+  mockHookResult: vi.fn()
+}))
 
 vi.mock('../lib/cache/createCardCachedHook', () => ({
     createCardCachedHook: (_config: Record<string, unknown>) => {

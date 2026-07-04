@@ -15,7 +15,9 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseClusters = vi.fn()
+const { mockUseClusters } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn()
+}))
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))

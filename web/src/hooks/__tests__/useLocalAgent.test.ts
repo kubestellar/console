@@ -37,10 +37,12 @@ vi.mock('../../lib/demoMode', () => ({
   isDemoModeForced: false,
 }))
 
-const mockEmitAgentConnected = vi.fn()
-const mockEmitAgentDisconnected = vi.fn()
-const mockEmitAgentProvidersDetected = vi.fn()
-const mockEmitConversionStep = vi.fn()
+const { mockEmitAgentConnected, mockEmitAgentDisconnected, mockEmitAgentProvidersDetected, mockEmitConversionStep } = vi.hoisted(() => ({
+  mockEmitAgentConnected: vi.fn(),
+  mockEmitAgentDisconnected: vi.fn(),
+  mockEmitAgentProvidersDetected: vi.fn(),
+  mockEmitConversionStep: vi.fn()
+}))
 
 vi.mock('../../lib/analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/analytics')>()),
@@ -51,8 +53,10 @@ vi.mock('../../lib/analytics', async (importOriginal) => ({
 }
 ))
 
-const mockSafeGetItem = vi.fn(() => null)
-const mockSafeSetItem = vi.fn()
+const { mockSafeGetItem, mockSafeSetItem } = vi.hoisted(() => ({
+  mockSafeGetItem: vi.fn(() => null),
+  mockSafeSetItem: vi.fn()
+}))
 
 vi.mock('../../lib/utils/localStorage', () => ({
   safeGetItem: (...args: unknown[]) => mockSafeGetItem(...args),

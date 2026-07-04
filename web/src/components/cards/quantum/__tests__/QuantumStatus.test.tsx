@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import type { QuantumSystemStatus } from '../../../../hooks/useCachedQuantum'
 
-const mockUseQuantumSystemStatus = vi.fn()
+const { mockUseQuantumSystemStatus } = vi.hoisted(() => ({
+  mockUseQuantumSystemStatus: vi.fn()
+}))
 vi.mock('../../../../hooks/useCachedQuantum', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../hooks/useCachedQuantum')>()
   return {

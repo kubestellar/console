@@ -4,7 +4,9 @@ import type { ModelEndpointSummary } from '../../../../hooks/useCachedModelEndpo
 import type { LLMdServer } from '../../../../hooks/useLLMd'
 
 const mockRefetch = vi.fn()
-const mockUseCachedModelEndpointHealth = vi.fn()
+const { mockUseCachedModelEndpointHealth } = vi.hoisted(() => ({
+  mockUseCachedModelEndpointHealth: vi.fn()
+}))
 const mockUseCardLoadingState = vi.fn()
 
 vi.mock('../../../../hooks/useCachedModelEndpointHealth', () => ({

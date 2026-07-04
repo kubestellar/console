@@ -7,7 +7,9 @@ import type { StrimziStatusData, StrimziKafkaCluster } from '../demoData'
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockUseCachedStrimzi = vi.fn()
+const { mockUseCachedStrimzi } = vi.hoisted(() => ({
+  mockUseCachedStrimzi: vi.fn()
+}))
 vi.mock('../../../../hooks/useCachedStrimzi', () => ({
   useCachedStrimzi: (...args: unknown[]) => mockUseCachedStrimzi(...args),
 }))

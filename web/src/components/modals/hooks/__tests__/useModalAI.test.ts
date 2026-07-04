@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AIAction, ResourceContext } from '../../types/modal.types'
 
 const mockStartMission = vi.fn()
-const mockUseMissions = vi.fn()
+const { mockUseMissions } = vi.hoisted(() => ({
+  mockUseMissions: vi.fn()
+}))
 
 vi.mock('../../../../hooks/useMissions', () => ({
   useMissions: () => mockUseMissions(),

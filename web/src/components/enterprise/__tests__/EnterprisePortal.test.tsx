@@ -4,7 +4,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mockNavigate = vi.fn()
+const { mockNavigate } = vi.hoisted(() => ({
+  mockNavigate: vi.fn()
+}))
 const mockOpenAddCardModal = vi.fn()
 
 vi.mock('react-router-dom', async () => {

@@ -2,8 +2,10 @@ import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mockSetBatchIntervalMs = vi.fn()
-const mockRunBatchNow = vi.fn()
+const { mockSetBatchIntervalMs, mockRunBatchNow } = vi.hoisted(() => ({
+  mockSetBatchIntervalMs: vi.fn(),
+  mockRunBatchNow: vi.fn()
+}))
 
 vi.mock('../../hooks/useStellar', () => ({
   useStellar: () => ({

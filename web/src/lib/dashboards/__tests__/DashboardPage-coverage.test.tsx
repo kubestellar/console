@@ -20,8 +20,10 @@ const mockSearchParamsData = vi.hoisted(() => ({
   params: new URLSearchParams(),
 }))
 
-const mockSetSearchParams = vi.fn()
-const mockNavigate = vi.fn()
+const { mockSetSearchParams, mockNavigate } = vi.hoisted(() => ({
+  mockSetSearchParams: vi.fn(),
+  mockNavigate: vi.fn()
+}))
 vi.mock('react-router-dom', () => ({
   useSearchParams: () => [mockSearchParamsData.params, mockSetSearchParams],
   useLocation: () => ({ pathname: '/coverage-test' }),

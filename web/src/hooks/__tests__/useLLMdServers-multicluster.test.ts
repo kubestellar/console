@@ -5,7 +5,9 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 // Mocks — only dependencies, never the hook under test
 // ---------------------------------------------------------------------------
 
-const mockExec = vi.fn()
+const { mockExec } = vi.hoisted(() => ({
+  mockExec: vi.fn()
+}))
 vi.mock('../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },
 }))
@@ -14,7 +16,9 @@ vi.mock('../useMCP', () => ({
   useClusters: vi.fn(() => ({ deduplicatedClusters: [], isLoading: false })),
 }))
 
-const mockGetDemoMode = vi.fn(() => false)
+const { mockGetDemoMode } = vi.hoisted(() => ({
+  mockGetDemoMode: vi.fn(() => false)
+}))
 vi.mock('../useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../useDemoMode')>()),
   getDemoMode: () => mockGetDemoMode(),

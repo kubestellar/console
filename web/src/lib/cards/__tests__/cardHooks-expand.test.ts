@@ -13,7 +13,9 @@ import { renderHook, act } from '@testing-library/react'
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockGlobalFilters = vi.fn(() => ({
+const { mockGlobalFilters } = vi.hoisted(() => ({
+  mockGlobalFilters: vi.fn(() => ({
+}))
   filterByCluster: <T>(items: T[]) => items,
   filterByStatus: <T>(items: T[]) => items,
   customFilter: '',

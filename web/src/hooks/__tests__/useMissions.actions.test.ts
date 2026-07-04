@@ -12,7 +12,9 @@ const { mockIsLocalAgentSuppressed, mockAreOptionalPollersSuppressed } = vi.hois
   mockAreOptionalPollersSuppressed: vi.fn(() => false),
 }))
 
-const mockStartMission = vi.fn(() => 'started-mission-id')
+const { mockStartMission } = vi.hoisted(() => ({
+  mockStartMission: vi.fn(() => 'started-mission-id')
+}))
 const mockCancelMission = vi.fn()
 
 vi.mock('../useMissions.start', () => ({

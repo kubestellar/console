@@ -18,7 +18,9 @@ let mockIsDemoMode = true
 let mockDiscoveredStacks: LLMdStack[] = []
 let mockIsLoading = false
 let mockError: string | null = null
-const mockRefetch = vi.fn()
+const { mockRefetch } = vi.hoisted(() => ({
+  mockRefetch: vi.fn()
+}))
 let mockLastRefresh: Date | null = null
 let mockDeduplicatedClusters: Array<{ name: string; reachable?: boolean }> = []
 

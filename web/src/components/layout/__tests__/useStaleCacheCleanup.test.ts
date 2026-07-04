@@ -15,7 +15,9 @@ vi.mock('../../../lib/utils/localStorage', () => ({
   safeRemoveItem: (key: string) => mockSafeRemoveItem(key),
 }))
 
-const mockDispatchStaleCacheCleanupEvent = vi.fn()
+const { mockDispatchStaleCacheCleanupEvent } = vi.hoisted(() => ({
+  mockDispatchStaleCacheCleanupEvent: vi.fn()
+}))
 vi.mock('../../../lib/staleCacheEvents', () => ({
   dispatchStaleCacheCleanupEvent: (detail: unknown) => mockDispatchStaleCacheCleanupEvent(detail),
 }))

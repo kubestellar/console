@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useMissionWatchedSources } from '../useMissionWatchedSources'
 
-const mockShowToast = vi.fn()
+const { mockShowToast } = vi.hoisted(() => ({
+  mockShowToast: vi.fn()
+}))
 vi.mock('../../ui/Toast', () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }))

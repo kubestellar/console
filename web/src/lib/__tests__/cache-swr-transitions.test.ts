@@ -22,7 +22,9 @@ vi.mock('../cache/workerRpc', () => ({
 }))
 
 // Mock demoMode — default to live mode
-const mockIsDemoMode = vi.fn().mockReturnValue(false)
+const { mockIsDemoMode } = vi.hoisted(() => ({
+  mockIsDemoMode: vi.fn().mockReturnValue(false)
+}))
 vi.mock('../demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
   subscribeDemoMode: (cb: () => void) => {

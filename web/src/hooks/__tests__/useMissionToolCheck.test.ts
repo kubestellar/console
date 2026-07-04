@@ -10,7 +10,9 @@ import { useMissionToolCheck } from '../useMissionToolCheck'
 
 // ---------- Mocks ----------
 
-const mockAgentStatus = vi.fn(() => 'connected')
+const { mockAgentStatus } = vi.hoisted(() => ({
+  mockAgentStatus: vi.fn(() => 'connected')
+}))
 
 vi.mock('../useLocalAgent', () => ({
   useLocalAgent: () => ({ status: mockAgentStatus() }),

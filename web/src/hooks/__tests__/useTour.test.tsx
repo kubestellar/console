@@ -15,7 +15,9 @@ vi.mock('../../lib/analytics', async (importOriginal) => ({
 }
 ))
 
-const mockIsMobile = vi.fn(() => false)
+const { mockIsMobile } = vi.hoisted(() => ({
+  mockIsMobile: vi.fn(() => false)
+}))
 vi.mock('../useMobile', () => ({
   useMobile: () => ({ isMobile: mockIsMobile() }),
 }))

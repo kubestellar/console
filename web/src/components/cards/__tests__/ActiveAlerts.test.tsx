@@ -5,8 +5,10 @@ import { ActiveAlerts } from '../ActiveAlerts'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockAcknowledgeAlerts = vi.fn()
-const mockRunAIDiagnosis = vi.fn()
+const { mockAcknowledgeAlerts, mockRunAIDiagnosis } = vi.hoisted(() => ({
+  mockAcknowledgeAlerts: vi.fn(),
+  mockRunAIDiagnosis: vi.fn()
+}))
 const mockDrillToAlert = vi.fn()
 
 const mockAlertsState = {

@@ -35,7 +35,9 @@ vi.mock('../../lib/dashboards/DashboardPage', () => ({
   ),
 }))
 
-const mockUseCachedEvents = vi.fn(() => ({
+const { mockUseCachedEvents } = vi.hoisted(() => ({
+  mockUseCachedEvents: vi.fn(() => ({
+}))
   events: [], isLoading: false, isRefreshing: false, lastRefresh: null, refetch: vi.fn(),
   isFailed: false, consecutiveFailures: 0, isDemoFallback: false, error: null,
 }))

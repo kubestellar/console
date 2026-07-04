@@ -14,7 +14,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => opts ? `${k}:${JSON.stringify(opts)}` : k }),
 }))
 
-const mockUseClusters = vi.fn()
+const { mockUseClusters } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn()
+}))
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
   useClusterHealth: () => ({ health: null, isLoading: false }),

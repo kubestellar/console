@@ -3,7 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MissionCTA } from './MissionCTA'
 
-const mockOpenSidebar = vi.fn()
+const { mockOpenSidebar } = vi.hoisted(() => ({
+  mockOpenSidebar: vi.fn()
+}))
 
 vi.mock('../../hooks/useMissions', () => ({
   useMissions: () => ({

@@ -24,18 +24,20 @@ let mockIsDemoMode = false
 let mockIsAutomatedEnv = false
 let mockUtmParams: Record<string, string> | null = null
 
-const mockSetInitialized = vi.fn((v: boolean) => { mockInitialized = v })
-const mockSetUserHasInteracted = vi.fn((v: boolean) => { mockUserHasInteracted = v })
-const mockSetAnalyticsScriptsLoaded = vi.fn((v: boolean) => { mockAnalyticsScriptsLoaded = v })
-const mockSetGtagMeasurementId = vi.fn((v: string) => { mockGtagMeasurementId = v })
-const mockSetUmamiWebsiteId = vi.fn((v: string) => { mockUmamiWebsiteId = v })
-const mockSetMeasurementId = vi.fn()
-const mockSetPageId = vi.fn()
-const mockSetUserId = vi.fn()
-const mockReplaceUserProperties = vi.fn()
-const mockMergeUserProperties = vi.fn()
-const mockResetAnalyticsCoreState = vi.fn()
-const mockConsumeRecoveryEvent = vi.fn().mockReturnValue(null)
+const { mockSetInitialized, mockSetUserHasInteracted, mockSetAnalyticsScriptsLoaded, mockSetGtagMeasurementId, mockSetUmamiWebsiteId, mockSetMeasurementId, mockSetPageId, mockSetUserId, mockReplaceUserProperties, mockMergeUserProperties, mockResetAnalyticsCoreState, mockConsumeRecoveryEvent } = vi.hoisted(() => ({
+  mockSetInitialized: vi.fn((v: boolean) => { mockInitialized = v }),
+  mockSetUserHasInteracted: vi.fn((v: boolean) => { mockUserHasInteracted = v }),
+  mockSetAnalyticsScriptsLoaded: vi.fn((v: boolean) => { mockAnalyticsScriptsLoaded = v }),
+  mockSetGtagMeasurementId: vi.fn((v: string) => { mockGtagMeasurementId = v }),
+  mockSetUmamiWebsiteId: vi.fn((v: string) => { mockUmamiWebsiteId = v }),
+  mockSetMeasurementId: vi.fn(),
+  mockSetPageId: vi.fn(),
+  mockSetUserId: vi.fn(),
+  mockReplaceUserProperties: vi.fn(),
+  mockMergeUserProperties: vi.fn(),
+  mockResetAnalyticsCoreState: vi.fn(),
+  mockConsumeRecoveryEvent: vi.fn().mockReturnValue(null)
+}))
 const MOCK_INTERACTION_GATE_EVENTS = ['mousedown', 'keydown', 'scroll']
 const MOCK_DEFAULT_PROXY_MEASUREMENT_ID = 'G-PROXY-TEST'
 

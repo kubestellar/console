@@ -20,7 +20,9 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseAlertRules = vi.fn()
+const { mockUseAlertRules } = vi.hoisted(() => ({
+  mockUseAlertRules: vi.fn()
+}))
 vi.mock('../../hooks/useAlerts', () => ({
   useAlertRules: () => mockUseAlertRules(),
 }))

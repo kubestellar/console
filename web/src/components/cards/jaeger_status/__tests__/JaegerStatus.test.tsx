@@ -11,7 +11,9 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock the cached-data hook
-const mockUseCachedJaegerStatus = vi.fn()
+const { mockUseCachedJaegerStatus } = vi.hoisted(() => ({
+  mockUseCachedJaegerStatus: vi.fn()
+}))
 vi.mock('../../../../hooks/useCachedData', () => ({
     useCachedJaegerStatus: () => mockUseCachedJaegerStatus(),
 }))

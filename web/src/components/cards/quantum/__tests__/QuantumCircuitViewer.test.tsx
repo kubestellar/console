@@ -2,7 +2,9 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-const mockUseQuantumCircuitAscii = vi.fn()
+const { mockUseQuantumCircuitAscii } = vi.hoisted(() => ({
+  mockUseQuantumCircuitAscii: vi.fn()
+}))
 vi.mock('../../../../hooks/useCachedQuantum', () => ({
   useQuantumCircuitAscii: (...args: unknown[]) => mockUseQuantumCircuitAscii(...args),
   QUANTUM_CIRCUIT_DEFAULT_POLL_MS: 10000,

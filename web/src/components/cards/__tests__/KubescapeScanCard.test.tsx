@@ -17,7 +17,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-const mockUseKubescape = vi.fn()
+const { mockUseKubescape } = vi.hoisted(() => ({
+  mockUseKubescape: vi.fn()
+}))
 vi.mock('../../../hooks/useKubescape', () => ({
   useKubescape: () => mockUseKubescape(),
 }))

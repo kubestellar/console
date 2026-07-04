@@ -12,7 +12,9 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
-const mockUseCache = vi.fn()
+const { mockUseCache } = vi.hoisted(() => ({
+  mockUseCache: vi.fn()
+}))
 const mockUseCachedKubectl = vi.fn()
 
 vi.mock('../../lib/cache', () => ({

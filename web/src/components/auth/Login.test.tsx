@@ -6,7 +6,9 @@ import { MemoryRouter } from 'react-router-dom'
 
 import '../../test/utils/setupMocks'
 
-const mockLogin = vi.fn()
+const { mockLogin } = vi.hoisted(() => ({
+  mockLogin: vi.fn()
+}))
 
 vi.mock('../../lib/auth', () => ({
   useAuth: () => ({

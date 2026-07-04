@@ -27,7 +27,9 @@ import type { KeyValueItem } from '../ModalSections'
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockCopyToClipboard = vi.fn().mockResolvedValue(true)
+const { mockCopyToClipboard } = vi.hoisted(() => ({
+  mockCopyToClipboard: vi.fn().mockResolvedValue(true)
+}))
 vi.mock('../../clipboard', () => ({
   copyToClipboard: (...args: unknown[]) => mockCopyToClipboard(...args),
 }))

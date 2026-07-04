@@ -21,9 +21,11 @@ vi.mock('../../../lib/demoMode', () => ({
   isDemoToken: () => mockIsDemoToken,
 }))
 
-const mockUpdateClusterCache = vi.fn()
-const mockUpdateSingleClusterInCache = vi.fn()
-const mockNotifyClusterSubscribers = vi.fn()
+const { mockUpdateClusterCache, mockUpdateSingleClusterInCache, mockNotifyClusterSubscribers } = vi.hoisted(() => ({
+  mockUpdateClusterCache: vi.fn(),
+  mockUpdateSingleClusterInCache: vi.fn(),
+  mockNotifyClusterSubscribers: vi.fn()
+}))
 
 let mockClusterCache: { clusters: ClusterInfo[]; consecutiveFailures: number } = {
   clusters: [],

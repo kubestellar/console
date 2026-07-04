@@ -85,7 +85,9 @@ vi.mock('../../../lib/dashboards/migrateStorageKey', () => ({
 }))
 
 // Mock DashboardPage to expose its props for assertion
-const mockDashboardPage = vi.fn()
+const { mockDashboardPage } = vi.hoisted(() => ({
+  mockDashboardPage: vi.fn()
+}))
 vi.mock('../../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: (props: Record<string, unknown>) => {
     mockDashboardPage(props)

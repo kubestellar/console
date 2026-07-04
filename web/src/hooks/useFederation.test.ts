@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
-const mockIsDemoMode = vi.fn(() => false)
+const { mockIsDemoMode } = vi.hoisted(() => ({
+  mockIsDemoMode: vi.fn(() => false)
+}))
 
 vi.mock('./useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./useDemoMode')>()),

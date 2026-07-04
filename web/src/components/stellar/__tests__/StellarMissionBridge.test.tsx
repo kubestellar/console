@@ -7,7 +7,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, act } from '@testing-library/react'
 import { STELLAR_MISSION_TRIGGER_EVENT } from '../../../hooks/useStellar'
 
-const mockStartMission = vi.fn(() => 'mission-1')
+const { mockStartMission } = vi.hoisted(() => ({
+  mockStartMission: vi.fn(() => 'mission-1')
+}))
 
 vi.mock('../../../hooks/useMissions', () => ({
   useMissions: () => ({

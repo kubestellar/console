@@ -5,7 +5,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TeamAccessGrants } from '../TeamAccessGrants'
 
 // Mock hooks and dependencies
-const mockUseClusters = vi.fn()
+const { mockUseClusters } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn()
+}))
 const mockUseCachedNamespaces = vi.fn()
 const mockUseGlobalFilters = vi.fn()
 const mockAuthFetch = vi.fn()

@@ -16,7 +16,9 @@ const { mockClusterCacheRef, mockIsDemoMode } = vi.hoisted(() => ({
   mockIsDemoMode: vi.fn(() => false),
 }))
 
-const mockUseCache = vi.fn()
+const { mockUseCache } = vi.hoisted(() => ({
+  mockUseCache: vi.fn()
+}))
 const mockIsBackendUnavailable = vi.fn(() => false)
 const mockAuthFetch = vi.fn()
 const mockIsAgentUnavailable = vi.fn(() => true)

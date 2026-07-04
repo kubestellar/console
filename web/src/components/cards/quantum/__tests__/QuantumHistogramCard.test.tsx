@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import type { HistogramData } from '../../../../hooks/useResultHistogram'
 
-const mockUseResultHistogram = vi.fn()
+const { mockUseResultHistogram } = vi.hoisted(() => ({
+  mockUseResultHistogram: vi.fn()
+}))
 vi.mock('../../../../hooks/useResultHistogram', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../hooks/useResultHistogram')>()
   return {

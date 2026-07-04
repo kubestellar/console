@@ -14,7 +14,9 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // Mocks — declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
 
-const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+const { mockUseDemoMode } = vi.hoisted(() => ({
+  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+}))
 const mockUseClusters = vi.fn(() => ({
   clusters: [],
   deduplicatedClusters: [],

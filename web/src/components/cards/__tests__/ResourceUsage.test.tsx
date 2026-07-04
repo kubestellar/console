@@ -13,7 +13,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => opts ? `${k}:${JSON.stringify(opts)}` : k }),
 }))
 
-const mockIsDemoMode = vi.fn(() => false)
+const { mockIsDemoMode } = vi.hoisted(() => ({
+  mockIsDemoMode: vi.fn(() => false)
+}))
 vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),

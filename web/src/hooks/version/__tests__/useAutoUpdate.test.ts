@@ -21,7 +21,9 @@ vi.mock('../../../lib/constants/network', async (importOriginal) => {
   }
 })
 
-const mockAuthFetch = vi.fn()
+const { mockAuthFetch } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn()
+}))
 vi.mock('../../../lib/api', () => ({
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),
 }))

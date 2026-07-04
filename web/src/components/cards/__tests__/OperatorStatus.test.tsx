@@ -15,7 +15,9 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseCardLoadingState = vi.fn()
+const { mockUseCardLoadingState } = vi.hoisted(() => ({
+  mockUseCardLoadingState: vi.fn()
+}))
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
   useReportCardDataState: vi.fn(),

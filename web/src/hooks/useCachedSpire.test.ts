@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
-const mockUseCache = vi.fn()
+const { mockUseCache } = vi.hoisted(() => ({
+  mockUseCache: vi.fn()
+}))
 // useCachedSpire imports createCachedHook from '../lib/cache/createCachedHook' directly
 vi.mock('../lib/cache/createCachedHook', () => ({
     createCachedHook: (_config: Record<string, unknown>) => {

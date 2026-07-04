@@ -26,8 +26,10 @@ vi.mock('../../../lib/analytics', async (importOriginal) => ({
   emitNavigate: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
 }
 ))
-const mockStartMission = vi.fn()
-const mockOpenSidebar = vi.fn()
+const { mockStartMission, mockOpenSidebar } = vi.hoisted(() => ({
+  mockStartMission: vi.fn(),
+  mockOpenSidebar: vi.fn()
+}))
 const mockMissions: unknown[] = []
 
 vi.mock('../../../hooks/useMissions', () => ({

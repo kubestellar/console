@@ -37,7 +37,9 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-const mockUseCardLoadingState = vi.fn()
+const { mockUseCardLoadingState } = vi.hoisted(() => ({
+  mockUseCardLoadingState: vi.fn()
+}))
 const mockUseNightlyE2EData = vi.fn()
 
 vi.mock('../../CardDataContext', () => ({

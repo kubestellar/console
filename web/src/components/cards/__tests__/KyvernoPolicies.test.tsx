@@ -18,7 +18,9 @@ vi.mock('../DynamicCardErrorBoundary', () => ({
   DynamicCardErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-const mockUseKyverno = vi.fn()
+const { mockUseKyverno } = vi.hoisted(() => ({
+  mockUseKyverno: vi.fn()
+}))
 vi.mock('../../../hooks/useKyverno', () => ({
   useKyverno: () => mockUseKyverno(),
 }))

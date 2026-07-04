@@ -6,7 +6,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
-const mockFetchJaegerStatus = vi.fn()
+const { mockFetchJaegerStatus } = vi.hoisted(() => ({
+  mockFetchJaegerStatus: vi.fn()
+}))
 
 vi.mock('../useCachedData/agentFetchers', () => ({
     createCachedHook: vi.fn(),
@@ -47,7 +49,9 @@ vi.mock('../useDemoMode', async (importOriginal) => ({
   setGlobalDemoMode: vi.fn(),
 }))
 
-const mockUseCache = vi.fn(() => ({
+const { mockUseCache } = vi.hoisted(() => ({
+  mockUseCache: vi.fn(() => ({
+}))
   data: null,
   isLoading: false,
   isRefreshing: false,

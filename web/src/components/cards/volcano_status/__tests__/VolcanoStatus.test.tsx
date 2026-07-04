@@ -7,7 +7,9 @@ import type { VolcanoStatusData, VolcanoQueue, VolcanoJob } from '../demoData'
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockUseCachedVolcano = vi.fn()
+const { mockUseCachedVolcano } = vi.hoisted(() => ({
+  mockUseCachedVolcano: vi.fn()
+}))
 vi.mock('../../../../hooks/useCachedVolcano', () => ({
   useCachedVolcano: (...args: unknown[]) => mockUseCachedVolcano(...args),
 }))

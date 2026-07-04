@@ -7,7 +7,9 @@ import { InitialInfrastructureGate } from './InitialInfrastructureGate'
 const mockGetState = vi.fn()
 const mockFetchKagentStatus = vi.fn()
 const mockIsDemoMode = vi.fn(() => false)
-const mockTranslate = vi.fn((_key: string, fallback: string, options?: Record<string, unknown>) => {
+const { mockTranslate } = vi.hoisted(() => ({
+  mockTranslate: vi.fn((_key: string, fallback: string, options?: Record<string, unknown>) => {
+}))
   if (options?.timeoutSeconds && fallback.includes('{{timeoutSeconds}}')) {
     return fallback.replace('{{timeoutSeconds}}', String(options.timeoutSeconds))
   }

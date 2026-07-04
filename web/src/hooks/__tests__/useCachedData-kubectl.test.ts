@@ -11,7 +11,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // Mocks — must be declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
 
-const mockUseCache = vi.fn()
+const { mockUseCache } = vi.hoisted(() => ({
+  mockUseCache: vi.fn()
+}))
 const mockIsBackendUnavailable = vi.fn(() => false)
 const mockAuthFetch = vi.fn()
 const mockIsAgentUnavailable = vi.fn(() => true)

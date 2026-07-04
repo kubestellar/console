@@ -15,11 +15,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // ── Mocks ──────────────────────────────────────────────────────────
 
 const mockPreloadedMetaMap = new Map<string, unknown>()
-const mockClearSessionSnapshots = vi.fn()
-const mockCacheStorageClear = vi.fn().mockResolvedValue(undefined)
-const mockCacheStorageDelete = vi.fn().mockResolvedValue(undefined)
+const { mockClearSessionSnapshots, mockCacheStorageClear, mockCacheStorageDelete, mockCacheStorageGet } = vi.hoisted(() => ({
+  mockClearSessionSnapshots: vi.fn(),
+  mockCacheStorageClear: vi.fn().mockResolvedValue(undefined),
+  mockCacheStorageDelete: vi.fn().mockResolvedValue(undefined),
+  mockCacheStorageGet: vi.fn().mockResolvedValue(null)
+}))
 let mockCacheStorageStats: { keys: string[]; count: number } = { keys: [], count: 0 }
-const mockCacheStorageGet = vi.fn().mockResolvedValue(null)
 
 vi.mock('../cacheStorage', () => ({
   META_PREFIX: 'kc_meta:',

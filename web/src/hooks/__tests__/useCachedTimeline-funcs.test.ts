@@ -5,7 +5,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
-const mockAuthFetch = vi.fn()
+const { mockAuthFetch } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn()
+}))
 vi.mock('../../lib/api', () => ({
     createCachedHook: vi.fn(), authFetch: (...args: unknown[]) => mockAuthFetch(...args) }))
 
@@ -44,7 +46,9 @@ vi.mock('../../components/cards/change_timeline/demoData', () => ({
   ],
 }))
 
-const mockUseCache = vi.fn(() => ({
+const { mockUseCache } = vi.hoisted(() => ({
+  mockUseCache: vi.fn(() => ({
+}))
   data: [],
   isLoading: false,
   isRefreshing: false,

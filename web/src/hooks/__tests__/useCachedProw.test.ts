@@ -5,14 +5,18 @@ import { renderHook } from '@testing-library/react'
 // Mocks
 // ============================================================================
 
-const mockUseCache = vi.fn()
+const { mockUseCache } = vi.hoisted(() => ({
+  mockUseCache: vi.fn()
+}))
 
 vi.mock('../../lib/cache', () => ({
     createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
-const mockExec = vi.fn()
+const { mockExec } = vi.hoisted(() => ({
+  mockExec: vi.fn()
+}))
 vi.mock('../../lib/kubectlProxy', () => ({
     createCachedHook: vi.fn(),
   kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },

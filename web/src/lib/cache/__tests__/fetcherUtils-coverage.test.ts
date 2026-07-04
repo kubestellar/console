@@ -12,7 +12,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // Mock setup
 // ---------------------------------------------------------------------------
 
-const mockIsBackendUnavailable = vi.fn(() => false)
+const { mockIsBackendUnavailable } = vi.hoisted(() => ({
+  mockIsBackendUnavailable: vi.fn(() => false)
+}))
 const mockFetchSSE = vi.fn()
 const mockSettledWithConcurrency = vi.fn()
 const mockValidateArrayResponse = vi.fn((_schema: unknown, raw: unknown) => raw)

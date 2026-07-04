@@ -20,7 +20,9 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseAgenticDetectionRuns = vi.fn()
+const { mockUseAgenticDetectionRuns } = vi.hoisted(() => ({
+  mockUseAgenticDetectionRuns: vi.fn()
+}))
 
 vi.mock('../../../hooks/useAgenticDetectionRuns', () => ({
   useAgenticDetectionRuns: () => mockUseAgenticDetectionRuns(),

@@ -9,7 +9,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
 // Mock the cache factory
-const mockUseCache = vi.fn(() => ({
+const { mockUseCache } = vi.hoisted(() => ({
+  mockUseCache: vi.fn(() => ({
+}))
   data: {
     status: 'Healthy',
     version: '1.50.0',

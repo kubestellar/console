@@ -15,7 +15,9 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseArgoCDApplications = vi.fn()
+const { mockUseArgoCDApplications } = vi.hoisted(() => ({
+  mockUseArgoCDApplications: vi.fn()
+}))
 vi.mock('../../../hooks/useArgoCD', () => ({
   useArgoCDApplications: () => mockUseArgoCDApplications(),
 }))

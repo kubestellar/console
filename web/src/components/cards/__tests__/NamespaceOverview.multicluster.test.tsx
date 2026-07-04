@@ -4,7 +4,9 @@ import { render, screen } from '@testing-library/react'
 import { NamespaceOverview } from '../NamespaceOverview'
 
 // Mock all dependencies
-const mockUseClusters = vi.fn()
+const { mockUseClusters } = vi.hoisted(() => ({
+  mockUseClusters: vi.fn()
+}))
 const mockUseCachedNamespaces = vi.fn()
 const mockUseCachedPodIssues = vi.fn()
 const mockUseCachedDeploymentIssues = vi.fn()

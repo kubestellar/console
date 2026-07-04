@@ -6,7 +6,9 @@ import { useApiKeyCheck, ANTHROPIC_KEY_STORAGE } from './shared'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
-const mockUseMissions = vi.fn()
+const { mockUseMissions } = vi.hoisted(() => ({
+  mockUseMissions: vi.fn()
+}))
 vi.mock('../../../hooks/useMissions', () => ({
   useMissions: () => mockUseMissions(),
 }))
