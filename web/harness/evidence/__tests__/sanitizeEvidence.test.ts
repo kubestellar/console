@@ -5,7 +5,6 @@ describe('sanitizeText', () => {
   const originalEnv = process.env
 
   beforeEach(() => {
-    vi.resetModules()
     vi.clearAllMocks()
     process.env = { ...originalEnv }
   })

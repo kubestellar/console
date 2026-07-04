@@ -8,41 +8,40 @@ const isBrowserEnvironment = typeof window !== 'undefined'
 // This prevents "Cannot find module" errors in Netlify function tests that run in node environment
 if (isBrowserEnvironment) {
   // Mock react-i18next globally to prevent i18n.ts from failing when imported
-  // by vite.config.ts or other modules. Uses importOriginal to get the real
-  // initReactI18next object that i18n.ts needs.
-  vi.mock('react-i18next', async () => {
-    const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
-    return {
-      ...actual,
-      useTranslation: () => ({
-        t: (key: string, options?: Record<string, unknown>) => {
-          // Preserve specific LaunchSequence strings used in tests
-          if (key === 'missionControl.launchSequence.missionFailed') return 'Mission failed'
-          if (key === 'missionControl.launchSequence.missionCancelled') return 'Mission cancelled'
-          // Support Deploying X projects in Y phase with pluralization
-          if (key.includes('missionControl.launchSequence.deployingProjects')) {
-            const count = typeof options?.count === 'number' ? options!.count as number : 0
-            const phaseCount = typeof options?.phaseCount === 'number' ? options!.phaseCount as number : 0
-            return `Deploying ${count} project${count === 1 ? '' : 's'} in ${phaseCount} phase`
+  // by vite.config.ts or other modules. Uses synchronous factory to avoid timing
+  // issues with isolate:true where async factories may not resolve before imports.
+  vi.mock('react-i18next', () => ({
+    initReactI18next: { type: '3rdParty', init: () => {} },
+    useTranslation: () => ({
+      t: (key: string, options?: Record<string, unknown>) => {
+        // Preserve specific LaunchSequence strings used in tests
+        if (key === 'missionControl.launchSequence.missionFailed') return 'Mission failed'
+        if (key === 'missionControl.launchSequence.missionCancelled') return 'Mission cancelled'
+        // Support Deploying X projects in Y phase with pluralization
+        if (key.includes('missionControl.launchSequence.deployingProjects')) {
+          const count = typeof options?.count === 'number' ? options!.count as number : 0
+          const phaseCount = typeof options?.phaseCount === 'number' ? options!.phaseCount as number : 0
+          return `Deploying ${count} project${count === 1 ? '' : 's'} in ${phaseCount} phase`
+        }
+        // Generic interpolation: replace {{key}} placeholders when options provided
+        if (options && typeof key === 'string') {
+          let s = key
+          for (const [k, v] of Object.entries(options)) {
+            s = s.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
           }
-          // Generic interpolation: replace {{key}} placeholders when options provided
-          if (options && typeof key === 'string') {
-            let s = key
-            for (const [k, v] of Object.entries(options)) {
-              s = s.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
-            }
-            return s
-          }
-          // Default: return the key as a fallback
-          return key
-        },
-        i18n: { language: 'en', changeLanguage: vi.fn() },
-      }),
-      Trans: ({ children }: { children: React.ReactNode }) => children,
-      // initReactI18next is imported from the actual module above, so tests that import
-      // i18n.ts (via vite.config.ts) don't crash
-    }
-  })
+          return s
+        }
+        // Default: return the key as a fallback
+        return key
+      },
+      i18n: { language: 'en', changeLanguage: vi.fn() },
+    }),
+    Trans: ({ children }: { children: React.ReactNode }) => children,
+    I18nextProvider: ({ children }: { children: React.ReactNode }) => children,
+    withTranslation: () => (Component: React.ComponentType) => Component,
+    Translation: ({ children }: { children: (t: (key: string) => string) => React.ReactNode }) =>
+      children((key: string) => key),
+  }))
 
   // Mock lib/demoMode globally to prevent module-level initialization that accesses
   // localStorage and getStoredAuthTokenSync at import time. This ensures tests don't
@@ -97,21 +96,20 @@ if (isBrowserEnvironment) {
 
   // Mock agentFetch wrappers to delegate to global.fetch so test mocks intercept
   // both the legacy shared wrapper and the direct mcp/agentFetch module imports.
-  vi.mock('../hooks/mcp/shared', async () => {
-    const actual = await vi.importActual<typeof import('../hooks/mcp/shared')>('../hooks/mcp/shared')
-    return {
-      ...actual,
-      agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
-    }
-  })
+  // Uses synchronous factory to avoid timing issues with isolate:true.
+  vi.mock('../hooks/mcp/shared', () => ({
+    agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
+    getAgentBaseUrl: vi.fn(() => ''),
+    getAgentWsUrl: vi.fn(() => ''),
+    isAgentAvailable: vi.fn(() => false),
+  }))
 
-  vi.mock('../hooks/mcp/agentFetch', async () => {
-    const actual = await vi.importActual<typeof import('../hooks/mcp/agentFetch')>('../hooks/mcp/agentFetch')
-    return {
-      ...actual,
-      agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
-    }
-  })
+  vi.mock('../hooks/mcp/agentFetch', () => ({
+    agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
+    getAgentBaseUrl: vi.fn(() => ''),
+    getAgentWsUrl: vi.fn(() => ''),
+    isAgentAvailable: vi.fn(() => false),
+  }))
 }
 
 const TOKEN_STORAGE_ALIASES = ['token', 'kc_token', 'kc-token', 'kc-auth-token'] as const
