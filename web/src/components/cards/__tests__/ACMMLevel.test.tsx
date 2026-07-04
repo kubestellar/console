@@ -1,6 +1,21 @@
 import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
+
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+}))
+
+const mockUseACMM = vi.fn()
+
+vi.mock('../../acmm/ACMMProvider', () => ({
+  useACMM: () => mockUseACMM(),
+}))
+
 import { CardDataReportContext } from '../CardDataContext'
 import { ACMMLevel } from '../ACMMLevel'
 import {
@@ -11,12 +26,6 @@ import {
   TEST_REPO,
 } from './acmmTestFixtures'
 import { computeLevel } from '../../../lib/acmm/computeLevel'
-
-const mockUseACMM = vi.fn()
-
-vi.mock('../../acmm/ACMMProvider', () => ({
-  useACMM: () => mockUseACMM(),
-}))
 
 vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSkeleton: ({ type }: { type?: string }) => (

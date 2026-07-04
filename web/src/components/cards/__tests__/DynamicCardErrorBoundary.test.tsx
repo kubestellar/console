@@ -1,6 +1,26 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+}))
+
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
+  emitError: vi.fn(),
+  markErrorReported: vi.fn(),
+}
+))
+
+vi.mock('../../../lib/chunkErrors', () => ({
+  isChunkLoadError: () => false,
+}))
+
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 
 // Suppress console.error from React error boundaries during tests

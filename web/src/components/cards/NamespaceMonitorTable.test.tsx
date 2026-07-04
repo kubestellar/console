@@ -11,6 +11,15 @@ import React from 'react'
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+}))
+
 import { NamespaceMonitorTable } from './NamespaceMonitorTable'
 import type { NamespaceData, ChangeType, ResourceType } from './NamespaceMonitor.types'
 import type { ClusterInfo } from '../../hooks/useMCP'
