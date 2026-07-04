@@ -316,6 +316,9 @@ export default defineConfig(({ mode }) => ({
     // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency
     maxWorkers: process.env.CI ? 1 : undefined,
     minWorkers: process.env.CI ? 1 : undefined,
+    // isolate: true ensures each test file runs in its own subprocess with a clean global environment,
+    // preventing vi.stubGlobal() cross-contamination between files (#20256)
+    isolate: true,
     // poolOptions.forks removed — deprecated in Vitest 4 (#5860).
     // maxWorkers/minWorkers above handle fork limits; teardownTimeout
     // above handles worker termination timeout.
