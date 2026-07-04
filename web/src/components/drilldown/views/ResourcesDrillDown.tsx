@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { Gauge } from '../../charts/Gauge'
-import { Cpu, MemoryStick, Server, ChevronRight, GripVertical } from 'lucide-react'
+import { Cpu, MemoryStick, Server, ChevronRight, GripVertical, ChevronLeft } from 'lucide-react'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import {
   DndContext,
@@ -181,6 +181,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
   const { deduplicatedClusters: initialClusters, isLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCluster } = useDrillDownActions()
+  const { state, pop } = useDrillDown()
 
   // Local state for cluster order (persists during session)
   const [clusterOrder, setClusterOrder] = useState<string[]>([])
@@ -322,6 +323,20 @@ export function ResourcesDrillDown({ data: _data }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Back navigation */}
+      {state.stack.length > 1 && (
+        <button
+          type="button"
+          onClick={pop}
+          className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
+          aria-label={t('drilldown.goBack')}
+          title={t('drilldown.goBack')}
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span>{t('common.back')}</span>
+        </button>
+      )}
+
       {/* Summary Stats - dynamic based on active accelerator types */}
       <div className="flex flex-wrap gap-3">
         <div className="p-3 rounded-lg bg-card/50 border border-border min-w-[120px]">

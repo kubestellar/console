@@ -8,7 +8,7 @@ import {
   Settings, Info, Loader2,
   Layers, Server, RefreshCw, Stethoscope,
   CheckCircle, XCircle, AlertTriangle,
-  Package, FileText, ExternalLink
+  Package, FileText, ExternalLink, ChevronLeft
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
@@ -87,7 +87,7 @@ export function OperatorDrillDown({ data }: Props) {
 
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToCRD } = useDrillDownActions()
-  const { close: closeDrillDown } = useDrillDown()
+  const { state, pop, close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -298,6 +298,18 @@ Please:
       <div className="px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6 text-sm">
+            {state.stack.length > 1 && (
+              <button
+                type="button"
+                onClick={pop}
+                className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
+                aria-label={t('drilldown.goBack')}
+                title={t('drilldown.goBack')}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>{t('common.back')}</span>
+              </button>
+            )}
             <button
               onClick={() => drillToNamespace(cluster, namespace)}
               className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
