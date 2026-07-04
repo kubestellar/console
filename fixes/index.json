@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-04T12:24:01.891Z",
+  "generatedAt": "2026-07-04T18:22:06.639Z",
   "count": 1626,
   "missions": [
     {
@@ -24912,7 +24912,7 @@
     {
       "path": "fixes/platform-install/platform-docker-desktop-k8s.json",
       "title": "Install and Configure Docker Desktop Kubernetes",
-      "description": "Docker Desktop for Mac provides an integrated Docker experience on macOS, allowing users to run Kubernetes clusters locally. It simplifies the setup process for developers looking to test and develop ",
+      "description": "Docker Desktop for Mac provides an integrated Docker experience on macOS, including a local Kubernetes cluster. It is ideal for developers looking to build and test applications in a Kubernetes enviro",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
