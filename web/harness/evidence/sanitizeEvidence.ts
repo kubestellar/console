@@ -2,7 +2,7 @@ const SENSITIVE_KEY_PATTERN = /(SECRET|TOKEN|PASSWORD|KEY|KUBECONFIG|AUTH|CREDEN
 const PRIVATE_KEY_PATTERN = /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g
 const BEARER_PATTERN = /\bBearer\s+[A-Za-z0-9._~+/=-]+/gi
 const TOKEN_PARAM_PATTERN = /([?&#](?:access_token|refresh_token|id_token|token|client_secret|code)=)[^&#\s"]+/gi
-const HEADER_PATTERN = /\b(authorization|cookie|set-cookie|x-api-key|kc-agent-token)\s*[:=]\s*[^,\n\r]+/gi
+const HEADER_PATTERN = /\b(authorization|cookie|set-cookie|x-api-key|kc-agent-token)\s*[:=]\s*(?!\s*Bearer[\s[])[^,\n\r]+/gi
 const KUBECONFIG_PATTERN = /\b(apiVersion:\s*v1[\s\S]{0,400}?(?:clusters:|users:|contexts:)[\s\S]{0,1200})/gi
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g
 

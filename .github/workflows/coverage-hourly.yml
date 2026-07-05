@@ -9,6 +9,7 @@ on:
     branches: [main]
     paths:
       - 'web/src/**'
+      - 'web/harness/**'
       - 'web/netlify/functions/**'
       - 'web/package.json'
       - 'web/package-lock.json'

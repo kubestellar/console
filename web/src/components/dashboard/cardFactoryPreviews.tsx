@@ -24,6 +24,7 @@ export function TemplateDropdown<T extends { name: string }>({
   label: string
 }) {
   const [open, setOpen] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -39,22 +40,71 @@ export function TemplateDropdown<T extends { name: string }>({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
+  const handleTriggerKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setOpen(!open)
+      setSelectedIndex(0)
+    }
+  }
+
+  const handleMenuKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setOpen(false)
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex(prev => (prev + 1) % templates.length)
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex(prev => (prev - 1 + templates.length) % templates.length)
+    }
+    if (e.key === 'Home') {
+      e.preventDefault()
+      setSelectedIndex(0)
+    }
+    if (e.key === 'End') {
+      e.preventDefault()
+      setSelectedIndex(templates.length - 1)
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onSelect(templates[selectedIndex])
+      setOpen(false)
+    }
+  }
+
   return (
     <div ref={containerRef} className="relative">
       <button
         onClick={() => setOpen(!open)}
+        onKeyDown={handleTriggerKeyDown}
+        aria-expanded={open}
+        aria-haspopup="menu"
         className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
       >
         <LayoutTemplate className="w-3 h-3" />
         {label}
       </button>
       {open && (
-        <div className="absolute z-dropdown top-full mt-1 left-0 bg-card border border-border rounded-lg shadow-lg p-1.5 min-w-[200px]">
-          {templates.map(tpl => (
+        <div 
+          role="menu"
+          onKeyDown={handleMenuKeyDown}
+          tabIndex={-1}
+          className="absolute z-dropdown top-full mt-1 left-0 bg-card border border-border rounded-lg shadow-lg p-1.5 min-w-[200px] focus:outline-none"
+        >
+          {templates.map((tpl, idx) => (
             <button
               key={tpl.name}
+              role="menuitem"
               onClick={() => { onSelect(tpl); setOpen(false) }}
-              className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-foreground hover:bg-secondary transition-colors"
+              tabIndex={-1}
+              className={cn(
+                'w-full text-left px-3 py-1.5 rounded-lg text-xs text-foreground transition-colors',
+                idx === selectedIndex ? 'bg-secondary' : 'hover:bg-secondary'
+              )}
             >
               {tpl.name}
             </button>
