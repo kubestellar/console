@@ -234,8 +234,6 @@ describe('aiPredictionToRisk', () => {
 
   it('handles missing optional fields (namespace, trend)', () => {
     const pred = makePrediction()
-    delete (pred as any).namespace
-    delete (pred as any).trend
     const risk = aiPredictionToRisk(pred)
     expect(risk.namespace).toBeUndefined()
     expect(risk.trend).toBeUndefined()
