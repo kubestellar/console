@@ -35,6 +35,10 @@ const TYPE_LABELS: Record<MarketplaceItemType, { label: string; icon: typeof Lay
   'card-preset': { label: 'Card Presets', icon: Puzzle },
   theme: { label: 'Themes', icon: Palette } }
 
+const MATURITY_CONFIG = {
+  graduated: { label: 'Graduated', color: 'text-green-400 bg-green-950 border-green-800' },
+  incubating: { label: 'Incubating', color: 'text-blue-400 bg-blue-950 border-blue-800' } } as const
+
 // --- List Row (compact view) ---
 function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
   item: MarketplaceItem
