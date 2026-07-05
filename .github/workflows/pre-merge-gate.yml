@@ -44,6 +44,9 @@ jobs:
 
       - name: Frontend test (gate subset)
         working-directory: web
-        run: npx vitest run --exclude 'harness/**' --exclude 'src/components/missions/**' --exclude 'src/components/mission-control/**' --exclude 'src/lib/__tests__/demoMode*' --exclude 'src/lib/dynamic-cards/**' --exclude 'src/hooks/__tests__/useDemoMode*' --exclude 'src/hooks/__tests__/useStackDiscovery*' --exclude 'src/hooks/mcp/**' --exclude 'src/contexts/__tests__/**' --exclude 'src/components/teams/**' --exclude 'src/config/cards/**' --exclude 'src/components/cards/grpc_status/**' --exclude 'src/components/cards/linkerd_status/**' --exclude 'src/components/cards/rook_status/**' --exclude 'src/components/cards/spiffe_status/**' --exclude 'src/components/cards/quantum/**' --exclude 'src/components/cards/llmd/**' --exclude 'src/lib/constants/__tests__/**'
+        # cacheStats.test.ts and wsAuth.test.ts temporarily excluded: PR #20324 added
+        # vi.resetModules() in beforeEach() which causes the gate suite to hang for >30min.
+        # These files remain covered by Coverage Suite. Remove exclusions once fixed.
+        run: npx vitest run --exclude 'harness/**' --exclude 'src/components/missions/**' --exclude 'src/components/mission-control/**' --exclude 'src/lib/__tests__/demoMode*' --exclude 'src/lib/dynamic-cards/**' --exclude 'src/hooks/__tests__/useDemoMode*' --exclude 'src/hooks/__tests__/useStackDiscovery*' --exclude 'src/hooks/mcp/**' --exclude 'src/contexts/__tests__/**' --exclude 'src/components/teams/**' --exclude 'src/config/cards/**' --exclude 'src/components/cards/grpc_status/**' --exclude 'src/components/cards/linkerd_status/**' --exclude 'src/components/cards/rook_status/**' --exclude 'src/components/cards/spiffe_status/**' --exclude 'src/components/cards/quantum/**' --exclude 'src/components/cards/llmd/**' --exclude 'src/lib/constants/__tests__/**' --exclude 'src/lib/cache/__tests__/cacheStats*' --exclude 'src/lib/utils/__tests__/wsAuth*'
         env:
           CI: true
