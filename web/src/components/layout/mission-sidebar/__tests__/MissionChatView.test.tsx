@@ -99,6 +99,7 @@ vi.mock('../mission-chat/MissionChatHeader', () => ({
       <button type="button" onClick={onStartEditingTitle} disabled={isRenamingTitle}>rename mission</button>
       {isEditingTitle && (
         <>
+          {/* eslint-disable-next-line no-restricted-syntax -- test mock uses raw input intentionally */}
           <input
             aria-label="mission title"
             value={editTitleValue}
@@ -135,6 +136,7 @@ vi.mock('../mission-chat/MissionChatInput', () => ({
     isDismissing?: boolean
   }) => (
     <div>
+      {/* eslint-disable-next-line no-restricted-syntax -- test mock uses raw input intentionally */}
       <input
         aria-label="chat input"
         value={input}
