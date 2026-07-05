@@ -25,8 +25,6 @@ import {
   getActiveTokenCategories,
   addCategoryTokens,
   __testables,
-  type TokenAlertLevel,
-  type TokenCategory,
 } from '../useTokenUsage'
 
 const {
@@ -45,7 +43,6 @@ const {
   DEFAULT_BY_CATEGORY,
   DEMO_TOKEN_USAGE,
   DEMO_BY_CATEGORY,
-  PERIOD_KEY,
 } = __testables
 
 // ── getTokenAlertLevel ──────────────────────────────────────────
@@ -220,13 +217,6 @@ describe('getUsagePeriodKey', () => {
 // ── setActiveTokenCategory / clearActiveTokenCategory ───────────
 
 describe('active token category management', () => {
-  afterEach(() => {
-    // Clean up any active categories
-    for (const cat of getActiveTokenCategories()) {
-      // Clear all — we can't clear by value, but the map is keyed by opId
-    }
-  })
-
   it('setActiveTokenCategory adds a category for an operation', () => {
     setActiveTokenCategory('op-1', 'missions')
     expect(getActiveTokenCategories()).toContain('missions')
