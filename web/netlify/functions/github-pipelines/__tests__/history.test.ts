@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readHistory, writeHistory, mergeIntoHistory } from '../history'
-import type { HistoryBlob, WorkflowRun, Conclusion } from '../types'
+import type { HistoryBlob, WorkflowRun } from '../types'
 
 function makeStore(data: Record<string, string> = {}) {
   const store: Record<string, string> = { ...data }
