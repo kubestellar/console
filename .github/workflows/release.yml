@@ -224,6 +224,9 @@ jobs:
         working-directory: web
         # Use lint:check (baseline script) to match pre-merge-gate behavior;
         # raw `lint` (eslint .) fails on pre-existing baseline errors and blocks releases.
+        # continue-on-error: baseline drift (e.g. eslint plugin upgrades) should not
+        # block nightly releases — tracked separately via lint-warning-gate on PRs.
+        continue-on-error: true
         run: npm run lint:check
 
   release:
