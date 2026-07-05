@@ -138,8 +138,11 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
 
     // Navigate to the GitHub callback — the mock responds with a redirect
     // to /auth/callback, exercising the real redirect chain (#11909).
+    // Use waitUntil: 'commit' because the redirect aborts the original
+    // navigation before 'load', causing ERR_ABORTED in CI (#20328, #20325).
     await page.goto(
-      `/auth/github/callback?code=${FAKE_OAUTH_CODE}&state=${FAKE_OAUTH_STATE}`
+      `/auth/github/callback?code=${FAKE_OAUTH_CODE}&state=${FAKE_OAUTH_STATE}`,
+      { waitUntil: 'commit' }
     )
 
     // Wait for the client-side redirect to complete
@@ -264,7 +267,8 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
     ])
 
     await page.goto(
-      `/auth/github/callback?code=${FAKE_OAUTH_CODE}&state=${FAKE_OAUTH_STATE}`
+      `/auth/github/callback?code=${FAKE_OAUTH_CODE}&state=${FAKE_OAUTH_STATE}`,
+      { waitUntil: 'commit' }
     )
 
     await page.waitForURL(/\/(clusters|auth\/callback)/, { timeout: NAV_INTERCEPT_TIMEOUT_MS })
