@@ -23,7 +23,7 @@ const AGENT_STATE_COLORS: Record<string, { bg: string; text: string; border: str
   Deploying: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30' },
   Ready: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/30' },
   Failed: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/30' },
-  Unknown: { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/30' },
+  Unknown: { bg: 'bg-gray-500/10 dark:bg-gray-400/10', text: 'text-gray-400 dark:text-gray-300', border: 'border-gray-500/30 dark:border-gray-400/30' },
 }
 
 const BUILD_STATE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -71,7 +71,7 @@ function LifecycleSummaryBar({
       </div>
       <div className="flex items-center gap-1">
         {states.map((state, idx) => {
-          const colors = colorMap[state] || colorMap.Unknown || { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/30' }
+          const colors = colorMap[state] || colorMap.Unknown || { bg: 'bg-gray-500/10 dark:bg-gray-400/10', text: 'text-gray-400 dark:text-gray-300', border: 'border-gray-500/30 dark:border-gray-400/30' }
           const count = counts[state] || 0
           return (
             <div key={state} className="contents">
@@ -249,7 +249,7 @@ function KagentiLifecycleManagerInternal({ config }: KagentiLifecycleManagerProp
           <div className="text-xs font-medium text-muted-foreground px-1">Recent Activity</div>
           {recentEvents.map((event, idx) => {
             const colorMap = event.type === 'agent' ? AGENT_STATE_COLORS : BUILD_STATE_COLORS
-            const colors = colorMap[event.status] || { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/30' }
+            const colors = colorMap[event.status] || { bg: 'bg-gray-500/10 dark:bg-gray-400/10', text: 'text-gray-400 dark:text-gray-300', border: 'border-gray-500/30 dark:border-gray-400/30' }
             const Icon = event.type === 'agent' ? Bot : Hammer
             return (
               <div
