@@ -43,10 +43,10 @@ vi.mock('../../../lib/modals/BaseModal', () => ({
     ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) =>
       isOpen ? <div role="dialog">{children}</div> : null,
     {
-      Header: ({ title, onClose }: { title: string; onClose?: () => void }) => (
+      Header: ({ title, onClose, disabled }: { title: string; onClose?: () => void; disabled?: boolean }) => (
         <div>
           <h1>{title}</h1>
-          {onClose && <button onClick={onClose} aria-label="close dialog">×</button>}
+          {onClose && <button onClick={onClose} aria-label="close dialog" disabled={disabled}>×</button>}
         </div>
       ),
       Content: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

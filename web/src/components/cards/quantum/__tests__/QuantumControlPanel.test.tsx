@@ -58,8 +58,8 @@ vi.mock('../../../ui/Toast', () => ({
 }))
 
 vi.mock('../CustomQASMModal', () => ({
-  CustomQASMModal: ({ isOpen, onSubmit }: { isOpen: boolean; onSubmit: (content: string) => void }) => (
-    isOpen ? <button data-testid="custom-qasm-submit" onClick={() => onSubmit('OPENQASM 2.0;')}>Submit custom QASM</button> : null
+  CustomQASMModal: ({ isOpen, onSubmit, disabled }: { isOpen: boolean; onSubmit: (content: string) => void; disabled?: boolean }) => (
+    isOpen ? <button data-testid="custom-qasm-submit" onClick={() => onSubmit('OPENQASM 2.0;')} disabled={disabled}>Submit custom QASM</button> : null
   ),
 }))
 
