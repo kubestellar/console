@@ -7,6 +7,7 @@ import {
 import { useMarketplace, MarketplaceItem, MarketplaceItemType } from '../../hooks/useMarketplace'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
+import { Input } from '../ui/Input'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 import { CNCFProgressBanner } from './CNCFProgressBanner'
@@ -341,14 +342,14 @@ export function Marketplace() {
 
       {/* Search and filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
+        <div className="flex-1 min-w-[200px] max-w-md">
+          <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('common.searchMarketplace')}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-md focus:outline-hidden focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
+            leadingIcon={<Search className="w-4 h-4" />}
+            inputSize="md"
           />
         </div>
 
