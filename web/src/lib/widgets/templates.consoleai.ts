@@ -1,8 +1,9 @@
 import { parseBlock, wrapOpen, wrapClose, issueButton } from './templates.shared'
 import { WIDGET_CARDS, type WidgetCardDefinition } from './widgetRegistry'
 
-export function generateConsoleAICardRender(cardType: string, card: WidgetCardDefinition | null, _title?: string): string {
-  card = card || WIDGET_CARDS[cardType]
+export function generateConsoleAICardRender(cardType: string, _card?: WidgetCardDefinition | null, _title?: string): string {
+  const card = _card || WIDGET_CARDS[cardType]
+  void card
 
   switch (cardType) {
     case 'console_ai_offline_detection':
