@@ -184,7 +184,7 @@ describe('fetchWeeklyActivity', () => {
   })
 
   it('handles pagination — stops when page has fewer items than page size', async () => {
-    const items = Array.from({ length: 50 }, (_, i) => ({
+    const items = Array.from({ length: 50 }, () => ({
       created_at: new Date().toISOString(),
       user: { login: 'dev' },
       labels: [],
