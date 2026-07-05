@@ -1,29 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
-
-vi.mock('./useDemoMode', () => ({ getDemoMode: vi.fn(() => false) }))
-vi.mock('./useLocalAgent', () => ({
-  isAgentUnavailable: vi.fn(() => false),
-  reportAgentDataSuccess: vi.fn(),
-  reportAgentDataError: vi.fn(),
-}))
-vi.mock('./useTokenUsage', () => ({
-  setActiveTokenCategory: vi.fn(),
-  clearActiveTokenCategory: vi.fn(),
-}))
-vi.mock('./usePredictionSettings', () => ({
-  getPredictionSettings: vi.fn(() => ({ enabled: true })),
-  getSettingsForBackend: vi.fn(() => ({})),
-}))
-vi.mock('./mcp/shared', () => ({
-  fullFetchClusters: vi.fn(),
-  clusterCache: { get: vi.fn() },
-  agentFetch: vi.fn(),
-}))
-vi.mock('../lib/utils/wsAuth', () => ({ getWsAuthParams: vi.fn(() => '') }))
-vi.mock('../lib/ws/useWsStaleDetection', () => ({
-  createWsStaleDetection: vi.fn(() => ({ start: vi.fn(), stop: vi.fn(), reset: vi.fn() })),
-}))
-
+import { describe, it, expect } from 'vitest'
 import { __testables, getRawAIPredictions, isWSConnected } from '../useAIPredictions'
 import type { AIPrediction } from '../../types/predictions'
 

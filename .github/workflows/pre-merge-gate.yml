@@ -3,6 +3,7 @@ name: Pre-Merge Build Gate
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions: read-all  # default read; writes scoped to job below
 
