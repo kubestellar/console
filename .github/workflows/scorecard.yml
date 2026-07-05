@@ -7,12 +7,13 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  security-events: write
+  contents: read
+  actions: read
+  id-token: write
+
 jobs:
   analysis:
-    permissions:
-      security-events: write
-      contents: read
-      actions: read
-    uses: kubestellar/infra/.github/workflows/reusable-scorecard.yml@1a04a3fd17771e78e5cf6d42a3fda84e3ba478f3 # pinned 2026-06-29 from main
+    uses: kubestellar/infra/.github/workflows/reusable-scorecard.yml@main
     secrets: inherit

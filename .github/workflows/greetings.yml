@@ -6,110 +6,12 @@ on:
   issues:
     types: [opened, reopened]
 
-permissions: read-all
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   greet:
-    # Fork guard: restrict pull_request_target to same-repo PRs only.
-    if: >-
-      github.event_name != 'pull_request_target' ||
-      github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      pull-requests: write
-    steps:
-      - name: Greet contributor
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const author = context.payload.pull_request?.user?.login || context.payload.issue?.user?.login;
-            const isPR = !!context.payload.pull_request;
-            const itemNumber = context.payload.pull_request?.number || context.payload.issue?.number;
-
-            if (!author || !itemNumber) {
-              console.log('Could not determine author or item number');
-              return;
-            }
-
-            // Skip bots
-            if (author.endsWith('[bot]') || author === 'dependabot' || author === 'github-actions') {
-              console.log(`Skipping bot: ${author}`);
-              return;
-            }
-
-            // Check if this is the author's first issue/PR in this repo
-            const searchType = isPR ? 'pr' : 'issue';
-            const query = `repo:${owner}/${repo} author:${author} type:${searchType}`;
-            const { data: searchResult } = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 2 });
-            if (searchResult.total_count > 1) {
-              console.log(`${author} already has ${searchResult.total_count} ${searchType}s — skipping greeting`);
-              return;
-            }
-
-            console.log(`First-time greeting for ${author} on ${isPR ? 'PR' : 'issue'} #${itemNumber}`);
-
-            const prMessage = `👋 Welcome to the KubeStellar community! 💖
-
-            Thanks and congrats 🎉 for opening your first PR here! We're excited to have you contributing.
-
-            **Before merge, please ensure:**
-            - ✅ **DCO Sign-off** — All commits signed with \`git commit -s\` ([DCO](https://developercertificate.org/))
-            - ✅ **PR Title** — Starts with an emoji: ✨ feature | 🐛 bug fix | 📖 docs | 🌱 infra/tests | ⚠️ breaking
-
-            📬 If you're using KubeStellar in your organization, please [add your name to our Adopters list](https://github.com/kubestellar/kubestellar/blob/main/ADOPTERS.md). 🙏 It really helps the project gain momentum and credibility — a small contribution back with a big impact.
-
-            **Resources:**
-            - 🖥️ [KubeStellar Console](https://console.kubestellar.io) — Try the live multi-cluster dashboard
-            - 📖 [Console Docs](https://kubestellar.io/docs/console/overview/introduction) — Installation, features, and architecture
-            - 🧩 [Marketplace](https://kubestellar.io/docs/console/programs/marketplace) — Community extensions and cards
-            - 📚 [Knowledge Base](https://kubestellar.io/docs/console/programs/knowledge-base) — Troubleshooting and how-tos
-            - 📖 [Full Documentation](https://kubestellar.io/docs) | 🤝 [Contributor Handbook](https://kubestellar.io/contribute-handbook) | 💬 [Slack](https://cloud-native.slack.com/archives/C097094RZ3M)
-
-            A maintainer will review your PR soon. Hope you have a great time here!
-
-            🌟 ~~~~~~~~~~ 🌟
-
-            📬 If you like KubeStellar, please ⭐ star ⭐ our repo to support it!
-
-            🙏 It really helps the project gain momentum and credibility — a small contribution back with a big impact.`;
-
-            const issueMessage = `👋 Welcome to the KubeStellar community! 💖
-
-            Thanks and congrats 🎉 for opening your first issue here! Every issue helps make KubeStellar better.
-
-            **To work on this issue**, comment \`/assign\` to assign yourself (use \`/unassign\` to remove).
-
-            **Find Issues to Work On:**
-            - [\`good first issue\`](https://github.com/search?q=org%3Akubestellar+is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) | [\`help wanted\`](https://github.com/search?q=org%3Akubestellar+is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) | [CLOTributor](https://clotributor.dev/search?project=kubestellar)
-
-            📬 If you're using KubeStellar in your organization, please [add your name to our Adopters list](https://github.com/kubestellar/kubestellar/blob/main/ADOPTERS.md). 🙏 It really helps the project gain momentum and credibility — a small contribution back with a big impact.
-
-            **Resources:**
-            - 🖥️ [KubeStellar Console](https://console.kubestellar.io) — Try the live multi-cluster dashboard
-            - 📖 [Console Docs](https://kubestellar.io/docs/console/overview/introduction) — Installation, features, and architecture
-            - 🧩 [Marketplace](https://kubestellar.io/docs/console/programs/marketplace) — Community extensions and cards
-            - 📚 [Knowledge Base](https://kubestellar.io/docs/console/programs/knowledge-base) — Troubleshooting and how-tos
-            - 📖 [Full Documentation](https://kubestellar.io/docs) | 🤝 [Contributor Handbook](https://kubestellar.io/contribute-handbook) | 💬 [Slack](https://cloud-native.slack.com/archives/C097094RZ3M)
-
-            Hope you have a great time here!
-
-            🌟 ~~~~~~~~~~ 🌟
-
-            📬 If you like KubeStellar, please ⭐ star ⭐ our repo to support it!
-
-            🙏 It really helps the project gain momentum and credibility — a small contribution back with a big impact.
-
-            **For Maintainers:** \`/good-first-issue\` | \`/help-wanted\``;
-
-            const message = isPR ? prMessage : issueMessage;
-
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: itemNumber,
-              body: message
-            });
-
-            console.log('Greeting posted successfully');
+    uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@main
+    secrets: inherit

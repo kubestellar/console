@@ -5,10 +5,10 @@ on:
     types: [closed]
 
 permissions:
+  contents: read
   pull-requests: write
+
 jobs:
   feedback:
-    permissions:
-      pull-requests: write
-    uses: kubestellar/infra/.github/workflows/reusable-feedback.yml@1a04a3fd17771e78e5cf6d42a3fda84e3ba478f3 # pinned 2026-06-29 from main
+    uses: kubestellar/infra/.github/workflows/reusable-feedback.yml@main
     secrets: inherit
