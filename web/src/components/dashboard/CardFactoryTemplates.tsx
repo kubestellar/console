@@ -14,6 +14,8 @@ import { TemplateDropdown } from './cardFactoryPreviews'
 import { FieldSuggestChips } from './FieldSuggestChips'
 import { validateT1AssistResult, type T1AssistResult } from './cardFactoryAssistTypes'
 import { useMemo } from 'react'
+import { Select } from '../ui/Select'
+import { TextArea } from '../ui/TextArea'
 
 // #9061 — Initial sample JSON shown in the Tier 1 "Data (JSON array)" field.
 // Exported as a constant so the field's first-focus auto-select can compare
@@ -253,15 +255,16 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
                   placeholder={t('dashboard.cardFactory.labelPlaceholder')}
                   className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
                 />
-                <select
+                <Select
                   value={col.format || 'text'}
                   onChange={e => updateColumn(idx, 'format', e.target.value)}
-                  className="w-20 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden"
+                  selectSize="sm"
+                  className="w-20"
                 >
                   <option value="text">{t('cardFactory.formatText')}</option>
                   <option value="badge">{t('cardFactory.formatBadge')}</option>
                   <option value="number">{t('cardFactory.formatNumber')}</option>
-                </select>
+                </Select>
                 <button
                   onClick={() => removeColumn(idx)}
                   className="p-1 text-muted-foreground hover:text-red-400 transition-colors"
@@ -284,7 +287,7 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
         {/* Static data JSON */}
         <div>
           <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.dataLabel')}</label>
-          <textarea
+          <TextArea
             value={t1DataJson}
             onChange={e => {
               // After the first user edit, stop treating the field as "pristine
@@ -306,7 +309,8 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
             }}
             rows={6}
             placeholder={T1_SAMPLE_DATA_JSON}
-            className="w-full text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+            textAreaSize="sm"
+            className="font-mono"
           />
         </div>
 
