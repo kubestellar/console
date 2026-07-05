@@ -199,10 +199,19 @@ test.describe('Smoke Tests', () => {
       // so use .first() to avoid a strict-mode violation. #9877
       const logoButton = page.locator('nav button[aria-label*="home"]').first()
       await expect(logoButton).toBeVisible()
+      
+      // Mobile viewports: wait for logo to be actionable before click.
+      // Navbar animations can leave buttons "visible" but still mid-transition. #20329
+      if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
+        await logoButton.waitFor({ state: 'visible', timeout: 5000 })
+        await page.waitForTimeout(300)
+      }
+      
       await logoButton.click()
 
       // Wait for navigation and verify we're at home
       await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, 'logo click')
+      await expect(page).toHaveURL(/\/$|\/dashboard$/, { timeout: 10000 })
       expect(page.url()).toMatch(/\/$|\/dashboard$/)
     })
   })
