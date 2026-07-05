@@ -63,6 +63,7 @@ func TestNewGitHubAppTokenProvider(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			// Clear env vars before each test
 			t.Setenv("KUBESTELLAR_CONSOLE_APP_ID", "")
@@ -242,6 +243,7 @@ func TestExpectedAppSlug(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.envValue != "" {
 				t.Setenv("KUBESTELLAR_CONSOLE_APP_SLUG", tt.envValue)
