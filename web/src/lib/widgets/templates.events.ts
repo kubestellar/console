@@ -1,9 +1,8 @@
 import { parseBlock, wrapOpen, wrapClose, issueButton } from './templates.shared'
-import { WIDGET_CARDS } from './widgetRegistry'
+import { WIDGET_CARDS, type WidgetCardDefinition } from './widgetRegistry'
 
-export function generateEventsCardRender(cardType: string, card: any, title: string): string {
+export function generateEventsCardRender(cardType: string, card: WidgetCardDefinition | undefined, _title: string): string {
   card = card || WIDGET_CARDS[cardType]
-  title = title || card?.displayName || cardType
 
   switch (cardType) {
     case 'event_summary':
