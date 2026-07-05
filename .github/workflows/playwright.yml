@@ -130,6 +130,8 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      pull-requests: write # post test-result comment on PR
     defaults:
       run:
         working-directory: web
