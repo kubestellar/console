@@ -32,6 +32,9 @@ import type { Workload, WorkloadStatus, WorkloadType, AvailableCluster } from '.
 // Helpers
 // ---------------------------------------------------------------------------
 
+type ApiWorkloadInput = Parameters<typeof mapApiWorkloads>[0]
+type RealWorkloadsInput = Parameters<typeof getWorkloadStats>[1]
+
 function makeWorkload(overrides: Partial<Workload> = {}): Workload {
   return {
     name: 'app',
@@ -193,7 +196,7 @@ describe('mapApiWorkloads', () => {
       targetClusters: ['east', 'west'],
       deployments: [],
       createdAt: '2025-06-01T00:00:00Z',
-    }] as any
+    }] as unknown as ApiWorkloadInput
     const result = mapApiWorkloads(apiWorkloads, [])
     expect(result).toHaveLength(1)
     expect(result[0].name).toBe('web')
@@ -204,7 +207,7 @@ describe('mapApiWorkloads', () => {
     const apiWorkloads = [
       { name: 'app', namespace: 'ns', type: 'Deployment', status: 'Running', replicas: 2, readyReplicas: 2, image: 'img', labels: {}, cluster: 'a', targetClusters: ['a'], deployments: [], createdAt: '2025-01-01' },
       { name: 'app', namespace: 'ns', type: 'Deployment', status: 'Pending', replicas: 1, readyReplicas: 0, image: 'img', labels: {}, cluster: 'b', targetClusters: ['b'], deployments: [], createdAt: '2025-01-01' },
-    ] as any
+    ] as unknown as ApiWorkloadInput
     const result = mapApiWorkloads(apiWorkloads, [])
     expect(result).toHaveLength(1)
     expect(result[0].targetClusters).toContain('a')
@@ -217,7 +220,7 @@ describe('mapApiWorkloads', () => {
     const apiWorkloads = [
       { name: 'app', namespace: 'ns', type: 'Deployment', status: 'Running', replicas: 1, readyReplicas: 1, image: 'img', labels: {}, targetClusters: ['a'], deployments: [], createdAt: '2025-01-01' },
       { name: 'app', namespace: 'ns', type: 'Deployment', status: 'Failed', replicas: 1, readyReplicas: 0, image: 'img', labels: {}, targetClusters: ['b'], deployments: [], createdAt: '2025-01-01' },
-    ] as any
+    ] as unknown as ApiWorkloadInput
     const result = mapApiWorkloads(apiWorkloads, [])
     expect(result[0].status).toBe('Failed')
   })
@@ -225,7 +228,7 @@ describe('mapApiWorkloads', () => {
   it('appends importedWorkloads after mapped ones', () => {
     const apiWorkloads = [
       { name: 'real', namespace: 'ns', type: 'Deployment', status: 'Running', replicas: 1, readyReplicas: 1, image: 'img', labels: {}, targetClusters: ['a'], deployments: [], createdAt: '2025-01-01' },
-    ] as any
+    ] as unknown as ApiWorkloadInput
     const imported = [makeWorkload({ name: 'imported' })]
     const result = mapApiWorkloads(apiWorkloads, imported)
     expect(result).toHaveLength(2)
@@ -235,7 +238,7 @@ describe('mapApiWorkloads', () => {
   it('handles workload with no targetClusters but has cluster field', () => {
     const apiWorkloads = [
       { name: 'solo', namespace: 'ns', type: 'Deployment', status: 'Running', replicas: 1, readyReplicas: 1, image: 'img', labels: {}, cluster: 'only-one', targetClusters: undefined, deployments: [], createdAt: '2025-01-01' },
-    ] as any
+    ] as unknown as ApiWorkloadInput
     const result = mapApiWorkloads(apiWorkloads, [])
     expect(result[0].targetClusters).toEqual(['only-one'])
   })
@@ -303,7 +306,7 @@ describe('getWorkloadStats', () => {
   })
 
   it('uses realWorkloads length for totalWorkloads when available', () => {
-    const real = [{ name: 'a' }, { name: 'b' }, { name: 'c' }] as any
+    const real = [{ name: 'a' }, { name: 'b' }, { name: 'c' }] as unknown as RealWorkloadsInput
     const workloads = [makeWorkload(), makeWorkload()]
     const stats = getWorkloadStats(false, real, workloads)
     expect(stats.totalWorkloads).toBe(3)
