@@ -56,8 +56,8 @@ vi.mock('../../../../lib/cn', () => ({
 }))
 
 vi.mock('../../../../lib/modals', () => ({
-  ConfirmDialog: ({ isOpen, onConfirm }: { isOpen: boolean; onConfirm: () => void }) => (
-    isOpen ? <button type="button" onClick={onConfirm}>confirm delete</button> : null
+  ConfirmDialog: ({ isOpen, onConfirm, disabled }: { isOpen: boolean; onConfirm: () => void; disabled?: boolean }) => (
+    isOpen ? <button type="button" onClick={onConfirm} disabled={disabled}>confirm delete</button> : null
   ),
 }))
 
@@ -86,23 +86,27 @@ vi.mock('../mission-chat/MissionChatHeader', () => ({
     onStartEditingTitle,
     onEditTitleChange,
     onSaveTitle,
+    isRenamingTitle,
   }: {
     isEditingTitle: boolean
     editTitleValue: string
     onStartEditingTitle: () => void
     onEditTitleChange: (value: string) => void
     onSaveTitle: () => void
+    isRenamingTitle?: boolean
   }) => (
     <div>
-      <button type="button" onClick={onStartEditingTitle}>rename mission</button>
+      <button type="button" onClick={onStartEditingTitle} disabled={isRenamingTitle}>rename mission</button>
       {isEditingTitle && (
         <>
+          {/* eslint-disable-next-line no-restricted-syntax -- test mock uses raw input intentionally */}
           <input
             aria-label="mission title"
             value={editTitleValue}
             onChange={(event) => onEditTitleChange(event.target.value)}
+            disabled={isRenamingTitle}
           />
-          <button type="button" onClick={onSaveTitle}>save title</button>
+          <button type="button" onClick={onSaveTitle} disabled={isRenamingTitle}>save title</button>
         </>
       )}
     </div>
@@ -120,21 +124,27 @@ vi.mock('../mission-chat/MissionChatInput', () => ({
     onInputChange,
     onRetryMission,
     onSend,
+    isRetrying,
+    isDismissing,
   }: {
     input: string
     inputError: string | null
     onInputChange: (value: string) => void
     onRetryMission: () => void
     onSend: () => void
+    isRetrying?: boolean
+    isDismissing?: boolean
   }) => (
     <div>
+      {/* eslint-disable-next-line no-restricted-syntax -- test mock uses raw input intentionally */}
       <input
         aria-label="chat input"
         value={input}
         onChange={(event) => onInputChange(event.target.value)}
+        disabled={isRetrying || isDismissing}
       />
-      <button type="button" onClick={onSend}>send message</button>
-      <button type="button" onClick={onRetryMission}>retry mission</button>
+      <button type="button" onClick={onSend} disabled={isRetrying || isDismissing}>send message</button>
+      <button type="button" onClick={onRetryMission} disabled={isRetrying || isDismissing}>retry mission</button>
       {inputError ? <span>{inputError}</span> : null}
     </div>
   ),

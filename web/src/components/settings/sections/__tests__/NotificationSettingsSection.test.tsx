@@ -43,7 +43,7 @@ vi.mock('../EmailNotificationSettings', () => ({
     <div data-testid="email-settings">
       <span data-testid="email-config">{config.emailSMTPHost ?? 'empty'}</span>
       <span data-testid="email-loading">{String(isLoading)}</span>
-      <button type="button" onClick={() => updateConfig({ emailSMTPHost: 'smtp.example.com' })}>
+      <button type="button" onClick={() => updateConfig({ emailSMTPHost: 'smtp.example.com' })} disabled={isLoading}>
         update-email
       </button>
     </div>
