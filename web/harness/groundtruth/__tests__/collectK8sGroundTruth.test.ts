@@ -1,15 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Use explicit mock factories so references remain stable after vi.resetModules()
-const { mockExecFileSync, mockWriteFileSync, mockMkdirSync, mockMkdtempSync, mockRmSync, mockExistsSync, mockReadFileSync } = vi.hoisted(() => ({
-  mockExecFileSync: vi.fn(),
-  mockWriteFileSync: vi.fn(),
-  mockMkdirSync: vi.fn(),
-  mockMkdtempSync: vi.fn(() => '/tmp/mock-kubeconfig-dir'),
-  mockRmSync: vi.fn(),
-  mockExistsSync: vi.fn(() => false),
-  mockReadFileSync: vi.fn(() => ''),
-}))
+const mockExecFileSync = vi.fn()
+const mockWriteFileSync = vi.fn()
+const mockMkdirSync = vi.fn()
+const mockMkdtempSync = vi.fn(() => '/tmp/mock-kubeconfig-dir')
+const mockRmSync = vi.fn()
+const mockExistsSync = vi.fn(() => false)
+const mockReadFileSync = vi.fn(() => '')
 
 vi.mock('node:child_process', () => ({
   execFileSync: mockExecFileSync,

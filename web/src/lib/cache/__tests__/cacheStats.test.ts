@@ -15,9 +15,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // ── Mocks ──────────────────────────────────────────────────────────
 
 const mockPreloadedMetaMap = new Map<string, unknown>()
-const { mockClearSessionSnapshots } = vi.hoisted(() => ({
-  mockClearSessionSnapshots: vi.fn(),
-}))
+const mockClearSessionSnapshots = vi.fn()
 const mockCacheStorageClear = vi.fn().mockResolvedValue(undefined)
 const mockCacheStorageDelete = vi.fn().mockResolvedValue(undefined)
 let mockCacheStorageStats: { keys: string[]; count: number } = { keys: [], count: 0 }
