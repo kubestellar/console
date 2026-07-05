@@ -24,8 +24,8 @@ vi.mock('../../../../hooks/useMissions', () => ({
   useMissions: () => mockUseMissions(),
 }))
 
-const mockUseCachedPodIssues = vi.fn()
-const mockUseCachedDeploymentIssues = vi.fn()
+const _mockUseCachedPodIssues = vi.fn()
+const _mockUseCachedDeploymentIssues = vi.fn()
 vi.mock('../../../../hooks/useCachedData', () => ({
   useCachedPodIssues: () => mockUseCachedPodIssues(),
   useCachedDeploymentIssues: () => mockUseCachedDeploymentIssues(),
@@ -41,7 +41,7 @@ vi.mock('../../../../hooks/useGlobalFilters', () => ({
 }))
 
 const mockDrillToPod = vi.fn()
-const mockDrillToDeployment = vi.fn()
+const _mockDrillToDeployment = vi.fn()
 vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({
     drillToPod: mockDrillToPod,

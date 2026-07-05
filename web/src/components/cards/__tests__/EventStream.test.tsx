@@ -32,12 +32,12 @@ vi.mock('../../../hooks/useCachedData', () => ({
   useCachedEvents: (...args: unknown[]) => mockUseCachedEvents(...args),
 }))
 
-const mockUseCardLoadingState = vi.fn()
+const _mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (...args: unknown[]) => mockUseCardLoadingState(...args),
 }))
 
-const mockUseCardData = vi.fn()
+const _mockUseCardData = vi.fn()
 vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../lib/cards/cardHooks')>()
   return {

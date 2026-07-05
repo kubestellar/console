@@ -160,6 +160,7 @@ describe('useMissionRecommendations', () => {
   it('passes clusterContext to matchMissionsToCluster', () => {
     mockMissionCache.fixes = [FIXER]
     mockGetCachedRecommendations.mockReturnValue(null)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cluster = { name: 'prod-cluster' } as any
     renderHook(() => useMissionRecommendations(true, cluster))
     expect(mockMatchMissionsToCluster).toHaveBeenCalledWith([FIXER], cluster)
@@ -177,6 +178,7 @@ describe('useMissionRecommendations', () => {
   it('hasCluster=true when clusterContext is provided', () => {
     mockMissionCache.fixes = [FIXER]
     mockMatchMissionsToCluster.mockReturnValue([MATCH])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cluster = { name: 'test-cluster' } as any
     const { result } = renderHook(() => useMissionRecommendations(true, cluster))
     expect(result.current.hasCluster).toBe(true)

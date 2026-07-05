@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
 /**
-/* eslint-disable @typescript-eslint/no-unused-vars */
  * Tests for KubecostOverview card component.
  * Health status is reported via useCardLoadingState hook in the card implementation.
  */

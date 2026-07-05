@@ -1,5 +1,4 @@
 /**
-/* eslint-disable @typescript-eslint/no-unused-vars */
  * CardWrapper — shared shell for every dashboard card (#15264).
  *
  * PR A: demo badge, failure banner, collapse write, expand modal outer sizing,

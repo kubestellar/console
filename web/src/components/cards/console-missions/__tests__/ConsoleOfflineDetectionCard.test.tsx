@@ -37,14 +37,14 @@ vi.mock('../../../../hooks/useMissions', () => ({
   useMissions: () => mockUseMissions(),
 }))
 
-const mockUseCachedGPUNodes = vi.fn()
-const mockUseCachedPodIssues = vi.fn()
+const _mockUseCachedGPUNodes = vi.fn()
+const _mockUseCachedPodIssues = vi.fn()
 vi.mock('../../../../hooks/useCachedData', () => ({
   useCachedGPUNodes: () => mockUseCachedGPUNodes(),
   useCachedPodIssues: () => mockUseCachedPodIssues(),
 }))
 
-const mockUseClusters = vi.fn()
+const _mockUseClusters = vi.fn()
 vi.mock('../../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))
@@ -60,7 +60,7 @@ vi.mock('../../../../hooks/useGlobalFilters', () => ({
 }))
 
 const mockDrillToCluster = vi.fn()
-const mockDrillToNode = vi.fn()
+const _mockDrillToNode = vi.fn()
 vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({
     drillToCluster: mockDrillToCluster,
@@ -69,7 +69,7 @@ vi.mock('../../../../hooks/useDrillDown', () => ({
 }))
 
 const mockUseCardLoadingState = vi.fn()
-const mockUseCardDemoState = vi.fn()
+const _mockUseCardDemoState = vi.fn()
 vi.mock('../../CardDataContext', () => ({
   useCardLoadingState: (...args: unknown[]) => mockUseCardLoadingState(...args),
   useCardDemoState: () => mockUseCardDemoState(),
@@ -102,7 +102,7 @@ vi.mock('../../../../hooks/usePredictionSettings', () => ({
   }),
 }))
 
-const mockTriggerAIAnalysis = vi.fn()
+const _mockTriggerAIAnalysis = vi.fn()
 vi.mock('../../../../hooks/useAIPredictions', () => ({
   useAIPredictions: () => ({
     predictions: [],

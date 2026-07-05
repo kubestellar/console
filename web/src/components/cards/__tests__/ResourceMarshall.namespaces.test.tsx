@@ -1,8 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 const mockUseCachedNamespaces = vi.fn()
 const { mockUseClusters } = vi.hoisted(() => ({
   mockUseClusters: vi.fn()

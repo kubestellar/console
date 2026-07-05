@@ -11,8 +11,8 @@ import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../../l
 
 // Mock useCache to avoid shared CacheStore state between tests.
 // This provides a minimal implementation that calls the fetcher immediately.
-/* eslint-disable @typescript-eslint/no-unused-vars */
 vi.mock('../../../lib/cache', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const React = require('react')
   return {
     useCache: ({ fetcher, initialData, enabled = true }: { fetcher: () => Promise<unknown>; initialData: unknown; enabled?: boolean; [k: string]: unknown }) => {

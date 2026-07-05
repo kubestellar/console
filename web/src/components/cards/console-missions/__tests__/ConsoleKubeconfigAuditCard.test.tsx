@@ -24,7 +24,7 @@ vi.mock('../../../../hooks/useMissions', () => ({
   useMissions: () => mockUseMissions(),
 }))
 
-const mockUseClusters = vi.fn()
+const _mockUseClusters = vi.fn()
 vi.mock('../../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))

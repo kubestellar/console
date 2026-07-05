@@ -107,6 +107,7 @@ describe('Nodes Component', () => {
         { name: 'gpu-safe', cluster: 'c1', gpuCount: 4, gpuAllocated: 0, taints: [], acceleratorType: 'GPU' },
         { name: 'gpu-tainted', cluster: 'c1', gpuCount: 4, gpuAllocated: 0, taints: [{ key: 'special', value: 'yes', effect: 'NoSchedule' }], acceleratorType: 'GPU' },
       ],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     renderNodes()
@@ -125,6 +126,7 @@ describe('Nodes Component', () => {
       lastUpdated: null,
       refetch: vi.fn(),
       error: null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     renderNodes()

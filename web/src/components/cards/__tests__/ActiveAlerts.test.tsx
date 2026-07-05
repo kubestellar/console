@@ -10,7 +10,7 @@ const { mockAcknowledgeAlerts, mockRunAIDiagnosis } = vi.hoisted(() => ({
   mockAcknowledgeAlerts: vi.fn(),
   mockRunAIDiagnosis: vi.fn()
 }))
-const mockDrillToAlert = vi.fn()
+const _mockDrillToAlert = vi.fn()
 
 const mockAlertsState = {
   activeAlerts: [] as Array<Record<string, unknown>>,
@@ -93,6 +93,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => (
+    // eslint-disable-next-line no-restricted-syntax
     <input data-testid="search-input" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />
   ),
   CardClusterFilter: () => <div data-testid="cluster-filter" />,

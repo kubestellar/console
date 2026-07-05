@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import React from 'react'
 import { FlatcarStatus } from './index'
 
-const mockUseFlatcarStatus = vi.fn()
+const _mockUseFlatcarStatus = vi.fn()
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

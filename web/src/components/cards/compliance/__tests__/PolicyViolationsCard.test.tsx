@@ -36,7 +36,7 @@ vi.mock('../../../../hooks/useKyverno', () => ({
   useKyverno: () => mockUseKyverno(),
 }))
 
-const mockStartMission = vi.fn()
+const _mockStartMission = vi.fn()
 vi.mock('../../../../hooks/useMissions', () => ({
   useMissions: () => ({ startMission: mockStartMission }),
 }))

@@ -129,6 +129,7 @@ describe('Card config schema validation', () => {
       })
 
       it('has valid category value', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect(VALID_CATEGORIES).toContain(config.category as any)
       })
 
@@ -155,6 +156,7 @@ describe('Card config schema validation', () => {
 
       it('has valid defaultWidth if specified', () => {
         if (config.defaultWidth !== undefined) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect(VALID_WIDTHS).toContain(config.defaultWidth as any)
         }
       })
@@ -172,6 +174,7 @@ describe('Card config schema validation', () => {
       })
 
       it('has valid dataSource type', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect(VALID_DATA_SOURCE_TYPES).toContain(config.dataSource.type as any)
       })
 
@@ -181,6 +184,7 @@ describe('Card config schema validation', () => {
       })
 
       it('has valid content type', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect(VALID_CONTENT_TYPES).toContain(config.content.type as any)
       })
 
@@ -219,13 +223,18 @@ describe('DataSource validation', () => {
 
       if (ds.type === 'hook') {
         it('has required hook property for hook dataSource', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((ds as any).hook).toBeDefined()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect(typeof (ds as any).hook).toBe('string')
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((ds as any).hook.length).toBeGreaterThan(0)
         })
 
         it('has object params property if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((ds as any).params !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(typeof (ds as any).params).toBe('object')
           }
         })
@@ -233,20 +242,28 @@ describe('DataSource validation', () => {
 
       if (ds.type === 'api') {
         it('has required endpoint property for api dataSource', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((ds as any).endpoint).toBeDefined()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect(typeof (ds as any).endpoint).toBe('string')
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((ds as any).endpoint).toMatch(/^\//)
         })
 
         it('has valid method if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((ds as any).method !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(['GET', 'POST']).toContain((ds as any).method)
           }
         })
 
         it('has number pollInterval if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((ds as any).pollInterval !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(typeof (ds as any).pollInterval).toBe('number')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect((ds as any).pollInterval).toBeGreaterThanOrEqual(0)
           }
         })
@@ -254,7 +271,9 @@ describe('DataSource validation', () => {
 
       if (ds.type === 'static') {
         it('has array data property if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((ds as any).data !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(Array.isArray((ds as any).data)).toBe(true)
           }
         })
@@ -262,8 +281,11 @@ describe('DataSource validation', () => {
 
       if (ds.type === 'context') {
         it('has required contextKey property for context dataSource', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((ds as any).contextKey).toBeDefined()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect(typeof (ds as any).contextKey).toBe('string')
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((ds as any).contextKey.length).toBeGreaterThan(0)
         })
       }
@@ -282,12 +304,16 @@ describe('Content validation', () => {
 
       if (content.type === 'list' || content.type === 'table') {
         it('has required columns array', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((content as any).columns).toBeDefined()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect(Array.isArray((content as any).columns)).toBe(true)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((content as any).columns.length).toBeGreaterThan(0)
         })
 
         it('has valid column configurations', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (content as any).columns.forEach((col: any) => {
             expect(col.field).toBeDefined()
             expect(typeof col.field).toBe('string')
@@ -319,28 +345,39 @@ describe('Content validation', () => {
         })
 
         it('has valid pageSize if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((content as any).pageSize !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(typeof (content as any).pageSize).toBe('number')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect((content as any).pageSize).toBeGreaterThan(0)
           }
         })
 
         it('has valid sortable property if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((content as any).sortable !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(typeof (content as any).sortable).toBe('boolean')
           }
         })
 
         it('has valid defaultSort if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((content as any).defaultSort !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(typeof (content as any).defaultSort).toBe('string')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const fields = (content as any).columns.map((c: any) => c.field)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(fields).toContain((content as any).defaultSort)
           }
         })
 
         it('has valid defaultDirection if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((content as any).defaultDirection !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(['asc', 'desc']).toContain((content as any).defaultDirection)
           }
         })
@@ -348,21 +385,28 @@ describe('Content validation', () => {
 
       if (content.type === 'chart') {
         it('has required chartType property', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((content as any).chartType).toBeDefined()
           expect(['line', 'bar', 'donut', 'gauge', 'sparkline', 'area']).toContain(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (content as any).chartType
           )
         })
 
         it('has valid height if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((content as any).height !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(typeof (content as any).height).toBe('number')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect((content as any).height).toBeGreaterThan(0)
           }
         })
 
         it('has valid showLegend if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((content as any).showLegend !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(typeof (content as any).showLegend).toBe('boolean')
           }
         })
@@ -370,20 +414,26 @@ describe('Content validation', () => {
 
       if (content.type === 'custom') {
         it('has component or componentName property', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const hasComponent = (content as any).component !== undefined
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const hasComponentName = (content as any).componentName !== undefined
           expect(hasComponent || hasComponentName).toBe(true)
 
           if (hasComponent) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(typeof (content as any).component).toBe('string')
           }
           if (hasComponentName) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(typeof (content as any).componentName).toBe('string')
           }
         })
 
         it('has valid props object if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((content as any).props !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(typeof (content as any).props).toBe('object')
           }
         })
@@ -391,13 +441,18 @@ describe('Content validation', () => {
 
       if (content.type === 'status-grid') {
         it('has required items array', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((content as any).items).toBeDefined()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect(Array.isArray((content as any).items)).toBe(true)
         })
 
         it('has valid columns if specified', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((content as any).columns !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(typeof (content as any).columns).toBe('number')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect((content as any).columns).toBeGreaterThan(0)
           }
         })
@@ -405,11 +460,14 @@ describe('Content validation', () => {
 
       if (content.type === 'stats-grid') {
         it('has required stats array', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((content as any).stats).toBeDefined()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect(Array.isArray((content as any).stats)).toBe(true)
         })
 
         it('has valid stat items', () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (content as any).stats.forEach((stat: any) => {
             expect(stat.field).toBeDefined()
             expect(typeof stat.field).toBe('string')
@@ -487,7 +545,9 @@ describe('Filters validation', () => {
             expect(typeof filter.storageKey).toBe('string')
           }
 
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((filter as any).searchFields !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect(Array.isArray((filter as any).searchFields)).toBe(true)
           }
         })
@@ -543,14 +603,19 @@ describe('LoadingState validation', () => {
       })
 
       it('has valid rows if specified', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if ((loadingState as any).rows !== undefined) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect(typeof (loadingState as any).rows).toBe('number')
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect((loadingState as any).rows).toBeGreaterThan(0)
         }
       })
 
       it('has valid showSearch if specified', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if ((loadingState as any).showSearch !== undefined) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           expect(typeof (loadingState as any).showSearch).toBe('boolean')
         }
       })

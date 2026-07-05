@@ -14,7 +14,9 @@ import type { TreeNode } from '../browser'
 
 const browserMockState = vi.hoisted(() => ({
   missionCache: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     installers: [] as any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fixes: [] as any[],
     installersDone: true,
     fixesDone: true,

@@ -19,6 +19,7 @@ const { mockNavigate } = vi.hoisted(() => ({
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal();
   return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...actual as any,
     useNavigate: () => mockNavigate,
   };
@@ -53,6 +54,7 @@ describe('EnterpriseComplianceCards', () => {
     it('renders loading state initially', async () => {
       // Return an unresolved promise to keep it in loading state
       const promise = new Promise(() => {});
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (authFetch as any).mockReturnValue(promise);
 
       render(
@@ -70,7 +72,9 @@ describe('EnterpriseComplianceCards', () => {
       const user = userEvent.setup();
       const mockResponse = { ok: true };
       const mockData = { overall_score: 85, safeguards_passed: 10, safeguards_failed: 2, phi_namespaces: 3, encrypted_flows: 7 };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (authFetch as any).mockResolvedValue(mockResponse);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (safeJson as any).mockResolvedValue(mockData);
 
       render(
@@ -96,6 +100,7 @@ describe('EnterpriseComplianceCards', () => {
 
     it('renders error state on fetch rejection', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (authFetch as any).mockRejectedValue(new Error('Network error'));
 
       render(
@@ -113,6 +118,7 @@ describe('EnterpriseComplianceCards', () => {
     });
 
     it('renders "No data" state when response is not ok', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (authFetch as any).mockResolvedValue({ ok: false });
 
       render(
@@ -130,6 +136,7 @@ describe('EnterpriseComplianceCards', () => {
 
   describe('NISTCard (Pattern B - useCache)', () => {
     it('renders loading state when data is null and no error', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (useCache as any).mockReturnValue({ data: null, error: false });
 
       render(
@@ -142,6 +149,7 @@ describe('EnterpriseComplianceCards', () => {
     });
 
     it('renders error state with translated text', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (useCache as any).mockReturnValue({ data: null, error: new Error('fail') });
 
       render(
@@ -158,6 +166,7 @@ describe('EnterpriseComplianceCards', () => {
     it('renders success state and navigates on click', async () => {
       const user = userEvent.setup();
       const mockData = { overall_score: 72, implemented_controls: 50, partial_controls: 10, planned_controls: 5, total_controls: 65 };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (useCache as any).mockReturnValue({ data: mockData, error: false });
 
       render(

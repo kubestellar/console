@@ -1,6 +1,5 @@
 import React from 'react'
 /**
-/* eslint-disable @typescript-eslint/no-unused-vars */
  * Form-interaction tests for ClusterGroupsForms (#15515).
  *
  * Run from web/:  npm run test:cluster-groups-forms

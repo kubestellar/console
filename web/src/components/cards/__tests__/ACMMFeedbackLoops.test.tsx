@@ -6,10 +6,8 @@ import { CardDataReportContext } from '../CardDataContext'
 import { ACMMFeedbackLoops } from '../ACMMFeedbackLoops'
 import { ALL_CRITERIA } from '../../../lib/acmm/sources'
 import { buildACMMContext, buildACMMContextFromScan, buildScanResult } from './acmmTestFixtures'
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 const mockUseACMM = vi.fn()
-const mockStartMission = vi.fn()
+const _mockStartMission = vi.fn()
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

@@ -4,9 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { NamespaceOverview } from '../NamespaceOverview'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
-const mockDrillToPod = vi.fn()
+const _mockDrillToPod = vi.fn()
 const mockDrillToDeployment = vi.fn()
 
 vi.mock('../../../hooks/useMCP', () => ({

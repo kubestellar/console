@@ -1,8 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 interface ChartOptionShape {
   xAxis: { data: unknown[] }
   series: Array<{ data: unknown[] }>

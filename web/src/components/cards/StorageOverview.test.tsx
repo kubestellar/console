@@ -43,7 +43,7 @@ vi.mock('../../hooks/useCachedData', () => ({
   useCachedPVCs: () => mockUseCachedPVCs(),
 }))
 
-const mockUseGlobalFilters = vi.fn()
+const _mockUseGlobalFilters = vi.fn()
 vi.mock('../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => mockUseGlobalFilters(),
 }))

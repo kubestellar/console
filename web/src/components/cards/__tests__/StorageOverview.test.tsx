@@ -2,8 +2,6 @@ import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { StorageOverview } from '../StorageOverview'
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
@@ -28,7 +26,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPVCs: () => mockUseCachedPVCs(),
 }))
 
-const mockUseGlobalFilters = vi.fn()
+const _mockUseGlobalFilters = vi.fn()
 vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => mockUseGlobalFilters(),
 }))
@@ -46,7 +44,7 @@ vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (args: Record<string, unknown>) => mockUseCardLoadingState(args),
 }))
 
-const mockUseChartFilters = vi.fn()
+const _mockUseChartFilters = vi.fn()
 vi.mock('../../../lib/cards/cardHooks', () => ({
   useChartFilters: () => mockUseChartFilters(),
 }))

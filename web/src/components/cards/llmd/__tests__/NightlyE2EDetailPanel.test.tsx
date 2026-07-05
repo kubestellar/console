@@ -79,6 +79,7 @@ describe('NightlyE2EDetailPanel', () => {
     }
     const { container } = render(
       <GuideDetailPanel
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         guide={guide as any}
         hoveredRun={null}
         onRunHover={vi.fn()}

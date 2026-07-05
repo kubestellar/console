@@ -46,7 +46,7 @@ vi.mock('../../hooks/useMCP', () => ({
   ],
 }))
 
-const mockUseCachedNamespaces = vi.fn()
+const _mockUseCachedNamespaces = vi.fn()
 vi.mock('../../hooks/useCachedData', () => ({
   useCachedNamespaces: (cluster?: string) => mockUseCachedNamespaces(cluster),
 }))
@@ -60,7 +60,7 @@ vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
 ))
 
 const mockUseCardLoadingState = vi.fn()
-const mockUseCardDemoState = vi.fn()
+const _mockUseCardDemoState = vi.fn()
 vi.mock('./CardDataContext', () => ({
   useCardLoadingState: (opts: Record<string, unknown>) => mockUseCardLoadingState(opts),
   useCardDemoState: (opts: Record<string, unknown>) => mockUseCardDemoState(opts),

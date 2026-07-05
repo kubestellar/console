@@ -40,7 +40,7 @@ vi.mock('./CardDataContext', () => ({
   useReportCardDataState: () => {},
 }))
 
-const mockUseCardData = vi.fn()
+const _mockUseCardData = vi.fn()
 vi.mock('../../lib/cards/cardHooks', () => ({
   useCardData: (...args: unknown[]) => mockUseCardData(...args),
   commonComparators: {

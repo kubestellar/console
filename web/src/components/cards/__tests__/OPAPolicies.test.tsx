@@ -29,14 +29,14 @@ vi.mock('../../../lib/demoMode', () => ({
   toggleDemoMode: vi.fn(),
 }))
 
-const mockUseDemoMode = vi.fn()
+const _mockUseDemoMode = vi.fn()
 vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: vi.fn(() => false),
 }))
 
-const mockUseCardDemoState = vi.fn()
+const _mockUseCardDemoState = vi.fn()
 const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
   useCardDemoState: (...args: unknown[]) => mockUseCardDemoState(...args),
@@ -48,7 +48,7 @@ vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))
 
-const mockStartMission = vi.fn()
+const _mockStartMission = vi.fn()
 vi.mock('../../../hooks/useMissions', () => ({
   useMissions: () => ({ startMission: mockStartMission }),
 }))
@@ -128,7 +128,7 @@ const mockPaginatedClusters = DEMO_CLUSTER_NAMES.map((name) => ({
   reachable: true,
 }))
 
-const mockUseCardData = vi.fn()
+const _mockUseCardData = vi.fn()
 vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (...args: unknown[]) => mockUseCardData(...args),
   commonComparators: {

@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import React from 'react'
 import { ArtifactHubStatus } from './index'
 
-const mockUseArtifactHubStatus = vi.fn()
+const _mockUseArtifactHubStatus = vi.fn()
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

@@ -5,7 +5,6 @@ import userEvent from '@testing-library/user-event'
 import { CardDataReportContext } from '../CardDataContext'
 import { ACMMRecommendations } from '../ACMMRecommendations'
 import {
-/* eslint-disable @typescript-eslint/no-unused-vars */
   buildACMMContext,
   buildACMMContextFromScan,
   buildScanResult,

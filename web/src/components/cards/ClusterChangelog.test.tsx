@@ -4,7 +4,7 @@ import React from 'react'
 import type { ReactNode } from 'react'
 import { ClusterChangelog } from './ClusterChangelog'
 
-const mockUseCachedEvents = vi.fn()
+const _mockUseCachedEvents = vi.fn()
 const mockUseCardLoadingState = vi.fn()
 const mockRefetch = vi.fn()
 

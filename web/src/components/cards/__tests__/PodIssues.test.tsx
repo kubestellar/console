@@ -22,7 +22,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPodIssues: () => mockUseCachedPodIssues(),
 }))
 
-const mockUseClusters = vi.fn()
+const _mockUseClusters = vi.fn()
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))
@@ -93,6 +93,7 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
     value: string
     onChange: (v: string) => void
   }) => (
+    // eslint-disable-next-line no-restricted-syntax
     <input
       data-testid="search-input"
       value={value}

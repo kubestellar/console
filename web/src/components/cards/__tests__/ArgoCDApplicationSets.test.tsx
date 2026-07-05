@@ -77,6 +77,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../../lib/cards/CardComponents', () => ({
+  // eslint-disable-next-line no-restricted-syntax
   CardSearchInput: () => <input data-testid="search" />,
   CardControlsRow: () => <div data-testid="controls-row" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,

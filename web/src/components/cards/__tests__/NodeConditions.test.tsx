@@ -4,8 +4,6 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { NodeConditions } from '../NodeConditions'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 const makeNode = (overrides = {}) => ({
   name: 'node-1',
   cluster: 'cluster-1',

@@ -4,7 +4,6 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MS_PER_DAY } from '../../../lib/constants/time'
 import {
-/* eslint-disable @typescript-eslint/no-unused-vars */
   CURRENT_REPO_STORAGE_KEY,
   getDemoGitHubData,
   SAVED_REPOS_STORAGE_KEY,

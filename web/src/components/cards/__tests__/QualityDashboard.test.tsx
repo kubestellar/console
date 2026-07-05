@@ -6,7 +6,6 @@ import * as useCachedData from '../../../hooks/useCachedData';
 import * as CardDataContext from '../CardDataContext';
 
 // Mock i18next
-/* eslint-disable @typescript-eslint/no-unused-vars */
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({

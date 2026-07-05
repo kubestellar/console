@@ -1,6 +1,5 @@
 import React from 'react'
 /**
-/* eslint-disable @typescript-eslint/no-unused-vars */
  * Direct Vitest coverage for CardLoadingState presentational branches (#15510).
  *
  * Run from web/:  npm run test:card-loading-state

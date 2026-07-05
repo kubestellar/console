@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import React from 'react'
 import { ChaosMeshStatus } from './index'
 
-const mockUseChaosMeshStatus = vi.fn()
+const _mockUseChaosMeshStatus = vi.fn()
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

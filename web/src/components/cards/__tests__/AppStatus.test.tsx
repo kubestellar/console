@@ -6,7 +6,7 @@ import { AppStatus } from '../AppStatus'
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 /* eslint-disable no-restricted-syntax, @typescript-eslint/no-unused-vars */
-const mockDrillToDeployment = vi.fn()
+const _mockDrillToDeployment = vi.fn()
 
 const makeDeployment = (overrides = {}) => ({
   name: 'my-app',
@@ -88,6 +88,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../../lib/cards/CardComponents', () => ({
+  // eslint-disable-next-line no-restricted-syntax
   CardSearchInput: () => <input data-testid="search" />,
   CardControlsRow: () => <div data-testid="controls-row" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,

@@ -7,8 +7,6 @@ import { ResourceUsage } from '../ResourceUsage'
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => opts ? `${k}:${JSON.stringify(opts)}` : k }),
@@ -26,12 +24,12 @@ vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
   setGlobalDemoMode: vi.fn(),
 }))
 
-const mockUseClusters = vi.fn()
+const _mockUseClusters = vi.fn()
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))
 
-const mockUseCachedGPUNodes = vi.fn()
+const _mockUseCachedGPUNodes = vi.fn()
 vi.mock('../../../hooks/useCachedData', () => ({
   useCachedGPUNodes: () => mockUseCachedGPUNodes(),
 }))

@@ -22,7 +22,7 @@ vi.mock('../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToDeployment: mockDrillToDeployment }),
 }))
 
-const mockUseCachedDeployments = vi.fn()
+const _mockUseCachedDeployments = vi.fn()
 vi.mock('../../../hooks/useCachedData', () => ({
   useCachedDeployments: () => mockUseCachedDeployments(),
 }))

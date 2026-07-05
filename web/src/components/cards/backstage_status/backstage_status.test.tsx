@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import React from 'react'
 import { BackstageStatus } from './index'
 
-const mockUseCachedBackstage = vi.fn()
+const _mockUseCachedBackstage = vi.fn()
 const mockUseCardLoadingState = vi.fn()
 
 vi.mock('react-i18next', () => ({

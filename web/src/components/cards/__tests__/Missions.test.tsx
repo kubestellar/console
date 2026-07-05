@@ -24,7 +24,7 @@ vi.mock('../../../hooks/useDeployMissions', () => ({
   useDeployMissions: () => mockUseDeployMissions(),
 }))
 
-const mockUseClusters = vi.fn()
+const _mockUseClusters = vi.fn()
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))
@@ -65,7 +65,7 @@ vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (...args: unknown[]) => mockUseCardLoadingState(...args),
 }))
 
-const mockUseCardData = vi.fn()
+const _mockUseCardData = vi.fn()
 vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../lib/cards/cardHooks')>()
   return {

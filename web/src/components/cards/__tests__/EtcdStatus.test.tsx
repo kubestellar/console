@@ -4,8 +4,6 @@ import { render, screen } from '@testing-library/react'
 import { EtcdStatus } from '../EtcdStatus'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 const makeEtcdPod = (overrides = {}) => ({
   name: 'etcd-node1',
   namespace: 'kube-system',

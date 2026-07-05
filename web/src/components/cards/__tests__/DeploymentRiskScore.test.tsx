@@ -6,8 +6,6 @@ import { DeploymentRiskScore } from '../DeploymentRiskScore'
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
@@ -23,12 +21,12 @@ vi.mock('../../../hooks/useArgoCD', () => ({
   useArgoCDApplications: () => mockUseArgoCDApplications(),
 }))
 
-const mockUseKyverno = vi.fn()
+const _mockUseKyverno = vi.fn()
 vi.mock('../../../hooks/useKyverno', () => ({
   useKyverno: () => mockUseKyverno(),
 }))
 
-const mockUseCachedAllPods = vi.fn()
+const _mockUseCachedAllPods = vi.fn()
 vi.mock('../../../hooks/useCachedData', () => ({
   useCachedAllPods: () => mockUseCachedAllPods(),
 }))

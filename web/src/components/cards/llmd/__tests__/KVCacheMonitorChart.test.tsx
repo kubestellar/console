@@ -42,7 +42,9 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('recharts', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ComposedChart: ({ children }: any) => <div>{children}</div>,
   Line: () => null,
   CartesianGrid: () => null,
@@ -55,6 +57,7 @@ vi.mock('recharts', () => ({
 import { KVCacheMonitorVisualization } from '../KVCacheMonitorChart'
 
 describe('KVCacheMonitorChart', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mockT = ((key: string, fallback?: string) => fallback || key) as any
 
   it('renders without crashing with empty data', () => {

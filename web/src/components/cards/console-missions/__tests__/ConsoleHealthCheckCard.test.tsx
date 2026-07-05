@@ -6,9 +6,9 @@ import { ConsoleHealthCheckCard } from '../ConsoleHealthCheckCard'
 
 const mockDrillToAllClusters = vi.fn()
 const mockDrillToCluster = vi.fn()
-const mockDrillToPod = vi.fn()
-const mockStartMission = vi.fn()
-const mockUseCardLoadingState = vi.fn()
+const _mockDrillToPod = vi.fn()
+const _mockStartMission = vi.fn()
+const _mockUseCardLoadingState = vi.fn()
 const mockHorseshoeGauge = vi.fn()
 
 vi.mock('react-i18next', () => ({

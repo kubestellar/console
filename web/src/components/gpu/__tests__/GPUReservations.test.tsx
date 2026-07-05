@@ -240,6 +240,7 @@ describe('GPUReservations Component', () => {
           { name: 'node-2', cluster: 'cluster-b', gpuType: 'Google TPU v4', gpuCount: 4, gpuAllocated: 0, acceleratorType: 'TPU' },
         ],
         isLoading: false, refetch: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
 
       renderGPU()
@@ -261,6 +262,7 @@ describe('GPUReservations Component', () => {
           { name: 'node-1', cluster: 'cluster-a', gpuType: 'NVIDIA A100', gpuCount: 10, gpuAllocated: 7, acceleratorType: 'GPU' },
         ],
         isLoading: false, refetch: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
 
       renderGPU()
@@ -277,6 +279,7 @@ describe('GPUReservations Component', () => {
           { name: 'node-tainted', cluster: 'c1', gpuType: 'A100', gpuCount: 4, gpuAllocated: 0, acceleratorType: 'GPU', taints: [{ key: 'dedicated', value: 'user1', effect: 'NoSchedule' }] },
         ],
         isLoading: false, refetch: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
 
       renderGPU()

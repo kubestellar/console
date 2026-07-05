@@ -1,6 +1,5 @@
 import React from 'react'
 /**
-/* eslint-disable @typescript-eslint/no-unused-vars */
  * Regression tests for compliance card refresh/failure visibility.
  *
  * Covers: loading, refreshing, failed fetch, stale/consecutive failures,

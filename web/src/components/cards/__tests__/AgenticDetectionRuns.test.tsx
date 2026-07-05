@@ -1,6 +1,5 @@
 import React from 'react'
 /**
-/* eslint-disable @typescript-eslint/no-unused-vars */
  * AgenticDetectionRuns card — Vitest RTL (#15355, Part of #4189).
  *
  * Hook layer is covered by useAgenticDetectionRuns.test.ts; this file tests

@@ -281,6 +281,7 @@ describe('KVCacheMonitor.utils', () => {
         aggregationMode: 'aggregated',
         isDemoMode: false,
         prometheusMetrics: null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         selectedStack: stack as any,
       })
       expect(result.length).toBeGreaterThanOrEqual(1)
@@ -302,6 +303,7 @@ describe('KVCacheMonitor.utils', () => {
         aggregationMode: 'disaggregated',
         isDemoMode: false,
         prometheusMetrics: null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         selectedStack: stack as any,
       })
       expect(result.length).toBe(2)

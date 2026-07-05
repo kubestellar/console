@@ -28,25 +28,25 @@ vi.mock('../../hooks/useAlerts', () => ({
   useAlerts: () => mockUseAlerts(),
 }))
 
-const mockUseGlobalFilters = vi.fn()
+const _mockUseGlobalFilters = vi.fn()
 vi.mock('../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => mockUseGlobalFilters(),
 }))
 
-const mockUseDemoMode = vi.fn()
+const _mockUseDemoMode = vi.fn()
 vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockUseDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: vi.fn(() => false),
 }))
 
-const mockDrillToAlert = vi.fn()
+const _mockDrillToAlert = vi.fn()
 vi.mock('../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToAlert: mockDrillToAlert }),
 }))
 
-const mockSetActiveMission = vi.fn()
-const mockOpenSidebar = vi.fn()
+const _mockSetActiveMission = vi.fn()
+const _mockOpenSidebar = vi.fn()
 vi.mock('../../hooks/useMissions', () => ({
   useMissions: () => ({
     missions: [],

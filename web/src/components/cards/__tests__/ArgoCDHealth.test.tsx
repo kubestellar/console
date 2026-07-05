@@ -4,8 +4,6 @@ import { render, screen } from '@testing-library/react'
 import { ArgoCDHealth } from '../ArgoCDHealth'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 vi.mock('../../../hooks/useArgoCD', () => ({
   useArgoCDHealth: vi.fn(() => ({
     stats: { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 },

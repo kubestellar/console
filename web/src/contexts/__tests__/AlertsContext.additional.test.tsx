@@ -75,7 +75,8 @@ vi.mock('../AlertsDataFetcher', () => {
     default: ({ onData }: { onData: (d: typeof mockMCPData) => void }) => {
       // Renamed to avoid react-hooks/rules-of-hooks violation
       function MockAlertsDataFetcher() {
-        useEffect(() => { onData(mockMCPData) }, [onData])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        useEffect(() => { onData(mockMCPData) }, [])
         return null
       }
       return <MockAlertsDataFetcher />
