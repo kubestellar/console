@@ -3,7 +3,8 @@ import { Star } from 'lucide-react'
 const DIFFICULTY_CONFIG = {
   beginner: { label: 'Beginner', color: 'text-green-400 bg-green-950', stars: 1 },
   intermediate: { label: 'Intermediate', color: 'text-yellow-600 dark:text-yellow-400 bg-yellow-500/10', stars: 2 },
-  advanced: { label: 'Advanced', color: 'text-red-400 bg-red-950', stars: 3 } } as const
+  advanced: { label: 'Advanced', color: 'text-red-400 bg-red-950', stars: 3 },
+} as const
 
 export function DifficultyBadge({ difficulty }: { difficulty: 'beginner' | 'intermediate' | 'advanced' }) {
   const config = DIFFICULTY_CONFIG[difficulty]
