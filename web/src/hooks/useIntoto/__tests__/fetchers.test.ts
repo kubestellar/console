@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../../../lib/kubectlProxy', () => ({
@@ -151,7 +152,7 @@ describe('saveToCache', () => {
 
   it('does not throw when localStorage is full', () => {
     // Simulate quota exceeded by filling up storage
-    const originalSetItem = localStorage.setItem.bind(localStorage)
+    const _originalSetItem = localStorage.setItem.bind(localStorage)
     vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new DOMException('QuotaExceededError', 'QuotaExceededError')
     })
