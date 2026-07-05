@@ -199,11 +199,18 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
 
         <div>
           <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.layoutLabel')}</label>
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="group" aria-label={t('dashboard.cardFactory.layoutLabel')}>
             {(['list', 'stats', 'stats-and-list'] as const).map(l => (
               <button
                 key={l}
                 onClick={() => setT1Layout(l)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setT1Layout(l)
+                  }
+                }}
+                aria-pressed={t1Layout === l}
                 className={cn(
                   'px-3 py-1.5 rounded-lg text-xs transition-colors',
                   t1Layout === l
