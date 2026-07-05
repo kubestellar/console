@@ -20,7 +20,9 @@ import {
   SortField,
   SortOrder,
   VIEW_MODE_KEY,
-  TYPE_LABELS
+  TYPE_LABELS,
+  ISSUES_URL,
+  CONTRIBUTE_URL
 } from './marketplaceConstants'
 
 const filterBtnClass = (active: boolean) =>
