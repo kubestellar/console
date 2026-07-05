@@ -61,12 +61,17 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "XXL",
+    "best_pr_size": "XL",
     "size_acceptance": {},
     "type_acceptance": {},
-    "common_rejection_reasons": [],
+    "common_rejection_reasons": [
+      "- PR #20303: ## Scanner Pass Summary — 2026-07-04 5:59 PM ET",
+      "### CI Repair",
+      "- PR #20211: Closing — superseded by #20216 which covers all 77 E2E test spec files (including the 6 files fixed here).",
+      "- PR #20185: 👋 Hey @clubanderson — thanks for opening this PR!"
+    ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-06-14"
+    "last_report_date": "2026-07-05"
   },
   "cncf_insights": {
     "last_scan_date": "2026-06-17",

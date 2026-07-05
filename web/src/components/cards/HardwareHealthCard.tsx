@@ -225,7 +225,6 @@ export function HardwareHealthCard() {
     const validFields = (viewMode === 'alerts' ? ALERTS_SORT_OPTIONS : INVENTORY_SORT_OPTIONS).map(o => o.value)
     // If current sort field is not valid for the new view, reset to default
     if (!validFields.includes(sortField)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronizes sort state when the active tab changes
       setSortField(defaultSort)
     }
   }, [viewMode]) // eslint-disable-line react-hooks/exhaustive-deps -- intentionally only reacts to viewMode changes
@@ -271,7 +270,6 @@ export function HardwareHealthCard() {
 
   // Reset page when filters or view mode change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- keeps pagination aligned with the active filters
     setCurrentPage(1)
   }, [search, localClusterFilter, sortField, viewMode])
 
@@ -370,7 +368,6 @@ export function HardwareHealthCard() {
   // Only depend on currentTotalPages — including currentPage risks infinite loop.
   useEffect(() => {
     if (currentTotalPages > 0 && currentPage > currentTotalPages) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clamps page after list size changes
       setCurrentPage(currentTotalPages)
     }
   }, [currentTotalPages]) // eslint-disable-line react-hooks/exhaustive-deps
