@@ -5,8 +5,8 @@ import {
   getModalDefinition,
   getAllModalDefinitions,
   registerSectionRenderer,
-  parseModalYAML,
 } from '../ModalRuntime'
+import { parseModalYAML } from '../parseModalYAML'
 import type { ModalDefinition } from '../types'
 
 /**
