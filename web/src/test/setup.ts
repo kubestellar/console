@@ -95,6 +95,30 @@ if (isBrowserEnvironment) {
   }))
 
 
+  // Global mock for lib/api — provides ALL exports so that coverage.all
+  // force-imports (and transitive imports in any test) never hit the error:
+  //   "No authFetch export is defined on the mock"
+  // Individual test files that vi.mock('lib/api') with their own factory will
+  // override this entirely; this is only a safety-net default. (#20382)
+  vi.mock('../lib/api', () => ({
+    authFetch: vi.fn(() => Promise.resolve(new Response('{}', { status: 200 }))),
+    safeJson: vi.fn((r: Response) => r.json()),
+    api: {
+      get: vi.fn().mockResolvedValue({ data: {} }),
+      post: vi.fn().mockResolvedValue({ data: {} }),
+      put: vi.fn().mockResolvedValue({ data: {} }),
+      delete: vi.fn().mockResolvedValue({ data: {} }),
+    },
+    checkBackendAvailability: vi.fn(() => Promise.resolve(true)),
+    checkOAuthConfiguredWithRetry: vi.fn(() => Promise.resolve({ backendUp: true, oauthConfigured: true })),
+    checkOAuthConfigured: vi.fn(() => Promise.resolve({ backendUp: true, oauthConfigured: true })),
+    isBackendUnavailable: vi.fn(() => false),
+    UnauthenticatedError: class UnauthenticatedError extends Error { constructor(m?: string) { super(m ?? 'Unauthenticated') } },
+    UnauthorizedError: class UnauthorizedError extends Error { constructor(m?: string) { super(m ?? 'Unauthorized') } },
+    RateLimitError: class RateLimitError extends Error { constructor(m?: string) { super(m ?? 'Rate limited') } },
+    BackendUnavailableError: class BackendUnavailableError extends Error { constructor(m?: string) { super(m ?? 'Backend unavailable') } },
+  }))
+
   // Mock agentFetch wrappers to delegate to global.fetch so test mocks intercept
   // both the legacy shared wrapper and the direct mcp/agentFetch module imports.
   vi.mock('../hooks/mcp/shared', async (importOriginal) => {

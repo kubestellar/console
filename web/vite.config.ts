@@ -324,6 +324,12 @@ export default defineConfig(({ mode }) => ({
     // above handles worker termination timeout.
     coverage: {
       provider: 'v8',
+      // Disable coverage.all to prevent force-importing source files that trigger
+      // mock validation errors in sharded runs. When all:true (Vitest default),
+      // every file matching `include` is imported for coverage measurement — if a
+      // test mocks lib/api without all exports, the force-import of a file that
+      // uses authFetch throws "No export is defined on the mock". (#20382)
+      all: false,
       reporter: ['text', 'json', 'json-summary', 'html'],
       include: [
         'src/hooks/**',
