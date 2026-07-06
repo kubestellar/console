@@ -226,16 +226,13 @@ afterEach(() => {
     window.sessionStorage?.clear()
   }
   vi.unstubAllEnvs()
+  vi.unstubAllGlobals()  // Clear global stubs to prevent cross-test contamination when isolate:false (#20007)
   vi.clearAllMocks()
 })
 
-// Clear global stubs after every test file.
-// In vitest 4.x with pool:'forks'/isolate:false and maxWorkers:1 (CI), all test
-// files in a shard share one worker process, so vi.stubGlobal() calls in one
-// file's beforeAll leak into subsequent files.
-// afterAll in setupFiles runs once per worker (end of shard), not once per file,
-// so this only partially mitigates contamination — see issue #20256 for the
-// full architectural fix (pool:'forks', isolate:true).
+// Clear global stubs at end of worker (belt-and-suspenders cleanup).
+// The primary cleanup now happens in afterEach above, which runs after every test
+// regardless of isolate setting. This afterAll serves as a final safeguard at worker shutdown.
 afterAll(() => {
   vi.unstubAllGlobals()
 })
