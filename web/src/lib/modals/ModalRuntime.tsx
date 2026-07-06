@@ -376,6 +376,7 @@ export function ModalRuntime({
                   onClick={() => handleAction(action)}
                   disabled={action.disabled}
                   title={action.description}
+                  aria-label={action.description || action.label}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     variantStyles[action.variant || 'default']
                   } disabled:opacity-50 disabled:cursor-not-allowed`}

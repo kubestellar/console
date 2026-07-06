@@ -133,6 +133,7 @@ function KeyValueItem({
           return (
             <button
               onClick={() => onNavigate(item.linkTo!)}
+              aria-label={`Navigate to ${String(value)}`}
               className="text-purple-400 hover:text-purple-300 hover:underline flex items-center gap-1"
             >
               {String(value)}
