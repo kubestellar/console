@@ -226,7 +226,7 @@ afterEach(() => {
     window.sessionStorage?.clear()
   }
   vi.unstubAllEnvs()
-  vi.unstubAllGlobals() // Prevent cross-test contamination when isolate:false in CI (#20007)
+  vi.restoreAllMocks() // Restore mocks but preserve global stubs (e.g., localStorage) (#20007)
   vi.clearAllMocks()
 })
 
