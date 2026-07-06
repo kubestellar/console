@@ -21292,5 +21292,82 @@
     "line": 132,
     "column": 42,
     "message": "Parsing error: Invalid character."
+  },
+  {
+    "file": "src/lib/insights/__tests__/analysis.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 90,
+    "column": 57,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/lib/insights/__tests__/analysis.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 207,
+    "column": 101,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/lib/insights/__tests__/analysis.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 214,
+    "column": 10,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/lib/insights/__tests__/analysis.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 222,
+    "column": 10,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/lib/insights/__tests__/analysis.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 233,
+    "column": 10,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/lib/insights/__tests__/analysis.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 242,
+    "column": 10,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/lib/insights/__tests__/analysis.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 256,
+    "column": 10,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/lib/insights/__tests__/analysis.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 264,
+    "column": 10,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/lib/insights/__tests__/analysis.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 277,
+    "column": 10,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/lib/insights/__tests__/analysis.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 378,
+    "column": 10,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/lib/insights/__tests__/analysis.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 399,
+    "column": 12,
+    "message": "Unexpected any. Specify a different type."
   }
 ]
