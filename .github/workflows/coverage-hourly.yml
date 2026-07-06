@@ -64,8 +64,9 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=6144'
         run: |
           npx vitest run --coverage --coverage.reportOnFailure \
-            --reporter=default --reporter=json \
+            --reporter=verbose --reporter=json \
             --outputFile.json=test-results.json \
+            --pool=threads \
             --shard=${{ matrix.shard }}/${{ env.TOTAL_SHARDS }} || true
 
           # Extract failed test names for the issue body
