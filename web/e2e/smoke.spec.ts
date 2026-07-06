@@ -175,21 +175,21 @@ test.describe('Smoke Tests', () => {
           await hamburger.evaluate((el) => (el as HTMLElement).click())
           await expect(sidebar).toBeVisible({ timeout: 3000 })
           // Mobile sidebar animation: wait for Settings link to become visible after sidebar opens.
-          // Fixes #20086, #20087 — sidebar container visible but links still hidden mid-animation.
-          await expect(settingsLink).toBeVisible({ timeout: 5000 })
+          // Fixes #20086, #20087, #20388 — sidebar container visible but links still hidden mid-animation.
+          await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
+          await expect(settingsLink).toBeVisible({ timeout: 10000 })
+          await page.waitForTimeout(500)
+          await settingsLink.waitFor({ state: 'visible', timeout: 5000 })
+          await settingsLink.click({ force: true })
         }
+      } else {
+        // Desktop: sidebar always visible, just wait for link to be ready.
+        await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
+        await expect(settingsLink).toBeVisible({ timeout: 45000 })
+        await page.waitForTimeout(500)
+        await settingsLink.waitFor({ state: 'visible', timeout: 10000 })
+        await settingsLink.click({ force: true })
       }
-
-      // WebKit/mobile browsers need more time for sidebar elements to hydrate.
-      // Wait for both the element to exist AND become actionable (no visibility:hidden).
-      // The sidebar slide-in animation can leave elements in a "found but hidden" state.
-      await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
-      await expect(settingsLink).toBeVisible({ timeout: 45000 })
-      // Extra stability wait for webkit/safari where elements can be "visible" but
-      // still mid-transition. Wait for DOM to fully settle after animation.
-      await page.waitForTimeout(500)
-      await settingsLink.waitFor({ state: 'visible', timeout: 10000 })
-      await settingsLink.click({ force: true })
 
       await expect(page).toHaveURL(/\/settings(?:[?#].*)?$/, { timeout: 10000 })
       await expect(page.locator('[data-testid="settings-page"] [data-testid="settings-title"]').first()).toBeVisible({ timeout: 15000 })
