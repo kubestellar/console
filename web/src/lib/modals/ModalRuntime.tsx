@@ -421,9 +421,9 @@ export function ModalRuntime({
 // YAML Parser (future implementation)
 // ============================================================================
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function parseModalYAML(_yaml: string): ModalDefinition {
   // YAML parsing intentionally not implemented - use registerModal() with JS objects
   // If YAML config becomes a requirement, add js-yaml library and implement parser here
   throw new Error('YAML parsing not yet implemented. Use registerModal() with JS objects.')
 }
-
