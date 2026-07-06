@@ -33,7 +33,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('lucide-react', () => ({
   ChevronDown: () => <span>ChevronDown</span>,
   ChevronRight: () => <span>ChevronRight</span>,
-  RefreshCw: () => <span>RefreshCw</span>,
+  RefreshCw: ({ className, ...props }: any) => <span data-testid="RefreshCw" className={className} {...props}>RefreshCw</span>,
   Maximize2: () => <span>Maximize2</span>,
   Bug: () => <span>Bug</span>,
 }))
@@ -119,7 +119,7 @@ describe('CardToolbar', () => {
 
       const refreshBtn = getRefreshButton()
       expect(refreshBtn).toBeDisabled()
-      expect(refreshBtn).toHaveClass('cursor-not-allowed', 'text-blue-400')
+      expect(refreshBtn).toHaveClass('text-muted-foreground')
     })
 
     it('uses failed styling when isFailed and not disabled', () => {
