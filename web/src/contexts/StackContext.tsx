@@ -213,7 +213,7 @@ export function StackProvider({ children }: StackProviderProps) {
   // Stable no-op for demo mode so refetch identity doesn't change every render
   const demoRefetch = useCallback(() => {}, [])
   const refetch = isDemoMode ? demoRefetch : liveRefetch
-  const lastRefresh = isDemoMode ? new Date() : liveLastRefresh
+  const lastRefresh = useMemo(() => isDemoMode ? new Date() : liveLastRefresh, [isDemoMode, liveLastRefresh])
 
   const [selectedStackId, setSelectedStackIdState] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -293,4 +293,5 @@ export function StackProvider({ children }: StackProviderProps) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { useStack, useOptionalStack }
