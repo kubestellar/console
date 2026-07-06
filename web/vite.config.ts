@@ -319,9 +319,9 @@ export default defineConfig(({ mode }) => ({
     // isolate: true ensures each test file runs in its own subprocess with a clean global environment,
     // preventing vi.stubGlobal() cross-contamination between files (#20256)
     isolate: true,
-    // poolOptions.forks removed — deprecated in Vitest 4 (#5860).
-    // maxWorkers/minWorkers above handle fork limits; teardownTimeout
-    // above handles worker termination timeout.
+    // CI: use threads pool instead of forks to prevent OOM from subprocess spawn storm (#20007)
+    // Threads share memory, no fork overhead. Local dev uses default (forks) for stronger isolation.
+    pool: process.env.CI ? 'threads' : undefined,
     coverage: {
       provider: 'v8',
       // Disable coverage.all to prevent force-importing source files that trigger

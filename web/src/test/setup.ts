@@ -226,6 +226,7 @@ afterEach(() => {
     window.sessionStorage?.clear()
   }
   vi.unstubAllEnvs()
+  vi.restoreAllMocks() // Restore mocks but preserve global stubs (e.g., localStorage) (#20007)
   vi.clearAllMocks()
 })
 
@@ -233,9 +234,8 @@ afterEach(() => {
 // In vitest 4.x with pool:'forks'/isolate:false and maxWorkers:1 (CI), all test
 // files in a shard share one worker process, so vi.stubGlobal() calls in one
 // file's beforeAll leak into subsequent files.
-// afterAll in setupFiles runs once per worker (end of shard), not once per file,
-// so this only partially mitigates contamination — see issue #20256 for the
-// full architectural fix (pool:'forks', isolate:true).
+// afterAll in setupFiles runs once per worker (end of shard), not once per file.
+// Belt-and-suspenders: primary cleanup now happens in afterEach above (#20007).
 afterAll(() => {
   vi.unstubAllGlobals()
 })
