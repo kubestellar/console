@@ -11,8 +11,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('lucide-react', () => ({
-  Check: (props: Record<string, unknown>) => <span data-testid="check-icon" {...props} />,
-  Search: (props: Record<string, unknown>) => <span data-testid="search-icon" {...props} />,
+  Check: () => <span data-testid="check-icon" />,
+  Search: () => <span data-testid="search-icon" />,
 }))
 
 vi.mock('../../../../../lib/formatCardTitle', () => ({
@@ -20,7 +20,7 @@ vi.mock('../../../../../lib/formatCardTitle', () => ({
 }))
 
 vi.mock('../../../../../lib/icons', () => ({
-  getIcon: () => (props: Record<string, unknown>) => <span data-testid="cat-icon" {...props} />,
+  getIcon: () => () => <span data-testid="cat-icon" />,
 }))
 
 vi.mock('../../../templates', () => ({
