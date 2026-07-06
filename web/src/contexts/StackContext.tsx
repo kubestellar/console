@@ -12,6 +12,7 @@ import { useStackDiscovery, type LLMdStack, type LLMdStackComponent } from '../h
 import { useDemoMode } from '../hooks/useDemoMode'
 import { useClusters } from '../hooks/mcp/clusters'
 import { createStateContext } from './createStateContext'
+import { safeGetItem, safeSetItem, safeRemoveItem } from '../lib/utils/localStorage'
 
 const STORAGE_KEY = 'kubestellar-llmd-stack'
 
@@ -212,11 +213,11 @@ export function StackProvider({ children }: StackProviderProps) {
   // Stable no-op for demo mode so refetch identity doesn't change every render
   const demoRefetch = useCallback(() => {}, [])
   const refetch = isDemoMode ? demoRefetch : liveRefetch
-  const lastRefresh = isDemoMode ? new Date() : liveLastRefresh
+  const lastRefresh = useMemo(() => isDemoMode ? new Date() : liveLastRefresh, [isDemoMode, liveLastRefresh])
 
   const [selectedStackId, setSelectedStackIdState] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem(STORAGE_KEY)
+      return safeGetItem(STORAGE_KEY)
     }
     return null
   })
@@ -226,9 +227,9 @@ export function StackProvider({ children }: StackProviderProps) {
     setSelectedStackIdState(id)
     if (typeof window !== 'undefined') {
       if (id) {
-        localStorage.setItem(STORAGE_KEY, id)
+        safeSetItem(STORAGE_KEY, id)
       } else {
-        localStorage.removeItem(STORAGE_KEY)
+        safeRemoveItem(STORAGE_KEY)
       }
     }
   }, [])
@@ -292,4 +293,5 @@ export function StackProvider({ children }: StackProviderProps) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { useStack, useOptionalStack }
