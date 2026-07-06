@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+import type { ClusterInfo } from '@/hooks/useMCP'
 import type {
   PodItem,
   DeploymentItem,
@@ -21,9 +22,6 @@ import {
   ResourceColors,
   ChangeAnimations,
   MAX_NAMESPACES_RENDERED_PER_CLUSTER,
-  MAX_VISIBLE_ITEMS,
-  MAX_RECENT_CHANGES,
-  MAX_VISIBLE_CHANGES,
   RECENT_CHANGE_WINDOW_MS,
   EMPTY_NAMESPACE_DATA,
 } from '../NamespaceMonitor.utils'
@@ -67,12 +65,12 @@ describe('NamespaceMonitor constants', () => {
 // ─── getFilteredClusters ─────────────────────────────────────────────────────
 
 describe('getFilteredClusters', () => {
-  const clusters = [
-    { name: 'prod-us-east', reachable: true },
-    { name: 'prod-eu-west', reachable: true },
-    { name: 'staging', reachable: false },
-    { name: 'dev-local', reachable: true },
-  ] as any[]
+  const clusters: ClusterInfo[] = [
+    { name: 'prod-us-east', context: 'prod-us-east', reachable: true },
+    { name: 'prod-eu-west', context: 'prod-eu-west', reachable: true },
+    { name: 'staging', context: 'staging', reachable: false },
+    { name: 'dev-local', context: 'dev-local', reachable: true },
+  ]
 
   it('filters out unreachable clusters', () => {
     const result = getFilteredClusters({
@@ -82,7 +80,7 @@ describe('getFilteredClusters', () => {
       searchFilter: '',
     })
     expect(result).toHaveLength(3)
-    expect(result.map((c: any) => c.name)).not.toContain('staging')
+    expect(result.map((c) => c.name)).not.toContain('staging')
   })
 
   it('filters by selectedClusters when not all selected', () => {
@@ -108,7 +106,7 @@ describe('getFilteredClusters', () => {
 
   it('returns empty array for null/undefined clusters', () => {
     const result = getFilteredClusters({
-      clusters: undefined as any,
+      clusters: undefined as unknown as ClusterInfo[],
       selectedClusters: [],
       isAllClustersSelected: true,
       searchFilter: '',
@@ -406,7 +404,7 @@ describe('getResourceChange', () => {
   })
 
   it('handles null/undefined recentChanges', () => {
-    const result = getResourceChange(undefined as any, 'c1', 'ns', 'pods', 'pod-1')
+    const result = getResourceChange(undefined as unknown as ResourceChange[], 'c1', 'ns', 'pods', 'pod-1')
     expect(result).toBeNull()
   })
 
@@ -459,7 +457,7 @@ describe('getChangeCountsByType', () => {
   })
 
   it('handles null/undefined input', () => {
-    const result = getChangeCountsByType(undefined as any)
+    const result = getChangeCountsByType(undefined as unknown as ResourceChange[])
     expect(result).toEqual({ added: 0, modified: 0, deleted: 0, error: 0 })
   })
 })
