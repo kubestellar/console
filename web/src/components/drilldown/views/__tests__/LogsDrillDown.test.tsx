@@ -55,7 +55,6 @@ async function loadLogsDrillDown() {
 afterEach(() => {
   vi.restoreAllMocks()
   vi.doUnmock('react')
-  vi.resetModules()
 })
 
 describe('LogsDrillDown', () => {

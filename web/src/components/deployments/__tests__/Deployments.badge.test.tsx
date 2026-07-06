@@ -75,7 +75,6 @@ describe('Deployments critical issues badge (#15906)', () => {
     capturedGetStatValue = null
     mockDeployments = []
     mockDeploymentIssues = []
-    vi.resetModules()
   })
 
   it('critical stat value is 0 when there are no deployment issues', async () => {
