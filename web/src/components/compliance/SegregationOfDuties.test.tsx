@@ -2,10 +2,15 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { SegregationOfDutiesContent as SegregationOfDuties } from './SegregationOfDuties'
+import * as apiModule from '../../lib/api'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
+
+vi.mock('../../lib/api', () => ({
+  authFetch: vi.fn(),
 }))
 
 const mockSummary = {
@@ -26,7 +31,8 @@ const mockViolations = [
 ]
 
 function mockFetchSuccess() {
-  vi.spyOn(globalThis, 'fetch').mockImplementation((url: RequestInfo | URL) => {
+  const mockAuthFetch = apiModule.authFetch as ReturnType<typeof vi.fn>
+  mockAuthFetch.mockImplementation((url: RequestInfo | URL) => {
     const u = typeof url === 'string' ? url : url.toString()
     if (u.includes('/summary')) return Promise.resolve(new Response(JSON.stringify(mockSummary)))
     if (u.includes('/rules')) return Promise.resolve(new Response(JSON.stringify(mockRules)))
@@ -40,7 +46,8 @@ describe('SegregationOfDuties', () => {
   beforeEach(() => { vi.restoreAllMocks() })
 
   it('shows loading state before SoD endpoints resolve', () => {
-    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}) as Promise<Response>)
+    const mockAuthFetch = apiModule.authFetch as ReturnType<typeof vi.fn>
+    mockAuthFetch.mockReturnValue(new Promise(() => {}) as Promise<Response>)
     render(<SegregationOfDuties />)
 
     expect(document.querySelector('.animate-spin')).toBeTruthy()
@@ -66,7 +73,8 @@ describe('SegregationOfDuties', () => {
   })
 
   it('shows error on failure', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'))
+    const mockAuthFetch = apiModule.authFetch as ReturnType<typeof vi.fn>
+    mockAuthFetch.mockRejectedValue(new Error('Network error'))
     render(<SegregationOfDuties />)
     await waitFor(() => {
       expect(screen.getByText('Network error')).toBeInTheDocument()
