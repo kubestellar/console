@@ -33,7 +33,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('lucide-react', () => ({
   ChevronDown: () => <span>ChevronDown</span>,
   ChevronRight: () => <span>ChevronRight</span>,
-  RefreshCw: ({ className, ...props }: any) => <span data-testid="RefreshCw" className={className} {...props}>RefreshCw</span>,
+  RefreshCw: ({ className, ...props }: unknown) => <span data-testid="RefreshCw" className={className as string} {...(props as object)}>RefreshCw</span>,
   Maximize2: () => <span>Maximize2</span>,
   Bug: () => <span>Bug</span>,
 }))
