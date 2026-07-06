@@ -230,9 +230,9 @@ describe('deriveImportance', () => {
 
   it('returns correct labels based on score thresholds', () => {
     const recent = new Date().toISOString()
-    expect(deriveImportance({ severity: 'info', createdAt: recent } as any, 0).label).toBe('low')
-    expect(deriveImportance({ severity: 'warning', createdAt: recent } as any, 0).label).toBe('low')
-    expect(deriveImportance({ severity: 'critical', createdAt: recent } as any, 0).label).toBe('medium')
+    expect(deriveImportance({ severity: 'info', createdAt: recent } as unknown as StellarNotification, 0).label).toBe('low')
+    expect(deriveImportance({ severity: 'warning', createdAt: recent } as unknown as StellarNotification, 0).label).toBe('low')
+    expect(deriveImportance({ severity: 'critical', createdAt: recent } as unknown as StellarNotification, 0).label).toBe('medium')
   })
 })
 
@@ -264,7 +264,7 @@ describe('countSolveAttempts', () => {
       { id: 's1', cluster: 'east', namespace: 'prod', workload: 'api-server', status: 'resolved', startedAt: '2025-01-01T00:00:00Z', eventId: 'x' },
       { id: 's2', cluster: 'east', namespace: 'prod', workload: 'api-server', status: 'running', startedAt: '2025-01-02T00:00:00Z', eventId: 'y' },
       { id: 's3', cluster: 'west', namespace: 'prod', workload: 'api-server', status: 'resolved', startedAt: '2025-01-01T00:00:00Z', eventId: 'z' },
-    ] as any
+    ] as unknown as StellarSolve[]
     expect(countSolveAttempts(notif, solves)).toBe(2)
   })
 })
@@ -281,8 +281,8 @@ describe('getSolveStatus', () => {
 
   it('returns live progress when available by event id', () => {
     const notif = { id: 'n1', cluster: 'a', namespace: 'ns', title: 'x', dedupeKey: '' }
-    const progress = { n1: { step: 'investigating', message: 'Reading logs', solveId: 's1' } }
-    const result = getSolveStatus(notif, [], progress as any)
+    const progress = { n1: { step: 'investigating', message: 'Reading logs', solveId: 's1' } } as unknown as Parameters<typeof getSolveStatus>[2]
+    const result = getSolveStatus(notif, [], progress)
     expect(result).not.toBeNull()
     expect(result!.phase).toBe('investigating')
     expect(result!.isActive).toBe(true)
@@ -290,7 +290,7 @@ describe('getSolveStatus', () => {
 
   it('returns resolved status from direct solve match', () => {
     const notif = { id: 'n1', cluster: 'a', namespace: 'ns', title: 'x', dedupeKey: '' }
-    const solves = [{ id: 's1', eventId: 'n1', cluster: 'a', namespace: 'ns', workload: 'x', status: 'resolved', startedAt: new Date().toISOString() }] as any
+    const solves = [{ id: 's1', eventId: 'n1', cluster: 'a', namespace: 'ns', workload: 'x', status: 'resolved', startedAt: new Date().toISOString() }] as unknown as StellarSolve[]
     const result = getSolveStatus(notif, solves, {})
     expect(result!.phase).toBe('resolved')
     expect(result!.isActive).toBe(false)
@@ -298,7 +298,7 @@ describe('getSolveStatus', () => {
   })
 
   it('handles string notification id (back-compat)', () => {
-    const solves = [{ id: 's1', eventId: 'n1', status: 'escalated', startedAt: new Date().toISOString(), cluster: '', namespace: '', workload: '' }] as any
+    const solves = [{ id: 's1', eventId: 'n1', status: 'escalated', startedAt: new Date().toISOString(), cluster: '', namespace: '', workload: '' }] as unknown as StellarSolve[]
     const result = getSolveStatus('n1', solves, {})
     expect(result!.phase).toBe('escalated')
   })
@@ -321,7 +321,7 @@ describe('getWatchAttemptSummary', () => {
       { cluster: 'a', namespace: 'ns', workload: 'web', status: 'resolved', startedAt: now.toISOString() },
       { cluster: 'a', namespace: 'ns', workload: 'web', status: 'escalated', startedAt: now.toISOString() },
       { cluster: 'a', namespace: 'ns', workload: 'web', status: 'exhausted', startedAt: now.toISOString() },
-    ] as any
+    ] as unknown as StellarSolve[]
     const result = getWatchAttemptSummary(watch, solves)
     expect(result).not.toBeNull()
     expect(result!.total).toBe(3)
@@ -334,7 +334,7 @@ describe('getWatchAttemptSummary', () => {
     const watch = { cluster: 'east', namespace: 'ns', resourceName: 'web' } as StellarWatch
     const solves = [
       { cluster: 'west', namespace: 'ns', workload: 'web', status: 'resolved', startedAt: new Date().toISOString() },
-    ] as any
+    ] as unknown as StellarSolve[]
     expect(getWatchAttemptSummary(watch, solves)).toBeNull()
   })
 })
