@@ -42,7 +42,7 @@ export const InstallStepCard = memo(function InstallStepCard({
         </div>
         {step.commands && (
           <div className="relative mb-3">
-            <pre className="p-4 rounded-lg bg-slate-950 text-slate-300 text-sm font-mono overflow-x-auto">
+            <pre className="p-4 rounded-lg bg-slate-950 text-slate-200 text-sm font-mono overflow-x-auto">
               {(step.commands || []).join('\n')}
             </pre>
             <button
