@@ -22,8 +22,8 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import {
   ModalRuntime,
   registerSectionRenderer,
+  parseModalYAML,
 } from '../ModalRuntime'
-import { parseModalYAML } from '../parseModalYAML'
 import type {
   ModalDefinition,
   ModalActionDefinition,

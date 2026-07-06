@@ -5,9 +5,8 @@ export {
   getModalDefinition,
   getAllModalDefinitions,
   registerSectionRenderer,
+  parseModalYAML,
 } from './ModalRuntime'
-
-export { parseModalYAML } from './parseModalYAML'
 
 // Base Modal (compound component)
 export { BaseModal } from './BaseModal'
