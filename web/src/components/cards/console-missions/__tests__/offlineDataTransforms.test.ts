@@ -293,7 +293,7 @@ describe('buildPredictionItems', () => {
       reasonDetailed: 'Pod restarted 5 times in 1h', metric: 'restarts',
       type: 'pod-crash', confidence: 0.8,
     }]
-    const items = buildPredictionItems(risks as any)
+    const items = buildPredictionItems(risks as unknown)
     expect(items).toHaveLength(1)
     expect(items[0].category).toBe('prediction')
     expect(items[0].id).toBe('risk-1')
@@ -305,7 +305,7 @@ describe('buildPredictionItems', () => {
       id: 'r1', name: 'x', severity: 'info' as const,
       reason: 'test', type: 'other', confidence: 0.5,
     }]
-    expect(buildPredictionItems(risks as any)[0].cluster).toBe('unknown')
+    expect(buildPredictionItems(risks as unknown)[0].cluster).toBe('unknown')
   })
 })
 
@@ -361,7 +361,7 @@ describe('buildRootCauseGroups', () => {
   it('groups prediction items by risk type', () => {
     const items: UnifiedItem[] = [
       { id: 'p1', category: 'prediction', name: 'pod-x', cluster: 'a', severity: 'warning', reason: 'crash risk',
-        predictionData: { id: 'p1', name: 'pod-x', type: 'pod-crash', severity: 'warning', reason: 'high restarts', confidence: 0.9 } as any },
+        predictionData: { id: 'p1', name: 'pod-x', type: 'pod-crash', severity: 'warning', reason: 'high restarts', confidence: 0.9 } as unknown },
     ]
     const groups = buildRootCauseGroups(items, severityOrder)
     expect(groups[0].cause).toBe('Pod crash risk')
@@ -370,7 +370,7 @@ describe('buildRootCauseGroups', () => {
   it('groups resource-exhaustion predictions by metric', () => {
     const items: UnifiedItem[] = [
       { id: 'r1', category: 'prediction', name: 'cluster-x', cluster: 'a', severity: 'warning', reason: 'cpu high',
-        predictionData: { id: 'r1', name: 'cluster-x', type: 'resource-exhaustion', metric: 'cpu', severity: 'warning', reason: 'cpu high', confidence: 0.8 } as any },
+        predictionData: { id: 'r1', name: 'cluster-x', type: 'resource-exhaustion', metric: 'cpu', severity: 'warning', reason: 'cpu high', confidence: 0.8 } as unknown },
     ]
     const groups = buildRootCauseGroups(items, severityOrder)
     expect(groups[0].cause).toBe('CPU pressure')
