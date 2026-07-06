@@ -399,7 +399,7 @@ export function useMissions() {
   const context = useContext(MissionContext)
   if (!context) {
     if (import.meta.env.DEV) {
-      logger.warn('useMissions was called outside MissionProvider — returning safe fallback')
+      console.warn('useMissions was called outside MissionProvider — returning safe fallback')
     }
     return MISSIONS_FALLBACK
   }
