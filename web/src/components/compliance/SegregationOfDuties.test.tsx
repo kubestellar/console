@@ -1,5 +1,5 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { SegregationOfDutiesContent as SegregationOfDuties } from './SegregationOfDuties'
 
@@ -37,7 +37,15 @@ function mockFetchSuccess() {
 }
 
 describe('SegregationOfDuties', () => {
-  beforeEach(() => { vi.restoreAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.restoreAllMocks()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
 
   it('shows loading state before SoD endpoints resolve', () => {
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}) as Promise<Response>)

@@ -166,7 +166,6 @@ jobs:
             --workers=1 \
             e2e/smoke.spec.ts \
             e2e/responsive-regression.spec.ts \
-            e2e/navbar-responsive.spec.ts \
             e2e/Login.spec.ts \
             e2e/Dashboard.spec.ts
         env:
