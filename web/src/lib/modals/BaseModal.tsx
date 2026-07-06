@@ -192,7 +192,7 @@ export function BaseModal({
           onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation() }}
         >
           <ModalTitleIdContext.Provider value={titleId}>
             <ModalEscapeContext.Provider value={escapeContextValue}>
