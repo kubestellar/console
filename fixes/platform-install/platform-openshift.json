@@ -1,0 +1,183 @@
+{
+  "version": "kc-mission-v1",
+  "name": "platform-openshift",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Red Hat OpenShift Container Platform (OCP)",
+    "description": "Red Hat OpenShift Container Platform (OCP) is an enterprise Kubernetes distribution that provides a developer-friendly platform for building, deploying, and managing containerized applications. It includes additional features such as a web console, integrated CI/CD, and enhanced security. Key trade-offs include the complexity of setup and management compared to vanilla Kubernetes, and licensing costs for enterprise support.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 30,
+    "steps": [
+      {
+        "title": "Install the OpenShift CLI",
+        "description": "This step installs the OpenShift command-line interface (CLI) which is essential for interacting with the OpenShift cluster.\n\n```bash\n\ncurl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux-4.17.0.tar.gz\n\ntar -xvf openshift-client-linux-4.17.0.tar.gz\n\nsudo mv oc kubectl /usr/local/bin/\n\n```\n\n> Download the OpenShift CLI for version 4.17.0.\n> Extract the downloaded tarball.\n> Move the binaries to a directory in your PATH.",
+        "commands": [
+          "curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux-4.17.0.tar.gz",
+          "tar -xvf openshift-client-linux-4.17.0.tar.gz",
+          "sudo mv oc kubectl /usr/local/bin/"
+        ]
+      },
+      {
+        "title": "Create an OpenShift cluster",
+        "description": "This command creates a new OpenShift cluster with the specified version and node count in a given region.\n\n```bash\n\nopenshift-install create cluster --dir=cluster --log-level=info\n\n```\n\n> Replace 'cluster' with your desired directory name.",
+        "commands": [
+          "openshift-install create cluster --dir=cluster --log-level=info"
+        ]
+      },
+      {
+        "title": "Configure kubeconfig",
+        "description": "This step sets up the kubeconfig file to allow kubectl and oc commands to interact with the new OpenShift cluster.\n\n```bash\n\nexport KUBECONFIG=$(pwd)/cluster/auth/kubeconfig\n\n```\n\n> Set the KUBECONFIG environment variable to point to the kubeconfig file.",
+        "commands": [
+          "export KUBECONFIG=$(pwd)/cluster/auth/kubeconfig"
+        ]
+      },
+      {
+        "title": "Verify cluster nodes",
+        "description": "This command checks the status of the nodes in the OpenShift cluster to ensure they are running correctly.\n\n```bash\n\noc get nodes\n\n```\n\n> You should see the nodes listed with a status of 'Ready'.",
+        "commands": [
+          "oc get nodes"
+        ]
+      },
+      {
+        "title": "Post-install configuration",
+        "description": "This step configures autoscaling and monitoring for your OpenShift cluster.\n\n```bash\n\noc apply -f https://raw.githubusercontent.com/openshift/cluster-autoscaler/master/deploy/cluster-autoscaler-operator.yaml\n\noc apply -f https://raw.githubusercontent.com/openshift/cluster-monitoring-operator/master/deploy/cluster-monitoring-operator.yaml\n\n```\n\n> Deploy the Cluster Autoscaler.\n> Deploy the Monitoring Operator.",
+        "commands": [
+          "oc apply -f https://raw.githubusercontent.com/openshift/cluster-autoscaler/master/deploy/cluster-autoscaler-operator.yaml",
+          "oc apply -f https://raw.githubusercontent.com/openshift/cluster-monitoring-operator/master/deploy/cluster-monitoring-operator.yaml"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Remove the OpenShift cluster",
+        "description": "This command will delete the OpenShift cluster and all associated resources, which may result in data loss.\n\n```bash\n\nopenshift-install destroy cluster --dir=cluster --log-level=info\n\n```\n\n> Replace 'cluster' with your cluster directory.",
+        "commands": [
+          "openshift-install destroy cluster --dir=cluster --log-level=info"
+        ]
+      },
+      {
+        "title": "Clean up orphaned resources",
+        "description": "This command will help to clean up any orphaned resources that may remain after cluster deletion.\n\n```bash\n\nkubectl delete pvc --all\n\nkubectl delete services --all\n\n```\n\n> Delete all persistent volume claims.\n> Delete all services.",
+        "commands": [
+          "kubectl delete pvc --all",
+          "kubectl delete services --all"
+        ]
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Upgrade the OpenShift cluster",
+        "description": "Before upgrading, ensure you back up your cluster and check for any deprecated APIs. This step performs the upgrade and verifies the cluster status post-upgrade.\n\n```bash\n\noc adm upgrade --to-image=<new-version-image>\n\noc get nodes\n\noc get clusterversion\n\n```\n\n> Replace <new-version-image> with the image of the new version.\n> Verify that all nodes are in 'Ready' state after the upgrade.\n> Check the cluster version to confirm the upgrade was successful.",
+        "commands": [
+          "oc adm upgrade --to-image=<new-version-image>",
+          "oc get nodes",
+          "oc get clusterversion"
+        ]
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Error: 'Unable to connect to the server: dial tcp <ip>:<port>: connect: connection refused'",
+        "description": "**Cause:** The OpenShift API server is not running or is unreachable.\n\n**Fix:**\nCheck the status of the API server pods using 'oc get pods -n openshift-apiserver'."
+      },
+      {
+        "title": "Error: 'Insufficient CPU resources available'",
+        "description": "**Cause:** The cluster does not have enough CPU resources to schedule new pods.\n\n**Fix:**\nScale up your cluster by adding more nodes or increasing the size of existing nodes."
+      },
+      {
+        "title": "Error: 'ImagePullBackOff'",
+        "description": "**Cause:** The specified container image cannot be pulled from the registry.\n\n**Fix:**\nVerify the image name and ensure the image is available in the specified registry."
+      },
+      {
+        "title": "Error: 'NodeNotReady'",
+        "description": "**Cause:** One or more nodes are not in a ready state due to various issues.\n\n**Fix:**\nCheck the node status with 'oc describe node <node-name>' for more details."
+      }
+    ],
+    "versionNotes": [
+      {
+        "version": "4.17",
+        "changes": "Introduced support for Kubernetes 1.30, enhanced security features, and improved monitoring capabilities.",
+        "deprecations": "Deprecated certain legacy APIs and features related to networking.",
+        "migrationSteps": "Review the deprecated features and update your configurations accordingly."
+      }
+    ],
+    "resolution": {
+      "summary": "You should see output from 'oc get nodes' showing all nodes in 'Ready' state, confirming that the OpenShift cluster is operational.",
+      "codeSnippets": [
+        "curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux-4.17.0.tar.gz",
+        "tar -xvf openshift-client-linux-4.17.0.tar.gz",
+        "sudo mv oc kubectl /usr/local/bin/",
+        "openshift-install create cluster --dir=cluster --log-level=info",
+        "export KUBECONFIG=$(pwd)/cluster/auth/kubeconfig",
+        "oc get nodes",
+        "oc apply -f https://raw.githubusercontent.com/openshift/cluster-autoscaler/master/deploy/cluster-autoscaler-operator.yaml",
+        "oc apply -f https://raw.githubusercontent.com/openshift/cluster-monitoring-operator/master/deploy/cluster-monitoring-operator.yaml"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "distribution",
+      "distribution",
+      "red-hat"
+    ],
+    "platform": "openshift",
+    "platformType": "distribution",
+    "platformProvider": "Red Hat",
+    "platformVersions": [
+      "4.14",
+      "4.15",
+      "4.16",
+      "4.17"
+    ],
+    "supportedK8sVersions": [
+      "1.27",
+      "1.28",
+      "1.29",
+      "1.30"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Namespace",
+      "Deployment",
+      "Service"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "cli"
+    ],
+    "containerImages": [
+      "registry.redhat.io/openshift4/ose-operator:v4.17"
+    ],
+    "sourceUrls": {
+      "docs": "https://docs.openshift.com/container-platform/latest/",
+      "repo": "https://github.com/openshift/origin"
+    },
+    "qualityScore": 96
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.27",
+    "tools": [
+      "kubectl",
+      "openshift-install"
+    ],
+    "cloudCLI": "oc >= 4.14",
+    "resources": "Minimum 4 vCPU, 16GB RAM per node",
+    "description": "Ensure you have the necessary tools and resources before starting the installation."
+  },
+  "security": {
+    "scannedAt": "2026-07-06T07:25:05.768Z",
+    "scannerVersion": "platform-install-gen-2.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

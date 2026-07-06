@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-06T00:58:04.384Z",
-  "count": 1625,
+  "generatedAt": "2026-07-06T07:28:12.728Z",
+  "count": 1626,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -31895,6 +31895,53 @@
       },
       "qualityIssues": [],
       "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/platform-install/platform-openshift.json",
+      "title": "Install and Configure Red Hat OpenShift Container Platform (OCP)",
+      "description": "Red Hat OpenShift Container Platform (OCP) is an enterprise Kubernetes distribution that provides a developer-friendly platform for building, deploying, and managing containerized applications. It inc",
+      "category": "platform-install",
+      "missionClass": "install",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "installation",
+        "configuration",
+        "distribution",
+        "distribution",
+        "red-hat"
+      ],
+      "cncfProjects": [],
+      "targetResourceKinds": [
+        "Namespace",
+        "Deployment",
+        "Service"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "installation",
+        "configuration"
+      ],
+      "type": "deploy",
+      "installMethods": [
+        "cli"
+      ],
+      "qualityScore": 96,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 70
+      },
+      "qualityIssues": [
+        "Missing expected output or log checks"
+      ],
+      "qualitySuggestions": [
+        "Include command outputs or log tailing instructions (e.g., kubectl get events/logs) to help users confirm success"
+      ]
     },
     {
       "path": "fixes/platform-install/platform-redis-operator.json",
