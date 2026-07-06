@@ -317,8 +317,10 @@ export default defineConfig(({ mode }) => ({
     maxWorkers: process.env.CI ? 1 : undefined,
     minWorkers: process.env.CI ? 1 : undefined,
     // isolate: true ensures each test file runs in its own subprocess with a clean global environment,
-    // preventing vi.stubGlobal() cross-contamination between files (#20256)
-    isolate: true,
+    // preventing vi.stubGlobal() cross-contamination between files (#20256).
+    // In CI, disable isolation to reduce memory overhead — with 2100+ test files and 1 worker,
+    // isolate:true spawns a new process per file, causing OOM on 7GB runners (#20007).
+    isolate: !process.env.CI,
     // poolOptions.forks removed — deprecated in Vitest 4 (#5860).
     // maxWorkers/minWorkers above handle fork limits; teardownTimeout
     // above handles worker termination timeout.
