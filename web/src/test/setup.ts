@@ -175,11 +175,12 @@ if (isBrowserEnvironment) {
     key: (index: number) => Object.keys(localStorageStore)[index] ?? null,
     get length() { return Object.keys(localStorageStore).length },
   }
-  Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true })
+  Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true, configurable: true })
 
   // Mock window.matchMedia
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
+    configurable: true,
     value: vi.fn().mockImplementation((query: string) => ({
       matches: false,
       media: query,
@@ -195,6 +196,7 @@ if (isBrowserEnvironment) {
   // Mock IntersectionObserver
   Object.defineProperty(globalThis, 'IntersectionObserver', {
     writable: true,
+    configurable: true,
     value: class IntersectionObserver {
       constructor() {}
       disconnect() {}
@@ -209,6 +211,7 @@ if (isBrowserEnvironment) {
   // Mock ResizeObserver
   Object.defineProperty(globalThis, 'ResizeObserver', {
     writable: true,
+    configurable: true,
     value: class ResizeObserver {
       constructor() {}
       disconnect() {}
