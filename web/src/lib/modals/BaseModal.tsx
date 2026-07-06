@@ -167,13 +167,6 @@ export function BaseModal({
     onClose()
   }
 
-  const handleBackdropKeyDown = (e: React.KeyboardEvent) => {
-    if (closeOnBackdrop && (e.key === 'Enter' || e.key === ' ')) {
-      e.preventDefault()
-      onClose()
-    }
-  }
-
   // Use React Portal to render modal at document.body level
   // This ensures it appears above all other content regardless of parent z-index
   return createPortal(
@@ -182,19 +175,11 @@ export function BaseModal({
       className="fixed inset-0 bg-black/60 backdrop-blur-xs z-modal isolate p-4 overflow-y-auto overscroll-contain"
       onMouseDown={handleBackdropMouseDown}
       onClick={handleBackdropClick}
-      onKeyDown={handleBackdropKeyDown}
-      role="button"
-      tabIndex={-1}
-      aria-label="Close modal backdrop"
     >
       <div
         className="min-h-full flex items-start justify-center py-4 sm:items-center"
         onMouseDown={handleBackdropMouseDown}
         onClick={handleBackdropClick}
-        onKeyDown={handleBackdropKeyDown}
-        role="button"
-        tabIndex={-1}
-        aria-label="Modal container"
       >
         <div
           ref={modalRef}
