@@ -8,16 +8,17 @@ import {
   evictOfflineClusterCacheEntries,
 } from '../ClusterResourceTree.utils'
 import type { ClusterDataCache } from '../types'
+import type { ClusterInfo } from '../../../../hooks/mcp/types'
 
 // ─── filterClusters ──────────────────────────────────────────────────────────
 
 describe('filterClusters', () => {
-  const clusters = [
-    { name: 'prod-us', healthy: true },
-    { name: 'prod-eu', healthy: true },
-    { name: 'staging', healthy: true },
-    { name: 'dev', healthy: false },
-  ] as any[]
+  const clusters: ClusterInfo[] = [
+    { name: 'prod-us', context: '', healthy: true },
+    { name: 'prod-eu', context: '', healthy: true },
+    { name: 'staging', context: '', healthy: true },
+    { name: 'dev', context: '', healthy: false },
+  ]
 
   it('returns all clusters when all selected and no filters', () => {
     const result = filterClusters({
@@ -39,7 +40,7 @@ describe('filterClusters', () => {
       searchFilter: '',
     })
     expect(result).toHaveLength(2)
-    expect(result.map((c: any) => c.name)).toEqual(['prod-us', 'dev'])
+    expect(result.map((c: ClusterInfo) => c.name)).toEqual(['prod-us', 'dev'])
   })
 
   it('applies localClusterFilter', () => {
@@ -62,7 +63,7 @@ describe('filterClusters', () => {
       searchFilter: 'PROD',
     })
     expect(result).toHaveLength(2)
-    expect(result.every((c: any) => c.name.startsWith('prod'))).toBe(true)
+    expect(result.every((c: ClusterInfo) => c.name.startsWith('prod'))).toBe(true)
   })
 
   it('combines all filters', () => {
@@ -360,16 +361,16 @@ describe('evictOfflineClusterCacheEntries', () => {
 
   it('returns null when no clusters are offline', () => {
     const cache = new Map([['c1', makeCache()]])
-    const clusters = [{ name: 'c1', healthy: true }] as any[]
+    const clusters: ClusterInfo[] = [{ name: 'c1', context: '', healthy: true }]
     expect(evictOfflineClusterCacheEntries(cache, clusters)).toBeNull()
   })
 
   it('returns null when offline cluster is not in cache', () => {
     const cache = new Map([['c1', makeCache()]])
-    const clusters = [
-      { name: 'c1', healthy: true },
-      { name: 'c2', healthy: false },
-    ] as any[]
+    const clusters: ClusterInfo[] = [
+      { name: 'c1', context: '', healthy: true },
+      { name: 'c2', context: '', healthy: false },
+    ]
     expect(evictOfflineClusterCacheEntries(cache, clusters)).toBeNull()
   })
 
@@ -378,10 +379,10 @@ describe('evictOfflineClusterCacheEntries', () => {
       ['c1', makeCache()],
       ['c2', makeCache()],
     ])
-    const clusters = [
-      { name: 'c1', healthy: true },
-      { name: 'c2', healthy: false },
-    ] as any[]
+    const clusters: ClusterInfo[] = [
+      { name: 'c1', context: '', healthy: true },
+      { name: 'c2', context: '', healthy: false },
+    ]
     const result = evictOfflineClusterCacheEntries(cache, clusters)
     expect(result).not.toBeNull()
     expect(result!.has('c1')).toBe(true)
@@ -394,11 +395,11 @@ describe('evictOfflineClusterCacheEntries', () => {
       ['c2', makeCache()],
       ['c3', makeCache()],
     ])
-    const clusters = [
-      { name: 'c1', healthy: false },
-      { name: 'c2', healthy: false },
-      { name: 'c3', healthy: true },
-    ] as any[]
+    const clusters: ClusterInfo[] = [
+      { name: 'c1', context: '', healthy: false },
+      { name: 'c2', context: '', healthy: false },
+      { name: 'c3', context: '', healthy: true },
+    ]
     const result = evictOfflineClusterCacheEntries(cache, clusters)
     expect(result!.size).toBe(1)
     expect(result!.has('c3')).toBe(true)
@@ -406,7 +407,7 @@ describe('evictOfflineClusterCacheEntries', () => {
 
   it('does not mutate original cache', () => {
     const cache = new Map([['c1', makeCache()]])
-    const clusters = [{ name: 'c1', healthy: false }] as any[]
+    const clusters: ClusterInfo[] = [{ name: 'c1', context: '', healthy: false }]
     evictOfflineClusterCacheEntries(cache, clusters)
     expect(cache.has('c1')).toBe(true)
   })
