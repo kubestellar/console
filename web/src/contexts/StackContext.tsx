@@ -12,6 +12,7 @@ import { useStackDiscovery, type LLMdStack, type LLMdStackComponent } from '../h
 import { useDemoMode } from '../hooks/useDemoMode'
 import { useClusters } from '../hooks/mcp/clusters'
 import { createStateContext } from './createStateContext'
+import { safeGetItem, safeSetItem, safeRemoveItem } from '../lib/utils/localStorage'
 
 const STORAGE_KEY = 'kubestellar-llmd-stack'
 
@@ -216,7 +217,7 @@ export function StackProvider({ children }: StackProviderProps) {
 
   const [selectedStackId, setSelectedStackIdState] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem(STORAGE_KEY)
+      return safeGetItem(STORAGE_KEY)
     }
     return null
   })
@@ -226,9 +227,9 @@ export function StackProvider({ children }: StackProviderProps) {
     setSelectedStackIdState(id)
     if (typeof window !== 'undefined') {
       if (id) {
-        localStorage.setItem(STORAGE_KEY, id)
+        safeSetItem(STORAGE_KEY, id)
       } else {
-        localStorage.removeItem(STORAGE_KEY)
+        safeRemoveItem(STORAGE_KEY)
       }
     }
   }, [])
