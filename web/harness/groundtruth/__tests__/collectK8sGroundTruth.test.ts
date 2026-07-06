@@ -11,18 +11,26 @@ const { mockExecFileSync, mockWriteFileSync, mockMkdirSync, mockMkdtempSync, moc
   mockReadFileSync: vi.fn(() => ''),
 }))
 
-vi.mock('node:child_process', () => ({
-  execFileSync: mockExecFileSync,
-}))
+vi.mock('node:child_process', async () => {
+  const actual = await vi.importActual<typeof import('node:child_process')>('node:child_process')
+  return {
+    ...actual,
+    execFileSync: mockExecFileSync,
+  }
+})
 
-vi.mock('node:fs', () => ({
-  writeFileSync: mockWriteFileSync,
-  mkdirSync: mockMkdirSync,
-  mkdtempSync: mockMkdtempSync,
-  rmSync: mockRmSync,
-  existsSync: mockExistsSync,
-  readFileSync: mockReadFileSync,
-}))
+vi.mock('node:fs', async () => {
+  const actual = await vi.importActual<typeof import('node:fs')>('node:fs')
+  return {
+    ...actual,
+    writeFileSync: mockWriteFileSync,
+    mkdirSync: mockMkdirSync,
+    mkdtempSync: mockMkdtempSync,
+    rmSync: mockRmSync,
+    existsSync: mockExistsSync,
+    readFileSync: mockReadFileSync,
+  }
+})
 
 describe('collectK8sGroundTruth', () => {
   const originalEnv = process.env
