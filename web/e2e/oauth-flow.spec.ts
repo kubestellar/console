@@ -140,10 +140,18 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
     // to /auth/callback, exercising the real redirect chain (#11909).
     // Use waitUntil: 'commit' because the redirect aborts the original
     // navigation before 'load', causing ERR_ABORTED in CI (#20328, #20325).
-    await page.goto(
-      `/auth/github/callback?code=${FAKE_OAUTH_CODE}&state=${FAKE_OAUTH_STATE}`,
-      { waitUntil: 'commit' }
-    )
+    try {
+      await page.goto(
+        `/auth/github/callback?code=${FAKE_OAUTH_CODE}&state=${FAKE_OAUTH_STATE}`,
+        { waitUntil: 'commit' }
+      )
+    } catch (e: unknown) {
+      // OAuth callback redirects abort the navigation — expected in CI.
+      // ERR_ABORTED means the server responded with a redirect before commit.
+      if (!(e instanceof Error) || !e.message.includes('ERR_ABORTED')) {
+        throw e
+      }
+    }
 
     // Wait for the client-side redirect to complete
     await page.waitForURL(/\/auth\/callback/, { timeout: NAV_INTERCEPT_TIMEOUT_MS })
