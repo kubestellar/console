@@ -321,7 +321,7 @@ export default defineConfig(({ mode }) => ({
     isolate: true,
     // CI: use threads pool instead of forks to prevent OOM from subprocess spawn storm (#20007)
     // Threads share memory, no fork overhead. Local dev uses default (forks) for stronger isolation.
-    pool: process.env.CI ? 'threads' : undefined,
+    // pool: process.env.CI ? 'threads' : undefined,  // Reverted: threads share memory, can cause mock cross-contamination
     coverage: {
       provider: 'v8',
       // Disable coverage.all to prevent force-importing source files that trigger

@@ -226,7 +226,6 @@ afterEach(() => {
     window.sessionStorage?.clear()
   }
   vi.unstubAllEnvs()
-  vi.restoreAllMocks() // Restore mocks but preserve global stubs (e.g., localStorage) (#20007)
   vi.clearAllMocks()
 })
 
