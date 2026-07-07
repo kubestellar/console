@@ -1,0 +1,178 @@
+{
+  "version": "kc-mission-v1",
+  "name": "platform-oke",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Oracle Container Engine for Kubernetes (OKE)",
+    "description": "Oracle Container Engine for Kubernetes (OKE) is a managed Kubernetes service that simplifies the deployment and management of Kubernetes clusters on Oracle Cloud Infrastructure. It provides a fully managed environment, allowing users to focus on application development rather than infrastructure management. Key trade-offs include reliance on Oracle's cloud services and potential vendor lock-in.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 15,
+    "steps": [
+      {
+        "title": "Install the Oracle Cloud CLI",
+        "description": "This step installs the Oracle Cloud Command Line Interface (CLI), which is necessary for managing Oracle Cloud resources.\n\n```bash\n\ncurl -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh\n\nbash install.sh --accept-all-defaults\n\noci --version\n\n```\n\n> Download the installation script.\n> Run the installation script with default settings.\n> Verify the installation by checking the CLI version.",
+        "commands": [
+          "curl -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh",
+          "bash install.sh --accept-all-defaults",
+          "oci --version"
+        ]
+      },
+      {
+        "title": "Create an OKE Cluster",
+        "description": "This step creates a new Kubernetes cluster in Oracle Cloud, specifying the version, node count, and region.\n\n```bash\n\noci ce cluster create --compartment-id <your_compartment_id> --name my-cluster --kubernetes-version 1.30.2 --vcn-id <your_vcn_id> --node-pool-configuration '\"nodePoolConfigurations\": [{\"name\": \"my-node-pool\", \"nodeShape\": \"VM.Standard2.1\", \"nodeCount\": 3}]'\n\n```\n\n> Replace <your_compartment_id> and <your_vcn_id> with your actual IDs.",
+        "commands": [
+          "oci ce cluster create --compartment-id <your_compartment_id> --name my-cluster --kubernetes-version 1.30.2 --vcn-id <your_vcn_id> --node-pool-configuration '\"nodePoolConfigurations\": [{\"name\": \"my-node-pool\", \"nodeShape\": \"VM.Standard2.1\", \"nodeCount\": 3}]'"
+        ]
+      },
+      {
+        "title": "Set Up Kubeconfig",
+        "description": "This step configures your kubeconfig file to connect to the newly created OKE cluster.\n\n```bash\n\noci ce cluster create-kubeconfig --cluster-id <your_cluster_id> --file $HOME/.kube/config --region <your_region>\n\n```\n\n> Replace <your_cluster_id> and <your_region> with your actual values.",
+        "commands": [
+          "oci ce cluster create-kubeconfig --cluster-id <your_cluster_id> --file $HOME/.kube/config --region <your_region>"
+        ]
+      },
+      {
+        "title": "Verify Cluster Nodes",
+        "description": "This step checks the status of the nodes in your Kubernetes cluster to ensure they are running.\n\n```bash\n\nkubectl get nodes\n\n```\n\n> You should see the nodes listed with a status of 'Ready'.",
+        "commands": [
+          "kubectl get nodes"
+        ]
+      },
+      {
+        "title": "Post-Install Configuration",
+        "description": "This step sets up autoscaling and monitoring for your cluster.\n\n```bash\n\nkubectl apply -f https://raw.githubusercontent.com/oracle/oci-cloud-controller-manager/main/deploy/oci-cloud-controller-manager.yaml\n\nkubectl apply -f https://raw.githubusercontent.com/oracle/oci-cloud-controller-manager/main/deploy/monitoring.yaml\n\n```\n\n> Deploy the OCI Cloud Controller Manager.\n> Deploy monitoring resources.",
+        "commands": [
+          "kubectl apply -f https://raw.githubusercontent.com/oracle/oci-cloud-controller-manager/main/deploy/oci-cloud-controller-manager.yaml",
+          "kubectl apply -f https://raw.githubusercontent.com/oracle/oci-cloud-controller-manager/main/deploy/monitoring.yaml"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Delete the OKE Cluster",
+        "description": "This step removes the OKE cluster and all associated resources. Be aware that this will result in data loss.\n\n```bash\n\noci ce cluster delete --cluster-id <your_cluster_id> --force --wait\n\n```\n\n> Replace <your_cluster_id> with your actual cluster ID.",
+        "commands": [
+          "oci ce cluster delete --cluster-id <your_cluster_id> --force --wait"
+        ]
+      },
+      {
+        "title": "Remove the Oracle Cloud CLI",
+        "description": "This step uninstalls the Oracle Cloud CLI from your system.\n\n```bash\n\nrm -rf ~/.oci\n\n```\n\n> Remove the OCI configuration directory.",
+        "commands": [
+          "rm -rf ~/.oci"
+        ]
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Upgrade the OKE Cluster",
+        "description": "This step includes backing up your data, upgrading the cluster, and verifying the upgrade.\n\n```bash\n\nkubectl get all --all-namespaces > backup.yaml\n\noci ce cluster update --cluster-id <your_cluster_id> --kubernetes-version 1.30.2\n\nkubectl get nodes\n\n```\n\n> Backup all resources in the cluster.\n> Upgrade the cluster to the specified version.\n> Verify that the nodes are running the new version.",
+        "commands": [
+          "kubectl get all --all-namespaces > backup.yaml",
+          "oci ce cluster update --cluster-id <your_cluster_id> --kubernetes-version 1.30.2",
+          "kubectl get nodes"
+        ]
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Error: 'Unable to connect to the server: x509: certificate signed by unknown authority'",
+        "description": "**Cause:** This indicates an issue with the kubeconfig file or the cluster's API server certificate.\n\n**Fix:**\nRegenerate the kubeconfig file using the correct cluster ID and region."
+      },
+      {
+        "title": "Error: 'Insufficient CPU resources available'",
+        "description": "**Cause:** This indicates that the requested resources exceed the available capacity in the specified region.\n\n**Fix:**\nCheck the available shapes and adjust the node pool configuration accordingly."
+      },
+      {
+        "title": "Error: 'Failed to create load balancer'",
+        "description": "**Cause:** This can occur if the necessary permissions are not granted to the dynamic group.\n\n**Fix:**\nEnsure that the dynamic group has the required permissions to manage load balancers."
+      },
+      {
+        "title": "Error: 'Node is not ready'",
+        "description": "**Cause:** This may indicate that the node is still initializing or there are issues with the underlying infrastructure.\n\n**Fix:**\nCheck the node status and logs for more details, and ensure that the underlying resources are healthy."
+      }
+    ],
+    "versionNotes": [
+      {
+        "version": "v1.30",
+        "changes": "Added support for new node shapes and improved integration with Oracle Cloud services.",
+        "deprecations": "Deprecated support for Kubernetes versions below 1.28.",
+        "migrationSteps": "Ensure that your workloads are compatible with the new features and test them in a staging environment before upgrading."
+      }
+    ],
+    "resolution": {
+      "summary": "You should see the output of 'kubectl get nodes' showing all nodes in 'Ready' status, confirming that the cluster is operational.",
+      "codeSnippets": [
+        "curl -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh",
+        "bash install.sh --accept-all-defaults",
+        "oci --version",
+        "oci ce cluster create --compartment-id <your_compartment_id> --name my-cluster --kubernetes-version 1.30.2 --vcn-id <your_vcn_id> --node-pool-configuration '\"nodePoolConfigurations\": [{\"name\": \"my-node-pool\", \"nodeShape\": \"VM.Standard2.1\", \"nodeCount\": 3}]'",
+        "oci ce cluster create-kubeconfig --cluster-id <your_cluster_id> --file $HOME/.kube/config --region <your_region>",
+        "kubectl get nodes",
+        "kubectl apply -f https://raw.githubusercontent.com/oracle/oci-cloud-controller-manager/main/deploy/oci-cloud-controller-manager.yaml",
+        "kubectl apply -f https://raw.githubusercontent.com/oracle/oci-cloud-controller-manager/main/deploy/monitoring.yaml"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "managed",
+      "managed-k8s",
+      "oracle-cloud"
+    ],
+    "platform": "oke",
+    "platformType": "managed",
+    "platformProvider": "Oracle Cloud",
+    "platformVersions": [
+      "1.30"
+    ],
+    "supportedK8sVersions": [
+      "1.28",
+      "1.29",
+      "1.30"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Namespace",
+      "Deployment",
+      "Service"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "cli"
+    ],
+    "containerImages": [
+      "ghcr.io/oracle/oci-cloud-controller-manager:v1.35.0"
+    ],
+    "sourceUrls": {
+      "docs": "https://docs.oracle.com/en-us/iaas/Content/ContEng/home.htm",
+      "repo": "https://github.com/oracle/oci-cloud-controller-manager"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.28",
+    "tools": [
+      "kubectl",
+      "oci-cli"
+    ],
+    "cloudCLI": "gcloud >= 450.0",
+    "resources": "Minimum 2 vCPU, 4GB RAM per node",
+    "description": "Ensure you have the necessary tools and resources before starting the installation."
+  },
+  "security": {
+    "scannedAt": "2026-07-07T18:37:35.645Z",
+    "scannerVersion": "platform-install-gen-2.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

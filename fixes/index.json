@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-07T12:47:53.148Z",
-  "count": 1626,
+  "generatedAt": "2026-07-07T18:42:03.418Z",
+  "count": 1627,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -31138,6 +31138,49 @@
       ],
       "projectVersion": "v1.42.0",
       "maturity": "incubating",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/platform-install/platform-oke.json",
+      "title": "Install and Configure Oracle Container Engine for Kubernetes (OKE)",
+      "description": "Oracle Container Engine for Kubernetes (OKE) is a managed Kubernetes service that simplifies the deployment and management of Kubernetes clusters on Oracle Cloud Infrastructure. It provides a fully ma",
+      "category": "platform-install",
+      "missionClass": "install",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "installation",
+        "configuration",
+        "managed",
+        "managed-k8s",
+        "oracle-cloud"
+      ],
+      "cncfProjects": [],
+      "targetResourceKinds": [
+        "Namespace",
+        "Deployment",
+        "Service"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "installation",
+        "configuration"
+      ],
+      "type": "deploy",
+      "installMethods": [
+        "cli"
+      ],
       "qualityScore": 100,
       "qualityPass": true,
       "qualityBreakdown": {
