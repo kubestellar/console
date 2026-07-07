@@ -309,8 +309,7 @@ jobs:
             --set securityContext.runAsGroup=null \
             --set podLabels.team=kubestellar \
             --atomic \
-            --wait \
-            --timeout 45m
+            --timeout 10m
 
       - name: Collect diagnostics on deploy failure
         if: failure()
@@ -670,8 +669,7 @@ jobs:
               --set podLabels.team=kubestellar \
               --atomic \
               --cleanup-on-fail \
-              --wait \
-              --timeout 45m
+              --timeout 10m
           }
 
           MAX_ATTEMPTS=2
