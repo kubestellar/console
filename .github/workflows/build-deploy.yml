@@ -278,6 +278,40 @@ jobs:
             fi
           fi
 
+      - name: Migrate RWO PVCs to ReadWriteMany
+        run: |
+          # If the Helm chart now requires ReadWriteMany but existing PVCs are
+          # ReadWriteOnce, Kubernetes rejects the patch as immutable. Detect
+          # and delete those PVCs so Helm can recreate them with the correct
+          # accessMode. Warns clearly because PVC data is lost on deletion.
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }}"
+          NAMESPACE=kc
+
+          RWO_PVCS=$(kubectl get pvc -n "$NAMESPACE" -l "$RELEASE_SELECTOR" -o json 2>/dev/null | \
+            jq -r '.items[] | select(.spec.accessModes | index("ReadWriteMany") == null) | .metadata.name' || true)
+
+          if [ -z "$RWO_PVCS" ]; then
+            echo "No ReadWriteOnce PVCs to migrate."
+            exit 0
+          fi
+
+          echo "::warning::Found ReadWriteOnce PVC(s) incompatible with chart ReadWriteMany: $(echo $RWO_PVCS | tr '\n' ' ')"
+          echo "Scaling down deployment to release volume holders before PVC deletion..."
+          kubectl scale deployment kc-kubestellar-console -n "$NAMESPACE" --replicas=0 2>/dev/null || true
+          kubectl wait pod -n "$NAMESPACE" -l "app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }}" \
+            --for=delete --timeout=120s 2>/dev/null || true
+
+          for pvc in $RWO_PVCS; do
+            echo "::warning::Deleting RWO PVC '$pvc' — Helm will recreate it as ReadWriteMany (PVC data is lost)"
+            kubectl delete pvc "$pvc" -n "$NAMESPACE" --wait=false 2>/dev/null || true
+            kubectl patch pvc "$pvc" -n "$NAMESPACE" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+            if ! kubectl wait --for=delete pvc/"$pvc" -n "$NAMESPACE" --timeout=60s 2>/dev/null; then
+              echo "::error::PVC '$pvc' still exists after 60s — cannot proceed with Helm upgrade"
+              exit 1
+            fi
+          done
+          echo "RWO→RWX PVC migration preparation complete."
+
       # #6344 / #6353: OpenShift SCC allocates a namespace-specific UID
       # range and rejects pods whose runAsUser falls outside that range.
       # The chart default (runAsUser=1001) is correct for Kind/Minikube
@@ -608,6 +642,40 @@ jobs:
             done
           fi
           echo "Volume detachment check complete (waited ${WAITED}s)"
+
+      - name: Migrate RWO PVCs to ReadWriteMany
+        run: |
+          # If the Helm chart now requires ReadWriteMany but existing PVCs are
+          # ReadWriteOnce, the rolling update deadlocks (Multi-Attach error).
+          # Detect and delete RWO PVCs so Helm can recreate them with RWX.
+          # Warns clearly because PVC data is lost on deletion.
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
+          NAMESPACE=kubestellar-console
+
+          RWO_PVCS=$(kubectl get pvc -n "$NAMESPACE" -l "$RELEASE_SELECTOR" -o json 2>/dev/null | \
+            jq -r '.items[] | select(.spec.accessModes | index("ReadWriteMany") == null) | .metadata.name' || true)
+
+          if [ -z "$RWO_PVCS" ]; then
+            echo "No ReadWriteOnce PVCs to migrate."
+            exit 0
+          fi
+
+          echo "::warning::Found ReadWriteOnce PVC(s) incompatible with chart ReadWriteMany: $(echo $RWO_PVCS | tr '\n' ' ')"
+          echo "Scaling down deployment to release volume holders before PVC deletion..."
+          kubectl scale deployment kc-kubestellar-console -n "$NAMESPACE" --replicas=0 2>/dev/null || true
+          kubectl wait pod -n "$NAMESPACE" -l "app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }}" \
+            --for=delete --timeout=120s 2>/dev/null || true
+
+          for pvc in $RWO_PVCS; do
+            echo "::warning::Deleting RWO PVC '$pvc' — Helm will recreate it as ReadWriteMany (PVC data is lost)"
+            kubectl delete pvc "$pvc" -n "$NAMESPACE" --wait=false 2>/dev/null || true
+            kubectl patch pvc "$pvc" -n "$NAMESPACE" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+            if ! kubectl wait --for=delete pvc/"$pvc" -n "$NAMESPACE" --timeout=60s 2>/dev/null; then
+              echo "::error::PVC '$pvc' still exists after 60s — cannot proceed with Helm upgrade"
+              exit 1
+            fi
+          done
+          echo "RWO→RWX PVC migration preparation complete."
 
       # #6344 / #6353: OpenShift SCC — see comment on the vllm-d Deploy
       # with Helm step above. Same fix: unset runAsUser/runAsGroup so the
