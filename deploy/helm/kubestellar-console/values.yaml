@@ -185,7 +185,7 @@ persistence:
   size: 1Gi
   storageClass: ""
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
 
 # Database backup configuration
 backup:
