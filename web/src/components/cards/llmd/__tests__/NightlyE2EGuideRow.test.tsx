@@ -40,8 +40,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
-  LineChart: ({ children }: any) => <div>{children}</div>,
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  LineChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Line: () => null,
   XAxis: () => null,
   YAxis: () => null,
@@ -82,6 +82,7 @@ describe('NightlyE2EGuideRow', () => {
     }
     const { container } = render(
       <GuideRow
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         guide={guide as any}
         delay={0}
         isSelected={false}
@@ -111,6 +112,7 @@ describe('NightlyE2EGuideRow', () => {
     }
     const { container } = render(
       <GuideRow
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         guide={guide as any}
         delay={0}
         isSelected={false}
