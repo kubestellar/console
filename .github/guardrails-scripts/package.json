@@ -1,0 +1,9 @@
+{
+  "name": "guardrails-scripts",
+  "version": "1.0.0",
+  "description": "Dependencies for scanner-merge-guardrails.yml",
+  "private": true,
+  "dependencies": {
+    "js-yaml": "4.1.0"
+  }
+}
