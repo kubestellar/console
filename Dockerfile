@@ -87,7 +87,7 @@ FROM alpine:3.22@sha256:310c62b5e7ca5b08167e4384c68db0fd2905dd9c7493756d356e8939
 WORKDIR /app
 
 # Install runtime dependencies
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata sqlite
 
 # Copy backend and watcher binaries
 COPY --from=backend-builder /app/console .
