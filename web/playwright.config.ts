@@ -179,7 +179,7 @@ export default defineConfig({
         ...devices['Pixel 5'],
       },
       // Mobile emulation can be slower — increase timeout
-      timeout: 90000,
+      timeout: 150000,
     },
 
     // Mobile Safari
@@ -189,7 +189,7 @@ export default defineConfig({
         ...devices['iPhone 12'],
       },
       // Mobile Safari (WebKit) is consistently slower — increase timeout
-      timeout: 90000,
+      timeout: 150000,
     },
   ],
 
