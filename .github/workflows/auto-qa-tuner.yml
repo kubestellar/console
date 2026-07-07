@@ -38,7 +38,6 @@ jobs:
   daily-feedback:
     permissions:
       contents: write
-      issues: write
       pull-requests: write
     if: >
       github.event.schedule == '0 3 * * *' ||
