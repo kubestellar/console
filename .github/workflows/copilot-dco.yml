@@ -4,6 +4,14 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# Explicit least-privilege permissions — prevents GITHUB_TOKEN from
+# inheriting broad repo-wide defaults (contents:write, issues:write, etc.)
+# See: https://github.com/kubestellar/console/issues/20492
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
 jobs:
   copilot-dco:
     uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@main
