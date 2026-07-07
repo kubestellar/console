@@ -716,3 +716,31 @@ func TestExecuteBinaryUpdate_DelegatesToFlow(t *testing.T) {
 	// Should not panic
 	uc.executeBinaryUpdate(release)
 }
+
+func TestValidateTagName(t *testing.T) {
+	tests := []struct {
+		tag     string
+		wantErr bool
+	}{
+		{"v1.2.3", false},
+		{"1.2.3", false},
+		{"v0.0.1", false},
+		{"v10.20.30", false},
+		{"v1.2.3-beta", false},
+		{"v1.2.3-rc.1", false},
+		{"latest", true},
+		{"", true},
+		{"v1.2", true},
+		{"abc", true},
+		{"v1", true},
+		{"release-1.0", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.tag, func(t *testing.T) {
+			err := validateTagName(tt.tag)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateTagName(%q) error = %v, wantErr %v", tt.tag, err, tt.wantErr)
+			}
+		})
+	}
+}

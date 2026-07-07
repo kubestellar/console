@@ -59,11 +59,12 @@ jobs:
         if: ${{ fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) && steps.existing.outputs.number == '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pass outputs as env vars to avoid expression injection from external API data
+          LEVEL: ${{ steps.badge.outputs.level }}
+          MIN: ${{ steps.badge.outputs.min_level }}
+          SCORE: ${{ steps.badge.outputs.score }}
+          MESSAGE: ${{ steps.badge.outputs.message }}
         run: |
-          LEVEL="${{ steps.badge.outputs.level }}"
-          MIN="${{ steps.badge.outputs.min_level }}"
-          SCORE="${{ steps.badge.outputs.score }}"
-          MESSAGE="${{ steps.badge.outputs.message }}"
           gh issue create \
             --repo kubestellar/console \
             --title "🔴 ACMM regression: badge dropped to L${LEVEL} (required L${MIN})" \
@@ -94,15 +95,21 @@ jobs:
         if: ${{ fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) && steps.existing.outputs.number != '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pass outputs as env vars to avoid expression injection from external API data
+          LEVEL: ${{ steps.badge.outputs.level }}
+          SCORE: ${{ steps.badge.outputs.score }}
+          MESSAGE: ${{ steps.badge.outputs.message }}
+          ISSUE_NUMBER: ${{ steps.existing.outputs.number }}
         run: |
-          LEVEL="${{ steps.badge.outputs.level }}"
-          SCORE="${{ steps.badge.outputs.score }}"
-          MESSAGE="${{ steps.badge.outputs.message }}"
-          gh issue comment "${{ steps.existing.outputs.number }}" \
+          gh issue comment "$ISSUE_NUMBER" \
             --repo kubestellar/console \
             --body "Still regressed as of $(date -u '+%Y-%m-%dT%H:%M:%SZ'): badge is \`${MESSAGE}\` (L${LEVEL}, score ${SCORE})"
 
       - name: Pass — log and exit
         if: ${{ fromJson(steps.badge.outputs.level) >= fromJson(steps.badge.outputs.min_level) }}
+        env:
+          LEVEL: ${{ steps.badge.outputs.level }}
+          MIN: ${{ steps.badge.outputs.min_level }}
+          SCORE: ${{ steps.badge.outputs.score }}
         run: |
-          echo "✅ ACMM level L${{ steps.badge.outputs.level }} >= required L${{ steps.badge.outputs.min_level }} (score: ${{ steps.badge.outputs.score }})"
+          echo "✅ ACMM level L${LEVEL} >= required L${MIN} (score: ${SCORE})"
