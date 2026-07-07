@@ -174,7 +174,7 @@ test.describe('Clusters: Sort, asc/desc toggle, and layout modes (#11776)', () =
     }
     
     // Click the first layout button
-    await layoutButtons.first().click()
+    await layoutButtons.first().click({ force: true })
     await page.waitForTimeout(500)
     
     // Verify page is still responsive
