@@ -31,14 +31,14 @@ done
 
 echo "Running Vitest unit tests..."
 
-# CI runners (ubuntu-latest, 7 GB RAM) can OOM when running 900+ test files.
-# With 3 forked workers, each worker needs ~1.8 GB heap to stay within the 7 GB
-# physical RAM limit (leaving 1.6 GB for system overhead and V8 non-heap memory).
-# The previous 2048 MB limit was still causing occasional "Worker exited unexpectedly"
-# OOM crashes. Reduced to 1792 MB (1.75 GB) for additional safety margin
-# (nightly regressions 2026-06-25, issues #19580, #19584).
+# CI runners (ubuntu-latest, 7 GB RAM) can OOM when running 2000+ test files.
+# With maxWorkers=1 (set in vite.config.ts for CI), a single worker needs ~3.5 GB
+# heap to handle the full suite without crashes. The 7 GB runner has enough
+# headroom: 3.5 GB worker + 1.5 GB system/V8 overhead + 2 GB safety margin.
+# Previous 1792 MB limit caused "Worker exited unexpectedly" OOM crashes (#20007).
+# Increased to 3584 MB (3.5 GB) to prevent nightly regressions.
 if [ -n "${CI:-}" ]; then
-  export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=1792"
+  export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=3584"
 fi
 
 # Vitest may exit non-zero due to pool worker termination timeout on CI
