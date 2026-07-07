@@ -61,12 +61,18 @@ jobs:
         id: test
         working-directory: web
         env:
-          NODE_OPTIONS: '--max-old-space-size=6144'
+          NODE_OPTIONS: '--max-old-space-size=7168'
         run: |
           npx vitest run --coverage --coverage.reportOnFailure \
             --reporter=verbose --reporter=json \
             --outputFile.json=test-results.json \
-            --shard=${{ matrix.shard }}/${{ env.TOTAL_SHARDS }} || true
+            --logHeapUsage \
+            --shard=${{ matrix.shard }}/${{ env.TOTAL_SHARDS }} || EXIT_CODE=$?
+          
+          echo "Vitest exit code: ${EXIT_CODE:-0}"
+          if [ "${EXIT_CODE:-0}" -ne 0 ]; then
+            echo "::warning::Shard ${{ matrix.shard }} exited with code ${EXIT_CODE:-0} (possible OOM)"
+          fi
 
           # Extract failed test names for the issue body
           if [ -f test-results.json ]; then
