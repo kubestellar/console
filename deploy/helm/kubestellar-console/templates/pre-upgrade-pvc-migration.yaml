@@ -1,0 +1,137 @@
+{{- if .Values.persistence.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}-pvc-migration
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}-pvc-migration
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}-pvc-migration
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "kubestellar-console.fullname" . }}-pvc-migration
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "kubestellar-console.fullname" . }}-pvc-migration
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}-pvc-migration
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "kubestellar-console.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: pvc-migration
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "kubestellar-console.fullname" . }}-pvc-migration
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate-pvcs
+          image: bitnami/kubectl:latest
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+
+              NAMESPACE="{{ .Release.Namespace }}"
+              MAIN_PVC="{{ include "kubestellar-console.fullname" . }}"
+              BACKUP_PVC="{{ include "kubestellar-console.fullname" . }}-backups"
+              TARGET_ACCESS_MODE="ReadWriteMany"
+
+              echo "=== PVC Access Mode Migration ==="
+              echo "Namespace: $NAMESPACE"
+              echo "Target access mode: $TARGET_ACCESS_MODE"
+              echo ""
+
+              migrate_pvc() {
+                local pvc_name=$1
+                echo "Checking PVC: $pvc_name"
+
+                if ! kubectl get pvc "$pvc_name" -n "$NAMESPACE" &>/dev/null; then
+                  echo "  PVC does not exist (new install). Skipping."
+                  return 0
+                fi
+
+                local current_mode
+                current_mode=$(kubectl get pvc "$pvc_name" -n "$NAMESPACE" -o jsonpath='{.spec.accessModes[0]}' 2>/dev/null || echo "")
+
+                if [ -z "$current_mode" ]; then
+                  echo "  WARNING: Could not read access mode. Skipping."
+                  return 0
+                fi
+
+                echo "  Current access mode: $current_mode"
+
+                if [ "$current_mode" = "$TARGET_ACCESS_MODE" ]; then
+                  echo "  Access mode already correct. No migration needed."
+                  return 0
+                fi
+
+                echo "  Access mode mismatch detected!"
+                echo "  Deleting PVC to allow recreation with $TARGET_ACCESS_MODE..."
+                
+                if kubectl delete pvc "$pvc_name" -n "$NAMESPACE" --wait=true --timeout=120s; then
+                  echo "  PVC deleted successfully."
+                else
+                  echo "  ERROR: Failed to delete PVC."
+                  return 1
+                fi
+              }
+
+              # Migrate main data PVC
+              migrate_pvc "$MAIN_PVC"
+
+              {{- if .Values.backup.enabled }}
+              # Migrate backup PVC
+              migrate_pvc "$BACKUP_PVC"
+              {{- end }}
+
+              echo ""
+              echo "=== Migration Complete ==="
+              echo "Helm will now create PVCs with $TARGET_ACCESS_MODE access mode."
+{{- end }}
