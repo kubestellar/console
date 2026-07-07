@@ -6,7 +6,7 @@ export function redactK8sGroundTruth(groundTruth: K8sGroundTruth): K8sGroundTrut
     ...groundTruth,
     contexts: {
       ...groundTruth.contexts,
-      names: groundTruth.contexts.names.map((name, index) => `context-${index + 1}-${name.replace(/[^a-z0-9-]/gi, '').slice(0, 12)}`),
+      names: groundTruth.contexts.names.map((name, index) => `context-${index + 1}-${name.replace(/[^a-z0-9]/gi, '').slice(0, 12)}`),
     },
   })
 }

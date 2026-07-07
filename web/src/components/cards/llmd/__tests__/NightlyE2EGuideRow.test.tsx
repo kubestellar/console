@@ -54,6 +54,12 @@ vi.mock('lucide-react', () => ({
   TrendingDown: () => <span>TrendingDown</span>,
   Minus: () => <span>Minus</span>,
   ChevronRight: () => <span>ChevronRight</span>,
+  AlertTriangle: () => <span>AlertTriangle</span>,
+  CheckCircle: () => <span>CheckCircle</span>,
+  ExternalLink: () => <span>ExternalLink</span>,
+  Loader2: () => <span>Loader2</span>,
+  Stethoscope: () => <span>Stethoscope</span>,
+  XCircle: () => <span>XCircle</span>,
 }))
 
 import { GuideRow } from '../NightlyE2EGuideRow'
