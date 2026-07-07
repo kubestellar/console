@@ -243,3 +243,58 @@ func TestVerifyChecksumFromReleaseRejectsTamperedBinary(t *testing.T) {
 		t.Fatalf("expected checksum mismatch error, got %v", err)
 	}
 }
+
+func TestRenameOrCopy_SameDevice(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "source.bin")
+	dst := filepath.Join(dir, "dest.bin")
+
+	content := []byte("binary-content-here")
+	if err := os.WriteFile(src, content, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := renameOrCopy(src, dst); err != nil {
+		t.Fatalf("renameOrCopy() error = %v", err)
+	}
+
+	// Source should no longer exist (rename moves it)
+	if _, err := os.Stat(src); !os.IsNotExist(err) {
+		t.Error("source file should not exist after rename")
+	}
+
+	// Dest should have correct content
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatalf("read dest: %v", err)
+	}
+	if string(got) != string(content) {
+		t.Errorf("dest content = %q, want %q", got, content)
+	}
+}
+
+func TestRenameOrCopy_SourceNotFound(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "nonexistent.bin")
+	dst := filepath.Join(dir, "dest.bin")
+
+	err := renameOrCopy(src, dst)
+	if err == nil {
+		t.Fatal("expected error for non-existent source")
+	}
+}
+
+func TestRenameOrCopy_DestDirNotExist(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "source.bin")
+	dst := filepath.Join(dir, "nosuchdir", "dest.bin")
+
+	if err := os.WriteFile(src, []byte("data"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	err := renameOrCopy(src, dst)
+	if err == nil {
+		t.Fatal("expected error for non-existent dest directory")
+	}
+}
