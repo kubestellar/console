@@ -165,7 +165,7 @@ export const QuantumControlPanel: React.FC = () => {
     hasAuthError && !isAuthErrorTransient && requiresIBM
       ? (lastIbmError?.message ?? authStatusError)
       : null
-  const error = fatalError ?? authErrorForBanner
+  const error = fatalError || authErrorForBanner
 
   // Three-state credential badge, driven by the workload's explicit
   // `tokenStored` field (v0.4.0+ — see web/src/hooks/useCachedQuantum.ts):

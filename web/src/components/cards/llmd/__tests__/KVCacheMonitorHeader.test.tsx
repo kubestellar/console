@@ -40,9 +40,11 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('lucide-react', () => ({
-  Grid3x3: () => <span>Grid</span>,
+  Grid3X3: () => <span>Grid</span>,
   Gauge: () => <span>Gauge</span>,
   Activity: () => <span>Activity</span>,
+  CircleDot: () => <span>CircleDot</span>,
+  Database: () => <span>Database</span>,
 }))
 
 import { KVCacheMonitorHeader } from '../KVCacheMonitorHeader'

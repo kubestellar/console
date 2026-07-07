@@ -260,7 +260,7 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
         </>
       ) : (
         <div className="text-center text-muted-foreground">
-          <p>{error ?? 'Unable to load quantum circuit diagram'}</p>
+          <p>{error ? 'Unable to load quantum circuit diagram' : 'Unable to load quantum circuit diagram'}</p>
         </div>
       )}
     </div>

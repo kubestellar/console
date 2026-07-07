@@ -67,7 +67,7 @@ describe('RookStatus', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false })
     render(<RookStatus />)
 
-    expect(screen.getByTestId('skeleton-stats')).toBeTruthy()
+    expect(screen.getByTestId('skeleton-card-with-refresh')).toBeTruthy()
   })
 
   it('renders without error when data is loaded', () => {
