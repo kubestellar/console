@@ -288,7 +288,7 @@ jobs:
           NAMESPACE=kc
 
           RWO_PVCS=$(kubectl get pvc -n "$NAMESPACE" -l "$RELEASE_SELECTOR" -o json 2>/dev/null | \
-            jq -r '.items[] | select(.spec.accessModes | (contains(["ReadWriteMany"]) | not)) | .metadata.name' || true)
+            jq -r '.items[] | select(.spec.accessModes | index("ReadWriteMany") == null) | .metadata.name' || true)
 
           if [ -z "$RWO_PVCS" ]; then
             echo "No ReadWriteOnce PVCs to migrate."
@@ -305,7 +305,10 @@ jobs:
             echo "::warning::Deleting RWO PVC '$pvc' — Helm will recreate it as ReadWriteMany (PVC data is lost)"
             kubectl delete pvc "$pvc" -n "$NAMESPACE" --wait=false 2>/dev/null || true
             kubectl patch pvc "$pvc" -n "$NAMESPACE" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
-            kubectl wait --for=delete pvc/"$pvc" -n "$NAMESPACE" --timeout=60s 2>/dev/null || true
+            if ! kubectl wait --for=delete pvc/"$pvc" -n "$NAMESPACE" --timeout=60s 2>/dev/null; then
+              echo "::error::PVC '$pvc' still exists after 60s — cannot proceed with Helm upgrade"
+              exit 1
+            fi
           done
           echo "RWO→RWX PVC migration preparation complete."
 
@@ -651,7 +654,7 @@ jobs:
           NAMESPACE=kubestellar-console
 
           RWO_PVCS=$(kubectl get pvc -n "$NAMESPACE" -l "$RELEASE_SELECTOR" -o json 2>/dev/null | \
-            jq -r '.items[] | select(.spec.accessModes | (contains(["ReadWriteMany"]) | not)) | .metadata.name' || true)
+            jq -r '.items[] | select(.spec.accessModes | index("ReadWriteMany") == null) | .metadata.name' || true)
 
           if [ -z "$RWO_PVCS" ]; then
             echo "No ReadWriteOnce PVCs to migrate."
@@ -668,7 +671,10 @@ jobs:
             echo "::warning::Deleting RWO PVC '$pvc' — Helm will recreate it as ReadWriteMany (PVC data is lost)"
             kubectl delete pvc "$pvc" -n "$NAMESPACE" --wait=false 2>/dev/null || true
             kubectl patch pvc "$pvc" -n "$NAMESPACE" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
-            kubectl wait --for=delete pvc/"$pvc" -n "$NAMESPACE" --timeout=60s 2>/dev/null || true
+            if ! kubectl wait --for=delete pvc/"$pvc" -n "$NAMESPACE" --timeout=60s 2>/dev/null; then
+              echo "::error::PVC '$pvc' still exists after 60s — cannot proceed with Helm upgrade"
+              exit 1
+            fi
           done
           echo "RWO→RWX PVC migration preparation complete."
 
