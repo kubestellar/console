@@ -10,6 +10,7 @@ vi.mock('react-i18next', () => ({
 
 const mockState: MissionControlState = {
   phase: 'blueprint',
+  description: 'Test deployment plan',
   title: 'Test Plan',
   overlay: 'architecture',
   deployMode: 'phased',
@@ -30,8 +31,11 @@ const mockState: MissionControlState = {
   assignments: [
     {
       clusterName: 'cluster-1',
+      clusterContext: 'cluster-1-context',
+      provider: 'kind',
       projectNames: ['prometheus'],
       warnings: [],
+      readiness: { cpuHeadroomPercent: 80, memHeadroomPercent: 70, storageHeadroomPercent: 90, overallScore: 80 },
     },
   ],
   phases: [
@@ -42,13 +46,21 @@ const mockState: MissionControlState = {
       estimatedSeconds: 300,
     },
   ],
-  description: 'Test deployment plan',
+  overlay: 'architecture',
+  deployMode: 'phased',
+  targetClusters: [],
+  aiStreaming: false,
+  launchProgress: [],
 }
 
 describe('FlightPlanBlueprint', () => {
   it('renders without crashing', () => {
     const { container } = render(
-      <FlightPlanBlueprint state={mockState} />
+      <FlightPlanBlueprint
+        state={mockState}
+        onOverlayChange={() => {}}
+        onDeployModeChange={() => {}}
+      />
     )
 
     expect(container.firstChild).toBeInTheDocument()
@@ -56,7 +68,11 @@ describe('FlightPlanBlueprint', () => {
 
   it('displays SVG visualization', () => {
     const { container } = render(
-      <FlightPlanBlueprint state={mockState} />
+      <FlightPlanBlueprint
+        state={mockState}
+        onOverlayChange={() => {}}
+        onDeployModeChange={() => {}}
+      />
     )
 
     const svg = container.querySelector('svg')
@@ -65,7 +81,11 @@ describe('FlightPlanBlueprint', () => {
 
   it('renders project nodes', () => {
     render(
-      <FlightPlanBlueprint state={mockState} />
+      <FlightPlanBlueprint
+        state={mockState}
+        onOverlayChange={() => {}}
+        onDeployModeChange={() => {}}
+      />
     )
 
     expect(screen.getByText(/prometheus/i)).toBeInTheDocument()
@@ -73,7 +93,8 @@ describe('FlightPlanBlueprint', () => {
 
   it('handles empty state', () => {
     const emptyState: MissionControlState = {
-      phase: 'define',
+      phase: 'blueprint',
+      description: '',
       title: '',
       overlay: 'architecture',
       deployMode: 'phased',
@@ -83,11 +104,45 @@ describe('FlightPlanBlueprint', () => {
       projects: [],
       assignments: [],
       phases: [],
-      description: '',
+      overlay: 'architecture',
+      deployMode: 'phased',
+      targetClusters: [],
+      aiStreaming: false,
+      launchProgress: [],
     }
 
     const { container } = render(
-      <FlightPlanBlueprint state={emptyState} />
+      <FlightPlanBlueprint
+        state={emptyState}
+        onOverlayChange={() => {}}
+        onDeployModeChange={() => {}}
+      />
+    )
+
+    expect(container.firstChild).toBeInTheDocument()
+  })
+
+  it('handles state with active launch progress', () => {
+    const launchingState: MissionControlState = {
+      ...mockState,
+      phase: 'launching',
+      launchProgress: [
+        {
+          phase: 1,
+          status: 'running',
+          projects: [
+            { name: 'prometheus', missionId: 'mission-1', status: 'running' },
+          ],
+        },
+      ],
+    }
+
+    const { container } = render(
+      <FlightPlanBlueprint
+        state={launchingState}
+        onOverlayChange={() => {}}
+        onDeployModeChange={() => {}}
+      />
     )
 
     expect(container.firstChild).toBeInTheDocument()
