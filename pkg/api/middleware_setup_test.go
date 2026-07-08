@@ -207,8 +207,8 @@ func TestCSP_ProductionMode_NoUnsafeInlineInScriptSrc(t *testing.T) {
 
 	assert.NotContains(t, scriptSrc, "'unsafe-inline'",
 		"script-src must NOT contain 'unsafe-inline' in production mode")
-	assert.Contains(t, scriptSrc, "'unsafe-eval'",
-		"script-src must contain 'unsafe-eval' for dynamic cards feature in production (default)")
+	assert.NotContains(t, scriptSrc, "'unsafe-eval'",
+		"script-src must NOT contain 'unsafe-eval' after CSP hardening (unsafe-eval removed from dynamic-cards)")
 	assert.Contains(t, scriptSrc, "'wasm-unsafe-eval'",
 		"script-src must contain 'wasm-unsafe-eval' for SQLite WASM worker")
 }
