@@ -205,6 +205,7 @@ function isHttpErrorThrottled(httpStatus: string, page: string): boolean {
 }
 
 export function _resetErrorThrottles() {
+  recentlyReportedErrors.clear()
   recentErrorEmissions.clear()
   pageErrorCounts.clear()
   recentHttpErrorEmissions.clear()

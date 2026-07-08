@@ -178,7 +178,7 @@ export function saveAlerts(alerts: Alert[]): void {
         safeRemove(ALERTS_KEY)
       }
     } else {
-      console.warn(`Failed to save ${ALERTS_KEY} to localStorage:`, e)
+      console.error(`Failed to save ${ALERTS_KEY} to localStorage:`, e)
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('storage-error', {
           detail: { 

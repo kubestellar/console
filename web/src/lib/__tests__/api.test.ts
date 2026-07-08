@@ -1,5 +1,8 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
+// Override the global setup.ts mock so this file can test the real api module
+vi.unmock('../api')
+
 vi.mock('../constants', () => ({
   MCP_HOOK_TIMEOUT_MS: 5_000,
   BACKEND_HEALTH_CHECK_TIMEOUT_MS: 3_000,
