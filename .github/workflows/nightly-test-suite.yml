@@ -67,6 +67,11 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
 
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.11'
+
       - name: Install test tools
         env:
           GOSEC_VERSION: '2.21.4'
@@ -75,7 +80,6 @@ jobs:
           GITLEAKS_SHA: 'b9b81a09e0873f73c5060271e46e9e638ba10f8bf1ec7a0a6e95dd90c6e2b9c5'
           TRIVY_VERSION: '0.69.3'
           TRIVY_SHA: '3efb9ea57badf80b2ac43aba925dd088b45b1accd2f62fb0fbc23edd3ee2ec1fb'
-          SEMGREP_VERSION: '1.102.0'
         shell: bash {0}
         run: |
           # Non-fatal installs: test scripts handle missing tools gracefully.
@@ -105,8 +109,8 @@ jobs:
             || echo "::warning::trivy install or verification failed"
           echo "::endgroup::"
 
-          echo "::group::semgrep (pip)"
-          pip3 install --break-system-packages "semgrep==${SEMGREP_VERSION}" \
+          echo "::group::semgrep (pip — hashed requirements)"
+          pip install --require-hashes -r .github/requirements-nightly.txt \
             && echo "✓ semgrep installed" \
             || echo "::warning::semgrep install failed"
           echo "::endgroup::"
