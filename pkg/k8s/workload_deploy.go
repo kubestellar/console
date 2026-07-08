@@ -18,6 +18,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // ResolveWorkloadDependencies fetches a workload by name (trying Deployment/StatefulSet/DaemonSet)
@@ -163,7 +164,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 			// 4a. Ensure namespace exists on target
 			nsErr := m.ensureNamespace(clusterCtx, targetClient, namespace, opts)
 			if nsErr != nil {
-				slog.Warn("[deploy] namespace ensure failed", "cluster", targetCluster, "error", nsErr)
+				slog.Warn("[deploy] namespace ensure failed", "cluster", sanitize.LogString(targetCluster), "error", nsErr)
 			}
 
 			// 4b. Apply dependencies in order before the workload
@@ -650,7 +651,7 @@ func (m *MultiClusterClient) DeleteWorkload(ctx context.Context, cluster, namesp
 			}
 			return fmt.Errorf("failed to delete %s %s/%s on cluster %s: %w", g.kind, namespace, name, cluster, err)
 		}
-		slog.Info("[delete] deleted workload", "kind", g.kind, "namespace", namespace, "name", name, "cluster", cluster)
+		slog.Info("[delete] deleted workload", "kind", g.kind, "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "cluster", sanitize.LogString(cluster))
 		return nil
 	}
 

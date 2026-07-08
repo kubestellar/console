@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // runAnalysis performs the AI analysis
@@ -65,7 +66,7 @@ func (w *PredictionWorker) runAnalysis(specificProviders []string) {
 
 		predictions, err := w.analyzeWithProvider(ctx, provider, prompt)
 		if err != nil {
-			slog.Error("[PredictionWorker] provider error", "provider", providerName, "error", err)
+			slog.Error("[PredictionWorker] provider error", "provider", sanitize.LogString(providerName), "error", err)
 			continue
 		}
 
@@ -215,7 +216,7 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 
 		for _, cluster := range clusters {
 			if !healthyClusterSet[cluster.Name] {
-				slog.Info("[PredictionWorker] skipping offline cluster", "cluster", cluster.Name)
+				slog.Info("[PredictionWorker] skipping offline cluster", "cluster", sanitize.LogString(cluster.Name))
 				continue
 			}
 			cl := cluster
@@ -240,7 +241,7 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 				// --- Pod issues ---
 				pods, podErr := w.k8sClient.FindPodIssues(clusterCtx, cl.Context, "")
 				if podErr != nil {
-					slog.Error("[PredictionWorker] error getting pod issues", "cluster", cl.Name, "error", podErr)
+					slog.Error("[PredictionWorker] error getting pod issues", "cluster", sanitize.LogString(cl.Name), "error", podErr)
 				} else {
 					localPods := make([]PodIssueSummary, 0, len(pods))
 					for _, p := range pods {
@@ -260,7 +261,7 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 				// --- GPU nodes ---
 				gpus, gpuErr := w.k8sClient.GetGPUNodes(clusterCtx, cl.Context)
 				if gpuErr != nil {
-					slog.Error("[PredictionWorker] error getting GPU nodes", "cluster", cl.Name, "error", gpuErr)
+					slog.Error("[PredictionWorker] error getting GPU nodes", "cluster", sanitize.LogString(cl.Name), "error", gpuErr)
 				} else {
 					localGPU := make([]GPUNodeSummary, 0, len(gpus))
 					for _, g := range gpus {

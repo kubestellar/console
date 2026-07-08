@@ -14,6 +14,8 @@ rbacv1 "k8s.io/api/rbac/v1"
 "k8s.io/apimachinery/pkg/api/errors"
 metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 "k8s.io/client-go/kubernetes"
+
+"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // GetGPUHealthCronJobStatus checks if the GPU health CronJob is installed and returns its status.
@@ -61,9 +63,9 @@ func (m *MultiClusterClient) GetGPUHealthCronJobStatus(ctx context.Context, cont
 		// Auto-reconcile: update CronJob if version is outdated and user has permissions
 		if status.UpdateAvailable && status.CanInstall {
 			if reconcileErr := m.InstallGPUHealthCronJob(ctx, contextName, ns, cj.Spec.Schedule, status.Tier); reconcileErr != nil {
-				slog.Error("[GPUHealthCronJob] auto-reconcile failed", "cluster", contextName, "error", reconcileErr)
+				slog.Error("[GPUHealthCronJob] auto-reconcile failed", "cluster", sanitize.LogString(contextName), "error", reconcileErr)
 			} else {
-				slog.Info("[GPUHealthCronJob] auto-reconciled to latest version", "cluster", contextName, "version", gpuHealthScriptVersion)
+				slog.Info("[GPUHealthCronJob] auto-reconciled to latest version", "cluster", sanitize.LogString(contextName), "version", gpuHealthScriptVersion)
 				status.Version = gpuHealthScriptVersion
 				status.UpdateAvailable = false
 			}
@@ -310,7 +312,7 @@ func (m *MultiClusterClient) InstallGPUHealthCronJob(ctx context.Context, contex
 		}
 	}
 
-	slog.Info("[GPUHealthCronJob] installed", "cluster", contextName, "namespace", namespace, "schedule", schedule, "tier", tier, "version", gpuHealthScriptVersion)
+	slog.Info("[GPUHealthCronJob] installed", "cluster", sanitize.LogString(contextName), "namespace", sanitize.LogString(namespace), "schedule", sanitize.LogString(schedule), "tier", sanitize.LogString(tier), "version", gpuHealthScriptVersion)
 	return nil
 }
 
@@ -663,7 +665,7 @@ func (m *MultiClusterClient) UninstallGPUHealthCronJob(ctx context.Context, cont
 		slog.Warn("[GPUHealthCronJob] could not delete ServiceAccount", "error", delErr)
 	}
 
-	slog.Info("[GPUHealthCronJob] uninstalled", "cluster", contextName, "namespace", namespace)
+	slog.Info("[GPUHealthCronJob] uninstalled", "cluster", sanitize.LogString(contextName), "namespace", sanitize.LogString(namespace))
 	return nil
 }
 
