@@ -69,8 +69,11 @@ describe('OrbitStatusTracker', () => {
     const { OrbitStatusTracker } = await import('./OrbitStatusTracker')
     const { container } = render(
       <OrbitStatusTracker
-        orbitId="orbit-123"
-        status="active"
+        history={[]}
+        cadence="daily"
+        lastRunAt={null}
+        onRunNow={vi.fn()}
+        onChangeCadence={vi.fn()}
       />
     )
     expect(container).toBeTruthy()
