@@ -1,0 +1,74 @@
+{
+  "version": "kc-mission-v1",
+  "name": "kubevirt-16951-client-go-log-init-unconditionally-registers-v-flag-in-flag-comma",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "kubevirt: client-go/log init() unconditionally registers 'v' flag in flag.CommandLine, conflicting with klog",
+    "description": "client-go/log init() unconditionally registers 'v' flag in flag.CommandLine, conflicting with klog. Community-requested feature.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current kubevirt deployment",
+        "description": "Verify your kubevirt version and configuration:\n```bash\nkubectl get pods -n kubevirt -l app.kubernetes.io/name=kubevirt\nhelm list -n kubevirt 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working kubevirt installation."
+      },
+      {
+        "title": "Review kubevirt configuration",
+        "description": "Inspect the relevant kubevirt configuration:\n```bash\nkubectl get all -n kubevirt -l app.kubernetes.io/name=kubevirt\nkubectl get configmap -n kubevirt -l app.kubernetes.io/part-of=kubevirt\n```\nTitle: client-go/log init() unconditionally registers 'v' flag in flag.CommandLine, conflicting with klog\n\n---\n\n## What happened\n\n`kubevirt.io/client-go/log`'s `init()` function unconditionally calls `flag.IntVar` to register a `v` flag in"
+      },
+      {
+        "title": "Apply the fix for client-go/log init() unconditionally registers 'v' flag in…",
+        "description": "Although #18295 is the more minimal change, I'd be in favor of #18294 as it looks like the proper way to address this to me. \n\nAs long as all components in kubevirt/kubevirt are updated to make use of the new flag and continue working as before I'm fine with this change. Ideally, logging for our\n```yaml\npanic: /main flag redefined: v\n\ngoroutine 1 [running]:\nflag.(*FlagSet).Var(...)\n        flag/flag.go:1028\nflag.IntVar(...)\n        flag/flag.go:781\nkubevirt.io/client-go/log.init.0()\n        kubevirt.io/client-go/log/log.go:88\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n kubevirt -l app.kubernetes.io/name=kubevirt\nkubectl get events -n kubevirt --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"client-go/log init() unconditionally registers 'v' flag in…\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "Although #18295 is the more minimal change, I'd be in favor of #18294 as it looks like the proper way to address this to me. \n\nAs long as all components in kubevirt/kubevirt are updated to make use of the new flag and continue working as before I'm fine with this change. Ideally, logging for our components should not be part of kubeevirt/client-go.",
+      "codeSnippets": [
+        "panic: /main flag redefined: v\n\ngoroutine 1 [running]:\nflag.(*FlagSet).Var(...)\n        flag/flag.go:1028\nflag.IntVar(...)\n        flag/flag.go:781\nkubevirt.io/client-go/log.init.0()\n        kubevirt.io/client-go/log/log.go:88"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "kubevirt",
+      "incubating",
+      "app-definition",
+      "feature"
+    ],
+    "cncfProjects": [
+      "kubevirt"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "incubating",
+    "sourceUrls": {
+      "issue": "https://github.com/kubevirt/kubevirt/issues/16951",
+      "repo": "https://github.com/kubevirt/kubevirt"
+    },
+    "reactions": 4,
+    "comments": 10,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with kubevirt installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-08T06:58:26.670Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
