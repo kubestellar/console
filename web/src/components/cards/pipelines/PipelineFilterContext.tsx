@@ -21,7 +21,7 @@ const STORAGE_KEY = 'kc-pipeline-repos'
 const SELECTION_STORAGE_KEY = 'kc-pipeline-selection'
 
 /** Shape persisted in localStorage */
-interface StoredRepoConfig {
+export interface StoredRepoConfig {
   /** Repos the user added beyond the server defaults */
   added: string[]
   /** Server-default repos the user chose to hide */
@@ -48,7 +48,7 @@ function saveSelection(sel: Set<string>): void {
 }
 
 /** Merge server repos + user config into the visible list */
-function mergeRepos(serverRepos: string[], config: StoredRepoConfig): string[] {
+export function mergeRepos(serverRepos: string[], config: StoredRepoConfig): string[] {
   const hidden = new Set(config.hidden)
   const visible = serverRepos.filter((r) => !hidden.has(r))
   // Append user-added repos that aren't already in the server list
