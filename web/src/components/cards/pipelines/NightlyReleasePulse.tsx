@@ -34,13 +34,19 @@ import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
 import { useMissions } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
+import { Input } from '../../ui/Input'
+import {
+  formatCron as formatCronUtil,
+  dotColor as dotColorUtil,
+  dotTextColor as dotTextColorUtil,
+  computeTrend as computeTrendUtil,
+  type DotInfo,
+} from './pulse-utils'
 
 /** Max dots per row */
 const MAX_DOTS = 14
 /** ms before hiding hover popup */
 const POPUP_HIDE_DELAY_MS = 200
-/** Minimum pass-rate delta to flag a trend */
-const TREND_THRESHOLD = 0.1
 /** Matrix days for dot rows */
 const MATRIX_DAYS = 14
 
@@ -51,49 +57,17 @@ const TITLE_AUDIT = 'Audit workflow'
 /** Extracted strings for ui-ux ratchet */
 const PLACEHOLDER_REPO = 'owner/repo'
 const LABEL_SET_REPO = 'Set repo to monitor'
-const STANDARD_CRON_FIELD_COUNT = 5
 
-function formatCron(cron: string | undefined | null): string {
-  if (!cron || typeof cron !== 'string') return '—'
-  const parts = cron.trim().split(/\s+/)
-  if (parts.length === STANDARD_CRON_FIELD_COUNT && parts[2] === '*' && parts[3] === '*' && parts[4] === '*') {
-    const minute = parseInt(parts[0], 10)
-    const hourUtc = parseInt(parts[1], 10)
-    if (!isNaN(minute) && !isNaN(hourUtc)) {
-      const now = new Date()
-      const utc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hourUtc, minute))
-      return `${utc.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} daily`
-    }
-  }
-  return cron
-}
+// Re-export utility functions under their original names for local use
+const formatCron = formatCronUtil
+const dotColor = dotColorUtil
+const dotTextColor = dotTextColorUtil
+const computeTrend = computeTrendUtil
 
 
 // ---------------------------------------------------------------------------
 // RunDot — colored dot with hover popup
 // ---------------------------------------------------------------------------
-
-interface DotInfo {
-  conclusion: Conclusion
-  htmlUrl: string
-  date: string
-}
-
-function dotColor(c: Conclusion): string {
-  if (!c) return 'bg-border/50'
-  if (c === 'success') return 'bg-green-400'
-  if (c === 'failure' || c === 'timed_out' || c === 'startup_failure') return 'bg-red-400'
-  if (c === 'cancelled') return 'bg-gray-500 dark:bg-gray-400'
-  if (c === 'action_required') return 'bg-yellow-400'
-  return 'bg-yellow-400'
-}
-
-function dotTextColor(c: Conclusion): string {
-  if (!c) return 'text-muted-foreground'
-  if (c === 'success') return 'text-green-400'
-  if (c === 'failure' || c === 'timed_out' || c === 'startup_failure') return 'text-red-400'
-  return 'text-muted-foreground'
-}
 
 function RunDot({ dot }: { dot: DotInfo }) {
   const [showPopup, setShowPopup] = useState(false)
@@ -156,20 +130,7 @@ function RunDot({ dot }: { dot: DotInfo }) {
 // TrendIndicator + compute
 // ---------------------------------------------------------------------------
 
-function computeTrend(cells: DotInfo[]): { passRate: number; trend: 'up' | 'down' | 'steady' } {
-  const with_ = cells.filter((c) => c.conclusion !== null)
-  if (with_.length === 0) return { passRate: 0, trend: 'steady' }
-  const successes = with_.filter((c) => c.conclusion === 'success').length
-  const rate = Math.round((successes / with_.length) * 100)
-  const mid = Math.floor(with_.length / 2)
-  const first = with_.slice(0, mid)
-  const second = with_.slice(mid)
-  const fr = first.length ? first.filter((c) => c.conclusion === 'success').length / first.length : 0
-  const sr = second.length ? second.filter((c) => c.conclusion === 'success').length / second.length : 0
-  const t: 'up' | 'down' | 'steady' =
-    fr > sr + TREND_THRESHOLD ? 'up' : fr < sr - TREND_THRESHOLD ? 'down' : 'steady'
-  return { passRate: rate, trend: t }
-}
+
 
 function TrendIndicator({ passRate, trend }: { passRate: number; trend: 'up' | 'down' | 'steady' }) {
   const Icon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus
@@ -266,12 +227,17 @@ function WorkflowRow({ wf }: { wf: MatrixWorkflow }) {
 
 function StandaloneRepoInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-      <Search size={12} className="text-muted-foreground" />
-      <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
+    <div className="px-4 py-3 border-b border-border/50">
+      <Input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={PLACEHOLDER_REPO}
-        className="flex-1 text-xs bg-transparent text-foreground placeholder:text-muted-foreground/50 focus:outline-hidden"
-        aria-label={LABEL_SET_REPO} />
+        aria-label={LABEL_SET_REPO}
+        leadingIcon={<Search size={12} />}
+        inputSize="sm"
+        className="bg-transparent"
+      />
     </div>
   )
 }

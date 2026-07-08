@@ -44,7 +44,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install pyjwt (for signing App JWT)
-        run: pip install --quiet pyjwt==2.12.1 cryptography==46.0.7
+        run: pip install --quiet --require-hashes -r .github/requirements-smoke.txt
 
       - name: Mint App JWT and exchange for installation token
         env:

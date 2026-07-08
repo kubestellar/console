@@ -13,6 +13,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { getPipelineRepos } from '../../../hooks/useGitHubPipelines'
 import { safeGetJSON, safeSetJSON } from '../../../lib/utils/localStorage'
+import { mergeRepos } from './pulse-utils'
 
 /** localStorage key for user-managed repo overrides */
 const STORAGE_KEY = 'kc-pipeline-repos'
@@ -47,19 +48,6 @@ function saveSelection(sel: Set<string>): void {
   safeSetJSON(SELECTION_STORAGE_KEY, [...sel])
 }
 
-/** Merge server repos + user config into the visible list */
-function mergeRepos(serverRepos: string[], config: StoredRepoConfig): string[] {
-  const hidden = new Set(config.hidden)
-  const visible = serverRepos.filter((r) => !hidden.has(r))
-  // Append user-added repos that aren't already in the server list
-  const serverSet = new Set(serverRepos)
-  for (const r of config.added) {
-    if (!serverSet.has(r) && !hidden.has(r)) {
-      visible.push(r)
-    }
-  }
-  return visible
-}
 
 export interface PipelineFilterState {
   /** Selected repos. Empty set = "All repos" (no filtering). */
@@ -128,11 +116,11 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
       }
       return next
     })
-  }, [])
+  }, [setSelectedRepos])
 
   const selectAll = useCallback(() => {
     setSelectedRepos(new Set())
-  }, [])
+  }, [setSelectedRepos])
 
   // Compute the API-level filter: null = all, single repo string if 1 selected,
   // first selected repo if multiple (API currently supports single-repo filter;
@@ -173,7 +161,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
       next.delete(repo)
       return next
     })
-  }, [])
+  }, [setSelectedRepos])
 
   const restoreRepo = useCallback((repo: string) => {
     setConfig((prev) => ({
@@ -196,7 +184,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
     } else {
       setSelectedRepos(new Set([repo]))
     }
-  }, [])
+  }, [setSelectedRepos])
 
   const value: PipelineFilterState = useMemo(() => ({
     selectedRepos,
@@ -235,6 +223,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePipelineFilter(): PipelineFilterState | null {
   return useContext(PipelineFilterCtx)
 }
