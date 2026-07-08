@@ -28,6 +28,18 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({ selectedClusters: [] }),
 }))
 
+vi.mock('../../../hooks/useDrillDown', () => ({
+  useDrillDown: () => ({
+    state: { stack: [], isOpen: false, currentView: null },
+    pop: vi.fn(),
+    open: vi.fn(),
+    goTo: vi.fn(),
+    close: vi.fn(),
+    replace: vi.fn(),
+    openOrPush: vi.fn(),
+  }),
+}))
+
 describe('ComplianceDrillDown', () => {
   it('renders compliance rows from trestle data', () => {
     render(

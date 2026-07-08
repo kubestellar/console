@@ -44,6 +44,18 @@ vi.mock('../../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => mockUseGlobalFilters(),
 }))
 
+vi.mock('../../../../hooks/useDrillDown', () => ({
+  useDrillDown: () => ({
+    state: { stack: [], isOpen: false, currentView: null },
+    pop: vi.fn(),
+    open: vi.fn(),
+    goTo: vi.fn(),
+    close: vi.fn(),
+    replace: vi.fn(),
+    openOrPush: vi.fn(),
+  }),
+}))
+
 vi.mock('../../../../lib/cn', () => ({
   cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
 }))
