@@ -23,7 +23,6 @@ beforeEach(() => {
 
   // Override blob URL import with a Function-based evaluator for jsdom compatibility
   _setCardImportFn(async (source: string) => {
-    // eslint-disable-next-line no-new-func
     new Function(source)()
     return {}
   })
