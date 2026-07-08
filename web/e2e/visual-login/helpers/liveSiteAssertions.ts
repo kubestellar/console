@@ -258,7 +258,7 @@ async function seedSignedLiveCookieSession(page: Page, baseUrl: string) {
     path: '/',
     httpOnly: true,
     secure: url.protocol === 'https:',
-    sameSite: 'Strict',
+    sameSite: 'Lax',
     expires: Math.floor(Date.now() / 1000) + 1_800,
   }])
   await page.addInitScript((user) => {
