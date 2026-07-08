@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-07-07T04:20:50Z",
+  "last_updated": "2026-07-08T04:02:35Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -11,11 +11,11 @@
       "last_evaluated": "2026-06-11T04:30:46Z"
     },
     "security": {
-      "merged": 83,
+      "merged": 84,
       "closed": 70,
-      "acceptance_rate": 0.54,
+      "acceptance_rate": 0.55,
       "status": "normal",
-      "last_evaluated": "2026-07-03T04:17:17Z"
+      "last_evaluated": "2026-07-08T04:02:35Z"
     },
     "a11y": {
       "merged": 57,
@@ -25,18 +25,18 @@
       "last_evaluated": "2026-07-07T04:20:50Z"
     },
     "operator": {
-      "merged": 568,
+      "merged": 576,
       "closed": 261,
       "acceptance_rate": 0.69,
       "status": "normal",
-      "last_evaluated": "2026-07-07T04:20:50Z"
+      "last_evaluated": "2026-07-08T04:02:35Z"
     },
     "sre": {
-      "merged": 312,
-      "closed": 87,
-      "acceptance_rate": 0.78,
+      "merged": 324,
+      "closed": 88,
+      "acceptance_rate": 0.79,
       "status": "normal",
-      "last_evaluated": "2026-07-07T04:20:50Z"
+      "last_evaluated": "2026-07-08T04:02:35Z"
     },
     "features": {
       "merged": 23,
@@ -109,13 +109,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-05-20",
-      "total_merged": 182,
-      "total_closed": 297,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-05-21",
       "total_merged": 232,
@@ -318,14 +311,21 @@
       "total_closed": 551,
       "categories_blocked": [],
       "categories_boosted": []
+    },
+    {
+      "date": "2026-07-08",
+      "total_merged": 1185,
+      "total_closed": 552,
+      "categories_blocked": [],
+      "categories_boosted": []
     }
   ],
   "rotation_weights": {
     "performance": 0.93,
-    "security": 0.81,
+    "security": 0.83,
     "a11y": 1.02,
     "operator": 1.03,
-    "sre": 1.17,
+    "sre": 1.19,
     "features": 1.08,
     "resilience": 0.8,
     "consistency": 0.89
