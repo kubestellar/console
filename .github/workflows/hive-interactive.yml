@@ -184,6 +184,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      # actions: write required to dispatch the implement-fix.lock.yml workflow
       actions: write
     steps:
       - name: Dispatch hive fix workflow
