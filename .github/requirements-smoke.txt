@@ -1,0 +1,20 @@
+# Hashed requirements for console-app-smoke.yml and console-app-roundtrip.yml.
+# Used with: pip install --quiet --require-hashes -r .github/requirements-smoke.txt
+#
+# Regenerate with:
+#   pip-compile --generate-hashes requirements-smoke.in
+# or update manually by verifying hashes from https://pypi.org/pypi/<pkg>/<ver>/json
+#
+# Hashes cover all manylinux x86_64 wheels for Python 3.8+ / 3.11+ abi3
+# (the ubuntu-latest GitHub Actions runner family uses glibc ≥ 2.28).
+
+pyjwt==2.12.1 \
+    --hash=sha256:28ca37c070cad8ba8cd9790cd940535d40274d22f80ab87f3ac6a713e6e8454c
+
+cryptography==46.0.7 \
+    --hash=sha256:5ad9ef796328c5e3c4ceed237a183f5d41d21150f972455a9d926593a1dcb308 \
+    --hash=sha256:420b1e4109cc95f0e5700eed79908cef9268265c773d3a66f7af1eef53d409ef \
+    --hash=sha256:42a1e5f98abb6391717978baf9f90dc28a743b7d9be7f0751a6f56a75d14065b \
+    --hash=sha256:128c5edfe5e5938b86b03941e94fac9ee793a94452ad1365c9fc3f4f62216832 \
+    --hash=sha256:1d25aee46d0c6f1a501adcddb2d2fee4b979381346a78558ed13e50aa8a59067 \
+    --hash=sha256:35719dc79d4730d30f1c2b6474bd6acda36ae2dfae1e3c16f2051f215df33ce0
