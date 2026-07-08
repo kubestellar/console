@@ -18,7 +18,9 @@ const testGPUDiscoCluster = "gpu-disco-cluster"
 
 func newGPUDiscoClient(objects ...runtime.Object) *MultiClusterClient {
 	fakeClient := fake.NewSimpleClientset(objects...)
-	m := &MultiClusterClient{}
+	m := &MultiClusterClient{
+		noClusterMode: true,
+	}
 	m.InjectClient(testGPUDiscoCluster, fakeClient)
 	return m
 }
@@ -276,10 +278,12 @@ func TestGetGPUNodes_TaintCollection(t *testing.T) {
 	require.Len(t, nodes, 1)
 	// Only NoSchedule and NoExecute taints should appear; PreferNoSchedule is dropped
 	assert.Len(t, nodes[0].Taints, 2)
-	assert.Equal(t, "nvidia.com/gpu", nodes[0].Taints[0].Key)
-	assert.Equal(t, "NoSchedule", nodes[0].Taints[0].Effect)
-	assert.Equal(t, "node.kubernetes.io/unschedulable", nodes[0].Taints[1].Key)
-	assert.Equal(t, "NoExecute", nodes[0].Taints[1].Effect)
+	taintKeys := make(map[string]string)
+	for _, taint := range nodes[0].Taints {
+		taintKeys[taint.Key] = taint.Effect
+	}
+	assert.Equal(t, "NoSchedule", taintKeys["nvidia.com/gpu"])
+	assert.Equal(t, "NoExecute", taintKeys["node.kubernetes.io/unschedulable"])
 }
 
 func TestGetGPUNodes_CUDAVersionAssembly(t *testing.T) {
@@ -369,7 +373,9 @@ func TestGetGPUNodes_PodListFailureGraceful(t *testing.T) {
 
 func TestGetGPUNodes_InvalidClusterReturnsError(t *testing.T) {
 	t.Parallel()
-	m := &MultiClusterClient{}
+	m := &MultiClusterClient{
+		noClusterMode: true,
+	}
 	_, err := m.GetGPUNodes(context.Background(), "nonexistent-cluster")
 	require.Error(t, err)
 }
