@@ -132,6 +132,18 @@ export function normalizeBaseUrl(value: string | undefined): string | undefined 
   return value.replace(/\/+$/, '')
 }
 
+/**
+ * Determine the cookie domain for a given hostname.
+ * Returns undefined for localhost/127.0.0.1 (browser requires no explicit domain
+ * for port-specific URLs), otherwise returns the hostname for explicit domain binding.
+ */
+export function getCookieDomain(hostname: string): string | undefined {
+  if (hostname === '127.0.0.1' || hostname === 'localhost') {
+    return undefined
+  }
+  return hostname
+}
+
 export function liveProductionUrl(): string | undefined {
   return normalizeBaseUrl(
     process.env.LIVE_PRODUCTION_CONSOLE_URL
@@ -251,9 +263,7 @@ async function seedSignedLiveCookieSession(page: Page, baseUrl: string) {
   const githubLogin = process.env.CONSOLE_LIVE_TEST_GITHUB_LOGIN || 'console-live-canary'
   const userId = process.env.CONSOLE_LIVE_TEST_USER_ID || 'console-live-test-user'
   const role = process.env.CONSOLE_LIVE_TEST_USER_ROLE || 'admin'
-  const cookieDomain = url.hostname === '127.0.0.1' || url.hostname === 'localhost' 
-    ? undefined 
-    : url.hostname
+  const cookieDomain = getCookieDomain(url.hostname)
   await page.context().addCookies([{
     name: 'kc_auth',
     value: jwt,

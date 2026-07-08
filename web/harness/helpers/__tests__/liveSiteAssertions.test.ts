@@ -17,7 +17,7 @@ vi.mock('../../../e2e/helpers/setup', () => ({
   setupDemoMode: vi.fn(),
 }))
 
-import { normalizeBaseUrl, liveCanaryAuthMode, liveProductionUrl, liveCanaryUrl } from '../../../e2e/visual-login/helpers/liveSiteAssertions'
+import { normalizeBaseUrl, liveCanaryAuthMode, liveProductionUrl, liveCanaryUrl, getCookieDomain } from '../../../e2e/visual-login/helpers/liveSiteAssertions'
 
 describe('normalizeBaseUrl', () => {
   it('returns undefined for empty string', () => {
@@ -209,5 +209,35 @@ describe('liveCanaryUrl', () => {
   it('falls back to PLAYWRIGHT_BASE_URL', () => {
     process.env.PLAYWRIGHT_BASE_URL = 'https://playwright.example.com/'
     expect(liveCanaryUrl()).toBe('https://playwright.example.com')
+  })
+})
+
+describe('getCookieDomain', () => {
+  it('returns undefined for 127.0.0.1', () => {
+    expect(getCookieDomain('127.0.0.1')).toBeUndefined()
+  })
+
+  it('returns undefined for localhost', () => {
+    expect(getCookieDomain('localhost')).toBeUndefined()
+  })
+
+  it('returns the hostname for a production domain', () => {
+    expect(getCookieDomain('console.kubestellar.io')).toBe('console.kubestellar.io')
+  })
+
+  it('returns the hostname for a subdomain', () => {
+    expect(getCookieDomain('staging.console.kubestellar.io')).toBe('staging.console.kubestellar.io')
+  })
+
+  it('returns the hostname for an IP address that is not 127.0.0.1', () => {
+    expect(getCookieDomain('192.168.1.100')).toBe('192.168.1.100')
+  })
+
+  it('returns the hostname for IPv6 loopback (::1 is not special-cased)', () => {
+    expect(getCookieDomain('::1')).toBe('::1')
+  })
+
+  it('does not treat "LOCALHOST" (uppercase) as local', () => {
+    expect(getCookieDomain('LOCALHOST')).toBe('LOCALHOST')
   })
 })
