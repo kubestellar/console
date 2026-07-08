@@ -366,19 +366,19 @@ func TestCreateOrUpdateResourceQuota_Update(t *testing.T) {
 	if result.Annotations["new-key"] != "new-val" {
 		t.Errorf("Expected new annotation added, got %v", result.Annotations)
 	}
-	// Verify the spec was actually updated in the API server
-	quotas, err := m.GetResourceQuotas(context.Background(), "cluster", "default")
+	// Verify the spec was actually updated in the API server.
+	// Use Get + Spec.Hard directly because the fake client does not
+	// auto-populate Status.Hard (a real controller would).
+	client := m.clients["cluster"]
+	updated, err := client.CoreV1().ResourceQuotas("default").Get(context.Background(), "existing-quota", metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("GetResourceQuotas after update failed: %v", err)
+		t.Fatalf("Get ResourceQuota after update failed: %v", err)
 	}
-	if len(quotas) != 1 {
-		t.Fatalf("Expected 1 quota, got %d", len(quotas))
+	if cpu := updated.Spec.Hard[corev1.ResourceCPU]; cpu.String() != "8" {
+		t.Errorf("Expected updated Spec.Hard cpu=8, got %q", cpu.String())
 	}
-	if quotas[0].Hard["cpu"] != "8" {
-		t.Errorf("Expected updated cpu=8, got %q", quotas[0].Hard["cpu"])
-	}
-	if quotas[0].Hard["memory"] != "32Gi" {
-		t.Errorf("Expected updated memory=32Gi, got %q", quotas[0].Hard["memory"])
+	if mem := updated.Spec.Hard[corev1.ResourceMemory]; mem.String() != "32Gi" {
+		t.Errorf("Expected updated Spec.Hard memory=32Gi, got %q", mem.String())
 	}
 }
 
