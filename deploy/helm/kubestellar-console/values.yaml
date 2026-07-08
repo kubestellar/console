@@ -48,6 +48,12 @@ podSecurityContext:
   # level. Setting it here covers all containers in one place.
   seccompProfile:
     type: RuntimeDefault
+  # #20590: fsGroup ensures the kubelet chowns the mounted PVC
+  # (/app/data) to this GID on pod startup, so the appuser (UID/GID
+  # 1001) can write to the data directory. Without this, the PVC is
+  # owned by root and the container gets "permission denied" on
+  # console.db and the kc-watcher runtime file.
+  fsGroup: 1001
 
 securityContext:
   # #6323/#6324: must be a numeric UID (not `appuser`) so the kubelet
