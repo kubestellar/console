@@ -22,7 +22,9 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Install script dependencies
-        run: npm install --no-save js-yaml@4.1.0
+        # --ignore-scripts prevents postinstall/preinstall lifecycle hooks from executing
+        # arbitrary code during npm install (supply-chain hardening, fixes #20483)
+        run: npm install --no-save --ignore-scripts js-yaml@4.1.0
         
       - name: Check Scanner Merge Eligibility
         id: check

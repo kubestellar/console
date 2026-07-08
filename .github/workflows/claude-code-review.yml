@@ -44,8 +44,9 @@ jobs:
         uses: anthropics/claude-code-action@558b1d6cab4085c7753fe402c10bef0fbb92ac7a # v1.0.165
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
+          # plugin_marketplaces and plugins removed: the claude-code-plugins branch ref
+          # was mutable and unresolvable, creating a supply-chain risk (fixes #20520).
+          # Review runs directly via the pinned action without an external plugin.
           # Decomposed-review prompt: single LLM call, structured output
           # with three explicit concern sections + priority ranking.
           # Adapted from fullsend-ai/fullsend's "decomposed code review"
@@ -54,9 +55,7 @@ jobs:
           # See docs/security/SECURITY-AI.md for the security concerns the
           # SECURITY section is asked to watch for.
           prompt: |
-            /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
-
-            After producing the review, organize your comments into exactly three sections in this order:
+            Review PR ${{ github.repository }}#${{ github.event.pull_request.number }} and organize your findings into exactly three sections in this order:
 
             ## CORRECTNESS
             Bugs, race conditions, logic errors, broken edge cases, incorrect assumptions, type mismatches, missing null/undefined guards. Things that will make the code behave wrong at runtime.
