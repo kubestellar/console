@@ -111,17 +111,27 @@ jobs:
       # ------------------------------------------------------------------
 
       - name: Install kind CLI
+        # SHA256 from https://github.com/kubernetes-sigs/kind/releases/download/v0.29.0/kind-linux-amd64.sha256sum
+        # See: https://github.com/kubestellar/console/issues/20490
+        env:
+          KIND_SHA: "c72eda46430f065fb45c5f70e7c957cc9209402ef309294821978677c8fb3284"
         run: |
-          sudo curl -Lo /usr/local/bin/kind \
+          curl -Lo /tmp/kind \
             "https://kind.sigs.k8s.io/dl/${{ env.KIND_VERSION }}/kind-linux-amd64"
-          sudo chmod +x /usr/local/bin/kind
+          echo "${KIND_SHA}  /tmp/kind" | sha256sum --check -
+          sudo install -o root -g root -m 0755 /tmp/kind /usr/local/bin/kind
           kind version
 
       - name: Install kubectl
+        # SHA256 from https://dl.k8s.io/release/v1.31.4/bin/linux/amd64/kubectl.sha256
+        # See: https://github.com/kubestellar/console/issues/20490
+        env:
+          KUBECTL_SHA: "298e19e9c6c17199011404278f0ff8168a7eca4217edad9097af577023a5620f"
         run: |
-          sudo curl -Lo /usr/local/bin/kubectl \
+          curl -Lo /tmp/kubectl \
             "https://dl.k8s.io/release/${{ env.KUBECTL_VERSION }}/bin/linux/amd64/kubectl"
-          sudo chmod +x /usr/local/bin/kubectl
+          echo "${KUBECTL_SHA}  /tmp/kubectl" | sha256sum --check -
+          sudo install -o root -g root -m 0755 /tmp/kubectl /usr/local/bin/kubectl
           kubectl version --client
 
       # ------------------------------------------------------------------
