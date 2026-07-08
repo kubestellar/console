@@ -12,13 +12,19 @@ on:
   pull_request_target:
     types: [opened]
 
+# Least-privilege at the top level; the reusable workflow's job receives
+# only the write scopes it actually needs (branch push, issue commenting,
+# PR creation) — everything else is restricted to read-only for
+# TokenPermissions compliance.
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+  contents: read
 
 jobs:
   ai-fix:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@main
     with:
       issue_number: ${{ github.event.inputs.issue_number || '' }}

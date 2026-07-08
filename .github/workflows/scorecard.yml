@@ -7,13 +7,18 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+# Least-privilege at the top level; the scan job requests the write scopes
+# scorecard actually needs (SARIF upload, OIDC signing) narrowly. Anything
+# else stays read-only for TokenPermissions compliance.
 permissions:
-  security-events: write
   contents: read
-  actions: read
-  id-token: write
 
 jobs:
   analysis:
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+      id-token: write
     uses: kubestellar/infra/.github/workflows/reusable-scorecard.yml@main
     secrets: inherit

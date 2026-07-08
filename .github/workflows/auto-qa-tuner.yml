@@ -19,7 +19,11 @@ on:
         default: 'all'
         type: string
 
-permissions: read-all
+# Least-privilege at the top level (explicit contents: read rather than
+# the broader read-all) so TokenPermissions passes; each job below opts
+# into only the write scopes it actually calls.
+permissions:
+  contents: read
 
 concurrency:
   group: auto-qa-tuner
@@ -36,9 +40,9 @@ jobs:
   # Job A: Daily Feedback — track AI-generated PR acceptance per category
   # ============================================================
   daily-feedback:
+    # Reads PR/issue lists, pushes a branch, opens a PR — no issue writes.
     permissions:
       contents: write
-      issues: write
       pull-requests: write
     if: >
       github.event.schedule == '0 3 * * *' ||

@@ -11,7 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"strconv"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -345,8 +345,24 @@ The user is currently viewing cluster context %s. You MUST pass
 --context flag, even for read-only commands. This prevents operating
 on the wrong cluster.`
 
+// clusterContextSanitizePattern matches any character that is NOT a
+// letter, digit, dot, hyphen, underscore, or space. The set of allowed
+// characters is a strict superset of what Kubernetes context names may
+// contain (RFC 1123 subdomain rules), while still preserving ASCII spaces
+// so upstream tooling can render the value verbatim in messages.
+var clusterContextSanitizePattern = regexp.MustCompile(`[^A-Za-z0-9._\- ]`)
+
+// sanitizeClusterContextForPrompt strips every character that could enable
+// prompt-injection or shell-injection when the cluster context is embedded
+// in the LLM system prompt (the model may later interpolate the value into
+// a kubectl command). Prior implementations relied on strconv.Quote to
+// escape the value, but Go-style quoting is not a valid escape for shell
+// or LLM contexts — CodeQL's go/unsafe-quoting (CWE-078/089/094) flagged
+// that pattern. Using a strict allowlist means the result contains no
+// shell metacharacters or embedded quotes, so no downstream quoting is
+// required.
 func sanitizeClusterContextForPrompt(clusterContext string) string {
-	return strconv.Quote(clusterContext)
+	return clusterContextSanitizePattern.ReplaceAllString(clusterContext, "")
 }
 
 // buildPromptWithHistory creates a prompt that includes conversation history for context
