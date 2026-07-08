@@ -19,7 +19,9 @@ import (
 const testStorageCluster = "storage-cluster"
 
 func newStorageClient(clientset *k8sfake.Clientset) *MultiClusterClient {
-	client := &MultiClusterClient{}
+	client := &MultiClusterClient{
+		noClusterMode: true,
+	}
 	client.SetClient(testStorageCluster, clientset)
 	return client
 }
