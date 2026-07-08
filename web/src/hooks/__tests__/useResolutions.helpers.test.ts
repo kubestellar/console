@@ -6,7 +6,7 @@
  *
  * Partially addresses #20495
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   detectIssueSignature,
   calculateSignatureSimilarity,
