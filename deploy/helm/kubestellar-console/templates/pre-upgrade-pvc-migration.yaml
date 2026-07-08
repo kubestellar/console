@@ -70,7 +70,14 @@ spec:
       restartPolicy: Never
       serviceAccountName: {{ include "kubestellar-console.fullname" . }}-pvc-migration
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        # The migration Job doesn't mount any PVCs itself, so fsGroup is not
+        # needed and must be omitted: on OpenShift the restricted-v2 SCC
+        # rejects an explicit fsGroup that falls outside its allowed range,
+        # which is exactly what broke the deploy-pok-prod job after fsGroup:
+        # 1001 was added to .Values.podSecurityContext (see #20590/#20620).
+        # We still set seccompProfile because restricted enforcement requires it.
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: migrate-pvcs
           image: bitnami/kubectl:latest
