@@ -20,6 +20,7 @@ permissions: read-all
 jobs:
   cleanup-screenshots:
     permissions:
+      # contents: write required to delete old screenshot files and commit URL rewrites
       contents: write
       # issues: write required to update issue comment URLs during cleanup
       issues: write

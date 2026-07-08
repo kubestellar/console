@@ -19,6 +19,7 @@ permissions: read-all
 jobs:
   process-screenshot:
     permissions:
+      # contents: write required to commit decoded screenshot images to .github/screenshots/
       contents: write
       # issues: write required to update issue comment with rendered screenshot
       issues: write

@@ -37,7 +37,9 @@ jobs:
   # ============================================================
   daily-feedback:
     permissions:
+      # contents: write required to update .github/auto-qa-tuning.json with acceptance rates
       contents: write
+      # pull-requests: write required to label and interact with AI-generated PRs
       pull-requests: write
     if: >
       github.event.schedule == '0 3 * * *' ||
@@ -362,8 +364,11 @@ jobs:
   # ============================================================
   weekly-analysis:
     permissions:
+      # contents: write required to update .github/auto-qa-tuning.json with weekly insights
       contents: write
+      # issues: write required to create weekly analysis summary issues
       issues: write
+      # pull-requests: write required to open tuning config update PRs
       pull-requests: write
     needs: daily-feedback
     if: >
@@ -621,8 +626,11 @@ jobs:
   # ============================================================
   cncf-intelligence:
     permissions:
+      # contents: write required to update .github/auto-qa-tuning.json with CNCF intelligence data
       contents: write
+      # issues: write required to create CNCF landscape insights issues
       issues: write
+      # pull-requests: write required to open tuning config update PRs
       pull-requests: write
     needs: weekly-analysis
     if: >

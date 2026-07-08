@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
+      # contents: write required to commit Chart.yaml version updates and push to gh-pages branch
       contents: write
       # packages: write required for Helm chart OCI registry publish
       packages: write

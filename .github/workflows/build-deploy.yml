@@ -415,21 +415,6 @@ jobs:
             exit 1
           fi
 
-      - name: Recover stuck Helm release
-        run: |
-          RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kc -o json 2>/dev/null | jq -r '.info.status // empty' || true)
-          if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
-            echo "::warning::Helm release in '$RELEASE_STATUS' — rolling back to recover"
-            if ! helm rollback ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 2m; then
-              echo "::warning::Helm rollback failed (no good prior revision?) — uninstalling to allow fresh deployment"
-              if ! helm uninstall ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 2m; then
-                echo "::error::Helm uninstall also failed — release may need manual intervention"
-                exit 1
-              fi
-              echo "Helm release uninstalled; next step will perform a fresh install"
-            fi
-          fi
-
       - name: Pre-deploy cluster health check
         run: |
           echo "::group::Current pod status in kc"
@@ -490,6 +475,21 @@ jobs:
             done
           fi
           echo "Volume detachment check complete (waited ${WAITED}s)"
+
+      - name: Recover stuck Helm release
+        run: |
+          RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kc -o json 2>/dev/null | jq -r '.info.status // empty' || true)
+          if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
+            echo "::warning::Helm release in '$RELEASE_STATUS' — rolling back to recover"
+            if ! helm rollback ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 2m; then
+              echo "::warning::Helm rollback failed (no good prior revision?) — uninstalling to allow fresh deployment"
+              if ! helm uninstall ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 5m; then
+                echo "::error::Helm uninstall also failed — release may need manual intervention"
+                exit 1
+              fi
+              echo "Helm release uninstalled; next step will perform a fresh install"
+            fi
+          fi
 
       - name: Migrate RWO PVCs to ReadWriteMany
         run: |
@@ -783,21 +783,6 @@ jobs:
             exit 1
           fi
 
-      - name: Recover stuck Helm release
-        run: |
-          RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console -o json 2>/dev/null | jq -r '.info.status // empty' || true)
-          if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
-            echo "::warning::Helm release in '$RELEASE_STATUS' — rolling back to recover"
-            if ! helm rollback ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 2m; then
-              echo "::warning::Helm rollback failed (no good prior revision?) — uninstalling to allow fresh deployment"
-              if ! helm uninstall ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 2m; then
-                echo "::error::Helm uninstall also failed — release may need manual intervention"
-                exit 1
-              fi
-              echo "Helm release uninstalled; next step will perform a fresh install"
-            fi
-          fi
-
       - name: Pre-deploy cluster health check
         run: |
           echo "::group::Current pod status in kubestellar-console"
@@ -843,7 +828,7 @@ jobs:
             echo "No running pods — checking VolumeAttachments..."
             PVC_PVS=$(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null \
               | jq -r '.items[].spec.volumeName // empty' 2>/dev/null)
-            
+
             for pv in $PVC_PVS; do
               while [ "$WAITED" -lt "$MAX_WAIT" ]; do
                 ATTACHED=$(kubectl get volumeattachments -o json 2>/dev/null \
@@ -859,6 +844,21 @@ jobs:
             done
           fi
           echo "Volume detachment check complete (waited ${WAITED}s)"
+
+      - name: Recover stuck Helm release
+        run: |
+          RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console -o json 2>/dev/null | jq -r '.info.status // empty' || true)
+          if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
+            echo "::warning::Helm release in '$RELEASE_STATUS' — rolling back to recover"
+            if ! helm rollback ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 2m; then
+              echo "::warning::Helm rollback failed (no good prior revision?) — uninstalling to allow fresh deployment"
+              if ! helm uninstall ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 5m; then
+                echo "::error::Helm uninstall also failed — release may need manual intervention"
+                exit 1
+              fi
+              echo "Helm release uninstalled; next step will perform a fresh install"
+            fi
+          fi
 
       - name: Migrate RWO PVCs to ReadWriteMany
         run: |

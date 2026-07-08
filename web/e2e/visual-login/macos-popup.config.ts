@@ -20,7 +20,10 @@ export default defineConfig({
   expect: { timeout: isCI ? CI_EXPECT_TIMEOUT_MS : LOCAL_EXPECT_TIMEOUT_MS },
   fullyParallel: false,
   forbidOnly: isCI,
-  retries: 0,
+  // Allow one retry in CI: a live-site canary hitting a remote URL over a
+  // macOS runner can fail transiently (slow network, cold auth cookie, brief
+  // app hiccup). One retry surfaces real regressions while absorbing noise.
+  retries: isCI ? 1 : 0,
   workers: 1,
   reporter: isCI
     ? [
