@@ -251,10 +251,13 @@ async function seedSignedLiveCookieSession(page: Page, baseUrl: string) {
   const githubLogin = process.env.CONSOLE_LIVE_TEST_GITHUB_LOGIN || 'console-live-canary'
   const userId = process.env.CONSOLE_LIVE_TEST_USER_ID || 'console-live-test-user'
   const role = process.env.CONSOLE_LIVE_TEST_USER_ROLE || 'admin'
+  const cookieDomain = url.hostname === '127.0.0.1' || url.hostname === 'localhost' 
+    ? undefined 
+    : url.hostname
   await page.context().addCookies([{
     name: 'kc_auth',
     value: jwt,
-    domain: url.hostname,
+    domain: cookieDomain,
     path: '/',
     httpOnly: true,
     secure: url.protocol === 'https:',
