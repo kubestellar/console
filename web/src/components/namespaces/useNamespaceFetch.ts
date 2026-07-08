@@ -349,7 +349,6 @@ export function useNamespaceFetch({ clusters, deduplicatedClusters }: UseNamespa
     setLoading(false)
     setLoadingClusters(new Set())
     setLastUpdated(new Date())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allClusterNames, clusters, getClusterRequestName, showToast, t])
 
   // Initial fetch when clusters are loaded - fetches ALL clusters to populate cache
