@@ -157,7 +157,7 @@ describe('cacheFeed', () => {
     const url = 'https://example.com/cache-me'
     const items = [{ id: '1', title: 'Cached', link: 'https://example.com/c' }]
 
-    cacheFeed(url, items as any)
+    cacheFeed(url, items)
 
     const cached = store.get(CACHE_KEY_PREFIX + hashUrl(url)) as { items: unknown[]; timestamp: number }
     expect(cached).toBeDefined()
