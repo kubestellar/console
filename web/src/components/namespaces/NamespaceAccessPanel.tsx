@@ -22,7 +22,6 @@ export function NamespaceAccessPanel({
   const { showToast } = useToast()
   const [accessEntries, setAccessEntries] = useState<NamespaceAccessEntry[]>([])
   const [accessLoading, setAccessLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const fetchAccess = useCallback(async (ns: NamespaceDetails) => {
     setAccessLoading(true)
@@ -65,7 +64,6 @@ export function NamespaceAccessPanel({
       fetchAccess(namespace)
     } catch (err: unknown) {
       console.error('Failed to revoke access:', err)
-      setError('Failed to revoke access')
       showToast('Failed to revoke access', 'error')
     }
   }

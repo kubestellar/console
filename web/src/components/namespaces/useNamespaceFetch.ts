@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import type { TFunction } from 'react-i18next'
 import { authFetch } from '../../lib/api'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 import { NAMESPACE_ABORT_TIMEOUT_MS, isLocalAgentSuppressed } from '../../lib/constants/network'
@@ -36,7 +37,7 @@ interface UseNamespaceFetchParams {
   clusters: Array<{ name: string; context?: string; reachable?: boolean }>
   deduplicatedClusters: Array<{ name: string; context?: string }>
   showToast: (message: string, type: 'error' | 'success' | 'info') => void
-  t: (key: string, defaultValue?: string | { defaultValue?: string; count?: number }) => string
+  t: TFunction<'common', undefined>
 }
 
 export function useNamespaceFetch({
