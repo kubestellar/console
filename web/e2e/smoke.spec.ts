@@ -171,6 +171,11 @@ test.describe('Smoke Tests', () => {
       // before React has rendered the Navbar, making a 2 s probe insufficient.
       // 'load' ensures all deferred scripts have run (fixes #20489).
       await page.waitForLoadState('load')
+      // On WebKit/Safari mobile CI, React can still be mounting after 'load'
+      // fires due to async chunk imports and initial data fetches. networkidle
+      // is a stronger signal that all pending work has settled, making the
+      // hamburger button reliably visible before we probe for it. (#20569)
+      await page.waitForLoadState('networkidle').catch(() => {})
       const sidebar = page.getByTestId('sidebar')
       const settingsLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/settings"], [data-testid="sidebar"] a[href="/settings"]').first()
 
@@ -204,7 +209,12 @@ test.describe('Smoke Tests', () => {
       await settingsLink.click({ force: true })
 
       await expect(page).toHaveURL(/\/settings(?:[?#].*)?$/, { timeout: 10000 })
-      await expect(page.locator('[data-testid="settings-page"] [data-testid="settings-title"]').first()).toBeVisible({ timeout: 15000 })
+      // Settings.tsx renders settings-title twice: once in the desktop sidebar
+      // nav (hidden lg:block, display:none on mobile) and once in the mobile
+      // header (block lg:hidden, visible on mobile). Using .first() picks the
+      // desktop element which is display:none on Pixel 5 / iPhone 12 viewports,
+      // causing toBeVisible() to always fail on mobile. Filter to visible only. (#20569)
+      await expect(page.locator('[data-testid="settings-page"] [data-testid="settings-title"]').filter({ visible: true }).first()).toBeVisible({ timeout: 15000 })
 
       // Click the logo button (has aria-label "Go to home dashboard").
       // The navbar renders two such buttons — the logo and the wordmark —

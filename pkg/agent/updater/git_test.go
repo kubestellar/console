@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // initBareGitRepo creates a minimal git repo in a temp dir suitable for testing.
@@ -29,55 +30,71 @@ func initBareGitRepo(t *testing.T) string {
 	return dir
 }
 
+// initGitRepo creates a temporary git repo with one commit and returns its path.
+func initGitRepo(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(),
+			"GIT_AUTHOR_NAME=test",
+			"GIT_AUTHOR_EMAIL=test@test.com",
+			"GIT_COMMITTER_NAME=test",
+			"GIT_COMMITTER_EMAIL=test@test.com",
+		)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v failed: %v\n%s", args, err, out)
+		}
+	}
+
+	run("init", "-b", "main")
+	run("config", "user.email", "test@test.com")
+	run("config", "user.name", "test")
+	if err := os.WriteFile(filepath.Join(dir, "file.txt"), []byte("hello"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	run("add", ".")
+	run("commit", "-m", "initial")
+
+	return dir
+}
+
 // ---------------------------------------------------------------------------
 // hasUncommittedChanges
 // ---------------------------------------------------------------------------
 
 func TestHasUncommittedChanges_EmptyPath(t *testing.T) {
-	got := hasUncommittedChanges("")
-	if got != false {
+	if hasUncommittedChanges("") {
 		t.Error("expected false for empty path")
 	}
 }
 
 func TestHasUncommittedChanges_CleanRepo(t *testing.T) {
-	repo := initBareGitRepo(t)
-	got := hasUncommittedChanges(repo)
-	if got != false {
-		t.Error("expected false for clean repo")
+	dir := initGitRepo(t)
+	if hasUncommittedChanges(dir) {
+		t.Error("expected no uncommitted changes in clean repo")
 	}
 }
 
 func TestHasUncommittedChanges_DirtyRepo(t *testing.T) {
-	repo := initBareGitRepo(t)
-
-	// Create a tracked file, commit it, then modify it
-	f := filepath.Join(repo, "file.txt")
-	os.WriteFile(f, []byte("original"), 0644)
-	cmd := exec.Command("git", "add", "file.txt")
-	cmd.Dir = repo
-	cmd.Run()
-	cmd = exec.Command("git", "commit", "-m", "add file")
-	cmd.Dir = repo
-	cmd.Run()
-
-	// Now modify the tracked file (staged change)
-	os.WriteFile(f, []byte("modified"), 0644)
-	cmd = exec.Command("git", "add", "file.txt")
-	cmd.Dir = repo
-	cmd.Run()
-
-	got := hasUncommittedChanges(repo)
-	if got != true {
-		t.Error("expected true for repo with staged changes")
+	dir := initGitRepo(t)
+	// Create a tracked file modification
+	if err := os.WriteFile(filepath.Join(dir, "file.txt"), []byte("modified"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if !hasUncommittedChanges(dir) {
+		t.Error("expected uncommitted changes after modifying tracked file")
 	}
 }
 
 func TestHasUncommittedChanges_NonExistentPath(t *testing.T) {
-	got := hasUncommittedChanges("/nonexistent/path/for/git/test")
-	// git status fails → returns true (assume dirty on error)
-	if got != true {
-		t.Error("expected true for non-existent path (assume dirty on error)")
+	// Non-existent path => git errors => returns true (assume dirty)
+	if !hasUncommittedChanges("/nonexistent/path/xyz") {
+		t.Error("expected true for non-existent path (error case)")
 	}
 }
 
@@ -90,6 +107,14 @@ func TestGitStash_NoChanges(t *testing.T) {
 	got := gitStash(repo)
 	if got != false {
 		t.Error("expected false when there are no uncommitted changes to stash")
+	}
+}
+
+func TestGitStash_CleanRepo(t *testing.T) {
+	dir := initGitRepo(t)
+	// No changes to stash
+	if gitStash(dir) {
+		t.Error("expected false when no uncommitted changes")
 	}
 }
 
@@ -125,47 +150,44 @@ func TestGitStash_WithChanges(t *testing.T) {
 	}
 }
 
+func TestGitStash_DirtyRepo(t *testing.T) {
+	dir := initGitRepo(t)
+	// Modify a tracked file
+	if err := os.WriteFile(filepath.Join(dir, "file.txt"), []byte("changed"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if !gitStash(dir) {
+		t.Error("expected stash to succeed with dirty working tree")
+	}
+	// After stash, repo should be clean
+	if hasUncommittedChanges(dir) {
+		t.Error("expected clean repo after stash")
+	}
+}
+
 func TestGitStashPop_RestoresChanges(t *testing.T) {
-	repo := initBareGitRepo(t)
-
-	// Create and commit a file, then modify and stash
-	f := filepath.Join(repo, "restore.txt")
-	os.WriteFile(f, []byte("original"), 0644)
-	for _, args := range [][]string{
-		{"git", "add", "restore.txt"},
-		{"git", "commit", "-m", "add restore"},
-	} {
-		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Dir = repo
-		cmd.Run()
+	dir := initGitRepo(t)
+	original := []byte("modified content")
+	if err := os.WriteFile(filepath.Join(dir, "file.txt"), original, 0644); err != nil {
+		t.Fatal(err)
 	}
-
-	os.WriteFile(f, []byte("modified-content"), 0644)
-	cmd := exec.Command("git", "add", "restore.txt")
-	cmd.Dir = repo
-	cmd.Run()
-
-	stashed := gitStash(repo)
-	if !stashed {
-		t.Fatal("precondition: stash should succeed")
+	if !gitStash(dir) {
+		t.Fatal("stash failed")
 	}
-
-	// Pop and verify content restored
-	gitStashPop(repo)
-
-	content, err := os.ReadFile(f)
+	gitStashPop(dir)
+	data, err := os.ReadFile(filepath.Join(dir, "file.txt"))
 	if err != nil {
-		t.Fatalf("read file after stash pop: %v", err)
+		t.Fatal(err)
 	}
-	if string(content) != "modified-content" {
-		t.Errorf("file content after stash pop = %q, want %q", content, "modified-content")
+	if string(data) != string(original) {
+		t.Errorf("expected restored content %q, got %q", original, data)
 	}
 }
 
 func TestGitStashPop_EmptyStash(t *testing.T) {
-	repo := initBareGitRepo(t)
-	// Should not panic even with no stash entries
-	gitStashPop(repo)
+	dir := initGitRepo(t)
+	// Pop on empty stash should not panic (just logs error)
+	gitStashPop(dir)
 }
 
 // ---------------------------------------------------------------------------
@@ -173,11 +195,20 @@ func TestGitStashPop_EmptyStash(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestRunGitPullWithTimeout_NoRemote(t *testing.T) {
-	repo := initBareGitRepo(t)
-	// No remote configured → git pull should fail
-	err := runGitPullWithTimeout(repo, 5000000000) // 5s
+	dir := initGitRepo(t)
+	// No remote configured, so pull should fail
+	err := runGitPullWithTimeout(dir, 5*time.Second)
 	if err == nil {
-		t.Fatal("expected error for git pull with no remote")
+		t.Error("expected error pulling without a remote")
+	}
+}
+
+func TestRunGitPullWithTimeout_Timeout(t *testing.T) {
+	dir := initGitRepo(t)
+	// Use an extremely short timeout
+	err := runGitPullWithTimeout(dir, 1*time.Nanosecond)
+	if err == nil {
+		t.Error("expected timeout error")
 	}
 }
 
@@ -214,13 +245,8 @@ func TestRollbackGit_ValidRepo(t *testing.T) {
 		cmd.Run()
 	}
 
-	// Get second commit SHA (unused, verifies we have 2 commits)
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = repo
-	_, _ = cmd.Output()
-
 	// Get first commit SHA
-	cmd = exec.Command("git", "rev-parse", "HEAD~1")
+	cmd := exec.Command("git", "rev-parse", "HEAD~1")
 	cmd.Dir = repo
 	firstOut, err := cmd.Output()
 	if err != nil {
@@ -241,5 +267,53 @@ func TestRollbackGit_ValidRepo(t *testing.T) {
 	got := strings.TrimRight(string(out), "\n")
 	if got != firstSHA {
 		t.Errorf("after rollback HEAD = %q, want %q", got, firstSHA)
+	}
+}
+
+func TestRollbackGit_ResetsToSHA(t *testing.T) {
+	dir := initGitRepo(t)
+
+	// Get the initial SHA
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	initialSHA := string(out[:len(out)-1]) // trim newline
+
+	// Create a second commit
+	if err := os.WriteFile(filepath.Join(dir, "file2.txt"), []byte("second"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cmd = exec.Command("git", "add", ".")
+	cmd.Dir = dir
+	if err := cmd.Run(); err != nil {
+		t.Fatal(err)
+	}
+	cmd = exec.Command("git", "commit", "-m", "second")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_NAME=test",
+		"GIT_AUTHOR_EMAIL=test@test.com",
+		"GIT_COMMITTER_NAME=test",
+		"GIT_COMMITTER_EMAIL=test@test.com",
+	)
+	if err := cmd.Run(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Rollback to initial SHA
+	rollbackGit(dir, initialSHA)
+
+	// Verify HEAD is now at initial SHA
+	cmd = exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = dir
+	out, err = cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(out[:len(out)-1]) != initialSHA {
+		t.Errorf("expected HEAD at %s, got %s", initialSHA, string(out[:len(out)-1]))
 	}
 }

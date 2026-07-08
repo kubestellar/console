@@ -27,10 +27,14 @@ jobs:
         uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
 
       - name: Install kubeconform
+        # SHA256 pinned to kubeconform v0.6.7 linux/amd64 tarball (fixes #20490)
         run: |
           KUBECONFORM_VERSION="v0.6.7"
-          curl -sSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" | \
-            tar xz -C /usr/local/bin kubeconform
+          KUBECONFORM_SHA256="95f14e87aa28c09d5941f11bd024c1d02fdc0303ccaa23f61cef67bc92619d73"
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            -o /tmp/kubeconform.tar.gz
+          echo "${KUBECONFORM_SHA256}  /tmp/kubeconform.tar.gz" | sha256sum --check
+          tar xz -C /usr/local/bin kubeconform < /tmp/kubeconform.tar.gz
 
       - name: Helm lint (default values)
         run: helm lint deploy/helm/kubestellar-console
