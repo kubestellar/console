@@ -5,7 +5,8 @@
  * pipeline filter bar: server defaults + user-added - user-hidden.
  */
 import { describe, it, expect } from 'vitest'
-import { mergeRepos, type StoredRepoConfig } from '../PipelineFilterContext'
+import { mergeRepos } from '../pulse-utils'
+import type { StoredRepoConfig } from '../PipelineFilterContext'
 
 // ---------------------------------------------------------------------------
 // mergeRepos

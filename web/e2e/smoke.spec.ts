@@ -17,7 +17,14 @@ const MIN_DASHBOARD_TEXT_LEN = 100
 /** Short timeout for optional UI probes (theme toggle, demo badge, etc.). */
 const OPTIONAL_PROBE_TIMEOUT_MS = 3_000
 const MOBILE_SIDEBAR_MAX_WIDTH_PX = 768
-const HAMBURGER_PROBE_TIMEOUT_MS = 2_000
+// Increased from 2 000 ms: on mobile CI (Pixel 5 / iPhone 12 emulation the
+// React initial render can take 4–6 s after domcontentloaded fires because
+// the mobile-emulation CPU throttle is applied before scripts execute.
+// A 2 s probe was expiring before the Navbar mounted, causing the sidebar
+// to remain closed and the settingsLink 45 s wait to timeout consistently.
+// 10 s gives the app time to fully hydrate on all CI mobile runners.
+// Fixes #20489.
+const HAMBURGER_PROBE_TIMEOUT_MS = 10_000
 
 /**
  * Smoke Tests for KubeStellar Console
@@ -159,9 +166,14 @@ test.describe('Smoke Tests', () => {
       // entry can be flaky across Firefox/WebKit. In-app navigation exercises
       // the actual router path without relying on preview-server rewrites.
       await page.goto('/', { waitUntil: 'domcontentloaded' })
+      // Wait for scripts to execute so the React app is fully mounted before
+      // probing the hamburger. On mobile CI the domcontentloaded event fires
+      // before React has rendered the Navbar, making a 2 s probe insufficient.
+      // 'load' ensures all deferred scripts have run (fixes #20489).
+      await page.waitForLoadState('load')
       const sidebar = page.getByTestId('sidebar')
       const settingsLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/settings"], [data-testid="sidebar"] a[href="/settings"]').first()
-      
+
       const viewportSize = page.viewportSize()
       if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
         const hamburger = page
