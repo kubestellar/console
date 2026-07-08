@@ -8,7 +8,6 @@ import {
   countK3sNodes,
   K3S_APP_LABEL,
   K3S_IMAGE_SUBSTRING,
-  K3S_RUNTIME_SUBSTRING,
 } from '../helpers'
 
 describe('k3s-status helpers', () => {
