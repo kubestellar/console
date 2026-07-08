@@ -385,7 +385,7 @@ func TestCreateOrUpdateResourceQuota_InvalidQuantity(t *testing.T) {
 	}
 }
 
-func TestDeleteResourceQuota(t *testing.T) {
+func TestDeleteResourceQuota_Core(t *testing.T) {
 	quota := &corev1.ResourceQuota{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "to-delete",
