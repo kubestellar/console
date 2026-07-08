@@ -468,8 +468,6 @@ jobs:
           podSecurityContext:
             seccompProfile:
               type: RuntimeDefault
-            fsGroup: 1001
-            fsGroupChangePolicy: OnRootMismatch
           github:
             existingSecret: "$OAUTH_SECRET_NAME"
           jwt:
