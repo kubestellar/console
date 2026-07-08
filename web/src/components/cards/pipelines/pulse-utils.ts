@@ -67,8 +67,12 @@ export function computeTrend(cells: DotInfo[]): { passRate: number; trend: 'up' 
   const mid = Math.floor(with_.length / 2)
   const first = with_.slice(0, mid)
   const second = with_.slice(mid)
-  const fr = first.length ? first.filter((c) => c.conclusion === 'success').length / first.length : 0
-  const sr = second.length ? second.filter((c) => c.conclusion === 'success').length / second.length : 0
+  // Need dots on both sides to compare halves; otherwise there's no trend.
+  if (first.length === 0 || second.length === 0) {
+    return { passRate: rate, trend: 'steady' }
+  }
+  const fr = first.filter((c) => c.conclusion === 'success').length / first.length
+  const sr = second.filter((c) => c.conclusion === 'success').length / second.length
   const t: 'up' | 'down' | 'steady' =
     fr > sr + TREND_THRESHOLD ? 'up' : fr < sr - TREND_THRESHOLD ? 'down' : 'steady'
   return { passRate: rate, trend: t }
