@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -213,18 +214,19 @@ func TestRollbackGit_ValidRepo(t *testing.T) {
 		cmd.Run()
 	}
 
-	// Get second commit SHA
+	// Get second commit SHA (unused, verifies we have 2 commits)
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = repo
-	headOut, _ := cmd.Output()
+	_, _ = cmd.Output()
 
 	// Get first commit SHA
 	cmd = exec.Command("git", "rev-parse", "HEAD~1")
 	cmd.Dir = repo
-	firstOut, _ := cmd.Output()
-
-	firstSHA := string(firstOut[:len(firstOut)-1])
-	_ = headOut
+	firstOut, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("git rev-parse HEAD~1: %v", err)
+	}
+	firstSHA := strings.TrimRight(string(firstOut), "\n")
 
 	// Rollback to first commit
 	rollbackGit(repo, firstSHA)
@@ -232,8 +234,11 @@ func TestRollbackGit_ValidRepo(t *testing.T) {
 	// Verify HEAD is now the first commit
 	cmd = exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = repo
-	out, _ := cmd.Output()
-	got := string(out[:len(out)-1])
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("git rev-parse HEAD: %v", err)
+	}
+	got := strings.TrimRight(string(out), "\n")
 	if got != firstSHA {
 		t.Errorf("after rollback HEAD = %q, want %q", got, firstSHA)
 	}
