@@ -17,6 +17,9 @@ permissions:
 
 jobs:
   ai-fix:
+    # Restrict pull_request_target to same-repo branches only to prevent
+    # write-capable automation from triggering on external fork PRs (#20622).
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: write
       issues: write
