@@ -22,8 +22,7 @@ on:
         type: boolean
         default: false
 
-permissions:
-  contents: read  # default read-only; writes scoped to job below
+permissions: read-all
 
 jobs:
   plan:

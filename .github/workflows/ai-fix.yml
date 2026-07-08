@@ -12,8 +12,7 @@ on:
   pull_request_target:
     types: [opened]
 
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   ai-fix:
