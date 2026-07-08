@@ -1,14 +1,14 @@
 package api
 
 import (
-"fmt"
-"strings"
+	"fmt"
+	"strings"
 
-"github.com/gofiber/fiber/v2"
-"github.com/gofiber/fiber/v2/middleware/compress"
-"github.com/gofiber/fiber/v2/middleware/cors"
-"github.com/gofiber/fiber/v2/middleware/logger"
-"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 func (s *Server) setupMiddleware() {
@@ -61,12 +61,11 @@ func (s *Server) setupMiddleware() {
 		// Dev mode (DEV_MODE=true): adds 'unsafe-inline' to script-src for
 		// Vite HMR injected module scripts. Never set in production.
 		//
-		// Production: uses 'unsafe-eval' (not 'unsafe-inline') in script-src
-		// to support the Tier 2 dynamic cards feature, which compiles
-		// user-authored card modules at runtime via new Function() in
-		// web/src/lib/dynamic-cards/compiler.ts. 'unsafe-inline' is removed
-		// to harden against XSS — inline <script> injection no longer executes.
-		// See: netlify.toml CSP for the equivalent Netlify production policy.
+		// Production: keeps 'unsafe-inline' out of script-src to harden against
+		// XSS — inline <script> injection no longer executes. Dynamic cards use
+		// blob-URL ES module imports in web/src/lib/dynamic-cards/compiler.ts,
+		// so no additional JS eval permission is required. See: netlify.toml
+		// CSP for the equivalent Netlify production policy.
 		//
 		// script-src includes 'wasm-unsafe-eval' because the SQLite cache
 		// worker compiles a WebAssembly module at runtime; without it the
@@ -106,11 +105,9 @@ func (s *Server) setupMiddleware() {
 		// repo on GitHub (#10653). Without it the browser blocks the request.
 		scriptSrc := "'self' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com"
 		if !s.config.DisableDynamicCards {
-			// Dynamic cards feature requires 'unsafe-eval' for new Function() in
-			// web/src/lib/dynamic-cards/compiler.ts. When DISABLE_DYNAMIC_CARDS=true,
-			// this directive is omitted, hardening the CSP against XSS payloads
-			// that leverage eval()/Function().
-			scriptSrc = "'self' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com"
+			// Dynamic cards uses blob-URL ES module imports (no 'unsafe-eval'
+			// required) in web/src/lib/dynamic-cards/compiler.ts.
+			scriptSrc = "'self' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com"
 		}
 		if s.config.DevMode {
 			// In dev mode, add 'unsafe-inline' to allow Vite HMR injected scripts.

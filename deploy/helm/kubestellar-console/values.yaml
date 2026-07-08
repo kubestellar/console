@@ -53,6 +53,12 @@ podSecurityContext:
   # 1001) can write to the data directory. Without this, the PVC is
   # owned by root and the container gets "permission denied" on
   # console.db and the kc-watcher runtime file.
+  # NOTE: on OpenShift this MUST be unset (--set
+  # podSecurityContext.fsGroup=null): the restricted-v2 SCC rejects
+  # fsGroups outside the namespace's supplemental-groups range, so no
+  # pods can be created at all. The SCC assigns an in-range fsGroup
+  # instead, which still triggers the kubelet chown. See the Deploy
+  # with Helm steps in .github/workflows/build-deploy.yml.
   fsGroup: 1001
 
 securityContext:
