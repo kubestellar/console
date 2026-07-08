@@ -76,6 +76,7 @@ jobs:
           TRIVY_VERSION: '0.69.3'
           TRIVY_SHA: '3efb9ea57badf80b2ac43aba925dd088b45b1accd2f62fb0fbc23edd3ee2ec1fb'
           SEMGREP_VERSION: '1.102.0'
+          SEMGREP_WHEEL_SHA: '4afc25fedae9db030573cab96a162bfc71cc414d00d7040ac179a8c3e88c7bf8'
         shell: bash {0}
         run: |
           # Non-fatal installs: test scripts handle missing tools gracefully.
@@ -105,10 +106,17 @@ jobs:
             || echo "::warning::trivy install or verification failed"
           echo "::endgroup::"
 
-          echo "::group::semgrep (pip)"
-          pip3 install --break-system-packages "semgrep==${SEMGREP_VERSION}" \
+          echo "::group::semgrep (pip wheel, sha256 verified)"
+          # Download the pre-built wheel and verify its hash before installing,
+          # matching the SHA-pinned pattern used for gosec/gitleaks/trivy above.
+          # See: https://github.com/kubestellar/console/issues/20533
+          SEMGREP_WHEEL="semgrep-${SEMGREP_VERSION}-cp39.cp310.cp311.py39.py310.py311-none-musllinux_1_0_x86_64.manylinux2014_x86_64.whl"
+          wget -q "https://files.pythonhosted.org/packages/5d/61/922fe072b0c6e7b41688d22d4a511d24feb7f126e326aae227c326ed05b2/${SEMGREP_WHEEL}" \
+            -O "/tmp/${SEMGREP_WHEEL}" \
+            && echo "${SEMGREP_WHEEL_SHA}  /tmp/${SEMGREP_WHEEL}" | sha256sum --check - \
+            && pip3 install --break-system-packages --no-index "/tmp/${SEMGREP_WHEEL}" \
             && echo "✓ semgrep installed" \
-            || echo "::warning::semgrep install failed"
+            || echo "::warning::semgrep install or verification failed"
           echo "::endgroup::"
 
           echo "::group::ripgrep (apt)"
