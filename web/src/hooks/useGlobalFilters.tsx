@@ -27,7 +27,6 @@ import { useSeverityFilter } from './globalFilters/useSeverityFilter'
 import { useStatusFilter } from './globalFilters/useStatusFilter'
 import { useDistributionFilter } from './globalFilters/useDistributionFilter'
 
-export { SEVERITY_CONFIG, SEVERITY_LEVELS, STATUS_CONFIG, STATUS_LEVELS } from './globalFilters/constants'
 export type { ClusterGroup, SavedFilterSet, SeverityLevel, StatusLevel } from './globalFilters/types'
 
 const GlobalFiltersContext = createContext<GlobalFiltersContextType | null>(null)
