@@ -534,6 +534,16 @@ jobs:
       # runAsNonRoot stays `true` (chart default) so PodSecurity
       # "restricted" still accepts the pod — only the UID/GID numbers
       # need to be null.
+      #
+      # The same applies to podSecurityContext.fsGroup, added by #20590:
+      # the chart default (fsGroup=1001, needed on vanilla k8s so the
+      # kubelet chowns the PVC for appuser) falls outside the namespace's
+      # SCC supplemental-groups range, so restricted-v2 rejects every new
+      # pod with "fsGroup: Invalid value: []int64{1001}: 1001 is not an
+      # allowed group" and the ReplicaSet can never create pods (Helm
+      # rolls back with Deployment stuck at "Updated: 0/1"). Unsetting it
+      # lets the SCC assign an in-range fsGroup, which still triggers the
+      # kubelet chown of the mounted PVC.
       - name: Deploy with Helm
         run: |
           recover_release() {
@@ -579,6 +589,7 @@ jobs:
               --set rbac.namespaceCreationEnabled=true \
               --set securityContext.runAsUser=null \
               --set securityContext.runAsGroup=null \
+              --set podSecurityContext.fsGroup=null \
               --set podLabels.team=kubestellar \
               --atomic \
               --cleanup-on-fail \
@@ -945,7 +956,11 @@ jobs:
       # with Helm step above. Same fix: unset runAsUser/runAsGroup so the
       # SCC admission controller can assign a namespace-appropriate UID.
       # runAsNonRoot stays true so PodSecurity "restricted" still accepts
-      # the pod.
+      # the pod. podSecurityContext.fsGroup (chart default 1001, added by
+      # #20590 for vanilla k8s) must be unset for the same reason:
+      # restricted-v2 rejects out-of-range fsGroups, blocking ReplicaSet
+      # pod creation ("Updated: 0/1" rollbacks); the SCC-assigned fsGroup
+      # still triggers the kubelet chown of the PVC.
       - name: Deploy with Helm
         run: |
           cleanup_stuck_pods() {
@@ -998,6 +1013,7 @@ jobs:
               --set rbac.namespaceCreationEnabled=true \
               --set securityContext.runAsUser=null \
               --set securityContext.runAsGroup=null \
+              --set podSecurityContext.fsGroup=null \
               --set podLabels.team=kubestellar \
               --atomic \
               --cleanup-on-fail \
