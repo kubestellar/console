@@ -1,5 +1,3 @@
-Written 46 packages to requirements-nightly.txt
-l transitive dependencies
 # Platform: manylinux2014_x86_64 / Python 3.11
 # Regenerate: pip-compile requirements-nightly.in --generate-hashes --python-version 3.11
 
@@ -96,8 +94,8 @@ packaging==26.2 \
 peewee==3.19.0 \
     --hash=sha256:de220b94766e6008c466e00ce4ba5299b9a832117d9eb36d45d0062f3cfd7417
 
-protobuf==4.25.9 \
-    --hash=sha256:438c636de8fb706a0de94a12a268ef1ae8f5ba5ae655a7671fcda5968ba3c9be
+protobuf==5.29.6 \
+    --hash=sha256:e3387f44798ac1106af0233c04fb8abf543772ff241169946f698b3a9a3d3ab9
 
 pygments==2.20.0 \
     --hash=sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176
@@ -140,4 +138,3 @@ wrapt==1.17.3 \
 
 zipp==4.1.0 \
     --hash=sha256:25ad4e16390cd314347dd8f1de67a2ac538ae658ed4ab9db16029c07c188e97f
-
