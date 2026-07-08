@@ -74,7 +74,8 @@ func TestGetConfigMaps(t *testing.T) {
 
 func TestGetConfigMaps_InvalidContext(t *testing.T) {
 	m := &MultiClusterClient{
-		clients: make(map[string]kubernetes.Interface),
+		noClusterMode: true,
+		clients:       make(map[string]kubernetes.Interface),
 	}
 
 	_, err := m.GetConfigMaps(context.Background(), "nonexistent", "default")
@@ -365,6 +366,20 @@ func TestCreateOrUpdateResourceQuota_Update(t *testing.T) {
 	if result.Annotations["new-key"] != "new-val" {
 		t.Errorf("Expected new annotation added, got %v", result.Annotations)
 	}
+	// Verify the spec was actually updated in the API server
+	quotas, err := m.GetResourceQuotas(context.Background(), "cluster", "default")
+	if err != nil {
+		t.Fatalf("GetResourceQuotas after update failed: %v", err)
+	}
+	if len(quotas) != 1 {
+		t.Fatalf("Expected 1 quota, got %d", len(quotas))
+	}
+	if quotas[0].Hard["cpu"] != "8" {
+		t.Errorf("Expected updated cpu=8, got %q", quotas[0].Hard["cpu"])
+	}
+	if quotas[0].Hard["memory"] != "32Gi" {
+		t.Errorf("Expected updated memory=32Gi, got %q", quotas[0].Hard["memory"])
+	}
 }
 
 func TestCreateOrUpdateResourceQuota_InvalidQuantity(t *testing.T) {
@@ -404,9 +419,12 @@ func TestDeleteResourceQuota_Core(t *testing.T) {
 	}
 
 	// Verify it's gone
-	_, err = m.GetResourceQuotas(context.Background(), "cluster", "default")
+	quotas, err := m.GetResourceQuotas(context.Background(), "cluster", "default")
 	if err != nil {
 		t.Fatalf("GetResourceQuotas after delete failed: %v", err)
+	}
+	if len(quotas) != 0 {
+		t.Errorf("Expected 0 quotas after delete, got %d", len(quotas))
 	}
 }
 
@@ -424,7 +442,8 @@ func TestDeleteResourceQuota_NotFound(t *testing.T) {
 
 func TestDeleteResourceQuota_InvalidContext(t *testing.T) {
 	m := &MultiClusterClient{
-		clients: make(map[string]kubernetes.Interface),
+		noClusterMode: true,
+		clients:       make(map[string]kubernetes.Interface),
 	}
 
 	err := m.DeleteResourceQuota(context.Background(), "bad-context", "default", "quota")
