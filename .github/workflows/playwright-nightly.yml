@@ -171,7 +171,8 @@ jobs:
             e2e/smoke.spec.ts \
             e2e/responsive-regression.spec.ts \
             e2e/Login.spec.ts \
-            e2e/Dashboard.spec.ts
+            e2e/Dashboard.spec.ts \
+            e2e/Settings.spec.ts
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:4173
 
