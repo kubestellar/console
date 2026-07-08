@@ -20,6 +20,13 @@ vi.mock('../cards/multi-tenancy/missionLoader', () => ({
 }))
 
 const mockState: MissionControlState = {
+  phase: 'launching',
+  title: 'Test Mission',
+  overlay: 'architecture',
+  deployMode: 'phased',
+  targetClusters: [],
+  aiStreaming: false,
+  launchProgress: [],
   projects: [
     {
       name: 'prometheus',

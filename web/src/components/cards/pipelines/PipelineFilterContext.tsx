@@ -22,7 +22,7 @@ const STORAGE_KEY = 'kc-pipeline-repos'
 const SELECTION_STORAGE_KEY = 'kc-pipeline-selection'
 
 /** Shape persisted in localStorage */
-interface StoredRepoConfig {
+export interface StoredRepoConfig {
   /** Repos the user added beyond the server defaults */
   added: string[]
   /** Server-default repos the user chose to hide */

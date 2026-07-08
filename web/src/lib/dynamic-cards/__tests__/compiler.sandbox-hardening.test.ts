@@ -8,10 +8,11 @@
  * - Prototype chain freezing in deepFreeze
  * - Async createCardComponent (blob URL ES module approach)
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createCardComponent } from '../compiler'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { createCardComponent, _setCardImportFn, _resetCardImportFn } from '../compiler'
 
-// Mock browser APIs for Node environment
+// Set up a Function-based module executor so tests don't need blob URL import support.
+// Also keep the Blob/URL stubs in case any path still references them.
 beforeEach(() => {
   if (typeof global.Blob === 'undefined') {
     global.Blob = class Blob {
@@ -24,11 +25,21 @@ beforeEach(() => {
       stream() { return new ReadableStream() }
     } as unknown as typeof Blob
   }
-  
+
   if (typeof global.URL.createObjectURL === 'undefined') {
     global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
     global.URL.revokeObjectURL = vi.fn()
   }
+
+  // Override blob URL import with a Function-based evaluator for node compatibility
+  _setCardImportFn(async (source: string) => {
+    new Function(source)()
+    return {}
+  })
+})
+
+afterEach(() => {
+  _resetCardImportFn()
 })
 
 // Mock sucrase (transform is not invoked for createCardComponent)
