@@ -8,7 +8,7 @@ on:
   issue_comment:
     types: [created]
 
-permissions: read-all  # default read; writes scoped to job below
+permissions: {}  # default none; specific scopes granted at job level
 
 jobs:
   post-directions:
