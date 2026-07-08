@@ -6,6 +6,8 @@ package safego
 import (
 	"log/slog"
 	"runtime/debug"
+
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // Go launches fn in a new goroutine with automatic panic recovery.
@@ -33,7 +35,7 @@ func GoWith(label string, fn func()) {
 		defer func() {
 			if r := recover(); r != nil {
 				slog.Error("goroutine panicked",
-					"label", label,
+					"label", sanitize.LogString(label),
 					"recover", r,
 					"stack", string(debug.Stack()),
 				)

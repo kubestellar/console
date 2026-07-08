@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/kubestellar/console/pkg/sanitize"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -125,6 +126,6 @@ func (m *MultiClusterClient) RemoveContext(contextName string) error {
 	delete(m.cacheTime, contextName)
 
 	m.rawConfig = config
-	slog.Info("Removed kubeconfig context", "context", contextName)
+	slog.Info("Removed kubeconfig context", "context", sanitize.LogString(contextName))
 	return nil
 }

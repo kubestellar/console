@@ -75,3 +75,29 @@ func TestPromptStrings_Nil(t *testing.T) {
 		t.Fatalf("expected nil, got %v", got)
 	}
 }
+
+func TestLogString_RemovesNewlines(t *testing.T) {
+	input := "malicious\nlog entry\rwith\r\ninjection"
+	got := LogString(input)
+	if strings.Contains(got, "\n") || strings.Contains(got, "\r") {
+		t.Fatalf("expected newlines/CR removed, got %q", got)
+	}
+	expected := "malicious⏎log entry⏎with⏎⏎injection"
+	if got != expected {
+		t.Fatalf("expected %q, got %q", expected, got)
+	}
+}
+
+func TestLogString_Empty(t *testing.T) {
+	if got := LogString(""); got != "" {
+		t.Fatalf("expected empty string, got %q", got)
+	}
+}
+
+func TestLogString_SafeInput(t *testing.T) {
+	input := "my-cluster-context"
+	got := LogString(input)
+	if got != "my-cluster-context" {
+		t.Fatalf("expected safe input unchanged, got %q", got)
+	}
+}

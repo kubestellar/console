@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/kubestellar/console/pkg/sanitize"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -43,7 +44,7 @@ func (m *MultiClusterClient) getGPUNodesWithPods(ctx context.Context, contextNam
 	allPods, allPodsErr := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if allPodsErr != nil {
 		slog.Error("[GPUNodes] failed to list pods for allocation accounting",
-			"cluster", contextName, "error", allPodsErr)
+			"cluster", sanitize.LogString(contextName), "error", allPodsErr)
 	}
 	// Track allocations by node and accelerator type
 	gpuAllocationByNode := make(map[string]int) // GPU allocations

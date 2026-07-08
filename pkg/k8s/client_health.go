@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -136,7 +137,7 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		errType := classifyError(err.Error())
-		slog.Error("[Health] cluster client error", "cluster", contextName, "error", err)
+		slog.Error("[Health] cluster client error", "cluster", sanitize.LogString(contextName), "error", err)
 		return &ClusterHealth{
 			Cluster:      contextName,
 			Healthy:      false,
@@ -187,7 +188,7 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 	// Process nodes - determines reachability
 	if nodesErr != nil {
 		errType := classifyError(nodesErr.Error())
-		slog.Error("[Health] failed to list nodes", "cluster", contextName, "error", nodesErr)
+		slog.Error("[Health] failed to list nodes", "cluster", sanitize.LogString(contextName), "error", nodesErr)
 		health.Healthy = false
 		health.Reachable = false
 		health.ErrorType = errType

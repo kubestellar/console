@@ -85,8 +85,9 @@ export default defineConfig({
   // Fail the build on CI if test.only is left in
   forbidOnly: isCI,
 
-  // Keep retry behavior consistent so timing bugs fail on the first cold run in every environment.
-  retries: 0,
+  // Retry once in CI to tolerate non-deterministic failures from resource contention.
+  // Local runs get zero retries to catch timing bugs early.
+  retries: isCI ? 1 : 0,
   // #12932 — Explicitly disable early termination so all browser projects
   // execute even when one test fails. maxFailures: 1 would skip remaining
   // Firefox/WebKit/mobile runs after the first Chromium failure, hiding

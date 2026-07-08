@@ -28,6 +28,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // rbacAnalysisTimeout is the per-request deadline for cross-cluster
@@ -78,7 +79,7 @@ func (s *Server) handleCanIHTTP(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.k8sClient.CheckCanI(ctx, req.Cluster, req)
 	if err != nil {
-		slog.Error("failed to check permissions", "cluster", req.Cluster, "verb", req.Verb, "resource", req.Resource, "error", err)
+		slog.Error("failed to check permissions", "cluster", sanitize.LogString(req.Cluster), "verb", sanitize.LogString(req.Verb), "resource", sanitize.LogString(req.Resource), "error", err)
 		writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("check permissions", err))
 		return
 	}
@@ -118,7 +119,7 @@ func (s *Server) handleClusterPermissionsHTTP(w http.ResponseWriter, r *http.Req
 	if cluster != "" {
 		perms, err := s.k8sClient.GetClusterPermissions(ctx, cluster)
 		if err != nil {
-			slog.Error("failed to get cluster permissions", "cluster", cluster, "error", err)
+			slog.Error("failed to get cluster permissions", "cluster", sanitize.LogString(cluster), "error", err)
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("get cluster permissions", err))
 			return
 		}

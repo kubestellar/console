@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 const (
@@ -101,12 +102,12 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 		targetURL += "?" + queryStr
 	}
 
-	slog.Debug("[QuantumProxy] Forwarding request", "from", c.Path(), "to", targetURL)
+	slog.Debug("[QuantumProxy] Forwarding request", "from", sanitize.LogString(c.Path()), "to", sanitize.LogString(targetURL))
 
 	// Create HTTP client request
 	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, targetURL, nil)
 	if err != nil {
-		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
+		slog.Error("[QuantumProxy] Failed to create request", "target", sanitize.LogString(targetURL), "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
 	}
 
@@ -121,7 +122,7 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 	// Execute request with shared client (has timeout)
 	resp, err := quantumClient.Do(req)
 	if err != nil {
-		slog.Error("[QuantumProxy] Quantum service unavailable", "target", targetURL, "error", err)
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", sanitize.LogString(targetURL), "error", err)
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
 	}
 	defer resp.Body.Close()
@@ -157,11 +158,11 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 	}
 	targetURL := h.quantumServiceURL + "/api/result/histogram?sort=" + url.QueryEscape(sort)
 
-	slog.Debug("[QuantumProxy] Forwarding histogram request", "from", c.Path(), "to", targetURL)
+	slog.Debug("[QuantumProxy] Forwarding histogram request", "from", sanitize.LogString(c.Path()), "to", sanitize.LogString(targetURL))
 
 	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, targetURL, nil)
 	if err != nil {
-		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
+		slog.Error("[QuantumProxy] Failed to create request", "target", sanitize.LogString(targetURL), "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
 	}
 
@@ -176,7 +177,7 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 	// Execute request with shared client (has timeout)
 	resp, err := quantumClient.Do(req)
 	if err != nil {
-		slog.Error("[QuantumProxy] Quantum service unavailable", "target", targetURL, "error", err)
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", sanitize.LogString(targetURL), "error", err)
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
 	}
 	defer resp.Body.Close()
@@ -262,12 +263,12 @@ func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 		targetURL += "?" + queryStr
 	}
 
-	slog.Debug("[QuantumProxy] Forwarding POST request", "from", c.Path(), "to", targetURL)
+	slog.Debug("[QuantumProxy] Forwarding POST request", "from", sanitize.LogString(c.Path()), "to", sanitize.LogString(targetURL))
 
 	// Create HTTP client request
 	req, err := http.NewRequestWithContext(c.Context(), http.MethodPost, targetURL, strings.NewReader(string(c.Body())))
 	if err != nil {
-		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
+		slog.Error("[QuantumProxy] Failed to create request", "target", sanitize.LogString(targetURL), "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
 	}
 
@@ -282,7 +283,7 @@ func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 	// Execute request with shared client (has timeout)
 	resp, err := quantumClient.Do(req)
 	if err != nil {
-		slog.Error("[QuantumProxy] Quantum service unavailable", "target", targetURL, "error", err)
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", sanitize.LogString(targetURL), "error", err)
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
 	}
 	defer resp.Body.Close()

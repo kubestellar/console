@@ -47,13 +47,11 @@ const mockState: MissionControlState = {
 describe('RequestApprovalModal', () => {
   it('renders modal title', () => {
     const onClose = vi.fn()
-    const onSubmit = vi.fn()
 
     render(
       <RequestApprovalModal
         isOpen={true}
         onClose={onClose}
-        onSubmit={onSubmit}
         state={mockState}
         installedProjects={new Set()}
       />
@@ -64,13 +62,11 @@ describe('RequestApprovalModal', () => {
 
   it('calls onClose when cancel clicked', () => {
     const onClose = vi.fn()
-    const onSubmit = vi.fn()
 
     render(
       <RequestApprovalModal
         isOpen={true}
         onClose={onClose}
-        onSubmit={onSubmit}
         state={mockState}
         installedProjects={new Set()}
       />
@@ -84,13 +80,11 @@ describe('RequestApprovalModal', () => {
 
   it('shows preview of approval body', () => {
     const onClose = vi.fn()
-    const onSubmit = vi.fn()
 
     render(
       <RequestApprovalModal
         isOpen={true}
         onClose={onClose}
-        onSubmit={onSubmit}
         state={mockState}
         installedProjects={new Set()}
       />
@@ -101,13 +95,11 @@ describe('RequestApprovalModal', () => {
 
   it('does not render when isOpen is false', () => {
     const onClose = vi.fn()
-    const onSubmit = vi.fn()
 
     const { container } = render(
       <RequestApprovalModal
         isOpen={false}
         onClose={onClose}
-        onSubmit={onSubmit}
         state={mockState}
         installedProjects={new Set()}
       />

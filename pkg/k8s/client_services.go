@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/kubestellar/console/pkg/sanitize"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -132,7 +133,7 @@ func (m *MultiClusterClient) GetServices(ctx context.Context, contextName, names
 		}
 	} else {
 		slog.Error("[Services] failed to list endpoints for readiness counts",
-			"cluster", contextName, "namespace", namespace, "error", epErr)
+			"cluster", sanitize.LogString(contextName), "namespace", sanitize.LogString(namespace), "error", epErr)
 	}
 
 	var result []Service
