@@ -313,15 +313,20 @@ export default defineConfig(({ mode }) => ({
     // Retry flaky tests up to 2 times in CI to reduce false-positive workflow failures (#11872)
     retry: process.env.CI ? 2 : 0,
     teardownTimeout: process.env.CI ? 120_000 : 10_000, // CI: increased from 60s to 120s for worker cleanup stability (#10436)
-    // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency
+    // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency.
+    // maxWorkers/minWorkers cap threads pool concurrency; poolOptions.forks.maxForks
+    // caps forks pool concurrency (used when unit-test.sh passes --pool=forks). Both
+    // must be set to 1 so that neither a CLI --pool=forks override nor the default
+    // threads pool exceeds the single-worker budget in CI (#20007).
     maxWorkers: process.env.CI ? 1 : undefined,
     minWorkers: process.env.CI ? 1 : undefined,
+    poolOptions: process.env.CI ? {
+      forks: { maxForks: 1, minForks: 1 },
+      threads: { maxThreads: 1, minThreads: 1 },
+    } : undefined,
     // isolate: true ensures each test file runs in its own subprocess with a clean global environment,
     // preventing vi.stubGlobal() cross-contamination between files (#20256)
     isolate: true,
-    // CI: use threads pool instead of forks to prevent OOM from subprocess spawn storm (#20007)
-    // Threads share memory, no fork overhead. Local dev uses default (forks) for stronger isolation.
-    // pool: process.env.CI ? 'threads' : undefined,  // Reverted: threads share memory, can cause mock cross-contamination
     coverage: {
       provider: 'v8',
       // Disable coverage.all to prevent force-importing source files that trigger
