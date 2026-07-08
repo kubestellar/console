@@ -1,5 +1,6 @@
 import { Search, Layers, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Input } from '../ui/Input'
 
 type GroupByMode = 'cluster' | 'type'
 
@@ -20,14 +21,15 @@ export function NamespaceFilterBar({
 
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-      <div className="relative w-full min-w-0 flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input
+      <div className="w-full min-w-0 flex-1">
+        <Input
           type="text"
+          inputSize="lg"
+          leadingIcon={<Search className="w-4 h-4" />}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={t('common.searchNamespaces')}
-          className="w-full min-w-0 pl-10 pr-4 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
+          className="min-w-0 focus:ring-blue-500/50"
         />
       </div>
       <div className="flex w-full flex-wrap items-center gap-1 rounded-lg bg-secondary/30 p-1 sm:w-auto sm:flex-nowrap sm:self-start">
