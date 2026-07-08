@@ -3,7 +3,7 @@ import {
   generateDrasiHealthSummary,
   deriveHealthLevel,
 } from '../drasiHealth'
-import type { DrasiHealthSummary, DrasiHealthLevel } from '../drasiHealth'
+import type { DrasiHealthSummary } from '../drasiHealth'
 
 // ---------------------------------------------------------------------------
 // deriveHealthLevel
