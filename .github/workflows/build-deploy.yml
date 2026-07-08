@@ -273,8 +273,12 @@ jobs:
           if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
             echo "::warning::Helm release in '$RELEASE_STATUS' — rolling back to recover"
             if ! helm rollback ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 2m; then
-              echo "::error::Helm rollback failed — release may need manual intervention"
-              exit 1
+              echo "::warning::Helm rollback failed — attempting to uninstall stuck release for fresh install"
+              if ! helm uninstall ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 2m; then
+                echo "::error::Helm uninstall failed — release may need manual intervention"
+                exit 1
+              fi
+              echo "Helm release uninstalled; next step will perform a fresh install"
             fi
           fi
 
