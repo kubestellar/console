@@ -277,6 +277,15 @@ podDisruptionBudget:
 watchdog:
   enabled: true
 
+# Startup probe controls how long Kubernetes waits for the watchdog to become
+# healthy before declaring the pod failed. With failureThreshold * periodSeconds
+# seconds of headroom, this must cover image pull (if not cached) + init container
+# (db-restore) + Go app startup + watchdog initialization.
+# Default: 24 * 5s = 120s. Increase on clusters with slow storage provisioning.
+startupProbe:
+  failureThreshold: 24
+  periodSeconds: 5
+
 # Self-upgrade: allow the console to upgrade its own Deployment image tag
 # from the UI. Creates a namespaced Role granting patch access to Deployments
 # in the release namespace only.

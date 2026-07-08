@@ -55,7 +55,11 @@ metadata:
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
-  backoffLimit: 3
+  backoffLimit: 1
+  # Hard deadline prevents a stuck hook from consuming Helm's --timeout budget.
+  # The migration script uses kubectl delete --timeout=120s per PVC; 180s gives
+  # enough headroom for two PVCs while leaving Helm's 10m window intact.
+  activeDeadlineSeconds: 180
   template:
     metadata:
       labels:
@@ -70,8 +74,16 @@ spec:
       containers:
         - name: migrate-pvcs
           image: bitnami/kubectl:latest
+          # Use a lighter securityContext for the migration job: bitnami/kubectl
+          # runs as uid 1001 by default but needs a writable home dir. The app's
+          # securityContext (readOnlyRootFilesystem=true) breaks kubectl's cache
+          # writes on some OpenShift clusters, causing the pod to fail immediately.
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           command:
             - /bin/bash
             - -c

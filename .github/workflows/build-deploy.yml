@@ -536,27 +536,74 @@ jobs:
       # need to be null.
       - name: Deploy with Helm
         run: |
-          helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./deploy/helm/kubestellar-console \
-            --namespace kc \
-            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
-            --set image.tag=${{ github.sha }} \
-            --set github.url=https://github.ibm.com \
-            --set github.existingSecret=kc-secrets \
-            --set jwt.existingSecret=kc-secrets \
-            --set githubToken.existingSecret=kc-secrets \
-            --set googleDrive.existingSecret=kc-secrets \
-            --set route.enabled=true \
-            --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
-            --set clusterName=vllm-d \
-            --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
-            --set persistence.storageClass=ibmc-vpc-block-10iops-tier \
-            --set backup.storageClass=ibmc-vpc-block-10iops-tier \
-            --set rbac.namespaceCreationEnabled=true \
-            --set securityContext.runAsUser=null \
-            --set securityContext.runAsGroup=null \
-            --set podLabels.team=kubestellar \
-            --atomic \
-            --timeout 10m
+          recover_release() {
+            RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kc -o json 2>/dev/null | jq -r '.info.status // empty' || true)
+            if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
+              echo "Helm release in '$RELEASE_STATUS' — rolling back to recover"
+              if ! helm rollback ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 2m; then
+                echo "::warning::Helm rollback failed — uninstalling to allow fresh deploy"
+                helm uninstall ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 5m 2>/dev/null || true
+              fi
+            fi
+          }
+
+          cleanup_stuck_pods() {
+            for pod in $(kubectl get pods -n kc -o json 2>/dev/null | jq -r '
+              .items[]
+              | select(.metadata.deletionTimestamp != null)
+              | select((now - (.metadata.deletionTimestamp | fromdateiso8601)) > 600)
+              | .metadata.name
+            '); do
+              echo "Force-deleting terminating pod: $pod"
+              kubectl delete pod "$pod" -n kc --grace-period=0 --force 2>/dev/null || true
+            done
+            kubectl delete pods -n kc --field-selector=status.phase=Failed --force --grace-period=0 2>/dev/null || true
+          }
+
+          deploy_helm() {
+            helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./deploy/helm/kubestellar-console \
+              --namespace kc \
+              --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+              --set image.tag=${{ github.sha }} \
+              --set github.url=https://github.ibm.com \
+              --set github.existingSecret=kc-secrets \
+              --set jwt.existingSecret=kc-secrets \
+              --set githubToken.existingSecret=kc-secrets \
+              --set googleDrive.existingSecret=kc-secrets \
+              --set route.enabled=true \
+              --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
+              --set clusterName=vllm-d \
+              --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
+              --set persistence.storageClass=ibmc-vpc-block-10iops-tier \
+              --set backup.storageClass=ibmc-vpc-block-10iops-tier \
+              --set rbac.namespaceCreationEnabled=true \
+              --set securityContext.runAsUser=null \
+              --set securityContext.runAsGroup=null \
+              --set podLabels.team=kubestellar \
+              --atomic \
+              --cleanup-on-fail \
+              --timeout 10m
+          }
+
+          MAX_ATTEMPTS=2
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "Deploy attempt $attempt of $MAX_ATTEMPTS..."
+            if deploy_helm; then
+              echo "Deploy succeeded on attempt $attempt"
+              exit 0
+            fi
+
+            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+              echo "::warning::Deploy attempt $attempt failed, recovering and retrying..."
+              sleep 30
+              recover_release
+              cleanup_stuck_pods
+              sleep 10
+            fi
+          done
+
+          echo "::error::Deploy failed after $MAX_ATTEMPTS attempts"
+          exit 1
 
       - name: Collect diagnostics on deploy failure
         if: failure()

@@ -112,14 +112,17 @@ spec:
           {{- if .Values.watchdog.enabled }}
           # Startup probe gives the watchdog reverse proxy time to initialize
           # before liveness/readiness probes begin. Without this, the pod may
-          # enter CrashLoopBackOff on slow nodes.
+          # enter CrashLoopBackOff on slow nodes or clusters with slow block
+          # storage provisioning (e.g. IBM VPC Block on vllm-d).
+          # Budget = startupProbe.failureThreshold * startupProbe.periodSeconds.
+          # Default: 24 * 5s = 120s. Configurable via .Values.startupProbe.
           startupProbe:
             httpGet:
               path: /watchdog/health
               port: http
             initialDelaySeconds: 5
-            periodSeconds: 5
-            failureThreshold: 12
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
           {{- end }}
           livenessProbe:
             httpGet:
