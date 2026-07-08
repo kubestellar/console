@@ -48,6 +48,7 @@ function saveSelection(sel: Set<string>): void {
 }
 
 /** Merge server repos + user config into the visible list */
+// eslint-disable-next-line react-refresh/only-export-components
 export function mergeRepos(serverRepos: string[], config: StoredRepoConfig): string[] {
   const hidden = new Set(config.hidden)
   const visible = serverRepos.filter((r) => !hidden.has(r))
