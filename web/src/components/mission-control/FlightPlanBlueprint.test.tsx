@@ -9,6 +9,9 @@ vi.mock('react-i18next', () => ({
 }))
 
 const mockState: MissionControlState = {
+  phase: 'blueprint',
+  title: 'Test Plan',
+  description: 'Test deployment plan',
   projects: [
     {
       name: 'prometheus',
@@ -23,8 +26,16 @@ const mockState: MissionControlState = {
   assignments: [
     {
       clusterName: 'cluster-1',
+      clusterContext: 'cluster-1',
+      provider: 'kind',
       projectNames: ['prometheus'],
       warnings: [],
+      readiness: {
+        cpuHeadroomPercent: 80,
+        memHeadroomPercent: 80,
+        storageHeadroomPercent: 80,
+        overallScore: 80,
+      },
     },
   ],
   phases: [
@@ -35,7 +46,11 @@ const mockState: MissionControlState = {
       estimatedSeconds: 300,
     },
   ],
-  description: 'Test deployment plan',
+  overlay: 'architecture',
+  deployMode: 'phased',
+  targetClusters: [],
+  aiStreaming: false,
+  launchProgress: [],
 }
 
 describe('FlightPlanBlueprint', () => {
@@ -66,10 +81,17 @@ describe('FlightPlanBlueprint', () => {
 
   it('handles empty state', () => {
     const emptyState: MissionControlState = {
+      phase: 'blueprint',
+      title: '',
+      description: '',
       projects: [],
       assignments: [],
       phases: [],
-      description: '',
+      overlay: 'architecture',
+      deployMode: 'phased',
+      targetClusters: [],
+      aiStreaming: false,
+      launchProgress: [],
     }
 
     const { container } = render(
