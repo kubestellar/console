@@ -120,5 +120,4 @@ export function collectK8sGroundTruth(runId = process.env.GITHUB_RUN_ID || Strin
 
 if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module) {
   const groundTruth = collectK8sGroundTruth()
-  console.log(safeJsonStringify(groundTruth))
 }
