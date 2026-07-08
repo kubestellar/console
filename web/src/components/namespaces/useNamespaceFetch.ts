@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { TFunction } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { authFetch } from '../../lib/api'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 import { NAMESPACE_ABORT_TIMEOUT_MS, isLocalAgentSuppressed } from '../../lib/constants/network'
