@@ -13,6 +13,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { getPipelineRepos } from '../../../hooks/useGitHubPipelines'
 import { safeGetJSON, safeSetJSON } from '../../../lib/utils/localStorage'
+import { mergeRepos } from './pulse-utils'
 
 /** localStorage key for user-managed repo overrides */
 const STORAGE_KEY = 'kc-pipeline-repos'
@@ -47,19 +48,6 @@ function saveSelection(sel: Set<string>): void {
   safeSetJSON(SELECTION_STORAGE_KEY, [...sel])
 }
 
-/** Merge server repos + user config into the visible list */
-function mergeRepos(serverRepos: string[], config: StoredRepoConfig): string[] {
-  const hidden = new Set(config.hidden)
-  const visible = serverRepos.filter((r) => !hidden.has(r))
-  // Append user-added repos that aren't already in the server list
-  const serverSet = new Set(serverRepos)
-  for (const r of config.added) {
-    if (!serverSet.has(r) && !hidden.has(r)) {
-      visible.push(r)
-    }
-  }
-  return visible
-}
 
 export interface PipelineFilterState {
   /** Selected repos. Empty set = "All repos" (no filtering). */
