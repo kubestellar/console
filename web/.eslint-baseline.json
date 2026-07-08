@@ -4286,7 +4286,7 @@
   {
     "file": "src/components/cards/pipelines/PipelineFilterContext.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 177,
+    "line": 176,
     "column": 6,
     "message": "React Hook useCallback has a missing dependency: 'setSelectedRepos'. Either include it or remove the dependency array."
   },
