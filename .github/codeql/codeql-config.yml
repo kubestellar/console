@@ -1,0 +1,18 @@
+# CodeQL configuration for kubestellar/console
+# See https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning
+
+name: "KubeStellar CodeQL Config"
+
+# Exclude paths that either contain no production code or only
+# generated/vendored content that we do not control.
+paths-ignore:
+  # End-to-end and unit test files — vulnerabilities here don't ship to prod
+  - "web/e2e/**"
+  - "web/src/**/*.test.ts"
+  - "web/src/**/*.test.tsx"
+  - "web/src/**/*.spec.ts"
+  - "web/src/**/*.spec.tsx"
+  # Bundled third-party vendor libraries
+  - "web/public/vendor/**"
+  # Mock service worker (generated, third-party)
+  - "web/public/mockServiceWorker.js"
