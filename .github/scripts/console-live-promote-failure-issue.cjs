@@ -33,6 +33,8 @@ const LIVE_UI_AREAS = ['web/src/components/**', 'web/src/components/dashboard/**
 const BROWSER_LAYOUT_AREAS = ['web/src/components/layout/**', 'web/src/components/ui/**', 'web/src/components/dashboard/**', 'web/e2e/visual-login/macos-popup/**', 'web/e2e/visual-login/browser-matrix/**']
 const BROWSER_CONTENT_AREAS = ['web/src/pages/**', 'web/src/components/**', 'web/src/hooks/**', 'cmd/console/**']
 const FAILURE_TYPE_METADATA = {
+  'canary-setup': { short: 'private canary setup failed', areas: ['.github/workflows/console-live-promote.yml', 'deploy/helm/kubestellar-console/**', 'cmd/watcher/**', 'pkg/watcher/**'] },
+  'deployment-rollout': { short: 'console-live deployment rollout failed', areas: ['.github/workflows/console-live-promote.yml', 'deploy/helm/kubestellar-console/**', 'cmd/watcher/**', 'pkg/watcher/**'] },
   'live-ui-overlap': { short: 'visible text overlap blocks promotion', areas: LIVE_UI_AREAS },
   'live-ui-forbidden-artifact': { short: 'live UI shows demo or local-only artifact', areas: LIVE_UI_AREAS },
   'live-ui-warning-flood': { short: 'live UI shows warning flood', areas: LIVE_UI_AREAS },
@@ -55,7 +57,7 @@ const FAILURE_TYPE_METADATA = {
   'interactive-surface-broken': { short: 'interactive live UI surface is broken', areas: ['web/src/components/layout/**', 'web/src/components/ui/**', 'web/src/components/search/**', 'web/src/components/dashboard/**'] },
   'fixture-state-mismatch': { short: 'controlled fixture state is missing or mislabeled', areas: ['web/harness/groundtruth/liveFixtureManager.ts', 'web/e2e/visual-login/semantic/live-fixtures.spec.ts', 'web/src/components/**', 'web/src/hooks/**'] },
   'groundtruth-mismatch': { short: 'live UI does not match cluster groundtruth', areas: ['web/src/components/**', 'web/harness/groundtruth/**', 'web/e2e/visual-login/semantic/live-canary-ui.spec.ts'] },
-  'auth-boundary': { short: 'production auth boundary failed', areas: ['web/src/lib/auth.tsx', 'cmd/console/**', 'deploy/helm/kubestellar-console/**', '.github/workflows/console-live-promote.yml'], browserMatrix: true },
+  'auth-boundary': { short: 'production auth boundary failed', areas: ['web/src/lib/auth.tsx', 'cmd/console/**', 'deploy/helm/kubestellar-console/**', '.github/workflows/console-live-promote.yml'] },
 }
 
 function walk(dir) {
@@ -504,6 +506,32 @@ function artifactPathsFromText(logText) {
   )
 }
 
+function rolloutFailureType(text) {
+  const hasRolloutSymptom = (
+    /crashloopbackoff|back-off restarting failed container|deployment [^\r\n]+ not ready|rollout status[^\r\n]+timed out/i.test(text)
+    || /timed out waiting for the condition|context deadline exceeded|upgrade failed|installation failed/i.test(text)
+    || /failed to prepare watcher runtime|read-only file system|create watcher runtime info temp file/i.test(text)
+    || /minimum availability|available:\s*0\/1|pod [^\r\n]+ crashloopbackoff/i.test(text)
+  )
+  if (!hasRolloutSymptom) return ''
+  if (/private canary|canary deployment|canary_release|canary_deployment|kc-live-canary|deploy candidate to private canary/i.test(text)) {
+    return 'canary-setup'
+  }
+  if (/console-live|production|live deployment|live_release|live_deployment|kc-live|deploy candidate to console-live|promote candidate to production/i.test(text)) {
+    return 'deployment-rollout'
+  }
+  return 'canary-setup'
+}
+
+function hasAuthBoundaryFailure(text) {
+  return (
+    /signed live canary (?:cookie|session)[\s\S]{0,500}\/api\/me[\s\S]{0,500}(?:401|received:\s*401|expected:\s*200)/i.test(text)
+    || /\/api\/me[\s\S]{0,300}(?:expected:\s*200[\s\S]{0,120}received:\s*401|received:\s*401[\s\S]{0,120}expected:\s*200)/i.test(text)
+    || /\/api\/me\s*=\s*401|\/api\/me[^\r\n]{0,160}\b401\b/i.test(text)
+    || /production auth boundary failed|auth-boundary|auth boundary/i.test(text)
+  )
+}
+
 function classifyFailure({ failures, evidenceItems, liveUiFailures, logText }) {
   const text = sanitizeText(JSON.stringify({ failures, evidenceItems, liveUiFailures }) + '\n' + logText).toLowerCase()
   const browserMatrixFailures = liveUiFailures.browserMatrixFailures || []
@@ -527,6 +555,9 @@ function classifyFailure({ failures, evidenceItems, liveUiFailures, logText }) {
     || (liveUiFailures.unexpectedRequestFailures || []).length
     || browserMatrixFailures.some(failure => failure.classification === 'live-network-error')
     || /live-network-error|startup-error|infrastructure connection error|unexpected app-origin|4xx|5xx|bad request/.test(text)
+  const rolloutFailure = rolloutFailureType(text)
+  if (rolloutFailure) return rolloutFailure
+  if (hasAuthBoundaryFailure(text)) return 'auth-boundary'
   if ((hasCandidateImageFailure || hasCanaryInfraFailure) && !hasProductEvidence) return 'canary-setup'
   if (hasStructuredCoreRateLimit || networkClassifications.some(item =>
     item.classification === 'live-rate-limit-data-loss' && isCoreResourceEndpoint(item.url)

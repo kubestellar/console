@@ -151,9 +151,10 @@ describe('card config deep schema validation', () => {
     it('custom content has component name', () => {
       const c = getCardConfig(cardType)!
       if (c.content.type === 'custom') {
-        const content = c.content as { type: 'custom'; component?: string }
-        expect(typeof content.component).toBe('string')
-        expect(content.component!.length).toBeGreaterThan(0)
+        const content = c.content as { type: 'custom'; component?: string; componentName?: string }
+        const name = content.component || content.componentName
+        expect(typeof name).toBe('string')
+        expect(name!.length).toBeGreaterThan(0)
       }
     })
 

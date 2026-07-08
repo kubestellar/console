@@ -143,6 +143,26 @@ jobs:
           MACOS_POPUP_LITMUS_FORCE_FAILURE: ${{ env.MACOS_POPUP_LITMUS_FORCE_FAILURE }}
         run: npm run test:visual:macos-popup
 
+      - name: Capture macOS popup diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          diag_dir="$RUNNER_TEMP/console-live-macos/diagnostics"
+          mkdir -p "$diag_dir"
+          {
+            echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "workflow=$GITHUB_WORKFLOW"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "runner_os=$RUNNER_OS"
+            echo "runner_arch=$RUNNER_ARCH"
+            echo "test_console_url=${LIVE_URL:-unknown}"
+            echo "litmus_force_failure=${MACOS_POPUP_LITMUS_FORCE_FAILURE:-false}"
+            echo
+            echo "## Playwright outputs found"
+            find web/e2e/visual-login/test-results web/test-results -maxdepth 4 -type f 2>/dev/null | sort
+          } > "$diag_dir/macos-popup-summary.log"
+
       - name: Upload console live macOS popup evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -152,5 +172,9 @@ jobs:
             web/test-results/macos-popup-results/results.json
             web/test-results/reports/macos-popup/
             web/test-results/macos-popup/
+            web/e2e/visual-login/test-results/macos-popup-results/results.json
+            web/e2e/visual-login/test-results/reports/macos-popup/
+            web/e2e/visual-login/test-results/macos-popup/
+            ${{ runner.temp }}/console-live-macos/diagnostics/
           if-no-files-found: warn
           retention-days: 14

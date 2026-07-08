@@ -9,6 +9,13 @@ vi.mock('react-i18next', () => ({
 }))
 
 const mockState: MissionControlState = {
+  phase: 'blueprint',
+  title: 'Test Plan',
+  overlay: 'architecture',
+  deployMode: 'phased',
+  targetClusters: [],
+  aiStreaming: false,
+  launchProgress: [],
   projects: [
     {
       name: 'prometheus',
@@ -66,6 +73,13 @@ describe('FlightPlanBlueprint', () => {
 
   it('handles empty state', () => {
     const emptyState: MissionControlState = {
+      phase: 'define',
+      title: '',
+      overlay: 'architecture',
+      deployMode: 'phased',
+      targetClusters: [],
+      aiStreaming: false,
+      launchProgress: [],
       projects: [],
       assignments: [],
       phases: [],

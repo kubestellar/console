@@ -8,6 +8,10 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
 }))
 
+vi.mock('../../lib/api', () => ({
+  authFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(url, init)),
+}))
+
 const mockSummary = {
   total_rules: 5, total_principals: 10, total_violations: 5,
   by_severity: { critical: 2, high: 2, medium: 1 },

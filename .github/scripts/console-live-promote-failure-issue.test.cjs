@@ -126,6 +126,12 @@ test('only browser failures receive the browser-matrix label', () => {
     'needs-fix',
     'browser-matrix',
   ])
+  assert.deepEqual(_test.labelsForFailureType('auth-boundary'), [
+    'console-live',
+    'live-canary',
+    'test-failure',
+    'needs-fix',
+  ])
 })
 
 test('classifies rate limits as live data loss', () => {
@@ -290,6 +296,44 @@ test('classifies structured browser matrix canary setup failures', () => {
 
 test('keeps canary setup as fallback when no parsed product evidence exists', () => {
   assert.equal(classify({}, 'canary browser matrix port-forward did not become healthy'), 'canary-setup')
+})
+
+test('classifies private canary CrashLoop rollout failures as setup failures', () => {
+  assert.equal(classify({}, [
+    'Deploy candidate to private canary',
+    'Error: UPGRADE FAILED: context deadline exceeded',
+    'Deployment kc-live-canary not ready. Available: 0/1',
+    'pod/kc-live-canary-abc123 CrashLoopBackOff',
+    'failed to prepare watcher runtime',
+    'create watcher runtime info temp file: open data/kc-watcher-runtime-123: read-only file system',
+    'cluster-dashboard-groundtruth-match',
+  ].join('\n')), 'canary-setup')
+})
+
+test('classifies production rollout failures separately from setup and groundtruth', () => {
+  assert.equal(classify({}, [
+    'Deploy candidate to console-live',
+    'helm upgrade --install kc-live ./deploy/helm/kubestellar-console --atomic --wait',
+    'Error: UPGRADE FAILED: timed out waiting for the condition',
+    'deployment kc-live not ready',
+    'groundtruth mismatch summary was not produced because deployment failed',
+  ].join('\n')), 'deployment-rollout')
+})
+
+test('classifies signed-session /api/me 401 as auth boundary before browser layout', () => {
+  assert.equal(classify({
+    browserMatrixFailures: [{
+      classification: 'macos-popup-clipped',
+      browser: 'webkit',
+      route: '/',
+      control: 'user-menu',
+      reason: 'not reached because session setup failed',
+    }],
+  }, [
+    'signed live canary cookie must validate against /api/me',
+    'Expected: 200',
+    'Received: 401',
+  ].join('\n')), 'auth-boundary')
 })
 
 test('prioritizes canary setup over product-looking log noise', () => {

@@ -76,13 +76,13 @@ function deepFreeze<T>(obj: T, seen = new WeakSet<object>()): T {
   // Freeze first so any subsequent property lookups can't trigger a getter
   // that mutates the object after we've walked it.
   Object.freeze(obj)
-  
+
   // #19864: Freeze the prototype chain to prevent prototype pollution
   const proto = Object.getPrototypeOf(obj)
   if (proto !== null && proto !== Object.prototype && !Object.isFrozen(proto)) {
     deepFreeze(proto, seen)
   }
-  
+
   for (const key of Object.getOwnPropertyNames(obj)) {
     let value: unknown
     try {
@@ -143,11 +143,43 @@ export async function compileCardCode(tsx: string, timeoutMs = CARD_COMPILE_TIME
 }
 
 /**
+ * Injectable module execution function.
+ * Default: creates a blob URL ES module (CSP-safe, works in production).
+ * Override via _setCardImportFn() in tests to use Function-based eval.
+ *
+ * Receives the raw module source string. The module stores its exported
+ * component in globalThis[scopeId + '__result'] as a side effect.
+ */
+type CardImportFn = (moduleSource: string) => Promise<unknown>
+
+const _defaultCardImportFn: CardImportFn = async (source: string): Promise<unknown> => {
+  const blob = new Blob([source], { type: 'text/javascript' })
+  const url = URL.createObjectURL(blob)
+  try {
+    return await import(/* webpackIgnore: true */ url)
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+let _cardImportFn: CardImportFn = _defaultCardImportFn
+
+/** @internal For testing only — inject a custom module execution function */
+export function _setCardImportFn(fn: CardImportFn): void {
+  _cardImportFn = fn
+}
+
+/** @internal For testing only — restore the default blob URL import */
+export function _resetCardImportFn(): void {
+  _cardImportFn = _defaultCardImportFn
+}
+
+/**
  * Create a React component from compiled JavaScript code.
  * #19864 Security fix: Replaced new Function() with blob URL ES module import.
  * This approach works with strict CSP (no unsafe-eval) by creating a temporary
  * ES module blob and using dynamic import(), which is allowed under CSP.
- * 
+ *
  * The code runs in a hardened sandbox:
  * 1. Whitelisted scope — only approved libraries are injected via module exports
  * 2. Dangerous globals blocked via static analysis (not runtime shadowing)
@@ -194,39 +226,40 @@ export async function createCardComponent(compiledCode: string): Promise<Dynamic
 
     const fullScope = { ...blockedEntries, ...scope }
     const scopeKeys = Object.keys(fullScope)
-    
+
     // Store scope in a temporary global for the module to access
     const scopeId = `__CARD_SCOPE_${Date.now()}_${Math.random().toString(36).slice(2)}`
     ;(globalThis as Record<string, unknown>)[scopeId] = fullScope
-    
-    // Create an ES module that:
+
+    // Create a module source that:
     // 1. Retrieves the frozen scope from globalThis
     // 2. Destructures scope variables into the module context
     // 3. Executes the compiled card code
-    // 4. Exports the resulting component
+    // 4. Stores the resulting component in globalThis for the caller to read
+    //
+    // Note: no ES module `export` syntax — the module communicates its result
+    // back via a globalThis side-effect. This lets the same source string work
+    // with both blob URL import() (production) and new Function() eval (tests).
     const moduleSource = `
-      const __scope = globalThis.${scopeId};
-      delete globalThis.${scopeId};
-      const { ${scopeKeys.join(', ')} } = __scope;
-      
+      "use strict";
+      const __scope = globalThis['${scopeId}'];
+      if (__scope) delete globalThis['${scopeId}'];
+      const { ${scopeKeys.join(', ')} } = __scope || {};
+
       var exports = {};
       var module = { exports: exports };
-      
+
       ${compiledCode}
-      
-      export default module.exports.default || module.exports;
+
+      globalThis['${scopeId}__result'] = module.exports.default || module.exports;
     `
-    
-    let blobUrl: string | null = null
-    
+
     try {
-      // Create a blob URL for the module
-      const blob = new Blob([moduleSource], { type: 'text/javascript' })
-      blobUrl = URL.createObjectURL(blob)
-      
-      // Import the module (this is CSP-compliant for blob: URLs)
-      const module = await import(/* webpackIgnore: true */ blobUrl)
-      const component = module.default as ComponentType<CardComponentProps>
+      // Execute the module source (via blob URL in production, or injected fn in tests)
+      await _cardImportFn(moduleSource)
+
+      const component = (globalThis as Record<string, unknown>)[`${scopeId}__result`] as ComponentType<CardComponentProps>
+      delete (globalThis as Record<string, unknown>)[`${scopeId}__result`]
 
       if (typeof component !== 'function') {
         return {
@@ -241,9 +274,9 @@ export async function createCardComponent(compiledCode: string): Promise<Dynamic
 
       return { component: SafeComponent, error: null, cleanup: timerCleanup }
     } finally {
-      // Clean up
-      if (blobUrl) URL.revokeObjectURL(blobUrl)
+      // Belt-and-suspenders cleanup (module source deletes scopeId; result deleted above)
       delete (globalThis as Record<string, unknown>)[scopeId]
+      delete (globalThis as Record<string, unknown>)[`${scopeId}__result`]
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)

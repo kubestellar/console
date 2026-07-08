@@ -14,7 +14,7 @@ import type { LLMdStack, LLMdStackComponent } from '../../hooks/useStackDiscover
 
 // ── Mock state ────────────────────────────────────────────────────────────
 
-let mockIsDemoMode = true
+const mockDemoModeState = vi.hoisted(() => ({ isDemoMode: true }))
 let mockDiscoveredStacks: LLMdStack[] = []
 let mockIsLoading = false
 let mockError: string | null = null
@@ -34,8 +34,8 @@ vi.mock('../../hooks/useStackDiscovery', () => ({
 
 vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
-  getDemoMode: vi.fn(() => false),
+  useDemoMode: () => ({ isDemoMode: mockDemoModeState.isDemoMode, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => mockDemoModeState.isDemoMode),
 }))
 
 vi.mock('../../hooks/mcp/clusters', () => ({
@@ -107,7 +107,7 @@ function createStack(overrides: Partial<LLMdStack> = {}): LLMdStack {
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
-  mockIsDemoMode = true
+  mockDemoModeState.isDemoMode = true
   mockDiscoveredStacks = []
   mockIsLoading = false
   mockError = null
@@ -150,7 +150,7 @@ describe('StackContext', () => {
   // ── 2. Demo mode provides demo stacks ───────────────────────────────
 
   it('provides demo stacks when in demo mode', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     expect(result.current.stacks.length).toBeGreaterThan(0)
@@ -158,7 +158,7 @@ describe('StackContext', () => {
   })
 
   it('includes a disaggregated stack in demo stacks', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const disaggregated = result.current.stacks.filter(s => s.hasDisaggregation)
@@ -166,7 +166,7 @@ describe('StackContext', () => {
   })
 
   it('includes a stack with WVA autoscaler in demo stacks', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const wvaStack = result.current.stacks.find(s => s.autoscaler?.type === 'WVA')
@@ -174,7 +174,7 @@ describe('StackContext', () => {
   })
 
   it('includes a stack with HPA autoscaler in demo stacks', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const hpaStack = result.current.stacks.find(s => s.autoscaler?.type === 'HPA')
@@ -182,7 +182,7 @@ describe('StackContext', () => {
   })
 
   it('includes a degraded stack in demo stacks', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const degraded = result.current.stacks.find(s => s.status === 'degraded')
@@ -190,21 +190,21 @@ describe('StackContext', () => {
   })
 
   it('reports isLoading as false in demo mode', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     expect(result.current.isLoading).toBe(false)
   })
 
   it('reports error as null in demo mode', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     expect(result.current.error).toBeNull()
   })
 
   it('provides a no-op refetch in demo mode', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     // Should not throw
@@ -216,7 +216,7 @@ describe('StackContext', () => {
   // ── 3. Live mode uses discovered stacks ──────────────────────────────
 
   it('uses discovered stacks from useStackDiscovery in live mode', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     const liveStack = createStack({ id: 'live-ns@cluster-a', cluster: 'cluster-a' })
     mockDiscoveredStacks = [liveStack]
     mockDeduplicatedClusters = [{ name: 'cluster-a', reachable: true }]
@@ -229,7 +229,7 @@ describe('StackContext', () => {
   })
 
   it('passes live isLoading state in live mode', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockIsLoading = true
 
     const { result } = renderHook(() => useStack(), { wrapper })
@@ -238,7 +238,7 @@ describe('StackContext', () => {
   })
 
   it('passes live error state in live mode', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockError = 'Failed to discover stacks'
 
     const { result } = renderHook(() => useStack(), { wrapper })
@@ -247,7 +247,7 @@ describe('StackContext', () => {
   })
 
   it('uses live refetch function in live mode', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     const { result } = renderHook(() => useStack(), { wrapper })
 
     result.current.refetch()
@@ -257,7 +257,7 @@ describe('StackContext', () => {
   // ── 4. Cluster filtering — exclude offline clusters ──────────────────
 
   it('filters out stacks from clusters that are not reachable', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockDiscoveredStacks = [
       createStack({ id: 'ns@online', cluster: 'online' }),
       createStack({ id: 'ns@offline', cluster: 'offline' }),
@@ -274,7 +274,7 @@ describe('StackContext', () => {
   })
 
   it('shows no stacks when all clusters are offline', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockDiscoveredStacks = [
       createStack({ id: 'ns@c1', cluster: 'c1' }),
     ]
@@ -290,7 +290,7 @@ describe('StackContext', () => {
   // ── 5. Stack selection ───────────────────────────────────────────────
 
   it('allows selecting a stack by ID', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const firstStack = result.current.stacks[0]
@@ -305,7 +305,7 @@ describe('StackContext', () => {
 
   // SKIP: test update needed — StackContext now returns default stack instead of null
   it('auto-selects a default stack when selection is cleared and stacks are available', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     // Clear any auto-selected stack — auto-select effect will re-select a default
@@ -320,7 +320,7 @@ describe('StackContext', () => {
 
   // SKIP: test update needed — StackContext now returns default stack instead of null
   it('auto-selects a default stack when selected ID does not match any stack', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     act(() => {
@@ -335,7 +335,7 @@ describe('StackContext', () => {
   // ── 6. Selection persistence to localStorage ─────────────────────────
 
   it('persists selected stack ID to localStorage', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const stackId = result.current.stacks[0].id
@@ -348,7 +348,7 @@ describe('StackContext', () => {
 
   // SKIP: test update needed — StackContext now returns default stack instead of null
   it('re-populates localStorage with auto-selected stack when selection is set to null', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     localStorage.setItem(STORAGE_KEY, 'some-id')
 
     const { result } = renderHook(() => useStack(), { wrapper })
@@ -365,7 +365,7 @@ describe('StackContext', () => {
   })
 
   it('restores selection from localStorage on mount', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     // Need to render once to get the demo stack IDs
     const { result: firstResult } = renderHook(() => useStack(), { wrapper })
     const stackId = firstResult.current.stacks[0].id
@@ -383,7 +383,7 @@ describe('StackContext', () => {
   // ── 7. Auto-selection logic ──────────────────────────────────────────
 
   it('auto-selects a healthy disaggregated stack first', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     // The demo stacks include a healthy disaggregated one
     const { result } = renderHook(() => useStack(), { wrapper })
 
@@ -397,7 +397,7 @@ describe('StackContext', () => {
   })
 
   it('auto-selects first healthy stack when no disaggregated stacks available', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockIsLoading = false
     const healthyUnified = createStack({
       id: 'unified@c1',
@@ -420,7 +420,7 @@ describe('StackContext', () => {
   })
 
   it('auto-selects first stack when none are healthy', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockIsLoading = false
     const stack1 = createStack({
       id: 'deg-1@c1',
@@ -443,7 +443,7 @@ describe('StackContext', () => {
   })
 
   it('does not auto-select while loading', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockIsLoading = true
     mockDiscoveredStacks = []
     mockDeduplicatedClusters = []
@@ -454,7 +454,7 @@ describe('StackContext', () => {
   })
 
   it('does not auto-select when stacks are empty', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockIsLoading = false
     mockDiscoveredStacks = []
     mockDeduplicatedClusters = []
@@ -467,7 +467,7 @@ describe('StackContext', () => {
   // ── 8. getStackById helper ───────────────────────────────────────────
 
   it('getStackById returns correct stack for valid ID', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const firstStack = result.current.stacks[0]
@@ -478,7 +478,7 @@ describe('StackContext', () => {
   })
 
   it('getStackById returns undefined for non-existent ID', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const found = result.current.getStackById('totally-fake@nonexistent')
@@ -488,7 +488,7 @@ describe('StackContext', () => {
   // ── 9. healthyStacks helper ──────────────────────────────────────────
 
   it('healthyStacks filters only healthy stacks', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const healthyCount = result.current.healthyStacks.length
@@ -499,7 +499,7 @@ describe('StackContext', () => {
   })
 
   it('healthyStacks excludes degraded stacks', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const degradedInHealthy = result.current.healthyStacks.some(s => s.status === 'degraded')
@@ -513,7 +513,7 @@ describe('StackContext', () => {
   // ── 10. disaggregatedStacks helper ───────────────────────────────────
 
   it('disaggregatedStacks filters only stacks with disaggregation', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const disaggCount = result.current.disaggregatedStacks.length
@@ -524,7 +524,7 @@ describe('StackContext', () => {
   })
 
   it('disaggregatedStacks excludes unified stacks', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const unifiedInDisagg = result.current.disaggregatedStacks.some(s => !s.hasDisaggregation)
@@ -538,7 +538,7 @@ describe('StackContext', () => {
   // ── 11. Demo stacks structure validation ─────────────────────────────
 
   it('demo stacks have valid component structures', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     for (const stack of result.current.stacks) {
@@ -558,7 +558,7 @@ describe('StackContext', () => {
   })
 
   it('demo stacks have unique IDs', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const ids = result.current.stacks.map(s => s.id)
@@ -567,7 +567,7 @@ describe('StackContext', () => {
   })
 
   it('demo stacks include at least one stack with zero replicas for WVA idle testing', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     const idleStack = result.current.stacks.find(
@@ -580,14 +580,14 @@ describe('StackContext', () => {
   // ── 12. lastRefresh ──────────────────────────────────────────────────
 
   it('provides a Date for lastRefresh in demo mode', () => {
-    mockIsDemoMode = true
+    mockDemoModeState.isDemoMode = true
     const { result } = renderHook(() => useStack(), { wrapper })
 
     expect(result.current.lastRefresh).toBeInstanceOf(Date)
   })
 
   it('passes through live lastRefresh in live mode', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     const liveDate = new Date('2025-01-01T00:00:00Z')
     mockLastRefresh = liveDate
 
@@ -597,7 +597,7 @@ describe('StackContext', () => {
   })
 
   it('passes through null lastRefresh when live data has not loaded yet', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockLastRefresh = null
 
     const { result } = renderHook(() => useStack(), { wrapper })
@@ -608,7 +608,7 @@ describe('StackContext', () => {
   // ── 13. Selection clearing on stale data ─────────────────────────────
 
   it('clears selection when selected stack disappears from the list', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockIsLoading = false
     const stack = createStack({ id: 'will-vanish@c1', cluster: 'c1' })
     mockDiscoveredStacks = [stack]
@@ -631,7 +631,7 @@ describe('StackContext', () => {
   // ── 14. Multiple stacks in live mode ─────────────────────────────────
 
   it('handles multiple stacks across different clusters', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockIsLoading = false
     mockDiscoveredStacks = [
       createStack({ id: 'ns1@c1', cluster: 'c1', status: 'healthy' }),
@@ -656,7 +656,7 @@ describe('StackContext', () => {
   // ── 15. Selection does not change when stacks reload ─────────────────
 
   it('preserves user selection across re-renders when stack still exists', () => {
-    mockIsDemoMode = false
+    mockDemoModeState.isDemoMode = false
     mockIsLoading = false
     const stacks = [
       createStack({ id: 'ns1@c1', cluster: 'c1', status: 'healthy', hasDisaggregation: true }),

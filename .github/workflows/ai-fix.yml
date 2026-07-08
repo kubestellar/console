@@ -21,7 +21,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-    uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@main
+    uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@1a04a3fd17771e78e5cf6d42a3fda84e3ba478f3 # main pinned 2026-07-08
     with:
       issue_number: ${{ github.event.inputs.issue_number || '' }}
     secrets:

@@ -748,6 +748,79 @@ jobs:
         working-directory: web
         run: npm run test:visual:browser-matrix:compare
 
+      - name: Capture console live diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          diag_dir="$RUNNER_TEMP/console-live/diagnostics"
+          mkdir -p "$diag_dir"
+
+          redact_file() {
+            file="$1"
+            [ -f "$file" ] || return 0
+            sed -E -i \
+              -e 's/(client[-_ ]?secret|jwt[-_ ]?secret|kubeconfig|token|password|cookie)([[:space:]]*[:=][[:space:]]*)[^[:space:]]+/\1\2[REDACTED]/Ig' \
+              -e 's/(github_pat_|ghp_)[A-Za-z0-9_]+/[REDACTED_GITHUB_TOKEN]/g' \
+              -e 's/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/[REDACTED_JWT]/g' \
+              "$file" || true
+          }
+
+          {
+            echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "workflow=$GITHUB_WORKFLOW"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "promote_production=${PROMOTE_PRODUCTION:-unknown}"
+            echo "test_console_url=${TEST_CONSOLE_URL:-unknown}"
+            echo "candidate_image=${{ steps.candidate.outputs.image }}"
+            echo "live_namespace=${LIVE_NAMESPACE:-unknown}"
+            echo "live_release=${LIVE_RELEASE:-unknown}"
+            echo "canary_release=${CANARY_RELEASE:-unknown}"
+          } > "$diag_dir/summary.log"
+
+          if [ -n "${DEPLOY_KUBECONFIG:-}" ] && [ -f "$DEPLOY_KUBECONFIG" ]; then
+            export KUBECONFIG="$DEPLOY_KUBECONFIG"
+            {
+              echo "## kubectl context"
+              kubectl config current-context
+              echo
+              echo "## helm live status"
+              helm status "$LIVE_RELEASE" -n "$LIVE_NAMESPACE"
+              echo
+              echo "## helm canary status"
+              helm status "$CANARY_RELEASE" -n "$LIVE_NAMESPACE"
+              echo
+              echo "## live resources"
+              kubectl -n "$LIVE_NAMESPACE" get deploy,svc,ingress,pods -o wide
+              echo
+              echo "## canary deployment describe"
+              kubectl -n "$LIVE_NAMESPACE" describe deploy "$CANARY_DEPLOYMENT"
+              echo
+              echo "## live deployment describe"
+              kubectl -n "$LIVE_NAMESPACE" describe deploy "$LIVE_DEPLOYMENT"
+              echo
+              echo "## canary pods describe"
+              kubectl -n "$LIVE_NAMESPACE" describe pods -l "app.kubernetes.io/instance=$CANARY_RELEASE"
+              echo
+              echo "## live pods describe"
+              kubectl -n "$LIVE_NAMESPACE" describe pods -l "app.kubernetes.io/instance=$LIVE_RELEASE"
+              echo
+              echo "## recent events"
+              kubectl -n "$LIVE_NAMESPACE" get events --sort-by=.lastTimestamp | tail -120
+            } > "$diag_dir/deployment-diagnostics.log" 2>&1
+
+            kubectl -n "$LIVE_NAMESPACE" logs -l "app.kubernetes.io/instance=$CANARY_RELEASE" --all-containers --tail=200 \
+              > "$diag_dir/canary-pod-logs.log" 2>&1 || true
+            kubectl -n "$LIVE_NAMESPACE" logs -l "app.kubernetes.io/instance=$LIVE_RELEASE" --all-containers --tail=200 \
+              > "$diag_dir/live-pod-logs.log" 2>&1 || true
+          else
+            echo "DEPLOY_KUBECONFIG was not available; Kubernetes diagnostics were skipped." > "$diag_dir/deployment-diagnostics.log"
+          fi
+
+          for file in "$diag_dir"/*.log; do
+            redact_file "$file"
+          done
+
       - name: Upload console live promote evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -764,10 +837,16 @@ jobs:
             web/test-results/visual-login-intensive/
             web/e2e/visual-login/test-results/results.json
             web/e2e/visual-login/test-results/evidence/
+            web/e2e/visual-login/test-results/reports/
+            web/e2e/visual-login/test-results/reports/browser-matrix/
+            web/e2e/visual-login/test-results/reports/browser-matrix.json
+            web/e2e/visual-login/test-results/browser-matrix/
+            web/e2e/visual-login/test-results/browser-matrix-results/
             web/e2e/visual-login/test-results/visual-login-intensive/
             ${{ runner.temp }}/console-live/live-rollback.log
             ${{ runner.temp }}/console-live/live-rate-limit-data-loss.json
             ${{ runner.temp }}/console-live/canary-port-forward.log
+            ${{ runner.temp }}/console-live/diagnostics/
           if-no-files-found: warn
           retention-days: 14
 

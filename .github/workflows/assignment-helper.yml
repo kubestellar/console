@@ -9,4 +9,5 @@ permissions:
 
 jobs:
   assignment-helper:
-    uses: kubestellar/infra/.github/workflows/reusable-assignment-helper.yml@main
+    # Pinned to commit SHA to prevent supply-chain drift from mutable @main (fixes #20493)
+    uses: kubestellar/infra/.github/workflows/reusable-assignment-helper.yml@ade15fa68c60c49fec98803ffd259ba24894a756 # main pinned 2026-07-08

@@ -883,8 +883,8 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
   describe('loading and error state exposure', () => {
     it('exposes connection type state to consumers', () => {
       const { result } = renderHook(() => useLocalAgent())
-      expect(result.current).toHaveProperty('type')
-      expect(['connected', 'disconnected', 'error', 'connecting']).toContain(result.current.type)
+      expect(result.current).toHaveProperty('status')
+      expect(['connected', 'disconnected', 'degraded', 'auth_error', 'connecting']).toContain(result.current.status)
     })
 
     it('exposes error state to consumers', () => {
