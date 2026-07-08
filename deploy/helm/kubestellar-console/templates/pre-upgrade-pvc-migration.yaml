@@ -8,7 +8,10 @@ metadata:
   annotations:
     "helm.sh/hook": pre-upgrade
     "helm.sh/hook-weight": "-10"
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    # hook-failed included so a failed hook cleans up its resources on the next
+    # release; otherwise the failed Job pods (and their PVCs) can wedge the
+    # namespace and block subsequent upgrades. See #20471.
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -19,11 +22,13 @@ metadata:
   annotations:
     "helm.sh/hook": pre-upgrade
     "helm.sh/hook-weight": "-10"
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
-    verbs: ["get", "list", "delete"]
+    # `patch` is required so the migration script can clear stuck finalizers
+    # when a PVC deletion hangs in Terminating (see #20471).
+    verbs: ["get", "list", "delete", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -34,7 +39,7 @@ metadata:
   annotations:
     "helm.sh/hook": pre-upgrade
     "helm.sh/hook-weight": "-10"
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -53,7 +58,7 @@ metadata:
   annotations:
     "helm.sh/hook": pre-upgrade
     "helm.sh/hook-weight": "0"
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 spec:
   backoffLimit: 3
   template:
@@ -114,13 +119,31 @@ spec:
 
                 echo "  Access mode mismatch detected!"
                 echo "  Deleting PVC to allow recreation with $TARGET_ACCESS_MODE..."
-                
-                if kubectl delete pvc "$pvc_name" -n "$NAMESPACE" --wait=true --timeout=120s; then
+
+                # Submit delete non-blocking, then wait separately so we can
+                # fall back to finalizer removal if the PVC gets stuck in
+                # Terminating (kubelet still holds a mount, PV driver hung,
+                # etc.). Without this fallback a stuck PVC wedges the whole
+                # Helm upgrade and blocks the release for manual cleanup —
+                # exactly what happened in #20471.
+                kubectl delete pvc "$pvc_name" -n "$NAMESPACE" --wait=false || true
+
+                if kubectl wait --for=delete "pvc/$pvc_name" -n "$NAMESPACE" --timeout=120s 2>/dev/null; then
                   echo "  PVC deleted successfully."
-                else
-                  echo "  ERROR: Failed to delete PVC."
-                  return 1
+                  return 0
                 fi
+
+                echo "  WARNING: PVC still Terminating after 120s. Removing finalizers to unblock..."
+                kubectl patch pvc "$pvc_name" -n "$NAMESPACE" \
+                  -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+
+                if kubectl wait --for=delete "pvc/$pvc_name" -n "$NAMESPACE" --timeout=60s 2>/dev/null; then
+                  echo "  PVC deleted after finalizer removal."
+                  return 0
+                fi
+
+                echo "  ERROR: PVC '$pvc_name' remained stuck in Terminating after finalizer removal."
+                return 1
               }
 
               # Migrate main data PVC
