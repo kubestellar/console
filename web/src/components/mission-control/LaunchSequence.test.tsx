@@ -21,7 +21,8 @@ vi.mock('../cards/multi-tenancy/missionLoader', () => ({
 
 const mockState: MissionControlState = {
   phase: 'launching',
-  title: 'Test Mission',
+  description: 'Test deployment',
+  title: 'Test Launch',
   overlay: 'architecture',
   deployMode: 'phased',
   targetClusters: [],
@@ -41,8 +42,11 @@ const mockState: MissionControlState = {
   assignments: [
     {
       clusterName: 'cluster-1',
+      clusterContext: 'cluster-1-context',
+      provider: 'kind',
       projectNames: ['prometheus'],
       warnings: [],
+      readiness: { cpuHeadroomPercent: 80, memHeadroomPercent: 70, storageHeadroomPercent: 90, overallScore: 80 },
     },
   ],
   phases: [
@@ -53,7 +57,11 @@ const mockState: MissionControlState = {
       estimatedSeconds: 300,
     },
   ],
-  description: 'Test deployment',
+  overlay: 'architecture',
+  deployMode: 'phased',
+  targetClusters: [],
+  aiStreaming: false,
+  launchProgress: [],
 }
 
 describe('LaunchSequence', () => {
