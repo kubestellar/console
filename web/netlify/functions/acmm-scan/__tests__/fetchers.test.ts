@@ -6,7 +6,6 @@ vi.mock('../helpers', async () => {
     ...actual,
     GITHUB_API: 'https://api.github.com',
     API_TIMEOUT_MS: 15000,
-    WEEKS_OF_HISTORY: 4,
   }
 })
 
@@ -156,7 +155,7 @@ describe('fetchWeeklyActivity', () => {
 
     const result = await fetchWeeklyActivity('kubestellar/console', 'tok')
     expect(Array.isArray(result)).toBe(true)
-    expect(result.length).toBe(4) // WEEKS_OF_HISTORY mocked to 4
+    expect(result.length).toBe(16) // WEEKS_OF_HISTORY is 16
     for (const week of result) {
       expect(week).toHaveProperty('week')
       expect(week).toHaveProperty('aiPrs')
@@ -209,7 +208,7 @@ describe('fetchWeeklyActivity', () => {
 
     const result = await fetchWeeklyActivity('org/repo', 'tok')
     // Should still return the buckets, just with zero counts
-    expect(result.length).toBe(4)
+    expect(result.length).toBe(16)
     for (const w of result) {
       expect(w.aiPrs + w.humanPrs).toBe(0)
     }
@@ -234,7 +233,7 @@ describe('fetchWeeklyActivity', () => {
 
   it('ignores items from weeks outside the tracking window', async () => {
     const oldDate = new Date()
-    oldDate.setDate(oldDate.getDate() - 365) // Way outside 4-week window
+    oldDate.setDate(oldDate.getDate() - 365) // Way outside 16-week window
 
     const items = [
       { created_at: oldDate.toISOString(), user: { login: 'dev' }, labels: [] },
