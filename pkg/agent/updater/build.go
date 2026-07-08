@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+// execReplaceFunc is the function used to replace the current process via exec.
+// Overridable in tests to prevent the test runner from being replaced.
+var execReplaceFunc = ExecReplace
+
 // restartViaStartupScript spawns startup-oauth.sh as a detached process.
 // startup-oauth.sh handles killing existing processes (including this one),
 // port cleanup, .env loading, and starting kc-agent, backend, and frontend.
@@ -87,7 +91,7 @@ func (uc *UpdateChecker) selfUpdateFallback(repoPath string) {
 	// #6297: Windows can't replace the current process image in place;
 	// ExecReplace returns an error there and kc-agent logs it and keeps
 	// running the old binary until the user restarts manually.
-	if err := ExecReplace(currentBinary, os.Args, os.Environ()); err != nil {
+	if err := execReplaceFunc(currentBinary, os.Args, os.Environ()); err != nil {
 		slog.Error("[AutoUpdate] exec into new kc-agent failed", "error", err)
 	}
 	// If exec succeeds on Unix, this line is never reached
