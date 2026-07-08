@@ -128,6 +128,20 @@ func (s *Server) deleteNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]interface{}{"success": false, "error": "cluster and name query parameters are required"})
 		return
 	}
+	// #8034 followup: validate inputs at the HTTP boundary before calling the
+	// Kubernetes client, matching the pattern in createNamespaceHTTP.
+	if err := kube.ValidateKubeContext(cluster); err != nil {
+		slog.Error("invalid cluster for delete namespace request", "cluster", cluster, "error", err)
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
+		return
+	}
+	if err := kube.ValidateDNS1123Label("name", name); err != nil {
+		slog.Error("invalid namespace name for delete request", "name", name, "error", err)
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
+		return
+	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
 	defer cancel()
