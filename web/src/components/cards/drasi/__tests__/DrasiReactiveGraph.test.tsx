@@ -78,7 +78,7 @@ vi.mock('../DrasiReactiveGraphSections', () => ({
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
-vi.mock('../../ui/Skeleton', () => ({
+vi.mock('../../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
 }))
 
