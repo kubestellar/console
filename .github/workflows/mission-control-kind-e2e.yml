@@ -112,16 +112,22 @@ jobs:
 
       - name: Install kind CLI
         run: |
-          sudo curl -Lo /usr/local/bin/kind \
+          KIND_SHA256="c72eda46430f065fb45c5f70e7c957cc9209402ef309294821978677c8fb3284"
+          curl -sSL -o /tmp/kind \
             "https://kind.sigs.k8s.io/dl/${{ env.KIND_VERSION }}/kind-linux-amd64"
-          sudo chmod +x /usr/local/bin/kind
+          echo "${KIND_SHA256}  /tmp/kind" | sha256sum --check
+          sudo install -o root -g root -m 0755 /tmp/kind /usr/local/bin/kind
+          rm /tmp/kind
           kind version
 
       - name: Install kubectl
         run: |
-          sudo curl -Lo /usr/local/bin/kubectl \
+          KUBECTL_SHA256="298e19e9c6c17199011404278f0ff8168a7eca4217edad9097af577023a5620f"
+          curl -sSL -o /tmp/kubectl \
             "https://dl.k8s.io/release/${{ env.KUBECTL_VERSION }}/bin/linux/amd64/kubectl"
-          sudo chmod +x /usr/local/bin/kubectl
+          echo "${KUBECTL_SHA256}  /tmp/kubectl" | sha256sum --check
+          sudo install -o root -g root -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+          rm /tmp/kubectl
           kubectl version --client
 
       # ------------------------------------------------------------------

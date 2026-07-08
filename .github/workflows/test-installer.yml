@@ -147,6 +147,20 @@ jobs:
             exit 1
           fi
 
+          # Verify checksum before extraction
+          CHECKSUM_URL="https://github.com/${REPO}/releases/download/${LATEST}/checksums.txt"
+          if curl -sSL --fail -o /tmp/console.checksums "$CHECKSUM_URL" 2>/dev/null; then
+            TARBALL_NAME="console_${LATEST#v}_${PLATFORM}.tar.gz"
+            EXPECTED=$(grep "${TARBALL_NAME}" /tmp/console.checksums | awk '{print $1}')
+            if [ -n "$EXPECTED" ]; then
+              echo "${EXPECTED}  /tmp/console.tar.gz" | sha256sum --check || {
+                echo "FAIL: Checksum mismatch for ${TARBALL_NAME}"
+                exit 1
+              }
+              echo "PASS: Checksum verified for ${TARBALL_NAME}"
+            fi
+          fi
+
           tar xzf /tmp/console.tar.gz -C "$INSTALL_DIR"
 
           if [ ! -f "$INSTALL_DIR/console" ]; then
