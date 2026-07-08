@@ -44,7 +44,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToEvents: [], drillToCluster: vi.fn() }),
-  useDrillDown: () => ({ close: vi.fn() }),
+  useDrillDown: () => ({ state: { isOpen: true, stack: [], currentView: null }, pop: vi.fn(), close: vi.fn() }),
 }))
 
 vi.mock('../../../../hooks/useMissions', () => ({

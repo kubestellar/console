@@ -8,6 +8,25 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
+vi.mock('../../hooks/mcp/clusters', () => ({
+  useClusters: () => ({
+    deduplicatedClusters: [
+      { name: 'cluster-1', context: 'cluster-1-ctx', healthy: true, cpuCores: 12, memoryGB: 32, storageGB: 100 },
+    ],
+    error: null,
+  }),
+}))
+
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => <div {...props}>{children}</div>,
+    g: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => <g {...props}>{children}</g>,
+    circle: (props: Record<string, unknown>) => <circle {...props} />,
+    rect: (props: Record<string, unknown>) => <rect {...props} />,
+  },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
 const mockState: MissionControlState = {
   phase: 'blueprint',
   description: 'Test deployment plan',
@@ -46,11 +65,6 @@ const mockState: MissionControlState = {
       estimatedSeconds: 300,
     },
   ],
-  overlay: 'architecture',
-  deployMode: 'phased',
-  targetClusters: [],
-  aiStreaming: false,
-  launchProgress: [],
 }
 
 describe('FlightPlanBlueprint', () => {
@@ -104,11 +118,6 @@ describe('FlightPlanBlueprint', () => {
       projects: [],
       assignments: [],
       phases: [],
-      overlay: 'architecture',
-      deployMode: 'phased',
-      targetClusters: [],
-      aiStreaming: false,
-      launchProgress: [],
     }
 
     const { container } = render(

@@ -19,7 +19,7 @@ vi.mock('../../../../hooks/useDrillDown', async (importOriginal) => {
       drillToCluster: vi.fn(),
       drillToNamespace: vi.fn(),
     }),
-    useDrillDown: () => ({ close: vi.fn() }),
+    useDrillDown: () => ({ state: { isOpen: true, stack: [], currentView: null }, pop: vi.fn(), close: vi.fn() }),
   }
 })
 

@@ -48,6 +48,7 @@ vi.mock('../../../../hooks/useMCP', () => ({
 }))
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
+  useDrillDown: () => ({ state: { isOpen: true, stack: [], currentView: null }, pop: vi.fn(), close: vi.fn() }),
   useDrillDownActions: () => ({ drillToCluster: vi.fn() }),
 }))
 

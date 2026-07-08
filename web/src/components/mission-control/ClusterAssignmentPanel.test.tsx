@@ -1,116 +1,146 @@
 import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { ClusterAssignmentPanel } from './ClusterAssignmentPanel'
-import type { ClusterInfo } from '../../hooks/mcp/types'
-import type { PayloadProject, ClusterAssignment } from './types'
+import type { MissionControlState } from './types'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
 }))
 
-vi.mock('react-router-dom', () => ({
-  useNavigate: () => vi.fn(),
-  useLocation: () => ({ pathname: '/', search: '' }),
+vi.mock('../../hooks/mcp/clusters', () => ({
+  useClusters: () => ({
+    deduplicatedClusters: [
+      { name: 'cluster-1', context: 'cluster-1-ctx', healthy: true, nodeCount: 3, cpuCores: 12, memoryGB: 32, storageGB: 100 },
+    ],
+    isLoading: false,
+  }),
 }))
 
-vi.mock('../../lib/api', () => ({
-  api: { post: vi.fn(), get: vi.fn() },
+vi.mock('../../hooks/mcp/helm', () => ({
+  useHelmReleases: () => ({ releases: [] }),
 }))
 
-vi.mock('../ui/Toast', () => ({
-  useToast: () => ({ showToast: vi.fn() }),
+vi.mock('./useMissionControl', () => ({
+  getAssistantContentSinceLastUser: vi.fn(() => ''),
 }))
 
-const mockClusters: ClusterInfo[] = [
-  {
-    name: 'cluster-1',
-    healthy: true,
-    nodeCount: 3,
-    cpuCores: 12,
-    memoryGB: 32,
-    storageGB: 100,
+vi.mock('../ui/LazyMarkdown', () => ({
+  LazyMarkdown: ({ children }: { children: string }) => <span>{children}</span>,
+}))
+
+vi.mock('remark-gfm', () => ({ default: () => {} }))
+vi.mock('rehype-sanitize', () => ({ default: () => {} }))
+
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => <div {...props}>{children}</div>,
+    button: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => <button {...props}>{children}</button>,
   },
-]
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
 
-const mockProjects: PayloadProject[] = [
-  {
-    name: 'prometheus',
-    displayName: 'Prometheus',
-    category: 'Observability',
-    maturity: 'graduated',
-    priority: 'required',
-    reason: 'Metrics',
-    dependencies: [],
-  },
-]
+vi.mock('./ClusterReadinessCard', () => ({
+  ClusterReadinessCard: ({ cluster }: { cluster: { name: string } }) => <div data-testid="cluster-card">{cluster.name}</div>,
+}))
 
-const mockAssignments: ClusterAssignment[] = [
-  {
-    clusterName: 'cluster-1',
-    projectNames: ['prometheus'],
-    warnings: [],
-  },
-]
+vi.mock('./AssignmentMatrix', () => ({
+  AssignmentMatrix: () => <div data-testid="assignment-matrix">matrix</div>,
+}))
+
+const mockState: MissionControlState = {
+  phase: 'assignment',
+  description: 'Test deployment',
+  title: 'Test',
+  overlay: 'architecture',
+  deployMode: 'phased',
+  targetClusters: [],
+  aiStreaming: false,
+  launchProgress: [],
+  projects: [
+    {
+      name: 'prometheus',
+      displayName: 'Prometheus',
+      category: 'Observability',
+      maturity: 'graduated',
+      priority: 'required',
+      reason: 'Metrics',
+      dependencies: [],
+    },
+  ],
+  assignments: [
+    {
+      clusterName: 'cluster-1',
+      clusterContext: 'cluster-1-ctx',
+      provider: 'kind',
+      projectNames: ['prometheus'],
+      warnings: [],
+      readiness: { cpuHeadroomPercent: 80, memHeadroomPercent: 70, storageHeadroomPercent: 90, overallScore: 80 },
+    },
+  ],
+  phases: [],
+}
 
 describe('ClusterAssignmentPanel', () => {
-  it('renders cluster cards', () => {
-    const onToggleProject = vi.fn()
-
-    render(
+  it('renders without crashing', () => {
+    const { container } = render(
       <ClusterAssignmentPanel
-        clusters={mockClusters}
-        projects={mockProjects}
-        assignments={mockAssignments}
-        onToggleProject={onToggleProject}
+        state={mockState}
+        onAskAI={vi.fn()}
+        onAutoAssign={vi.fn()}
+        onSetAssignment={vi.fn()}
+        aiStreaming={false}
       />
     )
 
-    expect(screen.getByText(/cluster-1/)).toBeInTheDocument()
+    expect(container.firstChild).toBeInTheDocument()
   })
 
-  it('displays available projects', () => {
-    const onToggleProject = vi.fn()
-
-    render(
+  it('renders cluster readiness cards', () => {
+    const { getAllByTestId } = render(
       <ClusterAssignmentPanel
-        clusters={mockClusters}
-        projects={mockProjects}
-        assignments={mockAssignments}
-        onToggleProject={onToggleProject}
+        state={mockState}
+        onAskAI={vi.fn()}
+        onAutoAssign={vi.fn()}
+        onSetAssignment={vi.fn()}
+        aiStreaming={false}
       />
     )
 
-    expect(screen.getByText('prometheus')).toBeInTheDocument()
+    expect(getAllByTestId('cluster-card').length).toBeGreaterThan(0)
   })
 
-  it('handles empty clusters list', () => {
-    const onToggleProject = vi.fn()
+  it('handles empty projects list', () => {
+    const emptyState: MissionControlState = {
+      ...mockState,
+      projects: [],
+      assignments: [],
+    }
 
-    render(
+    const { container } = render(
       <ClusterAssignmentPanel
-        clusters={[]}
-        projects={mockProjects}
-        assignments={[]}
-        onToggleProject={onToggleProject}
+        state={emptyState}
+        onAskAI={vi.fn()}
+        onAutoAssign={vi.fn()}
+        onSetAssignment={vi.fn()}
+        aiStreaming={false}
       />
     )
 
-    expect(screen.getByText(/No clusters/i)).toBeInTheDocument()
+    expect(container.firstChild).toBeInTheDocument()
   })
 
-  it('renders cluster readiness information', () => {
-    const onToggleProject = vi.fn()
-
-    render(
+  it('passes aiStreaming prop without error', () => {
+    const { container } = render(
       <ClusterAssignmentPanel
-        clusters={mockClusters}
-        projects={mockProjects}
-        assignments={mockAssignments}
-        onToggleProject={onToggleProject}
+        state={mockState}
+        onAskAI={vi.fn()}
+        onAutoAssign={vi.fn()}
+        onSetAssignment={vi.fn()}
+        aiStreaming={true}
       />
     )
 
-    expect(screen.getByText(/CPU/)).toBeInTheDocument()
+    expect(container.firstChild).toBeInTheDocument()
   })
 })

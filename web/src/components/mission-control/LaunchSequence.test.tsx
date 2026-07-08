@@ -9,14 +9,29 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../hooks/useMissions', () => ({
+  MissionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useMissions: () => ({
     missions: [],
     createMission: vi.fn(),
+    startMission: vi.fn(),
   }),
 }))
 
 vi.mock('../cards/multi-tenancy/missionLoader', () => ({
   loadMissionPrompt: vi.fn().mockResolvedValue('mock prompt'),
+}))
+
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => <div {...props}>{children}</div>,
+    span: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => <span {...props}>{children}</span>,
+  },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
+vi.mock('./useMissionControl', () => ({
+  buildInstallPromptForProject: vi.fn(() => 'mock prompt'),
+  isSafeProjectName: vi.fn(() => true),
 }))
 
 const mockState: MissionControlState = {
@@ -57,23 +72,18 @@ const mockState: MissionControlState = {
       estimatedSeconds: 300,
     },
   ],
-  overlay: 'architecture',
-  deployMode: 'phased',
-  targetClusters: [],
-  aiStreaming: false,
-  launchProgress: [],
 }
 
 describe('LaunchSequence', () => {
   it('renders mission description', () => {
+    const onUpdateProgress = vi.fn()
     const onComplete = vi.fn()
-    const onCancel = vi.fn()
 
     render(
       <LaunchSequence
         state={mockState}
+        onUpdateProgress={onUpdateProgress}
         onComplete={onComplete}
-        onCancel={onCancel}
       />
     )
 
@@ -81,14 +91,14 @@ describe('LaunchSequence', () => {
   })
 
   it('displays phase information', () => {
+    const onUpdateProgress = vi.fn()
     const onComplete = vi.fn()
-    const onCancel = vi.fn()
 
     render(
       <LaunchSequence
         state={mockState}
+        onUpdateProgress={onUpdateProgress}
         onComplete={onComplete}
-        onCancel={onCancel}
       />
     )
 
@@ -96,14 +106,16 @@ describe('LaunchSequence', () => {
   })
 
   it('shows cancel button', () => {
+    const onUpdateProgress = vi.fn()
     const onComplete = vi.fn()
-    const onCancel = vi.fn()
+    const onClose = vi.fn()
 
     render(
       <LaunchSequence
         state={mockState}
+        onUpdateProgress={onUpdateProgress}
         onComplete={onComplete}
-        onCancel={onCancel}
+        onClose={onClose}
       />
     )
 
@@ -111,14 +123,14 @@ describe('LaunchSequence', () => {
   })
 
   it('renders project list', () => {
+    const onUpdateProgress = vi.fn()
     const onComplete = vi.fn()
-    const onCancel = vi.fn()
 
     render(
       <LaunchSequence
         state={mockState}
+        onUpdateProgress={onUpdateProgress}
         onComplete={onComplete}
-        onCancel={onCancel}
       />
     )
 

@@ -62,6 +62,23 @@ vi.mock('lucide-react', () => ({
   XCircle: () => <span>XCircle</span>,
 }))
 
+vi.mock('../../../../hooks/useMissions', () => ({
+  useMissions: () => ({ missions: [], startMission: vi.fn(), createMission: vi.fn() }),
+}))
+
+vi.mock('../../console-missions/shared', () => ({
+  ApiKeyPromptModal: () => null,
+  useApiKeyCheck: () => ({ showKeyPrompt: false, checkKeyAndRun: vi.fn(), goToSettings: vi.fn(), dismissPrompt: vi.fn() }),
+}))
+
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => <div {...props}>{children}</div>,
+    tr: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => <tr {...props}>{children}</tr>,
+  },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
 import { GuideRow } from '../NightlyE2EGuideRow'
 
 describe('NightlyE2EGuideRow', () => {
