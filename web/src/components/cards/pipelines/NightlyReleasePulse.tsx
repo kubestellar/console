@@ -34,6 +34,7 @@ import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
 import { useMissions } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
+import { Input } from '../../ui/Input'
 import {
   formatCron as formatCronUtil,
   dotColor as dotColorUtil,
@@ -226,12 +227,17 @@ function WorkflowRow({ wf }: { wf: MatrixWorkflow }) {
 
 function StandaloneRepoInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-      <Search size={12} className="text-muted-foreground" />
-      <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
+    <div className="px-4 py-3 border-b border-border/50">
+      <Input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={PLACEHOLDER_REPO}
-        className="flex-1 text-xs bg-transparent text-foreground placeholder:text-muted-foreground/50 focus:outline-hidden"
-        aria-label={LABEL_SET_REPO} />
+        aria-label={LABEL_SET_REPO}
+        leadingIcon={<Search size={12} />}
+        inputSize="sm"
+        className="bg-transparent"
+      />
     </div>
   )
 }

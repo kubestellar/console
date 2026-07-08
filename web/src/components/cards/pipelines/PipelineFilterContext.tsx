@@ -116,11 +116,11 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
       }
       return next
     })
-  }, [])
+  }, [setSelectedRepos])
 
   const selectAll = useCallback(() => {
     setSelectedRepos(new Set())
-  }, [])
+  }, [setSelectedRepos])
 
   // Compute the API-level filter: null = all, single repo string if 1 selected,
   // first selected repo if multiple (API currently supports single-repo filter;
@@ -161,7 +161,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
       next.delete(repo)
       return next
     })
-  }, [])
+  }, [setSelectedRepos])
 
   const restoreRepo = useCallback((repo: string) => {
     setConfig((prev) => ({
@@ -184,7 +184,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
     } else {
       setSelectedRepos(new Set([repo]))
     }
-  }, [])
+  }, [setSelectedRepos])
 
   const value: PipelineFilterState = useMemo(() => ({
     selectedRepos,
@@ -223,6 +223,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePipelineFilter(): PipelineFilterState | null {
   return useContext(PipelineFilterCtx)
 }

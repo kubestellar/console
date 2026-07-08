@@ -15,7 +15,6 @@ import {
   dotTextColor,
   computeTrend,
   mergeRepos,
-  TREND_THRESHOLD,
   type DotInfo,
 } from '../pulse-utils'
 
