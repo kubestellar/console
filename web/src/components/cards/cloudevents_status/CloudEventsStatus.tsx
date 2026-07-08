@@ -26,6 +26,8 @@ const STATUS_LABEL_KEY: Record<CloudEventResourceState, 'cloudevents.status_read
 
 export function CloudEventsStatus() {
   const { t } = useTranslation('cards')
+  // Demo mode subscription is handled in useCloudEventsStatus via useCache, which
+  // uses useSyncExternalStore(subscribeDemoMode, ...) to re-render on toggles.
   const { data, error, showSkeleton, showEmptyState } = useCloudEventsStatus()
   const [search, setSearch] = useState('')
 
@@ -138,7 +140,7 @@ export function CloudEventsStatus() {
                       {style.icon}
                       <span className="text-xs font-medium truncate">{resource.name}</span>
                     </div>
-                    <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${style.badge}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${style.badge}`}>
                       {t(STATUS_LABEL_KEY[resource.state])}
                     </span>
                   </div>

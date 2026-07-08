@@ -40,6 +40,7 @@ func TestAgentAutoUpdateProxyRequiresAdmin(t *testing.T) {
 			})
 
 			req := httptest.NewRequest(http.MethodPost, "/api/agent/auto-update/status", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)

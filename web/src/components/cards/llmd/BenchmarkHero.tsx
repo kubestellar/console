@@ -35,7 +35,7 @@ function Delta({ value, invert = false }: { value: number; invert?: boolean }) {
   const color = positive ? 'text-green-400' : 'text-red-400'
   const Icon = positive ? TrendingUp : TrendingDown
   return (
-    <span className={`inline-flex items-center gap-0.5 text-[11px] font-medium ${color}`}>
+    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${color}`}>
       <Icon size={11} />
       {Math.abs(value).toFixed(1)}%
     </span>
@@ -74,7 +74,7 @@ function HeroMetric({
       <div className="relative">
         <div className="flex items-center gap-1.5 mb-2">
           <Icon size={13} style={{ color }} />
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">{label}</span>
+          <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{label}</span>
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl font-bold text-white tracking-tight">{value}</span>

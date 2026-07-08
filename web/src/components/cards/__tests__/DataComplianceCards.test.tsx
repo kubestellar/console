@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { VaultSecrets, ExternalSecrets, CertManager } from '../DataComplianceCards'
@@ -12,8 +13,9 @@ vi.mock('react-i18next', () => ({
 }))
 
 const mockIsDemoMode = vi.fn(() => false)
-vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: () => true, default: () => true,
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
   canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),

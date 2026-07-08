@@ -17,6 +17,7 @@ import (
 func TestCreateNamespaceHTTP_BadJSON(t *testing.T) {
 	srv := newTestServer(t, withToken("tok"))
 	req := httptest.NewRequest(http.MethodPost, "/namespaces", bytes.NewBufferString("{bad"))
+	req.Host = "localhost"
 	authRequest(req, "tok")
 	rec := httptest.NewRecorder()
 	srv.createNamespaceHTTP(rec, req)
@@ -35,6 +36,7 @@ func TestCreateNamespaceHTTP_InvalidCluster(t *testing.T) {
 	payload := map[string]string{"cluster": "../escape", "name": "valid-ns"}
 	data, _ := json.Marshal(payload)
 	req := httptest.NewRequest(http.MethodPost, "/namespaces", bytes.NewReader(data))
+	req.Host = "localhost"
 	authRequest(req, "tok")
 	rec := httptest.NewRecorder()
 	srv.createNamespaceHTTP(rec, req)
@@ -48,6 +50,7 @@ func TestCreateNamespaceHTTP_InvalidName(t *testing.T) {
 	payload := map[string]string{"cluster": "prod", "name": "INVALID_CAPS"}
 	data, _ := json.Marshal(payload)
 	req := httptest.NewRequest(http.MethodPost, "/namespaces", bytes.NewReader(data))
+	req.Host = "localhost"
 	authRequest(req, "tok")
 	rec := httptest.NewRecorder()
 	srv.createNamespaceHTTP(rec, req)
@@ -63,6 +66,7 @@ func TestCreateNamespaceHTTP_NilK8sClient(t *testing.T) {
 	// gate prevents reaching it.
 	srv := newTestServer(t, withToken("tok"))
 	req := httptest.NewRequest(http.MethodPost, "/namespaces", nil)
+	req.Host = "localhost"
 	authRequest(req, "tok")
 	rec := httptest.NewRecorder()
 	srv.handleNamespacesHTTP(rec, req)
@@ -94,6 +98,7 @@ func TestDeleteNamespaceHTTP_MissingParams(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodDelete, "/namespaces"+tt.query, nil)
+			req.Host = "localhost"
 			authRequest(req, "tok")
 			rec := httptest.NewRecorder()
 			srv.deleteNamespaceHTTP(rec, req)
@@ -111,6 +116,7 @@ func TestDeleteNamespaceHTTP_MissingParams(t *testing.T) {
 func TestHandleNamespacesHTTP_Unauthorized(t *testing.T) {
 	srv := newTestServer(t, withToken("secret"))
 	req := httptest.NewRequest(http.MethodGet, "/namespaces?cluster=prod", nil)
+	req.Host = "localhost"
 	// No auth header
 	rec := httptest.NewRecorder()
 	srv.handleNamespacesHTTP(rec, req)
@@ -122,6 +128,7 @@ func TestHandleNamespacesHTTP_Unauthorized(t *testing.T) {
 func TestHandleNamespacesHTTP_OPTIONS(t *testing.T) {
 	srv := newTestServer(t)
 	req := httptest.NewRequest(http.MethodOptions, "/namespaces", nil)
+	req.Host = "localhost"
 	rec := httptest.NewRecorder()
 	srv.handleNamespacesHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
@@ -132,6 +139,7 @@ func TestHandleNamespacesHTTP_OPTIONS(t *testing.T) {
 func TestHandleNamespacesHTTP_GET_MissingCluster(t *testing.T) {
 	srv := newTestServer(t, withContexts("prod"))
 	req := httptest.NewRequest(http.MethodGet, "/namespaces", nil)
+	req.Host = "localhost"
 	rec := httptest.NewRecorder()
 	srv.handleNamespacesHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -151,6 +159,7 @@ func TestHandleNamespacesHTTP_GET_MissingCluster(t *testing.T) {
 func TestCreateServiceAccountHTTP_BadJSON(t *testing.T) {
 	srv := newTestServer(t, withToken("tok"))
 	req := httptest.NewRequest(http.MethodPost, "/serviceaccounts", bytes.NewBufferString("not json"))
+	req.Host = "localhost"
 	authRequest(req, "tok")
 	rec := httptest.NewRecorder()
 	srv.createServiceAccountHTTP(rec, req)
@@ -175,6 +184,7 @@ func TestCreateServiceAccountHTTP_MissingFields(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data, _ := json.Marshal(tt.payload)
 			req := httptest.NewRequest(http.MethodPost, "/serviceaccounts", bytes.NewReader(data))
+			req.Host = "localhost"
 			authRequest(req, "tok")
 			rec := httptest.NewRecorder()
 			srv.createServiceAccountHTTP(rec, req)
@@ -204,6 +214,7 @@ func TestDeleteServiceAccountHTTP_MissingParams(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodDelete, "/serviceaccounts"+tt.query, nil)
+			req.Host = "localhost"
 			authRequest(req, "tok")
 			rec := httptest.NewRecorder()
 			srv.deleteServiceAccountHTTP(rec, req)
@@ -221,6 +232,7 @@ func TestDeleteServiceAccountHTTP_MissingParams(t *testing.T) {
 func TestHandleServiceExportsHTTP_Unauthorized(t *testing.T) {
 	srv := newTestServer(t, withToken("secret"))
 	req := httptest.NewRequest(http.MethodPost, "/serviceexports", nil)
+	req.Host = "localhost"
 	// No auth header
 	rec := httptest.NewRecorder()
 	srv.handleServiceExportsHTTP(rec, req)
@@ -232,6 +244,7 @@ func TestHandleServiceExportsHTTP_Unauthorized(t *testing.T) {
 func TestHandleServiceExportsHTTP_OPTIONS(t *testing.T) {
 	srv := newTestServer(t)
 	req := httptest.NewRequest(http.MethodOptions, "/serviceexports", nil)
+	req.Host = "localhost"
 	rec := httptest.NewRecorder()
 	srv.handleServiceExportsHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
@@ -242,6 +255,7 @@ func TestHandleServiceExportsHTTP_OPTIONS(t *testing.T) {
 func TestHandleServiceExportsHTTP_NilK8sClient(t *testing.T) {
 	srv := newTestServer(t)
 	req := httptest.NewRequest(http.MethodPost, "/serviceexports", nil)
+	req.Host = "localhost"
 	rec := httptest.NewRecorder()
 	srv.handleServiceExportsHTTP(rec, req)
 	if rec.Code != http.StatusServiceUnavailable {
@@ -252,6 +266,7 @@ func TestHandleServiceExportsHTTP_NilK8sClient(t *testing.T) {
 func TestHandleServiceExportsHTTP_MethodNotAllowed(t *testing.T) {
 	srv := newTestServer(t, withContexts("prod"))
 	req := httptest.NewRequest(http.MethodGet, "/serviceexports", nil)
+	req.Host = "localhost"
 	rec := httptest.NewRecorder()
 	srv.handleServiceExportsHTTP(rec, req)
 	if rec.Code != http.StatusMethodNotAllowed {
@@ -266,6 +281,7 @@ func TestHandleServiceExportsHTTP_MethodNotAllowed(t *testing.T) {
 func TestCreateServiceExportHTTP_BadJSON(t *testing.T) {
 	srv := newTestServer(t, withContexts("prod"))
 	req := httptest.NewRequest(http.MethodPost, "/serviceexports", bytes.NewBufferString("{nope"))
+	req.Host = "localhost"
 	rec := httptest.NewRecorder()
 	srv.createServiceExportHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest {
@@ -288,6 +304,7 @@ func TestCreateServiceExportHTTP_MissingFields(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data, _ := json.Marshal(tt.payload)
 			req := httptest.NewRequest(http.MethodPost, "/serviceexports", bytes.NewReader(data))
+			req.Host = "localhost"
 			rec := httptest.NewRecorder()
 			srv.createServiceExportHTTP(rec, req)
 			if rec.Code != http.StatusBadRequest {
@@ -316,6 +333,7 @@ func TestDeleteServiceExportHTTP_MissingParams(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodDelete, "/serviceexports"+tt.query, nil)
+			req.Host = "localhost"
 			rec := httptest.NewRecorder()
 			srv.deleteServiceExportHTTP(rec, req)
 			if rec.Code != http.StatusBadRequest {

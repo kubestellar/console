@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { SmartCardSuggestions } from './SmartCardSuggestions'
@@ -27,11 +28,13 @@ vi.mock('../../hooks/useMCP', () => ({
   }),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitSmartSuggestionsShown: vi.fn(),
   emitSmartSuggestionAccepted: vi.fn(),
   emitSmartSuggestionsAddAll: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/utils/localStorage', () => ({
   safeGetItem: vi.fn(() => null),

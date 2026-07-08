@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * MissionBrowser unit tests
  *
@@ -74,14 +75,16 @@ vi.mock('../../../lib/api', () => ({
   },
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitFixerBrowsed: vi.fn(),
   emitFixerViewed: vi.fn(),
   emitFixerImported: vi.fn(),
   emitFixerImportError: vi.fn(),
   emitFixerGitHubLink: vi.fn(),
   emitFixerLinkCopied: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../lib/missions/matcher', () => ({
   matchMissionsToCluster: vi.fn((missions: any[]) => missions.map((mission) => ({
@@ -380,6 +383,13 @@ describe('MissionBrowser', () => {
     // The empty state should be rendered for the file browser area
     const emptyStates = screen.getAllByTestId('empty-state')
     expect(emptyStates.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows recommendation loading spinner while cache search is still running', () => {
+    browserMockState.missionCache.fixesDone = false
+    const { container } = render(<MissionBrowser {...defaultProps} />)
+
+    expect(container.querySelector('.animate-spin')).toBeTruthy()
   })
 
   it('switches recommended missions to list layout when list view is selected', async () => {

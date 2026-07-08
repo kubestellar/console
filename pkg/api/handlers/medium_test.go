@@ -54,6 +54,7 @@ func TestMediumBlogHandler(t *testing.T) {
 		}
 
 		req := httptest.NewRequest("GET", "/api/medium/blog", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -80,6 +81,7 @@ func TestMediumBlogHandler(t *testing.T) {
 		}
 
 		req := httptest.NewRequest("GET", "/api/medium/blog", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 
 		assert.Equal(t, http.StatusBadGateway, resp.StatusCode)

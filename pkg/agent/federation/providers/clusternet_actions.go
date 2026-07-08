@@ -60,6 +60,9 @@ func (p *clusternetProvider) Execute(ctx context.Context, cfg *rest.Config, req 
 // ManagedCluster. If the cluster is already approved the operation returns
 // Skipped=true (idempotent).
 func clusternetApproveCluster(ctx context.Context, cfg *rest.Config, clusterName string) (federation.ActionResult, error) {
+	if cfg == nil {
+		return federation.ActionResult{}, fmt.Errorf("rest config is nil")
+	}
 	dc, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, err
@@ -94,6 +97,9 @@ func clusternetApproveCluster(ctx context.Context, cfg *rest.Config, clusterName
 // clusternetUnregisterCluster deletes the named ManagedCluster CR. If the CR
 // is already absent the operation returns Skipped=true (idempotent).
 func clusternetUnregisterCluster(ctx context.Context, cfg *rest.Config, clusterName string) (federation.ActionResult, error) {
+	if cfg == nil {
+		return federation.ActionResult{}, fmt.Errorf("rest config is nil")
+	}
 	dc, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		return federation.ActionResult{}, err

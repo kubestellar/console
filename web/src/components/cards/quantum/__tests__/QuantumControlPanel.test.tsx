@@ -1,3 +1,4 @@
+import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { QuantumAuthStatus, QuantumSystemStatus } from '../../../../hooks/useCachedQuantum'
@@ -43,11 +44,12 @@ vi.mock('../../../../hooks/useQASMFiles', () => ({
   useQASMFiles: () => ({
     files: [{ name: 'bell.qasm' }],
     isLoading: false,
-    error: null,
+    error: false,
   }),
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
@@ -56,8 +58,8 @@ vi.mock('../../../ui/Toast', () => ({
 }))
 
 vi.mock('../CustomQASMModal', () => ({
-  CustomQASMModal: ({ isOpen, onSubmit }: { isOpen: boolean; onSubmit: (content: string) => void }) => (
-    isOpen ? <button data-testid="custom-qasm-submit" onClick={() => onSubmit('OPENQASM 2.0;')}>Submit custom QASM</button> : null
+  CustomQASMModal: ({ isOpen, onSubmit, disabled }: { isOpen: boolean; onSubmit: (content: string) => void; disabled?: boolean }) => (
+    isOpen ? <button data-testid="custom-qasm-submit" onClick={() => onSubmit('OPENQASM 2.0;')} disabled={disabled}>Submit custom QASM</button> : null
   ),
 }))
 
@@ -92,7 +94,7 @@ function statusHookReturn(
     isLoading: false,
     isRefreshing: false,
     isDemoData: false,
-    error: null,
+    error: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: Date.now(),
@@ -123,7 +125,7 @@ function authHookReturn(
     isLoading: false,
     isRefreshing: false,
     isDemoData: false,
-    error: null,
+    error: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: null,

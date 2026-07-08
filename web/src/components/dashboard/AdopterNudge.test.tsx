@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { AdopterNudge } from './AdopterNudge'
@@ -11,11 +12,13 @@ vi.mock('../../lib/demoMode', () => ({
   isNetlifyDeployment: false,
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitAdopterNudgeShown: vi.fn(),
   emitAdopterNudgeActioned: vi.fn(),
   emitConversionStep: vi.fn(),
-}))
+}
+))
 
 const NUDGE_DELAY_DAYS = 3
 const MS_PER_DAY = 86_400_000
@@ -60,7 +63,7 @@ describe('AdopterNudge Component', () => {
     render(<AdopterNudge />)
     fireEvent.click(screen.getByText('Add your organization'))
     expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining('ADOPTERS.MD'),
+      expect.stringContaining('ADOPTERS.md'),
       '_blank',
       expect.any(String),
     )

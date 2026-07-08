@@ -12,7 +12,7 @@ import { fullFetchClusters, clusterCache, agentFetch } from './mcp/shared'
 
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { getWsAuthParams } from '../lib/utils/wsAuth'
-import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay, isLocalAgentSuppressed, areOptionalPollersSuppressed } from '../lib/constants/network'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 const DEGRADED_RECONNECT_INTERVAL_MS = 60_000
@@ -21,7 +21,6 @@ const FALLBACK_AI_CLUSTER_NAME = 'unknown'
 const FALLBACK_AI_REASON = 'AI response unavailable'
 const STALE_AI_PREDICTIONS_TIMEOUT_MS = 45_000
 
-const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL
 const POLL_INTERVAL_MS = 30_000 // Poll every 30 seconds as fallback
 
 // Polling constants for analysis completion detection
@@ -258,6 +257,15 @@ async function fetchAIPredictions(signal?: AbortSignal): Promise<void> {
     return
   }
 
+  if (isLocalAgentSuppressed() || areOptionalPollersSuppressed()) {
+    aiPredictions = []
+    providers = []
+    isStale = false
+    wsConnectionIsStale = false
+    notifySubscribers()
+    return
+  }
+
   if (isAgentUnavailable()) {
     // Agent is known to be unavailable — mark existing predictions as stale so
     // the UI stops presenting them as fresh (#5937). Also notify subscribers so
@@ -271,7 +279,7 @@ async function fetchAIPredictions(signal?: AbortSignal): Promise<void> {
   }
 
   try {
-    const response = await agentFetch(`${AGENT_HTTP_URL}/predictions/ai`, {
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/predictions/ai`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
       signal: getRequestSignal(AI_PREDICTION_TIMEOUT_MS, signal)
@@ -329,7 +337,7 @@ async function fetchAIPredictions(signal?: AbortSignal): Promise<void> {
  * Connect to WebSocket for real-time prediction updates
  */
 async function connectWebSocket(): Promise<void> {
-  if (getDemoMode() || ws) return
+  if (getDemoMode() || ws || isLocalAgentSuppressed() || areOptionalPollersSuppressed()) return
 
   try {
     const { url, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
@@ -425,6 +433,8 @@ async function connectWebSocket(): Promise<void> {
  * Trigger manual AI analysis
  */
 async function triggerAnalysis(specificProviders?: string[], signal?: AbortSignal): Promise<boolean> {
+  if (isLocalAgentSuppressed() || areOptionalPollersSuppressed()) return false
+
   if (getDemoMode()) {
     // Simulate analysis in demo mode
     await delayWithSignal(UI_FEEDBACK_TIMEOUT_MS, signal)
@@ -441,7 +451,7 @@ async function triggerAnalysis(specificProviders?: string[], signal?: AbortSigna
   }
 
   try {
-    const response = await agentFetch(`${AGENT_HTTP_URL}/predictions/analyze`, {
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/predictions/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ providers: specificProviders }),
@@ -463,6 +473,10 @@ async function triggerAnalysis(specificProviders?: string[], signal?: AbortSigna
 
 /** Start singleton polling — only starts once regardless of how many hook instances exist */
 function startSingletonPolling() {
+  if (isLocalAgentSuppressed() || areOptionalPollersSuppressed()) {
+    void fetchAIPredictions()
+    return
+  }
   if (singletonPollInterval) return
   fetchAIPredictions()
   singletonPollInterval = setInterval(fetchAIPredictions, POLL_INTERVAL_MS)

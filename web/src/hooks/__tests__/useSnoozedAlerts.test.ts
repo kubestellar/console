@@ -10,10 +10,12 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 const mockEmitSnoozed = vi.fn()
 const mockEmitUnsnoozed = vi.fn()
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitSnoozed: (...args: unknown[]) => mockEmitSnoozed(...args),
   emitUnsnoozed: (...args: unknown[]) => mockEmitUnsnoozed(...args),
-}))
+}
+))
 
 import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining } from '../useSnoozedAlerts'
 

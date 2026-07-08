@@ -1,3 +1,4 @@
+import React from 'react'
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, render, screen, fireEvent } from '@testing-library/react'
@@ -11,6 +12,14 @@ vi.mock('../useMissionControl', () => ({
   consumePersistQuotaBanner: vi.fn(() => null),
 }))
 
+// Mock useMissions
+vi.mock('../../../hooks/useMissions', () => ({
+  useMissions: vi.fn(() => ({
+    startMission: vi.fn(() => 'mission-id'),
+    openSidebar: vi.fn(),
+  })),
+}))
+
 // Mock missionPlanCodec
 vi.mock('../missionPlanCodec', () => ({
   decodePlan: vi.fn(),
@@ -21,6 +30,7 @@ vi.mock('../missionPlanCodec', () => ({
 vi.mock('../../../lib/modals/useModalNavigation', () => ({
   useModalFocusTrap: vi.fn(),
   useModalNavigation: vi.fn(),
+  useModalState: vi.fn(() => ({ isOpen: false, open: vi.fn(), close: vi.fn(), toggle: vi.fn(), setIsOpen: vi.fn() })),
 }))
 
 vi.mock('../../../lib/auth', () => ({
@@ -90,8 +100,8 @@ describe('MissionControlDialog', () => {
 
   it('renders Phase 1 by default when opened', () => {
     render(<MissionControlDialog open={true} onClose={vi.fn()} />)
-    expect(screen.getByTestId('mission-control-dialog')).toBeDefined()
-    expect(screen.getByTestId('phase-define')).toBeDefined()
+    expect(screen.getByTestId('mission-control-dialog')).toBeInTheDocument()
+    expect(screen.getByTestId('phase-define')).toBeInTheDocument()
   })
 
   it('preserves seeded state on first sidebar CTA open and resets after the token increments', () => {
@@ -120,7 +130,7 @@ describe('MissionControlDialog', () => {
     )
 
     expect(mcWithHistory.loadHistoricalSession).toHaveBeenCalledWith('mission-1')
-    expect(screen.getByText('REVIEW')).toBeDefined()
+    expect(screen.getByText('REVIEW')).toBeInTheDocument()
     expect(mcWithHistory.reset).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByTestId('mission-control-cancel'))
@@ -141,7 +151,7 @@ describe('MissionControlDialog', () => {
       rerender(<MissionControlDialog open={true} onClose={vi.fn()} />)
     }).not.toThrow()
 
-    expect(screen.getByTestId('mission-control-dialog')).toBeDefined()
+    expect(screen.getByTestId('mission-control-dialog')).toBeInTheDocument()
   })
 
   it('calls setPhase when clicking Next', () => {
@@ -210,7 +220,7 @@ describe('MissionControlDialog', () => {
     expect(mockMC.reset).not.toHaveBeenCalled()
     expect(decodePlan).toHaveBeenCalledWith('base64data')
     expect(mockMC.hydrateFromPlan).toHaveBeenCalledWith(mockPlan)
-    expect(screen.getByText('REVIEW')).toBeDefined()
+    expect(screen.getByText('REVIEW')).toBeInTheDocument()
   })
 
   it('prevents duplicate launch submission on rapid double click', () => {

@@ -14,7 +14,11 @@ func TestRegisterDestination_FullFlow(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
 
-	// Use httptest.NewServer to bypass SSRF validation
+	// Bypass SSRF guard for the loopback test server.
+	orig := auditURLValidator
+	auditURLValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { auditURLValidator = orig })
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -42,7 +46,11 @@ func TestBuildSummary(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
 
-	// Use httptest.NewServer to bypass SSRF validation
+	// Bypass SSRF guard for the loopback test server.
+	orig := auditURLValidator
+	auditURLValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { auditURLValidator = orig })
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))

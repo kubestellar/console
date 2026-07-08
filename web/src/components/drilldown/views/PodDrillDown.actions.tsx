@@ -8,6 +8,16 @@ import type { RelatedResource } from './pod-drilldown'
 
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
 
+interface WsMessage {
+  id?: string
+  type?: string
+  payload?: {
+    exitCode?: number
+    error?: string
+    output?: string
+  }
+}
+
 interface UsePodActionsProps {
   cluster: string
   namespace: string
@@ -22,7 +32,7 @@ interface UsePodActionsProps {
   annotations: Record<string, string> | null
   ownerChain: RelatedResource[]
   openTrackedWs: () => Promise<WebSocket>
-  parseWsMessage: (event: MessageEvent, context: string) => any
+  parseWsMessage: (event: MessageEvent, context: string) => WsMessage | null
 }
 
 export function usePodActions({
@@ -424,34 +434,35 @@ Please:
             resolve(output || '')
           }, 10000)
 
-          ws.onopen = () => {
-            ws.send(JSON.stringify({
-              id: requestId,
-              type: 'kubectl',
-              payload: { context: cluster, args }
-            }))
-          }
+          // Set up handlers before sending so no messages are missed
           ws.onmessage = (event: MessageEvent) => {
             const msg = parseWsMessage(event, 'related resources')
             if (!msg) {
               clearTimeout(timeout)
               ws.close()
-              resolve(output)
+              resolve(output || '')
               return
             }
 
             if (msg.id === requestId && msg.payload?.output) {
               output = msg.payload.output
+              clearTimeout(timeout)
+              ws.close()
+              resolve(output)
             }
-            clearTimeout(timeout)
-            ws.close()
-            resolve(output)
           }
           ws.onerror = () => {
             clearTimeout(timeout)
             ws.close()
             resolve(output || '')
           }
+
+          // openTrackedWs resolves with an already-open connection; send immediately
+          ws.send(JSON.stringify({
+            id: requestId,
+            type: 'kubectl',
+            payload: { context: cluster, args }
+          }))
         })
       }
 

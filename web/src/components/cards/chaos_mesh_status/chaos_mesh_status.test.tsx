@@ -19,6 +19,7 @@ vi.mock('./useChaosMeshStatus', () => ({
 vi.mock('../../ui/Skeleton', () => ({
   SkeletonList: () => <div data-testid="skeleton-list" />,
   SkeletonStats: () => <div data-testid="skeleton-stats" />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../../lib/cards/CardComponents', () => ({

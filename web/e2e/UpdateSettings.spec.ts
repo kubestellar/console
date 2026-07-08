@@ -87,8 +87,8 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
       try {
         const msg = JSON.parse(String(data))
         ws.send(JSON.stringify({ id: msg.id, type: 'result', payload: { output: '{}', exitCode: 0 } }))
-      } catch {
-        // ignore
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error)
       }
     })
   })
@@ -143,6 +143,41 @@ function sendProgress(
   }
 }
 
+async function expectProgressStage(
+  page: Page,
+  wsRoutes: WsRoutes,
+  status: string,
+  message: string,
+  progress: number,
+  expectedText: string | RegExp = message,
+) {
+  await expect(async () => {
+    sendProgress(wsRoutes, status, message, progress)
+    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 1000 })
+    await expect(page.getByTestId('update-progress-message')).toContainText(expectedText, { timeout: 1000 })
+  }).toPass({ timeout: 10000 })
+}
+
+async function expectDoneBanner(page: Page, wsRoutes: WsRoutes) {
+  await expect(async () => {
+    sendProgress(wsRoutes, 'done', 'Update complete — restart successful', 100)
+    await expect(page.getByTestId('update-done-banner')).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 10000 })
+}
+
+async function expectFailedBanner(
+  page: Page,
+  wsRoutes: WsRoutes,
+  message: string,
+  progress: number,
+  error: string,
+) {
+  await expect(async () => {
+    sendProgress(wsRoutes, 'failed', message, progress, error)
+    await expect(page.getByTestId('update-failed-banner')).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 10000 })
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -153,14 +188,7 @@ test.describe('Update Settings', () => {
   test('shows progress banner during update', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
-    // Retry sending progress until the banner appears — handles the race
-    // between WS connection established and React's useEffect registering
-    // the update_progress message handler.
-    await expect(async () => {
-      sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
-      await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 1000 })
-    }).toPass({ timeout: 10000 })
-    await expect(page.getByTestId('update-progress-message')).toContainText('Pulling latest changes')
+    await expectProgressStage(page, ws, 'pulling', 'Pulling latest changes...', 10)
 
     // "Done" and "Failed" banners should NOT be visible during update
     await expect(page.getByTestId('update-done-banner')).not.toBeVisible()
@@ -171,27 +199,21 @@ test.describe('Update Settings', () => {
     const ws = await setupUpdateTest(page)
 
     // Stage 1: pulling at 10% (retry to handle handler-registration race)
-    await expect(async () => {
-      sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
-      await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 1000 })
-    }).toPass({ timeout: 10000 })
+    await expectProgressStage(page, ws, 'pulling', 'Pulling latest changes...', 10)
     const bar = page.getByTestId('update-progress-bar')
     await expect(bar).toHaveCSS('width', /\d+/)
 
     // Stage 2: building at 60%
-    sendProgress(ws, 'building', 'Building Go binaries...', 60)
-    await expect(page.getByTestId('update-progress-message')).toContainText('Building Go binaries')
+    await expectProgressStage(page, ws, 'building', 'Building Go binaries...', 60)
 
     // Stage 3: restarting at 80%
-    sendProgress(ws, 'restarting', 'Restarting via startup-oauth.sh...', 80)
-    await expect(page.getByTestId('update-progress-message')).toContainText('Restarting')
+    await expectProgressStage(page, ws, 'restarting', 'Restarting via startup-oauth.sh...', 80, 'Restarting')
   })
 
   test('countdown timer shows during update', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
-    sendProgress(ws, 'building', 'Building frontend...', 30)
-    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
+    await expectProgressStage(page, ws, 'building', 'Building frontend...', 30)
 
     // Countdown should be visible and contain a number (seconds remaining)
     const countdown = page.getByTestId('update-countdown')
@@ -214,10 +236,7 @@ test.describe('Update Settings', () => {
 
     // Retry the progress event until the banner appears — this avoids the race
     // between the WS connection establishing and the React handler registering.
-    await expect(async () => {
-      sendProgress(ws, 'restarting', 'Waiting for backend to come up...', 90)
-      await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 1000 })
-    }).toPass({ timeout: 10000 })
+    await expectProgressStage(page, ws, 'restarting', 'Waiting for backend to come up...', 90)
 
     // The done banner should NOT appear while we're still in "restarting" state
     await expect(page.getByTestId('update-done-banner')).not.toBeVisible()
@@ -229,10 +248,9 @@ test.describe('Update Settings', () => {
 
     // Send "done" status — simulates what happens after waitForBackend()
     // confirms status === 'ok'
-    sendProgress(ws, 'done', 'Update complete — restart successful', 100)
+    await expectDoneBanner(page, ws)
 
     // Done banner and refresh button should appear
-    await expect(page.getByTestId('update-done-banner')).toBeVisible({ timeout: 5000 })
     await expect(page.getByTestId('update-refresh-button')).toBeVisible()
     await expect(page.getByTestId('update-refresh-button')).toContainText(/refresh/i)
 
@@ -243,8 +261,7 @@ test.describe('Update Settings', () => {
   test('done banner can be dismissed', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
-    sendProgress(ws, 'done', 'Update complete — restart successful', 100)
-    await expect(page.getByTestId('update-done-banner')).toBeVisible({ timeout: 5000 })
+    await expectDoneBanner(page, ws)
 
     // Click dismiss
     await page.getByTestId('update-done-dismiss').click()
@@ -254,10 +271,7 @@ test.describe('Update Settings', () => {
   test('shows failed banner with error details', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
-    await expect(async () => {
-      sendProgress(ws, 'failed', 'Frontend build failed, rolling back...', 30, 'npm ERR! code ELIFECYCLE')
-      await expect(page.getByTestId('update-failed-banner')).toBeVisible({ timeout: 1000 })
-    }).toPass({ timeout: 10000 })
+    await expectFailedBanner(page, ws, 'Frontend build failed, rolling back...', 30, 'npm ERR! code ELIFECYCLE')
     await expect(page.getByTestId('update-failed-error')).toContainText('npm ERR!')
 
     // Progress and done banners should NOT be visible
@@ -268,8 +282,7 @@ test.describe('Update Settings', () => {
   test('failed banner can be dismissed', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
-    sendProgress(ws, 'failed', 'Go build failed', 60, 'exit status 1')
-    await expect(page.getByTestId('update-failed-banner')).toBeVisible({ timeout: 5000 })
+    await expectFailedBanner(page, ws, 'Go build failed', 60, 'exit status 1')
 
     await page.getByTestId('update-failed-dismiss').click()
     await expect(page.getByTestId('update-failed-banner')).not.toBeVisible()
@@ -279,9 +292,7 @@ test.describe('Update Settings', () => {
     const ws = await setupUpdateTest(page)
 
     // Start an update — UI should show the progress banner
-    sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
-    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
-    await expect(page.getByTestId('update-progress-message')).toContainText('Pulling latest changes')
+    await expectProgressStage(page, ws, 'pulling', 'Pulling latest changes...', 10)
 
     // Simulate a mid-update disconnect by closing every open WS connection
     const routeCountBeforeDisconnect = ws.routes.length
@@ -297,14 +308,10 @@ test.describe('Update Settings', () => {
       .poll(() => ws.routes.length, { timeout: RECONNECT_TIMEOUT_MS })
       .toBeGreaterThan(routeCountBeforeDisconnect)
 
-    // Resume the update on the new connection(s) — send a later stage
-    sendProgress(ws, 'building', 'Building Go binaries...', 60)
-    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
-    await expect(page.getByTestId('update-progress-message')).toContainText('Building Go binaries')
+    await expectProgressStage(page, ws, 'building', 'Building Go binaries...', 60)
 
     // Complete the update
-    sendProgress(ws, 'done', 'Update complete — restart successful', 100)
-    await expect(page.getByTestId('update-done-banner')).toBeVisible({ timeout: 5000 })
+    await expectDoneBanner(page, ws)
     await expect(page.getByTestId('update-progress-banner')).not.toBeVisible()
     await expect(page.getByTestId('update-refresh-button')).toBeVisible()
   })
@@ -313,20 +320,15 @@ test.describe('Update Settings', () => {
     const ws = await setupUpdateTest(page)
 
     // Start update
-    sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
-    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
+    await expectProgressStage(page, ws, 'pulling', 'Pulling latest changes...', 10)
 
     // Progress through stages
-    sendProgress(ws, 'building', 'Building frontend...', 30)
-    await expect(page.getByTestId('update-progress-message')).toContainText('Building frontend')
-
-    sendProgress(ws, 'building', 'Building Go binaries...', 60)
-    sendProgress(ws, 'restarting', 'Restarting...', 80)
-    await expect(page.getByTestId('update-progress-message')).toContainText('Restarting')
+    await expectProgressStage(page, ws, 'building', 'Building frontend...', 30)
+    await expectProgressStage(page, ws, 'building', 'Building Go binaries...', 60)
+    await expectProgressStage(page, ws, 'restarting', 'Restarting...', 80)
 
     // Complete
-    sendProgress(ws, 'done', 'Update complete — restart successful', 100)
-    await expect(page.getByTestId('update-done-banner')).toBeVisible({ timeout: 5000 })
+    await expectDoneBanner(page, ws)
     await expect(page.getByTestId('update-progress-banner')).not.toBeVisible()
     await expect(page.getByTestId('update-refresh-button')).toBeVisible()
   })

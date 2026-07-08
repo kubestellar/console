@@ -74,8 +74,10 @@ test.describe('Settings Page', () => {
       await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
 
       // Should have Settings heading
-      await expect(page.getByTestId('settings-title')).toBeVisible()
-      await expect(page.getByTestId('settings-title')).toHaveText('Settings')
+      const settingsTitle = page.getByTestId('settings-title')
+        .or(page.getByTestId('settings-title-mobile'))
+      await expect(settingsTitle.first()).toBeVisible()
+      await expect(settingsTitle.first()).toHaveText('Settings')
     })
 
     test('has sidebar navigation', async ({ page }) => {
@@ -125,7 +127,7 @@ test.describe('Settings Page', () => {
 
       // Look for AI mode section
       const aiSection = page.getByText(/ai.*mode|intelligence/i).first()
-      const hasAiSection = await aiSection.isVisible().catch(() => false)
+      const hasAiSection = await aiSection.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
       // AI mode section should be visible
       expect(hasAiSection).toBe(true)

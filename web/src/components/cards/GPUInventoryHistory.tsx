@@ -2,7 +2,7 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import {
   Cpu, TrendingUp, TrendingDown, Minus, Clock, Server,
-  BarChart3, Table2, ChevronDown, ArrowUpDown,
+  BarChart3, Table2, ChevronDown, ArrowUpDown, RefreshCw,
 } from 'lucide-react'
 import { useMetricsHistory } from '../../hooks/useMetricsHistory'
 import type { MetricsSnapshot } from '../../types/predictions'
@@ -11,6 +11,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
+import { Button } from '../ui/Button'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
@@ -36,7 +37,9 @@ export function GPUInventoryHistory() {
     isRefreshing,
     isDemoFallback,
     isFailed,
-    consecutiveFailures } = useCachedGPUNodes()
+    consecutiveFailures,
+    refetch,
+  } = useCachedGPUNodes()
   const { isDemoMode } = useDemoMode()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
@@ -453,11 +456,20 @@ export function GPUInventoryHistory() {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex items-center justify-center p-4">
+      <div className="h-full flex flex-col items-center justify-center p-4 gap-2">
         <div className="text-center text-muted-foreground">
           <p className="text-sm font-medium">{t('cards:gpuInventoryHistory.loadFailed', 'Failed to load GPU inventory')}</p>
           <p className="text-xs mt-1">{t('cards:gpuInventoryHistory.tryRefresh', 'Please refresh the page to try again.')}</p>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => refetch()}
+          className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+        >
+          <RefreshCw className="w-3 h-3" />
+          {t('common.retry', 'Retry')}
+        </Button>
       </div>
     )
   }
@@ -650,7 +662,7 @@ export function GPUInventoryHistory() {
                 <button
                   onClick={() => setChartMode('aggregate')}
                   className={cn(
-                    'text-[10px] px-1.5 py-0.5 rounded transition-colors',
+                    'text-xs px-1.5 py-0.5 rounded transition-colors',
                     chartMode === 'aggregate' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
@@ -659,7 +671,7 @@ export function GPUInventoryHistory() {
                 <button
                   onClick={() => setChartMode('by-type')}
                   className={cn(
-                    'text-[10px] px-1.5 py-0.5 rounded transition-colors',
+                    'text-xs px-1.5 py-0.5 rounded transition-colors',
                     chartMode === 'by-type' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >

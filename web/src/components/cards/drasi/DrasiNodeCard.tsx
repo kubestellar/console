@@ -113,7 +113,7 @@ export function NodeControls({
 export function StatusDot({ status, isStopped }: { status: 'ready' | 'error' | 'pending'; isStopped: boolean }) {
   const color = isStopped
     ? 'bg-slate-500'
-    : status === 'ready' ? 'bg-green-400' : status === 'error' ? 'bg-red-400' : 'bg-yellow-400'
+    : status === 'ready' ? 'bg-green-500' : status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
   return (
     <motion.div
       className={`w-2 h-2 rounded-full ${color}`}
@@ -193,7 +193,7 @@ export function NodeCard({
         <span className="text-white text-xs font-semibold truncate flex-1">{title}</span>
         <StatusDot status={status} isStopped={isStopped} />
       </div>
-      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{subtitle}</div>
+      <div className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">{subtitle}</div>
       <NodeControls
         isStopped={isStopped}
         isPinned={isPinned}

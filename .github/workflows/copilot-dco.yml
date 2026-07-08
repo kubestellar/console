@@ -4,10 +4,15 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# Explicit least-privilege permissions — prevents GITHUB_TOKEN from
+# inheriting broad repo-wide defaults (contents:write, issues:write, etc.)
+# See: https://github.com/kubestellar/console/issues/20492
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
+  statuses: write
 
 jobs:
   copilot-dco:
-    uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@af322d48cc67ade7345cabc6a0ed55c6c7040ee4  # main
+    # Pinned to commit SHA to prevent supply-chain drift from mutable @main (fixes #20493, #20494)
+    uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@18213effcf16b25f46e956d6f4969b491d03b805 # main pinned 2026-07-08

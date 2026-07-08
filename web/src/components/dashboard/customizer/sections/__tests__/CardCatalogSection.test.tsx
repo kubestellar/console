@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for CardCatalogSection component.
  *
@@ -58,14 +59,20 @@ vi.mock('../../../../ui/Toast', () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }))
 
-vi.mock('../../../../../lib/constants/network', () => ({
-  FOCUS_DELAY_MS: 0,
-}))
+vi.mock('../../../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FOCUS_DELAY_MS: 0,
+  }
+})
 
-vi.mock('../../../../../lib/analytics', () => ({
+vi.mock('../../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../../lib/analytics')>()),
   emitCardCategoryBrowsed: vi.fn(),
   emitRecommendedCardShown: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../../../config/cards', () => ({
   isCardVisibleForProject: () => true,

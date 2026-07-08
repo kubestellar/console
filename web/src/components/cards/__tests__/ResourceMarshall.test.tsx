@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ResourceMarshall } from '../ResourceMarshall'
@@ -28,8 +29,10 @@ vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false }),
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../ui/ClusterSelect', () => ({
@@ -67,13 +70,13 @@ describe('ResourceMarshall', () => {
       isLoading: false,
       isDemoFallback: false,
       isFailed: false,
-      error: null,
+      error: false,
     })
     mockUseWorkloads.mockReturnValue({ data: [], isLoading: false })
     mockUseResolveDependencies.mockReturnValue({
       data: null,
       isLoading: false,
-      error: null,
+      error: false,
       resolve: vi.fn(),
       reset: vi.fn(),
     })

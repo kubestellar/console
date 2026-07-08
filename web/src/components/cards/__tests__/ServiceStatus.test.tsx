@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ServiceStatus } from '../ServiceStatus'
@@ -26,7 +27,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
-    error: null,
+    error: false,
   })),
 }))
 
@@ -86,6 +87,7 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
 
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../ui/ClusterBadge', () => ({
@@ -146,7 +148,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       // LB count = 1
@@ -166,7 +168,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       expect(screen.getByText('my-svc')).toBeTruthy()
@@ -182,7 +184,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       expect(screen.getByTestId('cluster-badge')).toBeTruthy()
@@ -197,7 +199,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       expect(screen.getByText('LoadBalancer')).toBeTruthy()
@@ -212,7 +214,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       expect(screen.getByText('443/TCP, 80/TCP')).toBeTruthy()
@@ -227,7 +229,7 @@ describe('ServiceStatus', () => {
         isDemoFallback: false,
         isFailed: false,
         consecutiveFailures: 0,
-        error: null,
+        error: false,
       } as never)
       render(<ServiceStatus />)
       fireEvent.click(screen.getByText('my-svc'))

@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -27,27 +28,59 @@ vi.mock('../../../lib/demoMode', () => ({
   setDemoToken: vi.fn(),
 }))
 
-let mockPodIssues: any[] = []
-let mockDeploymentIssues: any[] = []
-let mockDeployments: any[] = []
-let mockClusters: any[] = []
+interface MockPodIssue {
+  name: string
+  namespace: string
+  cluster: string
+  reason: string
+}
+
+interface MockDeploymentIssue {
+  name: string
+  namespace: string
+  cluster: string
+  reason: string
+}
+
+interface MockDeployment {
+  name: string
+  namespace: string
+  cluster: string
+  status: string
+  replicas: number
+  readyReplicas: number
+}
+
+interface MockCluster {
+  name: string
+  [key: string]: unknown
+}
+
+let mockPodIssues: MockPodIssue[] = []
+let mockDeploymentIssues: MockDeploymentIssue[] = []
+let mockDeployments: MockDeployment[] = []
+let mockClusters: MockCluster[] = []
 let mockIsLoading = false
+let mockHookError: string | null = null
 let mockAgentStatus: 'connected' | 'disconnected' = 'connected'
 let mockIsDemoMode = true
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   getDemoMode: () => mockIsDemoMode,
   default: () => mockIsDemoMode,
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode }),
   isDemoModeForced: false,
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(),
   emitLogin: vi.fn(),
   emitEvent: vi.fn(),
   analyticsReady: Promise.resolve(),
-}))
+}
+))
 
 vi.mock('../../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: ({ title, rightExtra, children }: { title: string; rightExtra?: React.ReactNode; children?: React.ReactNode }) => (
@@ -60,10 +93,10 @@ vi.mock('../../../lib/dashboards/DashboardPage', () => ({
 }))
 
 vi.mock('../../../hooks/useMCP', () => ({
-  usePodIssues: () => ({ issues: mockPodIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
-  useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
-  useDeployments: () => ({ deployments: mockDeployments, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
-  useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters, isLoading: mockIsLoading, lastUpdated: null, refetch: vi.fn() }),
+  usePodIssues: () => ({ issues: mockPodIssues, isLoading: mockIsLoading, isRefreshing: false, error: mockHookError, lastUpdated: null, refetch: vi.fn() }),
+  useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: mockIsLoading, isRefreshing: false, error: mockHookError, lastUpdated: null, refetch: vi.fn() }),
+  useDeployments: () => ({ deployments: mockDeployments, isLoading: mockIsLoading, isRefreshing: false, error: mockHookError, lastUpdated: null, refetch: vi.fn() }),
+  useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters, isLoading: mockIsLoading, error: mockHookError, lastUpdated: null, refetch: vi.fn() }),
 }))
 
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
@@ -73,7 +106,7 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
     selectedClusters: [],
     isAllClustersSelected: true,
     customFilter: '',
-    filterByCluster: (items: any[]) => items,
+    filterByCluster: <T,>(items: T[]) => items,
   })),
 }))
 
@@ -159,6 +192,7 @@ describe('Workloads Add Workload button', () => {
     mockDeployments = []
     mockClusters = []
     mockIsLoading = false
+    mockHookError = null
     mockAgentStatus = 'connected'
     mockIsDemoMode = true
     showToastSpy.mockClear()
@@ -167,8 +201,8 @@ describe('Workloads Add Workload button', () => {
       selectedClusters: [],
       isAllClustersSelected: true,
       customFilter: '',
-      filterByCluster: (items: any[]) => items,
-    } as any)
+      filterByCluster: <T,>(items: T[]) => items,
+    })
   })
 
   it('renders the add workload button using the translated label', () => {
@@ -196,5 +230,14 @@ describe('Workloads Add Workload button', () => {
 
     expect(screen.getByTestId('workload-import-dialog')).toBeTruthy()
     expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it('renders workload error state when workload queries fail', () => {
+    mockHookError = 'cluster fetch failed'
+    renderWorkloads()
+
+    expect(screen.getByText('Could not load workload data')).toBeInTheDocument()
+    expect(screen.getByText('cluster fetch failed')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
   })
 })

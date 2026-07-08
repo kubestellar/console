@@ -74,51 +74,21 @@ This milestone crystallizes the near-term roadmap items into a cohesive theme: e
 ### Community Health
 
 - **Adopters program** — Populate ADOPTERS.MD with confirmed production users; define maturity tiers (install-mission vs. production deployment)
-- **Contributor onboarding** — Establish PR triage SLA, define `ai-needs-human` escalation path, and publish contributor guide update; see `docs/plans/PR-TRIAGE-SLA.md`
+- **Contributor onboarding** — Establish PR triage SLA, define `ai-needs-human` escalation path, and publish contributor guide update
 - **Adoption metrics** — Replace all `TBD` fields in `docs/adoption-metrics.md` with real measurements before any CNCF application
-
-### Tech Debt Unblocking Strategy
-
-As the codebase scales past 160+ dashboard cards and 10,000+ unit tests, technical debt items that were previously deprioritized ("hold" status) now represent scaling risks. This section defines the unblocking strategy to address accumulated tech debt before it impacts delivery velocity.
-
-**Priority 1: Performance & Scalability**
-- **Card render optimization** — Audit and fix cards with >500ms initial render time; establish performance budgets per card type
-- **Cache eviction policy** — Implement LRU eviction for SQLite WASM cache to prevent unbounded growth; target <50MB cache size
-- **Test parallelization** — Reduce CI test suite runtime from current baseline; investigate Jest worker memory limits
-
-**Priority 2: Code Health**
-- **TypeScript strict mode** — Enable `strict: true` incrementally, starting with new files; eliminate remaining `any` types in card components
-- **Dependency updates** — Unblock Vite 6, React 19, and Tailwind 4 upgrades currently held due to breaking changes; allocate dedicated sprint
-- **Bundle size** — Audit and tree-shake unused dependencies; target <2MB initial JS bundle (currently ~2.8MB)
-
-**Priority 3: Developer Experience**
-- **Storybook coverage** — Achieve 80% component coverage in Storybook (currently ~40%); prioritize cards with complex state
-- **E2E test stability** — Fix flaky Playwright tests in `nightly-e2e` workflow; define retry/timeout standards
-- **Documentation debt** — Update outdated API docs in `pkg/api/`, particularly for Stellar subsystem endpoints
-
-**Execution Model**
-- Allocate 20% of each sprint cycle to tech debt work (approximately 1 issue per developer per 2-week sprint)
-- Tag tech debt issues with `tech-debt` label and priority tier (`p1-perf`, `p2-health`, `p3-dx`)
-- Track tech debt ratio (tech debt issues / total issues) as a key health metric; target <15%
-- Block new feature work if tech debt ratio exceeds 25% or any P1 item is open >30 days
 
 ## Near-Term (Q2–Q3 2026)
 
-See **v0.4 — AI-Native Observability** milestone above for the full near-term feature scope, quality gates, and community health targets.
-
-**Branch Stability Covenant (effective immediately):** Main branch must remain green at all times. A post-merge integration smoke gate (combining TS build, auth smoke, and workflow startup checks) is required before new feature PRs are merged. See issue [#17756](https://github.com/kubestellar/console/issues/17756) for tracking.
-
 ## Mid-Term (Q3–Q4 2026)
 
-- **Stellar subsystem GA** — Graduate the Stellar persistent AI runtime from alpha to GA: finalize CRD versioning (v1 stability), complete Mission Operator test coverage, publish upgrade path documentation, and achieve at least one confirmed non-demo deployment. GA criteria tracked in [#17757](https://github.com/kubestellar/console/issues/17757). Stellar GA is the strategic milestone that moves Console from a dashboard to a production AI operations runtime.
 - **GitOps integration milestone** — First-class Flux + Argo CD support with observability parity, declarative Console configuration, and Mission Control deep links; see `docs/plans/GITOPS-INTEGRATION-RFC.md`
 - **Multi-tenant RBAC** — Role-based access control for teams sharing a Console instance, with namespace-scoped permissions
-- **Plugin architecture** — Extensible card and mission system allowing third-party developers to build custom dashboard components; see `docs/plans/PLUGIN-ARCHITECTURE-RFC.md` (RFC to be authored — tracked in [#17760](https://github.com/kubestellar/console/issues/17760))
+- **Plugin architecture** — Extensible card and mission system allowing third-party developers to build custom dashboard components
 - **Helm operator** — Kubernetes operator for fleet-wide Console deployment and lifecycle management
 - **Enhanced AI missions** — AI-assisted troubleshooting missions that diagnose cluster issues and suggest remediation steps
 - **Offline/air-gapped mode** — Full Console functionality without internet connectivity for restricted environments
 - **CNCF incubation preparation** — Governance documentation, adopters program, and community growth metrics; target Q4 2026 TOC application
-- **Third-party security audit (Q3 2026)** — Engage CNCF-sponsored auditors (ADA Logics or CNCF Security Audit program) for formal code security audit; required gate for CNCF incubation. **Owner:** clubanderson. **Timeline:** Open CNCF Security Audit request at https://github.com/cncf/toc/issues in Q2 2026; schedule audit completion for Q3 2026. This positions the project for Q4 2026 incubation application with completed security due-diligence.
+- **Third-party security audit** — Engage CNCF-sponsored auditors (e.g., ADA Logics) for a formal code security audit; required gate for CNCF incubation
 - **Multi-model AI backend** — Support for multiple LLM providers (OpenAI, Ollama, vLLM) behind a unified mission interface, reducing vendor lock-in
 - **Webhook-driven card updates** — Push-based card refresh via Kubernetes webhooks instead of polling, reducing API server load on large clusters
 - **Custom alert rules** — User-defined threshold alerts on any card metric, with notification channels (Slack, email, PagerDuty)
@@ -150,50 +120,3 @@ We welcome community input on priorities:
 - **GitHub Issues** — Open an issue on [kubestellar/console](https://github.com/kubestellar/console/issues) with the `enhancement` label
 - **Discussions** — Join [#kubestellar-dev on Slack](https://cloud-native.slack.com/channels/kubestellar-dev)
 - **Mailing List** — Email [kubestellar-dev@googlegroups.com](mailto:kubestellar-dev@googlegroups.com)
-
----
-
-## Strategic Health — June 2026
-
-> Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
-> **Last updated:** 2026-06-12
-
-### Current Risk Register
-
-| Risk | Severity | Issue | Status |
-|------|----------|-------|--------|
-| Merge gate disabled on `main` — no required status checks | 🔴 Critical | #17852 | Open |
-| Main branch build cascade — 8+ breaks on 2026-06-12, recovery SLA undefined | 🔴 Critical | #17756, #17969 | Escalating |
-| Auth smoke test regression | 🔴 Critical | #17824 | Open |
-| DCO sign-off failures on automation PRs — legal compliance risk | 🔴 Critical | #17966 | Open |
-| Coverage suite — 415 failures risk v0.3 "91% coverage" claim | 🟠 High | #17856 | Open |
-| v0.4 feature velocity at zero — all recent merges are maintenance | 🟠 High | #17968 | Ongoing |
-| Scanner PR backlog stalling v0.4 arch refactor | 🟠 High | #17853 | Open |
-| Stellar subsystem — no GA milestone or alpha exit criteria | 🟡 Medium | #17757 | Open |
-| Plugin architecture RFC exists (Draft) but issue tracker not closed | 🟡 Medium | #17760 | RFC exists |
-| Organic contributor drought — <4% human PR ratio | 🟡 Medium | #17967 | Ongoing |
-| Adoption metrics (`docs/ADOPTION-METRICS.md`) all TBD | 🟡 Medium | #17965 | Unresolved |
-| CNCF incubation tracker on `hold` | 🟡 Medium | #4072 | Blocked |
-
-### v0.4 Delivery Prerequisites
-
-Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), the following blockers must be resolved:
-
-1. **Merge gate enforcement** (#17852) — Must be enabled first; every other quality improvement depends on a stable merge pipeline.
-2. **Build stabilization** (#17756) — Main must stay green for at least 2 weeks before any v0.4 feature work is reliable.
-3. **Recovery SLA definition** (#17969) — Define build sheriff role, 4-hour SLA, and circuit breaker for automation agents when main is broken.
-4. **Coverage regression triage** (#17856) — Determine whether the 415-failure coverage suite is a build environment artifact or real test regression.
-5. **v0.4 feature work kickoff** (#17968) — Designate a feature captain and open at least one implementation PR for llm-d, Drasi, or kagent integration.
-
-### Adoption Readiness
-
-| Signal | Target | Current |
-|--------|--------|---------|
-| Main branch build stability | Green ≥14 consecutive days | ❌ Failing (8+ breaks on 2026-06-12) |
-| Coverage suite pass rate | >99% | ❌ 415 failures |
-| Human contributor ratio | ≥10% of merged PRs | ❌ <4% (1/30 recent merges) |
-| ADOPTERS.md confirmed entries | ≥3 production users | ⚠️ TBD |
-| Adoption metrics populated | All fields in `docs/ADOPTION-METRICS.md` | ❌ All TBD (#17965) |
-| DCO compliance on automation PRs | 100% of merged PRs signed | ⚠️ Gaps identified (#17966) |
-| CNCF incubation application | Filed | ⏸ On hold (#4072) |
-

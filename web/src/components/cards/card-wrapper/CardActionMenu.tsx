@@ -8,6 +8,7 @@ import { cn } from '../../../lib/cn'
 import { isCardExportable } from '../../../lib/widgets/widgetRegistry'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { useDashboardContextOptional } from '../../../hooks/useDashboardContext'
+import { useModalState } from '../../../lib/modals'
 
 // Card width options (in grid columns out of 12)
 const WIDTH_OPTIONS = [
@@ -86,9 +87,9 @@ export const CardActionMenu = memo(function CardActionMenu({
   const { t } = useTranslation(['cards', 'common'])
   const studioContext = useDashboardContextOptional()
 
-  const [showMenu, setShowMenu] = useState(false)
-  const [showResizeMenu, setShowResizeMenu] = useState(false)
-  const [showHeightMenu, setShowHeightMenu] = useState(false)
+  const { isOpen: showMenu, open: openMenu, close: closeMenu } = useModalState()
+  const { isOpen: showResizeMenu, open: openResizeMenu, close: closeResizeMenu } = useModalState()
+  const { isOpen: showHeightMenu, open: openHeightMenu, close: closeHeightMenu } = useModalState()
   const [resizeMenuOnLeft, setResizeMenuOnLeft] = useState(false)
   const [heightMenuOnLeft, setHeightMenuOnLeft] = useState(false)
   const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null)
@@ -107,15 +108,15 @@ export const CardActionMenu = memo(function CardActionMenu({
   // Close resize/height submenus when main menu closes (#7869)
   useEffect(() => {
     if (!showMenu) {
-      setShowResizeMenu(false)
-      setShowHeightMenu(false)
+      closeResizeMenu()
+      closeHeightMenu()
       setMenuPosition(null)
       if (restoreFocusRef.current) {
         menuButtonRef.current?.focus()
         restoreFocusRef.current = false
       }
     }
-  }, [showMenu])
+  }, [showMenu, closeResizeMenu, closeHeightMenu])
 
   useEffect(() => {
     if (!showMenu) return
@@ -140,12 +141,12 @@ export const CardActionMenu = memo(function CardActionMenu({
     function handleOtherMenuOpen(e: Event) {
       const detail = (e as CustomEvent).detail
       if (detail !== cardId && showMenu) {
-        setShowMenu(false)
+        closeMenu()
       }
     }
     window.addEventListener('card-menu-open', handleOtherMenuOpen)
     return () => window.removeEventListener('card-menu-open', handleOtherMenuOpen)
-  }, [showMenu, cardId])
+  }, [showMenu, cardId, closeMenu])
 
   // Keep menu anchored to button on scroll/resize (#5253).
   useEffect(() => {
@@ -184,13 +185,13 @@ export const CardActionMenu = memo(function CardActionMenu({
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       if (!target.closest('[data-tour="card-menu"]') && !target.closest('[data-card-action-menu]')) {
-        setShowMenu(false)
+        closeMenu()
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showMenu])
+  }, [showMenu, closeMenu])
 
   // Flip resize submenu to left when near viewport edge
   useEffect(() => {
@@ -212,15 +213,15 @@ export const CardActionMenu = memo(function CardActionMenu({
     if (e.key === 'Escape') {
       e.preventDefault()
       restoreFocusRef.current = true
-      setShowResizeMenu(false)
-      setShowHeightMenu(false)
-      setShowMenu(false)
+      closeResizeMenu()
+      closeHeightMenu()
+      closeMenu()
       return
     }
     if (e.key === 'ArrowLeft' && (showResizeMenu || showHeightMenu)) {
       e.preventDefault()
-      setShowResizeMenu(false)
-      setShowHeightMenu(false)
+      closeResizeMenu()
+      closeHeightMenu()
       menuRef.current?.querySelector<HTMLElement>(MENU_ITEM_SELECTOR)?.focus()
       return
     }
@@ -251,8 +252,10 @@ export const CardActionMenu = memo(function CardActionMenu({
           const opening = !showMenu
           if (opening) {
             window.dispatchEvent(new CustomEvent('card-menu-open', { detail: cardId }))
+            openMenu()
+          } else {
+            closeMenu()
           }
-          setShowMenu(opening)
         }}
         className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
         aria-label={t('cardWrapper.cardMenuTooltip')}
@@ -275,7 +278,7 @@ export const CardActionMenu = memo(function CardActionMenu({
           onKeyDown={handleMenuKeyDown}
         >
           <button
-            onClick={() => { setShowMenu(false); onConfigure?.() }}
+            onClick={() => { closeMenu(); onConfigure?.() }}
             className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
             role="menuitem"
             title={t('cardWrapper.configureTooltip')}
@@ -285,7 +288,7 @@ export const CardActionMenu = memo(function CardActionMenu({
           </button>
           <button
             onClick={() => {
-              setShowMenu(false)
+              closeMenu()
               const url = `${window.location.origin}${window.location.pathname}?card=${cardType}`
               copyToClipboard(url)
             }}
@@ -301,7 +304,7 @@ export const CardActionMenu = memo(function CardActionMenu({
           {onWidthChange && (
             <div className="relative" ref={menuContainerRef}>
               <button
-                onClick={() => { setShowResizeMenu(!showResizeMenu); setShowHeightMenu(false) }}
+                onClick={() => { if (showResizeMenu) { closeResizeMenu() } else { openResizeMenu() } closeHeightMenu() }}
                 className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
                 role="menuitem"
                 aria-haspopup="menu"
@@ -327,7 +330,7 @@ export const CardActionMenu = memo(function CardActionMenu({
                   {WIDTH_OPTIONS.map((option) => (
                     <button
                       key={option.value}
-                      onClick={() => { onWidthChange(option.value); setShowResizeMenu(false); setShowMenu(false) }}
+                      onClick={() => { onWidthChange(option.value); closeResizeMenu(); closeMenu() }}
                       className={cn(
                         'w-full px-3 py-2 text-left text-sm flex flex-wrap items-center justify-between gap-y-2',
                         cardWidth === option.value
@@ -349,7 +352,7 @@ export const CardActionMenu = memo(function CardActionMenu({
           {onHeightChange && (
             <div className="relative" ref={heightMenuContainerRef}>
               <button
-                onClick={() => { setShowHeightMenu(!showHeightMenu); setShowResizeMenu(false) }}
+                onClick={() => { if (showHeightMenu) { closeHeightMenu() } else { openHeightMenu() } closeResizeMenu() }}
                 className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
                 role="menuitem"
                 aria-haspopup="menu"
@@ -375,7 +378,7 @@ export const CardActionMenu = memo(function CardActionMenu({
                   {HEIGHT_OPTIONS.map((option) => (
                     <button
                       key={option.value}
-                      onClick={() => { onHeightChange(option.value); setShowHeightMenu(false); setShowMenu(false) }}
+                      onClick={() => { onHeightChange(option.value); closeHeightMenu(); closeMenu() }}
                       className={cn(
                         'w-full px-3 py-2 text-left text-sm flex flex-wrap items-center justify-between gap-y-2',
                         cardHeight === option.value
@@ -396,7 +399,7 @@ export const CardActionMenu = memo(function CardActionMenu({
           {isCardExportable(cardType) && (
             <button
               onClick={() => {
-                setShowMenu(false)
+                closeMenu()
                 if (studioContext?.openAddCardModal) {
                   studioContext.openAddCardModal('widgets', cardType)
                 } else {
@@ -413,7 +416,7 @@ export const CardActionMenu = memo(function CardActionMenu({
           )}
 
           <button
-            onClick={() => { setShowMenu(false); onRemove?.() }}
+            onClick={() => { closeMenu(); onRemove?.() }}
             className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
             role="menuitem"
             title={t('cardWrapper.removeTooltip')}

@@ -547,6 +547,19 @@ describe('fullFetchClusters', () => {
     expect(clusterCache.clusters.some(c => c.name === 'backend-cluster')).toBe(true)
   })
 
+  it('fetches from backend API for cookie-only sessions when agent is unavailable', async () => {
+    localStorage.setItem('kc-has-session', 'true')
+    const BACKEND_CLUSTERS = [makeCluster({ name: 'cookie-session-cluster' })]
+    mockApiGet.mockResolvedValue({ data: { clusters: BACKEND_CLUSTERS } })
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('agent down'))
+
+    await fullFetchClusters()
+
+    expect(mockApiGet).toHaveBeenCalledWith('/api/mcp/clusters')
+    expect(clusterCache.isLoading).toBe(false)
+    expect(clusterCache.clusters.some(c => c.name === 'cookie-session-cluster')).toBe(true)
+  })
+
   it('routes cluster fetch through backend API when kagenti backend is preferred (#9535)', async () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagenti')
     const KAGENTI_CLUSTERS = [makeCluster({ name: 'kagenti-cluster' })]
@@ -561,8 +574,8 @@ describe('fullFetchClusters', () => {
     expect(clusterCache.clusters.some(c => c.name === 'kagenti-cluster')).toBe(true)
   })
 
-  it('skips backend when no auth token', async () => {
-    // The previous test may have set a token; clear it all
+  it('skips backend when no auth token or cookie session marker exists', async () => {
+    // The previous test may have set auth state; clear it all.
     localStorage.clear()
     mockApiGet.mockClear()
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('agent down'))
@@ -592,7 +605,7 @@ describe('fullFetchClusters', () => {
     await fullFetchClusters()
 
     expect(clusterCache.isLoading).toBe(false)
-    expect(clusterCache.error).toBeNull()
+    expect(clusterCache.error).toBe('Cluster data unavailable')
     expect(clusterCache.clusters).toEqual([])
     expect(clusterCache.consecutiveFailures).toBeGreaterThan(0)
   })

@@ -17,8 +17,8 @@ import type { UnifiedStatBlockProps } from '../types'
 import { resolveStatValue } from './valueResolvers'
 import { useIsModeSwitching } from '../demo'
 
-/** Tailwind arbitrary shadow class for demo-mode glow (yellow-500 at 15% opacity) */
-const DEMO_GLOW_SHADOW = 'shadow-[0_0_12px_rgba(234,179,8,0.15)]'
+/** Tailwind shadow class for demo-mode glow using semantic warning color */
+const DEMO_GLOW_SHADOW = 'shadow-[0_0_12px_hsl(var(--warning)/0.15)]'
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {

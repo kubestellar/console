@@ -3,6 +3,8 @@ import { Trans, useTranslation } from 'react-i18next'
 import { BaseModal } from '../../lib/modals'
 import type { AgentInfo } from '../../types/agent'
 import { AgentIcon } from './AgentIcon'
+import { safeGet, safeSet, safeRemove } from '../../lib/safeLocalStorage'
+import { Button } from '../ui/Button'
 
 const APPROVED_KEY = 'kc_agents_approved'
 
@@ -11,30 +13,18 @@ let sessionApproved = false
 
 /** Check whether the user has already approved agent access. */
 export function hasApprovedAgents(): boolean {
-  try {
-    return localStorage.getItem(APPROVED_KEY) === 'true' || sessionApproved
-  } catch {
-    return sessionApproved
-  }
+  return safeGet(APPROVED_KEY) === 'true' || sessionApproved
 }
 
 /** Record that the user has approved agent access. */
 export function setAgentsApproved(): void {
   sessionApproved = true
-  try {
-    localStorage.setItem(APPROVED_KEY, 'true')
-  } catch {
-    // storage full — sessionApproved already set above as fallback
-  }
+  safeSet(APPROVED_KEY, 'true')
 }
 
 /** Clear approval (e.g. for testing or reset). */
 export function clearAgentsApproval(): void {
-  try {
-    localStorage.removeItem(APPROVED_KEY)
-  } catch {
-    // ignore
-  }
+  safeRemove(APPROVED_KEY)
 }
 
 interface AgentApprovalDialogProps {
@@ -109,21 +99,23 @@ export function AgentApprovalDialog({ isOpen, agents, onApprove, onCancel }: Age
 
       <BaseModal.Footer showKeyboardHints={false}>
         <div className="flex items-center justify-end gap-3 w-full">
-          <button
+          <Button
             onClick={onCancel}
-            className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors"
+            variant="ghost"
+            size="md"
           >
             {t('agent.approval.cancel')}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => {
               setAgentsApproved()
               onApprove()
             }}
-            className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
+            variant="primary"
+            size="md"
           >
             {t('agent.approval.approveEnable')}
-          </button>
+          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>

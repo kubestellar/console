@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { ClusterInfo } from '../../hooks/mcp/types'
-import { isClusterUnreachable, isClusterHealthy } from './utils'
+import { getClusterHealthState, isClusterUnreachable } from './utils'
 
 export interface GPUByCluster {
   [clusterKey: string]: { total: number; allocated: number }
@@ -57,19 +57,20 @@ export function useClusterStats({
       }
     })
 
-    // Separate unreachable, healthy, unhealthy - simplified logic matching sidebar
-    const unreachable = globalFilteredClusters.filter(c => isClusterUnreachable(c)).length
+    const healthStates = globalFilteredClusters.map(cluster => ({
+      cluster,
+      state: getClusterHealthState(cluster),
+    }))
+    const unreachable = healthStates.filter(({ state }) => state === 'unreachable').length
     // `neverConnected` is populated by the backend — set in
     // `pkg/api/handlers/mcp_cluster.go` (and also stamped in
     // `pkg/k8s/client.go` when the health cache has never seen the
     // cluster) — when every health probe since startup has failed.
     // Surfaces the stale kubeconfig warning banner (#5921).
     const staleContexts = globalFilteredClusters.filter(c => c.neverConnected === true).length
-    const healthy = globalFilteredClusters.filter(c => !isClusterUnreachable(c) && isClusterHealthy(c)).length
-    const unhealthy = globalFilteredClusters.filter(c => !isClusterUnreachable(c) && !isClusterHealthy(c)).length
-    const loadingCount = globalFilteredClusters.filter(c =>
-      c.nodeCount === undefined && c.reachable === undefined
-    ).length
+    const healthy = healthStates.filter(({ state }) => state === 'healthy').length
+    const unhealthy = healthStates.filter(({ state }) => state === 'unhealthy').length
+    const loadingCount = healthStates.filter(({ state }) => state === 'loading').length
 
     const hasResourceData = globalFilteredClusters.some(c =>
       !isClusterUnreachable(c) && c.nodeCount !== undefined && c.nodeCount > 0
@@ -83,7 +84,7 @@ export function useClusterStats({
       unreachable,
       staleContexts,
       healthyNodes: globalFilteredClusters.reduce(
-        (sum, c) => sum + (!isClusterUnreachable(c) && isClusterHealthy(c) ? (c.nodeCount || 0) : 0),
+        (sum, c) => sum + (!isClusterUnreachable(c) ? (c.readyNodes ?? c.nodeCount ?? 0) : 0),
         0,
       ),
       totalNodes: globalFilteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),

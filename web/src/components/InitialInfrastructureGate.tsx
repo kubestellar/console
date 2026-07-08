@@ -10,6 +10,7 @@ import { getUserSafeErrorMessage } from '../lib/errors/handleError'
 import { stellarApi } from '../services/stellar'
 import { StatusBadge } from './ui/StatusBadge'
 import { Button } from './ui/Button'
+import { safeRemove } from '../lib/safeLocalStorage'
 
 const INITIAL_HANDSHAKE_TIMEOUT_MS = 15_000
 const INITIAL_HANDSHAKE_TIMEOUT_SECONDS = INITIAL_HANDSHAKE_TIMEOUT_MS / 1000
@@ -75,13 +76,9 @@ const gateReducer = (state: GateState, action: GateAction): GateState => {
 }
 
 const clearStaleSessionAndRedirectToLogin = (): void => {
-  try {
-    localStorage.removeItem(LEGACY_STORAGE_KEY_KC_TOKEN)
-    clearStoredAuthToken()
-    localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
-  } catch {
-    // ignore localStorage access failures and continue to login
-  }
+  safeRemove(LEGACY_STORAGE_KEY_KC_TOKEN)
+  clearStoredAuthToken()
+  safeRemove(STORAGE_KEY_HAS_SESSION)
   window.location.href = LOGIN_PATH
 }
 

@@ -212,6 +212,7 @@ func TestGPUCreateReservation_OverAllocationReturnsConflict(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/gpu/reservations", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -242,6 +243,7 @@ func TestGPUCreateReservation_SetsDefaultDurationAndUserName(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/gpu/reservations", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -275,6 +277,7 @@ func TestGPUCreateReservation_ProvisioningSuccessReturnsActiveReservation(t *tes
 
 	req, err := http.NewRequest(http.MethodPost, "/api/gpu/reservations", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -329,6 +332,7 @@ func TestGPUCreateReservation_ProvisioningCleanupOnStoreFailure(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, "/api/gpu/reservations", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -353,6 +357,7 @@ func TestGPUListReservations_MineNilReturnsEmptyArray(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations?mine=true", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -376,6 +381,7 @@ func TestGPUListReservations_NonAdminOnlyGetsOwnReservations(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -402,6 +408,7 @@ func TestGPUGetReservation_NonOwnerIsForbidden(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations/"+resID.String(), nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -426,6 +433,7 @@ func TestGPUUpdateReservation_RejectsZeroGPUCount(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -452,6 +460,7 @@ func TestGPUUpdateReservation_RejectsNegativeGPUCount(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -477,6 +486,7 @@ func TestGPUUpdateReservation_RejectsNegativeDuration(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -502,6 +512,7 @@ func TestGPUUpdateReservation_RejectsZeroDuration(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -525,6 +536,7 @@ func TestGPUBulkUtilizations_ForbiddenForNonOwner(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gpu/utilizations?ids="+resID.String(), nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)

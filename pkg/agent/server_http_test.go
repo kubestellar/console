@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kubestellar/console/pkg/agent/updater"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/settings"
 	appsv1 "k8s.io/api/apps/v1"
@@ -105,6 +106,7 @@ func TestResourceHandlers_QueryExtraction(t *testing.T) {
 	// 1. Verify handleNodesHTTP extracts ?cluster=
 	t.Run("handleNodesHTTP", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/nodes?cluster=test-cluster", nil)
+		req.Host = "localhost"
 		w := httptest.NewRecorder()
 
 		server.handleNodesHTTP(w, req)
@@ -142,6 +144,7 @@ func TestResourceHandlers_QueryExtraction(t *testing.T) {
 		fakeCS.ClearActions()
 
 		req := httptest.NewRequest("GET", "/deployments?cluster=test-cluster&namespace=test-ns", nil)
+		req.Host = "localhost"
 		w := httptest.NewRecorder()
 
 		server.handleDeploymentsHTTP(w, req)
@@ -180,6 +183,7 @@ func TestMutationLogic_CreateNamespaceHTTP(t *testing.T) {
 
 	body := `{"cluster": "test-cluster", "name": "new-ns", "labels": {"env": "test"}}`
 	req := httptest.NewRequest("POST", "/namespaces", strings.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -219,6 +223,7 @@ func TestMutationLogic_CreateServiceAccountHTTP(t *testing.T) {
 
 	body := `{"cluster": "test-cluster", "namespace": "test-ns", "name": "new-sa"}`
 	req := httptest.NewRequest("POST", "/serviceaccounts", strings.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -251,7 +256,7 @@ func TestHandleAutoUpdateConfig_SaveAllError_Returns500(t *testing.T) {
 	mgr.SetSettingsPath("/dev/null/no-such-dir/settings.json")
 	defer mgr.SetSettingsPath(original)
 
-	checker := &UpdateChecker{channel: "stable"}
+	checker := updater.NewUpdateChecker(updater.UpdateCheckerConfig{})
 	server := &Server{
 		allowedOrigins: []string{"*"},
 		agentToken:     "",
@@ -260,6 +265,7 @@ func TestHandleAutoUpdateConfig_SaveAllError_Returns500(t *testing.T) {
 
 	body := `{"enabled":true,"channel":"developer"}`
 	req := httptest.NewRequest("POST", "/auto-update/config", strings.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -268,9 +274,7 @@ func TestHandleAutoUpdateConfig_SaveAllError_Returns500(t *testing.T) {
 	if w.Code != http.StatusInternalServerError {
 		t.Errorf("expected 500, got %d", w.Code)
 	}
-	checker.mu.Lock()
-	ch := checker.channel
-	checker.mu.Unlock()
+	ch := checker.Status().Channel
 	if ch != "stable" {
 		t.Errorf("updateChecker.Configure must not be called on SaveAll failure, but channel changed to %q", ch)
 	}

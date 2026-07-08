@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"net"
 	"testing"
 	"time"
@@ -88,4 +89,84 @@ func TestSyslogDestination_RequiresAddr(t *testing.T) {
 	_, err := NewSyslogDestination("tcp", "", "")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "addr is required")
+}
+
+func TestSyslogDestination_Provider(t *testing.T) {
+	dest := &SyslogDestination{}
+	assert.Equal(t, ProviderSyslog, dest.Provider())
+}
+
+func TestSyslogDestination_Defaults(t *testing.T) {
+	orig := syslogHostValidator
+	syslogHostValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { syslogHostValidator = orig })
+
+	conn, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer conn.Close()
+
+	dest, err := NewSyslogDestination("", conn.LocalAddr().String(), "")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, dest.Close()) })
+
+	assert.Equal(t, syslogDefaultNetwork, dest.network)
+	assert.Equal(t, syslogDefaultTag, dest.tag)
+}
+
+func TestSyslogDestination_RejectsUnsupportedNetwork(t *testing.T) {
+	_, err := NewSyslogDestination("http", "127.0.0.1:514", "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported network")
+}
+
+func TestSyslogDestination_ValidationError(t *testing.T) {
+	orig := syslogHostValidator
+	syslogHostValidator = func(_ string) error { return errors.New("blocked host") }
+	t.Cleanup(func() { syslogHostValidator = orig })
+
+	_, err := NewSyslogDestination("tcp", "collector.example.com:514", "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "blocked host")
+}
+
+func TestSyslogDestination_SendClosedWriter(t *testing.T) {
+	dest := &SyslogDestination{}
+	err := dest.Send(context.Background(), []PipelineEvent{{ID: "closed"}})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrDestinationUnsupported)
+}
+
+func TestSyslogDestination_SendCanceledContext(t *testing.T) {
+	orig := syslogHostValidator
+	syslogHostValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { syslogHostValidator = orig })
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer ln.Close()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		conn, acceptErr := ln.Accept()
+		if acceptErr == nil {
+			_ = conn.Close()
+		}
+	}()
+
+	dest, err := NewSyslogDestination("tcp", ln.Addr().String(), "test-tag")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, dest.Close()) })
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err = dest.Send(ctx, []PipelineEvent{{ID: "syslog-cancelled", Timestamp: time.Now().UTC()}})
+	require.ErrorIs(t, err, context.Canceled)
+	<-done
+}
+
+func TestSyslogDestination_CloseIsIdempotent(t *testing.T) {
+	dest := &SyslogDestination{}
+	require.NoError(t, dest.Close())
 }

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Unit tests for NodeConditions card component.
  *
@@ -34,9 +35,11 @@ vi.mock('../../hooks/useCachedData', () => ({
   useCachedNodes: () => mockCachedNodes(),
 }))
 
-const mockIsDemoMode = vi.fn(() => ({ isDemoMode: false }))
-vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => mockIsDemoMode(),
+const mockIsDemoMode = vi.fn(() => false)
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 const mockExecute = vi.fn()
@@ -109,7 +112,7 @@ const defaultNodesReturn = {
 function setup() {
   mockCachedNodes.mockReturnValue(defaultNodesReturn)
   mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false })
-  mockIsDemoMode.mockReturnValue({ isDemoMode: false })
+  mockIsDemoMode.mockReturnValue(false)
   mockExecute.mockResolvedValue(undefined)
 }
 

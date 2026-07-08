@@ -53,6 +53,19 @@
         }
       }
     },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "allowedGitHubLogins": {
+          "type": "string",
+          "description": "Comma-separated GitHub login allowlist. Empty permits any GitHub OAuth user."
+        },
+        "adminGitHubLogins": {
+          "type": "string",
+          "description": "Comma-separated GitHub logins promoted or kept as admin after OAuth sign-in."
+        }
+      }
+    },
     "backup": {
       "type": "object",
       "properties": {

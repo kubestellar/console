@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for useIntoto.ts — focused on the pure function exports and
  * the deterministic demo-data generators. The `useIntoto()` hook itself

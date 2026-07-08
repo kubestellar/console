@@ -1,9 +1,18 @@
+/// <reference types="node" />
 /**
  * Network Constants - URLs, timeouts, and connection parameters
  *
  * Centralizes all hardcoded network values previously scattered across 40+ files.
  * Any timeout, URL, or connection parameter should be defined here.
  */
+
+// ============================================================================
+// Time Constants (needed for vitest importOriginal pattern)
+// ============================================================================
+
+/** Milliseconds per second. Defined here (not re-exported from time.ts) so
+ * vitest importOriginal() includes it when mocking network.ts. */
+export const MS_PER_SECOND = 1_000
 
 // ============================================================================
 // URLs
@@ -14,16 +23,30 @@
  * On Netlify, agent URLs are disabled — there is no local kc-agent.
  * Duplicated from demoMode.ts to avoid circular imports (demoMode → constants → network).
  */
+function isTestEnvironment(): boolean {
+  return typeof process !== 'undefined' && process.env.NODE_ENV === 'test'
+}
+
 const viteEnv = (import.meta.env ?? {}) as Partial<ImportMetaEnv>
 const isDemoModeBuild = viteEnv.VITE_DEMO_MODE === 'true'
 const isNoLocalAgentBuild = viteEnv.VITE_NO_LOCAL_AGENT === 'true'
 
-const _isNetlify = typeof window !== 'undefined' && (
-  isDemoModeBuild ||
-  window.location.hostname.includes('netlify.app') ||
-  window.location.hostname.includes('deploy-preview-') ||
-  window.location.hostname === 'console.kubestellar.io'
-)
+// In test environments (jsdom/vitest), window.location exists but has mock values.
+// Skip hostname checks to avoid false positives.
+const isConsoleLiveHost = !isTestEnvironment() && 
+  typeof window !== 'undefined' && 
+  typeof window.location !== 'undefined' && 
+  window.location.hostname === 'console-live.kubestellar.io'
+
+const _isNetlify = !isTestEnvironment() && 
+  typeof window !== 'undefined' && 
+  typeof window.location !== 'undefined' && (
+    isDemoModeBuild ||
+    window.location.hostname.includes('netlify.app') ||
+    window.location.hostname.includes('deploy-preview-') ||
+    window.location.hostname === 'console.kubestellar.io' ||
+    isConsoleLiveHost
+  )
 
 /**
  * Whether the local kc-agent should be suppressed.
@@ -35,6 +58,7 @@ const _isNetlify = typeof window !== 'undefined' && (
  * deployed in-cluster where Vite env vars cannot be injected at runtime.
  */
 let _suppressAgent = _isNetlify || isNoLocalAgentBuild
+let _suppressOptionalPollers = isConsoleLiveHost
 
 /**
  * Called by the BrandingProvider after fetching /health to suppress agent
@@ -56,6 +80,21 @@ export function suppressLocalAgent(suppress: boolean): void {
 /** Check whether the local agent is suppressed (build-time or runtime). */
 export function isLocalAgentSuppressed(): boolean {
   return _suppressAgent
+}
+
+/**
+ * Suppress non-core background pollers for live canary deployments. This keeps
+ * semantic route checks focused on Kubernetes data without weakening backend
+ * rate limits.
+ */
+export function suppressOptionalPollers(suppress: boolean): void {
+  if (suppress) {
+    _suppressOptionalPollers = true
+  }
+}
+
+export function areOptionalPollersSuppressed(): boolean {
+  return _suppressOptionalPollers
 }
 
 /** Syntactically-valid but unroutable WS URL used when the agent is suppressed.
@@ -415,8 +454,6 @@ export const SERVICES_CACHE_TTL_MS = 60_000
  * (shown as a "Cached • Ns ago" / "Stale" badge). Strictly less than
  * SERVICES_CACHE_TTL_MS. */
 export const SERVICES_CACHE_STALE_MS = 30_000
-
-export { MS_PER_SECOND } from './time'
 
 // ============================================================================
 // Network Latency Classification (issue #13249)

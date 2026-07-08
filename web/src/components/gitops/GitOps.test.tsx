@@ -1,3 +1,4 @@
+import React from 'react'
 /// <reference types='@testing-library/jest-dom/vitest' />
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -133,6 +134,19 @@ describe('GitOps Component', () => {
   it('renders the integration info section', () => {
     renderGitOps()
     expect(screen.getByText('gitops.integrationTitle')).toBeInTheDocument()
+  })
+
+  it('shows checking state while drift detection is running', async () => {
+    mockClusters = [{ name: 'only', context: 'only' }]
+    driftFetchHandler = () => new Promise(() => {})
+    renderGitOps()
+
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('gitops.checking').length).toBeGreaterThan(0)
+      },
+      { timeout: ASYNC_WAIT_TIMEOUT_MS }
+    )
   })
 
   // #6155 — in demo mode we must NOT be stuck in perpetual "checking".

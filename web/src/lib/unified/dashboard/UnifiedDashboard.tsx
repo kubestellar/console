@@ -24,7 +24,7 @@ import { AddCardModal } from '../../../components/dashboard/AddCardModal'
 import { ConfigureCardModal } from '../../../components/dashboard/ConfigureCardModal'
 import { prefetchCardChunks } from '../../../components/cards/cardRegistry'
 import { SHORT_DELAY_MS } from '../../constants/network'
-import { ConfirmDialog } from '../../modals/ConfirmDialog'
+import { ConfirmDialog, useModalState } from '../../modals'
 import { useTranslation } from 'react-i18next'
 
 /** Card suggestion type from AddCardModal */
@@ -77,7 +77,7 @@ export function UnifiedDashboard({
           }
         }
       } catch (error) {
-        console.error('Failed to restore unified dashboard cards', error)
+        console.warn('Failed to restore unified dashboard cards', error)
         nextState.error = t('errors.storageRestoreFailed')
       }
     }
@@ -95,7 +95,7 @@ export function UnifiedDashboard({
             }
           }
         } catch (error) {
-          console.error('Failed to restore unified dashboard tab cards', error)
+          console.warn('Failed to restore unified dashboard tab cards', error)
           nextState.error = t('errors.storageRestoreFailed')
         }
       }
@@ -155,10 +155,12 @@ export function UnifiedDashboard({
   const hasInitializedTabPersistence = useRef(false)
 
   // Modal state
-  const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false)
-  const [isConfigureCardModalOpen, setIsConfigureCardModalOpen] = useState(false)
+  const addCardModal = useModalState()
+  const configureCardModal = useModalState()
   const [cardToEdit, setCardToEdit] = useState<ConfigurableCard | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [showRemoveCardConfirm, setShowRemoveCardConfirm] = useState(false)
+  const [cardToRemove, setCardToRemove] = useState<{ id: string; title?: string } | null>(null)
 
   // Persist cards to localStorage when they change.
   //
@@ -178,7 +180,7 @@ export function UnifiedDashboard({
         localStorage.setItem(config.storageKey, JSON.stringify(cards))
         setDashboardError(null)
       } catch (error) {
-        console.error('Failed to persist unified dashboard cards', error)
+        console.warn('Failed to persist unified dashboard cards', error)
         setDashboardError(t('errors.storagePersistFailed'))
       }
     }
@@ -202,7 +204,7 @@ export function UnifiedDashboard({
         localStorage.setItem(slot, JSON.stringify(placements))
         setDashboardError(null)
       } catch (error) {
-        console.error('Failed to persist unified dashboard tab cards', error)
+        console.warn('Failed to persist unified dashboard tab cards', error)
         setDashboardError(t('errors.storagePersistFailed'))
       }
     }
@@ -228,9 +230,20 @@ export function UnifiedDashboard({
     mutateActiveCards(() => newCards)
   }
 
-  // Handle card removal
+  // Handle card removal - show confirmation first
   const handleRemoveCard = (cardId: string) => {
-    mutateActiveCards((prev) => prev.filter((c) => c.id !== cardId))
+    const card = activeCards.find((c) => c.id === cardId)
+    setCardToRemove({ id: cardId, title: card?.title })
+    setShowRemoveCardConfirm(true)
+  }
+
+  // Handle confirmed card removal
+  const handleRemoveCardConfirmed = () => {
+    if (cardToRemove) {
+      mutateActiveCards((prev) => prev.filter((c) => c.id !== cardToRemove.id))
+    }
+    setShowRemoveCardConfirm(false)
+    setCardToRemove(null)
   }
 
   // Handle card configuration
@@ -242,7 +255,7 @@ export function UnifiedDashboard({
         card_type: card.cardType,
         config: card.config || {},
         title: card.title })
-      setIsConfigureCardModalOpen(true)
+      configureCardModal.open()
     }
   }
 
@@ -257,7 +270,7 @@ export function UnifiedDashboard({
 
   // Handle add card
   const handleAddCard = () => {
-    setIsAddCardModalOpen(true)
+    addCardModal.open()
   }
 
   // Handle adding cards from AddCardModal
@@ -276,7 +289,7 @@ export function UnifiedDashboard({
         } }))
       return [...prev, ...additions]
     })
-    setIsAddCardModalOpen(false)
+    addCardModal.close()
   }
 
   // Handle saving card configuration
@@ -291,8 +304,8 @@ export function UnifiedDashboard({
           : card
       )
     )
-    setIsConfigureCardModalOpen(false)
     setCardToEdit(null)
+    configureCardModal.close()
   }
 
   // Handle reset to defaults
@@ -333,7 +346,7 @@ export function UnifiedDashboard({
         }
         setDashboardError(null)
       } catch (error) {
-        console.error('Failed to reset unified dashboard layout', error)
+        console.warn('Failed to reset unified dashboard layout', error)
         setDashboardError(t('errors.storagePersistFailed'))
       }
     }
@@ -358,7 +371,7 @@ export function UnifiedDashboard({
             setDashboardError(null)
           }
         } catch (error) {
-          console.error('Failed to sync unified dashboard cards from storage event', error)
+          console.warn('Failed to sync unified dashboard cards from storage event', error)
           setDashboardError(t('errors.storageRestoreFailed'))
         }
         return
@@ -376,7 +389,7 @@ export function UnifiedDashboard({
             setDashboardError(null)
           }
         } catch (error) {
-          console.error('Failed to sync unified dashboard tab cards from storage event', error)
+          console.warn('Failed to sync unified dashboard tab cards from storage event', error)
           setDashboardError(t('errors.storageRestoreFailed'))
         }
       }
@@ -431,7 +444,7 @@ export function UnifiedDashboard({
           <div>
             <h1 className="text-2xl font-bold text-white">{config.name}</h1>
             {config.subtitle && (
-              <p className="text-sm text-muted-foreground mt-1">{config.subtitle}</p>
+              <div className="text-sm text-muted-foreground mt-1">{config.subtitle}</div>
             )}
           </div>
           {/* Health indicator */}
@@ -477,6 +490,7 @@ export function UnifiedDashboard({
               onClick={handleResetRequest}
               className="px-3 py-1.5 text-xs rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
               title="Reset to default layout"
+              aria-label="Reset to default layout"
             >
               Reset
             </button>
@@ -573,18 +587,18 @@ export function UnifiedDashboard({
 
       {/* Add Card Modal */}
       <AddCardModal
-        isOpen={isAddCardModalOpen}
-        onClose={() => setIsAddCardModalOpen(false)}
+        isOpen={addCardModal.isOpen}
+        onClose={addCardModal.close}
         onAddCards={handleAddCards}
         existingCardTypes={activeCards.map((c) => c.cardType)}
       />
 
       {/* Configure Card Modal */}
       <ConfigureCardModal
-        isOpen={isConfigureCardModalOpen}
+        isOpen={configureCardModal.isOpen}
         card={cardToEdit}
         onClose={() => {
-          setIsConfigureCardModalOpen(false)
+          configureCardModal.close()
           setCardToEdit(null)
         }}
         onSave={handleSaveCardConfig}
@@ -599,6 +613,22 @@ export function UnifiedDashboard({
         message={t('confirmDialog.resetDashboardMessage')}
         confirmLabel={t('actions.reset')}
         variant="warning"
+      />
+
+      {/* Remove Card Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showRemoveCardConfirm}
+        onClose={() => {
+          setShowRemoveCardConfirm(false)
+          setCardToRemove(null)
+        }}
+        onConfirm={handleRemoveCardConfirmed}
+        title={t('confirmDialog.removeCardTitle')}
+        message={cardToRemove?.title 
+          ? t('confirmDialog.removeCardMessageWithTitle', { title: cardToRemove.title })
+          : t('confirmDialog.removeCardMessage')}
+        confirmLabel={t('actions.remove')}
+        variant="danger"
       />
     </div>
   )

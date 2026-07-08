@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -12,10 +13,13 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../../hooks/useDemoMode', () => ({
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
-}))
+  getDemoMode: vi.fn(() => false),
+}
+))
 
 const mockStartMission = vi.fn()
 vi.mock('../../../../hooks/useMissions', () => ({

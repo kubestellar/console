@@ -12,6 +12,13 @@ import { logger } from '@/lib/logger'
 import type { MissionActionBundle } from './useMissions.types'
 import { createMissionStartActions } from './useMissions.start'
 import { createMissionMessagingActions } from './useMissions.messaging'
+import { areOptionalPollersSuppressed, isLocalAgentSuppressed } from '../lib/constants/network'
+
+function isExpectedAgentUnavailable(error: unknown): boolean {
+  if (!(isLocalAgentSuppressed() || areOptionalPollersSuppressed())) return false
+  const message = error instanceof Error ? error.message : String(error)
+  return message.includes('Agent unavailable')
+}
 
 export function createMissionActions(
   state: MissionProviderState,
@@ -126,6 +133,10 @@ export function createMissionActions(
       })
     }).catch((error: unknown) => {
       state.selectAgentPending.current = null
+      if (isExpectedAgentUnavailable(error)) {
+        logger.debug('[Missions] Agent selection skipped because the agent is unavailable in this deployment')
+        return
+      }
       logger.error('[Missions] Failed to select agent:', error)
     })
   }
@@ -133,6 +144,10 @@ export function createMissionActions(
   const connectToAgent = () => {
     state.wsReconnectAttempts.current = 0
     connectionApi.ensureConnection().catch((error: unknown) => {
+      if (isExpectedAgentUnavailable(error)) {
+        logger.debug('[Missions] Agent connection skipped because the agent is unavailable in this deployment')
+        return
+      }
       logger.error('[Missions] Failed to connect to agent:', error)
     })
   }

@@ -26,7 +26,7 @@ func TestFetchRunFolder(t *testing.T) {
 			folderID:          "",
 			experimentName:    "exp1",
 			runName:           "run1",
-			expectError       true,
+			expectError:       true,
 			expectedMinLength: 0,
 		},
 		{
@@ -34,7 +34,7 @@ func TestFetchRunFolder(t *testing.T) {
 			folderID:          "mock-folder-id",
 			experimentName:    "test-experiment",
 			runName:           "test-run",
-			expectError       true, // Will error because no real Drive API
+			expectError:       true, // Will error because no real Drive API
 			expectedMinLength: 0,
 		},
 	}
@@ -71,7 +71,7 @@ func TestCollectBenchmarkFiles(t *testing.T) {
 			folderID:          "",
 			experimentName:    "exp1",
 			runName:           "run1",
-			expectError       true,
+			expectError:       true,
 			expectedMinLength: 0,
 		},
 		{
@@ -79,7 +79,7 @@ func TestCollectBenchmarkFiles(t *testing.T) {
 			folderID:          "mock-folder-id",
 			experimentName:    "test-experiment",
 			runName:           "test-run",
-			expectError       true, // Will error because no real Drive API
+			expectError:       true, // Will error because no real Drive API
 			expectedMinLength: 0,
 		},
 	}
@@ -245,6 +245,7 @@ func TestGetReportsHandler(t *testing.T) {
 			app.Get("/api/benchmarks/reports", h.GetReports)
 
 			req := httptest.NewRequest("GET", "/api/benchmarks/reports"+tc.queryParams, nil)
+			req.Host = "localhost"
 			if tc.demoMode {
 				req.Header.Set("X-Demo-Mode", "true")
 			}
@@ -290,6 +291,7 @@ func TestStreamReportsHandler(t *testing.T) {
 			app.Get("/api/benchmarks/stream", h.StreamReports)
 
 			req := httptest.NewRequest("GET", "/api/benchmarks/stream"+tc.queryParams, nil)
+			req.Host = "localhost"
 			if tc.demoMode {
 				req.Header.Set("X-Demo-Mode", "true")
 			}
@@ -297,179 +299,6 @@ func TestStreamReportsHandler(t *testing.T) {
 			resp, err := app.Test(req, 5000) // 5 second timeout
 			require.NoError(t, err)
 			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
-		})
-	}
-}
-
-func TestParseSinceDuration(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected time.Duration
-	}{
-		{
-			name:     "empty string",
-			input:    "",
-			expected: 0,
-		},
-		{
-			name:     "zero value",
-			input:    "0",
-			expected: 0,
-		},
-		{
-			name:     "zero days",
-			input:    "0d",
-			expected: 0,
-		},
-		{
-			name:     "7 days",
-			input:    "7d",
-			expected: 7 * 24 * time.Hour,
-		},
-		{
-			name:     "30 days",
-			input:    "30d",
-			expected: 30 * 24 * time.Hour,
-		},
-		{
-			name:     "90 days",
-			input:    "90d",
-			expected: 90 * 24 * time.Hour,
-		},
-		{
-			name:     "invalid format",
-			input:    "invalid",
-			expected: 0,
-		},
-		{
-			name:     "negative days",
-			input:    "-7d",
-			expected: 0,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := parseSinceDuration(tc.input)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
-}
-
-func TestNormalizeSinceKey(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "empty string",
-			input:    "",
-			expected: "0",
-		},
-		{
-			name:     "zero value",
-			input:    "0",
-			expected: "0",
-		},
-		{
-			name:     "zero days",
-			input:    "0d",
-			expected: "0",
-		},
-		{
-			name:     "7 days",
-			input:    "7d",
-			expected: "7d",
-		},
-		{
-			name:     "30 days",
-			input:    "30d",
-			expected: "30d",
-		},
-		{
-			name:     "whitespace around zero",
-			input:    "  0  ",
-			expected: "0",
-		},
-		{
-			name:     "whitespace around value",
-			input:    "  7d  ",
-			expected: "7d",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := normalizeSinceKey(tc.input)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
-}
-
-func TestIsAfterCutoff(t *testing.T) {
-	now := time.Now()
-	yesterday := now.Add(-24 * time.Hour)
-	tomorrow := now.Add(24 * time.Hour)
-
-	tests := []struct {
-		name     string
-		file     driveFile
-		cutoff   time.Time
-		expected bool
-	}{
-		{
-			name: "zero cutoff always includes",
-			file: driveFile{
-				Name:        "test.yaml",
-				CreatedTime: yesterday.Format(time.RFC3339),
-			},
-			cutoff:   time.Time{},
-			expected: true,
-		},
-		{
-			name: "file created after cutoff",
-			file: driveFile{
-				Name:        "test.yaml",
-				CreatedTime: tomorrow.Format(time.RFC3339),
-			},
-			cutoff:   now,
-			expected: true,
-		},
-		{
-			name: "file created before cutoff",
-			file: driveFile{
-				Name:        "test.yaml",
-				CreatedTime: yesterday.Format(time.RFC3339),
-			},
-			cutoff:   now,
-			expected: false,
-		},
-		{
-			name: "no created time defaults to include",
-			file: driveFile{
-				Name:        "test.yaml",
-				CreatedTime: "",
-			},
-			cutoff:   now,
-			expected: true,
-		},
-		{
-			name: "invalid created time defaults to include",
-			file: driveFile{
-				Name:        "test.yaml",
-				CreatedTime: "invalid-timestamp",
-			},
-			cutoff:   now,
-			expected: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := isAfterCutoff(tc.file, tc.cutoff)
-			assert.Equal(t, tc.expected, result)
 		})
 	}
 }

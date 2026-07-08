@@ -23,7 +23,7 @@ const REPO_ROOT = resolve(process.cwd(), '..')
 
 const AUTH_HANDLER_PATH = join(
   REPO_ROOT,
-  'pkg/api/handlers/auth_handler.go',
+  'pkg/api/handlers/auth/handler.go',
 )
 
 const AUTH_CALLBACK_PATH = join(

@@ -382,6 +382,8 @@ Common knobs:
 | `image.tag` | chart `appVersion` | Pin for reproducible deploys. |
 | `github.clientId` / `github.clientSecret` | *(empty)* | GitHub OAuth; leave empty for demo-only. |
 | `github.existingSecret` | *(empty)* | Use an existing Secret instead of inline values. |
+| `auth.allowedGitHubLogins` | *(empty)* | Optional comma-separated GitHub OAuth login allowlist. |
+| `auth.adminGitHubLogins` | *(empty)* | Optional comma-separated GitHub logins promoted or kept as admin. |
 | `jwt.secret` | *(auto-generated)* | Set to use a fixed key across reinstalls. |
 | `jwt.existingSecret` | *(empty)* | When set, chart skips rendering its own Secret. |
 | `ingress.enabled` | `false` | |

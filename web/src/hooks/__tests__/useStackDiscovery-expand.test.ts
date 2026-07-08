@@ -6,8 +6,10 @@ import { renderHook, act } from '@testing-library/react'
 const mockGetDemoMode = vi.fn(() => false)
 const mockExec = vi.fn()
 
-vi.mock('../useDemoMode', () => ({
-  getDemoMode: (...args: unknown[]) => mockGetDemoMode(...args),
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: mockGetDemoMode,
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({

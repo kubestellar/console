@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * SubmitToKBDialog unit tests
  *
@@ -6,7 +7,6 @@
  * long-URL fallback to issue link.
  */
 
-import type React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import type { MockedFunction } from 'vitest'
@@ -74,10 +74,10 @@ vi.mock('../../../lib/modals/BaseModal', () => ({
     ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) =>
       isOpen ? <div role="dialog">{children}</div> : null,
     {
-      Header: ({ title, onClose }: { title: string; onClose?: () => void }) => (
+      Header: ({ title, onClose, disabled }: { title: string; onClose?: () => void; disabled?: boolean }) => (
         <div>
           <h1>{title}</h1>
-          {onClose && <button onClick={onClose} aria-label="close dialog">×</button>}
+          {onClose && <button onClick={onClose} aria-label="close dialog" disabled={disabled}>×</button>}
         </div>
       ),
       Content: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

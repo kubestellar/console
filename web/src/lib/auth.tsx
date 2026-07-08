@@ -10,7 +10,8 @@ import { clearSSECache } from './sseClient'
 import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
 import { clearAgentToken, setAgentToken } from '../hooks/mcp/agentFetch'
 import { DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE } from './constants'
-import { safeGet, safeRemove, safeSetJSON } from './safeLocalStorage'
+import { isLocalAgentSuppressed } from './constants/network'
+import { safeGet, safeRemove, safeSet, safeSetJSON } from './safeLocalStorage'
 import { AUTH_TOKEN_SYNC_KEY, clearStoredAuthToken, getStoredAuthToken, getStoredAuthTokenSync, parseAuthTokenSyncEvent, setStoredAuthToken } from './authToken'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession, emitSessionRefreshFailure } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
@@ -100,9 +101,9 @@ function showExpiryWarningBanner(onRefresh: () => void): void {
   const BANNER_PAD_V_PX = '12px'
   const BANNER_PAD_H_PX = '20px'
   const BANNER_RADIUS_PX = '8px'
-  const WARN_BG = 'rgba(234,179,8,0.15)'       // yellow-500 at 15% opacity
-  const WARN_BORDER = 'rgba(234,179,8,0.4)'     // yellow-500 at 40% opacity
-  const WARN_TEXT = '#fbbf24'                    // amber-400 text
+  const WARN_BG = 'hsl(var(--warning) / 0.15)'
+  const WARN_BORDER = 'hsl(var(--warning) / 0.4)'
+  const WARN_TEXT = 'hsl(var(--warning-foreground))'
   const BTN_MARGIN_LEFT_PX = '8px'
   const BTN_PAD_V_PX = '4px'
   const BTN_PAD_H_PX = '12px'
@@ -131,8 +132,8 @@ function showExpiryWarningBanner(onRefresh: () => void): void {
   btn.textContent = i18n.t('session.refreshNow')
   btn.style.cssText = `
     margin-left: ${BTN_MARGIN_LEFT_PX}; padding: ${BTN_PAD_V_PX} ${BTN_PAD_H_PX}; border-radius: ${BANNER_RADIUS_PX};
-    background: rgba(234,179,8,0.3); border: 1px solid rgba(234,179,8,0.5);
-    color: #fbbf24; cursor: pointer; font-size: 13px; font-family: inherit;
+    background: hsl(var(--warning) / 0.3); border: 1px solid hsl(var(--warning) / 0.5);
+    color: hsl(var(--warning-foreground)); cursor: pointer; font-size: 13px; font-family: inherit;
   `
   btn.onclick = () => {
     onRefresh()
@@ -211,6 +212,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // session.
     await clearStoredAuthToken()
     clearAgentToken()
+    // A real authenticated session may have auto-enabled demo data when the
+    // local agent was absent. Signing out must leave the user unauthenticated
+    // instead of allowing a protected route to re-enter the demo dashboard.
+    safeSet(STORAGE_KEY_DEMO_MODE, 'false')
+    setGlobalDemoMode(false, true)
     safeRemove(AUTH_USER_CACHE_KEY)
     safeRemove(STORAGE_KEY_HAS_SESSION)
     try {
@@ -324,20 +330,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // localStorage quota — best-effort hint
               }
               // Fetch kc-agent token so agentFetch/WebSocket can authenticate
-              try {
-                const agentRes = await fetch('/api/agent/token', {
-                  credentials: 'same-origin',
-                  headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                  signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-                })
-                if (agentRes.ok) {
-                  const agentData = await agentRes.json()
-                  if (agentData.token) {
-                    setAgentToken(agentData.token)
+              if (!isLocalAgentSuppressed()) {
+                try {
+                  const agentRes = await fetch('/api/agent/token', {
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+                  })
+                  if (agentRes.ok) {
+                    const agentData = await agentRes.json()
+                    if (agentData.token) {
+                      setAgentToken(agentData.token)
+                    }
                   }
+                } catch {
+                  // Non-fatal: agent auth may fail while the browser session remains intact.
                 }
-              } catch {
-                // Non-fatal — agent auth will fail but session is intact
               }
               const meResponse = await fetch('/api/me', {
                 credentials: 'include',

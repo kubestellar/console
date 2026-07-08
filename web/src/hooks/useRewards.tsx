@@ -29,6 +29,7 @@ import {
   getUserRewards as apiGetUserRewards,
   incrementCoins as apiIncrementCoins,
   RewardsUnauthenticatedError } from '../lib/rewardsApi'
+import { areOptionalPollersSuppressed } from '../lib/constants/network'
 
 const REWARDS_STORAGE_KEY = 'kubestellar-rewards'
 /** Maximum reward events to keep in history */
@@ -204,7 +205,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
 
       // Step 2: if this is a real authenticated session (not demo mode),
       // pull the canonical server state and overwrite coin/point totals.
-      if (getDemoMode() || effectiveUserId === DEMO_REWARDS_USER_ID) return
+      if (getDemoMode() || areOptionalPollersSuppressed() || effectiveUserId === DEMO_REWARDS_USER_ID) return
 
       try {
         const server = await apiGetUserRewards()

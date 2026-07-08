@@ -1,9 +1,7 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import {
   setupDemoAndNavigate,
-  setupDemoMode,
   setupErrorCollector,
-  NETWORK_IDLE_TIMEOUT_MS,
   ELEMENT_VISIBLE_TIMEOUT_MS,
 } from './helpers/setup'
 
@@ -29,8 +27,6 @@ const CONTRIBUTE_URL_SUBSTRING = 'console-marketplace'
 /** Expected issues URL substring for Help Wanted issues */
 const ISSUES_URL_SUBSTRING = 'console-marketplace/issues'
 
-/** Number of type filter buttons (All + Dashboards + Card Presets + Themes) */
-const EXPECTED_TYPE_FILTER_COUNT = 4
 const MARKETPLACE_REGISTRY_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/registry.json'
 const GITHUB_SEARCH_ISSUES_URL = 'https://api.github.com/search/issues'
 const MOCK_MARKETPLACE_REGISTRY = {
@@ -82,13 +78,22 @@ const MOCK_MARKETPLACE_REGISTRY = {
     },
   ],
 }
+const ROUTE_READY_TIMEOUT_MS = 45_000
+
+async function waitForMarketplaceReady(page: Page) {
+  await expect(page.getByTestId('dashboard-title')).toContainText(/marketplace/i, {
+    timeout: ROUTE_READY_TIMEOUT_MS,
+  })
+}
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 test.describe('Marketplace Deep Tests (/marketplace)', () => {
-  test.beforeEach(async ({ page }) => {
+  test.describe.configure({ mode: 'serial' })
+
+  test.beforeEach(async ({ page }, testInfo) => {
     await page.route(MARKETPLACE_REGISTRY_URL, route =>
       route.fulfill({
         status: 200,
@@ -103,10 +108,9 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
         body: JSON.stringify({ total_count: 0, items: [] }),
       })
     )
+    if (testInfo.title === 'loads without console errors') return
     await setupDemoAndNavigate(page, MARKETPLACE_ROUTE)
-    await expect(page.getByTestId('dashboard-header')).toBeVisible({
-      timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
-    })
+    await waitForMarketplaceReady(page)
   })
 
   // -------------------------------------------------------------------------
@@ -115,12 +119,11 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
 
   test.describe('Page Structure', () => {
     test('loads without console errors', async ({ page }) => {
+      test.slow()
       const { errors } = setupErrorCollector(page)
-      // Re-navigate to capture errors from a fresh load
+      // Install the collector before the first route load so route-level errors are captured.
       await setupDemoAndNavigate(page, MARKETPLACE_ROUTE)
-      await expect(page.getByTestId('dashboard-header')).toBeVisible({
-        timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
-      })
+      await waitForMarketplaceReady(page)
       expect(errors).toHaveLength(0)
     })
 
@@ -152,8 +155,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
       const gridBtn = page.locator('button[title="Grid view"]')
       const listBtn = page.locator('button[title="List view"]')
       // These only appear when items are loaded; use a soft check
-      const gridVisible = await gridBtn.isVisible().catch(() => false)
-      const listVisible = await listBtn.isVisible().catch(() => false)
+      const gridVisible = await gridBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })
       // If marketplace has items, both should be visible
       if (gridVisible) {
         await expect(gridBtn).toBeVisible()
@@ -163,7 +165,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
 
     test('clicking list toggle switches view', async ({ page }) => {
       const listBtn = page.locator('button[title="List view"]')
-      if (await listBtn.isVisible().catch(() => false)) {
+      if (await listBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })) {
         await listBtn.click()
         // After clicking, the list button should have the active style
         // Verify localStorage was updated
@@ -178,7 +180,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
     test('clicking grid toggle switches back', async ({ page }) => {
       const listBtn = page.locator('button[title="List view"]')
       const gridBtn = page.locator('button[title="Grid view"]')
-      if (await listBtn.isVisible().catch(() => false)) {
+      if (await listBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })) {
         // First switch to list
         await listBtn.click()
         // Then switch back to grid
@@ -206,16 +208,19 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
 
     test('type filter buttons are present', async ({ page }) => {
       // Should have "All", "Dashboards", "Card Presets", "Themes" buttons
-      const allBtn = page.locator('button').filter({ hasText: 'All' }).first()
+      const typeFilters = page.locator('div').filter({
+        has: page.getByRole('button', { name: /^Dashboards\b/ }),
+      }).first()
+      const allBtn = typeFilters.getByRole('button', { name: /^All\b/ })
       await expect(allBtn).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
-      const dashboardsBtn = page.locator('button').filter({ hasText: 'Dashboards' }).first()
+      const dashboardsBtn = typeFilters.getByRole('button', { name: /^Dashboards\b/ })
       await expect(dashboardsBtn).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
-      const cardPresetsBtn = page.locator('button').filter({ hasText: 'Card Presets' }).first()
+      const cardPresetsBtn = typeFilters.getByRole('button', { name: /^Card Presets\b/ })
       await expect(cardPresetsBtn).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
-      const themesBtn = page.locator('button').filter({ hasText: 'Themes' }).first()
+      const themesBtn = typeFilters.getByRole('button', { name: /^Themes\b/ })
       await expect(themesBtn).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     })
   })
@@ -228,7 +233,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
     test('shows CNCF Project Coverage banner', async ({ page }) => {
       const banner = page.locator('text=CNCF Project Coverage').first()
       // Banner only appears when cncfStats.total > 0; gracefully handle absence
-      const isVisible = await banner.isVisible().catch(() => false)
+      const isVisible = await banner.isVisible().catch((error) => { console.error('Promise error:', error); return false })
       if (isVisible) {
         await expect(banner).toBeVisible()
       }
@@ -236,10 +241,10 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
 
     test('banner shows completion percentage', async ({ page }) => {
       const banner = page.locator('text=CNCF Project Coverage').first()
-      if (await banner.isVisible().catch(() => false)) {
+      if (await banner.isVisible().catch((error) => { console.error('Promise error:', error); return false })) {
         // Look for percentage text (e.g. "42%")
         const pctText = page.getByText(/\d+%/).first()
-        const isVisible = await pctText.isVisible().catch(() => false)
+        const isVisible = await pctText.isVisible().catch((error) => { console.error('Promise error:', error); return false })
         // Percentage is shown near the banner header
         if (isVisible) {
           await expect(pctText).toBeVisible()
@@ -249,7 +254,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
 
     test('banner can be collapsed', async ({ page }) => {
       const bannerButton = page.locator('button').filter({ hasText: 'CNCF Project Coverage' }).first()
-      if (await bannerButton.isVisible().catch(() => false)) {
+      if (await bannerButton.isVisible().catch((error) => { console.error('Promise error:', error); return false })) {
         // Click to collapse
         await bannerButton.click()
         const collapsed = await page.evaluate(
@@ -288,7 +293,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
     test('items show name and type badge', async ({ page }) => {
       // Each card has an h3 for the name and a type badge (Dashboard/Card Preset/Theme)
       const firstCard = page.locator('.bg-card').filter({ has: page.locator('h3') }).first()
-      if (await firstCard.isVisible().catch(() => false)) {
+      if (await firstCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })) {
         const name = firstCard.locator('h3').first()
         await expect(name).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
         const nameText = await name.textContent()
@@ -299,9 +304,9 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
     test('items show description', async ({ page }) => {
       // Description is a <p> with class "line-clamp-2" inside cards
       const firstCard = page.locator('.bg-card').filter({ has: page.locator('h3') }).first()
-      if (await firstCard.isVisible().catch(() => false)) {
+      if (await firstCard.isVisible().catch((error) => { console.error('Promise error:', error); return false })) {
         const desc = firstCard.locator('p').first()
-        if (await desc.isVisible().catch(() => false)) {
+        if (await desc.isVisible().catch((error) => { console.error('Promise error:', error); return false })) {
           const descText = await desc.textContent()
           expect((descText ?? '').length).toBeGreaterThan(0)
         }
@@ -317,7 +322,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
     test('sort controls are visible', async ({ page }) => {
       // Sort label "Sort:" appears when items are loaded
       const sortLabel = page.locator('text=Sort:').first()
-      const isVisible = await sortLabel.isVisible().catch(() => false)
+      const isVisible = await sortLabel.isVisible().catch((error) => { console.error('Promise error:', error); return false })
       if (isVisible) {
         await expect(sortLabel).toBeVisible()
         // Verify sort buttons exist (Name, Type, Author)
@@ -345,8 +350,8 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
       const helpWantedBtn = page.locator('button').filter({ hasText: 'Help Wanted' }).first()
       const browseIssuesLink = page.locator('a').filter({ hasText: 'Browse Issues' }).first()
 
-      const helpVisible = await helpWantedBtn.isVisible().catch(() => false)
-      const browseVisible = await browseIssuesLink.isVisible().catch(() => false)
+      const helpVisible = await helpWantedBtn.isVisible().catch((error) => { console.error('Promise error:', error); return false })
+      const browseVisible = await browseIssuesLink.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
       if (browseVisible) {
         const href = await browseIssuesLink.getAttribute('href')

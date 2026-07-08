@@ -28,6 +28,7 @@ func TestServer_HandleNodesHTTP(t *testing.T) {
 
 	// 2. Test request for specific cluster
 	req := httptest.NewRequest("GET", "/nodes?cluster=cluster1", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleNodesHTTP(w, req)
@@ -52,6 +53,7 @@ func TestServer_HandleEventsHTTP_Limit(t *testing.T) {
 
 	// Test with invalid limit
 	req := httptest.NewRequest("GET", "/events?cluster=c1&limit=abc", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	// We just want to make sure it doesn't crash and uses default limit
@@ -98,6 +100,7 @@ func TestServer_HandleGPUNodesHTTP_Returns503DuringRetryBackoff(t *testing.T) {
 	server.recordClusterResourceFailure("gpu-nodes", "cluster-a")
 
 	req := httptest.NewRequest(http.MethodGet, "/gpu-nodes?cluster=cluster-a", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleGPUNodesHTTP(w, req)
@@ -140,6 +143,7 @@ func TestServer_HandleNodesHTTP_SkipsBackoffedClusters(t *testing.T) {
 	server.recordClusterResourceFailure("nodes", "cluster-a")
 
 	req := httptest.NewRequest(http.MethodGet, "/nodes", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	server.handleNodesHTTP(w, req)

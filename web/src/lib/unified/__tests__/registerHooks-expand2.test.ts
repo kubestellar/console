@@ -80,7 +80,8 @@ const {
   mockK8sRoleBindings: vi.fn(() => ({ bindings: [], isLoading: false, error: null, refetch: vi.fn() })),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockDemoMode() }),
   getDemoMode: () => mockDemoMode(),
   isDemoModeForced: false,

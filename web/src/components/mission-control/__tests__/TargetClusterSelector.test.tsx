@@ -1,3 +1,4 @@
+import React from 'react'
 /** @vitest-environment jsdom */
 import type { HTMLAttributes, ReactNode } from 'react'
 import { describe, it, expect, vi } from 'vitest'

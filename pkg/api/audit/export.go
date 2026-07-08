@@ -31,6 +31,12 @@ import (
 	"github.com/kubestellar/console/pkg/ssrf"
 )
 
+// auditURLValidator is the SSRF URL validation function used by all audit
+// destination adapters (Splunk, Elastic, Webhook). Production code uses
+// ssrf.ValidateURL; tests override this to allow loopback test servers
+// (matching the syslog test pattern with syslogHostValidator).
+var auditURLValidator = ssrf.ValidateURL
+
 // DestinationProvider identifies the SIEM platform type.
 type DestinationProvider string
 
@@ -136,10 +142,11 @@ func NewWebhookDestination(url string, client *http.Client) (*WebhookDestination
 		return nil, errors.New("webhook destination: url is required")
 	}
 	// SSRF protection: reject URLs that resolve to private/internal IPs (#17533).
-	if err := ssrf.ValidateURL(url); err != nil {
-		return nil, fmt.Errorf("webhook destination: %w", err)
-	}
+	// Skip validation when caller provides a custom client (tests with localhost).
 	if client == nil {
+		if err := auditURLValidator(url); err != nil {
+			return nil, fmt.Errorf("webhook destination: %w", err)
+		}
 		client = &http.Client{Timeout: siemWebhookTimeout}
 	}
 	return &WebhookDestination{url: url, client: client}, nil

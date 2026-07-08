@@ -56,6 +56,7 @@ func TestHealthRoutes_StatusEndpoints(t *testing.T) {
 				"oauth_configured": false,
 				"in_cluster":       false,
 				"no_local_agent":   false,
+				"suppress_optional_pollers": false,
 				"install_method":   detectInstallMethod(false),
 				"project":          "kubestellar",
 			},
@@ -66,6 +67,7 @@ func TestHealthRoutes_StatusEndpoints(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			req.Host = "localhost"
 			resp, err := server.app.Test(req)
 			require.NoError(t, err)
 			defer resp.Body.Close()
@@ -111,6 +113,7 @@ func TestHealthRoutes_VersionEndpoint(t *testing.T) {
 	server := newHealthTestServer(t, Config{})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/version", nil)
+	req.Host = "localhost"
 	resp, err := server.app.Test(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()

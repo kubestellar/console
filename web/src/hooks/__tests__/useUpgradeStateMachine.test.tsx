@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useUpgradeStateMachine } from '../useUpgradeStateMachine'
@@ -430,5 +431,19 @@ describe('useUpgradeStateMachine — Cleanup', () => {
     expect(spyClearInterval).toHaveBeenCalledTimes(2)
     expect(mockVersionWsHandle.destroy).toHaveBeenCalledTimes(1)
     spyClearInterval.mockRestore()
+  })
+
+  describe('loading state exposure', () => {
+    it('exposes fetchCompleted state (loading indicator) to consumers', () => {
+      const { result } = renderHook(() => useUpgradeStateMachine({
+        allClusters: [],
+        agentConnected: false,
+        isDemoMode: false,
+        openTrackedWs: vi.fn(),
+        parseWsMessage: vi.fn(),
+      }))
+      expect(result.current).toHaveProperty('fetchCompleted')
+      expect(typeof result.current.fetchCompleted).toBe('boolean')
+    })
   })
 })

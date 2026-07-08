@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ArgoCDHealth } from '../ArgoCDHealth'
@@ -21,8 +22,9 @@ vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false }),
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: () => false, default: () => false,
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
   canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
@@ -36,6 +38,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 // ── Tests ────────────────────────────────────────────────────────────────────

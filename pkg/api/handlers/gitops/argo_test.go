@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,6 +73,7 @@ func TestGitOpsArgo_ListArgoApplications(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/argocd/applications", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -101,6 +103,7 @@ func TestGitOpsArgo_GetArgoHealthSummary(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/argocd/health", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -130,6 +133,7 @@ func TestGitOpsArgo_GetArgoSyncSummary(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/argocd/sync", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -157,6 +161,7 @@ func TestGitOpsArgo_ListArgoApplicationSets(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/argocd/applicationsets", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -185,6 +190,7 @@ func TestGitOpsArgo_GetArgoStatus(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/argocd/status", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -208,13 +214,15 @@ func TestGitOpsArgo_GetHelmValues_Validation(t *testing.T) {
 	// Missing release
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/values", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	// Invalid cluster name
-	req, err = http.NewRequest(http.MethodGet, "/api/gitops/helm/values?release=my-rel&cluster=bad;name", nil)
+	req, err = http.NewRequest(http.MethodGet, "/api/gitops/helm/values?release=my-rel&cluster="+url.QueryEscape("bad;name"), nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err = env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)

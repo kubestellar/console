@@ -10,7 +10,7 @@ export const clusterDeltaDetectorConfig: UnifiedCardConfig = {
   defaultWidth: 8,
   defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'useMultiClusterInsights' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'ClusterDeltaDetector' },
   emptyState: {
     icon: 'GitCompare',
     title: 'No cluster deltas detected',

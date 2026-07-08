@@ -36,9 +36,11 @@ vi.mock('../../components/ui/Toast', () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitOrbitMissionRun: mockEmitOrbitMissionRun,
-}))
+}
+))
 
 import { useOrbitAutoRun } from '../useOrbitAutoRun'
 

@@ -96,6 +96,9 @@ jobs:
           name: build-output
           path: web/dist
 
+      - name: Remove broken Microsoft apt source (workaround for NOSPLIT GPG error)
+        run: sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-edge.list
+
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 
@@ -130,6 +133,8 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      pull-requests: write # post test-result comment on PR
     defaults:
       run:
         working-directory: web
@@ -284,6 +289,9 @@ jobs:
           name: build-output
           path: web/dist
 
+      - name: Remove broken Microsoft apt source (workaround for NOSPLIT GPG error)
+        run: sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-edge.list
+
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium webkit
 
@@ -335,6 +343,9 @@ jobs:
         with:
           name: build-output
           path: web/dist
+
+      - name: Remove broken Microsoft apt source (workaround for NOSPLIT GPG error)
+        run: sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-edge.list
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium

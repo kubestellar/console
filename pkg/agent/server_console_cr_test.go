@@ -47,6 +47,7 @@ func TestServer_HandleConsoleCRManagedWorkloads(t *testing.T) {
 	}
 	body, _ := json.Marshal(mw)
 	req := httptest.NewRequest("POST", "/console-cr/managedworkloads?cluster=persistence-cluster&namespace=test-ns", bytes.NewReader(body))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleConsoleCRManagedWorkloads(w, req)
@@ -59,6 +60,7 @@ func TestServer_HandleConsoleCRManagedWorkloads(t *testing.T) {
 	mw.Spec.SourceCluster = "c2"
 	body, _ = json.Marshal(mw)
 	req = httptest.NewRequest("PUT", "/console-cr/managedworkloads?cluster=persistence-cluster&namespace=test-ns&name=test-mw", bytes.NewReader(body))
+	req.Host = "localhost"
 	w = httptest.NewRecorder()
 
 	s.handleConsoleCRManagedWorkloads(w, req)
@@ -69,6 +71,7 @@ func TestServer_HandleConsoleCRManagedWorkloads(t *testing.T) {
 
 	// 5. Test DELETE
 	req = httptest.NewRequest("DELETE", "/console-cr/managedworkloads?cluster=persistence-cluster&namespace=test-ns&name=test-mw", nil)
+	req.Host = "localhost"
 	w = httptest.NewRecorder()
 
 	s.handleConsoleCRManagedWorkloads(w, req)
@@ -100,6 +103,7 @@ func TestServer_HandleConsoleCRClusterGroups(t *testing.T) {
 	}
 	body, _ := json.Marshal(cg)
 	req := httptest.NewRequest("POST", "/console-cr/clustergroups?cluster=persistence-cluster&namespace=test-ns", bytes.NewReader(body))
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleConsoleCRClusterGroups(w, req)

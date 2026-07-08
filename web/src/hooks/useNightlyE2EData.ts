@@ -18,7 +18,7 @@ import {
 } from '../lib/llmd/nightlyE2EDemoData'
 import { getStoredAuthTokenSync } from '../lib/authToken'
 import { isNetlifyDeployment } from '../lib/demoMode'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, areOptionalPollersSuppressed } from '../lib/constants/network'
 import { MS_PER_MINUTE } from '../lib/constants/time'
 
 const REFRESH_IDLE_MS = 5 * MS_PER_MINUTE    // 5 minutes when idle
@@ -76,6 +76,10 @@ export function useNightlyE2EData() {
     isEmpty: (d) => !d.guides || d.guides.length === 0 || d.guides.every(g => (g.runs || []).length === 0),
     liveInDemoMode: isNetlifyDeployment,
     fetcher: async () => {
+      if (areOptionalPollersSuppressed()) {
+        return { guides: [], isDemo: false }
+      }
+
       // Try authenticated endpoint first, then public fallback
       const endpoints = ['/api/nightly-e2e/runs', '/api/public/nightly-e2e/runs']
       for (const endpoint of (endpoints || [])) {

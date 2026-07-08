@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Siren, Check, X } from 'lucide-react'
 import { NotificationConfig } from '../../../types/alerts'
 import type { TestResultState } from './NotificationSettingsSection'
+import { cn } from '../../../lib/cn'
 
 interface PagerDutyNotificationSettingsProps {
   config: NotificationConfig
@@ -68,7 +69,7 @@ export function PagerDutyNotificationSettings({
             pagerdutyRoutingKeyConfigured: e.target.value.trim().length > 0,
           })}
           placeholder="e.g. a1b2c3d4e5f6..."
-          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary"
         />
         {hasStoredRoutingKey && (
           <p className="mt-1 text-xs text-green-400">
@@ -83,15 +84,15 @@ export function PagerDutyNotificationSettings({
       <button
         onClick={handleTestPagerDuty}
         disabled={isLoading}
-        className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors disabled:opacity-50"
+        className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
       >
         {isLoading ? t('settings.notifications.pagerduty.testing') : t('settings.notifications.pagerduty.testNotification', 'Test PagerDuty')}
       </button>
 
       {testResult && testResult.type === 'pagerduty' && (
         <div
-          className={`flex items-start gap-2 p-3 rounded-lg ${
-            testResult.success ? 'bg-green-500/20 border border-green-500/20' : 'bg-red-500/20 border border-red-500/20'
+          className={`flex items-start gap-2 p-3 rounded-lg border ${
+            testResult.success ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'
           }`}
         >
           {testResult.success ? (
@@ -99,7 +100,7 @@ export function PagerDutyNotificationSettings({
           ) : (
             <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           )}
-          <p className={`text-sm ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
+          <p className={cn('text-sm', testResult.success ? 'text-green-400' : 'text-red-400')}>
             {testResult.message}
           </p>
         </div>

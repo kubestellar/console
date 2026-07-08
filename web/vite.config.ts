@@ -121,34 +121,62 @@ export default defineConfig(({ mode }) => ({
             ['cards-networking', ['/src/components/cards/cilium_status/', '/src/components/cards/linkerd_status/', '/src/components/cards/envoy_status/', '/src/components/cards/contour_status/', '/src/components/cards/cni_status/', '/src/components/cards/coredns_status/', '/src/components/cards/nats_status/', '/src/components/cards/grpc_status/']],
             ['cards-platform', ['/src/components/cards/crossplane-status/', '/src/components/cards/knative_status/', '/src/components/cards/keda_status/', '/src/components/cards/dapr_status/', '/src/components/cards/kubevela_status/', '/src/components/cards/harbor_status/', '/src/components/cards/strimzi_status/', '/src/components/cards/volcano_status/', '/src/components/cards/openkruise_status/', '/src/components/cards/cardRegistry.platform']],
             ['cards-misc', ['/src/components/cards/']],
-            // Split drilldown views into their own chunk
             ['drilldown', ['/src/components/drilldown/']],
-            // Dashboard and layout
             ['dashboard-core', ['/src/components/dashboard/', '/src/lib/dashboards/', '/src/lib/unified/dashboard/']],
             ['layout-shell', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
-            ['contexts-providers', ['/src/contexts/', '/src/hooks/useDrillDown', '/src/hooks/useRewards', '/src/hooks/useMissions', '/src/hooks/useGlobalFilters']],
-            ['hooks-data', ['/src/hooks/useCached', '/src/hooks/useCache', '/src/hooks/useCluster', '/src/hooks/useDashboard']],
+            ['contexts-providers', ['/src/contexts/']],
+            ['hooks-data', ['/src/hooks/']],
             ['lib-cache', ['/src/lib/cache/']],
+            ['lib-utils', ['/src/lib/utils', '/src/lib/cn.ts', '/src/lib/constants.ts']],
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
-            ['app-shell', ['/src/App.tsx', '/src/hooks/usePersistedSettings']],
+            // Split app shell to reduce massive app-routes chunk
+            ['app-router', ['/src/components/router/', '/src/lib/router/']],
+            ['app-routes', ['/src/App.tsx']],
+            ['app-shell', ['/src/hooks/usePersistedSettings']],
             ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
           ] as const
           for (const [chunkName, needles] of sourceChunkRules) {
             if (needles.some(needle => id.includes(needle))) return chunkName
           }
           if (!id.includes('node_modules')) return
-          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router') || id.includes('/scheduler/') || id.includes('/react-reconciler/')) return 'react-vendor'
+          // React core (split scheduler separately to reduce main react bundle)
+          if (id.includes('/scheduler/')) return 'react-scheduler-vendor'
+          if (id.includes('/react-dom/client')) return 'react-dom-client-vendor'
+          if (id.includes('/react-dom/')) return 'react-dom-vendor'
+          if (id.includes('/react-router-dom/')) return 'react-router-dom-vendor'
+          if (id.includes('/react-router/')) return 'react-router-vendor'
+          if (id.includes('/react-reconciler/')) return 'react-reconciler-vendor'
+          if (id.includes('/react/')) return 'react-vendor'
+          // three.js ecosystem (split into smaller chunks to reduce three-core and three-drei)
           if (id.includes('/three-stdlib/')) return 'three-stdlib-vendor'
+          if (id.includes('/@react-three/fiber/')) return 'three-fiber-vendor'
+          // Split drei into sub-chunks to reduce 304KB chunk
+          if (id.includes('/@react-three/drei/') && id.includes('/core/')) return 'drei-core-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/web/')) return 'drei-web-vendor'
+          if (id.includes('/@react-three/drei/')) return 'drei-helpers-vendor'
           if (id.includes('/@react-three/') || id.includes('/zustand/') || id.includes('/stats-gl/')) return 'three-react-vendor'
-          if (id.includes('/three/')) return 'three-core-vendor'
+          // Split three.js core modules to reduce 708KB chunk
+          if (id.includes('/three/build/three.module.js')) return 'three-core-vendor'
+          if (id.includes('/three/src/math/')) return 'three-math-vendor'
+          if (id.includes('/three/src/loaders/')) return 'three-loaders-vendor'
+          if (id.includes('/three/')) return 'three-extras-vendor'
+          // Chart libraries
           if (id.includes('/zrender/')) return 'zrender-vendor'
           if (id.includes('/echarts-for-react/')) return 'echarts-react-vendor'
           if (id.includes('/echarts/')) return 'echarts-vendor'
           if (id.includes('/framer-motion/')) return 'motion-vendor'
-          if (id.includes('/@xterm/addon-fit/')) return 'xterm-addon-vendor'
+          // Terminal (split addons from core to reduce xterm-core 336KB chunk)
+          if (id.includes('/@xterm/addon-fit/')) return 'xterm-addon-fit-vendor'
+          if (id.includes('/@xterm/addon-web-links/')) return 'xterm-addon-links-vendor'
+          if (id.includes('/@xterm/addon-')) return 'xterm-addon-vendor'
+          if (id.includes('/@xterm/xterm/')) return 'xterm-core-vendor'
           if (id.includes('/@xterm/')) return 'xterm-vendor'
-          if (id.includes('/lucide-react/') || id.includes('/@dnd-kit/')) return 'ui-vendor'
+          // UI libraries
+          if (id.includes('/lucide-react/')) return 'lucide-vendor'
+          if (id.includes('/@dnd-kit/core/')) return 'dnd-core-vendor'
+          if (id.includes('/@dnd-kit/sortable/')) return 'dnd-sortable-vendor'
+          if (id.includes('/@dnd-kit/')) return 'dnd-vendor'
           if (
             id.includes('/react-markdown/') ||
             id.includes('/remark-') ||
@@ -183,6 +211,19 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/dompurify/')) return 'sanitize-vendor'
           if (id.includes('/zod/')) return 'schema-vendor'
           if (id.includes('/@tanstack/react-virtual/')) return 'virtual-vendor'
+          // Split date/time libraries
+          if (id.includes('/date-fns/')) return 'date-vendor'
+          if (id.includes('/dayjs/')) return 'dayjs-vendor'
+          // Split utility libraries to reduce generic vendor chunk
+          if (id.includes('/lodash/') || id.includes('/lodash-es/')) return 'lodash-vendor'
+          if (id.includes('/axios/')) return 'axios-vendor'
+          if (id.includes('/clsx/') || id.includes('/classnames/')) return 'classnames-vendor'
+          if (id.includes('/uuid/')) return 'uuid-vendor'
+          // Split state management
+          if (id.includes('/jotai/')) return 'jotai-vendor'
+          if (id.includes('/immer/')) return 'immer-vendor'
+          // Split async utilities
+          if (id.includes('/p-limit/') || id.includes('/p-queue/')) return 'async-vendor'
           return 'vendor'
         },
       },
@@ -267,19 +308,33 @@ export default defineConfig(({ mode }) => ({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
-    include: ['src/**/*.{test,spec}.{ts,tsx}', 'netlify/functions/__tests__/*.{test,spec}.{ts,tsx}', 'netlify/edge-functions/__tests__/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'netlify/functions/**/__tests__/*.{test,spec}.{ts,tsx}', 'netlify/edge-functions/__tests__/*.{test,spec}.{ts,tsx}', 'harness/**/__tests__/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'e2e/**/*'],
     // Retry flaky tests up to 2 times in CI to reduce false-positive workflow failures (#11872)
     retry: process.env.CI ? 2 : 0,
     teardownTimeout: process.env.CI ? 120_000 : 10_000, // CI: increased from 60s to 120s for worker cleanup stability (#10436)
-    // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency
+    // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency.
+    // maxWorkers/minWorkers cap threads pool concurrency; poolOptions.forks.maxForks
+    // caps forks pool concurrency (used when unit-test.sh passes --pool=forks). Both
+    // must be set to 1 so that neither a CLI --pool=forks override nor the default
+    // threads pool exceeds the single-worker budget in CI (#20007).
     maxWorkers: process.env.CI ? 1 : undefined,
     minWorkers: process.env.CI ? 1 : undefined,
-    // poolOptions.forks removed — deprecated in Vitest 4 (#5860).
-    // maxWorkers/minWorkers above handle fork limits; teardownTimeout
-    // above handles worker termination timeout.
+    poolOptions: process.env.CI ? {
+      forks: { maxForks: 1, minForks: 1 },
+      threads: { maxThreads: 1, minThreads: 1 },
+    } : undefined,
+    // isolate: true ensures each test file runs in its own subprocess with a clean global environment,
+    // preventing vi.stubGlobal() cross-contamination between files (#20256)
+    isolate: true,
     coverage: {
       provider: 'v8',
+      // Disable coverage.all to prevent force-importing source files that trigger
+      // mock validation errors in sharded runs. When all:true (Vitest default),
+      // every file matching `include` is imported for coverage measurement — if a
+      // test mocks lib/api without all exports, the force-import of a file that
+      // uses authFetch throws "No export is defined on the mock". (#20382)
+      all: false,
       reporter: ['text', 'json', 'json-summary', 'html'],
       include: [
         'src/hooks/**',

@@ -15,7 +15,10 @@ import {
   Search, X, Filter } from 'lucide-react'
 import { useTrestle, type OscalControlResult } from '../../../hooks/useTrestle'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
+import { useDrillDown } from '../../../hooks/useDrillDown'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { Input } from '../../ui/Input'
+import { Select } from '../../ui/Select'
 import { cn } from '../../../lib/cn'
 import { TOUCH_TARGET_HEIGHT_CLASS, TOUCH_TARGET_SIZE_CLASS } from '../../../lib/constants/ui'
 
@@ -94,6 +97,7 @@ export function ComplianceDrillDown({ data }: Props) {
   const filterStatus = normalizeComplianceStatus(data.filterStatus as string | undefined)
   const { statuses } = useTrestle()
   const { selectedClusters } = useGlobalFilters()
+  const { state, pop } = useDrillDown()
 
   const summaryCounts = useMemo(() => {
     const passing = parseCount(data.passing)
@@ -234,6 +238,20 @@ export function ComplianceDrillDown({ data }: Props) {
     <div className="flex flex-col h-full -m-6">
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
+        <div className="flex items-center gap-6 text-sm mb-4">
+          {state.stack.length > 1 && (
+            <button
+              type="button"
+              onClick={pop}
+              className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
+              aria-label={t('drilldown.goBack')}
+              title={t('drilldown.goBack')}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>{t('common.back')}</span>
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-3 mb-4">
           <Shield className="w-6 h-6 text-teal-400" />
           <div>
@@ -295,18 +313,18 @@ export function ComplianceDrillDown({ data }: Props) {
         {/* Search + filter toggle */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
+            <Input
               type="text"
               placeholder="Search by control ID, title, or description..."
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); resetPage() }}
-              className={cn('w-full rounded-lg border border-border bg-card/50 py-2 pl-9 pr-8 text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary', TOUCH_TARGET_HEIGHT_CLASS)}
+              leadingIcon={<Search className="w-4 h-4" />}
+              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
             />
             {searchQuery && (
               <button
                 onClick={() => { setSearchQuery(''); resetPage() }}
-                className={cn('absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground', TOUCH_TARGET_SIZE_CLASS)}
+                className={cn('absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-10', TOUCH_TARGET_SIZE_CLASS)}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -335,47 +353,47 @@ export function ComplianceDrillDown({ data }: Props) {
         {/* Filter dropdowns */}
         {showFilters && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
-            <select
+            <Select
               value={statusFilter}
               onChange={e => { setStatusFilter(e.target.value); resetPage() }}
-              className={cn('rounded-lg border border-border bg-card/50 px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary', TOUCH_TARGET_HEIGHT_CLASS)}
+              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
             >
               <option value="">{t('drilldown.compliance.allStatuses')}</option>
               {uniqueStatuses.map(s => (
                 <option key={s} value={s}>{statusLabel(s)}</option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
               value={severityFilter}
               onChange={e => { setSeverityFilter(e.target.value); resetPage() }}
-              className={cn('rounded-lg border border-border bg-card/50 px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary', TOUCH_TARGET_HEIGHT_CLASS)}
+              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
             >
               <option value="">{t('drilldown.compliance.allSeverities')}</option>
               <option value="critical">{t('drilldown.compliance.critical')}</option>
               <option value="high">{t('drilldown.compliance.high')}</option>
               <option value="medium">{t('drilldown.compliance.medium')}</option>
               <option value="low">{t('drilldown.compliance.low')}</option>
-            </select>
-            <select
+            </Select>
+            <Select
               value={clusterFilter}
               onChange={e => { setClusterFilter(e.target.value); resetPage() }}
-              className={cn('rounded-lg border border-border bg-card/50 px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary', TOUCH_TARGET_HEIGHT_CLASS)}
+              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
             >
               <option value="">{t('drilldown.compliance.allClusters')}</option>
               {uniqueClusters.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
               value={profileFilter}
               onChange={e => { setProfileFilter(e.target.value); resetPage() }}
-              className={cn('rounded-lg border border-border bg-card/50 px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary', TOUCH_TARGET_HEIGHT_CLASS)}
+              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
             >
               <option value="">{t('drilldown.compliance.allProfiles')}</option>
               {uniqueProfiles.map(p => (
                 <option key={p} value={p}>{p}</option>
               ))}
-            </select>
+            </Select>
 
             {activeFilters > 0 && (
               <button

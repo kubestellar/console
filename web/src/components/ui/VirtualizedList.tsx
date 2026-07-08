@@ -43,7 +43,6 @@ export function VirtualizedList<T>({
   }, [scrollRef])
 
   // TanStack Virtual manages its own measurement lifecycle; React Compiler skips memoizing this hook safely.
-  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollElementRef.current,

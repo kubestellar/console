@@ -118,7 +118,7 @@ export default function SigningStatusDashboard() {
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
+      <button onClick={fetchData} className="px-4 py-2 min-h-11 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
     </div>
   )
 
@@ -222,7 +222,7 @@ export default function SigningStatusDashboard() {
                   <tr key={i} className="border-b border-border/50 hover:bg-secondary/50">
                     <td className="p-3">
                       <div className="text-foreground font-mono text-xs truncate max-w-[200px]">{img.image}</div>
-                      <div className="text-muted-foreground text-[10px] font-mono">{img.digest.substring(0, 20)}…</div>
+                      <div className="text-muted-foreground text-xs font-mono">{img.digest.substring(0, 20)}…</div>
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-1.5">
@@ -242,7 +242,7 @@ export default function SigningStatusDashboard() {
                         ? <Shield className="w-4 h-4 text-emerald-400" />
                         : <ShieldAlert className="w-4 h-4 text-orange-400" />}
                       {img.failure_reason && (
-                        <div className="text-[10px] text-red-400 mt-0.5">{img.failure_reason}</div>
+                        <div className="text-xs text-red-400 mt-0.5">{img.failure_reason}</div>
                       )}
                     </td>
                     <td className="p-3">

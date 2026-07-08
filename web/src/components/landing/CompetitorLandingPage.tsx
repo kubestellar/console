@@ -70,7 +70,7 @@ export function CompetitorLandingPage({
             </span>
           </h1>
 
-          <p className="text-xl text-slate-300 max-w-2xl mx-auto mb-6 leading-relaxed">
+          <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-6 leading-relaxed">
             {heroLeadText}{' '}
             <span className="text-white font-medium">{heroLeadEmphasis}</span>
           </p>
@@ -96,7 +96,7 @@ export function CompetitorLandingPage({
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => onActioned('hero_view_github')}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-300 font-medium text-lg transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-400 font-medium text-lg transition-colors"
             >
               View on GitHub
               <ExternalLink className="w-4 h-4" />
@@ -175,7 +175,7 @@ export function CompetitorLandingPage({
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => onActioned('footer_view_github')}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-300 font-medium text-lg transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-400 font-medium text-lg transition-colors"
             >
               View on GitHub
               <ExternalLink className="w-4 h-4" />

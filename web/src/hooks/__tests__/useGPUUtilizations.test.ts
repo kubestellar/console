@@ -15,8 +15,10 @@ vi.mock('../../lib/api', () => ({
   },
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockGetDemoMode() }),
+  getDemoMode: vi.fn(() => false),
   hasRealToken: () => mockHasRealToken(),
 }))
 

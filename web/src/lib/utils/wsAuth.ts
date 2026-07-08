@@ -18,6 +18,7 @@ const WS_AUTH_PROTOCOL_PREFIX = 'bearer.'
 
 /** Throttle: only emit once per session to avoid spamming GA4 */
 let wsAuthMissingEmitted = false
+const LOCAL_AGENT_SUPPRESSED_MESSAGE = 'Local agent WebSocket disabled in this deployment'
 
 /**
  * Fetch the kc-agent token if needed, then return the WebSocket URL
@@ -27,6 +28,10 @@ let wsAuthMissingEmitted = false
  * Callers should use: `new WebSocket(result.url, result.protocols)`
  */
 export async function getWsAuthParams(url: string): Promise<{ url: string; protocols: string[] }> {
+  if (isLocalAgentSuppressed()) {
+    throw new Error(LOCAL_AGENT_SUPPRESSED_MESSAGE)
+  }
+
   await getAgentToken()
 
   const token = getStoredAgentToken()

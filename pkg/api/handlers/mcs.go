@@ -49,6 +49,10 @@ func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), mcsDefaultTimeout)
 	defer cancel()
 
@@ -84,6 +88,10 @@ func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 	// Optional filters
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcsDefaultTimeout)
 	defer cancel()
@@ -155,6 +163,13 @@ func (h *MCSHandlers) GetServiceExport(c *fiber.Ctx) error {
 	namespace := c.Params("namespace")
 	name := c.Params("name")
 
+	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+	if err := validateK8sName("name", name); err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), mcsDefaultTimeout)
 	defer cancel()
 
@@ -182,6 +197,13 @@ func (h *MCSHandlers) GetServiceImport(c *fiber.Ctx) error {
 	cluster := c.Params("cluster")
 	namespace := c.Params("namespace")
 	name := c.Params("name")
+
+	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+	if err := validateK8sName("name", name); err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcsDefaultTimeout)
 	defer cancel()

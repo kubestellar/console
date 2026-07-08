@@ -31,8 +31,10 @@ vi.mock('../../../lib/demoMode', () => ({
   get isNetlifyDeployment() { return mockIsNetlifyDeployment.value },
 }))
 
-vi.mock('../../useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../lib/modeTransition', () => ({
@@ -68,7 +70,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsNetlifyDeployment.value = false
   mockRegisterRefetch.mockReturnValue(vi.fn())
 })
@@ -114,7 +116,7 @@ describe('useCrossplaneManagedResources', () => {
 
   it('returns demo resources when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     // Use a cluster param to bypass the module-level cache from prior tests
     const { result } = renderHook(() => useCrossplaneManagedResources('demo-cluster'))

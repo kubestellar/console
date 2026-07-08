@@ -1,3 +1,4 @@
+import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import type { QuantumSystemStatus } from '../../../../hooks/useCachedQuantum'
@@ -56,7 +57,7 @@ function defaultHookReturn(
     isLoading: false,
     isRefreshing: false,
     isDemoData: false,
-    error: null,
+    error: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: Date.now(),

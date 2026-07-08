@@ -91,14 +91,14 @@ function ServerPodRow({
         </div>
         <span
           className={cn(
-            'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+            'text-xs px-1.5 py-0.5 rounded-full shrink-0',
             phaseBadgeClass(pod.phase, pod.ready),
           )}
         >
           {phaseLabel}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="truncate">{pod.node}</span>
         {pod.restarts > 0 ? (
           <span className="text-yellow-400 shrink-0">
@@ -123,7 +123,9 @@ export function SpireStatus() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    error,
     lastRefresh,
+    refetch,
   } = useCachedSpire()
 
   // Rule: never show demo data while still loading
@@ -140,6 +142,7 @@ export function SpireStatus() {
     hasAnyData,
     isFailed,
     consecutiveFailures,
+    errorMessage: error ?? undefined,
     lastRefresh,
   })
 
@@ -158,9 +161,17 @@ export function SpireStatus() {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-3">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">{t('spireStatus.fetchFailed', 'Failed to fetch SPIRE status')}</p>
+        {error && <p className="text-xs text-muted-foreground max-w-xs text-center">{error}</p>}
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm"
+        >
+          <RefreshCw className="w-4 h-4" />
+          {t('common.retry', 'Retry')}
+        </button>
       </div>
     )
   }
@@ -264,7 +275,7 @@ export function SpireStatus() {
               {t('spireStatus.sectionServer', 'SPIRE Server')}
             </h3>
             {data.trustDomain ? (
-              <span className="text-[11px] text-muted-foreground ml-auto truncate max-w-[50%] font-mono">
+              <span className="text-xs text-muted-foreground ml-auto truncate max-w-[50%] font-mono">
                 {data.trustDomain}
               </span>
             ) : null}
@@ -304,7 +315,7 @@ export function SpireStatus() {
                 </span>
                 <span
                   className={cn(
-                    'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+                    'text-xs px-1.5 py-0.5 rounded-full shrink-0',
                     agent.numberReady === agent.desiredNumberScheduled &&
                       agent.numberMisscheduled === 0
                       ? 'bg-green-500/20 text-green-400'
@@ -316,7 +327,7 @@ export function SpireStatus() {
                 </span>
               </div>
               {agent.numberMisscheduled > 0 ? (
-                <div className="text-[11px] text-yellow-400">
+                <div className="text-xs text-yellow-400">
                   {t('spireStatus.misscheduled', '{{count}} misscheduled', {
                     count: agent.numberMisscheduled,
                   })}

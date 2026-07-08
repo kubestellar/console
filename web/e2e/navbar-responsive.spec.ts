@@ -128,7 +128,7 @@ test.describe('Navbar responsive layout', () => {
     
     // Wait for network idle to ensure all initial requests settle before
     // interacting. This prevents DOM detach during hook re-renders.
-    await page.waitForLoadState('networkidle').catch(() => {})
+    await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
     
     // Use native el.click() for maximum cross-browser compatibility —
     // Playwright's synthetic clicks can miss React event handlers on
@@ -161,16 +161,16 @@ test.describe('Navbar responsive layout', () => {
     await expect(searchWrapper).toBeVisible()
   })
 
-  test('desktop item group is visible at md+ (768px)', async ({ page, isMobile }) => {
+  test('desktop item group is visible at lg+ (1024px)', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Viewport breakpoint tests are unreliable on mobile device emulation (DPR > 1)')
-    // Use 800px — safely above the 768px md: boundary. Exact-boundary tests
-    // are fragile because browsers may compute 768 CSS px as <768 when rounding.
-    await page.setViewportSize({ width: 800, height: 720 })
+    // Use 1100px — safely above the 1024px lg: boundary. Exact-boundary tests
+    // are fragile because browsers may compute 1024 CSS px as <1024 when rounding.
+    await page.setViewportSize({ width: 1100, height: 720 })
     await setupPage(page)
 
     const nav = page.locator('nav[data-tour="navbar"]')
-    // ClusterFilterPanel/AgentStatus group uses hidden md:flex
-    const desktopGroup = nav.locator('.hidden.md\\:flex').first()
+    // ClusterFilterPanel/AgentStatus group uses hidden lg:flex (changed from md:flex in #19585)
+    const desktopGroup = nav.locator('.hidden.lg\\:flex').first()
     await expect(desktopGroup).toBeVisible()
   })
 

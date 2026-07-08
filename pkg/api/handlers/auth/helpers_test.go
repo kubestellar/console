@@ -55,6 +55,7 @@ func TestAuthHelpers(t *testing.T) {
 				}
 
 				req := httptest.NewRequest("GET", "/test", nil)
+				req.Host = "localhost"
 				resp, _ := app.Test(req)
 				assert.Equal(t, tt.wantStatus, resp.StatusCode)
 				mockStore.AssertExpectations(t)
@@ -105,6 +106,7 @@ func TestAuthHelpers(t *testing.T) {
 				}
 
 				req := httptest.NewRequest("GET", "/test", nil)
+				req.Host = "localhost"
 				resp, _ := app.Test(req)
 				assert.Equal(t, tt.wantStatus, resp.StatusCode)
 			})
@@ -125,6 +127,7 @@ func TestAuthHelpers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/test", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 		assert.Equal(t, models.UserRoleViewer, viewer.Role)
@@ -163,6 +166,7 @@ func TestAuthHelpers(t *testing.T) {
 				})
 
 				req := httptest.NewRequest("GET", "/test", nil)
+				req.Host = "localhost"
 				resp, _ := app.Test(req)
 				assert.Equal(t, tt.wantStatus, resp.StatusCode)
 			})

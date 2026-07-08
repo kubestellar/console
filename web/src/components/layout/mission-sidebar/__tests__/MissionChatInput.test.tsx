@@ -1,3 +1,4 @@
+import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { Mission } from '../../../../hooks/useMissions'
@@ -19,8 +20,8 @@ vi.mock('../../../ui/FileAttachmentButton', () => ({
 }))
 
 vi.mock('../../../ui/MicrophoneButton', () => ({
-  MicrophoneButton: ({ onTranscript }: { onTranscript: (text: string) => void }) => (
-    <button type="button" onClick={() => onTranscript('voice update')}>mic</button>
+  MicrophoneButton: ({ onTranscript, disabled }: { onTranscript: (text: string) => void; disabled?: boolean }) => (
+    <button type="button" onClick={() => onTranscript('voice update')} disabled={disabled}>mic</button>
   ),
 }))
 

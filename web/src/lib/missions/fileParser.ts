@@ -7,7 +7,7 @@
  * or returns an unstructured preview for AI-assisted conversion.
  */
 
-import yaml from 'js-yaml'
+import { dump, load, loadAll } from 'js-yaml'
 import type { MissionExport, MissionStep } from './types'
 import { validateMissionExport } from './types'
 import {
@@ -314,7 +314,7 @@ function wrapCRsAsMission(crDocuments: Record<string, unknown>[]): ParseResult {
       description: project
         ? `Apply ${kind} resource for ${project.displayName}`
         : `Apply ${kind} resource (${doc.apiVersion})`,
-      yaml: yaml.dump(doc, { indent: 2, lineWidth: -1 }),
+      yaml: dump(doc, { indent: 2, lineWidth: -1 }),
       command: `kubectl apply -f ${name ? name + '.yaml' : '<filename>.yaml'}`,
     }
   })
@@ -365,7 +365,7 @@ function extractFrontmatter(content: string): FrontmatterResult {
   const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/)
   if (!match) return { frontmatter: null, body: content }
   try {
-    const parsed = yaml.load(match[1]) as Record<string, unknown>
+    const parsed = load(match[1]) as Record<string, unknown>
     return { frontmatter: parsed, body: match[2] }
   } catch {
     return { frontmatter: null, body: content }
@@ -451,25 +451,21 @@ function stripCodeBlocks(text: string): string {
 
 /** Safely load all YAML documents from a multi-document string */
 function loadAllYamlDocuments(content: string): unknown[] {
-  const documents: unknown[] = []
   try {
-    yaml.loadAll(content, (doc: unknown) => {
-      if (doc !== null && doc !== undefined) {
-        documents.push(doc)
-      }
-    })
+    const docs = loadAll(content)
+    return (docs || []).filter((doc: unknown) => doc !== null && doc !== undefined)
   } catch {
     // If loadAll fails, try single document
     try {
-      const single = yaml.load(content)
+      const single = load(content)
       if (single !== null && single !== undefined) {
-        documents.push(single)
+        return [single]
       }
     } catch {
       // Unparseable YAML
     }
   }
-  return documents
+  return []
 }
 
 // ============================================================================

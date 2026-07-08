@@ -78,14 +78,16 @@ const {
   mockUseK8sRoleBindings: vi.fn().mockReturnValue({ bindings: [], isLoading: false, error: null, refetch: vi.fn() }),
   mockUseServiceExports: vi.fn().mockReturnValue({ exports: [], isLoading: false, error: null, refetch: vi.fn() }),
   mockUseServiceImports: vi.fn().mockReturnValue({ imports: [], isLoading: false, error: null, refetch: vi.fn() }),
-  mockUseDemoMode: vi.fn().mockReturnValue({ isDemoMode: false }),
+  mockUseDemoMode: vi.fn().mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
   getDemoMode: () => false,
   isDemoModeForced: false,
-}))
+}
+))
 
 vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPodIssues: (...args: unknown[]) => mockUseCachedPodIssues(...args),
@@ -171,7 +173,7 @@ vi.spyOn({ registerDataHook: originalRegister }, 'registerDataHook')
 beforeEach(() => {
   vi.clearAllMocks()
   vi.useFakeTimers()
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
 })
 
 afterEach(() => {

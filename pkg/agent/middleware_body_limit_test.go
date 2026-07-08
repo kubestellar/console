@@ -24,6 +24,7 @@ func TestMaxBodyMiddleware_LimitsPostBody(t *testing.T) {
 	// Create a body larger than maxRequestBodyBytes (1 MB)
 	oversizedBody := strings.NewReader(strings.Repeat("x", int(maxRequestBodyBytes)+1))
 	req := httptest.NewRequest(http.MethodPost, "/test", oversizedBody)
+	req.Host = "localhost"
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -41,6 +42,7 @@ func TestMaxBodyMiddleware_AllowsGetUnlimited(t *testing.T) {
 	handler := maxBodyMiddleware(inner)
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.Host = "localhost"
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -64,6 +66,7 @@ func TestMaxBodyMiddleware_AllowsSmallPost(t *testing.T) {
 
 	smallBody := strings.NewReader(`{"key":"value"}`)
 	req := httptest.NewRequest(http.MethodPost, "/test", smallBody)
+	req.Host = "localhost"
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)

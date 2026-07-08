@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -93,7 +94,43 @@ func TestValidateHelmChartVersion(t *testing.T) {
 	}
 }
 
+func TestValidateHelmChartHost(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		// Plain repo/chart references — no URL scheme, no SSRF risk
+		{"plain repo chart", "bitnami/nginx", false},
+		{"plain chart name", "nginx", false},
+		// OCI with public registry — allowed
+		{"valid oci registry", "oci://registry-1.docker.io/bitnamicharts/nginx", false},
+		// HTTPS chart archive with public host — allowed
+		{"valid https archive", "https://charts.bitnami.com/bitnami/nginx-1.0.0.tgz", false},
+		// OCI pointing to private IP — blocked (original #17530 fix)
+		{"oci private ip", "oci://192.168.1.1/charts/evil", true},
+		{"oci metadata service", "oci://169.254.169.254/charts/evil", true},
+		{"oci loopback", "oci://127.0.0.1/charts/evil", true},
+		// HTTPS pointing to private IP — blocked by #18074 fix
+		{"https private ip", "https://10.0.0.1/evil.tgz", true},
+		{"https metadata service", "https://169.254.169.254/latest/meta-data/iam/security-credentials/", true},
+		{"https loopback", "https://127.0.0.1/evil.tgz", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateHelmChartHost(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateHelmChartHost(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestServer_HandleHelmRollback(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping: requires live cluster (set KC_INTEGRATION_TESTS=1)")
+	}
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
 	execCommandContext = fakeExecCommandContext
@@ -114,6 +151,7 @@ func TestServer_HandleHelmRollback(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest("POST", "/helm/rollback", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 
@@ -132,6 +170,7 @@ func TestServer_HandleHelmRollback(t *testing.T) {
 	reqBody = helmRollbackRequest{Namespace: "my-ns", Revision: 1}
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest("POST", "/helm/rollback", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleHelmRollback(w, req)
@@ -145,6 +184,7 @@ func TestServer_HandleHelmRollback(t *testing.T) {
 	reqBody = helmRollbackRequest{Release: "r", Namespace: "n", Revision: 1}
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest("POST", "/helm/rollback", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleHelmRollback(w, req)
@@ -154,6 +194,9 @@ func TestServer_HandleHelmRollback(t *testing.T) {
 }
 
 func TestServer_HandleHelmUninstall(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping: requires live cluster (set KC_INTEGRATION_TESTS=1)")
+	}
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
 	execCommandContext = fakeExecCommandContext
@@ -172,6 +215,7 @@ func TestServer_HandleHelmUninstall(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest("POST", "/helm/uninstall", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 
@@ -185,6 +229,7 @@ func TestServer_HandleHelmUninstall(t *testing.T) {
 	mockExitCode = 1
 	mockStderr = "uninstall failed"
 	req = httptest.NewRequest("POST", "/helm/uninstall", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleHelmUninstall(w, req)
@@ -194,6 +239,9 @@ func TestServer_HandleHelmUninstall(t *testing.T) {
 }
 
 func TestServer_HandleHelmUpgrade(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping: requires live cluster (set KC_INTEGRATION_TESTS=1)")
+	}
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
 	execCommandContext = fakeExecCommandContext
@@ -212,6 +260,7 @@ func TestServer_HandleHelmUpgrade(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest("POST", "/helm/upgrade", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 
@@ -224,6 +273,7 @@ func TestServer_HandleHelmUpgrade(t *testing.T) {
 	reqBody.Values = "key: value"
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest("POST", "/helm/upgrade", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleHelmUpgrade(w, req)
@@ -235,6 +285,7 @@ func TestServer_HandleHelmUpgrade(t *testing.T) {
 	reqBody.Chart = "-invalid"
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest("POST", "/helm/upgrade", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleHelmUpgrade(w, req)
@@ -310,6 +361,7 @@ func TestHandleHelmUpgrade_SecurityBoundary(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "/helm/upgrade", strings.NewReader(tt.body))
+			req.Host = "localhost"
 			if tt.token != "" {
 				req.Header.Set("Authorization", tt.token)
 			}

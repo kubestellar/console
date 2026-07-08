@@ -243,7 +243,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      <span className="ml-3 text-gray-300">Loading SBOM data…</span>
+      <span className="ml-3 text-muted-foreground">Loading SBOM data…</span>
     </div>
   )
 
@@ -254,9 +254,9 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
   )
 
   const licensePieData = summary ? [
-    { label: 'Compliant', count: summary.license_compliant, color: 'rgb(34,197,94)' },
-    { label: 'Non-Compliant', count: summary.license_non_compliant, color: 'rgb(239,68,68)' },
-    { label: 'Unknown', count: summary.license_unknown, color: 'rgb(107,114,128)' },
+    { label: 'Compliant', count: summary.license_compliant, color: 'hsl(var(--success))' },
+    { label: 'Non-Compliant', count: summary.license_non_compliant, color: 'hsl(var(--destructive))' },
+    { label: 'Unknown', count: summary.license_unknown, color: 'hsl(var(--muted-foreground))' },
   ] : []
   const licenseTotal = licensePieData.reduce((a, b) => a + b.count, 0)
 
@@ -401,7 +401,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
               {licensePieData.map(d => (
                 <div key={d.label} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
-                  <span className="text-sm text-gray-300">{d.label}: <span className="text-white font-medium">{d.count}</span></span>
+                  <span className="text-sm text-muted-foreground">{d.label}: <span className="text-white font-medium">{d.count}</span></span>
                 </div>
               ))}
             </div>
@@ -412,13 +412,13 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-700">
         <button
-          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'packages' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400 hover:text-gray-200'}`}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'packages' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-muted-foreground hover:text-foreground'}`}
           onClick={() => setActiveTab('packages')}
         >
           <Package className="w-4 h-4 inline mr-1" /> Packages ({packages.length})
         </button>
         <button
-          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'vulnerabilities' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400 hover:text-gray-200'}`}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'vulnerabilities' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-muted-foreground hover:text-foreground'}`}
           onClick={() => setActiveTab('vulnerabilities')}
         >
           <Shield className="w-4 h-4 inline mr-1" /> Vulnerabilities ({vulnerabilities.length})
@@ -443,9 +443,9 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
               {packages.map((p, i) => (
                 <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/30">
                   <td className="py-2 px-3 text-white font-mono text-xs">{p.name}</td>
-                  <td className="py-2 px-3 text-gray-300">{p.version}</td>
-                  <td className="py-2 px-3 text-gray-300">{p.license}</td>
-                  <td className="py-2 px-3 text-gray-300">{p.ecosystem}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{p.version}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{p.license}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{p.ecosystem}</td>
                   <td className="py-2 px-3">
                     <span className={p.vulnerabilities > 0 ? 'text-red-400 font-medium' : 'text-green-400'}>{p.vulnerabilities}</span>
                   </td>
@@ -484,11 +484,11 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
                       {v.severity}
                     </span>
                   </td>
-                  <td className="py-2 px-3 text-gray-300 font-mono text-xs">{v.fixed_version}</td>
+                  <td className="py-2 px-3 text-gray-600 font-mono text-xs">{v.fixed_version}</td>
                   <td className="py-2 px-3">
                     <span className="flex items-center gap-1">
                       {STATUS_ICON[v.status]}
-                      <span className="text-gray-300 capitalize">{v.status}</span>
+                      <span className="text-gray-600 capitalize">{v.status}</span>
                     </span>
                   </td>
                 </tr>

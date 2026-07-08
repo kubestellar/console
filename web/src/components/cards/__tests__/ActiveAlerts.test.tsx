@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ActiveAlerts } from '../ActiveAlerts'
@@ -44,8 +45,10 @@ vi.mock('../CardDataContext', () => ({
   useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false }),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false }),
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../lib/cards/cardHooks', () => ({

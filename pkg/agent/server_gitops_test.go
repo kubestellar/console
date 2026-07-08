@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
 	"reflect"
 	"sort"
@@ -110,7 +111,7 @@ func TestGitopsCloneRepoRejectsBlockedResolvedIP(t *testing.T) {
 	execCalled := false
 	execCommandContext = func(ctx context.Context, command string, args ...string) *exec.Cmd {
 		execCalled = true
-		return fakeExecCommandContext(ctx, command, args...)
+		return fakeExecCommand(command, args...)
 	}
 	gitopsLookupIPAddr = func(_ context.Context, host string) ([]net.IPAddr, error) {
 		if host != "github.com" {
@@ -328,6 +329,7 @@ func TestGitopsHandlers(t *testing.T) {
 
 	t.Run("handleDetectDrift_OPTIONS", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodOptions, "/api/gitops/detect-drift", nil)
+		req.Host = "localhost"
 		w := httptest.NewRecorder()
 		server.handleDetectDrift(w, req)
 		if w.Code != http.StatusNoContent {
@@ -336,6 +338,9 @@ func TestGitopsHandlers(t *testing.T) {
 	})
 
 	t.Run("handleDetectDrift_DriftDetected", func(t *testing.T) {
+		if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+			t.Skip("skipping: requires live cluster (set KC_INTEGRATION_TESTS=1)")
+		}
 		// Mock git clone (1st call) and kubectl diff (2nd call)
 		originalMockStdout := mockStdout
 		originalMockExitCode := mockExitCode
@@ -359,6 +364,7 @@ func TestGitopsHandlers(t *testing.T) {
 
 		reqBody := `{"repoUrl": "https://github.com/org/repo", "path": "manifests"}`
 		req := httptest.NewRequest(http.MethodPost, "/api/gitops/detect-drift", strings.NewReader(reqBody))
+		req.Host = "localhost"
 		w := httptest.NewRecorder()
 		server.handleDetectDrift(w, req)
 

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * CreateNamespaceModal Tests
  *
@@ -38,6 +39,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllTimers()
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 

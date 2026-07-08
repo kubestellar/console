@@ -56,7 +56,7 @@ function BadgePreview({ level, levelName, detected, total }: {
 }) {
   const rightColor = BADGE_COLORS[level] ?? BADGE_COLORS[1]
   return (
-    <span className="inline-flex items-stretch text-[11px] font-medium leading-none rounded overflow-hidden shadow-xs h-5">
+    <span className="inline-flex items-stretch text-xs font-medium leading-none rounded overflow-hidden shadow-xs h-5">
       <span className="px-1.5 flex items-center bg-neutral-600 text-white">ACMM</span>
       <span
         className="px-1.5 flex items-center text-white"
@@ -145,15 +145,16 @@ export function RepoPicker() {
     // last inner container so it aligns with the page content width.
     <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xs">
       <div className="max-w-(--breakpoint-2xl) mx-auto px-6 pt-2 pb-0">
-        <button
+        <Button
           type="button"
           onClick={openIntro}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+          variant="ghost"
+          size="sm"
+          icon={<Info className="w-3 h-3" />}
           title="Re-open the ACMM intro"
         >
-          <Info className="w-3 h-3" />
           What is ACMM?
-        </button>
+        </Button>
       </div>
       <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-3 flex flex-wrap items-center gap-3">
         <form
@@ -180,18 +181,19 @@ export function RepoPicker() {
               aria-label="GitHub repository"
             />
             {input && (
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   setInput('')
                   setError(null)
                   inputRef.current?.focus()
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                variant="ghost"
+                size="sm"
+                icon={<X className="w-4 h-4" />}
+                className="absolute right-2 top-1/2 -translate-y-1/2 !p-0"
                 aria-label="Clear"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              />
             )}
             <datalist id="acmm-recent-repos">
               {recentRepos.map((r) => (
@@ -274,48 +276,54 @@ export function RepoPicker() {
             <span className="text-muted-foreground">
               Preview for <code className="font-mono">{repo}</code>
             </span>
-            <button
+            <Button
               type="button"
               onClick={() => setShowBadge(false)}
-              className="ml-auto text-muted-foreground hover:text-foreground"
+              variant="ghost"
+              size="sm"
+              icon={<X className="w-3.5 h-3.5" />}
+              className="ml-auto !p-0"
               aria-label="Close"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+            />
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-muted-foreground">Markdown</span>
-              <button
+              <Button
                 type="button"
                 onClick={() => copy(badgeMarkdown, 'md')}
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/30 hover:bg-muted/50"
+                variant="ghost"
+                size="sm"
+                icon={copied === 'md' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                className="bg-muted/30 hover:bg-muted/50"
               >
-                {copied === 'md' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
                 {copied === 'md' ? 'Copied' : 'Copy'}
-              </button>
+              </Button>
             </div>
-            <code className="block font-mono bg-background/60 px-2 py-1 rounded text-[10px] break-all">
+            <code className="block font-mono bg-background/60 px-2 py-1 rounded text-xs break-all">
               {badgeMarkdown}
             </code>
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-muted-foreground">HTML</span>
-              <button
+              <Button
                 type="button"
                 onClick={() => copy(badgeHtml, 'html')}
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/30 hover:bg-muted/50"
+                variant="ghost"
+                size="sm"
+                icon={copied === 'html' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                className="bg-muted/30 hover:bg-muted/50"
               >
                 {copied === 'html' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
                 {copied === 'html' ? 'Copied' : 'Copy'}
-              </button>
+              </Button>
             </div>
-            <code className="block font-mono bg-background/60 px-2 py-1 rounded text-[10px] break-all">
+            <code className="block font-mono bg-background/60 px-2 py-1 rounded text-xs break-all">
               {badgeHtml}
             </code>
           </div>
-          <div className="text-muted-foreground text-[10px]">
+          <div className="text-muted-foreground text-xs">
             Links back to the ACMM dashboard loaded with <code className="font-mono">{repo}</code>. Shields.io caches for ~5 minutes; use the refresh icon to force an in-dashboard re-scan.
           </div>
         </div>

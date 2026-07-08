@@ -30,6 +30,7 @@ import { useStatHistory, MIN_SPARKLINE_POINTS } from '../../hooks/useStatHistory
 import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 import { STAT_BLOCK_COLORS as COLOR_HEX } from '../../lib/tokens'
+import { isLocalAgentSuppressed } from '../../lib/constants'
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -169,6 +170,10 @@ const HEATMAP_HIGH_CONTRAST_TEXT_CLASSES = {
 export interface StatBlockValue {
   value: string | number
   sublabel?: string
+  /** Optional machine-readable semantic value for live canary groundtruth checks. */
+  groundtruthField?: string
+  /** Optional semantic values when one visible card represents multiple live facts. */
+  groundtruthFields?: Record<string, string | number | null | undefined>
   onClick?: () => void
   isClickable?: boolean
   /** Whether this stat uses demo/mock data (shows yellow border + badge) */
@@ -286,6 +291,10 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
   const progressMaxLabel = hasExplicitMax && !isPercentageStat
     ? (data.format ? data.format(data.max) : data.max)
     : null
+  const groundtruthFields = {
+    ...(data.groundtruthField ? { [data.groundtruthField]: rawValue } : {}),
+    ...(data.groundtruthFields || {}),
+  }
 
   // Sparkline: fall back to numeric if not enough data yet.
   // Progress-style modes also fall back when the stat has no real denominator,
@@ -318,6 +327,12 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
         onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); data.onClick?.() } },
       } : {})}
     >
+      {Object.entries(groundtruthFields).map(([field, value]) => (
+        <span key={field} className="sr-only" data-groundtruth-field={field}>
+          {value ?? ''}
+        </span>
+      ))}
+
       {/* Demo badge */}
       {isDemo && (
         <span className="absolute -top-1 -right-1" title="Demo data">
@@ -570,7 +585,12 @@ export function StatsOverview({
   // When demo mode is OFF and agent is confirmed disconnected, force skeleton display
   // Don't force skeleton during 'connecting' - show cached data to prevent flicker
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceLoadingForOffline = !isDemoMode && !isDemoData && isAgentOffline && !isInClusterMode() && !wasAgentEverConnected()
+  const forceLoadingForOffline = !isDemoMode
+    && !isDemoData
+    && isAgentOffline
+    && !isInClusterMode()
+    && !isLocalAgentSuppressed()
+    && !wasAgentEverConnected()
   // Show skeleton during mode switching for smooth transitions
   const effectiveIsLoading = isLoading || forceLoadingForOffline || isModeSwitching
   const effectiveHasData = forceLoadingForOffline ? false : hasData

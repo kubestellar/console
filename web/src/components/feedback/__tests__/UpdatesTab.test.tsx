@@ -1,3 +1,4 @@
+import React from 'react'
 /** @vitest-environment jsdom */
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import type { ComponentProps } from 'react'

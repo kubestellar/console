@@ -22,6 +22,7 @@ import { GlobalFiltersProvider } from '../hooks/useGlobalFilters'
 import { MissionProvider } from '../hooks/useMissions'
 import { CardEventProvider } from '../lib/cardEvents'
 import { ToastProvider } from '../components/ui/Toast'
+import { ErrorToastListener } from '../components/ui/ErrorToastListener'
 import { AlertsProvider } from '../contexts/AlertsContext'
 import { RewardsProvider } from '../hooks/useRewards'
 import { NPSSurvey } from '../components/feedback'
@@ -53,7 +54,7 @@ import {
   RiskAppetiteDashboard, EnterpriseLayout, EnterprisePortal, ComingSoon,
   DataCompliance, GPUReservations, KarmadaOps, Nodes, Deployments,
   Services, Operators, HelmReleases, Logs, Pods, CardHistory,
-  UserManagementPage, NamespaceManager, Arcade, Deploy, AIML, AIAgents,
+  UserManagementPage, TeamManagementPage, NamespaceManager, Arcade, Deploy, AIML, AIAgents,
   LLMdBenchmarks, ClusterAdmin, CICD, Insights, MultiTenancy, Drasi,
   ACMM, Marketplace, Quantum, StellarPage, AuditPage, MiniDashboard, EmbedCard, Welcome,
   FromLens, FromHeadlamp, FromHolmesGPT, FeatureInspektorGadget,
@@ -250,6 +251,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
     <UnifiedDemoProvider>
       <RewardsProvider>
       <ToastProvider>
+      <ErrorToastListener />
       <GlobalFiltersProvider>
       <MissionProvider>
       <CardEventProvider>
@@ -334,6 +336,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path={ROUTES.HISTORY} element={<SuspenseRoute><CardHistoryWithRestore /></SuspenseRoute>} />
           <Route path={ROUTES.SETTINGS} element={<SuspenseRoute><Settings /></SuspenseRoute>} />
           <Route path={ROUTES.USERS} element={<SuspenseRoute><UserManagementPage /></SuspenseRoute>} />
+          <Route path={ROUTES.TEAMS} element={<SuspenseRoute><TeamManagementPage /></SuspenseRoute>} />
           <Route path={ROUTES.NAMESPACES} element={<SuspenseRoute><NamespaceManager /></SuspenseRoute>} />
           <Route path={ROUTES.ARCADE} element={<SuspenseRoute><Arcade /></SuspenseRoute>} />
           <Route path={ROUTES.DEPLOY} element={<SuspenseRoute><Deploy /></SuspenseRoute>} />

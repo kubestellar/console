@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import type { PredictionSettings } from '../../../../types/predictions'
@@ -16,11 +17,13 @@ vi.mock('../../../../hooks/usePredictionFeedback', () => ({
   }),
 }))
 
-vi.mock('../../../../lib/analytics', () => ({
+vi.mock('../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitAIPredictionsToggled: vi.fn(),
   emitConfidenceThresholdChanged: vi.fn(),
   emitConsensusModeToggled: vi.fn(),
-}))
+}
+))
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

@@ -1,3 +1,4 @@
+import React from 'react'
 import { vi } from 'vitest'
 
 // vi.hoisted ensures mockUseCacheFn is available when vi.mock() is hoisted

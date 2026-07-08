@@ -206,6 +206,8 @@ export function useBuildpackImages(cluster?: string) {
           setConsecutiveFailures(0)
           setLastRefresh(Date.now())
           setIsDemoData(false)
+          setIsLoading(false)
+          setIsRefreshing(false)
           return
         }
         if (!response.ok) {
@@ -257,7 +259,7 @@ export function useBuildpackImages(cluster?: string) {
     const cacheAge = now - buildpackCache.timestamp
     const cacheValid =
       !cluster &&
-      buildpackCache.data.length > 0 &&
+      buildpackCache.timestamp > 0 &&
       cacheAge < BUILDPACK_CACHE_TTL_MS
 
     if (cacheValid) {

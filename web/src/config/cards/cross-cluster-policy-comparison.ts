@@ -13,7 +13,7 @@ export const crossClusterPolicyComparisonConfig: UnifiedCardConfig = {
   defaultWidth: 6,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useCrossClusterPolicyComparison' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'CrossClusterPolicyComparison' },
   emptyState: { icon: 'GitCompare', title: 'No Data', message: 'No Kyverno clusters detected', variant: 'info' },
   loadingState: { type: 'table', count: 4 },
   isDemoData: false,

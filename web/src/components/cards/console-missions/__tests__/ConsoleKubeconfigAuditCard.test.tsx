@@ -1,3 +1,4 @@
+import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -47,8 +48,10 @@ vi.mock('../../CardDataContext', () => ({
 }))
 
 const mockIsDemoMode = vi.fn(() => false)
-vi.mock('../../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../shared', () => ({

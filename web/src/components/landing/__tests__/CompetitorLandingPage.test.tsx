@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -6,9 +7,11 @@ vi.mock('../../../lib/clipboard', () => ({
   copyToClipboard: vi.fn().mockResolvedValue(true),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitInstallCommandCopied: vi.fn(),
-}))
+}
+))
 
 import { CompetitorLandingPage } from '../CompetitorLandingPage'
 import type { CompetitorLandingPageProps } from '../types'

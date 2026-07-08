@@ -49,7 +49,7 @@ async function dismissAnyOpenModals(page: Page) {
   // These fixed-overlay modals intercept pointer events on the sidebar,
   // blocking subsequent navigation clicks. Dismiss them before proceeding.
   const modal = page.getByRole('dialog').first()
-  const modalVisible = await modal.isVisible().catch(() => false)
+  const modalVisible = await modal.isVisible().catch((error) => { console.error('Promise error:', error); return false })
   if (modalVisible) {
     await page.keyboard.press('Escape')
     await expect(modal).not.toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
@@ -57,26 +57,42 @@ async function dismissAnyOpenModals(page: Page) {
 }
 
 async function clickSidebarRoute(page: Page, href: string) {
-  // After navigating, sidebar sections may re-render / collapse. Wait for
-  // the visible sidebar to stabilize before looking for the target link.
-  const sidebar = page.locator('[data-testid="sidebar"]:visible').first()
-  await expect(sidebar).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS })
+  const maxAttempts = 3
 
-  // Dismiss any auto-opened modals that could overlay the sidebar (#11829).
-  await dismissAnyOpenModals(page)
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    // After navigating, sidebar sections may re-render / collapse. Wait for
+    // the visible sidebar to stabilize before looking for the target link.
+    const sidebar = page.locator('[data-testid="sidebar"]:visible').first()
+    await expect(sidebar).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS })
 
-  const link = sidebar.locator(`a[href="${href}"]`).first()
+    // Dismiss any auto-opened modals that could overlay the sidebar (#11829).
+    await dismissAnyOpenModals(page)
 
-  await link.waitFor({ state: 'attached', timeout: ROUTE_LOAD_TIMEOUT_MS })
-  await link.scrollIntoViewIfNeeded()
-  await link.waitFor({ state: 'visible', timeout: ROUTE_LOAD_TIMEOUT_MS })
+    const link = sidebar.locator(`a[href="${href}"]`).first()
 
-  // Re-locate within the visible sidebar immediately before the click so React
-  // re-renders do not leave us clicking a stale or hidden duplicate node.
-  try {
-    await sidebar.locator(`a[href="${href}"]`).first().click({ timeout: ROUTE_LOAD_TIMEOUT_MS })
-  } catch {
-    await sidebar.locator(`a[href="${href}"]`).first().click({ force: true, timeout: ROUTE_LOAD_TIMEOUT_MS })
+    await link.waitFor({ state: 'attached', timeout: ROUTE_LOAD_TIMEOUT_MS })
+    await link.scrollIntoViewIfNeeded()
+    await link.waitFor({ state: 'visible', timeout: ROUTE_LOAD_TIMEOUT_MS })
+
+    // Re-locate within the visible sidebar immediately before the click so React
+    // re-renders do not leave us clicking a stale or hidden duplicate node.
+    try {
+      await sidebar.locator(`a[href="${href}"]`).first().click({
+        force: attempt > 0,
+        timeout: ROUTE_LOAD_TIMEOUT_MS,
+      })
+    } catch (error) { console.error('Error:', error)
+      await sidebar.locator(`a[href="${href }"]`).first().dispatchEvent('click')
+    }
+
+    const reachedTarget = await page
+      .waitForURL(routeMatcher(href), { timeout: 3000 })
+      .then(() => true)
+      .catch((error) => { console.error('Promise error:', error); return false })
+
+    if (reachedTarget) {
+      break
+    }
   }
 
   await assertRouteLoaded(page, href)
@@ -188,7 +204,7 @@ test.describe('Post-login initial dashboard UX sweep', () => {
 
     // Clusters stat block should open a drilldown or navigate to clusters when count > 0.
     const clustersStat = page.getByTestId('stat-block-clusters').first()
-    const clustersStatVisible = await clustersStat.isVisible().catch(() => false)
+    const clustersStatVisible = await clustersStat.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
     if (clustersStatVisible) {
       const clusterCount = await clustersStat.evaluate((node) => {
@@ -203,7 +219,7 @@ test.describe('Post-login initial dashboard UX sweep', () => {
         const drilldownModal = page.getByTestId('drilldown-modal')
         const openedDrilldown = await drilldownModal
           .isVisible({ timeout: DIALOG_TIMEOUT_MS })
-          .catch(() => false)
+          .catch((error) => { console.error('Promise error:', error); return false })
 
         const navigatedToClusters = /\/clusters(?:\?.*)?$/.test(page.url())
         expect(openedDrilldown || navigatedToClusters).toBe(true)
@@ -228,7 +244,7 @@ test.describe('Post-login initial dashboard UX sweep', () => {
       .locator('button[title*="xpand" i], button[aria-label*="xpand" i], button[title*="full screen" i], button[aria-label*="full screen" i]')
       .first()
 
-    const hasExpandButton = await expandCardButton.isVisible().catch(() => false)
+    const hasExpandButton = await expandCardButton.isVisible().catch((error) => { console.error('Promise error:', error); return false })
     if (hasExpandButton) {
       await expandCardButton.click()
       const drilldownModal = page.getByTestId('drilldown-modal')

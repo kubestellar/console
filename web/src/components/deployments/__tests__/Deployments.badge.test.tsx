@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Test: critical stat value returned by getStatValue('critical') matches
  * filteredDeploymentIssues.length — regression guard for bug #15906.
@@ -74,7 +75,6 @@ describe('Deployments critical issues badge (#15906)', () => {
     capturedGetStatValue = null
     mockDeployments = []
     mockDeploymentIssues = []
-    vi.resetModules()
   })
 
   it('critical stat value is 0 when there are no deployment issues', async () => {

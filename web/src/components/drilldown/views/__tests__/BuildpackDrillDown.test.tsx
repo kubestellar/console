@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * RTL interaction tests for BuildpackDrillDown (#15406, Part of #4189).
  */

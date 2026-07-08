@@ -1,4 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback, mockLocalAgentUnavailable, mockApiMe } from './helpers/setup'
+import { setupDemoMode as setupSharedDemoMode } from './helpers/storage-setup'
 
 /**
  * Responsive Breakpoint Regression Tests
@@ -26,7 +28,7 @@ const ROOT_VISIBLE_TIMEOUT_MS = 10_000
 /** Minimum body text length to consider the page non-blank. */
 const MIN_BODY_TEXT_LEN = 20
 /** Timeout (ms) for hamburger/sidebar-toggle visibility probe. */
-const MOBILE_NAV_PROBE_TIMEOUT_MS = 5_000
+const MOBILE_NAV_PROBE_TIMEOUT_MS = 10_000
 /** Max viewport width (px) below which mobile/hamburger nav is expected. */
 const MOBILE_NAV_MAX_WIDTH_PX = 1024
 
@@ -39,35 +41,13 @@ const KEY_ROUTES = [
 ]
 
 async function setupDemoMode(page: Page) {
-  // Seed localStorage BEFORE any page script runs so the auth guard sees
-  // the token on first execution. page.evaluate() runs after the page has
-  // already parsed and executed scripts, which is too late for webkit/Safari
-  // where the auth redirect fires synchronously on script evaluation.
-  // page.addInitScript() injects the snippet ahead of any page code (#9096).
-  await page.addInitScript(() => {
-    localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc-demo-mode', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-  })
+  await setupSharedDemoMode(page)
+  await mockApiFallback(page)
+  await mockLocalAgentUnavailable(page)
+  await mockApiMe(page)
 
-  // Mock /api/me so AuthProvider has a deterministic user without a backend.
-  // Without this, WebKit may redirect to /login before the page renders. #10200
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: '1',
-        github_id: '12345',
-        github_login: 'testuser',
-        email: 'test@example.com',
-        onboarded: true,
-      }),
-    })
-  )
-
-  // Mock MCP endpoints to prevent unmocked requests hitting a non-existent
-  // backend, which causes WebKit CORS errors and slow timeouts. #10200
+  // Keep the MCP override explicit so responsive tests always receive a stable
+  // shape for cluster-backed views, regardless of helper evolution.
   await page.route('**/api/mcp/**', (route) =>
     route.fulfill({
       status: 200,
@@ -182,18 +162,13 @@ test.describe('Responsive Breakpoint Tests', () => {
           const mobileNav = page.locator('[data-testid="mobile-menu-toggle"]')
             .or(page.locator('button[aria-label*="menu" i]'))
             .or(page.locator('[data-testid="sidebar-toggle"]'))
+            .or(page.getByTestId('navbar-home-btn'))
+            .or(page.locator('nav a:visible, nav button:visible'))
 
-          const hasHamburger = await mobileNav.first().isVisible({ timeout: MOBILE_NAV_PROBE_TIMEOUT_MS }).catch(() => false)
-
-          // Either hamburger menu is present OR nav items are visible
-          if (!hasHamburger) {
-            const navItems = page.locator('nav a, nav button')
-            const navCount = await navItems.count()
-            expect(
-              navCount,
-              `No navigation accessible at ${viewport.name} viewport`
-            ).toBeGreaterThan(0)
-          }
+          await expect(
+            mobileNav.first(),
+            `No navigation accessible at ${viewport.name} viewport`
+          ).toBeVisible({ timeout: MOBILE_NAV_PROBE_TIMEOUT_MS })
         } else {
           // On larger viewports, main nav should be visible
           const nav = page.locator('nav')

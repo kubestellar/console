@@ -25,6 +25,7 @@ vi.mock('../../constants', () => ({
 
 vi.mock('../../authToken', () => ({
   getStoredAuthToken: () => mockGetStoredAuthToken(),
+  getStoredAuthTokenSync: () => mockGetStoredAuthToken(),
 }))
 
 // Import after mocks

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Unit tests for StorageOverview card component.
  *
@@ -45,9 +46,11 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => mockUseGlobalFilters(),
 }))
 
-const mockIsDemoMode = vi.fn(() => ({ isDemoMode: false }))
-vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => mockIsDemoMode(),
+const mockIsDemoMode = vi.fn(() => false)
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 const mockUseCardLoadingState = vi.fn()
@@ -61,8 +64,27 @@ vi.mock('../../lib/cards/cardHooks', () => ({
 }))
 
 vi.mock('../../lib/cards/CardComponents', () => ({
-  CardClusterFilter: ({ availableClusters }: { availableClusters: Array<{ name: string }> }) => (
-    <div data-testid="cluster-filter" data-count={availableClusters.length} />
+  CardHeaderRow: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  CardStatGrid: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  CardStatHeader: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  CardControlsRow: ({
+    clusterFilter,
+    clusterIndicator,
+  }: {
+    clusterFilter?: { availableClusters: Array<{ name: string }> }
+    clusterIndicator?: { selectedCount: number; totalCount: number }
+  }) => (
+    <div data-testid="card-controls-row">
+      {clusterFilter && (
+        <div
+          data-testid="cluster-filter"
+          data-count={clusterFilter.availableClusters.length}
+        />
+      )}
+      {clusterIndicator && (
+        <span>{clusterIndicator.selectedCount}/{clusterIndicator.totalCount}</span>
+      )}
+    </div>
   ),
 }))
 
@@ -76,6 +98,7 @@ vi.mock('../ui/Skeleton', () => ({
   SkeletonList: ({ items, className }: { items?: number; className?: string }) => (
     <div data-testid="skeleton-list" data-items={items} className={className} />
   ),
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../lib/formatStats', () => ({
@@ -114,7 +137,7 @@ const defaultPVCsReturn = {
   consecutiveFailures: 0,
   isFailed: false,
   isDemoFallback: false,
-  error: null,
+  error: false,
 }
 
 const defaultChartFilters = {
@@ -138,7 +161,7 @@ function setup() {
   mockUseGlobalFilters.mockReturnValue(defaultGlobalFilters)
   mockUseChartFilters.mockReturnValue(defaultChartFilters)
   mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false })
-  mockIsDemoMode.mockReturnValue({ isDemoMode: false })
+  mockIsDemoMode.mockReturnValue(false)
 }
 
 // ---------------------------------------------------------------------------

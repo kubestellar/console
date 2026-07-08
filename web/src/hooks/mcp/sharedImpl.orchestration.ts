@@ -1,6 +1,7 @@
 // Main cluster fetch orchestration and refresh logic
 
 import { api } from '../../lib/api'
+import { STORAGE_KEY_HAS_SESSION } from '../../lib/constants'
 import { isDemoMode, isDemoToken, isNetlifyDeployment } from '../../lib/demoMode'
 import { resetFailuresForCluster } from '../../lib/cache'
 import { getStoredAuthToken } from '../../lib/authToken'
@@ -15,6 +16,18 @@ import type { ClusterInfo } from './types'
 
 // Track if a fetch is in progress to prevent duplicate requests
 let fetchInProgress = false
+
+function hasCookieBackedSession(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true'
+  } catch {
+    return false
+  }
+}
+
+async function hasBackendSession(): Promise<boolean> {
+  return Boolean(await getStoredAuthToken()) || hasCookieBackedSession()
+}
 
 // Full refetch - updates shared cache with loading state
 // Deduplicates concurrent calls - only one fetch runs at a time
@@ -162,9 +175,10 @@ export async function fullFetchClusters() {
       return
     }
 
-    // Skip backend if not authenticated
-    const token = await getStoredAuthToken()
-    if (!token) {
+    // Skip backend only when there is no bearer token and no cookie-backed
+    // session marker. Production OAuth uses an HttpOnly kc_auth cookie, so
+    // localStorage intentionally has no bearer token.
+    if (!await hasBackendSession()) {
       await finishWithMinDuration({ isLoading: false, isRefreshing: false })
       return
     }
@@ -218,7 +232,7 @@ export async function fullFetchClusters() {
       : getLiveClustersForFallback(clusterCache.clusters)
 
     await finishWithMinDuration({
-      error: null,
+      error: 'Cluster data unavailable',
       clusters: fallbackClusters,
       isLoading: false,
       isRefreshing: false,
@@ -262,6 +276,7 @@ export async function refreshSingleCluster(clusterName: string): Promise<void> {
       healthy: health.healthy,
       reachable: isReachable,
       nodeCount: health.nodeCount,
+      readyNodes: health.readyNodes,
       podCount: health.podCount,
       cpuCores: health.cpuCores,
       cpuRequestsCores: health.cpuRequestsCores,

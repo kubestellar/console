@@ -3,206 +3,15 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/agent/tokentracker"
 )
 
-// TestServer_TokenUsage tests the token usage tracking and persistence
-func TestServer_TokenUsage(t *testing.T) {
-	// Setup temp home for token usage file
-	tmpDir, err := os.MkdirTemp("", "agent-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-	t.Setenv("HOME", tmpDir)
-
-	s := &Server{
-		todayDate: time.Now().Format("2006-01-02"),
-	}
-
-	usage := &ProviderTokenUsage{
-		InputTokens:  100,
-		OutputTokens: 50,
-		TotalTokens:  150,
-	}
-
-	// 1. Add usage
-	s.addTokenUsage(usage)
-
-	s.tokenMux.RLock()
-	if s.sessionTokensIn != 100 || s.sessionTokensOut != 50 {
-		t.Errorf("Expected 100/50 session tokens, got %d/%d", s.sessionTokensIn, s.sessionTokensOut)
-	}
-	if s.todayTokensIn != 100 || s.todayTokensOut != 50 {
-		t.Errorf("Expected 100/50 today tokens, got %d/%d", s.todayTokensIn, s.todayTokensOut)
-	}
-	s.tokenMux.RUnlock()
-
-	// 2. Add more usage
-	s.addTokenUsage(usage)
-
-	s.tokenMux.RLock()
-	if s.sessionTokensIn != 200 || s.sessionTokensOut != 100 {
-		t.Errorf("Expected 200/100 session tokens, got %d/%d", s.sessionTokensIn, s.sessionTokensOut)
-	}
-	s.tokenMux.RUnlock()
-
-	// 3. Verify persistence — force a synchronous flush because
-	// addTokenUsage uses a debounced 5 s timer (#9483) that will not
-	// have fired yet.
-	s.saveTokenUsage()
-
-	path := getTokenUsagePath()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("Failed to read usage file: %v", err)
-	}
-
-	var saved tokenUsageData
-	if err := json.Unmarshal(data, &saved); err != nil {
-		t.Fatalf("Failed to unmarshal usage data: %v", err)
-	}
-
-	if saved.InputIn != 200 || saved.OutputOut != 100 {
-		t.Errorf("Expected 200/100 in file, got %d/%d", saved.InputIn, saved.OutputOut)
-	}
-
-	// 4. Test loading
-	s2 := &Server{}
-	s2.loadTokenUsage()
-	if s2.todayTokensIn != 200 || s2.todayTokensOut != 100 {
-		t.Errorf("Expected 200/100 loaded, got %d/%d", s2.todayTokensIn, s2.todayTokensOut)
-	}
-
-	// 5. Test date change reset
-	s.tokenMux.Lock()
-	s.todayDate = "2000-01-01" // distant past
-	s.tokenMux.Unlock()
-
-	s.addTokenUsage(usage)
-	s.tokenMux.RLock()
-	if s.todayTokensIn != 100 || s.todayTokensOut != 50 {
-		t.Errorf("Expected reset output, got %d/%d", s.todayTokensIn, s.todayTokensOut)
-	}
-	// Session tokens should NOT reset
-	if s.sessionTokensIn != 300 || s.sessionTokensOut != 150 {
-		t.Errorf("Session tokens should accumulate across days, got %d/%d", s.sessionTokensIn, s.sessionTokensOut)
-	}
-	s.tokenMux.RUnlock()
-}
-
-// TestServer_MultiInstanceTokenMerge verifies that two simulated kc-agent
-// instances correctly merge token counts via the flock-guarded
-// read-modify-write cycle, preventing data loss (#9730).
-func TestServer_MultiInstanceTokenMerge(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "agent-multi-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-	t.Setenv("HOME", tmpDir)
-
-	today := time.Now().Format("2006-01-02")
-
-	// Instance A accumulates 100/50 and saves.
-	a := &Server{todayDate: today, todayTokensIn: 100, todayTokensOut: 50}
-	a.saveTokenUsage()
-
-	// Instance B loads the file (simulating startup after A's save),
-	// then accumulates an additional 200/100 and saves.
-	b := &Server{}
-	b.loadTokenUsage()
-	b.addTokenUsage(&ProviderTokenUsage{InputTokens: 200, OutputTokens: 100})
-	b.saveTokenUsage()
-
-	// Instance A accumulates another 50/25 and saves.
-	// Without flock-based merge, A would clobber B's 200/100 contribution.
-	a.addTokenUsage(&ProviderTokenUsage{InputTokens: 50, OutputTokens: 25})
-	a.saveTokenUsage()
-
-	// Read the persisted file — it should contain the merged total:
-	//   A's contributions: 100 + 50 = 150 input, 50 + 25 = 75 output
-	//   B's contributions: 200 input, 100 output
-	//   Total: 350 input, 175 output
-	path := getTokenUsagePath()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("Failed to read usage file: %v", err)
-	}
-
-	var saved tokenUsageData
-	if err := json.Unmarshal(data, &saved); err != nil {
-		t.Fatalf("Failed to unmarshal: %v", err)
-	}
-
-	const expectedIn int64 = 350
-	const expectedOut int64 = 175
-	if saved.InputIn != expectedIn || saved.OutputOut != expectedOut {
-		t.Errorf("Expected %d/%d merged on disk, got %d/%d",
-			expectedIn, expectedOut, saved.InputIn, saved.OutputOut)
-	}
-}
-
-// TestServer_SessionTokenQuota verifies that the per-session aggregate
-// token quota rejects new prompts once the limit is reached (#9438).
-func TestServer_SessionTokenQuota(t *testing.T) {
-	const testQuota int64 = 500 // intentionally small for the test
-
-	s := &Server{
-		todayDate:         time.Now().Format("2006-01-02"),
-		sessionTokenQuota: testQuota,
-	}
-
-	// Before any usage, the quota should NOT be exceeded
-	if s.isSessionQuotaExceeded() {
-		t.Fatal("quota should not be exceeded before any usage")
-	}
-
-	// Add usage that stays under the quota
-	s.addTokenUsage(&ProviderTokenUsage{InputTokens: 100, OutputTokens: 100, TotalTokens: 200})
-	time.Sleep(50 * time.Millisecond) // let async save fire
-	if s.isSessionQuotaExceeded() {
-		t.Fatal("quota should not be exceeded at 200/500")
-	}
-
-	// Push over the limit
-	s.addTokenUsage(&ProviderTokenUsage{InputTokens: 200, OutputTokens: 200, TotalTokens: 400})
-	time.Sleep(50 * time.Millisecond)
-	if !s.isSessionQuotaExceeded() {
-		t.Fatal("quota should be exceeded at 600/500")
-	}
-
-	// Verify the error message mentions the env var
-	msg := s.sessionTokenQuotaMessage()
-	if !strings.Contains(msg, "KC_SESSION_TOKEN_QUOTA") {
-		t.Errorf("quota message should mention env var, got: %s", msg)
-	}
-}
-
-// TestServer_SessionTokenQuota_Unlimited verifies that a quota of 0
-// disables the limit (#9438).
-func TestServer_SessionTokenQuota_Unlimited(t *testing.T) {
-	s := &Server{
-		todayDate:         time.Now().Format("2006-01-02"),
-		sessionTokenQuota: 0, // unlimited
-	}
-
-	// Even with huge usage, the quota should never trigger
-	s.addTokenUsage(&ProviderTokenUsage{InputTokens: 999_999_999, OutputTokens: 999_999_999})
-	time.Sleep(50 * time.Millisecond)
-	if s.isSessionQuotaExceeded() {
-		t.Fatal("quota of 0 should mean unlimited")
-	}
-}
-
-// TestServer_HandleChatMessage_QuotaExceeded verifies that handleChatMessage
-// returns a token_quota_exceeded error when the session quota is blown (#9438).
 func TestServer_HandleChatMessage_QuotaExceeded(t *testing.T) {
 	const testQuota int64 = 100
 
@@ -211,8 +20,8 @@ func TestServer_HandleChatMessage_QuotaExceeded(t *testing.T) {
 	registry.SetDefault("mock")
 
 	s := &Server{
-		todayDate:         time.Now().Format("2006-01-02"),
-		sessionTokenQuota: testQuota,
+		
+		tokens: tokentracker.New(testQuota),
 		registry:          registry,
 	}
 

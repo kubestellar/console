@@ -1,3 +1,4 @@
+import React from 'react'
 /// <reference types='@testing-library/jest-dom/vitest' />
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -5,9 +6,12 @@ import { MemoryRouter } from 'react-router-dom'
 
 import '../../test/utils/setupMocks'
 
+let mockClustersLoading = false
+let mockClustersError: string | null = null
+
 vi.mock('../../lib/dashboards/DashboardPage', () => ({
-  DashboardPage: ({ title, subtitle, children }: { title: string; subtitle?: string; children?: React.ReactNode }) => (
-    <div data-testid='dashboard-page' data-title={title} data-subtitle={subtitle}>
+  DashboardPage: ({ title, subtitle, children, isLoading }: { title: string; subtitle?: string; children?: React.ReactNode; isLoading?: boolean }) => (
+    <div data-testid='dashboard-page' data-title={title} data-subtitle={subtitle} data-loading={isLoading ? 'true' : 'false'}>
       <h1>{title}</h1>
       {subtitle && <p>{subtitle}</p>}
       {children}
@@ -25,7 +29,7 @@ vi.mock('../../hooks/useAlerts', () => ({
 
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => ({
-    deduplicatedClusters: [], isRefreshing: false, refetch: vi.fn(), error: null,
+    deduplicatedClusters: [], isLoading: mockClustersLoading, isRefreshing: false, refetch: vi.fn(), error: mockClustersError,
   }),
 }))
 
@@ -70,5 +74,20 @@ describe('Alerts Component', () => {
     renderAlerts()
     const page = screen.getByTestId('dashboard-page')
     expect(page).toHaveAttribute('data-subtitle')
+  })
+
+  it('marks dashboard loading state while cluster data is loading', () => {
+    mockClustersLoading = true
+    renderAlerts()
+    expect(screen.getByTestId('dashboard-page')).toHaveAttribute('data-loading', 'true')
+    mockClustersLoading = false
+  })
+
+  it('displays error message when cluster data fetch fails', () => {
+    mockClustersError = 'Failed to connect to cluster'
+    renderAlerts()
+    expect(screen.getByText('alerts.errorLoading')).toBeInTheDocument()
+    expect(screen.getByText('Failed to connect to cluster')).toBeInTheDocument()
+    mockClustersError = null
   })
 })

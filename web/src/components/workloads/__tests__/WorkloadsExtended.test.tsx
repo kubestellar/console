@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -20,19 +21,22 @@ vi.mock('../../../lib/demoMode', () => ({
   setDemoToken: vi.fn(),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   getDemoMode: () => mockIsDemoMode,
   default: () => ({ isDemoMode: mockIsDemoMode, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   isDemoModeForced: false,
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(),
   emitLogin: vi.fn(),
   emitEvent: vi.fn(),
   analyticsReady: Promise.resolve(),
-}))
+}
+))
 
 vi.mock('../../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: ({ title, children }: { title: string; children?: React.ReactNode }) => (
@@ -43,17 +47,44 @@ vi.mock('../../../lib/dashboards/DashboardPage', () => ({
   ),
 }))
 
-let mockPodIssues: any[] = []
-let mockDeploymentIssues: any[] = []
-let mockDeployments: any[] = []
-let mockClusters: any[] = []
+interface MockPodIssue {
+  name: string
+  namespace: string
+  cluster: string
+  reason: string
+}
+
+interface MockDeploymentIssue {
+  name: string
+  namespace: string
+  cluster: string
+  reason?: string
+}
+
+interface MockDeployment {
+  name: string
+  namespace: string
+  cluster: string
+  status: string
+  replicas: number
+  readyReplicas: number
+}
+
+interface MockCluster {
+  name: string
+}
+
+let mockPodIssues: MockPodIssue[] = []
+let mockDeploymentIssues: MockDeploymentIssue[] = []
+let mockDeployments: MockDeployment[] = []
+const mockClusters: MockCluster[] = []
 let mockIsLoading = false
 let mockIsDemoMode = true
 
 vi.mock('../../../hooks/useMCP', () => ({
   usePodIssues: () => ({ issues: mockPodIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
-  useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: mockIsLoading, isRefreshing: false, refetch: vi.fn() }),
-  useDeployments: () => ({ deployments: mockDeployments, isLoading: mockIsLoading, isRefreshing: false, refetch: vi.fn() }),
+  useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
+  useDeployments: () => ({ deployments: mockDeployments, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
   useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters, isLoading: mockIsLoading, lastUpdated: null, refetch: vi.fn() }),
 }))
 
@@ -64,7 +95,7 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
     selectedClusters: [],
     isAllClustersSelected: true,
     customFilter: '',
-    filterByCluster: (items: any[]) => items,
+    filterByCluster: <T,>(items: T[]) => items,
   })),
 }))
 
@@ -114,7 +145,7 @@ vi.mock('../../ui/Toast', () => ({
 const kubectlExecSpy = vi.fn().mockResolvedValue({ output: 'deployment.apps/test restarted', exitCode: 0 })
 vi.mock('../../../lib/kubectlProxy', () => ({
   kubectlProxy: {
-    exec: (...args: any[]) => kubectlExecSpy(...args),
+    exec: (...args: unknown[]) => kubectlExecSpy(...args),
   },
 }))
 
@@ -140,8 +171,8 @@ const setupDeploymentView = () => {
     selectedClusters: [],
     isAllClustersSelected: true,
     customFilter: 'nginx',
-    filterByCluster: (items: any[]) => items,
-  } as any)
+    filterByCluster: <T,>(items: T[]) => items,
+  })
 
   mockDeployments = [
     { name: 'nginx-web', namespace: 'production', cluster: 'ctx/prod-east', status: 'running', replicas: 3, readyReplicas: 3 },
@@ -227,8 +258,8 @@ describe('Namespace-grouped view (#12479)', () => {
       selectedClusters: [],
       isAllClustersSelected: true,
       customFilter: '',
-      filterByCluster: (items: any[]) => items,
-    } as any)
+      filterByCluster: <T,>(items: T[]) => items,
+    })
   })
 
   it('groups deployments by namespace/cluster when no filter is applied', () => {
@@ -434,8 +465,8 @@ describe('Loading skeleton and agent-offline states (#12481)', () => {
       selectedClusters: [],
       isAllClustersSelected: true,
       customFilter: '',
-      filterByCluster: (items: any[]) => items,
-    } as any)
+      filterByCluster: <T,>(items: T[]) => items,
+    })
   })
 
   it('shows loading skeletons when data is loading and no data exists', () => {
@@ -448,10 +479,10 @@ describe('Loading skeleton and agent-offline states (#12481)', () => {
     renderWorkloads()
 
     // Skeleton elements should be present (they use role or specific class)
-    const skeletons = screen.getAllByTestId ? 
+    const skeletons = screen.getAllByTestId ?
       document.querySelectorAll('[class*="skeleton"], [class*="Skeleton"], [class*="animate-pulse"]') :
       document.querySelectorAll('[class*="skeleton"], [class*="Skeleton"], [class*="animate-pulse"]')
-    
+
     expect(skeletons.length).toBeGreaterThan(0)
   })
 

@@ -30,8 +30,10 @@ vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
 }))
 
-vi.mock('../../useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../lib/sseClient', () => ({
@@ -105,7 +107,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockSubscribePolling.mockReturnValue(vi.fn())
   mockFetchSSE.mockResolvedValue([])
@@ -144,7 +146,7 @@ describe('useSecurityIssues', () => {
 
   it('returns demo security issues when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useSecurityIssues())
 
@@ -194,7 +196,7 @@ describe('useSecurityIssues', () => {
 
   it('returns lastRefresh timestamp', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useSecurityIssues())
 
@@ -207,7 +209,7 @@ describe('useSecurityIssues', () => {
 
   it('demo issues include all expected severity levels', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useSecurityIssues())
 
@@ -220,7 +222,7 @@ describe('useSecurityIssues', () => {
 
   it('demo issues all have required fields (name, namespace, cluster, issue, severity)', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useSecurityIssues())
 
@@ -336,7 +338,7 @@ describe('useSecurityIssues', () => {
 
   it('skips SSE when demo mode is enabled, never calls fetchSSE', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     mockFetchSSE.mockResolvedValue([])
 
     const { result } = renderHook(() => useSecurityIssues())
@@ -395,7 +397,7 @@ describe('useGitOpsDrifts', () => {
 
   it('returns demo drifts when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useGitOpsDrifts())
 
@@ -449,7 +451,7 @@ describe('useGitOpsDrifts', () => {
 
   it('demo drifts include all three drift types (modified, added, deleted-check)', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useGitOpsDrifts())
 
@@ -462,7 +464,7 @@ describe('useGitOpsDrifts', () => {
 
   it('demo drifts all have required fields (resource, namespace, cluster, kind, driftType, severity)', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useGitOpsDrifts())
 
@@ -692,7 +694,7 @@ describe('useGitOpsDrifts', () => {
 
   it('demo drifts include severity for each entry', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useGitOpsDrifts())
 

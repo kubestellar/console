@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -259,7 +260,8 @@ describe('TableVisualization', () => {
     it('disables prev button on first page', () => {
       renderTable({ pageSize: PAGE_SIZE })
       const buttons = screen.getAllByRole('button')
-      expect(buttons[0]).toHaveProperty('disabled', true)
+      const prevButton = buttons[0]
+      expect(prevButton.getAttribute('aria-disabled')).toBe('true')
     })
 
     it('disables next button on last page', async () => {
@@ -275,8 +277,8 @@ describe('TableVisualization', () => {
 
       // Refresh buttons reference after re-renders
       const updatedButtons = screen.getAllByRole('button')
-      const lastNext = updatedButtons[updatedButtons.length - 1]
-      expect(lastNext).toHaveProperty('disabled', true)
+      const updatedNext = updatedButtons[updatedButtons.length - 1]
+      expect(updatedNext.getAttribute('aria-disabled')).toBe('true')
     })
 
     it('does not show pagination when all data fits on one page', () => {

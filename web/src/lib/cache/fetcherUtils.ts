@@ -9,7 +9,7 @@ import { isBackendUnavailable } from '../api'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { fetchSSE } from '../sseClient'
 import { clusterCacheRef } from '../../hooks/mcp/clusterCacheRef'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../constants'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_TOKEN } from '../constants'
 import { getStoredAuthTokenSync } from '../authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../constants/network'
 import { settledWithConcurrency } from '../utils/concurrency'
@@ -61,6 +61,14 @@ export const getToken = () => {
   try { return localStorage.getItem(STORAGE_KEY_TOKEN) } catch { return null }
 }
 
+function hasCookieBackedSession(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true'
+  } catch {
+    return false
+  }
+}
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -107,7 +115,7 @@ function makeRestFetcher(config: RestFetcherConfig) {
     params?: Record<string, FetchParamValue>
   ): Promise<T> {
     const token = getToken()
-    if (!token) throw new Error('No authentication token')
+    if (!token && !hasCookieBackedSession()) throw new Error('No authentication token')
 
     const searchParams = new URLSearchParams()
     if (params) {
@@ -121,9 +129,18 @@ function makeRestFetcher(config: RestFetcherConfig) {
     const signal = config.useGlobalAbort
       ? AbortSignal.any([globalFetchController.signal, timeoutSignal])
       : timeoutSignal
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    }
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      credentials: 'same-origin',
+      headers,
       signal })
 
     if (!response.ok) {

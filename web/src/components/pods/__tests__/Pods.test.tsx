@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -17,19 +18,23 @@ vi.mock('../../../lib/demoMode', () => ({
   setDemoToken: vi.fn(),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   getDemoMode: () => true,
   default: () => true,
   useDemoMode: () => true,
   isDemoModeForced: false,
-}))
+}
+))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(),
   emitLogin: vi.fn(),
   emitEvent: vi.fn(),
   analyticsReady: Promise.resolve(),
-}))
+}
+))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({
@@ -205,7 +210,7 @@ describe('Pods Component', () => {
   it('renders the action buttons (Restart, Logs, Delete)', () => {
     renderPods()
     expect(screen.getByLabelText('common.restart')).toBeTruthy()
-    expect(screen.getByLabelText('View logs')).toBeTruthy()
+    expect(screen.getByLabelText('common.logs')).toBeTruthy()
     expect(screen.getByLabelText('common.delete')).toBeTruthy()
   })
 
@@ -228,10 +233,9 @@ describe('Pods Component', () => {
 
   it('calls drillToPod when Logs is clicked', () => {
     renderPods()
-    const logsBtn = screen.getByLabelText('View logs')
+    const logsBtn = screen.getByLabelText('common.logs')
     fireEvent.click(logsBtn)
     // Check if drillToPod was called with tab: 'logs'
-    // Note: we added tab: 'logs' to the drillToPod call in implementation
     expect(drillToPodSpy).toHaveBeenCalledWith('ctx/prod', 'default', 'my-pod', { tab: 'logs' })
   })
 

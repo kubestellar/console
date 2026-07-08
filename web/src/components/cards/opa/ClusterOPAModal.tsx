@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Shield, AlertTriangle, CheckCircle, ExternalLink, Plus, Edit3, Trash2, FileCode, LayoutTemplate, Sparkles, Copy } from 'lucide-react'
+import { Shield, AlertTriangle, CheckCircle, ExternalLink, Plus, Edit3, Trash2, FileCode, LayoutTemplate, Sparkles, Copy, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../ui/Button'
 import { BaseModal, useModalState } from '../../../lib/modals'
@@ -41,6 +41,8 @@ export function ClusterOPAModal({
   const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null)
   const [yamlContent, setYamlContent] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<Policy | null>(null)
+  const [togglingPolicyId, setTogglingPolicyId] = useState<string | null>(null)
+  const [isDeletingPolicy, setIsDeletingPolicy] = useState(false)
   const createMenuRef = useRef<HTMLDivElement>(null)
 
   // Close create menu when clicking outside
@@ -192,7 +194,9 @@ Please proceed with applying this policy.`,
 
   // Toggle enforcement mode
   const handleToggleMode = async (policy: Policy) => {
+    if (togglingPolicyId) return
     const newMode = policy.mode === 'enforce' ? 'warn' : policy.mode === 'warn' ? 'dryrun' : 'enforce'
+    setTogglingPolicyId(policy.name)
     try {
       await kubectlProxy.exec(
         ['patch', policy.kind.toLowerCase(), policy.name, '--type=merge', '-p', `{"spec":{"enforcementAction":"${newMode}"}}`],
@@ -203,11 +207,14 @@ Please proceed with applying this policy.`,
     } catch (err: unknown) {
       console.error('Failed to toggle mode:', err)
       showToast('Failed to toggle policy mode', 'error')
+    } finally {
+      setTogglingPolicyId(null)
     }
   }
 
   // Delete policy
   const handleDelete = async (policy: Policy) => {
+    setIsDeletingPolicy(true)
     try {
       await kubectlProxy.exec(
         ['delete', policy.kind.toLowerCase(), policy.name],
@@ -219,6 +226,8 @@ Please proceed with applying this policy.`,
     } catch (err: unknown) {
       console.error('Failed to delete policy:', err)
       showToast('Failed to delete policy', 'error')
+    } finally {
+      setIsDeletingPolicy(false)
     }
   }
 
@@ -333,9 +342,13 @@ Please proceed with applying this policy.`,
                       <div className="flex items-center gap-2">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleToggleMode(policy) }}
-                          className={`px-2 py-0.5 rounded text-xs font-medium transition-colors hover:opacity-80 ${getModeColor(policy.mode)}`}
+                          disabled={!!togglingPolicyId}
+                          className={`px-2 py-0.5 rounded text-xs font-medium transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 ${getModeColor(policy.mode)}`}
                           title="Click to cycle: enforce → warn → dryrun"
                         >
+                          {togglingPolicyId === policy.name ? (
+                            <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+                          ) : null}
                           {policy.mode}
                         </button>
                       </div>
@@ -501,7 +514,7 @@ Please proceed with applying this policy.`,
           onClose={() => setShowYamlEditor(false)}
           showBack={false}
         />
-        <BaseModal.Content className="overflow-visible!">
+        <BaseModal.Content className="overflow-visible">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
               <span className="text-muted-foreground">YAML will be applied to: <span className="text-foreground">{clusterName}</span></span>
@@ -579,10 +592,15 @@ Please proceed with applying this policy.`,
           <div className="flex-1" />
           <button
             onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-            className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+            disabled={isDeletingPolicy}
+            className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Trash2 className="w-4 h-4" />
-            Delete Policy
+            {isDeletingPolicy ? (
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+            {isDeletingPolicy ? 'Deleting...' : 'Delete Policy'}
           </button>
         </BaseModal.Footer>
       </BaseModal>

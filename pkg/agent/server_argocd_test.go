@@ -30,6 +30,7 @@ func TestServer_HandleArgoCDSync(t *testing.T) {
 
 	// 1. Unauthorized
 	req := httptest.NewRequest("POST", "/argocd/sync", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 	server.handleArgoCDSync(w, req)
 	if w.Code != http.StatusUnauthorized {
@@ -38,6 +39,7 @@ func TestServer_HandleArgoCDSync(t *testing.T) {
 
 	// 2. Method not allowed
 	req = httptest.NewRequest("GET", "/argocd/sync", nil)
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleArgoCDSync(w, req)
@@ -47,6 +49,7 @@ func TestServer_HandleArgoCDSync(t *testing.T) {
 
 	// 3. Bad request (invalid body)
 	req = httptest.NewRequest("POST", "/argocd/sync", bytes.NewBufferString("invalid"))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleArgoCDSync(w, req)
@@ -57,6 +60,7 @@ func TestServer_HandleArgoCDSync(t *testing.T) {
 	// 4. Bad request (missing fields)
 	body, _ := json.Marshal(map[string]string{"appName": "test-app"})
 	req = httptest.NewRequest("POST", "/argocd/sync", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleArgoCDSync(w, req)
@@ -95,6 +99,7 @@ func TestServer_HandleArgoCDSync(t *testing.T) {
 	}
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest("POST", "/argocd/sync", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 

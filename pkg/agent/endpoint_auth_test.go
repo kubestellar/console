@@ -242,7 +242,7 @@ func newAuthTestServerWithToken() *Server {
 	}
 
 	return &Server{
-		kubectl:        &kube.KubectlProxy{config: config},
+		kubectl:        kube.NewTestKubectlProxy(config),
 		allowedOrigins: []string{testAllowedOrigin},
 		agentToken:     testTokenValue,
 		tokenExplicit:  true, // treat test token as explicitly set so origin bypass doesn't fire
@@ -259,7 +259,7 @@ func newAuthTestServerNoToken() *Server {
 	}
 
 	return &Server{
-		kubectl:        &kube.KubectlProxy{config: config},
+		kubectl:        kube.NewTestKubectlProxy(config),
 		allowedOrigins: []string{testAllowedOrigin},
 		agentToken:     "", // No token — all requests pass validateToken
 		registry:       &Registry{providers: make(map[string]AIProvider)},
@@ -275,6 +275,7 @@ func TestEndpointAuth_SensitiveEndpointsRejectWithoutToken(t *testing.T) {
 		ep := ep // capture loop variable
 		t.Run(fmt.Sprintf("%s_%s_no_auth", ep.method, ep.path), func(t *testing.T) {
 			req := httptest.NewRequest(ep.method, ep.path, nil)
+			req.Host = "localhost"
 			req.Header.Set("Origin", testAllowedOrigin)
 			w := httptest.NewRecorder()
 
@@ -304,6 +305,7 @@ func TestEndpointAuth_SensitiveEndpointsAcceptValidToken(t *testing.T) {
 		ep := ep
 		t.Run(fmt.Sprintf("%s_%s_with_auth", ep.method, ep.path), func(t *testing.T) {
 			req := httptest.NewRequest(ep.method, ep.path, nil)
+			req.Host = "localhost"
 			req.Header.Set("Origin", testAllowedOrigin)
 			req.Header.Set("Authorization", "Bearer "+testTokenValue)
 			w := httptest.NewRecorder()
@@ -333,6 +335,7 @@ func TestEndpointAuth_InvalidTokenRejected(t *testing.T) {
 		ep := ep
 		t.Run(fmt.Sprintf("%s_%s_bad_token", ep.method, ep.path), func(t *testing.T) {
 			req := httptest.NewRequest(ep.method, ep.path, nil)
+			req.Host = "localhost"
 			req.Header.Set("Origin", testAllowedOrigin)
 			req.Header.Set("Authorization", "Bearer wrong-token")
 			w := httptest.NewRecorder()
@@ -362,6 +365,7 @@ func TestEndpointAuth_PublicEndpointsAccessibleWithoutToken(t *testing.T) {
 		ep := ep
 		t.Run(fmt.Sprintf("GET_%s_public", ep), func(t *testing.T) {
 			req := httptest.NewRequest("GET", ep, nil)
+			req.Host = "localhost"
 			req.Header.Set("Origin", testAllowedOrigin)
 			w := httptest.NewRecorder()
 
@@ -392,6 +396,7 @@ func TestEndpointAuth_DocumentMissingAuth(t *testing.T) {
 		ep := ep
 		t.Run(fmt.Sprintf("%s_%s_missing_auth", ep.method, ep.path), func(t *testing.T) {
 			req := httptest.NewRequest(ep.method, ep.path, nil)
+			req.Host = "localhost"
 			req.Header.Set("Origin", testAllowedOrigin)
 			w := httptest.NewRecorder()
 
@@ -438,6 +443,7 @@ func TestEndpointAuth_HealthDoesNotLeakSecrets(t *testing.T) {
 	server := newAuthTestServerNoToken()
 
 	req := httptest.NewRequest("GET", endpointHealth, nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", testAllowedOrigin)
 	w := httptest.NewRecorder()
 
@@ -491,6 +497,7 @@ func TestEndpointAuth_StatusReturnsTelemetry(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", endpointStatus, nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", testAllowedOrigin)
 	req.Header.Set("Authorization", "Bearer "+testTokenValue)
 	w := httptest.NewRecorder()
@@ -533,6 +540,7 @@ func TestEndpointAuth_OptionsPreflightNoAuth(t *testing.T) {
 		ep := ep
 		t.Run(fmt.Sprintf("OPTIONS_%s", ep), func(t *testing.T) {
 			req := httptest.NewRequest("OPTIONS", ep, nil)
+			req.Host = "localhost"
 			req.Header.Set("Origin", testAllowedOrigin)
 			w := httptest.NewRecorder()
 

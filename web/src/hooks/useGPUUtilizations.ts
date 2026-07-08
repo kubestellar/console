@@ -8,6 +8,14 @@ const GPU_UTIL_REFRESH_MS = 300_000
 /** Timeout for GPU utilization API requests (10 seconds) */
 const GPU_UTIL_FETCH_TIMEOUT_MS = 10_000
 
+function isAuthUnavailableError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  return err.name === 'UnauthenticatedError'
+    || err.name === 'UnauthorizedError'
+    || err.message.includes('No authentication token')
+    || err.message.includes('Token is invalid or expired')
+}
+
 export interface GPUUtilizationSnapshot {
   id: string
   reservation_id: string
@@ -43,14 +51,23 @@ export function useGPUUtilizations(reservationIds: string[]) {
   const idsKey = [...(reservationIds || [])].sort().join(',')
 
   const fetchData = useCallback(async (ids: string[]) => {
-    const shouldSkipAuthFetch = isDemoMode && !hasRealToken()
-
-    if (!ids || ids.length === 0 || shouldSkipAuthFetch) {
+    if (!ids || ids.length === 0) {
       setData({})
       setError(null)
       setIsFailed(false)
       setIsLoading(false)
       return
+    }
+
+    if (isDemoMode) {
+      setData({})
+      setError(null)
+      setIsFailed(false)
+      setIsLoading(false)
+
+      if (!(await hasRealToken())) {
+        return
+      }
     }
 
     try {
@@ -64,6 +81,14 @@ export function useGPUUtilizations(reservationIds: string[]) {
       )
       setData(result || {})
     } catch (err) {
+      if (isAuthUnavailableError(err)) {
+        console.debug('[useGPUUtilizations] Skipped - no auth token')
+        setError(null)
+        setIsFailed(false)
+        setData({})
+        return
+      }
+
       const message = err instanceof Error ? err.message : 'GPU utilization fetch failed'
       console.error('[useGPUUtilizations] Fetch failed:', message)
       setError(message)

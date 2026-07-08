@@ -15,6 +15,7 @@ import type {
 } from '../CardComponents'
 import { CheckCircle, AlertTriangle, Info, Server } from 'lucide-react'
 import React from 'react'
+import { TEST_STRINGS } from '../../test-strings'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -60,6 +61,7 @@ vi.mock('../../../components/ui/Skeleton', () => ({
   Skeleton: ({ height, width, variant, className }: { height?: number; width?: number; variant?: string; className?: string }) => (
     <div data-testid="skeleton" data-variant={variant} data-height={height} data-width={width} className={className} />
   ),
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 // Mock Pagination
@@ -382,7 +384,7 @@ describe('CardHeader', () => {
   })
 
   it('renders controls content', () => {
-    render(<CardHeader title="Test" controls={<button data-testid="ctrl">Ctrl</button>} />)
+    render(<CardHeader title="Test" controls={<button data-testid="ctrl">{TEST_STRINGS.card.ctrl}</button>} />)
     expect(screen.getByTestId('ctrl')).toBeTruthy()
   })
 

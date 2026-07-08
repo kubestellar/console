@@ -8,7 +8,7 @@
 
 import { createContext, use, useState, useEffect, type ReactNode } from 'react'
 import { DEFAULT_BRANDING, mergeBranding, type BrandingConfig } from '../lib/branding'
-import { FETCH_DEFAULT_TIMEOUT_MS, suppressLocalAgent } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, suppressLocalAgent, suppressOptionalPollers } from '../lib/constants/network'
 import { updateAnalyticsIds } from '../lib/analytics'
 
 const BrandingContext = createContext<BrandingConfig>(DEFAULT_BRANDING)
@@ -54,6 +54,9 @@ export function BrandingProvider({ children }: BrandingProviderProps) {
         // build-time VITE_NO_LOCAL_AGENT env var.
         if (!cancelled && data.no_local_agent === true) {
           suppressLocalAgent(true)
+        }
+        if (!cancelled && data.suppress_optional_pollers === true) {
+          suppressOptionalPollers(true)
         }
       } catch {
         // Intentionally silent — branding is non-critical.

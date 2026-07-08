@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
@@ -46,14 +46,14 @@ const (
 // WorkloadHandlers handles workload API endpoints
 type WorkloadHandlers struct {
 	k8sClient *k8s.MultiClusterClient
-	hub       *handlers.Hub
+	hub       *transport.Hub
 	store     store.Store
 	stopOnce  sync.Once
 	stopCh    chan struct{}
 }
 
 // NewWorkloadHandlers creates a new workload handlers instance
-func NewWorkloadHandlers(k8sClient *k8s.MultiClusterClient, hub *handlers.Hub, s store.Store) *WorkloadHandlers {
+func NewWorkloadHandlers(k8sClient *k8s.MultiClusterClient, hub *transport.Hub, s store.Store) *WorkloadHandlers {
 	return &WorkloadHandlers{
 		k8sClient: k8sClient,
 		hub:       hub,

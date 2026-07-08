@@ -1,3 +1,4 @@
+import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
@@ -73,8 +74,10 @@ vi.mock('../../CardDataContext', () => ({
 }))
 
 const mockIsDemoMode = vi.fn(() => false)
-vi.mock('../../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../clusters/useClusterFiltering', () => ({
@@ -162,7 +165,7 @@ vi.mock('../nodeCache', () => ({
   getNodesCache: () => mockGetNodesCache(),
   subscribeToNodes: () => () => {},
   fetchAllNodes: vi.fn(() =>
-    Promise.resolve({ nodes: [], error: null, consecutiveFailures: 0 }),
+    Promise.resolve({ nodes: [], error: false, consecutiveFailures: 0 }),
   ),
   OFFLINE_DETECTION_FAILURE_THRESHOLD: 3,
   GPU_CLUSTER_EXHAUSTION_THRESHOLD: 0.8,

@@ -33,6 +33,8 @@ type AuthConfig struct {
 	JWTSecret      string
 	FrontendURL    string
 	BackendURL     string // Backend URL for OAuth callback (defaults to http://localhost:8080)
+	AllowedGitHubLogins string // Comma-separated OAuth allowlist; empty means any GitHub login may sign in
+	AdminGitHubLogins   string // Comma-separated logins promoted/kept as admin after OAuth sign-in
 	DevUserLogin   string
 	DevUserEmail   string
 	DevUserAvatar  string
@@ -54,6 +56,8 @@ type AuthHandler struct {
 	githubAPIBase  string // API base URL: "https://api.github.com" or "https://github.ibm.com/api/v3"
 	jwtSecret      string
 	frontendURL    string
+	allowedGitHubLogins map[string]struct{}
+	adminGitHubLogins   map[string]struct{}
 	devUserLogin   string
 	devUserEmail   string
 	devUserAvatar  string
@@ -69,6 +73,35 @@ type AuthHandler struct {
 	// http.Client per call, defeating connection reuse and leaking idle
 	// TCP connections during bursts of OAuth callbacks.
 	githubHTTPClient *http.Client
+}
+
+func parseGitHubLoginSet(raw string) map[string]struct{} {
+	logins := make(map[string]struct{})
+	for _, part := range strings.Split(raw, ",") {
+		login := normalizeGitHubLogin(part)
+		if login == "" {
+			continue
+		}
+		logins[login] = struct{}{}
+	}
+	return logins
+}
+
+func normalizeGitHubLogin(login string) string {
+	return strings.ToLower(strings.TrimSpace(login))
+}
+
+func (h *AuthHandler) isGitHubLoginAllowed(login string) bool {
+	if len(h.allowedGitHubLogins) == 0 {
+		return true
+	}
+	_, ok := h.allowedGitHubLogins[normalizeGitHubLogin(login)]
+	return ok
+}
+
+func (h *AuthHandler) isConfiguredGitHubAdmin(login string) bool {
+	_, ok := h.adminGitHubLogins[normalizeGitHubLogin(login)]
+	return ok
 }
 
 // NewAuthHandler creates a new auth handler
@@ -125,9 +158,11 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 		githubAPIBase:    apiBase,
 		jwtSecret:        cfg.JWTSecret,
 		frontendURL:      cfg.FrontendURL,
-		devUserLogin:     cfg.DevUserLogin,
-		devUserEmail:     cfg.DevUserEmail,
-		devUserAvatar:    cfg.DevUserAvatar,
+		allowedGitHubLogins: parseGitHubLoginSet(cfg.AllowedGitHubLogins),
+		adminGitHubLogins:   parseGitHubLoginSet(cfg.AdminGitHubLogins),
+		devUserLogin:        cfg.DevUserLogin,
+		devUserEmail:        cfg.DevUserEmail,
+		devUserAvatar:       cfg.DevUserAvatar,
 		githubToken:      cfg.GitHubToken,
 		devMode:          cfg.DevMode,
 		skipOnboarding:   cfg.SkipOnboarding,
@@ -360,6 +395,10 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		slog.Error("[Auth] failed to get GitHub user", "error", err)
 		return h.oauthErrorRedirect(c, "user_fetch_failed", "Failed to retrieve GitHub user profile")
 	}
+	if !h.isGitHubLoginAllowed(ghUser.Login) {
+		slog.Warn("[Auth] GitHub login denied by allowlist", "login", ghUser.Login)
+		return h.oauthErrorRedirect(c, "github_login_not_allowed", "This GitHub account is not allowed to access this Console")
+	}
 
 	// Find or create user
 	user, err := h.store.GetUserByGitHubID(c.UserContext(), fmt.Sprintf("%d", ghUser.ID))
@@ -375,7 +414,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 
 	if user == nil {
 		role := models.UserRoleViewer
-		if bootstrapAdmin {
+		if bootstrapAdmin || h.isConfiguredGitHubAdmin(ghUser.Login) {
 			role = models.UserRoleAdmin
 		}
 		// Create new user
@@ -396,7 +435,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		user.GitHubLogin = ghUser.Login
 		user.Email = ghUser.Email
 		user.AvatarURL = ghUser.AvatarURL
-		if bootstrapAdmin {
+		if bootstrapAdmin || h.isConfiguredGitHubAdmin(ghUser.Login) {
 			user.Role = models.UserRoleAdmin
 		}
 		if err := h.store.UpdateUser(c.UserContext(), user); err != nil {

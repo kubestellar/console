@@ -33,6 +33,7 @@ func TestGitOpsDrift_ListDrifts(t *testing.T) {
 	// Test list all
 	httpReq, err := http.NewRequest(http.MethodGet, "/api/gitops/drifts", nil)
 	require.NoError(t, err)
+	httpReq.Host = "localhost"
 	resp, err := env.App.Test(httpReq)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -48,6 +49,7 @@ func TestGitOpsDrift_ListDrifts(t *testing.T) {
 	// Test filter by cluster
 	httpReq, err = http.NewRequest(http.MethodGet, "/api/gitops/drifts?cluster=test-cluster", nil)
 	require.NoError(t, err)
+	httpReq.Host = "localhost"
 	resp, err = env.App.Test(httpReq)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -56,6 +58,7 @@ func TestGitOpsDrift_ListDrifts(t *testing.T) {
 
 	httpReq, err = http.NewRequest(http.MethodGet, "/api/gitops/drifts?cluster=other-cluster", nil)
 	require.NoError(t, err)
+	httpReq.Host = "localhost"
 	resp, err = env.App.Test(httpReq)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)

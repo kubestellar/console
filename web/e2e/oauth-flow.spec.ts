@@ -60,7 +60,7 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
 
     await page
       .waitForURL(/\/auth\/github(?:$|\?)/, { timeout: NAV_INTERCEPT_TIMEOUT_MS })
-      .catch(() => {})
+      .catch((error) => { console.error('Promise catch:', error) })
     expect(page.url()).toMatch(/\/auth\/github(?:$|\?)/)
   })
 
@@ -138,9 +138,20 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
 
     // Navigate to the GitHub callback — the mock responds with a redirect
     // to /auth/callback, exercising the real redirect chain (#11909).
-    await page.goto(
-      `/auth/github/callback?code=${FAKE_OAUTH_CODE}&state=${FAKE_OAUTH_STATE}`
-    )
+    // Use waitUntil: 'commit' because the redirect aborts the original
+    // navigation before 'load', causing ERR_ABORTED in CI (#20328, #20325).
+    try {
+      await page.goto(
+        `/auth/github/callback?code=${FAKE_OAUTH_CODE}&state=${FAKE_OAUTH_STATE}`,
+        { waitUntil: 'commit' }
+      )
+    } catch (e: unknown) {
+      // OAuth callback redirects abort the navigation — expected in CI.
+      // ERR_ABORTED means the server responded with a redirect before commit.
+      if (!(e instanceof Error) || !e.message.includes('ERR_ABORTED')) {
+        throw e
+      }
+    }
 
     // Wait for the client-side redirect to complete
     await page.waitForURL(/\/auth\/callback/, { timeout: NAV_INTERCEPT_TIMEOUT_MS })
@@ -264,7 +275,8 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
     ])
 
     await page.goto(
-      `/auth/github/callback?code=${FAKE_OAUTH_CODE}&state=${FAKE_OAUTH_STATE}`
+      `/auth/github/callback?code=${FAKE_OAUTH_CODE}&state=${FAKE_OAUTH_STATE}`,
+      { waitUntil: 'commit' }
     )
 
     await page.waitForURL(/\/(clusters|auth\/callback)/, { timeout: NAV_INTERCEPT_TIMEOUT_MS })

@@ -25,18 +25,21 @@ func TestPingHandler(t *testing.T) {
 
 	t.Run("Missing URL", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/ping", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, 400, resp.StatusCode)
 	})
 
 	t.Run("Invalid URL Format", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/ping?url=not-a-url", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.True(t, resp.StatusCode >= 400)
 	})
 
 	t.Run("Private IP Blocking", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/ping?url=http://127.0.0.1", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 		assert.Equal(t, 403, resp.StatusCode)
 
@@ -59,6 +62,7 @@ func TestPingHandler(t *testing.T) {
 		defer func() { pingClient = oldClient }()
 
 		req := httptest.NewRequest("GET", "/api/ping?url=https://example.com", nil)
+		req.Host = "localhost"
 		resp, _ := app.Test(req)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -80,6 +84,7 @@ func TestPingHandler(t *testing.T) {
 		defer func() { pingClient = oldClient }()
 
 		req := httptest.NewRequest("GET", "/api/ping?url=https://example.com", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req, 1000)
 		require.NoError(t, err)
 

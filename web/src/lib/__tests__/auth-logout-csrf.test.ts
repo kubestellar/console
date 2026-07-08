@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor, act } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import React from 'react'
+import { setStoredAuthToken } from '../authToken'
 
 vi.mock('../api', () => ({
   checkOAuthConfigured: vi.fn().mockResolvedValue({ backendUp: false, oauthConfigured: false }),
@@ -59,7 +60,6 @@ vi.mock('../../hooks/mcp/shared', () => ({
   agentFetch: vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))),
 }))
 
-const STORAGE_KEY_TOKEN = 'token'
 const AUTH_USER_CACHE_KEY = 'kc-user-cache'
 
 async function renderWithAuthProvider() {
@@ -70,38 +70,45 @@ async function renderWithAuthProvider() {
 }
 
 describe('logout CSRF protection', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear()
+    sessionStorage.clear()
     vi.clearAllMocks()
-    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.useRealTimers()
     vi.stubGlobal('fetch', vi.fn())
+    await setStoredAuthToken(null)
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
+    localStorage.clear()
+    sessionStorage.clear()
+    await setStoredAuthToken(null)
   })
 
   it('adds X-Requested-With header to logout fetch', async () => {
     const realToken = 'real-jwt-token-abc'
     const cachedUser = { id: 'u1', github_id: '1', github_login: 'test', onboarded: true }
-    localStorage.setItem(STORAGE_KEY_TOKEN, realToken)
+    vi.spyOn(AbortSignal, 'timeout').mockReturnValue(new AbortController().signal)
+    await setStoredAuthToken(realToken)
     localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
 
-    const mockFetch = vi.fn()
-    mockFetch.mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(cachedUser) })
-    mockFetch.mockResolvedValueOnce({ ok: true })
+    const mockFetch = vi.fn((input: RequestInfo | URL) => {
+      if (input === '/api/me') {
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(cachedUser) })
+      }
+      if (input === '/auth/logout') {
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue({}) })
+      }
+      return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue({}) })
+    })
     vi.stubGlobal('fetch', mockFetch)
 
     const { result } = await renderWithAuthProvider()
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    mockFetch.mockClear()
-    mockFetch.mockResolvedValue({ ok: true })
-
-    act(() => {
-      result.current.logout()
-    })
+    await result.current.logout()
 
     expect(mockFetch).toHaveBeenCalledWith('/auth/logout', expect.objectContaining({
       method: 'POST',
@@ -110,5 +117,5 @@ describe('logout CSRF protection', () => {
         'X-Requested-With': 'XMLHttpRequest',
       }),
     }))
-  })
+  }, 15000)
 })

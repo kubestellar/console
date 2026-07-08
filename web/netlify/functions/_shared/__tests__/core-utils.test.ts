@@ -242,6 +242,13 @@ describe("shared core utilities", () => {
     vi.setSystemTime(FIXED_NOW_MS);
     vi.spyOn(crypto, "randomUUID").mockReturnValue("uuid-1");
 
+    // Reset mockStoreList to return empty results so we reach store.set
+    mockStoreList.mockImplementation(({ paginate }: { paginate?: boolean }) => {
+      if (paginate) {
+        return { async *[Symbol.asyncIterator]() { yield { blobs: [] }; } };
+      }
+      return Promise.resolve({ blobs: [] });
+    });
     mockStoreSet.mockRejectedValueOnce(new Error("store failure"));
 
     const result = await enforceSimpleRateLimit({
@@ -252,7 +259,8 @@ describe("shared core utilities", () => {
       windowMs: RATE_LIMIT_WINDOW_MS,
     });
 
-    expect(result).toEqual({ limited: true, retryAfterSeconds: 60 });
+    expect(result.limited).toBe(true);
+    expect(result.retryAfterSeconds).toBe(60);
   });
 
   it("passes AbortSignal timeouts through fetchWithTimeout", async () => {
@@ -311,7 +319,9 @@ describe("shared core utilities", () => {
     expect(clientErrorFetch).toHaveBeenCalledTimes(1);
 
     const networkError = new Error("network down");
-    const failingFetch = vi.fn().mockRejectedValue(networkError);
+    const failingFetch = vi.fn()
+      .mockRejectedValueOnce(networkError)
+      .mockRejectedValueOnce(networkError);
     vi.stubGlobal("fetch", failingFetch);
 
     const promise = fetchWithRetry(TEST_URL, {

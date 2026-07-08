@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { MissionChat } from '../MissionChat'
@@ -31,8 +32,10 @@ vi.mock('../../../../lib/auth', () => ({
   useAuth: () => ({ user: null }),
 }))
 
-vi.mock('../../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false }),
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../../lib/demoMode', () => ({

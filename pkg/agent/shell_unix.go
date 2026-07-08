@@ -5,7 +5,6 @@
 package agent
 
 import (
-	"os"
 	"os/exec"
 )
 
@@ -32,7 +31,3 @@ func isWindows() bool {
 	return false
 }
 
-// chmodIfSupported sets file permissions. On Unix this is a direct os.Chmod.
-func chmodIfSupported(path string, mode uint32) error {
-	return osChmod(path, os.FileMode(mode))
-}

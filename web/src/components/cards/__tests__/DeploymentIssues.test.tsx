@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 import type { ReactNode } from 'react'
@@ -11,19 +12,23 @@ vi.mock('../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   getDemoMode: () => true, default: () => true,
   useDemoMode: () => mockUseDemoMode(),
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
   canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
-}))
+}
+))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
@@ -74,7 +79,7 @@ describe('DeploymentIssues', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockDeploymentIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockDeploymentIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
     mockDrillDown.mockReturnValue({ drillToDeployment: vi.fn() })
   })
 
@@ -90,7 +95,7 @@ describe('DeploymentIssues', () => {
 
   it('renders skeleton UI when data is loading', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
-    mockDeploymentIssues.mockReturnValue({ issues: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
+    mockDeploymentIssues.mockReturnValue({ issues: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: null })
     const { container } = render(<DeploymentIssues />)
     // Skeleton renders animate-pulse elements or similar loading indicators
     expect(container.innerHTML.length).toBeGreaterThan(0)
@@ -109,7 +114,7 @@ describe('DeploymentIssues', () => {
   })
 
   it('handles undefined issues without crashing', () => {
-    mockDeploymentIssues.mockReturnValue({ issues: undefined, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
+    mockDeploymentIssues.mockReturnValue({ issues: undefined, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: null })
     const { container } = render(<DeploymentIssues />)
     expect(container).toBeTruthy()
   })
@@ -128,13 +133,13 @@ describe('DeploymentIssues', () => {
 
   it('renders during background refresh with cached data', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockDeploymentIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockDeploymentIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
     const { container } = render(<DeploymentIssues />)
     expect(container).toBeTruthy()
   })
 
   it('reports demo fallback state', () => {
-    mockDeploymentIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockDeploymentIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
     render(<DeploymentIssues />)
     expect(mockUseCardLoadingState).toHaveBeenCalled()
   })

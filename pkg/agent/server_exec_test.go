@@ -1091,6 +1091,7 @@ func TestHandleExec_OPTIONSPreflight(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodOptions, "/ws/exec", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:5174")
 	w := httptest.NewRecorder()
 
@@ -1120,6 +1121,7 @@ func TestHandleExec_OPTIONSPreflight_UnknownOrigin(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodOptions, "/ws/exec", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://evil.example.com")
 	w := httptest.NewRecorder()
 
@@ -1140,6 +1142,7 @@ func TestHandleExec_Unauthorized(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/ws/exec", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:5174")
 	w := httptest.NewRecorder()
 
@@ -1161,6 +1164,7 @@ func TestHandleExec_NoK8sClient(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/ws/exec", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleExec(w, req)

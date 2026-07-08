@@ -32,8 +32,10 @@ vi.mock('../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToCost: mockDrillToCost }),
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false }),
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('./CardDataContext', () => ({
@@ -58,6 +60,7 @@ vi.mock('../../lib/cards/CardComponents', () => ({
 
 vi.mock('../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../ui/CloudProviderIcon', () => ({
@@ -190,5 +193,21 @@ describe('ClusterCosts', () => {
 
     // Banner must show $7,000 (all 7 clusters), not $5,000 (page 1 only)
     expect(screen.getByText('$7,000')).toBeTruthy()
+  })
+
+  it('displays error state when cluster data fetch fails', () => {
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: [],
+      isLoading: false,
+      isRefreshing: false,
+      isFailed: true,
+      consecutiveFailures: 1,
+      error: 'Failed to fetch cluster data',
+    })
+    mockUseCardData.mockReturnValue({ ...baseCardData, items: [], totalItems: 0 })
+    
+    render(<ClusterCosts />)
+    
+    expect(screen.queryByText('$')).toBeNull()
   })
 })

@@ -178,6 +178,7 @@ function CanICheckerContent() {
   } = form
 
   // Get selected cluster for namespace fetching
+  // clusters[0] is intentional: user picks from dropdown (line 256-274), this is the initial default
   const selectedCluster = cluster || clusters[0] || ''
   const { namespaces } = useNamespaces(selectedCluster)
 
@@ -195,6 +196,7 @@ function CanICheckerContent() {
   }
 
   const handleCheck = async () => {
+    // clusters[0] fallback is intentional: cluster is selected via dropdown, this handles initial state
     const targetCluster = cluster || clusters[0]
     if (!targetCluster) return
 
@@ -258,6 +260,7 @@ function CanICheckerContent() {
             {t('rbac.cluster')}
           </label>
           <div className="relative">
+            {/* clusters[0] is the initial dropdown selection — user can pick any cluster */}
             <select
               id="cluster-select"
               value={cluster || clusters[0] || ''}

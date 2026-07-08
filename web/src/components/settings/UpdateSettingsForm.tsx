@@ -29,6 +29,7 @@ import { Button } from '../ui/Button'
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 import { INITIAL_PROGRESS_PCT, type UpdateSettingsState } from './useUpdateSettingsState'
+import { useDropdownKeyNav } from '../../hooks/useDropdownKeyNav'
 
 interface UpdateSettingsFormProps {
   state: UpdateSettingsState
@@ -105,6 +106,8 @@ export function UpdateSettingsForm({ state }: UpdateSettingsFormProps) {
     installMethod === 'dev',
   ]
   const failCount = prereqChecks.filter((check) => !check).length
+
+  const channelDropdownKeyNav = useDropdownKeyNav(channelDropdown.close)
 
   return (
     <div id="system-updates-settings" className="glass rounded-xl p-6">
@@ -193,7 +196,7 @@ export function UpdateSettingsForm({ state }: UpdateSettingsFormProps) {
             <ChevronDown className={`w-4 h-4 transition-transform ${channelDropdown.isOpen ? 'rotate-180' : ''}`} />
           </button>
           {channelDropdown.isOpen && (
-            <div role="listbox" aria-labelledby="updates-channel-label" className="absolute z-dropdown mt-2 w-full rounded-lg bg-card border border-border shadow-xl">
+            <div role="listbox" aria-labelledby="updates-channel-label" onKeyDown={channelDropdownKeyNav} className="absolute z-dropdown mt-2 w-full rounded-lg bg-card border border-border shadow-xl">
               {visibleChannels.map((option) => (
                 <button
                   key={option.value}

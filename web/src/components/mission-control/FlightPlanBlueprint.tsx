@@ -217,7 +217,7 @@ export function FlightPlanBlueprint({
 
   // Track if mouse is over the info panel to keep it visible while interacting
   const isOverInfoPanelRef = useRef(false)
-  const hidePanelTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const hidePanelTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Zoom controls
   const [zoom, setZoom] = useState(1)

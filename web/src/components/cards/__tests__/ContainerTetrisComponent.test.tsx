@@ -1,3 +1,4 @@
+import React from 'react'
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, within } from '@testing-library/react'
@@ -29,10 +30,12 @@ vi.mock('../CardDataContext', () => ({
   useReportCardDataState: vi.fn(),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitGameStarted: vi.fn(),
   emitGameEnded: vi.fn(),
-}))
+}
+))
 
 // Get mock store for localStorage
 const store: Record<string, string> = {}

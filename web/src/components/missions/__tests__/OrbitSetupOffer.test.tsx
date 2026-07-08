@@ -1,3 +1,4 @@
+import React from 'react'
 import type { ComponentProps } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -34,9 +35,11 @@ vi.mock('../../../lib/orbit/orbitTemplates', () => ({
   getApplicableOrbitTemplates: (categories: string[]) => mockGetApplicableOrbitTemplates(categories),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitOrbitMissionCreated: (orbitType: string, cadence: string) => mockEmitOrbitMissionCreated(orbitType, cadence),
-}))
+}
+))
 
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),

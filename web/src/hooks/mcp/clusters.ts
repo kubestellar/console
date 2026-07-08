@@ -298,7 +298,7 @@ export function useClusterHealth(cluster?: string) {
         healthy: cached.healthy ?? false,
         reachable: cached.reachable ?? true,
         nodeCount: cached.nodeCount ?? 0,
-        readyNodes: cached.nodeCount ?? 0,
+        readyNodes: cached.readyNodes ?? cached.nodeCount ?? 0,
         podCount: cached.podCount ?? 0,
         cpuCores: cached.cpuCores,
         memoryGB: cached.memoryGB,

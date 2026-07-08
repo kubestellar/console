@@ -1,7 +1,6 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import {
   setupDemoAndNavigate,
-  ELEMENT_VISIBLE_TIMEOUT_MS,
   NETWORK_IDLE_TIMEOUT_MS,
 } from '../helpers/setup'
 
@@ -74,7 +73,21 @@ const MISSION_DEEP_LINKS = [
   '/missions/install-open-cluster-management',
 ] as const
 
-const ALL_ROUTES = [...DASHBOARD_ROUTES, ...LANDING_ROUTES] as const
+test.describe.configure({ mode: 'serial' })
+
+async function expectRenderedContent(page: Page, label: string): Promise<void> {
+  await page.waitForLoadState('domcontentloaded')
+  await expect.poll(
+    () => page.evaluate(() => (document.body.textContent || '').trim().length),
+    {
+      timeout: CONTENT_TIMEOUT_MS,
+      message: `${label} rendered a blank page`,
+    },
+  ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+
+  const crash = page.getByText(/something went wrong|application error|unhandled error/i)
+  await expect(crash).not.toBeVisible()
+}
 
 test.describe('Deep Links — Dashboard Routes', () => {
   for (const route of DASHBOARD_ROUTES) {
@@ -82,16 +95,7 @@ test.describe('Deep Links — Dashboard Routes', () => {
 
     test(`${label} renders content (not blank)`, async ({ page }) => {
       await setupDemoAndNavigate(page, route)
-      await page.waitForLoadState('domcontentloaded')
-
-      const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-      expect(
-        bodyText.length,
-        `Route "${route}" rendered a blank page (body text length: ${bodyText.length})`,
-      ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
-
-      const crash = page.getByText(/something went wrong|application error|unhandled error/i)
-      await expect(crash).not.toBeVisible()
+      await expectRenderedContent(page, `Route "${route}"`)
     })
   }
 })
@@ -101,18 +105,8 @@ test.describe('Deep Links — Landing Pages', () => {
     const label = route.replace('/', '')
 
     test(`${label} renders content (not blank)`, async ({ page }) => {
-      // Landing pages may still check auth context even under LightweightShell,
-      // so set up demo mode first to prevent redirect to /login.
       await setupDemoAndNavigate(page, route)
-
-      const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-      expect(
-        bodyText.length,
-        `Landing page "${route}" rendered a blank page`,
-      ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
-
-      const crash = page.getByText(/something went wrong|application error|unhandled error/i)
-      await expect(crash).not.toBeVisible()
+      await expectRenderedContent(page, `Landing page "${route}"`)
     })
   }
 })
@@ -122,17 +116,8 @@ test.describe('Deep Links — Mission Deep Links', () => {
     const missionName = route.replace('/missions/', '')
 
     test(`mission "${missionName}" renders landing page`, async ({ page }) => {
-      // Mission landing pages need demo context to avoid auth redirects
       await setupDemoAndNavigate(page, route)
-
-      const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-      expect(
-        bodyText.length,
-        `Mission "${missionName}" rendered a blank page`,
-      ).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
-
-      const crash = page.getByText(/something went wrong|application error|unhandled error/i)
-      await expect(crash).not.toBeVisible()
+      await expectRenderedContent(page, `Mission "${missionName}"`)
     })
   }
 })
@@ -140,19 +125,12 @@ test.describe('Deep Links — Mission Deep Links', () => {
 test.describe('Deep Links — Query Params & Special Routes', () => {
   test('/?browse=missions renders missions content', async ({ page }) => {
     await setupDemoAndNavigate(page, '/?browse=missions')
-
-    const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-    expect(bodyText.length).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
-
-    const crash = page.getByText(/something went wrong|application error/i)
-    await expect(crash).not.toBeVisible()
+    await expectRenderedContent(page, '/?browse=missions')
   })
 
   test('route with hash fragment does not crash', async ({ page }) => {
     await setupDemoAndNavigate(page, '/settings#appearance')
-
-    const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-    expect(bodyText.length).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+    await expectRenderedContent(page, '/settings#appearance')
   })
 })
 
@@ -162,7 +140,7 @@ test.describe('Deep Links — Navigation Integrity', () => {
 
     // Navigate to clusters
     await page.goto('/clusters')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
     // Demo mode flag should still be set
     const demoMode = await page.evaluate(() => localStorage.getItem('kc-demo-mode'))
@@ -170,7 +148,7 @@ test.describe('Deep Links — Navigation Integrity', () => {
 
     // Navigate to settings
     await page.goto('/settings')
-    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch((error) => { console.error('Promise catch:', error) })
 
     const demoModeAfter = await page.evaluate(() => localStorage.getItem('kc-demo-mode'))
     expect(demoModeAfter).toBe('true')
@@ -184,7 +162,6 @@ test.describe('Deep Links — Navigation Integrity', () => {
     expect(finalUrl).not.toContain('redirect')
 
     // Page should have content
-    const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-    expect(bodyText.length).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
+    await expectRenderedContent(page, '/missions')
   })
 })

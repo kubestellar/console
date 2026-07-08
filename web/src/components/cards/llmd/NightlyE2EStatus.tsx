@@ -201,7 +201,7 @@ export function NightlyE2EStatus() {
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center gap-2">
               <TestTube2 size={20} className="text-muted-foreground" />
-              <p className="text-[11px] text-muted-foreground">{t('cards:llmd.hoverTestDetails')}</p>
+              <p className="text-xs text-muted-foreground">{t('cards:llmd.hoverTestDetails')}</p>
             </div>
           )}
         </div>

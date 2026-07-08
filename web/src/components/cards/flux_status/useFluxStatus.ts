@@ -1,6 +1,6 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { areOptionalPollersSuppressed, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 import { authFetch } from '../../../lib/api'
 import {
   FLUX_DEMO_DATA,
@@ -229,6 +229,10 @@ function buildFluxStatus(
 }
 
 async function fetchFluxStatus(): Promise<FluxStatusData> {
+  if (areOptionalPollersSuppressed()) {
+    return INITIAL_DATA
+  }
+
   const [sourceResult, kustomizationResult, helmResult] = await Promise.all([
     fetchGitRepositories(),
     fetchKustomizations(),

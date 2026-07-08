@@ -70,6 +70,26 @@ func TestNewAuthHandler(t *testing.T) {
 				require.Contains(t, h.githubAPIBase, "github.enterprise.com")
 			},
 		},
+		{
+			name: "github login allowlist and admin list",
+			cfg: AuthConfig{
+				GitHubClientID:      "client-id",
+				GitHubSecret:        "secret",
+				GitHubURL:           "https://github.com",
+				JWTSecret:           "jwt-secret",
+				FrontendURL:         "http://localhost:5174",
+				BackendURL:          "http://localhost:8080",
+				AllowedGitHubLogins: " canary-user, teammate ",
+				AdminGitHubLogins:   "canary-user",
+			},
+			expect: func(t *testing.T, h *AuthHandler) {
+				require.True(t, h.isGitHubLoginAllowed("CANARY-USER"))
+				require.True(t, h.isGitHubLoginAllowed("TEAMMATE"))
+				require.False(t, h.isGitHubLoginAllowed("unknown-user"))
+				require.True(t, h.isConfiguredGitHubAdmin("canary-user"))
+				require.False(t, h.isConfiguredGitHubAdmin("teammate"))
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -101,6 +121,7 @@ func TestAuthHandler_DevMode(t *testing.T) {
 	app.Get("/auth/github", h.GitHubLogin)
 
 	req := httptest.NewRequest(http.MethodGet, "/auth/github", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	require.Equal(t, fiber.StatusTemporaryRedirect, resp.StatusCode)
@@ -210,7 +231,7 @@ func TestAuthHandler_CleanupExpiredTokens(t *testing.T) {
 	jti2 := uuid.New().String()
 	jti3 := uuid.New().String()
 
-	now := time.Now()
+	now := time.Now().UTC()
 	expiredTime := now.Add(-time.Hour)
 	futureTime := now.Add(time.Hour)
 

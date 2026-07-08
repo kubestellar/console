@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { ChangeControlAuditContent as ChangeControlAudit } from './ChangeControlAudit'
@@ -5,6 +6,10 @@ import { ChangeControlAuditContent as ChangeControlAudit } from './ChangeControl
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
+
+vi.mock('../../lib/api', () => ({
+  authFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(url, init)),
 }))
 
 const mockSummary = {
@@ -36,6 +41,13 @@ function mockFetchSuccess() {
 
 describe('ChangeControlAudit', () => {
   beforeEach(() => { vi.restoreAllMocks() })
+
+  it('shows loading state before change-control endpoints resolve', () => {
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}) as Promise<Response>)
+    render(<ChangeControlAudit />)
+
+    expect(document.querySelector('.animate-spin')).toBeTruthy()
+  })
 
   it('renders header and summary cards', async () => {
     mockFetchSuccess()

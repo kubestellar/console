@@ -96,7 +96,7 @@ export const deploymentIssuesConfig: UnifiedCardConfig = {
     icon: 'CheckCircle',
     title: 'All deployments healthy',
     message: 'No deployment issues detected',
-    variant: 'success',
+    variant: 'neutral',
   },
 
   // Loading state

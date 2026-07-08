@@ -105,7 +105,6 @@ export function prefetchDemoCardChunks(): void {
     () => import('./DataComplianceCards'),
     () => import('./workload-detection/MLJobs'),
     () => import('./workload-detection/MLNotebooks'),
-    () => import('./llmd'),
     () => import('./KagentiStatusCard'),
     () => import('./kagenti/KagentiAgentFleet'),
     () => import('./kagenti/KagentiBuildPipeline'),

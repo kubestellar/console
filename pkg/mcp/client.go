@@ -333,6 +333,9 @@ func (c *Client) CallTool(ctx context.Context, name string, args map[string]inte
 		return nil, err
 	}
 
+	if result == nil {
+		return nil, fmt.Errorf("nil result from tools/call")
+	}
 	var toolResult CallToolResult
 	if err := json.Unmarshal(result, &toolResult); err != nil {
 		return nil, fmt.Errorf("failed to parse tool result: %w", err)
@@ -355,6 +358,9 @@ func (c *Client) initialize(ctx context.Context) error {
 		return err
 	}
 
+	if result == nil {
+		return fmt.Errorf("nil result from initialize")
+	}
 	var initResult InitializeResult
 	if err := json.Unmarshal(result, &initResult); err != nil {
 		return fmt.Errorf("failed to parse initialize result: %w", err)
@@ -375,6 +381,9 @@ func (c *Client) listTools(ctx context.Context) error {
 		return err
 	}
 
+	if result == nil {
+		return fmt.Errorf("nil result from tools/list")
+	}
 	var toolsResult ToolsListResult
 	if err := json.Unmarshal(result, &toolsResult); err != nil {
 		return fmt.Errorf("failed to parse tools list: %w", err)
@@ -412,8 +421,14 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (j
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("context done")
 	case resp := <-respCh:
+		if resp == nil {
+			return nil, fmt.Errorf("nil response from channel")
+		}
 		if resp.Error != nil {
 			return nil, fmt.Errorf("RPC error %d: %s", resp.Error.Code, resp.Error.Message)
 		}
@@ -464,6 +479,10 @@ func (c *Client) send(req Request) error {
 	c.writeMu.Lock()
 	safego.Go(func() {
 		defer c.writeMu.Unlock()
+		if c.stdin == nil {
+			ch <- writeResult{err: fmt.Errorf("stdin is nil (connection unavailable)")}
+			return
+		}
 		_, werr := c.stdin.Write(data)
 		ch <- writeResult{err: werr}
 	})

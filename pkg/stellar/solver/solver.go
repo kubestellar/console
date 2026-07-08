@@ -130,7 +130,7 @@ func SolveLoop(
 			"status":       "running",
 		}})
 	}
-	broadcast("reading", "Reading recent pod status…", 0)
+	broadcast("reading", "Reading recent pod status\u2026", 0)
 
 	// Deterministic action ladder for the v1 loop. The spec wants an LLM at the
 	// plan step; until that slots in, the ladder gives the same "junior engineer"
@@ -154,12 +154,16 @@ func SolveLoop(
 			continue
 		}
 
-		broadcast("planning", fmt.Sprintf("Trying %s — safest reversible action.", actionType), actionsTaken)
+		broadcast("planning", fmt.Sprintf("Trying %s \u2014 safest reversible action.", actionType), actionsTaken)
 		actionID, outcome, err := dispatchAction(ctx, storage, k8sClient, input, actionType, dedupeKey)
 		actionsTaken++
-		_ = storage.IncrementSolveActions(ctx, input.SolveID)
+		if storage != nil {
+			_ = storage.IncrementSolveActions(ctx, input.SolveID)
+		}
 		lastAction = actionType
-		lastOutcome = outcome
+		if outcome != "" {
+			lastOutcome = outcome
+		}
 		if err != nil {
 			broadcast("acting", fmt.Sprintf("%s failed: %s", actionType, err.Error()), actionsTaken)
 			slog.Warn("solver: action dispatch failed",
@@ -169,7 +173,7 @@ func SolveLoop(
 		broadcast("acting", fmt.Sprintf("%s executed. %s", actionType, outcome), actionsTaken)
 
 		// Observe phase: dwell briefly so the operator perceives the verify step.
-		broadcast("observing", fmt.Sprintf("Waiting %ds to verify…", int(ObserveWait/time.Second)), actionsTaken)
+		broadcast("observing", fmt.Sprintf("Waiting %ds to verify\u2026", int(ObserveWait/time.Second)), actionsTaken)
 		select {
 		case <-ctx.Done():
 			terminate(ctx, storage, input.SolveID, "exhausted", "Cancelled mid-observe.", "wall_clock", "", broadcaster, input)
@@ -178,7 +182,7 @@ func SolveLoop(
 		}
 
 		// Verify: read pod status. If healthy, resolve. Otherwise advance ladder.
-		broadcast("verifying", "Re-reading pod state…", actionsTaken)
+		broadcast("verifying", "Re-reading pod state\u2026", actionsTaken)
 		healthy, healthMsg := verifyResourceHealth(ctx, k8sClient, input.Cluster, input.Namespace, input.Workload)
 		if healthy {
 			summary := fmt.Sprintf("Resolved by %s. %s", actionType, healthMsg)
@@ -190,7 +194,7 @@ func SolveLoop(
 	}
 
 	// Exhausted the ladder without success → escalate to human.
-	summary := fmt.Sprintf("Tried %d action(s) (last: %s — %s). Issue persists; needs your judgment.",
+	summary := fmt.Sprintf("Tried %d action(s) (last: %s \u2014 %s). Issue persists; needs your judgment.",
 		actionsTaken, lastAction, lastOutcome)
 	terminate(ctx, storage, input.SolveID, "escalated", summary, "", "", broadcaster, input)
 }
@@ -233,10 +237,12 @@ func dispatchAction(
 		ApprovedBy:  "stellar-solver",
 		ApprovedAt:  &now,
 	}
-	if err := storage.CreateStellarAction(ctx, action); err != nil {
-		return "", "", fmt.Errorf("create action: %w", err)
+	if storage != nil {
+		if err := storage.CreateStellarAction(ctx, action); err != nil {
+			return "", "", fmt.Errorf("create action: %w", err)
+		}
+		_ = storage.UpdateStellarActionStatus(ctx, action.ID, "running", "", "")
 	}
-	_ = storage.UpdateStellarActionStatus(ctx, action.ID, "running", "", "")
 
 	outcome, dispatchErr := scheduler.Dispatch(ctx, k8sClient, *action)
 	status := "completed"
@@ -244,25 +250,29 @@ func dispatchAction(
 		status = "failed"
 		outcome = dispatchErr.Error()
 	}
-	_ = storage.UpdateStellarActionStatus(ctx, action.ID, status, outcome, "")
+	if storage != nil {
+		_ = storage.UpdateStellarActionStatus(ctx, action.ID, status, outcome, "")
+	}
 
 	completed := time.Now().UTC()
 	durationMs := int(completed.Sub(now).Milliseconds())
 	// Note: dedupe_key + solve_id are written via an explicit UPDATE because the
 	// generic CreateStellarExecution signature predates these columns. A future
 	// migration that adds them to the create-path will remove this follow-up.
-	_ = storage.CreateStellarExecution(ctx, &store.StellarExecution{
-		UserID:      input.UserID,
-		MissionID:   "solver",
-		TriggerType: "solve",
-		TriggerData: marshalTriggerData(input.SolveID, actionType),
-		Status:      status,
-		RawInput:    fmt.Sprintf("Action %s on %s/%s/%s", actionType, input.Cluster, input.Namespace, name),
-		Output:      outcome,
-		DurationMs:  durationMs,
-		StartedAt:   now,
-		CompletedAt: &completed,
-	})
+	if storage != nil {
+		_ = storage.CreateStellarExecution(ctx, &store.StellarExecution{
+			UserID:      input.UserID,
+			MissionID:   "solver",
+			TriggerType: "solve",
+			TriggerData: marshalTriggerData(input.SolveID, actionType),
+			Status:      status,
+			RawInput:    fmt.Sprintf("Action %s on %s/%s/%s", actionType, input.Cluster, input.Namespace, name),
+			Output:      outcome,
+			DurationMs:  durationMs,
+			StartedAt:   now,
+			CompletedAt: &completed,
+		})
+	}
 	if dispatchErr != nil {
 		return action.ID, outcome, dispatchErr
 	}
@@ -285,6 +295,9 @@ func verifyResourceHealth(ctx context.Context, k8sClient *k8s.MultiClusterClient
 	if err != nil {
 		return false, fmt.Sprintf("deployment read error: %s", err.Error())
 	}
+	if deploy == nil {
+		return false, "deployment read returned nil"
+	}
 	if deploy.Status.ReadyReplicas > 0 && deploy.Status.ReadyReplicas == deploy.Status.Replicas {
 		return true, fmt.Sprintf("%d/%d replicas ready.", deploy.Status.ReadyReplicas, deploy.Status.Replicas)
 	}
@@ -300,21 +313,23 @@ func terminate(
 	broadcaster Broadcaster,
 	input Input,
 ) {
-	_ = storage.UpdateSolveStatus(ctx, solveID, status, summary, limitHit, errStr)
+	if storage != nil {
+		_ = storage.UpdateSolveStatus(ctx, solveID, status, summary, limitHit, errStr)
+	}
 
 	notifTitle := ""
 	notifSeverity := "info"
 	switch status {
 	case "resolved":
-		notifTitle = "✦ Stellar resolved an issue"
+		notifTitle = "\u2726 Stellar resolved an issue"
 	case "escalated":
-		notifTitle = "⚠ Stellar escalated to you"
+		notifTitle = "\u26a0 Stellar escalated to you"
 		notifSeverity = "warning"
 	case "exhausted":
-		notifTitle = "⏸ Stellar paused at budget limit"
+		notifTitle = "\u23f8 Stellar paused at budget limit"
 		notifSeverity = "warning"
 	}
-	if notifTitle != "" {
+	if notifTitle != "" && storage != nil {
 		_ = storage.CreateStellarNotification(ctx, &store.StellarNotification{
 			UserID:    input.UserID,
 			Type:      "action",

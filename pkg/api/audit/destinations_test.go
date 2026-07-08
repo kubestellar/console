@@ -81,7 +81,12 @@ func TestRegisterDestinationSplunkWithFullConfig(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
 
-	// Use httptest.NewServer to bypass SSRF validation
+	// Bypass SSRF guard for the loopback test server — production code uses
+	// ssrf.ValidateURL; this override is scoped to the test only.
+	orig := auditURLValidator
+	auditURLValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { auditURLValidator = orig })
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -112,7 +117,11 @@ func TestRegisterDestinationElasticWithURL(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
 
-	// Use httptest.NewServer to bypass SSRF validation
+	// Bypass SSRF guard for the loopback test server.
+	orig := auditURLValidator
+	auditURLValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { auditURLValidator = orig })
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))

@@ -8,7 +8,8 @@ vi.mock('../../lib/cache', () => ({
 }))
 
 const mockIsDemoMode = vi.fn(() => false)
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
     createCachedHook: vi.fn(),
     useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
     isDemoModeForced: () => false,
@@ -39,10 +40,14 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   }
 })
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
     createCachedHook: vi.fn(),
     LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+  }
+})
 
 import { useCachedKeda } from '../useCachedKeda'
 

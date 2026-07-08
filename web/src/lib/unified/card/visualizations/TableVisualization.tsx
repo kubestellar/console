@@ -5,7 +5,7 @@
  * table layout with sortable columns and pagination.
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type KeyboardEvent } from 'react'
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react'
 import type { CardContentTable, CardDrillDownConfig } from '../../types'
 import { renderCell } from '../renderers'
@@ -23,6 +23,18 @@ export interface TableVisualizationProps {
 }
 
 type SortDirection = 'asc' | 'desc'
+
+function handleInteractiveDivKeyDown(
+  event: KeyboardEvent<HTMLDivElement>,
+  onActivate: () => void,
+  disabled?: boolean,
+) {
+  if (disabled) return
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    onActivate()
+  }
+}
 
 /**
  * TableVisualization - Renders data as a table
@@ -206,25 +218,45 @@ export function TableVisualization({
             {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, sortedData.length)} of {sortedData.length}
           </span>
           <div className="flex items-center gap-1">
-            <button
+            <div
+              role="button"
+              tabIndex={currentPage === 0 ? -1 : 0}
+              aria-disabled={currentPage === 0}
               aria-label="Previous page"
-              onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-              disabled={currentPage === 0}
-              className="p-1 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => {
+                if (currentPage === 0) return
+                setCurrentPage((p) => Math.max(0, p - 1))
+              }}
+              onKeyDown={(event) => handleInteractiveDivKeyDown(
+                event,
+                () => setCurrentPage((p) => Math.max(0, p - 1)),
+                currentPage === 0,
+              )}
+              className={`p-1 rounded ${currentPage === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-secondary'}`}
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </div>
             <span className="px-2">
               {currentPage + 1} / {totalPages}
             </span>
-            <button
+            <div
+              role="button"
+              tabIndex={currentPage >= totalPages - 1 ? -1 : 0}
+              aria-disabled={currentPage >= totalPages - 1}
               aria-label="Next page"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={currentPage >= totalPages - 1}
-              className="p-1 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => {
+                if (currentPage >= totalPages - 1) return
+                setCurrentPage((p) => Math.min(totalPages - 1, p + 1))
+              }}
+              onKeyDown={(event) => handleInteractiveDivKeyDown(
+                event,
+                () => setCurrentPage((p) => Math.min(totalPages - 1, p + 1)),
+                currentPage >= totalPages - 1,
+              )}
+              className={`p-1 rounded ${currentPage >= totalPages - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-secondary'}`}
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </div>
           </div>
         </div>
       )}

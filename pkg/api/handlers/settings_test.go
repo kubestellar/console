@@ -25,6 +25,7 @@ func TestGetSettings(t *testing.T) {
 
 	// Case 1: File missing (default settings)
 	req := httptest.NewRequest("GET", "/api/settings", nil)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
@@ -46,6 +47,7 @@ func TestGetSettings(t *testing.T) {
 
 	// Request again
 	req2 := httptest.NewRequest("GET", "/api/settings", nil)
+	req2.Host = "localhost"
 	resp2, err := env.App.Test(req2, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp2.StatusCode)
@@ -60,6 +62,8 @@ func TestGetSettings(t *testing.T) {
 }
 
 func TestSaveSettings(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("FEEDBACK_GITHUB_TOKEN", "")
 	env := setupTestEnv(t)
 	handler := NewSettingsHandler(env.Settings, env.Store)
 	env.App.Put("/api/settings", handler.SaveSettings)
@@ -79,6 +83,7 @@ func TestSaveSettings(t *testing.T) {
 	}
 	data, _ := json.Marshal(payload)
 	req := httptest.NewRequest("PUT", "/api/settings", bytes.NewReader(data))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := env.App.Test(req, 5000)
@@ -95,6 +100,7 @@ func TestSaveSettings(t *testing.T) {
 
 	// Case 2: Malformed JSON
 	reqInvalid := httptest.NewRequest("PUT", "/api/settings", bytes.NewReader([]byte("{invalid-json")))
+	reqInvalid.Host = "localhost"
 	reqInvalid.Header.Set("Content-Type", "application/json")
 	respInvalid, err := env.App.Test(reqInvalid, 5000)
 	require.NoError(t, err)
@@ -119,6 +125,7 @@ func TestExportImportSettings(t *testing.T) {
 
 	// Case 1: Export
 	reqExport := httptest.NewRequest("POST", "/api/settings/export", nil)
+	reqExport.Host = "localhost"
 	respExport, err := env.App.Test(reqExport, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 200, respExport.StatusCode)
@@ -140,6 +147,7 @@ func TestExportImportSettings(t *testing.T) {
 	env2.App.Post("/api/settings/import", handler2.ImportSettings)
 
 	reqImport := httptest.NewRequest("POST", "/api/settings/import", bytes.NewReader(exportedData))
+	reqImport.Host = "localhost"
 	reqImport.Header.Set("Content-Type", "application/json")
 
 	respImport, err := env2.App.Test(reqImport, 5000)
@@ -154,12 +162,14 @@ func TestExportImportSettings(t *testing.T) {
 
 	// Case 3: Import invalid blob
 	reqInvalid := httptest.NewRequest("POST", "/api/settings/import", bytes.NewReader([]byte("not-json")))
+	reqInvalid.Host = "localhost"
 	respInvalid, err := env2.App.Test(reqInvalid, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 400, respInvalid.StatusCode)
 
 	// Case 4: Import empty body
 	reqEmpty := httptest.NewRequest("POST", "/api/settings/import", nil)
+	reqEmpty.Host = "localhost"
 	respEmpty, err := env2.App.Test(reqEmpty, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 400, respEmpty.StatusCode)
@@ -214,6 +224,7 @@ func TestSettings_NonAdmin_Forbidden(t *testing.T) {
 		env.App.Get("/api/settings", handler.GetSettings)
 
 		req := httptest.NewRequest("GET", "/api/settings", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req, fiberTestTimeout)
 		require.NoError(t, err)
 		assert.Equal(t, 403, resp.StatusCode)
@@ -226,6 +237,7 @@ func TestSettings_NonAdmin_Forbidden(t *testing.T) {
 		payload := settings.AllSettings{Theme: "light"}
 		data, _ := json.Marshal(payload)
 		req := httptest.NewRequest("PUT", "/api/settings", bytes.NewReader(data))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := env.App.Test(req, fiberTestTimeout)
 		require.NoError(t, err)
@@ -237,6 +249,7 @@ func TestSettings_NonAdmin_Forbidden(t *testing.T) {
 		env.App.Post("/api/settings/export", handler.ExportSettings)
 
 		req := httptest.NewRequest("POST", "/api/settings/export", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req, fiberTestTimeout)
 		require.NoError(t, err)
 		assert.Equal(t, 403, resp.StatusCode)
@@ -248,6 +261,7 @@ func TestSettings_NonAdmin_Forbidden(t *testing.T) {
 
 		req := httptest.NewRequest("POST", "/api/settings/import",
 			bytes.NewReader([]byte(`{"theme":"light"}`)))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := env.App.Test(req, fiberTestTimeout)
 		require.NoError(t, err)
@@ -279,6 +293,7 @@ func TestSettingsFileError(t *testing.T) {
 	payload := settings.AllSettings{Theme: "fail"}
 	data, _ := json.Marshal(payload)
 	req := httptest.NewRequest("PUT", "/api/settings", bytes.NewReader(data))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	// This relies on file system permissions which can be flaky in some CI envs.

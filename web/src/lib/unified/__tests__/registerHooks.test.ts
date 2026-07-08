@@ -26,7 +26,8 @@ function getRegisteredNames(): string[] {
 }
 
 // ── Mock all upstream hooks (prevent real imports) ───────────────────
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: true }),
   getDemoMode: () => true,
   isDemoModeForced: false,

@@ -15,6 +15,7 @@ import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
 import type { AlertsMCPData } from './AlertsDataFetcher'
 import type { AlertsContextValue, AlertNotificationBatch, MutationAccumulator } from './AlertsContext.types'
 import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS, NIGHTLY_E2E_POLL_INTERVAL_MS } from '../lib/constants/network'
+import { MS_PER_SECOND } from '../lib/constants/time'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 import { safeGet } from '../lib/safeLocalStorage'
 import {
@@ -26,7 +27,7 @@ import {
   saveAlerts,
 } from './alertStorage'
 import { STORAGE_KEY_AUTH_TOKEN } from '../lib/constants/storage'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, areOptionalPollersSuppressed } from '../lib/constants/network'
 import {
   shouldDispatchBrowserNotification,
   type BrowserNotificationParams,
@@ -43,9 +44,9 @@ import { applyMutations, createAlertRulesEngine, generateId, shallowEqualRecords
 const AlertsDataFetcher = safeLazy(() => import('./AlertsDataFetcher'), 'default')
 const MCP_UPDATE_BATCH_FRAME_FALLBACK_MS = 16
 const ALERT_RULES_KEY = 'kc_alert_rules'
-const LOADING_TIMEOUT_MS = 30_000
-const INITIAL_EVALUATION_DELAY_MS = 1000
-const EVALUATION_INTERVAL_MS = 30000
+const ALERTS_LOADING_TIMEOUT_MS = 30 * MS_PER_SECOND
+const INITIAL_EVALUATION_DELAY_MS = MS_PER_SECOND
+const EVALUATION_INTERVAL_MS = 30 * MS_PER_SECOND
 
 const {
   Context: AlertsContext,
@@ -153,6 +154,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    if (areOptionalPollersSuppressed()) return
+
     let unmounted = false
     const fetchCronJobResults = async () => {
       const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
@@ -197,12 +200,14 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(fetchCronJobResults, POLL_INTERVAL_SLOW_MS)
     return () => {
       unmounted = true
-      clearTimeout(timer)
       clearInterval(interval)
+      clearTimeout(timer)
     }
   }, [])
 
   useEffect(() => {
+    if (areOptionalPollersSuppressed()) return
+
     let unmounted = false
     const fetchNightlyE2E = async () => {
       if (unmounted) return
@@ -226,8 +231,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(fetchNightlyE2E, NIGHTLY_E2E_POLL_INTERVAL_MS)
     return () => {
       unmounted = true
-      clearTimeout(timer)
       clearInterval(interval)
+      clearTimeout(timer)
     }
   }, [])
 
@@ -254,17 +259,14 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (!mcpData.isLoading) return
-    const timer = setTimeout(() => {
-      setLoadingTimedOut(true)
-    }, LOADING_TIMEOUT_MS)
-    return () => clearTimeout(timer)
-  }, [mcpData.isLoading])
-
-  useEffect(() => {
     if (!mcpData.isLoading) {
       setLoadingTimedOut(false)
+      return
     }
+    const timer = setTimeout(() => {
+      setLoadingTimedOut(true)
+    }, ALERTS_LOADING_TIMEOUT_MS)
+    return () => clearTimeout(timer)
   }, [mcpData.isLoading])
 
   useEffect(() => () => {
@@ -411,7 +413,17 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           if (enabledChannels.length > 0) {
             const resolvedAlert: Alert = { ...alertToResolve, status: 'resolved', resolvedAt }
             localSendNotifications(resolvedAlert, enabledChannels).catch((error) => {
-              console.error('[AlertsContext] resolved notification send failed:', error)
+              console.warn('[AlertsContext] resolved notification send failed:', error)
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('alert-notification-error', {
+                  detail: { 
+                    error: error instanceof Error ? error.message : String(error), 
+                    timestamp: Date.now(),
+                    context: 'resolved-notification',
+                    alertId,
+                  }
+                }))
+              }
             })
           }
         }
@@ -639,6 +651,7 @@ Please provide:
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const __alertsTestables = {
   shallowEqualRecords,
   alertDedupKey,

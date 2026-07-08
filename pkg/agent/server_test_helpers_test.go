@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"sort"
 	"testing"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/agent/tokentracker"
 )
 
 // serverTestOption is a functional option for newTestServer.
@@ -99,8 +99,7 @@ func newTestServer(t *testing.T, opts ...serverTestOption) *Server {
 		resourceRetryState: make(map[string]clusterResourceRetryState),
 		allowedOrigins:     []string{"http://localhost", "https://localhost"},
 		registry:           &Registry{providers: make(map[string]AIProvider)},
-		sessionStart:       time.Now(),
-		todayDate:          time.Now().Format("2006-01-02"),
+		tokens:             tokentracker.New(0),
 		upgrader:           websocket.Upgrader{},
 		stellarForwardSem:  make(chan struct{}, 32),
 	}

@@ -55,6 +55,7 @@ func newCSPTestServerWithConfig(t *testing.T, kcAgentURL string, serverCfg Serve
 func cspHeader(t *testing.T, s *Server) string {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Host = "localhost"
 	resp, err := s.app.Test(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -161,6 +162,7 @@ func TestCSP_CustomKCAgentURL_HTTPSInjectsWSS(t *testing.T) {
 func TestCSP_XFrameOptions_DenyOnRegularPaths(t *testing.T) {
 	s := newCSPTestServer(t, defaultKCAgentBaseURL)
 	req := httptest.NewRequest(http.MethodGet, "/some/page", nil)
+	req.Host = "localhost"
 	resp, err := s.app.Test(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -174,6 +176,7 @@ func TestCSP_XFrameOptions_DenyOnRegularPaths(t *testing.T) {
 func TestCSP_XFrameOptions_AllowedOnEmbedPaths(t *testing.T) {
 	s := newCSPTestServer(t, defaultKCAgentBaseURL)
 	req := httptest.NewRequest(http.MethodGet, "/embed/ci-status", nil)
+	req.Host = "localhost"
 	resp, err := s.app.Test(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()

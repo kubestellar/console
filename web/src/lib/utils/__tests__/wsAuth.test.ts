@@ -1,10 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-const mockEmitWsAuthMissing = vi.fn()
-const mockGetAgentToken = vi.fn(async () => '')
+const { mockEmitWsAuthMissing, mockGetAgentToken } = vi.hoisted(() => ({
+  mockEmitWsAuthMissing: vi.fn(),
+  mockGetAgentToken: vi.fn(async () => ''),
+}))
+let mockIsLocalAgentSuppressed = false
 
 vi.mock('../../analytics', () => ({
   emitWsAuthMissing: mockEmitWsAuthMissing,
+}))
+
+vi.mock('../../constants/network', () => ({
+  isLocalAgentSuppressed: () => mockIsLocalAgentSuppressed,
 }))
 
 vi.mock('../../../hooks/mcp/agentFetch', () => ({
@@ -21,6 +28,7 @@ describe('getWsAuthParams', () => {
     mockEmitWsAuthMissing.mockClear()
     mockGetAgentToken.mockReset()
     mockGetAgentToken.mockImplementation(async () => sessionStorage.getItem('kc-agent-token') || '')
+    mockIsLocalAgentSuppressed = false
     vi.resetModules()
     const mod = await import('../wsAuth')
     getWsAuthParams = mod.getWsAuthParams
@@ -72,5 +80,12 @@ describe('getWsAuthParams', () => {
     const result = await getWsAuthParams('ws://localhost:8585/ws')
     expect(result.url).not.toContain('secret')
     expect(result.url).not.toContain('token=')
+  })
+
+  it('does not fetch a token or return a WebSocket target when local agent is suppressed', async () => {
+    mockIsLocalAgentSuppressed = true
+    await expect(getWsAuthParams('ws://localhost:1/disabled')).rejects.toThrow('Local agent WebSocket disabled')
+    expect(mockGetAgentToken).not.toHaveBeenCalled()
+    expect(mockEmitWsAuthMissing).not.toHaveBeenCalled()
   })
 })

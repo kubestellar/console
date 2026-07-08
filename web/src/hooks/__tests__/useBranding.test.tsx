@@ -59,9 +59,11 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 } })
 
 const mockUpdateAnalyticsIds = vi.fn()
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   updateAnalyticsIds: (...args: unknown[]) => mockUpdateAnalyticsIds(...args),
-}))
+}
+))
 
 import { useBranding, BrandingProvider } from '../useBranding'
 
@@ -283,6 +285,16 @@ describe('useBranding', () => {
       expect(fetch).toHaveBeenCalledWith('/health', expect.objectContaining({
         signal: expect.any(AbortSignal),
       }))
+    })
+  })
+
+  describe('progressive enhancement - no loading state needed', () => {
+    it('provides branding immediately without loading state', () => {
+      const { result } = renderHook(() => useBranding(), { wrapper: createWrapper() })
+      // useBranding uses progressive enhancement - always returns valid branding immediately
+      expect(result.current.appName).toBeDefined()
+      expect(result.current.appShortName).toBeDefined()
+      // No loading state needed since defaults are always available
     })
   })
 })

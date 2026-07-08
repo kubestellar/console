@@ -56,6 +56,7 @@ func TestSettings_Integration_RoundTrip(t *testing.T) {
 
 	// 1. Initial GET - should return defaults
 	req1 := httptest.NewRequest("GET", "/api/settings", nil)
+	req1.Host = "localhost"
 	resp1, err := app.Test(req1)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp1.StatusCode)
@@ -73,6 +74,7 @@ func TestSettings_Integration_RoundTrip(t *testing.T) {
 	}
 	body, _ := json.Marshal(payload)
 	req2 := httptest.NewRequest("PUT", "/api/settings", bytes.NewReader(body))
+	req2.Host = "localhost"
 	req2.Header.Set("Content-Type", "application/json")
 	resp2, err := app.Test(req2)
 	require.NoError(t, err)
@@ -90,6 +92,7 @@ func TestSettings_Integration_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	req3 := httptest.NewRequest("GET", "/api/settings", nil)
+	req3.Host = "localhost"
 	resp3, err := app.Test(req3)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp3.StatusCode)
@@ -131,6 +134,7 @@ func TestSettings_Integration_ExportImport(t *testing.T) {
 
 	// 2. Export
 	reqExport := httptest.NewRequest("POST", "/api/settings/export", nil)
+	reqExport.Host = "localhost"
 	respExport, err := app.Test(reqExport)
 	require.NoError(t, err)
 	assert.Equal(t, 200, respExport.StatusCode)
@@ -143,6 +147,7 @@ func TestSettings_Integration_ExportImport(t *testing.T) {
 
 	// 4. Import
 	reqImport := httptest.NewRequest("POST", "/api/settings/import", bytes.NewReader(blob))
+	reqImport.Host = "localhost"
 	reqImport.Header.Set("Content-Type", "application/json")
 	respImport, err := app.Test(reqImport)
 	require.NoError(t, err)

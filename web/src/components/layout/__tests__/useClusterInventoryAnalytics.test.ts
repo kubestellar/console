@@ -3,9 +3,11 @@ import { renderHook } from '@testing-library/react'
 
 const mockEmitClusterInventory = vi.fn()
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitClusterInventory: (...args: unknown[]) => mockEmitClusterInventory(...args),
-}))
+}
+))
 
 import { useClusterInventoryAnalytics } from '../useClusterInventoryAnalytics'
 

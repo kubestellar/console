@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 
 const {
@@ -29,8 +29,10 @@ const {
   },
 }))
 
-vi.mock('../../useDemoMode', () => ({
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../lib/demoMode', () => ({
@@ -96,7 +98,8 @@ import { useClusters, useMCPStatus } from '../clusters'
 
 describe('clusters smoke coverage', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
     localStorage.clear()
     localStorage.setItem('token', 'test-token')
     sharedState.initialFetchStarted = false
@@ -126,7 +129,11 @@ describe('clusters smoke coverage', () => {
     }
   })
 
-  it('bootstraps cluster polling from the shared cache and opens the shared websocket', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('bootstraps cluster polling from the shared cache and opens the shared websocket', async () => {
     const { result } = renderHook(() => useClusters())
 
     expect(result.current.clusters).toHaveLength(2)
@@ -137,7 +144,9 @@ describe('clusters smoke coverage', () => {
       isComplete: true,
     })
     expect(mockFullFetchClusters).toHaveBeenCalledTimes(1)
-    expect(mockConnectSharedWebSocket).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(mockConnectSharedWebSocket).toHaveBeenCalledTimes(1)
+    })
     expect(mockSubscribePolling).toHaveBeenCalledWith('clusters', 30_000, expect.any(Function))
   })
 

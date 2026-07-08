@@ -5,7 +5,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
+	"github.com/kubestellar/console/pkg/api/handlers/stellar"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
@@ -14,13 +15,13 @@ import (
 // stellarRouteGroup wires the Stellar handler with only the dependencies its
 // routes and background workers need.
 type stellarRouteGroup struct {
-	store     handlers.Store
+	store     stellar.Store
 	userStore store.Store
 	k8sClient *k8s.MultiClusterClient
 	done      <-chan struct{}
 }
 
-func newStellarRouteGroup(stelStore handlers.Store, k8sClient *k8s.MultiClusterClient, done <-chan struct{}, userStore store.Store) *stellarRouteGroup {
+func newStellarRouteGroup(stelStore stellar.Store, k8sClient *k8s.MultiClusterClient, done <-chan struct{}, userStore store.Store) *stellarRouteGroup {
 	return &stellarRouteGroup{
 		store:     stelStore,
 		userStore: userStore,
@@ -30,7 +31,7 @@ func newStellarRouteGroup(stelStore handlers.Store, k8sClient *k8s.MultiClusterC
 }
 
 func (g *stellarRouteGroup) Register(api fiber.Router) {
-	handler := handlers.NewHandler(g.store, g.k8sClient, handlers.WithUserStore(g.userStore))
+	handler := stellar.NewHandler(g.store, g.k8sClient, stellar.WithUserStore(g.userStore))
 	g.startWorkers(handler)
 
 	api.Get("/stellar/preferences", handler.GetPreferences)
@@ -87,7 +88,7 @@ func (g *stellarRouteGroup) Register(api fiber.Router) {
 	api.Delete("/stellar/memory/:id", handler.DeleteMemory)
 
 	api.Get("/stellar/observations", handler.ListObservations)
-	api.Post("/stellar/events", handlers.RequireEditorOrAdminMiddleware(g.userStore), handler.IngestEvent)
+	api.Post("/stellar/events", auth.RequireEditorOrAdminMiddleware(g.userStore), handler.IngestEvent)
 
 	api.Get("/stellar/audit", handler.ListAuditLog)
 
@@ -100,7 +101,7 @@ func (g *stellarRouteGroup) Register(api fiber.Router) {
 	api.Get("/stellar/health", handler.Health)
 }
 
-func (g *stellarRouteGroup) startWorkers(handler *handlers.Handler) {
+func (g *stellarRouteGroup) startWorkers(handler *stellar.Handler) {
 	ctx, cancel := context.WithCancel(context.Background())
 	safego.GoWith("stellar-done-watcher", func() {
 		<-g.done

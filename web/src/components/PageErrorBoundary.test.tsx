@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { PageErrorBoundary } from './PageErrorBoundary'
@@ -10,10 +11,12 @@ vi.mock('i18next', () => ({
 }))
 
 // Mock analytics
-vi.mock('../lib/analytics', () => ({
+vi.mock('../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/analytics')>()),
   emitError: vi.fn(),
   markErrorReported: vi.fn(),
-}))
+}
+))
 
 // Mock chunkErrors — non-chunk errors should be caught by PageErrorBoundary
 vi.mock('../lib/chunkErrors', () => ({

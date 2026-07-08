@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ReactNode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -28,8 +29,10 @@ vi.mock('../../../lib/demoMode', () => ({
 }))
 
 const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 const mockUseCardDemoState = vi.fn()

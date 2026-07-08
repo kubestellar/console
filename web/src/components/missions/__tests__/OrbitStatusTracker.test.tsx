@@ -1,3 +1,4 @@
+import React from 'react'
 import type { ComponentProps } from 'react'
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'

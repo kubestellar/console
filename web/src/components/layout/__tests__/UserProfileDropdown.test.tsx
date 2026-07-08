@@ -1,3 +1,4 @@
+import React from 'react'
 /// <reference types="@testing-library/jest-dom/vitest" />
 import type { ComponentProps, ReactNode } from 'react'
 import { render, screen, waitFor, within } from '@testing-library/react'
@@ -110,10 +111,12 @@ vi.mock('../../../lib/demoMode', () => ({
   },
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitLinkedInShare: vi.fn(),
   emitLanguageChanged,
-}))
+}
+))
 
 vi.mock('../../../lib/api', () => ({
   checkOAuthConfigured: vi.fn().mockResolvedValue({ oauthConfigured: true, backendUp: true }),
@@ -193,6 +196,17 @@ describe('UserProfileDropdown', () => {
   it('renders with null user', () => {
     renderDropdown({ user: null })
     expect(screen.queryByTestId('navbar-profile-btn')).not.toBeInTheDocument()
+  })
+
+  it('includes the visible login in the trigger accessible name', async () => {
+    renderDropdown()
+
+    const trigger = screen.getByRole('button', { name: /testuser profile menu, open/i })
+    expect(trigger).toBeInTheDocument()
+
+    await userEvent.click(trigger)
+
+    expect(screen.getByRole('button', { name: /testuser profile menu, close/i })).toBeInTheDocument()
   })
 
   it('shows the contributor rank once instead of duplicating it in the coins row', async () => {

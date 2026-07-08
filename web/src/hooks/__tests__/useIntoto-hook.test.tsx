@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for the useIntoto() hook.
  * The existing useIntoto.test.ts only covers computeIntotoStats.
@@ -31,8 +32,10 @@ const {
   mockUnregisterCacheReset: vi.fn(),
 }))
 
-vi.mock('../useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../useMCP', () => ({

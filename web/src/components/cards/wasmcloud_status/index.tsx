@@ -95,17 +95,17 @@ function HostRow({ host, t }: { host: WasmcloudHost; t: TFunction<'cards'> }) {
           <span className="text-xs font-medium text-foreground truncate">
             {host.friendlyName}
           </span>
-          <span className="text-[11px] text-muted-foreground font-mono shrink-0">
+          <span className="text-xs text-muted-foreground font-mono shrink-0">
             {shortId(host.hostId)}
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${HOST_STATUS_CLASS[host.status]}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${HOST_STATUS_CLASS[host.status]}`}
         >
           {host.status}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span>
           {host.actorCount} {t('wasmcloudStatus.actorsShort', 'actors')}
         </span>
@@ -131,12 +131,12 @@ function ProviderRow({ provider }: { provider: WasmcloudProvider }) {
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${PROVIDER_STATUS_CLASS[provider.status]}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${PROVIDER_STATUS_CLASS[provider.status]}`}
         >
           {provider.status}
         </span>
       </div>
-      <div className="text-[11px] text-muted-foreground truncate font-mono">
+      <div className="text-xs text-muted-foreground truncate font-mono">
         {provider.contractId}
       </div>
     </div>
@@ -149,17 +149,17 @@ function LinkRow({ link }: { link: WasmcloudLink }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0 flex items-center gap-1.5">
           <Link2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-          <span className="text-[11px] font-mono text-foreground truncate">
+          <span className="text-xs font-mono text-foreground truncate">
             {shortId(link.actorId)} → {shortId(link.providerId)}
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${LINK_STATUS_CLASS[link.status]}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${LINK_STATUS_CLASS[link.status]}`}
         >
           {link.status}
         </span>
       </div>
-      <div className="text-[11px] text-muted-foreground truncate font-mono">
+      <div className="text-xs text-muted-foreground truncate font-mono">
         {link.contractId}
       </div>
     </div>
@@ -284,7 +284,7 @@ export function WasmcloudStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('wasmcloudStatus.sectionLattice', 'Lattice')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {t('wasmcloudStatus.version', 'version')}:{' '}
               <span className="text-foreground">{data.stats.latticeVersion}</span>
             </span>
@@ -300,7 +300,7 @@ export function WasmcloudStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('wasmcloudStatus.sectionHosts', 'Hosts')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {hosts.length}
             </span>
           </div>
@@ -324,7 +324,7 @@ export function WasmcloudStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('wasmcloudStatus.sectionProviders', 'Capability providers')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {providers.length}
             </span>
           </div>
@@ -351,7 +351,7 @@ export function WasmcloudStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('wasmcloudStatus.sectionLinks', 'Link definitions')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {links.length}
             </span>
           </div>

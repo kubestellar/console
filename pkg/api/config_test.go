@@ -46,6 +46,8 @@ func TestLoadConfigFromEnv_DoesNotAutoEnableDevMode(t *testing.T) {
 	t.Setenv("DEV_USER_LOGIN", "")
 	t.Setenv("DEV_USER_EMAIL", "")
 	t.Setenv("DEV_USER_AVATAR", "")
+	t.Setenv("AUTH_ALLOWED_GITHUB_LOGINS", "")
+	t.Setenv("AUTH_ADMIN_GITHUB_LOGINS", "")
 	t.Setenv("CLAUDE_API_KEY", "")
 	t.Setenv("KUBESTELLAR_OPS_PATH", "")
 	t.Setenv("KUBESTELLAR_DEPLOY_PATH", "")
@@ -90,6 +92,18 @@ func TestLoadConfigFromEnv_DoesNotAutoEnableDevMode(t *testing.T) {
 				"dev mode must stay disabled unless explicitly opted in with DEV_MODE=true")
 		})
 	}
+}
+
+func TestLoadConfigFromEnv_LoadsGitHubLoginGateConfig(t *testing.T) {
+	t.Setenv("GITHUB_CLIENT_ID", "client-id-123456")
+	t.Setenv("GITHUB_CLIENT_SECRET", "client-secret-1234567890")
+	t.Setenv("AUTH_ALLOWED_GITHUB_LOGINS", "canary-user, teammate")
+	t.Setenv("AUTH_ADMIN_GITHUB_LOGINS", "canary-user")
+
+	cfg := LoadConfigFromEnv()
+
+	assert.Equal(t, "canary-user, teammate", cfg.AllowedGitHubLogins)
+	assert.Equal(t, "canary-user", cfg.AdminGitHubLogins)
 }
 
 func TestNewServer_ExplicitDevModeStartsWithoutOAuth(t *testing.T) {

@@ -13,6 +13,8 @@ interface MissionChatInputProps {
   mission: Mission
   statusLabel: string
   statusColor: string
+  isRetrying?: boolean
+  isDismissing?: boolean
   onDismissMission: () => void
   onInputChange: (value: string) => void
   onKeyDown: (event: React.KeyboardEvent) => void
@@ -30,6 +32,8 @@ export function MissionChatInput({
   mission,
   statusLabel,
   statusColor,
+  isRetrying = false,
+  isDismissing = false,
   onDismissMission,
   onInputChange,
   onKeyDown,
@@ -102,16 +106,18 @@ export function MissionChatInput({
           </div>
           <button
             onClick={onRetryPreflight}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-amber-600/20 text-amber-300 border border-amber-500/30 rounded-lg hover:bg-amber-600/30 transition-colors"
+            disabled={isRetrying || isDismissing}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-amber-600/20 text-amber-300 border border-amber-500/30 rounded-lg hover:bg-amber-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RotateCcw className="w-4 h-4" />
+            {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
             Retry Preflight Check
           </button>
           <button
             onClick={onDismissMission}
-            className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            disabled={isRetrying || isDismissing}
+            className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <X className="w-3 h-3" />
+            {isDismissing ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
             Dismiss Mission
           </button>
         </div>
@@ -124,9 +130,10 @@ export function MissionChatInput({
           {(mission.messages || []).some((message) => message.role === 'user') && (
             <button
               onClick={onRetryMission}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              disabled={isRetrying || isDismissing}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RotateCcw className="w-4 h-4" />
+              {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
               {t('missionChat.retryMission', { defaultValue: 'Retry Mission' })}
             </button>
           )}

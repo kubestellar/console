@@ -7,16 +7,19 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
 	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/api/audit"
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
@@ -39,7 +42,7 @@ type Server struct {
 	app                 *fiber.App
 	store               store.Store
 	config              Config
-	hub                 *handlers.Hub
+	hub                 *transport.Hub
 	bridge              *mcp.Bridge
 	k8sClient           *k8s.MultiClusterClient
 	notificationService *notifications.Service
@@ -106,6 +109,7 @@ func NewServer(cfg Config) (*Server, error) {
 	// Wire up persistent token revocation so revoked JWTs survive restarts.
 	middleware.InitTokenRevocation(db)
 	middleware.InitUserValidation(db)
+	bootstrapLiveTestUser(context.Background(), db)
 
 	// Create Fiber app
 	// trustedProxyCIDRs are the RFC-1918 and link-local ranges typical of
@@ -145,7 +149,7 @@ func NewServer(cfg Config) (*Server, error) {
 	})
 
 	// WebSocket hub
-	hub := handlers.NewHub()
+	hub := transport.NewHub()
 	hub.SetJWTSecret(cfg.JWTSecret)
 	hub.SetDevMode(cfg.DevMode)
 	safego.GoWith("api/hub-run", func() { hub.Run() })
@@ -156,7 +160,7 @@ func NewServer(cfg Config) (*Server, error) {
 		slog.Warn("Kubernetes client initialization failed — connect clusters via Settings or place a kubeconfig at ~/.kube/config", "error", err)
 	} else {
 		k8sClient.SetOnReload(func() {
-			hub.BroadcastAll(handlers.Message{
+			hub.BroadcastAll(transport.Message{
 				Type: "kubeconfig_changed",
 				Data: map[string]string{"message": "Kubeconfig updated"},
 			})
@@ -302,4 +306,65 @@ func (s *Server) startKBGapsSweeper(gapStore kbGapSweeper) {
 			}
 		}
 	})
+}
+
+func bootstrapLiveTestUser(ctx context.Context, users store.UserStore) {
+	if !strings.EqualFold(strings.TrimSpace(os.Getenv("CONSOLE_LIVE_TEST_USER_BOOTSTRAP")), "true") {
+		return
+	}
+	if users == nil {
+		return
+	}
+
+	idRaw := strings.TrimSpace(os.Getenv("CONSOLE_LIVE_TEST_USER_ID"))
+	login := strings.TrimSpace(os.Getenv("CONSOLE_LIVE_TEST_GITHUB_LOGIN"))
+	if idRaw == "" || login == "" {
+		slog.Warn("[Auth] live test user bootstrap requested without CONSOLE_LIVE_TEST_USER_ID and CONSOLE_LIVE_TEST_GITHUB_LOGIN")
+		return
+	}
+
+	userID, err := uuid.Parse(idRaw)
+	if err != nil {
+		slog.Warn("[Auth] live test user bootstrap skipped because CONSOLE_LIVE_TEST_USER_ID is not a UUID", "error", err)
+		return
+	}
+
+	role := models.UserRole(strings.TrimSpace(os.Getenv("CONSOLE_LIVE_TEST_USER_ROLE")))
+	if role == "" {
+		role = models.UserRoleAdmin
+	}
+
+	current, err := users.GetUser(ctx, userID)
+	if err != nil {
+		slog.Warn("[Auth] live test user bootstrap could not read user", "userID", userID, "error", err)
+		return
+	}
+
+	user := &models.User{
+		ID:          userID,
+		GitHubID:    "console-live-test-" + userID.String(),
+		GitHubLogin: login,
+		Email:       login + "@users.noreply.github.com",
+		Role:        role,
+		Onboarded:   true,
+	}
+	if current == nil {
+		if err := users.CreateUser(ctx, user); err != nil {
+			slog.Warn("[Auth] live test user bootstrap could not create user", "userID", userID, "login", login, "error", err)
+			return
+		}
+		slog.Info("[Auth] bootstrapped live test user", "userID", userID, "login", login, "role", role)
+		return
+	}
+
+	current.GitHubID = user.GitHubID
+	current.GitHubLogin = user.GitHubLogin
+	current.Email = user.Email
+	current.Role = user.Role
+	current.Onboarded = true
+	if err := users.UpdateUser(ctx, current); err != nil {
+		slog.Warn("[Auth] live test user bootstrap could not update user", "userID", userID, "login", login, "error", err)
+		return
+	}
+	slog.Info("[Auth] refreshed live test user", "userID", userID, "login", login, "role", role)
 }

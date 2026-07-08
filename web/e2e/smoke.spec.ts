@@ -16,6 +16,15 @@ const MIN_BODY_TEXT_LEN = 50
 const MIN_DASHBOARD_TEXT_LEN = 100
 /** Short timeout for optional UI probes (theme toggle, demo badge, etc.). */
 const OPTIONAL_PROBE_TIMEOUT_MS = 3_000
+const MOBILE_SIDEBAR_MAX_WIDTH_PX = 768
+// Increased from 2 000 ms: on mobile CI (Pixel 5 / iPhone 12 emulation the
+// React initial render can take 4–6 s after domcontentloaded fires because
+// the mobile-emulation CPU throttle is applied before scripts execute.
+// A 2 s probe was expiring before the Navbar mounted, causing the sidebar
+// to remain closed and the settingsLink 45 s wait to timeout consistently.
+// 10 s gives the app time to fully hydrate on all CI mobile runners.
+// Fixes #20489.
+const HAMBURGER_PROBE_TIMEOUT_MS = 10_000
 
 /**
  * Smoke Tests for KubeStellar Console
@@ -86,12 +95,10 @@ test.describe('Smoke Tests', () => {
         .or(page.locator('button[aria-label*="menu" i]'))
         .first()
       const viewportSize = page.viewportSize()
-      const MOBILE_SIDEBAR_MAX_WIDTH_PX = 768
-      const HAMBURGER_PROBE_TIMEOUT_MS = 2_000
       if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
         const hamburgerVisible = await hamburger
           .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
-          .catch(() => false)
+          .catch((error) => { console.error('Promise error:', error); return false })
         if (hamburgerVisible) {
           // Use native el.click() for cross-browser stability
           await hamburger.evaluate((el) => (el as HTMLElement).click())
@@ -112,11 +119,9 @@ test.describe('Smoke Tests', () => {
         // Wait for network idle before clicking to avoid DOM detach during
         // hook re-renders (common in webkit/firefox). This stabilizes the
         // element before interaction.
-        await page.waitForLoadState('networkidle').catch(() => {})
+        await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
         
-        // Use native el.click() for cross-browser stability — Playwright's
-        // synthetic clicks can miss React event handlers on webkit/firefox
-        // when the sidebar is re-rendering from hook updates.
+        // Use native el.click() for maximum cross-browser compatibility
         await link.evaluate((el) => (el as HTMLElement).click())
         
         await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, `nav to ${expectedPath}`)
@@ -125,11 +130,11 @@ test.describe('Smoke Tests', () => {
         if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
           const stillVisible = await link
             .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
-            .catch(() => false)
+            .catch((error) => { console.error('Promise error:', error); return false })
           if (!stillVisible) {
             const hamburgerVisible = await hamburger
               .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
-              .catch(() => false)
+              .catch((error) => { console.error('Promise error:', error); return false })
             if (hamburgerVisible) {
               await hamburger.evaluate((el) => (el as HTMLElement).click())
               await expect(sidebar).toBeVisible({ timeout: 3000 })
@@ -156,20 +161,79 @@ test.describe('Smoke Tests', () => {
     test('clicking navbar logo navigates to home from non-home route', async ({ page }) => {
       await setupDemoMode(page)
 
-      // Navigate to a non-home route
-      await page.goto('/settings')
-      await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, '/settings')
-      expect(page.url()).toContain('/settings')
+      // Navigate via the in-app sidebar instead of a deep-link goto().
+      // The nightly workflow runs against Vite preview, where direct sub-route
+      // entry can be flaky across Firefox/WebKit. In-app navigation exercises
+      // the actual router path without relying on preview-server rewrites.
+      await page.goto('/', { waitUntil: 'domcontentloaded' })
+      // Wait for scripts to execute so the React app is fully mounted before
+      // probing the hamburger. On mobile CI the domcontentloaded event fires
+      // before React has rendered the Navbar, making a 2 s probe insufficient.
+      // 'load' ensures all deferred scripts have run (fixes #20489).
+      await page.waitForLoadState('load')
+      // On WebKit/Safari mobile CI, React can still be mounting after 'load'
+      // fires due to async chunk imports and initial data fetches. networkidle
+      // is a stronger signal that all pending work has settled, making the
+      // hamburger button reliably visible before we probe for it. (#20569)
+      await page.waitForLoadState('networkidle').catch(() => {})
+      const sidebar = page.getByTestId('sidebar')
+      const settingsLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/settings"], [data-testid="sidebar"] a[href="/settings"]').first()
+
+      const viewportSize = page.viewportSize()
+      if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
+        const hamburger = page
+          .locator('[data-testid="mobile-menu-toggle"]')
+          .or(page.locator('button[aria-label*="menu" i]'))
+          .first()
+        const hamburgerVisible = await hamburger
+          .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
+          .catch((error) => { console.error('Promise error:', error); return false })
+        if (hamburgerVisible) {
+          await hamburger.evaluate((el) => (el as HTMLElement).click())
+          await expect(sidebar).toBeVisible({ timeout: 3000 })
+          // Mobile sidebar animation: wait for Settings link to become visible after sidebar opens.
+          // Fixes #20086, #20087 — sidebar container visible but links still hidden mid-animation.
+          await expect(settingsLink).toBeVisible({ timeout: 5000 })
+        }
+      }
+
+      // WebKit/mobile browsers need more time for sidebar elements to hydrate.
+      // Wait for both the element to exist AND become actionable (no visibility:hidden).
+      // The sidebar slide-in animation can leave elements in a "found but hidden" state.
+      await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
+      await expect(settingsLink).toBeVisible({ timeout: 45000 })
+      // Extra stability wait for webkit/safari where elements can be "visible" but
+      // still mid-transition. Wait for DOM to fully settle after animation.
+      await page.waitForTimeout(500)
+      await settingsLink.waitFor({ state: 'visible', timeout: 10000 })
+      await settingsLink.click({ force: true })
+
+      await expect(page).toHaveURL(/\/settings(?:[?#].*)?$/, { timeout: 10000 })
+      // Settings.tsx renders settings-title twice: once in the desktop sidebar
+      // nav (hidden lg:block, display:none on mobile) and once in the mobile
+      // header (block lg:hidden, visible on mobile). Using .first() picks the
+      // desktop element which is display:none on Pixel 5 / iPhone 12 viewports,
+      // causing toBeVisible() to always fail on mobile. Filter to visible only. (#20569)
+      await expect(page.locator('[data-testid="settings-page"] [data-testid="settings-title"]').filter({ visible: true }).first()).toBeVisible({ timeout: 15000 })
 
       // Click the logo button (has aria-label "Go to home dashboard").
       // The navbar renders two such buttons — the logo and the wordmark —
       // so use .first() to avoid a strict-mode violation. #9877
       const logoButton = page.locator('nav button[aria-label*="home"]').first()
       await expect(logoButton).toBeVisible()
+      
+      // Mobile viewports: wait for logo to be actionable before click.
+      // Navbar animations can leave buttons "visible" but still mid-transition. #20329
+      if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
+        await logoButton.waitFor({ state: 'visible', timeout: 5000 })
+        await page.waitForTimeout(300)
+      }
+      
       await logoButton.click()
 
       // Wait for navigation and verify we're at home
       await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, 'logo click')
+      await expect(page).toHaveURL(/\/$|\/dashboard$/, { timeout: 10000 })
       expect(page.url()).toMatch(/\/$|\/dashboard$/)
     })
   })
@@ -218,7 +282,7 @@ test.describe('Smoke Tests', () => {
         const htmlBefore = await page.locator('html').getAttribute('class')
         
         // Wait for network idle before clicking to avoid DOM detach
-        await page.waitForLoadState('networkidle').catch(() => {})
+        await page.waitForLoadState('networkidle').catch((error) => { console.error('Promise catch:', error) })
         
         // Use native el.click() for maximum cross-browser compatibility
         await themeToggle.first().evaluate((el) => (el as HTMLElement).click())

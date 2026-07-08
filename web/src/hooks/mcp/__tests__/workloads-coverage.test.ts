@@ -48,8 +48,10 @@ vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
 }))
 
-vi.mock('../../useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../useLocalAgent', () => ({
@@ -145,7 +147,7 @@ beforeEach(() => {
   __resetInfrastructureCaches()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsAgentUnavailable.mockReturnValue(true)
   mockIsBackendUnavailable.mockReturnValue(false)
   mockRegisterRefetch.mockReturnValue(vi.fn())
@@ -500,7 +502,7 @@ describe('useDeploymentIssues — uncovered branches', () => {
   it('silent demo mode does not set isRefreshing', async () => {
     vi.useFakeTimers()
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useDeploymentIssues())
 

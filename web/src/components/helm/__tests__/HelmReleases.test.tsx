@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * HelmReleases component smoke tests
  */

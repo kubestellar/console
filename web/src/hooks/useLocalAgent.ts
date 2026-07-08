@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { isDemoModeForced } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { TRANSITION_DELAY_MS } from '../lib/constants/network'
+import { TRANSITION_DELAY_MS, isLocalAgentSuppressed } from '../lib/constants/network'
 import { emitAgentConnected, emitAgentDisconnected, emitAgentProvidersDetected, emitConversionStep } from '../lib/analytics'
 import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
 import { STORAGE_KEY_FIRST_AGENT_CONNECT } from '../lib/constants/storage'
@@ -157,11 +157,11 @@ class AgentManager {
     this.isStarted = true
 
     // On Netlify deployments, skip agent connection entirely (no local agent available)
-    if (isDemoModeForced) {
+    if (isDemoModeForced || isLocalAgentSuppressed()) {
       this.setState({
         status: 'disconnected',
         health: DEMO_DATA,
-        error: 'Demo mode - agent connection skipped' })
+        error: isLocalAgentSuppressed() ? 'Local agent disabled in this deployment' : 'Demo mode - agent connection skipped' })
       return
     }
 
@@ -220,7 +220,7 @@ class AgentManager {
   }
 
   private handleBrowserWake(source: 'visibilitychange' | 'focus' | 'online') {
-    if (!this.isStarted || isDemoModeForced) return
+    if (!this.isStarted || isDemoModeForced || isLocalAgentSuppressed()) return
 
     const now = Date.now()
     if (now - this.lastBrowserWakeCheckAt < BROWSER_WAKE_DEBOUNCE_MS) {
@@ -291,6 +291,16 @@ class AgentManager {
   }
 
   async checkAgent() {
+    if (isLocalAgentSuppressed()) {
+      this.isChecking = false
+      this.setState({
+        status: 'disconnected',
+        health: DEMO_DATA,
+        error: 'Local agent disabled in this deployment',
+      })
+      return
+    }
+
     // Skip if already checking (prevent overlapping requests)
     if (this.isChecking) {
       return

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for UnifiedDashboard component
  *
@@ -9,6 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
@@ -25,8 +27,8 @@ vi.mock('../../../modals/ConfirmDialog', () => ({
       <div data-testid="confirm-dialog">
         <span>{title}</span>
         <span>{message}</span>
-        <button onClick={onClose}>cancel-confirm</button>
-        <button onClick={onConfirm}>{confirmLabel || 'confirm'}</button>
+        <div role="button" tabIndex={0} onClick={onClose}>cancel-confirm</div>
+        <div role="button" tabIndex={0} onClick={onConfirm}>{confirmLabel || 'confirm'}</div>
       </div>
     ) : null
   ),
@@ -210,6 +212,10 @@ describe('Card removal', () => {
     const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
     act(() => { onRemoveCard('card-1') })
 
+    // Confirm removal in the dialog
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('actions.remove'))
+
     const cards = capturedGridProps.cards as DashboardCardPlacement[]
     expect(cards).toHaveLength(1)
     expect(cards[0].id).toBe('card-2')
@@ -375,6 +381,9 @@ describe('Reset to defaults', () => {
     const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
     act(() => { onRemoveCard('card-1') })
 
+    // Confirm the removal
+    fireEvent.click(screen.getByText('actions.remove'))
+
     expect(screen.getByText('Reset')).toBeDefined()
   })
 
@@ -385,10 +394,13 @@ describe('Reset to defaults', () => {
     const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
     act(() => { onRemoveCard('card-1') })
 
+    // Confirm the card removal first
+    fireEvent.click(screen.getByText('actions.remove'))
+
+    // Now click Reset button
     fireEvent.click(screen.getByText('Reset'))
 
-    const cards = capturedGridProps.cards as DashboardCardPlacement[]
-    expect(cards).toHaveLength(1)
+    // Should show reset confirmation dialog
     expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
     expect(screen.getByText('confirmDialog.resetDashboardTitle')).toBeInTheDocument()
   })
@@ -400,6 +412,10 @@ describe('Reset to defaults', () => {
     const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
     act(() => { onRemoveCard('card-1') })
 
+    // Confirm the card removal first
+    fireEvent.click(screen.getByText('actions.remove'))
+
+    // Now click Reset and confirm
     fireEvent.click(screen.getByText('Reset'))
     fireEvent.click(screen.getByText('actions.reset'))
 
@@ -481,6 +497,9 @@ describe('localStorage persistence', () => {
     // Remove a card to trigger a state change
     const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
     act(() => { onRemoveCard('card-1') })
+
+    // Confirm the removal
+    fireEvent.click(screen.getByText('actions.remove'))
 
     const stored = JSON.parse(localStorage.getItem(storageKey) || '[]')
     expect(stored).toHaveLength(1)

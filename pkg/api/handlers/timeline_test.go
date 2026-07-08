@@ -33,6 +33,7 @@ func TestTimelineGetTimeline_Success(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/timeline?cluster=test-cluster", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -56,6 +57,7 @@ func TestTimelineGetTimeline_Error(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/timeline", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)

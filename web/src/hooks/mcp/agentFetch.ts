@@ -81,6 +81,23 @@ export function _resetAgentTokenState(): void {
   agentTokenNegativeCacheUntil = 0
 }
 
+function suppressedAgentResponse(input: RequestInfo | URL): Response {
+  const url = typeof input === 'string'
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url
+
+  return new Response(JSON.stringify({
+    error: 'local_agent_suppressed',
+    message: 'kc-agent calls are disabled in this deployment',
+    url,
+  }), {
+    status: 503,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 /**
  * Lazily fetch the kc-agent token from the backend. The token is cached
  * in memory and mirrored to expiring sessionStorage for same-tab reloads.
@@ -147,6 +164,11 @@ export function getAgentToken(): Promise<string> {
  * requests to kc-agent are rejected when KC_AGENT_TOKEN is configured.
  */
 export async function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  if (isLocalAgentSuppressed()) {
+    clearAgentToken()
+    return suppressedAgentResponse(input)
+  }
+
   const token = await getAgentToken()
   const headers = new Headers(init?.headers)
   if (token && !headers.has('Authorization')) {

@@ -27,7 +27,7 @@ func (h *SwapHandler) ListPendingSwaps(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
 	// #6597: bound the read. Same limit/offset contract as the feedback list
 	// endpoints — absent limit → store default, malformed/oversized → 400.
-	limit, offset, err := parsePageParams(c)
+	limit, offset, err := ParsePageParams(c)
 	if err != nil {
 		return err
 	}

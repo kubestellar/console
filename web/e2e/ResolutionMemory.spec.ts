@@ -1,7 +1,26 @@
 import { test, expect } from './fixtures'
+import type { Page } from '@playwright/test'
 import { mockApiFallback, mockApiMe } from './helpers/setup'
 
+async function openAiMissions(page: Page) {
+  const sidebar = page.locator('[data-tour="ai-missions"]').first()
+  if (await sidebar.isVisible().catch((error) => { console.error('Promise error:', error); return false })) return
+
+  const floatingToggle = page.getByTestId('mission-sidebar-toggle')
+  if (await floatingToggle.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) {
+    await floatingToggle.click()
+  } else {
+    const navbarToggle = page.getByTestId('navbar-ai-missions-btn')
+    await expect(navbarToggle).toBeVisible({ timeout: 10000 })
+    await navbarToggle.click({ force: true })
+  }
+
+  await expect(sidebar).toBeVisible({ timeout: 10000 })
+}
+
 test.describe('Resolution Memory System', () => {
+  test.describe.configure({ mode: 'serial' })
+
   test.beforeEach(async ({ page }) => {
     // Catch-all API mock prevents unmocked requests hanging against vite preview
     await mockApiFallback(page)
@@ -10,12 +29,14 @@ test.describe('Resolution Memory System', () => {
 
     // Set up test mode and skip onboarding
     await page.addInitScript(() => {
+      sessionStorage.setItem('kc-update-toast-seen', '1')
       localStorage.setItem('kubestellar-test-mode', 'true')
       localStorage.setItem('kubestellar-skip-onboarding', 'true')
       localStorage.setItem('token', 'demo-token')
       localStorage.setItem('demo-user-onboarded', 'true')
       localStorage.setItem('kc-demo-mode', 'true')
       localStorage.setItem('kc-has-session', 'true')
+      localStorage.setItem('kc-hints-suppressed', 'true')
       localStorage.setItem('kc-agent-setup-dismissed', 'true')
       localStorage.setItem('kc-backend-status', JSON.stringify({
         available: true,
@@ -181,7 +202,7 @@ test.describe('Resolution Memory System', () => {
 
   test('AI missions sidebar toggle button is visible', async ({ page }) => {
     // Wait for page to be interactive
-    await page.waitForLoadState('domcontentloaded').catch(() => {})
+    await page.waitForLoadState('domcontentloaded').catch((error) => { console.error('Promise catch:', error) })
 
     // The floating toggle button uses data-tour="ai-missions-toggle"
     // (distinct from the sidebar container which uses data-tour="ai-missions")
@@ -192,12 +213,9 @@ test.describe('Resolution Memory System', () => {
   })
 
   test('mission sidebar opens when clicking toggle', async ({ page }) => {
-    await page.waitForLoadState('domcontentloaded').catch(() => {})
+    await page.waitForLoadState('domcontentloaded').catch((error) => { console.error('Promise catch:', error) })
 
-    // Find and click the AI Missions toggle button
-    const toggleButton = page.locator('[data-tour="ai-missions-toggle"]').first()
-    await expect(toggleButton).toBeVisible({ timeout: 10000 })
-    await toggleButton.click()
+    await openAiMissions(page)
 
     // Sidebar should open - look for the header text
     const sidebarHeader = page.locator('text=AI Missions')
@@ -226,16 +244,14 @@ test.describe('Resolution Memory System', () => {
 
     // Reload to pick up the seeded mission
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.waitForLoadState('domcontentloaded').catch(() => {})
+    await page.waitForLoadState('domcontentloaded').catch((error) => { console.error('Promise catch:', error) })
 
     // Open the sidebar via the toggle button
-    const toggleButton = page.locator('[data-tour="ai-missions-toggle"]').first()
-    await expect(toggleButton).toBeVisible({ timeout: 10000 })
-    await toggleButton.click()
+    await openAiMissions(page)
 
     // Look for fullscreen button
     const fullscreenButton = page.locator('button[title="Full screen"], button[title="Expand to full screen"]').first()
-    if (await fullscreenButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await fullscreenButton.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })) {
       await fullscreenButton.click()
 
       // In fullscreen, the sidebar container should take more space
@@ -249,6 +265,8 @@ test.describe('Resolution Memory System', () => {
   })
 
   test('seeded resolutions appear in related knowledge panel', async ({ page }) => {
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+
     // Seed resolutions and a matching mission
     await page.evaluate(() => {
       // Seed resolutions
@@ -279,27 +297,37 @@ test.describe('Resolution Memory System', () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
-      localStorage.setItem('kc_missions', JSON.stringify([mission]))
+      const missionsPayload = JSON.stringify([mission])
+      localStorage.setItem('kc_missions', missionsPayload)
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'kc_missions',
+        oldValue: null,
+        newValue: missionsPayload,
+      }))
     })
 
-    // Reload
-    await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.waitForLoadState('domcontentloaded').catch(() => {})
-
     // Open sidebar
-    const toggleButton = page.locator('[data-tour="ai-missions"]').first()
-    await toggleButton.click()
+    await openAiMissions(page)
+
+    const missionButton = page.getByRole('button', { name: /Fix CrashLoopBackOff in nginx pod/i }).first()
+    if (!(await missionButton.isVisible({ timeout: 2000 }).catch((error) => { console.error('Promise error:', error); return false }))) {
+      const historyButton = page.getByRole('button', { name: /View \d+ previous missions?/i }).first()
+      await expect(historyButton).toBeVisible({ timeout: 10000 })
+      await historyButton.click()
+    }
+    await expect(missionButton).toBeVisible({ timeout: 10000 })
+    await missionButton.click()
 
     // In non-fullscreen mode, we should see a banner about related resolutions
     const relatedBanner = page.locator('text=/similar resolution|Related Knowledge/i')
 
     // Try to find any indication of related resolutions
-    const hasBanner = await relatedBanner.first().isVisible({ timeout: 5000 }).catch(() => false)
+    const hasBanner = await relatedBanner.first().isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
 
     // If not visible in sidebar mode, try fullscreen
     if (!hasBanner) {
       const fullscreenBtn = page.locator('button[title="Full screen"], button[title="Expand to full screen"]').first()
-      if (await fullscreenBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await fullscreenBtn.isVisible({ timeout: 2000 }).catch((error) => { console.error('Promise error:', error); return false })) {
         await fullscreenBtn.click()
 
         // Wait for fullscreen transition to complete
@@ -307,7 +335,7 @@ test.describe('Resolution Memory System', () => {
 
         // In fullscreen, look for the Related Knowledge panel
         const knowledgePanel = page.locator('text=Related Knowledge')
-        const visible = await knowledgePanel.isVisible({ timeout: 3000 }).catch(() => false)
+        const visible = await knowledgePanel.isVisible({ timeout: 3000 }).catch((error) => { console.error('Promise error:', error); return false })
 
         // The panel should exist (even if empty, the header should show)
         expect(visible).toBe(true)

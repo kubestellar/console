@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * EmbedCard.test.tsx — Vitest RTL tests (Issue #15737, Part of #4189).
  *
@@ -26,6 +27,7 @@ import { useDemoMode } from '../hooks/useDemoMode'
 // ---------------------------------------------------------------------------
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => {
       if (key === 'embed.unknownCard') return 'Card not found'
@@ -35,10 +37,13 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false }))
-vi.mock('../hooks/useDemoMode', () => ({
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+vi.mock('../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
-}))
+  getDemoMode: vi.fn(() => false),
+}
+))
 
 const mockPipelineFilterProvider = vi.fn()
 vi.mock('../components/cards/pipelines/PipelineFilterContext', () => ({
@@ -100,7 +105,7 @@ function renderEmbed({ cardType = '', searchQuery = '' }: RenderEmbedOptions = {
 describe('EmbedCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   })
 
   // ---- Scenario 1: Valid card query parameters ----
@@ -217,7 +222,7 @@ describe('EmbedCard', () => {
 
   describe('demo mode in embed context', () => {
     it('displays the demo badge when isDemoMode is active', () => {
-      mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+      mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
       renderEmbed({ cardType: 'nightly-release-pulse' })
 
       expect(screen.getByTestId('demo-badge')).toBeInTheDocument()
@@ -225,7 +230,7 @@ describe('EmbedCard', () => {
     })
 
     it('does not display demo badge when isDemoMode is disabled', () => {
-      mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+      mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
       renderEmbed({ cardType: 'nightly-release-pulse' })
 
       expect(screen.queryByTestId('demo-badge')).not.toBeInTheDocument()

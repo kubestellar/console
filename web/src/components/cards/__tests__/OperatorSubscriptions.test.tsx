@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
@@ -77,6 +78,7 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
 
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../ui/ClusterBadge', () => ({

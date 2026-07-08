@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -75,6 +76,7 @@ vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
 // Stub UI components
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ variant }: { variant: string }) => <div data-testid={`skeleton-${variant}`} />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../ui/Pagination', () => ({

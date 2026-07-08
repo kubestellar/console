@@ -329,13 +329,12 @@ export function TourOverlay() {
         <>
           {/* Static dark backdrop — no animation so it never blinks */}
           <div
-            className="absolute rounded-lg pointer-events-none"
+            className="absolute rounded-lg pointer-events-none shadow-tour-overlay"
             style={{
               top: overlay.rect.top - 8,
               left: overlay.rect.left - 8,
               width: overlay.rect.width + 16,
               height: overlay.rect.height + 16,
-              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.75)',
             }}
           />
           {/* Pulsing border highlight — only the border animates, not the backdrop */}

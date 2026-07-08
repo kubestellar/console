@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
@@ -90,7 +91,7 @@ func TestAppendFormattedWarningEvents_SanitizesPromptSensitiveContent(t *testing
 	}}
 
 	var sb strings.Builder
-	appendFormattedWarningEvents(&sb, events)
+	kube.AppendFormattedWarningEvents(&sb, events)
 	out := sb.String()
 
 	if strings.Contains(out, "SYSTEM:") {

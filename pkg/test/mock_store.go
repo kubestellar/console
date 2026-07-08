@@ -16,6 +16,15 @@ type MockStore struct {
 	mock.Mock
 }
 
+func (m *MockStore) hasExpectation(method string) bool {
+	for _, call := range m.ExpectedCalls {
+		if call.Method == method {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *MockStore) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
@@ -25,6 +34,9 @@ func (m *MockStore) GetUser(ctx context.Context, id uuid.UUID) (*models.User, er
 }
 
 func (m *MockStore) GetUserByGitHubID(ctx context.Context, githubID string) (*models.User, error) {
+	if !m.hasExpectation("GetUserByGitHubID") {
+		return nil, nil
+	}
 	args := m.Called(githubID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -41,6 +53,9 @@ func (m *MockStore) GetUserByGitHubLogin(ctx context.Context, login string) (*mo
 }
 
 func (m *MockStore) CreateUser(ctx context.Context, user *models.User) error {
+	if !m.hasExpectation("CreateUser") {
+		return nil
+	}
 	args := m.Called(user)
 	return args.Error(0)
 }
@@ -51,6 +66,9 @@ func (m *MockStore) UpdateUser(ctx context.Context, user *models.User) error {
 }
 
 func (m *MockStore) UpdateLastLogin(ctx context.Context, userID uuid.UUID) error {
+	if !m.hasExpectation("UpdateLastLogin") {
+		return nil
+	}
 	args := m.Called(userID)
 	return args.Error(0)
 }
@@ -513,6 +531,12 @@ func (m *MockStore) AddUserTokenDelta(ctx context.Context, userID string, catego
 // OAuth credentials — GitHub App Manifest one-click flow.
 func (m *MockStore) SaveOAuthCredentials(_ context.Context, _, _ string) error { return nil }
 func (m *MockStore) GetOAuthCredentials(_ context.Context) (string, string, error) {
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "GetOAuthCredentials" {
+			args := m.Called()
+			return args.String(0), args.String(1), args.Error(2)
+		}
+	}
 	return "", "", nil
 }
 
@@ -744,6 +768,7 @@ func (m *MockStore) GetLatestEventBatchTimestamp(_ context.Context) (*time.Time,
 	return nil, nil
 }
 func (m *MockStore) PruneOldNotifications(_ context.Context, _ int) (int64, error) { return 0, nil }
+func (m *MockStore) PruneOldExecutions(_ context.Context, _ int) (int64, error) { return 0, nil }
 
 func (m *MockStore) CreateTask(_ context.Context, _ *store.StellarTask) (string, error) {
 	return "", nil
@@ -856,4 +881,72 @@ func (m *MockStore) ListStellarAuditLog(_ context.Context, _ string, _ int) ([]s
 	return nil, nil
 }
 
+
+func (m *MockStore) CreateTeam(ctx context.Context, team *models.Team, memberIDs []uuid.UUID) error {
+	args := m.Called(ctx, team, memberIDs)
+	return args.Error(0)
+}
+
+
+func (m *MockStore) UpdateTeam(ctx context.Context, team *models.Team) error {
+	args := m.Called(ctx, team)
+	return args.Error(0)
+}
+
+func (m *MockStore) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
+	args := m.Called(ctx, teamID, userID, role)
+	return args.Error(0)
+}
+
+func (m *MockStore) DeleteTeam(ctx context.Context, teamID uuid.UUID) error {
+	args := m.Called(ctx, teamID)
+	return args.Error(0)
+}
+func (m *MockStore) GetTeamWithMembers(ctx context.Context, teamID uuid.UUID) (*models.TeamWithMembers, error) {
+	args := m.Called(ctx, teamID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.TeamWithMembers), args.Error(1)
+}
+
+// Add these to pkg/store/test/mock.go
+func (m *MockStore) GetTeam(ctx context.Context, teamID uuid.UUID) (*models.Team, error) {
+	args := m.Called(ctx, teamID)
+	if args.Get(0) == nil { return nil, args.Error(1) }
+	return args.Get(0).(*models.Team), args.Error(1)
+}
+
+func (m *MockStore) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]models.Team, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil { return nil, args.Error(1) }
+	return args.Get(0).([]models.Team), args.Error(1)
+}
+
+func (m *MockStore) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]models.TeamMemberInfo, error) {
+    args := m.Called(ctx, teamID)
+
+    if args.Get(0) == nil {
+        return nil, args.Error(1)
+    }
+
+    return args.Get(0).([]models.TeamMemberInfo), args.Error(1)
+}
+func (m *MockStore) ListTeams(ctx context.Context, userID *uuid.UUID, limit, offset int) ([]models.Team, error) {
+    args := m.Called(ctx, userID, limit, offset)
+
+    if args.Get(0) == nil {
+        return nil, args.Error(1)
+    }
+
+    return args.Get(0).([]models.Team), args.Error(1)
+}
+func (m *MockStore) RemoveTeamMember(ctx context.Context, teamID, userID uuid.UUID) error {
+	args := m.Called(ctx, teamID, userID)
+	return args.Error(0)
+}
+func (m *MockStore) UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
+	args := m.Called(ctx, teamID, userID, role)
+	return args.Error(0)
+}
 func (m *MockStore) Close() error { return nil }

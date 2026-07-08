@@ -1,3 +1,4 @@
+import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import type { HistogramData } from '../../../../hooks/useResultHistogram'
@@ -89,7 +90,7 @@ function defaultHookReturn(
     isLoading: false,
     isRefreshing: false,
     isDemoData: false,
-    error: null,
+    error: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: STABLE_LAST_REFRESH_MS,

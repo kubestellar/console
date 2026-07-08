@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
@@ -10,20 +11,24 @@ vi.mock('../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   getDemoMode: () => true, default: () => true,
   useDemoMode: () => mockUseDemoMode(),
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
   canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
-}))
+}
+))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
   emitError: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
@@ -77,7 +82,7 @@ describe('PVCStatus', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
   })
 
   it('renders without crashing', () => {
@@ -92,7 +97,7 @@ describe('PVCStatus', () => {
 
   it('renders skeleton UI when data is loading', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
-    mockPVCs.mockReturnValue({ pvcs: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
+    mockPVCs.mockReturnValue({ pvcs: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: null })
     const { container } = render(<PVCStatus />)
     // Skeleton renders animate-pulse elements or similar loading indicators
     expect(container.innerHTML.length).toBeGreaterThan(0)
@@ -124,13 +129,13 @@ describe('PVCStatus', () => {
 
   it('renders during background refresh with cached data', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
     const { container } = render(<PVCStatus />)
     expect(container).toBeTruthy()
   })
 
   it('reports demo fallback state', () => {
-    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: false, lastRefresh: Date.now() })
     render(<PVCStatus />)
     expect(mockUseCardLoadingState).toHaveBeenCalled()
   })

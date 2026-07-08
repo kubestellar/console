@@ -106,7 +106,7 @@ export function GPUInventoryTab({
                           {node.taints && node.taints.length > 0 && (
                             <div className="flex gap-1">
                               {node.taints.map((t, idx) => (
-                                <span key={idx} className="px-1 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-500 font-mono" title={`${t.key}=${t.value || ''}:${t.effect}`}>
+                                <span key={idx} className="px-1 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-xs text-amber-500 font-mono" title={`${t.key}=${t.value || ''}:${t.effect}`}>
                                   {t.key.split('/').pop()}
                                 </span>
                               ))}

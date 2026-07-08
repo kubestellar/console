@@ -31,30 +31,26 @@ done
 
 echo "Running Vitest unit tests..."
 
-# CI runners (ubuntu-latest, 7 GB RAM) can OOM when running 900+ test files.
-# 8192 MB (8 GB) is the new limit after test count grew to 1800+ files.
-# The previous 7168 MB limit caused environment setup slowdowns (17+ min
-# jsdom construction time) and intermittent worker crashes (nightly
-# regression 2026-05-28, issue #16250).
+# CI runners (ubuntu-latest, 7 GB RAM) can OOM when running 2000+ test files.
+# With maxWorkers=1 (set in vite.config.ts for CI), a single worker needs ~3.5 GB
+# heap to handle the full suite without crashes. The 7 GB runner has enough
+# headroom: 3.5 GB worker + 1.5 GB system/V8 overhead + 2 GB safety margin.
+# Previous 1792 MB limit caused "Worker exited unexpectedly" OOM crashes (#20007).
+# Increased to 3584 MB (3.5 GB) to prevent nightly regressions.
 if [ -n "${CI:-}" ]; then
-  export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=8192"
+  export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=3584"
 fi
 
 # Vitest may exit non-zero due to pool worker termination timeout on CI
 # even when all tests pass. Capture the output and check for actual failures.
 # Run with forks so worker heaps are isolated instead of sharing one threaded heap.
 # Use project directory for output file to avoid /tmp restrictions (#16250).
-# Limit to 3 workers on CI to prevent OOM while keeping runtime reasonable.
-# Forked Vitest workers typically use a few hundred MB of RSS each, so 3 forks
-# fit within the 7 GB runner even though the Node heap limit is 8 GB per worker.
-# This keeps the nightly unit suite from timing out as file count continues growing.
+# Worker count is controlled by vite.config.ts (maxWorkers/minWorkers),
+# not by CLI args — CLI override was causing OOM by forcing 3 workers when
+# vite.config correctly limited to 1 for CI memory constraints (#20007).
 OUTPUT_FILE="vitest-output.log"
 EXIT_CODE=0
-WORKER_ARGS=""
-if [ -n "${CI:-}" ]; then
-  WORKER_ARGS="--maxWorkers=3"
-fi
-npx vitest run $EXTRA_ARGS --pool=forks $WORKER_ARGS --testTimeout=30000 --reporter=verbose 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
+npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --reporter=verbose 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
 
 if [ "$EXIT_CODE" -ne 0 ]; then
   # Check if all tests actually passed despite the non-zero exit

@@ -47,7 +47,7 @@ func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, confi
 // GetStatus returns the kagenti controller availability status.
 // Only editors and admins may view LLM provider configuration (CWE-200, #16730).
 func (h *KagentiProviderProxyHandler) GetStatus(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.client == nil {
@@ -78,7 +78,7 @@ func (h *KagentiProviderProxyHandler) GetStatus(c *fiber.Ctx) error {
 
 // ListAgents returns known kagenti agents.
 func (h *KagentiProviderProxyHandler) ListAgents(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.client == nil {
@@ -112,7 +112,7 @@ func writeSSEDataEvent(w *bufio.Writer, payload string) error {
 
 // Chat streams a kagenti agent conversation via SSE.
 func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.client == nil {
@@ -291,7 +291,7 @@ func (h *KagentiProviderProxyHandler) UpdateConfig(c *fiber.Ctx) error {
 
 // CallTool invokes a tool through a kagenti agent via A2A.
 func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.client == nil {
@@ -451,7 +451,7 @@ type kagentiDirectToolRequest struct {
 
 // CallToolDirect routes tool calls to the appropriate console handlers
 func (h *KagentiProviderProxyHandler) CallToolDirect(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.k8sClient == nil {
@@ -485,6 +485,10 @@ type kagentiClusterReference struct {
 
 // handleGetClusterList implements the get_cluster_list tool
 func (h *KagentiProviderProxyHandler) handleGetClusterList(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "k8s client not initialized"})
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), clusterContextTimeout)
 	defer cancel()
 
@@ -507,6 +511,10 @@ func (h *KagentiProviderProxyHandler) handleGetClusterList(c *fiber.Ctx) error {
 
 // handleGetPodList implements the get_pod_list tool
 func (h *KagentiProviderProxyHandler) handleGetPodList(c *fiber.Ctx, args map[string]any) error {
+	if h.k8sClient == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "k8s client not initialized"})
+	}
+
 	cluster, ok := args["cluster"].(string)
 	if !ok || cluster == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster parameter is required"})
@@ -534,6 +542,10 @@ func (h *KagentiProviderProxyHandler) handleGetPodList(c *fiber.Ctx, args map[st
 
 // handleGetEvents implements the get_events tool
 func (h *KagentiProviderProxyHandler) handleGetEvents(c *fiber.Ctx, args map[string]any) error {
+	if h.k8sClient == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "k8s client not initialized"})
+	}
+
 	cluster, ok := args["cluster"].(string)
 	if !ok || cluster == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster parameter is required"})

@@ -2,11 +2,12 @@
  * Utility Sections - Various reusable section components (Alert, Empty, Loading, Badges, QuickActions)
  */
 
-import { ReactNode, useState } from 'react'
+import { ReactNode } from 'react'
 import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { cn } from '../../lib/cn'
 import { TOUCH_TARGET_HEIGHT_CLASS } from '../../lib/constants/ui'
+import { useModal } from '../../hooks/useModal'
 
 // ============================================================================
 // Collapsible Section
@@ -27,28 +28,33 @@ export function CollapsibleSection({
   badge,
   className = '',
 }: CollapsibleSectionProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
+  const { isOpen, toggle } = useModal(defaultOpen)
 
   return (
     <div className={className}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between py-2 text-sm font-medium text-foreground hover:text-purple-400 transition-colors"
+      <Button
+        variant="ghost"
+        size="sm"
+        fullWidth
+        onClick={toggle}
+        className="justify-between px-0 py-2 text-sm font-medium text-foreground hover:text-purple-400"
+        aria-expanded={isOpen}
+        aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${title} section`}
+        iconRight={badge !== undefined ? (
+          <span className="rounded bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
+            {badge}
+          </span>
+        ) : undefined}
       >
         <span className="flex items-center gap-2">
           {isOpen ? (
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
           ) : (
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           )}
           {title}
         </span>
-        {badge !== undefined && (
-          <span className="px-2 py-0.5 rounded bg-secondary text-xs text-muted-foreground">
-            {badge}
-          </span>
-        )}
-      </button>
+      </Button>
       {isOpen && (
         <div className="pl-6 pb-2">
           {children}
@@ -241,6 +247,7 @@ export function QuickActionsSection({
             key={action.id}
             onClick={action.onClick}
             disabled={action.disabled}
+            aria-label={action.label}
             className={cn('flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50', TOUCH_TARGET_HEIGHT_CLASS, variantStyles[action.variant || 'default'])}
           >
             <Icon className="w-4 h-4" />

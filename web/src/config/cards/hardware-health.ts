@@ -31,7 +31,7 @@ export const hardwareHealthConfig: UnifiedCardConfig = {
     icon: 'CheckCircle',
     title: 'All Healthy',
     message: 'All hardware devices are healthy',
-    variant: 'success',
+    variant: 'neutral',
   },
   loadingState: { type: 'list', rows: 3 },
   isDemoData: false,

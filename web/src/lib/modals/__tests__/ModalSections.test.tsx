@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi} from 'vitest'
 import { render, screen, fireEvent} from '@testing-library/react'
 import {
@@ -23,10 +24,11 @@ vi.mock('../../clipboard', () => ({
 
 // Mock Button component
 vi.mock('../../../components/ui/Button', () => ({
-  Button: ({ children, onClick, icon, ...props }: Record<string, unknown>) => (
+  Button: ({ children, onClick, icon, iconRight, ...props }: Record<string, unknown>) => (
     <button onClick={onClick as () => void} {...props}>
       {icon as React.ReactNode}
       {children as React.ReactNode}
+      {iconRight as React.ReactNode}
     </button>
   ),
 }))

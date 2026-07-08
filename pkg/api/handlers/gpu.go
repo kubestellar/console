@@ -73,7 +73,7 @@ func NewGPUHandler(s store.Store, capacityProvider ClusterCapacityProvider, k8sC
 // CreateReservation creates a new GPU reservation
 func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 	// Require at least editor role — viewers cannot create GPU reservations (#16547).
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -93,7 +93,7 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 	if input.Namespace == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Namespace is required")
 	}
-	if err := mcpValidateClusterAndNamespace(input.Cluster, input.Namespace); err != nil {
+	if err := ValidateClusterAndNamespace(input.Cluster, input.Namespace); err != nil {
 		return err
 	}
 	if input.GPUCount < 1 {
@@ -291,7 +291,7 @@ func (h *GPUHandler) GetReservation(c *fiber.Ctx) error {
 // Only the owner or an admin may modify a reservation (#5416).
 func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 	// Require at least editor role — viewers cannot update GPU reservations (#16547).
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -454,7 +454,7 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 // Only the owner or an admin may delete a reservation (#5417).
 func (h *GPUHandler) DeleteReservation(c *fiber.Ctx) error {
 	// Require at least editor role — viewers cannot delete GPU reservations (#16547).
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 

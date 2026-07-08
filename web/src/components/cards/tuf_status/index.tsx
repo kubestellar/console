@@ -112,18 +112,18 @@ function RoleRow({
             <AlertTriangle className={cn('w-3.5 h-3.5 shrink-0', statusTextColor(role.status))} />
           )}
           <span className="text-xs font-medium font-mono truncate">{role.name}</span>
-          <span className="text-[11px] text-muted-foreground shrink-0">v{role.version}</span>
+          <span className="text-xs text-muted-foreground shrink-0">v{role.version}</span>
         </div>
         <span
           className={cn(
-            'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+            'text-xs px-1.5 py-0.5 rounded-full shrink-0',
             statusBadgeClass(role.status),
           )}
         >
           {statusLabel}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
           <span className={statusTextColor(role.status)}>{formatExpiration(role.expiresAt)}</span>
@@ -150,7 +150,9 @@ export function TufStatus() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    error,
     lastRefresh,
+    refetch,
   } = useCachedTuf()
 
   // Rule: never show demo data while still loading
@@ -167,6 +169,7 @@ export function TufStatus() {
     hasAnyData,
     isFailed,
     consecutiveFailures,
+    errorMessage: error ?? undefined,
     lastRefresh,
   })
 
@@ -185,9 +188,17 @@ export function TufStatus() {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-3">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">{t('tufStatus.fetchFailed', 'Failed to fetch TUF status')}</p>
+        {error && <p className="text-xs text-muted-foreground max-w-xs text-center">{error}</p>}
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm"
+        >
+          <RefreshCw className="w-4 h-4" />
+          {t('common.retry', 'Retry')}
+        </button>
       </div>
     )
   }
@@ -291,7 +302,7 @@ export function TufStatus() {
               {t('tufStatus.sectionRoles', 'Top-level roles')}
             </h3>
             {data.repository ? (
-              <span className="text-[11px] text-muted-foreground ml-auto truncate max-w-[50%]">
+              <span className="text-xs text-muted-foreground ml-auto truncate max-w-[50%]">
                 {data.repository}
               </span>
             ) : null}

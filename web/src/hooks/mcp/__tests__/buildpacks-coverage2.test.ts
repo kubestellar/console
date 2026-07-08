@@ -33,7 +33,11 @@ vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
   get isNetlifyDeployment() { return mockIsNetlifyDeployment.value },
 }))
-vi.mock('../../useDemoMode', () => ({ useDemoMode: () => mockUseDemoMode() }))
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
+}))
 vi.mock('../../../lib/modeTransition', () => ({
   registerRefetch: (...args: unknown[]) => mockRegisterRefetch(...args),
   registerCacheReset: (...args: unknown[]) => mockRegisterCacheReset(...args),
@@ -42,6 +46,10 @@ vi.mock('../shared', () => ({ MIN_REFRESH_INDICATOR_MS: 0, getEffectiveInterval:
 vi.mock('../pollingManager', () => ({ subscribePolling: (...args: unknown[]) => mockSubscribePolling(...args) }))
 vi.mock('../../../lib/constants/network', async (i) => ({ ...(await i() as Record<string, unknown>), MCP_HOOK_TIMEOUT_MS: 5_000 }))
 vi.mock('../../../lib/constants', async (i) => ({ ...(await i() as Record<string, unknown>), STORAGE_KEY_TOKEN: 'token' }))
+vi.mock('../../../lib/authToken', () => ({
+  getStoredAuthToken: vi.fn().mockResolvedValue('test-token'),
+  getStoredAuthTokenSync: vi.fn().mockReturnValue('test-token'),
+}))
 
 import { useBuildpackImages } from '../buildpacks'
 
@@ -56,7 +64,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'tk')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsNetlifyDeployment.value = false
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockSubscribePolling.mockReturnValue(vi.fn())

@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { SearchItem } from '../../../../hooks/useSearchIndex'
@@ -60,12 +61,14 @@ vi.mock('../../../ui/FeatureHintTooltip', () => ({
   FeatureHintTooltip: () => null,
 }))
 
-vi.mock('../../../../lib/analytics', () => ({
+vi.mock('../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitGlobalSearchOpened: vi.fn(),
   emitGlobalSearchQueried: vi.fn(),
   emitGlobalSearchSelected: vi.fn(),
   emitGlobalSearchAskAI: vi.fn(),
-}))
+}
+))
 
 describe('SearchDropdown', () => {
   beforeEach(() => {

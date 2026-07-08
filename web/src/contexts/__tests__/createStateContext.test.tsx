@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for createStateContext — covers the factory function's three exports:
  * Context, useRequiredStateContext, and useOptionalStateContext.

@@ -53,6 +53,7 @@ func TestTopologyGetTopology_Success(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/topology", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
@@ -97,6 +98,7 @@ func TestTopologyGetTopology_NoClusters(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/topology", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)

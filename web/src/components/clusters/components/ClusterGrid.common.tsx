@@ -41,6 +41,7 @@ export function ActionTooltipWrapper({
   return (
     <span
       className="inline-flex"
+      role="presentation"
       onClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
     >

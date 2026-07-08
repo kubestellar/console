@@ -46,9 +46,25 @@ export async function compressScreenshot(dataUri: string): Promise<string | null
 
     // Still too large — give up
     console.warn('[Screenshot] Image too large even after aggressive compression')
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('screenshot-compression-warning', {
+        detail: { 
+          error: 'Image too large after compression', 
+          timestamp: Date.now()
+        }
+      }))
+    }
     return null
   } catch (err: unknown) {
     console.error('[Screenshot] Compression failed:', err)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('screenshot-compression-error', {
+        detail: { 
+          error: err instanceof Error ? err.message : String(err), 
+          timestamp: Date.now()
+        }
+      }))
+    }
     return null
   }
 }

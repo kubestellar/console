@@ -255,6 +255,9 @@ jobs:
           elif [ "$JOB_RESULT" = "skipped" ]; then
             ICON="⏭️"
             STATUS="skipped (no matching specs)"
+          elif [ "$JOB_RESULT" = "cancelled" ]; then
+            ICON="⏹️"
+            STATUS="cancelled"
           else
             ICON="❌"
             STATUS="failed"

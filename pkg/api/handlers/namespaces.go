@@ -59,7 +59,7 @@ func namespaceListError(err error) error {
 func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 	// SECURITY (#7485): namespace listing exposes cluster structure; require a
 	// valid console role (viewer or above).
-	if err := requireViewerOrAbove(c, h.store); err != nil {
+	if err := RequireViewerOrAbove(c, h.store); err != nil {
 		return err
 	}
 
@@ -70,6 +70,9 @@ func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	if cluster == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
+	}
+	if err := validateK8sName("cluster", cluster); err != nil {
+		return err
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), nsDefaultTimeout)
@@ -109,6 +112,12 @@ func (h *NamespaceHandler) GetNamespaceAccess(c *fiber.Ctx) error {
 	name := c.Params("name")
 	if cluster == "" || name == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster and namespace name are required")
+	}
+	if err := validateK8sName("cluster", cluster); err != nil {
+		return err
+	}
+	if err := validateK8sName("namespace", name); err != nil {
+		return err
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), nsDefaultTimeout)

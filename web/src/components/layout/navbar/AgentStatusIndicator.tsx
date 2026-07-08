@@ -21,6 +21,7 @@ import {
   TOAST_DISMISS_MS,
   LOCAL_AGENT_HTTP_URL,
   BACKEND_HEALTH_CHECK_TIMEOUT_MS,
+  isLocalAgentSuppressed,
 } from '../../../lib/constants/network'
 import { agentFetch } from '@/hooks/mcp/shared'
 import type { AgentInfo } from '../../../types/agent'
@@ -70,6 +71,8 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
   // Fetch agents from kc-agent health endpoint (works even in demo mode
   // when the WebSocket is not connected)
   const fetchAgentsFromHealth = async () => {
+    if (isLocalAgentSuppressed()) return
+
     setIsDiscoveringAgents(true)
     try {
       const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
@@ -246,7 +249,9 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
   // Uses stabilized status values to prevent color flashes during navigation.
   // showDemoStyle is sticky: stays true after demo toggle until agent connects.
   const showAsDemoMode = isDemoMode || showDemoStyle
-  const isClusterBacked = isInClusterMode && !showAsDemoMode
+  const hasBackendOnlyLiveConnection =
+    isLocalAgentSuppressed() && isBackendConnected && backendStatus === 'connected'
+  const isClusterBacked = (isInClusterMode || hasBackendOnlyLiveConnection) && !showAsDemoMode
   const systemHealthTooltip = [dashboardHealth.message, ...dashboardHealth.details].join('\n')
 
   // Backend health affects the indicator when agent is connected (but not in demo mode)
@@ -296,7 +301,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
             Icon: Wifi,
             title: systemHealthTooltip,
           }
-        : stableConnected
+        : stableConnected || hasBackendOnlyLiveConnection
           ? {
               bg: isLiveMode
                 ? 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20'
@@ -632,14 +637,14 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
               <p className="text-xs text-muted-foreground mb-2">
                 {t('agent.localAgentDesc')}
               </p>
-              <div className="bg-black/50 rounded p-2 font-mono text-[11px] text-green-400 mb-2 space-y-1">
+              <div className="bg-black/50 rounded p-2 font-mono text-xs text-green-400 mb-2 space-y-1">
                 <div className="text-muted-foreground">
                   {t('agent.installViaHomebrewMacOS')}
                 </div>
                 <code className="block">{t('agent.tapKubestellar')}</code>
                 <code className="block">{t('agent.installKcAgent')}</code>
               </div>
-              <div className="bg-black/50 rounded p-2 font-mono text-[11px] text-green-400 mb-2 space-y-1">
+              <div className="bg-black/50 rounded p-2 font-mono text-xs text-green-400 mb-2 space-y-1">
                 <div className="text-muted-foreground">
                   {t('agent.installLinuxBuildFromSource')}
                 </div>

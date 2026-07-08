@@ -18,6 +18,15 @@ import * as path from 'path'
 import { fileURLToPath } from 'url'
 import { setupAuth, setupLiveMocks } from '../mocks/liveMocks'
 
+const SCAN_USER = {
+  id: 'console-error-scan-user',
+  github_id: '12345',
+  github_login: 'console-error-scan',
+  email: 'scan@example.com',
+  role: 'viewer',
+  onboarded: true,
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -188,7 +197,7 @@ async function mockSkipPatternRoutes(page: Page): Promise<void> {
   const objectPatterns = [
     '**/api/kubectl/**', '**/api/active-users*',
     '**/api/user/preferences*', '**/api/permissions/**',
-    '**/auth/**', '**/api/dashboards/**', '**/api/feedback/**',
+    '**/api/dashboards/**', '**/api/feedback/**',
     '**/api/persistence/**', '**/api/config/**', '**/api/gitops/**',
     '**/api/rewards/**',
   ]
@@ -202,6 +211,66 @@ async function mockSkipPatternRoutes(page: Page): Promise<void> {
       route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
     )
   }
+  await page.route('**/auth/**', (route) => {
+    const pathname = new URL(route.request().url()).pathname
+    if (!pathname.startsWith('/auth/')) {
+      return route.fallback()
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  })
+}
+
+async function seedScannerAuth(page: Page): Promise<void> {
+  await page.addInitScript((user) => {
+    const originalFetch = window.fetch.bind(window)
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const requestUrl = typeof input === 'string'
+        ? input
+        : input instanceof Request
+          ? input.url
+          : input.toString()
+      const { pathname } = new URL(requestUrl, window.location.origin)
+      const normalizedPath = pathname.replace(/\/+$/, '')
+      if (normalizedPath === '/api/me') {
+        return new Response(JSON.stringify(user), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (normalizedPath === '/auth/refresh') {
+        return new Response(JSON.stringify({ refreshed: true, onboarded: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return originalFetch(input, init)
+    }
+
+    const now = String(Date.now())
+    localStorage.setItem('token', 'test-token')
+    sessionStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-user-cache', JSON.stringify(user))
+    localStorage.setItem('kc-user-cache-validated', now)
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
+  }, SCAN_USER)
+}
+
+async function mockScannerAuth(page: Page): Promise<void> {
+  await page.route('**/api/**', (route) => {
+    const { pathname } = new URL(route.request().url())
+    if (pathname.replace(/\/+$/, '') !== '/api/me') return route.fallback()
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(SCAN_USER),
+    })
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -286,9 +355,14 @@ test('console error scan — all routes', async ({ page }) => {
 
   // ── Setup ─────────────────────────────────────────────────────────────
   console.log('[ConsoleErrorScan] Setting up auth and API mocks...')
-  await setupAuth(page)
+  await seedScannerAuth(page)
+  await setupAuth(page, SCAN_USER)
   await setupLiveMocks(page, { delayDataAPIs: false })
   await mockSkipPatternRoutes(page)
+  // setupLiveMocks/mockSkipPatternRoutes install broad API handlers. Register
+  // /api/me last so AuthProvider always receives the schema-valid mock user.
+  await setupAuth(page, SCAN_USER)
+  await mockScannerAuth(page)
 
   // Prime the app — initial load
   console.log('[ConsoleErrorScan] Priming app with initial load...')
@@ -301,8 +375,18 @@ test('console error scan — all routes', async ({ page }) => {
   // Set auth token in localStorage (ProtectedRoute checks this)
   await page.evaluate(() => {
     localStorage.setItem('token', 'test-token')
+    sessionStorage.setItem('token', 'test-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-user-cache', JSON.stringify({
+      id: 'console-error-scan-user',
+      github_id: '12345',
+      github_login: 'console-error-scan',
+      email: 'scan@example.com',
+      role: 'viewer',
+      onboarded: true,
+    }))
+    localStorage.setItem('kc-user-cache-validated', String(Date.now()))
     localStorage.setItem('kc-agent-setup-dismissed', 'true')
     localStorage.setItem('kc-backend-status', JSON.stringify({
       available: true,

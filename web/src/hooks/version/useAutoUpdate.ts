@@ -1,6 +1,6 @@
 import type { AutoUpdateStatus, UpdateChannel } from '../../types/updates'
 import { authFetch } from '../../lib/api'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, isLocalAgentSuppressed } from '../../lib/constants/network'
 import {
   CANCEL_UPDATE_TIMEOUT_MS,
   safeJsonParse,
@@ -24,6 +24,9 @@ export async function fetchAutoUpdateStatus(
 ): Promise<AutoUpdateStatusResult> {
   if (!agentSupportsAutoUpdate) {
     return { success: false, errorMessage: 'Could not reach kc-agent' }
+  }
+  if (isLocalAgentSuppressed()) {
+    return { success: false, errorMessage: 'kc-agent disabled in this deployment' }
   }
 
   try {

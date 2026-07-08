@@ -23,6 +23,8 @@ export const aiMlDashboardConfig: UnifiedDashboardConfig = {
 
     // Configuration and existing cards
     { id: 'llmd-configurator-1', cardType: 'llmd_configurator', title: 'Configurator', position: { w: 4, h: 4 } },
+    { id: 'epp-health-1', cardType: 'epp_health', title: 'EPP Health', position: { w: 4, h: 3 } },
+    { id: 'model-endpoint-health-1', cardType: 'model_endpoint_health', title: 'Model Endpoint Health', position: { w: 4, h: 3 } },
     { id: 'llm-models-1', cardType: 'llm_models', position: { w: 4, h: 3 } },
     { id: 'llm-inference-1', cardType: 'llm_inference', position: { w: 4, h: 3 } },
     { id: 'llmd-stack-monitor-1', cardType: 'llmd_stack_monitor', position: { w: 4, h: 3 } },

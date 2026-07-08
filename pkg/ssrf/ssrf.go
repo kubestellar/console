@@ -30,7 +30,7 @@ const dnsTimeout = 3 * time.Second
 // CGNAT, cloud metadata, IETF protocol assignments).
 func IsBlockedIP(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsUnspecified() ||
+		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() ||
 		cgnatNet.Contains(ip) || cloudMetadataNet.Contains(ip) || ietfProtocolNet.Contains(ip)
 }
 

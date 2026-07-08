@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * ThemeSection Component Tests
  */

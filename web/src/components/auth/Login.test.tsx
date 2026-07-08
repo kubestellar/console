@@ -1,3 +1,4 @@
+import React from 'react'
 /// <reference types='@testing-library/jest-dom/vitest' />
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -66,6 +67,12 @@ describe('Login Component', () => {
   it('renders the KubeStellar branding', () => {
     renderLogin()
     expect(screen.getByText('KubeStellar')).toBeInTheDocument()
+  })
+
+  it('does not render a terms of service footer', () => {
+    renderLogin()
+    expect(screen.queryByText('login.termsOfServicePrefix')).not.toBeInTheDocument()
+    expect(screen.queryByText('login.termsOfServiceLink')).not.toBeInTheDocument()
   })
 
   describe('OAuth setup wizard (backendUp && !oauthConfigured)', () => {

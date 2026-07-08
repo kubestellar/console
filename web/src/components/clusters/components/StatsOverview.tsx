@@ -8,6 +8,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { useModalState } from '../../../lib/modals'
 import { wrapAbbreviations } from '../../shared/TechnicalAcronym'
 import { getSeverityColors } from '../../../lib/cards/statusColors'
+import { isLocalAgentSuppressed } from '../../../lib/constants'
 
 export interface ClusterStats {
   total: number
@@ -225,7 +226,7 @@ export function StatsOverview({
 
   // When demo mode is OFF and agent is not connected, force skeleton display
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceLoadingForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !wasAgentEverConnected()
+  const forceLoadingForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !isLocalAgentSuppressed() && !wasAgentEverConnected()
 
   // Map block IDs to their click handlers
   const getClickHandler = (blockId: string) => {

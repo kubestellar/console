@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -25,6 +26,7 @@ vi.mock('../../../../cards/useStablePageHeight', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
@@ -200,7 +202,7 @@ describe('ListVisualization', () => {
       renderList({ pageSize: PAGE_SIZE })
       const buttons = screen.getAllByRole('button')
       const prevButton = buttons[buttons.length - 2]
-      expect(prevButton).toBeDisabled()
+      expect(prevButton.getAttribute('aria-disabled')).toBe('true')
     })
 
     it('disables next button on last page', async () => {
@@ -218,7 +220,7 @@ describe('ListVisualization', () => {
       // Re-query buttons after re-render
       const updatedButtons = screen.getAllByRole('button')
       const updatedNext = updatedButtons[updatedButtons.length - 1]
-      expect(updatedNext).toBeDisabled()
+      expect(updatedNext.getAttribute('aria-disabled')).toBe('true')
     })
 
     it('does not show pagination when all items fit on one page', () => {

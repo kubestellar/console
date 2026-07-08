@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * AuthCallback CONTRACT tests (#6590)
  *
@@ -70,10 +71,12 @@ vi.mock('../../../config/routes', () => ({
   getLoginWithError: (err: string) => `/login?error=${err}`,
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitGitHubConnected: mockEmitGitHubConnected,
   emitError: mockEmitError,
-}))
+}
+))
 
 vi.mock('../../../lib/utils/localStorage', () => ({
   safeGetItem: () => null,
@@ -127,6 +130,15 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('AuthCallback /auth/refresh contract (#6590)', () => {
+  it('renders loading state while auth refresh is pending', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
+
+    const { getByRole, getByText } = renderAuthCallback()
+
+    expect(getByRole('status')).toBeInTheDocument()
+    expect(getByText('authCallback.fetchingUserInfo')).toBeInTheDocument()
+  })
+
   it('navigates to home when response has { refreshed: true, onboarded: true }', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,

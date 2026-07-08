@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { isLocalAgentSuppressed } from '../lib/constants/network'
 import { triggerAllRefetches } from '../lib/modeTransition'
 import {
   subscribeToBackendHealthEvents,
@@ -263,6 +264,8 @@ class BackendHealthManager {
    *  Uses plain fetch instead of agentFetch — the /health endpoint does not
    *  require auth, and plain fetch avoids CORS preflight failures (#10459). */
   private async checkAgentHealth(): Promise<boolean> {
+    if (isLocalAgentSuppressed()) return false
+
     try {
       const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         method: 'GET',

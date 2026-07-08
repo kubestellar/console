@@ -47,6 +47,7 @@ func TestWebSocketRateLimit(t *testing.T) {
 	// Test: Normal WebSocket upgrade request should succeed
 	req, err := http.NewRequest(http.MethodGet, "/ws", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Upgrade", "websocket")
 	req.Header.Set("Connection", "Upgrade")
 	req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")

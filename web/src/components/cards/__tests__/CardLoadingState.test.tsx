@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Direct Vitest coverage for CardLoadingState presentational branches (#15510).
  *

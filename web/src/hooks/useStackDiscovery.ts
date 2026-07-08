@@ -326,12 +326,12 @@ function loadCachedStacks(): { stacks: LLMdStack[]; timestamp: number } | null {
   try {
     const cached = localStorage.getItem(CACHE_KEY)
     if (!cached) return null
-    const parsed = JSON.parse(cached)
-    if (parsed.timestamp && parsed.stacks) {
-      return parsed
+    const parsed = safeJsonParse<{ stacks?: LLMdStack[]; timestamp?: number } | null>(cached, null, 'stack cache')
+    if (parsed?.timestamp && parsed.stacks) {
+      return { stacks: parsed.stacks, timestamp: parsed.timestamp }
     }
   } catch {
-    // Ignore parse errors
+    // Ignore storage errors
   }
   return null
 }

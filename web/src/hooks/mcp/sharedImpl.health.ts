@@ -296,6 +296,7 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
           // External reachability probe result (#4202)
           externallyReachable: health.externallyReachable,
           nodeCount: health.nodeCount,
+          readyNodes: health.readyNodes,
           podCount: health.podCount,
           cpuCores: health.cpuCores,
           cpuRequestsCores: health.cpuRequestsCores,

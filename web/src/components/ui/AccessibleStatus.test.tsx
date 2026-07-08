@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect } from 'vitest'
 import { AccessibleStatusBadge, AccessibleStatusText } from './AccessibleStatus'
 import { STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'

@@ -14,6 +14,9 @@ import { TemplateDropdown } from './cardFactoryPreviews'
 import { FieldSuggestChips } from './FieldSuggestChips'
 import { validateT1AssistResult, type T1AssistResult } from './cardFactoryAssistTypes'
 import { useMemo } from 'react'
+import { Input } from '../ui/Input'
+import { Select } from '../ui/Select'
+import { TextArea } from '../ui/TextArea'
 
 // #9061 — Initial sample JSON shown in the Tier 1 "Data (JSON array)" field.
 // Exported as a constant so the field's first-focus auto-select can compare
@@ -162,48 +165,55 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.titleRequired')}</label>
-            <input
+            <Input
               type="text"
               value={t1Title}
               onChange={e => setT1Title(e.target.value)}
               placeholder={t('dashboard.cardFactory.titlePlaceholder')}
-              className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+              inputSize="md"
             />
           </div>
           <div>
             <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.widthLabel')}</label>
-            <select
+            <Select
               value={t1Width}
               onChange={e => setT1Width(Number(e.target.value))}
-              className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+              selectSize="md"
             >
               <option value={3}>{t('dashboard.cardFactory.widthSmall')}</option>
               <option value={4}>{t('dashboard.cardFactory.widthMedium')}</option>
               <option value={6}>{t('dashboard.cardFactory.widthLarge')}</option>
               <option value={8}>{t('dashboard.cardFactory.widthWide')}</option>
               <option value={12}>{t('dashboard.cardFactory.widthFull')}</option>
-            </select>
+            </Select>
           </div>
         </div>
 
         <div>
           <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.descriptionLabel')}</label>
-          <input
+          <Input
             type="text"
             value={t1Description}
             onChange={e => setT1Description(e.target.value)}
             placeholder={t('dashboard.cardFactory.descPlaceholder')}
-            className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+            inputSize="md"
           />
         </div>
 
         <div>
           <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.layoutLabel')}</label>
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="group" aria-label={t('dashboard.cardFactory.layoutLabel')}>
             {(['list', 'stats', 'stats-and-list'] as const).map(l => (
               <button
                 key={l}
                 onClick={() => setT1Layout(l)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setT1Layout(l)
+                  }
+                }}
+                aria-pressed={t1Layout === l}
                 className={cn(
                   'px-3 py-1.5 rounded-lg text-xs transition-colors',
                   t1Layout === l
@@ -232,29 +242,34 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
           <div className="space-y-2">
             {t1Columns.map((col, idx) => (
               <div key={idx} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={col.field}
-                  onChange={e => updateColumn(idx, 'field', e.target.value)}
-                  placeholder={t('dashboard.cardFactory.fieldPlaceholder')}
-                  className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
-                />
-                <input
-                  type="text"
-                  value={col.label}
-                  onChange={e => updateColumn(idx, 'label', e.target.value)}
-                  placeholder={t('dashboard.cardFactory.labelPlaceholder')}
-                  className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
-                />
-                <select
+                <div className="flex-1 min-w-0">
+                  <Input
+                    type="text"
+                    value={col.field}
+                    onChange={e => updateColumn(idx, 'field', e.target.value)}
+                    placeholder={t('dashboard.cardFactory.fieldPlaceholder')}
+                    inputSize="sm"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <Input
+                    type="text"
+                    value={col.label}
+                    onChange={e => updateColumn(idx, 'label', e.target.value)}
+                    placeholder={t('dashboard.cardFactory.labelPlaceholder')}
+                    inputSize="sm"
+                  />
+                </div>
+                <Select
                   value={col.format || 'text'}
                   onChange={e => updateColumn(idx, 'format', e.target.value)}
-                  className="w-20 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden"
+                  selectSize="sm"
+                  className="w-20"
                 >
                   <option value="text">{t('cardFactory.formatText')}</option>
                   <option value="badge">{t('cardFactory.formatBadge')}</option>
                   <option value="number">{t('cardFactory.formatNumber')}</option>
-                </select>
+                </Select>
                 <button
                   onClick={() => removeColumn(idx)}
                   className="p-1 text-muted-foreground hover:text-red-400 transition-colors"
@@ -277,7 +292,7 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
         {/* Static data JSON */}
         <div>
           <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.dataLabel')}</label>
-          <textarea
+          <TextArea
             value={t1DataJson}
             onChange={e => {
               // After the first user edit, stop treating the field as "pristine
@@ -299,7 +314,8 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
             }}
             rows={6}
             placeholder={T1_SAMPLE_DATA_JSON}
-            className="w-full text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono focus:outline-hidden focus:ring-1 focus:ring-inset focus:ring-purple-500/50"
+            textAreaSize="sm"
+            className="font-mono"
           />
         </div>
 

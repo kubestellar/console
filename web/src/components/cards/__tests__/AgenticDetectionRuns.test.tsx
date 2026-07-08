@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * AgenticDetectionRuns card — Vitest RTL (#15355, Part of #4189).
  *
@@ -10,6 +11,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+}))
+
+const mockUseAgenticDetectionRuns = vi.fn()
+
+vi.mock('../../../hooks/useAgenticDetectionRuns', () => ({
+  useAgenticDetectionRuns: () => mockUseAgenticDetectionRuns(),
+}))
+
 import { CardDataReportContext } from '../CardDataContext'
 import type { DetectionRun, DetectionRunsData } from '../../../hooks/useAgenticDetectionRuns'
 import { AgenticDetectionRuns } from '../AgenticDetectionRuns'
@@ -18,12 +34,6 @@ const ITEMS_PER_PAGE = 10
 const GITHUB_ISSUE_URL = 'https://github.com/kubestellar/console/issues/16283'
 const GITHUB_WORKFLOW_URL = 'https://github.com/kubestellar/console/actions/runs/12345'
 const MS_PER_HOUR = 60 * 60 * 1000
-
-const mockUseAgenticDetectionRuns = vi.fn()
-
-vi.mock('../../../hooks/useAgenticDetectionRuns', () => ({
-  useAgenticDetectionRuns: () => mockUseAgenticDetectionRuns(),
-}))
 
 function makeRun(overrides: Partial<DetectionRun> = {}): DetectionRun {
   return {

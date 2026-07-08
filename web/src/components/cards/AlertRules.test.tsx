@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -25,8 +26,10 @@ vi.mock('../../hooks/useAlerts', () => ({
 }))
 
 const mockIsDemoMode = vi.fn(() => false)
-vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 const mockUseCardLoadingState = vi.fn()

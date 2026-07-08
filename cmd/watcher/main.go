@@ -82,7 +82,7 @@ func main() {
 
 	slog.Info("kc-watcher starting", "version", version, "port", strconv.Itoa(*port), "backend-port", strconv.Itoa(*backendPort))
 
-	runtimeState, cleanupRuntime, err := watcher.PrepareRuntime(watcher.RuntimeInfoFile)
+	runtimeState, cleanupRuntime, err := watcher.PrepareRuntime(watcher.RuntimeInfoFileFromEnv())
 	if err != nil {
 		slog.Error("failed to prepare watcher runtime", "error", err)
 		os.Exit(1)

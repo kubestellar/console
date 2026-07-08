@@ -352,7 +352,7 @@ func (h *CardHandler) RecordFocus(c *fiber.Ctx) error {
 // GetCardTypes returns available card types
 func (h *CardHandler) GetCardTypes(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
-		return demoResponse(c, "card_types", models.GetCardTypes())
+		return DemoResponse(c, "card_types", models.GetCardTypes())
 	}
 	return c.JSON(models.GetCardTypes())
 }

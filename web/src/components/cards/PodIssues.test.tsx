@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Unit tests for PodIssues card component.
  *
@@ -165,7 +166,7 @@ const defaultPodIssuesReturn = {
   isDemoFallback: false,
   isFailed: false,
   consecutiveFailures: 0,
-  error: null,
+  error: false,
 }
 
 const defaultClustersReturn = {

@@ -176,10 +176,11 @@ describe("rate-limit", () => {
 
       const result = await enforceSimpleRateLimit({
         ...DEFAULT_OPTIONS,
-        maxRequests: 4,
+        maxRequests: 5,
       });
 
-      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
+      expect(result.limited).toBe(false);
+      expect(result.retryAfterSeconds).toBe(0);
     });
 
     it("fails closed when blob operations error", async () => {

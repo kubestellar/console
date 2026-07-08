@@ -15,6 +15,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/ssrf"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -40,21 +42,17 @@ const (
 
 	// cardProxyRateMax is the maximum requests per user per window.
 	cardProxyRateMax = 30
+
+	// cardProxyMaxBuckets caps the worst-case map size to prevent unbounded growth.
+	cardProxyMaxBuckets = 10000
+
+	// cardProxyLimiterIdleTTL is the idle timeout before evicting a rate limiter entry.
+	cardProxyLimiterIdleTTL = 10 * time.Minute
+
+	// cardProxyEvictionInterval is how often to run the eviction goroutine.
+	cardProxyEvictionInterval = 5 * time.Minute
 )
 
-var (
-	// cgnatNet is RFC 6598 Carrier-Grade NAT range (100.64.0.0/10).
-	// Not covered by net.IP.IsPrivate(), but often used for internal services.
-	_, cgnatNet, _ = net.ParseCIDR("100.64.0.0/10")
-
-	// cloudMetadataIP is the cloud instance metadata service endpoint (169.254.169.254/32).
-	// Common SSRF target for credential theft in AWS, GCP, Azure.
-	_, cloudMetadataIP, _ = net.ParseCIDR("169.254.169.254/32")
-
-	// ietfProtocolNet is RFC 6890 IETF Protocol Assignments (192.0.0.0/24).
-	// Reserved range that should not be used for external requests.
-	_, ietfProtocolNet, _ = net.ParseCIDR("192.0.0.0/24")
-)
 
 // cardProxyClient uses a custom DialContext to check resolved IPs at
 // connection time, preventing DNS rebinding / TOCTOU SSRF bypasses.
@@ -88,12 +86,10 @@ var cardProxyClient = &http.Client{
 	},
 }
 
-// isBlockedIP returns true if the IP is in a non-public range.
-// Covers standard private ranges plus CGNAT, cloud metadata, and IETF ranges.
+// isBlockedIP delegates to the shared SSRF validation package to keep
+// IP-blocking logic in one place (#18372).
 func isBlockedIP(ip net.IP) bool {
-	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() ||
-		cgnatNet.Contains(ip) || cloudMetadataIP.Contains(ip) || ietfProtocolNet.Contains(ip)
+	return ssrf.IsBlockedIP(ip)
 }
 
 // CardProxyHandler proxies external HTTP GET requests for custom card code.
@@ -106,13 +102,26 @@ type CardProxyHandler struct {
 
 // cardProxyRateLimiter tracks per-user request counts in a sliding window.
 type cardProxyRateLimiter struct {
-	mu      sync.Mutex
-	buckets map[string]*rateBucket
+	mu           sync.Mutex
+	buckets      map[string]*rateBucket
+	evictStarted bool
 }
 
 type rateBucket struct {
-	count  int
-	window time.Time
+	count    int
+	window   time.Time
+	lastUsed time.Time
+}
+
+// cardProxyEvictCtx / cardProxyEvictCancel provide context-based cancellation
+// for the background evictor goroutine.
+var (
+	cardProxyEvictCtx    context.Context
+	cardProxyEvictCancel context.CancelFunc
+)
+
+func init() {
+	cardProxyEvictCtx, cardProxyEvictCancel = context.WithCancel(context.Background())
 }
 
 func newCardProxyRateLimiter() *cardProxyRateLimiter {
@@ -124,16 +133,29 @@ func (l *cardProxyRateLimiter) allow(userID string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	// Lazy-start the evictor on first allow() call
+	if !l.evictStarted {
+		l.evictStarted = true
+		safego.GoWith("card-proxy/limiter-evictor", func() { startCardProxyLimiterEvictor(l, cardProxyEvictCtx) })
+	}
+
+	// Cap the map to prevent unbounded growth
+	if len(l.buckets) >= cardProxyMaxBuckets {
+		slog.Warn("[CardProxy] rate limiter map at capacity", "size", len(l.buckets))
+		return false
+	}
+
 	now := time.Now()
 	b, ok := l.buckets[userID]
 	if !ok || now.Sub(b.window) > cardProxyRateWindow {
-		l.buckets[userID] = &rateBucket{count: 1, window: now}
+		l.buckets[userID] = &rateBucket{count: 1, window: now, lastUsed: now}
 		return true
 	}
 	if b.count >= cardProxyRateMax {
 		return false
 	}
 	b.count++
+	b.lastUsed = now
 	return true
 }
 
@@ -146,7 +168,7 @@ func NewCardProxyHandler(s store.Store) *CardProxyHandler {
 func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	// Require at least editor role — viewers and anonymous users must not be
 	// able to trigger outbound requests through the proxy (#12436).
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -244,6 +266,47 @@ func (h *CardProxyHandler) validateProxyTarget(rawURL string) (string, error) {
 	}
 
 	return host, nil
+}
+
+// startCardProxyLimiterEvictor periodically removes idle rate limiters
+// (no requests for >10 minutes) to prevent unbounded map growth.
+// Exits when ctx is cancelled.
+//
+//nolint:nilaway // ctx is always non-nil (created by context.WithCancel)
+func startCardProxyLimiterEvictor(limiter *cardProxyRateLimiter, ctx context.Context) {
+	if ctx == nil || limiter == nil {
+		return
+	}
+	ticker := time.NewTicker(cardProxyEvictionInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			now := time.Now()
+			// Collect stale keys under lock, then delete — avoids
+			// holding the lock for the entire iteration when map is large.
+			limiter.mu.Lock()
+			stale := make([]string, 0)
+			for userID, entry := range limiter.buckets {
+				if now.Sub(entry.lastUsed) > cardProxyLimiterIdleTTL {
+					stale = append(stale, userID)
+				}
+			}
+			for _, id := range stale {
+				delete(limiter.buckets, id)
+			}
+			limiter.mu.Unlock()
+		}
+	}
+}
+
+// StopCardProxyLimiterEvictor signals the background evictor goroutine to exit.
+// Safe to call multiple times. Intended for server shutdown and tests.
+func StopCardProxyLimiterEvictor() {
+	cardProxyEvictCancel()
 }
 
 // buildProxyRequest constructs the HTTP request for the proxy target.

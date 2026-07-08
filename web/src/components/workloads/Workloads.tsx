@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ChevronRight, Plus, RefreshCw, Trash2, Terminal } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Plus, RefreshCw, Trash2, Terminal } from 'lucide-react'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -22,6 +22,7 @@ import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 import { WorkloadImportDialog } from '../cards/WorkloadImportDialog'
 import { ConfirmDialog } from '../../lib/modals'
 import type { Workload } from '../cards/WorkloadDeployment'
+import { isLocalAgentSuppressed } from '../../lib/constants'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 const IMPORTED_WORKLOAD_CLUSTER = 'Imported'
@@ -74,10 +75,10 @@ function mapImportedWorkload(workload: Workload): DeploymentSummary {
 export function Workloads() {
   const { t } = useTranslation()
   // Data fetching
-  const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated: podLastUpdated, refetch: refetchPodIssues } = usePodIssues()
-  const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, lastUpdated: deploymentLastUpdated, refetch: refetchDeploymentIssues } = useDeploymentIssues()
-  const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, lastUpdated: deploymentsLastUpdated, refetch: refetchDeployments } = useDeployments()
-  const { deduplicatedClusters: clusters, isLoading: clustersLoading, lastUpdated: clustersLastUpdated, refetch: refetchClusters } = useClusters()
+  const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, error: podIssuesError, lastUpdated: podLastUpdated, refetch: refetchPodIssues } = usePodIssues()
+  const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, error: deploymentIssuesError, lastUpdated: deploymentLastUpdated, refetch: refetchDeploymentIssues } = useDeploymentIssues()
+  const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, error: deploymentsError, lastUpdated: deploymentsLastUpdated, refetch: refetchDeployments } = useDeployments()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, error: clustersError, lastUpdated: clustersLastUpdated, refetch: refetchClusters } = useClusters()
 
   // Combine lastUpdated from all sources - use the most recent one
   const lastUpdated = useMemo(() => {
@@ -110,9 +111,10 @@ export function Workloads() {
   // Combined states
   const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
   const isRefreshing = podIssuesRefreshing || deploymentIssuesRefreshing || deploymentsRefreshing
+  const loadError = podIssuesError || deploymentIssuesError || deploymentsError || clustersError
   // Show skeletons when loading with no data OR when agent is offline and demo mode is OFF OR mode switching
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !wasAgentEverConnected()
+  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !isLocalAgentSuppressed() && !wasAgentEverConnected()
   const showSkeletons = ((deployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading) || forceSkeletonForOffline || isModeSwitching
 
   // Combined refresh
@@ -354,6 +356,24 @@ export function Workloads() {
         description: t('workloads.emptyDescription')
       }}
     >
+      {loadError && (
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-400">{t('workloads.errorLoading', 'Could not load workload data')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{loadError}</p>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                className="mt-3 inline-flex items-center rounded-lg bg-red-500/15 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/25"
+              >
+                {t('common.retry', 'Retry')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Workloads List */}
       {showSkeletons ? (
         <div data-testid="workloads-loading-state" className="space-y-3">

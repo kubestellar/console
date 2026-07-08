@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 export function useLocalStorage<T>(
   key: string,
@@ -7,10 +7,12 @@ export function useLocalStorage<T>(
 ): [T, (value: T | ((prev: T) => T)) => void] {
   const serialize = options?.serialize ?? JSON.stringify
   const deserialize = options?.deserialize ?? JSON.parse
+  const lastObservedStorage = useRef<string | null>(null)
 
   const [value, setValue] = useState<T>(() => {
     try {
       const stored = localStorage.getItem(key)
+      lastObservedStorage.current = stored
       return stored !== null ? deserialize(stored) : defaultValue
     } catch {
       return defaultValue
@@ -19,16 +21,35 @@ export function useLocalStorage<T>(
 
   useEffect(() => {
     try {
-      localStorage.setItem(key, serialize(value))
+      const serializedValue = serialize(value)
+      const storedValue = localStorage.getItem(key)
+
+      if (
+        storedValue !== null
+        && storedValue !== lastObservedStorage.current
+        && storedValue !== serializedValue
+      ) {
+        // Another same-tab caller wrote localStorage directly after this hook
+        // initialized. Preserve that newer storage value instead of clobbering
+        // it with stale React state; the next navigation or storage event will
+        // rehydrate hook state from localStorage.
+        return
+      }
+
+      if (storedValue !== serializedValue) {
+        localStorage.setItem(key, serializedValue)
+      }
+      lastObservedStorage.current = serializedValue
     } catch {
       // Storage quota exceeded — silently ignore
     }
-  }, [key, value, serialize])
+  }, [key, value, serialize, deserialize])
 
   useEffect(() => {
     const handler = (e: StorageEvent) => {
       if (e.key === key) {
         try {
+          lastObservedStorage.current = e.newValue
           setValue(e.newValue !== null ? deserialize(e.newValue) : defaultValue)
         } catch {
           setValue(defaultValue)
@@ -41,8 +62,20 @@ export function useLocalStorage<T>(
   }, [key, defaultValue, deserialize])
 
   const setStoredValue = useCallback((newValue: T | ((prev: T) => T)) => {
-    setValue(newValue)
-  }, [])
+    setValue((previousValue) => {
+      const nextValue = typeof newValue === 'function'
+        ? (newValue as (prev: T) => T)(previousValue)
+        : newValue
+      try {
+        const serializedValue = serialize(nextValue)
+        localStorage.setItem(key, serializedValue)
+        lastObservedStorage.current = serializedValue
+      } catch {
+        // Storage quota exceeded - keep React state in sync even if persistence fails.
+      }
+      return nextValue
+    })
+  }, [key, serialize])
 
   return [value, setStoredValue]
 }

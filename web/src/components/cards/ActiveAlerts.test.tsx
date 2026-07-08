@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -31,8 +32,10 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
 }))
 
 const mockUseDemoMode = vi.fn()
-vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: mockUseDemoMode() }),
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockUseDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 const mockDrillToAlert = vi.fn()

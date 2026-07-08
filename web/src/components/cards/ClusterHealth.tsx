@@ -21,6 +21,7 @@ import { ROUTES } from '../../config/routes'
 import { CARD_LOADING_TIMEOUT_MS } from '../../lib/constants/network'
 import { Tooltip } from '../ui/Tooltip'
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
+import { CardHeaderActions, CardHeaderRow, CardStatGrid, CardStatHeader } from '../../lib/cards/CardComponents'
 
 type SortByOption = 'status' | 'name' | 'nodes' | 'pods'
 
@@ -196,13 +197,13 @@ export function ClusterHealth() {
     return (
       <div className="h-full flex flex-col">
         {/* Header skeleton */}
-        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
-          <div className="flex items-center gap-2">
+        <CardHeaderRow>
+          <CardHeaderActions>
             <Skeleton variant="circular" width={16} height={16} />
             <Skeleton variant="text" width={80} height={16} />
-          </div>
+          </CardHeaderActions>
           <Skeleton variant="rounded" width={120} height={28} />
-        </div>
+        </CardHeaderRow>
         {/* Stats skeleton */}
         <SkeletonStats className="mb-4" />
         {/* List skeleton */}
@@ -228,8 +229,8 @@ export function ClusterHealth() {
   return (
     <div className="h-full flex flex-col content-loaded">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
-        <div className="flex items-center gap-2">
+      <CardHeaderRow>
+        <CardHeaderActions>
           <StatusBadge color="purple" title={t('clusterHealth.totalClustersTitle', { count: displayClusters.length })}>
             {displayClusters.length} {t('clusterHealth.clustersLabel')}
           </StatusBadge>
@@ -239,8 +240,8 @@ export function ClusterHealth() {
             size="sm"
             showLabel={false}
           />
-        </div>
-      </div>
+        </CardHeaderActions>
+      </CardHeaderRow>
 
       <div className="mb-4 flex flex-wrap items-start gap-2">
         <div className="min-w-0 flex-1 shrink basis-64 overflow-hidden">
@@ -281,33 +282,33 @@ export function ClusterHealth() {
 
       {/* Stats — hidden on /clusters page where StatsOverview already shows these metrics */}
       {!hideStatsGrid && (
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-4">
+      <CardStatGrid className="@md:grid-cols-4 gap-2">
         <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.healthyTooltip', { count: healthyClusters })}>
-          <div className="flex items-center gap-1.5 mb-1 min-w-0">
+          <CardStatHeader className="gap-1.5 min-w-0">
             <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
             <span className="text-xs text-green-400 truncate">{t('common:common.healthy')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-2xl font-bold text-foreground">{healthyClusters}</span>
         </div>
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.unhealthyTooltip', { count: unhealthyClusters })}>
-          <div className="flex items-center gap-1.5 mb-1 min-w-0">
+          <CardStatHeader className="gap-1.5 min-w-0">
             <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
             <span className="text-xs text-red-400 truncate">{t('common:common.unhealthy')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-2xl font-bold text-foreground">{unhealthyClusters}</span>
         </div>
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.authErrorTooltip', { count: tokenExpiredClusters })}>
-          <div className="flex items-center gap-1.5 mb-1 min-w-0">
+          <CardStatHeader className="gap-1.5 min-w-0">
             <KeyRound className="w-4 h-4 text-red-400 shrink-0" />
             <span className="text-xs text-red-400 truncate">{t('clusterHealth.authErrorLabel')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-2xl font-bold text-foreground">{tokenExpiredClusters}</span>
         </div>
         <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.offlineTooltip', { count: networkOfflineClusters })}>
-          <div className="flex items-center gap-1.5 mb-1 min-w-0">
+          <CardStatHeader className="gap-1.5 min-w-0">
             <WifiOff className="w-4 h-4 text-yellow-400 shrink-0" />
             <span className="text-xs text-yellow-400 truncate">{t('common:common.offline')}</span>
-          </div>
+          </CardStatHeader>
           <span className="text-2xl font-bold text-foreground">{networkOfflineClusters}</span>
         </div>
         {(federation.hubs || []).filter(h => h.detected).map(hub => {
@@ -321,16 +322,16 @@ export function ClusterHealth() {
               className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 min-w-0 overflow-hidden"
               title={`${getFederationProviderLabel(hub.provider)} hub: ${hub.hubContext} — ${joinedCount}/${hubClusters.length} clusters active`}
             >
-              <div className="flex items-center gap-1.5 mb-1 min-w-0">
+              <CardStatHeader className="gap-1.5 min-w-0">
                 <Server className="w-4 h-4 text-blue-400 shrink-0" />
                 <span className="text-xs text-blue-400 truncate">{getFederationProviderLabel(hub.provider)}</span>
-              </div>
+              </CardStatHeader>
               <span className="text-2xl font-bold text-foreground">{hubClusters.length}</span>
               <span className="text-xs text-muted-foreground ml-1">{t('clusterHealth.clustersLabel').toLowerCase()}</span>
             </div>
           )
         })}
-      </div>
+      </CardStatGrid>
       )}
 
       {/* Cluster list */}

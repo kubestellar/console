@@ -41,10 +41,12 @@ on:
 
 permissions:
   contents: read
+  actions: read
   issues: write
-
 jobs:
   notify:
+    permissions:
+      issues: write
     name: File/update perf regression issue
     runs-on: ubuntu-latest
     timeout-minutes: 5

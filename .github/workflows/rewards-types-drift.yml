@@ -30,8 +30,7 @@ concurrency:
   group: rewards-types-drift-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   check:

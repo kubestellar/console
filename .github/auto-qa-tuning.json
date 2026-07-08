@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-06-12T04:30:18Z",
+  "last_updated": "2026-07-08T04:02:35Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -11,168 +11,86 @@
       "last_evaluated": "2026-06-11T04:30:46Z"
     },
     "security": {
-      "merged": 72,
-      "closed": 64,
-      "acceptance_rate": 0.53,
+      "merged": 84,
+      "closed": 70,
+      "acceptance_rate": 0.55,
       "status": "normal",
-      "last_evaluated": "2026-06-12T04:30:18Z"
+      "last_evaluated": "2026-07-08T04:02:35Z"
     },
     "a11y": {
-      "merged": 53,
-      "closed": 26,
-      "acceptance_rate": 0.67,
+      "merged": 57,
+      "closed": 27,
+      "acceptance_rate": 0.68,
       "status": "normal",
-      "last_evaluated": "2026-06-12T04:30:18Z"
+      "last_evaluated": "2026-07-07T04:20:50Z"
     },
     "operator": {
-      "merged": 449,
-      "closed": 238,
-      "acceptance_rate": 0.65,
+      "merged": 576,
+      "closed": 261,
+      "acceptance_rate": 0.69,
       "status": "normal",
-      "last_evaluated": "2026-06-12T04:30:18Z"
+      "last_evaluated": "2026-07-08T04:02:35Z"
     },
     "sre": {
-      "merged": 240,
-      "closed": 75,
-      "acceptance_rate": 0.76,
+      "merged": 324,
+      "closed": 88,
+      "acceptance_rate": 0.79,
       "status": "normal",
-      "last_evaluated": "2026-06-12T04:30:18Z"
+      "last_evaluated": "2026-07-08T04:02:35Z"
     },
     "features": {
-      "merged": 15,
+      "merged": 23,
       "closed": 9,
-      "acceptance_rate": 0.63,
+      "acceptance_rate": 0.72,
       "status": "normal",
-      "last_evaluated": "2026-06-06T04:22:55Z"
+      "last_evaluated": "2026-07-04T04:14:42Z"
     },
     "resilience": {
-      "merged": 68,
-      "closed": 60,
+      "merged": 75,
+      "closed": 66,
       "acceptance_rate": 0.53,
       "status": "normal",
-      "last_evaluated": "2026-06-12T04:30:18Z"
+      "last_evaluated": "2026-07-07T04:20:50Z"
     },
     "consistency": {
-      "merged": 29,
+      "merged": 30,
       "closed": 21,
-      "acceptance_rate": 0.58,
+      "acceptance_rate": 0.59,
       "status": "normal",
-      "last_evaluated": "2026-06-11T04:30:46Z"
+      "last_evaluated": "2026-07-04T04:14:42Z"
     }
   },
   "weekly_insights": {
-    "best_pr_size": "S",
+    "best_pr_size": "XL",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #17105: Closing as duplicate — superseded by #17104 which was already merged.",
-      "- PR #17058: Closing as duplicate — #17057 fixed #17056 and was merged first (all CI green).",
-      "- PR #17020: Closing in favor of #17019 which is in better shape (mergeable, no conflicts). Both address the same CWE-306 issue #17016.",
-      "- PR #17011: Closing — superseded by #17013 which fixes all issues addressed here (#16971, #17003, #17004, #16984, #16974) in a consolidated PR.",
-      "- PR #17006: Closing — superseded by #17013 which includes the #16903 fix (agent token memory-only) in a consolidated security PR."
+      "- PR #20303: ## Scanner Pass Summary — 2026-07-04 5:59 PM ET",
+      "### CI Repair",
+      "- PR #20211: Closing — superseded by #20216 which covers all 77 E2E test spec files (including the 6 files fixed here).",
+      "- PR #20185: 👋 Hey @clubanderson — thanks for opening this PR!"
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-06-07"
+    "last_report_date": "2026-07-05"
   },
   "cncf_insights": {
-    "last_scan_date": "2026-06-10",
+    "last_scan_date": "2026-07-08",
     "suggested_checks": [
       {
-        "pattern": "navigation_ux",
-        "count": 5,
-        "added": "2026-06-10",
+        "pattern": "form_ux",
+        "count": 9,
+        "added": "2026-07-08",
         "priority": "medium"
       },
       {
-        "pattern": "form_ux",
-        "count": 19,
-        "added": "2026-06-10",
+        "pattern": "realtime_ux",
+        "count": 5,
+        "added": "2026-07-08",
         "priority": "medium"
       }
     ]
   },
   "history": [
-    {
-      "date": "2026-04-03",
-      "total_merged": 131,
-      "total_closed": 97,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-04-04",
-      "total_merged": 131,
-      "total_closed": 132,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-04-05",
-      "total_merged": 131,
-      "total_closed": 178,
-      "categories_blocked": [
-        "operator",
-        "sre"
-      ],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-04-06",
-      "total_merged": 131,
-      "total_closed": 228,
-      "categories_blocked": [
-        "operator",
-        "sre"
-      ],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-04-07",
-      "total_merged": 131,
-      "total_closed": 278,
-      "categories_blocked": [
-        "operator",
-        "sre"
-      ],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-04-08",
-      "total_merged": 131,
-      "total_closed": 288,
-      "categories_blocked": [
-        "operator",
-        "sre"
-      ],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-04-13",
-      "total_merged": 131,
-      "total_closed": 289,
-      "categories_blocked": [
-        "operator",
-        "sre"
-      ],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-05-09",
-      "total_merged": 132,
-      "total_closed": 289,
-      "categories_blocked": [
-        "operator",
-        "sre"
-      ],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-05-20",
-      "total_merged": 182,
-      "total_closed": 297,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-05-21",
       "total_merged": 232,
@@ -319,25 +237,88 @@
       "total_closed": 503,
       "categories_blocked": [],
       "categories_boosted": []
+    },
+    {
+      "date": "2026-06-13",
+      "total_merged": 992,
+      "total_closed": 531,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-14",
+      "total_merged": 1031,
+      "total_closed": 532,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-06-17",
+      "total_merged": 1081,
+      "total_closed": 536,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-07-03",
+      "total_merged": 1101,
+      "total_closed": 546,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-07-04",
+      "total_merged": 1108,
+      "total_closed": 549,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-07-05",
+      "total_merged": 1121,
+      "total_closed": 550,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-07-06",
+      "total_merged": 1132,
+      "total_closed": 551,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-07-07",
+      "total_merged": 1164,
+      "total_closed": 551,
+      "categories_blocked": [],
+      "categories_boosted": []
+    },
+    {
+      "date": "2026-07-08",
+      "total_merged": 1185,
+      "total_closed": 552,
+      "categories_blocked": [],
+      "categories_boosted": []
     }
   ],
   "rotation_weights": {
     "performance": 0.93,
-    "security": 0.8,
-    "a11y": 1.01,
-    "operator": 0.98,
-    "sre": 1.14,
-    "features": 0.95,
+    "security": 0.83,
+    "a11y": 1.02,
+    "operator": 1.03,
+    "sre": 1.19,
+    "features": 1.08,
     "resilience": 0.8,
-    "consistency": 0.87
+    "consistency": 0.89
   },
   "max_issues_override": 3,
-  "pr_guidance": "Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs.",
+  "pr_guidance": "Keep PRs small and focused. Smaller PRs have higher acceptance rates.",
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],
-    "total_issues_7d": 41,
+    "total_issues_7d": 47,
     "repeat_pattern_count": 0,
-    "last_analyzed": "2026-06-12T04:30:19Z"
+    "last_analyzed": "2026-07-07T04:20:51Z"
   }
 }

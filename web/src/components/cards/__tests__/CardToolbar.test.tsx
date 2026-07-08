@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Vitest unit tests for CardToolbar (#15513).
  *
@@ -27,6 +28,14 @@ vi.mock('react-i18next', () => ({
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
+}))
+
+vi.mock('lucide-react', () => ({
+  ChevronDown: () => <span>ChevronDown</span>,
+  ChevronRight: () => <span>ChevronRight</span>,
+  RefreshCw: ({ className, ...props }: unknown) => <span data-testid="RefreshCw" className={className as string} {...(props as object)}>RefreshCw</span>,
+  Maximize2: () => <span>Maximize2</span>,
+  Bug: () => <span>Bug</span>,
 }))
 
 vi.mock('../card-wrapper/CardActionMenu', () => ({
@@ -110,7 +119,7 @@ describe('CardToolbar', () => {
 
       const refreshBtn = getRefreshButton()
       expect(refreshBtn).toBeDisabled()
-      expect(refreshBtn).toHaveClass('cursor-not-allowed', 'text-blue-400')
+      expect(refreshBtn).toHaveClass('text-muted-foreground')
     })
 
     it('uses failed styling when isFailed and not disabled', () => {

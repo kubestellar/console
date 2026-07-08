@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { GitOpsDrift } from '../GitOpsDrift'
@@ -23,7 +24,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
     drifts: [],
     isLoading: false,
     isRefreshing: false,
-    error: null,
+    error: false,
     isFailed: false,
     consecutiveFailures: 0,
     isDemoFallback: false,
@@ -150,7 +151,7 @@ describe('GitOpsDrift', () => {
       const { useCachedGitOpsDrifts } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
         drifts: [makeDrift()],
-        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+        isLoading: false, isRefreshing: false, error: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
       } as never)
       render(<GitOpsDrift />)
       expect(screen.getByText('my-deployment')).toBeTruthy()
@@ -161,7 +162,7 @@ describe('GitOpsDrift', () => {
       const { useCachedGitOpsDrifts } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
         drifts: [makeDrift()],
-        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+        isLoading: false, isRefreshing: false, error: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
       } as never)
       render(<GitOpsDrift />)
       expect(screen.getByText('cluster-1')).toBeTruthy()
@@ -171,7 +172,7 @@ describe('GitOpsDrift', () => {
       const { useCachedGitOpsDrifts } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
         drifts: [makeDrift({ driftType: 'modified' })],
-        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+        isLoading: false, isRefreshing: false, error: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
       } as never)
       render(<GitOpsDrift />)
       expect(screen.getByText('cards:gitOpsDrift.modified')).toBeTruthy()
@@ -181,7 +182,7 @@ describe('GitOpsDrift', () => {
       const { useCachedGitOpsDrifts } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
         drifts: [makeDrift({ severity: 'high' })],
-        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+        isLoading: false, isRefreshing: false, error: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
       } as never)
       render(<GitOpsDrift />)
       expect(screen.getByText(/gitOpsDrift.nCritical/)).toBeTruthy()
@@ -191,7 +192,7 @@ describe('GitOpsDrift', () => {
       const { useCachedGitOpsDrifts } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
         drifts: [makeDrift()],
-        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+        isLoading: false, isRefreshing: false, error: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
       } as never)
       render(<GitOpsDrift />)
       fireEvent.click(screen.getByText('my-deployment'))
@@ -202,7 +203,7 @@ describe('GitOpsDrift', () => {
       const { useCachedGitOpsDrifts } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
         drifts: [makeDrift({ gitVersion: 'main@abc123' })],
-        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+        isLoading: false, isRefreshing: false, error: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
       } as never)
       render(<GitOpsDrift />)
       expect(screen.getByText('main@abc123')).toBeTruthy()
@@ -220,7 +221,7 @@ describe('GitOpsDrift', () => {
       const { useCachedGitOpsDrifts } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
         drifts: [makeDrift({ severity: 'low', resource: 'low-resource' })],
-        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+        isLoading: false, isRefreshing: false, error: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
       } as never)
       render(<GitOpsDrift />)
       expect(screen.queryByText('low-resource')).toBeNull()

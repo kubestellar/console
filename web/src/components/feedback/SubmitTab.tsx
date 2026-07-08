@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   Bug, Sparkles, ExternalLink,
   Eye, Pencil, Settings, Maximize2,
-  AlertTriangle, Monitor, BookOpen, FileText, Lock,
+  AlertTriangle, Monitor, BookOpen, FileText, Lock, Loader2,
 } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { cn } from '@/lib/cn'
@@ -424,7 +424,22 @@ export function SubmitForm({
                 ))}
               </ul>
               <div className="text-muted-foreground text-xs mt-1.5 flex flex-wrap gap-1 items-center">
-                <a href={GITHUB_TOKEN_CREATE_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Create token on GitHub</a>
+                <a
+                  href={sanitizeUrl(buildDirectIssueUrl(targetRepo, description))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
+                >
+                  Report on GitHub
+                </a>
+                <span>{' · '}</span>
+                <button
+                  type="button"
+                  onClick={() => window.open(GITHUB_TOKEN_CREATE_URL, '_blank', 'noopener,noreferrer')}
+                  className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
+                >
+                  Create token on GitHub
+                </button>
                 <span>{' · '}</span>
                 <button
                   type="button"
@@ -549,9 +564,10 @@ export function SubmitForm({
             </summary>
             <div className="mt-3 space-y-2">
               {isCheckingParentIssueAccess ? (
-                <p className="text-2xs text-muted-foreground">
-                  {t('feedback.checkingIssueLinkAccess', 'Checking repository access…')}
-                </p>
+                <div className="flex items-center gap-2 text-2xs text-muted-foreground">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <p>{t('feedback.checkingIssueLinkAccess', 'Checking repository access…')}</p>
+                </div>
               ) : canLinkParentIssue ? (
                 <>
                   <label htmlFor="feedback-parent-issue" className="block text-xs font-medium text-muted-foreground">

@@ -49,6 +49,7 @@ const (
 	DefaultBackendPort  = 8081
 	DefaultListenPort   = 8080
 	RuntimeInfoFile     = "./data/kc-watcher-runtime.env"
+	RuntimeInfoFileEnv  = "WATCHDOG_RUNTIME_FILE"
 	// GitShortHashLen is the number of hex chars shown for the commit
 	// hash in the fallback footer (matches typical `git rev-parse --short` output).
 	GitShortHashLen = 7
@@ -84,6 +85,14 @@ type RuntimeState struct {
 	Dir       string
 	PidFile   string
 	StageFile string
+}
+
+// RuntimeInfoFileFromEnv returns the configured watcher runtime file path.
+func RuntimeInfoFileFromEnv() string {
+	if runtimeInfoFile := strings.TrimSpace(os.Getenv(RuntimeInfoFileEnv)); runtimeInfoFile != "" {
+		return runtimeInfoFile
+	}
+	return RuntimeInfoFile
 }
 
 // Run starts the watcher reverse proxy. It proxies all traffic to the

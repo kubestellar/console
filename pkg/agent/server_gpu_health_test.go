@@ -35,6 +35,7 @@ func TestServer_HandleGPUHealthCronJob(t *testing.T) {
 	}
 	body, _ := json.Marshal(installBody)
 	req := httptest.NewRequest("POST", "/gpu-health-cronjob", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 
@@ -63,6 +64,7 @@ func TestServer_HandleGPUHealthCronJob(t *testing.T) {
 	}
 	body, _ = json.Marshal(uninstallBody)
 	req = httptest.NewRequest("DELETE", "/gpu-health-cronjob", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 
@@ -83,6 +85,7 @@ func TestServer_HandleGPUHealthCronJob(t *testing.T) {
 	installBody["tier"] = 10
 	body, _ = json.Marshal(installBody)
 	req = httptest.NewRequest("POST", "/gpu-health-cronjob", bytes.NewBuffer(body))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	server.handleGPUHealthCronJob(w, req)

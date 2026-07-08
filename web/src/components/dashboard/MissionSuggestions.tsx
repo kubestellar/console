@@ -14,6 +14,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { MissionActionPanel } from './MissionActionPanel'
 import { emitMissionSuggestionsShown, emitMissionSuggestionActioned } from '../../lib/analytics'
 import { safeSetItem } from '../../lib/utils/localStorage'
+import { isLocalAgentSuppressed } from '../../lib/constants'
 
 
 /** localStorage key to persist that the user has seen (and auto-collapsed) the panel */
@@ -57,7 +58,7 @@ export function MissionSuggestions() {
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !wasAgentEverConnected()
+  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !isLocalAgentSuppressed() && !wasAgentEverConnected()
 
   // Force dependency on snoozedMissions for reactivity
   void snoozedMissions

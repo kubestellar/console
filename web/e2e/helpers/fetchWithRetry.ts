@@ -31,7 +31,6 @@ export async function fetchWithRetry(
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (attempt > 0) {
       const delay = RETRY_BASE_DELAY_MS * (1 << (attempt - 1))
-      console.log(`[fetchWithRetry] Attempt ${attempt + 1}/${MAX_RETRIES + 1} after ${delay}ms delay for ${url}`)
       await new Promise((r) => setTimeout(r, delay))
     }
 

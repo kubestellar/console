@@ -1,5 +1,16 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+
+const mockIsLocalAgentSuppressed = vi.hoisted(() => vi.fn(() => false))
+
+vi.mock('../../../../lib/constants/network', async () => {
+  const actual = await vi.importActual<typeof import('../../../../lib/constants/network')>('../../../../lib/constants/network')
+  return {
+    ...actual,
+    isLocalAgentSuppressed: () => mockIsLocalAgentSuppressed(),
+  }
+})
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => false, getDemoMode: () => false, isNetlifyDeployment: false,
@@ -9,7 +20,8 @@ vi.mock('../../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
-vi.mock('../../../../hooks/useDemoMode', () => ({
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
   getDemoMode: () => false, default: () => false,
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   hasRealToken: () => true, isDemoModeForced: false, isNetlifyDeployment: false,
@@ -17,10 +29,12 @@ vi.mock('../../../../hooks/useDemoMode', () => ({
   setGlobalDemoMode: vi.fn(),
 }))
 
-vi.mock('../../../../lib/analytics', () => ({
+vi.mock('../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
@@ -119,6 +133,7 @@ describe('AgentStatusIndicator', () => {
       criticalCount: 0,
       warningCount: 0,
     })
+    mockIsLocalAgentSuppressed.mockReturnValue(false)
   })
 
   it('renders without crashing', () => {
@@ -170,6 +185,31 @@ describe('AgentStatusIndicator', () => {
     render(<AgentStatusIndicator />)
 
     expect(screen.getByText('networkUtils.online')).toBeTruthy()
+    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.liveMode')
+  })
+
+  it('shows live online state when local agent is suppressed but backend is connected', () => {
+    mockIsLocalAgentSuppressed.mockReturnValue(true)
+    mockUseLocalAgent.mockReturnValueOnce({
+      status: 'disconnected',
+      health: {},
+      connectionEvents: [],
+      isConnected: false,
+      isDegraded: false,
+      isAuthError: false,
+      dataErrorCount: 0,
+      lastDataError: null,
+    })
+    mockUseBackendHealth.mockReturnValueOnce({
+      status: 'connected',
+      isConnected: true,
+      isInClusterMode: false,
+    })
+
+    render(<AgentStatusIndicator />)
+
+    expect(screen.getByText('networkUtils.online')).toBeTruthy()
+    expect(screen.queryByText('networkUtils.offline')).toBeNull()
     expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.liveMode')
   })
 

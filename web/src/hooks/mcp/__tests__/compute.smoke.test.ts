@@ -39,8 +39,10 @@ vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
 }))
 
-vi.mock('../../useDemoMode', () => ({
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../lib/modeTransition', () => ({

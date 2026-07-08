@@ -40,15 +40,19 @@ vi.mock('../../lib/api', () => ({
   api: { post: mockApiPost },
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitNPSSurveyShown: (...args: unknown[]) => mockEmitShown(...args),
   emitNPSResponse: (...args: unknown[]) => mockEmitResponse(...args),
   emitNPSDismissed: (...args: unknown[]) => mockEmitDismissed(...args),
-}))
+}
+))
 
-vi.mock('../../lib/analytics-session', () => ({
+vi.mock('../../lib/analytics-session', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics-session')>()),
   peekSessionEngagementMs: () => mockPeekSessionEngagementMs(),
-}))
+}
+))
 
 vi.mock('../../lib/utils/localStorage', () => ({
   safeGetItem: (key: string) => store.get(key) ?? null,

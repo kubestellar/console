@@ -154,13 +154,15 @@ export function setupErrorCollector(page: Page): { errors: string[]; warnings: s
  * to simulate an unauthenticated state should NOT call this helper.
  */
 export async function mockApiMe(page: Page) {
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
+  await page.route('**/api/**', (route) => {
+    const { pathname } = new URL(route.request().url())
+    if (pathname !== '/api/me') return route.fallback()
+    return route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(MOCK_DEMO_USER),
     })
-  )
+  })
 }
 
 export async function mockLocalAgentUnavailable(page: Page) {
@@ -186,9 +188,9 @@ export async function mockLocalAgentUnavailable(page: Page) {
               payload: { error: LOCAL_AGENT_UNAVAILABLE_MESSAGE },
             }))
           }
-        } catch {
+        } catch (error) { console.error('Error:', error)
           // Ignore malformed test traffic.
-        }
+         }
       })
     })
   }
@@ -235,7 +237,6 @@ export async function mockApiFallback(page: Page) {
   // STRICT MOCKING: Log unmocked API calls to help detect missing endpoints (#11225)
   await page.route('**/api/**', (route) => {
     const url = route.request().url()
-    // eslint-disable-next-line no-console
     console.error(`[mockApiFallback] Unmocked API call: ${url}`)
     route.fulfill({
       status: 200,
@@ -561,7 +562,6 @@ export async function mockApiFallbackStrict(page: Page) {
   // rather than silent empty-state renders.
   await page.route('**/api/**', (route) => {
     const url = route.request().url()
-    // eslint-disable-next-line no-console
     console.error(`[mockApiFallbackStrict] Unmocked API call (returning 404): ${url}`)
     route.fulfill({
       status: 404,
@@ -621,9 +621,9 @@ export async function setupDemoMode(page: Page) {
       // Fire-and-forget IndexedDB delete — must not block localStorage seeding
       try {
         indexedDB.deleteDatabase('kc_cache')
-      } catch {
+      } catch (error) { console.error('Error:', error)
         // IndexedDB may not be available in all test contexts
-      }
+       }
     }
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
@@ -647,6 +647,20 @@ export async function setupDemoAndNavigate(page: Page, path: string) {
   await page.goto(path, { waitUntil: 'domcontentloaded' })
 }
 
+export async function waitForAppContent(
+  page: Page,
+  timeoutMs: number = ELEMENT_VISIBLE_TIMEOUT_MS,
+) {
+  await page.locator('#root').waitFor({ state: 'visible', timeout: timeoutMs })
+  await page.waitForFunction(
+    () => (document.body.innerText || '').trim().length > 0,
+    { timeout: timeoutMs },
+  ).catch(() => {
+    // Some error-state routes intentionally render late; callers with stricter
+    // expectations assert their route-specific markers after this best-effort wait.
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Best-effort networkidle wait — logs a warning on timeout instead of
 // silently swallowing the error. The dashboard has long-lived WebSocket/SSE
@@ -662,11 +676,10 @@ export async function waitForNetworkIdleBestEffort(
 ) {
   try {
     await page.waitForLoadState('networkidle', { timeout: timeoutMs })
-  } catch {
-    if (process.env.E2E_VERBOSE_WAITS) {
-      // eslint-disable-next-line no-console -- Opt-in debug logging for tests
+  } catch (error) { console.error('Error:', error)
+    if (typeof process !== 'undefined' && process.env.E2E_VERBOSE_WAITS) {
       console.warn(
-        `[e2e] networkidle timed out after ${timeoutMs}ms${label ? ` (${label})` : ''} — page may have long-lived WebSocket/SSE connections`
+        `[e2e] networkidle timed out after ${timeoutMs }ms${label ? ` (${label})` : ''} — page may have long-lived WebSocket/SSE connections`
       )
     }
   }
@@ -767,13 +780,15 @@ export const DEFAULT_AUTH_USER: MockApiUser = {
 export async function setupAuth(page: Page, user?: Partial<MockApiUser>): Promise<void> {
   await mockApiFallback(page)
   const u: MockApiUser = { ...DEFAULT_AUTH_USER, ...(user || {}) }
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
+  await page.route('**/api/**', (route) => {
+    const { pathname } = new URL(route.request().url())
+    if (pathname !== '/api/me') return route.fallback()
+    return route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(u),
     })
-  )
+  })
 }
 
 /** Options for seeding auth state via localStorage */

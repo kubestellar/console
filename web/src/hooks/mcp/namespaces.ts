@@ -4,7 +4,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { isDemoMode } from '../../lib/demoMode'
 import { getLocalAgentURL, agentFetch, clusterCacheRef } from './shared'
 import type { PodInfo, NamespaceStats } from './types'
-import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { LOCAL_AGENT_HTTP_URL, isLocalAgentSuppressed } from '../../lib/constants/network'
 import { authFetch } from '../../lib/api'
 
 // Large clusters (100+ namespaces) can take 30s+ to list all namespaces.
@@ -90,7 +90,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
     const requestCluster = getClusterRequestName(cluster)
 
     // Try local agent HTTP endpoint first (works without backend)
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && !isLocalAgentSuppressed()) {
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), NAMESPACE_FETCH_TIMEOUT_MS)
@@ -120,7 +120,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
     }
 
     // Try kubectl proxy as fallback
-    if (!isAgentUnavailable()) {
+    if (!isAgentUnavailable() && !isLocalAgentSuppressed()) {
       let timerId: ReturnType<typeof setTimeout> | null = null
       try {
         const nsPromise = kubectlProxy.getNamespaces(requestCluster)

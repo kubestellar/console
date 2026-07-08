@@ -40,6 +40,7 @@ func TestGetQuestions_ReturnsNonEmpty(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "/api/onboarding/questions", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -66,6 +67,7 @@ func TestSaveResponses_Success(t *testing.T) {
 	payload := `[{"question_key":"role","answer":"SRE"},{"question_key":"focus_layer","answer":"Application"}]`
 	req, err := http.NewRequest("POST", "/api/onboarding/responses", strings.NewReader(payload))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -89,6 +91,7 @@ func TestSaveResponses_InvalidBody(t *testing.T) {
 
 	req, err := http.NewRequest("POST", "/api/onboarding/responses", strings.NewReader("not-json"))
 	require.NoError(t, err)
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
@@ -107,6 +110,7 @@ func TestCompleteOnboarding_Success(t *testing.T) {
 	// CreateCard, SetUserOnboarded — all succeed silently with default behavior.
 	req, err := http.NewRequest("POST", "/api/onboarding/complete", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)

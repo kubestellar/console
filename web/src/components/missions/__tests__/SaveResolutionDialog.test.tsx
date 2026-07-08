@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * SaveResolutionDialog unit tests
  *
@@ -5,7 +6,6 @@
  * form field editing, validation, save success, step management, visibility toggle.
  */
 
-import type React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 
@@ -33,7 +33,8 @@ vi.mock('../../../lib/utils/wsAuth', () => ({
   getWsAuthParams: mockGetWsAuthParams,
 }))
 
-vi.mock('../../../lib/constants', () => ({
+vi.mock('../../../lib/constants', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/constants')>()),
   LOCAL_AGENT_WS_URL: 'ws://localhost:8585/ws',
 }))
 
@@ -42,10 +43,10 @@ vi.mock('../../../lib/modals/BaseModal', () => ({
     ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) =>
       isOpen ? <div role="dialog">{children}</div> : null,
     {
-      Header: ({ title, onClose }: { title: string; onClose?: () => void }) => (
+      Header: ({ title, onClose, disabled }: { title: string; onClose?: () => void; disabled?: boolean }) => (
         <div>
           <h1>{title}</h1>
-          {onClose && <button onClick={onClose} aria-label="close dialog">×</button>}
+          {onClose && <button onClick={onClose} aria-label="close dialog" disabled={disabled}>×</button>}
         </div>
       ),
       Content: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

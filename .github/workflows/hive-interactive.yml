@@ -8,7 +8,7 @@ on:
   issue_comment:
     types: [created]
 
-permissions: {}
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   post-directions:
@@ -16,7 +16,10 @@ jobs:
       (github.event_name == 'issues' && github.event.issue.user.type != 'Bot') ||
       (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot')
     permissions:
+      # issues: write required to post directions comment on issues
       issues: write
+      # pull-requests: write required to post directions comment on pull requests
+      pull-requests: write
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -180,6 +183,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
+      contents: read
+      # actions: write required to dispatch the implement-fix.lock.yml workflow
       actions: write
     steps:
       - name: Dispatch hive fix workflow

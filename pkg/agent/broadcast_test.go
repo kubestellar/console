@@ -102,7 +102,11 @@ func TestBroadcastToClients_RemovesDeadClients(t *testing.T) {
 	defer cleanup()
 
 	// Close client 0's underlying TCP connection to simulate a dead peer.
-	clients[0].UnderlyingConn().Close()
+	if len(clients) > 0 && clients[0] != nil {
+		if uc := clients[0].UnderlyingConn(); uc != nil {
+			uc.Close()
+		}
+	}
 	// Give the kernel time to register the broken pipe.
 	time.Sleep(100 * time.Millisecond)
 
@@ -113,6 +117,9 @@ func TestBroadcastToClients_RemovesDeadClients(t *testing.T) {
 	s.BroadcastToClients("ping2", nil)
 
 	// Client 1 should still receive messages.
+	if len(clients) <= 1 || clients[1] == nil {
+		t.Fatal("client 1 is nil or not available")
+	}
 	clients[1].SetReadDeadline(time.Now().Add(2 * time.Second))
 	_, msg, err := clients[1].ReadMessage()
 	if err != nil {

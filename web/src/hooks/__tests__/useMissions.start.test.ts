@@ -17,10 +17,12 @@ vi.mock('../useMissionPromptBuilder', () => ({
   buildSystemMessages: vi.fn(() => []),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitMissionStarted: vi.fn(),
   emitError: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/missions/preflightCheck', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/missions/preflightCheck')>()

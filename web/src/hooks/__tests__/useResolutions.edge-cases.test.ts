@@ -8,9 +8,11 @@ vi.mock('../../lib/auth', () => ({
   useAuth: () => mockUseAuth(),
 }))
 
-vi.mock('../../lib/analytics-session', () => ({
+vi.mock('../../lib/analytics-session', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics-session')>()),
   getOrCreateAnonymousId: () => mockGetOrCreateAnonymousId(),
-}))
+}
+))
 
 import {
   detectIssueSignature,

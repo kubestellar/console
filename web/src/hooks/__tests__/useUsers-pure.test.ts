@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { setStoredAuthToken } from '../../lib/authToken'
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   getDemoMode: vi.fn(() => true),
   isDemoModeForced: false,
   useDemoMode: () => ({ isDemoMode: true }),
@@ -34,17 +36,23 @@ const {
 } = mod.__testables
 
 beforeEach(() => {
+  vi.useRealTimers()
   localStorage.clear()
+  vi.restoreAllMocks()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 describe('agentAuthHeaders', () => {
-  it('returns empty object when no token', () => {
-    expect(agentAuthHeaders()).toEqual({})
+  it('returns empty object when no token', async () => {
+    expect(await agentAuthHeaders()).toEqual({})
   })
 
-  it('returns Authorization header when token exists', () => {
-    localStorage.setItem('kc-auth-token', 'my-jwt-token')
-    const headers = agentAuthHeaders()
+  it('returns Authorization header when token exists', async () => {
+    await setStoredAuthToken('my-jwt-token')
+    const headers = await agentAuthHeaders()
     expect(headers.Authorization).toBe('Bearer my-jwt-token')
   })
 })

@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Form-interaction tests for ClusterGroupsForms (#15515).
  *

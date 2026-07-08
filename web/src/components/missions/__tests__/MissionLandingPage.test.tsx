@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * MissionLandingPage unit tests
  *

@@ -1,9 +1,11 @@
+import React from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCache } from '../../lib/cache'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (_key: string, fallback?: string) => fallback ?? 'Retry' }),
 }))
 vi.mock('../../lib/api', () => ({ authFetch: vi.fn(), safeJson: vi.fn() }))

@@ -453,7 +453,10 @@ func TestReconcileDeployment_DeployAllClustersFail(t *testing.T) {
 	assert.Equal(t, "0/2 clusters", wd.Status.Progress)
 }
 
-func TestSetTerminalStatus(t *testing.T) {
+// TestSetTerminalStatus_ReconcileDeployment tests setTerminalStatus in the context
+// of reconcile_deployment. The canonical TestSetTerminalStatus lives in
+// console_persistence_helpers_test.go.
+func TestSetTerminalStatus_ReconcileDeployment(t *testing.T) {
 	h := &ConsolePersistenceHandlers{}
 	now := metav1.Now()
 

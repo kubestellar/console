@@ -110,12 +110,12 @@ function ProviderRow({
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${PROVIDER_STATUS_CLASS[provider.status]}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${PROVIDER_STATUS_CLASS[provider.status]}`}
         >
           {providerStatusLabel(provider.status, t)}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         {provider.evaluations > 0 && (
           <span>
             {provider.evaluations.toLocaleString()} {t('openFeature.evals', 'evals')}
@@ -151,12 +151,12 @@ function FlagRow({
           </span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${FLAG_TYPE_CLASS[flag.type]}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${FLAG_TYPE_CLASS[flag.type]}`}
         >
           {flag.type}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="truncate">
           {t('openFeature.flagProvider', 'provider')}:{' '}
           <span className="text-foreground">{flag.provider}</span>
@@ -314,7 +314,7 @@ export function OpenFeatureStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('openFeature.providerStatus', 'Provider Status')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {providers.length}
             </span>
           </div>
@@ -338,7 +338,7 @@ export function OpenFeatureStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('openFeature.sectionFlags', 'Feature flags')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {flags.length}
             </span>
           </div>

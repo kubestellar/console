@@ -15,8 +15,8 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { AlertTriangle, Eye, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
-import { AMBER_500, GREEN_500_BRIGHT, RED_500, SLATE_700 } from '../../lib/theme/chartColors'
 import type { ProjectHoverInfo } from './svg/ProjectNode'
 import type { ClusterHoverInfo } from './svg/ClusterZone'
 import type { DependencyEdge, DeployPhase, PayloadProject } from './types'
@@ -56,9 +56,9 @@ export function GaugeRow({ label, value, max, unit }: {
   const display = value != null
     ? max != null ? `${Math.round(value)} / ${max}${unit ?? ''}` : `${Math.round(value)}${unit ?? ''}`
     : max != null ? `— / ${max}${unit ?? ''}` : 'N/A'
-  const barColor = pctVal != null
-    ? pctVal >= 80 ? RED_500 : pctVal >= 50 ? AMBER_500 : GREEN_500_BRIGHT
-    : SLATE_700
+  const barColorClass = pctVal != null
+    ? pctVal >= 80 ? 'bg-red-500' : pctVal >= 50 ? 'bg-amber-500' : 'bg-green-500'
+    : 'bg-slate-700 dark:bg-slate-600'
 
   return (
     <div className="space-y-1">
@@ -66,9 +66,9 @@ export function GaugeRow({ label, value, max, unit }: {
         <span className="text-slate-400 font-medium">{label}</span>
         <span className="text-foreground tabular-nums">{display}{pctVal != null ? ` (${pctVal}%)` : ''}</span>
       </div>
-      <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+      <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
         {pctVal != null && (
-          <div className="h-full rounded-full transition-all" style={{ width: `${pctVal}%`, backgroundColor: barColor }} />
+          <div className={cn('h-full rounded-full transition-all', barColorClass)} style={{ width: `${pctVal}%` }} />
         )}
       </div>
     </div>
@@ -289,7 +289,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
               const other = edge.from === info.name ? edge.to : edge.from
               const direction = edge.from === info.name ? '→' : '←'
               return (
-                <div key={i} className="flex items-center gap-1.5 text-[11px]">
+                <div key={i} className="flex items-center gap-1.5 text-xs">
                   <span className={cn(
                     'w-1.5 h-1.5 rounded-full shrink-0',
                     edge.crossCluster ? 'bg-amber-500' : 'bg-indigo-500'
@@ -337,7 +337,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
               <div key={i} className="flex gap-1.5">
                 <span className="text-[10px] font-bold text-primary mt-0.5 shrink-0">{i + 1}.</span>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium text-foreground">{step.title || step.description?.slice(0, 60)}</p>
+                  <p className="text-xs font-medium text-foreground">{step.title || step.description?.slice(0, 60)}</p>
                   {step.command && (
                     <pre className="text-[10px] text-emerald-400 font-mono mt-0.5 bg-slate-800 rounded px-1.5 py-0.5 overflow-x-auto whitespace-pre-wrap break-all">
                       {step.command}
@@ -558,6 +558,7 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
   onShowProject?: (project: PayloadProject) => void
   installedProjects?: Set<string>
 }) {
+  const { t } = useTranslation()
   const depNotes = getDependencyNotes(projects)
   const projectByName = useMemo(
     () => new Map(projects.map((project) => [project.name, project] as const)),
@@ -743,24 +744,24 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
 
       <div className="pt-2 border-t border-border">
         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-          {mode === 'phased' ? 'Safety Features' : 'Considerations'}
+          {mode === 'phased' ? t('missionControl.blueprintInfo.phasedSafetyFeatures') : t('missionControl.blueprintInfo.parallelConsiderations')}
         </h4>
         <div className="text-xs text-muted-foreground">
           {mode === 'phased' ? (
             <ul className="space-y-1 list-disc list-inside">
-              <li>Safe for production environments</li>
-              <li>Automatic pause on failure</li>
-              <li>Retry/skip individual projects</li>
-              <li>Dependencies validated per phase</li>
-              <li>Rollback plan generated for each phase</li>
+              <li>{t('missionControl.blueprintInfo.safeForProduction')}</li>
+              <li>{t('missionControl.blueprintInfo.automaticPauseOnFailure')}</li>
+              <li>{t('missionControl.blueprintInfo.retrySkipIndividual')}</li>
+              <li>{t('missionControl.blueprintInfo.dependenciesValidatedPerPhase')}</li>
+              <li>{t('missionControl.blueprintInfo.rollbackPlanGenerated')}</li>
             </ul>
           ) : (
             <ul className="space-y-1 list-disc list-inside">
-              <li>All missions launched in parallel</li>
-              <li>No dependency gating — order not guaranteed</li>
-              <li>Fastest possible deployment</li>
-              <li>Failures don't block other projects</li>
-              <li>May need manual intervention if deps fail</li>
+              <li>{t('missionControl.blueprintInfo.allMissionsParallel')}</li>
+              <li>{t('missionControl.blueprintInfo.noDependencyGating')}</li>
+              <li>{t('missionControl.blueprintInfo.fastestDeployment')}</li>
+              <li>{t('missionControl.blueprintInfo.failuresDontBlock')}</li>
+              <li>{t('missionControl.blueprintInfo.manualInterventionNeeded')}</li>
             </ul>
           )}
         </div>

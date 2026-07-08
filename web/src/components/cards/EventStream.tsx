@@ -325,7 +325,14 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
       />
 
       {/* Event list */}
-      <div ref={containerRef} className="flex-1 space-y-1.5 overflow-y-auto" style={containerStyle}>
+      <div
+        ref={containerRef}
+        className="flex-1 space-y-1.5 overflow-y-auto"
+        style={containerStyle}
+        role="region"
+        aria-label="Event stream list"
+        tabIndex={0}
+      >
         {events.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
             {t('cards:eventStream.noMatchingEvents')}

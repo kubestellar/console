@@ -65,9 +65,9 @@ class UXReporter implements Reporter {
           testFile: test.location.file,
           screenshot: data.screenshot,
         })
-      } catch {
+      } catch (error) { console.error('Error:', error)
         // Malformed annotation — skip
-      }
+       }
     }
   }
 

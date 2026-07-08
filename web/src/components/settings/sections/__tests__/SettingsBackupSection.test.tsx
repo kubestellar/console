@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { TOAST_DISMISS_MS } from '../../../../lib/constants/network'
@@ -8,9 +9,13 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
-vi.mock('../../../../lib/constants/network', () => ({
-  TOAST_DISMISS_MS: 1000,
-}))
+vi.mock('../../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    TOAST_DISMISS_MS: 1000,
+  }
+})
 
 describe('SettingsBackupSection', () => {
   beforeEach(() => {

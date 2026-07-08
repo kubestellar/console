@@ -33,15 +33,21 @@ vi.mock('../../lib/themes', () => ({
 const mockEmitInstall = vi.fn()
 const mockEmitRemove = vi.fn()
 const mockEmitInstallFailed = vi.fn()
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitMarketplaceInstall: (...args: unknown[]) => mockEmitInstall(...args),
   emitMarketplaceRemove: (...args: unknown[]) => mockEmitRemove(...args),
   emitMarketplaceInstallFailed: (...args: unknown[]) => mockEmitInstallFailed(...args),
-}))
+}
+))
 
-vi.mock('../../lib/constants/network', () => ({
-  FETCH_EXTERNAL_TIMEOUT_MS: 15000,
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FETCH_EXTERNAL_TIMEOUT_MS: 15000,
+  }
+})
 
 const mockIsCardTypeRegistered = vi.fn(() => false)
 vi.mock('../../components/cards/cardRegistry', () => ({

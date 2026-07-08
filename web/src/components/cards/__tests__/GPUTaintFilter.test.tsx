@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Unit tests for the taint-aware GPU filter utilities (#8172).
  *

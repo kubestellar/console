@@ -17,7 +17,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/transport"
+	ghhandlers "github.com/kubestellar/console/pkg/api/handlers/github"
+	"github.com/kubestellar/console/pkg/api/handlers/gitops"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/fileutil"
 	"github.com/kubestellar/console/pkg/safego"
@@ -278,12 +280,12 @@ func (s *Server) Shutdown() error {
 			s.background.rewardsHandler.StopEviction()
 		}
 		// stop the operator cache and GitHub proxy limiter eviction goroutines.
-		handlers.StopOperatorCacheEvictor()
-		handlers.StopGitHubProxyLimiterEvictor()
+		gitops.StopOperatorCacheEvictor()
+		ghhandlers.StopGitHubProxyLimiterEvictor()
 		// #7043 — stop the SSE cache evictor goroutine that was started
 		// lazily by sseCacheSet. Without this the goroutine leaks after
 		// server shutdown.
-		handlers.StopSSECacheEvictor()
+		transport.StopSSECacheEvictor()
 		// #6578 — stop the token revocation cleanup goroutine so tests
 		// and embedded usage don't leak it across Server lifecycles.
 		middleware.ShutdownTokenRevocation()

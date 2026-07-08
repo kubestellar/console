@@ -1,3 +1,4 @@
+import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { MemoryRouter } from 'react-router-dom'
@@ -82,9 +83,11 @@ vi.mock('../../../../lib/modals', () => ({
   ConfirmDialog: () => null,
 }))
 
-vi.mock('../../../../lib/analytics', () => ({
+vi.mock('../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitLocalClusterCreated: vi.fn(),
-}))
+}
+))
 
 const dismissVClusterActionFeedback = vi.fn()
 

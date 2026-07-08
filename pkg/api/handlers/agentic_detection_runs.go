@@ -90,13 +90,13 @@ type DetectionRunIssue struct {
 // GetDetectionRuns returns detection runs from the active detection tracking issue.
 func (h *AgenticDetectionRunsHandler) GetDetectionRuns(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
-		return demoResponse(c, "agentic-detection-runs", getDemoDetectionRuns())
+		return DemoResponse(c, "agentic-detection-runs", GetDemoDetectionRuns())
 	}
 
 	runs, err := h.fetchDetectionRuns(c.UserContext())
 	if err != nil {
 		slog.Error("[AgenticDetectionRuns] Failed to fetch detection runs", "error", err)
-		return demoResponse(c, "agentic-detection-runs", getDemoDetectionRuns())
+		return DemoResponse(c, "agentic-detection-runs", GetDemoDetectionRuns())
 	}
 
 	return c.JSON(runs)
@@ -229,8 +229,8 @@ func fetchGitHubResponseBody(ctx context.Context, token, requestURL string) ([]b
 	return body, nil
 }
 
-// getDemoDetectionRuns returns demo data for detection runs.
-func getDemoDetectionRuns() DetectionRunsResponse {
+// GetDemoDetectionRuns returns demo data for detection runs.
+func GetDemoDetectionRuns() DetectionRunsResponse {
 	now := time.Now()
 	issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", awDetectionRunsRepo, awDetectionRunsDemoIssueNumber)
 

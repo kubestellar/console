@@ -4,14 +4,17 @@ import { renderHook, act } from '@testing-library/react'
 
 // ---------- Mocks ----------
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitEvent: vi.fn(),
   emitRewardUnlocked: vi.fn(),
-}))
+}
+))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   getDemoMode: vi.fn(() => false),
-  useDemoMode: vi.fn(() => ({ isDemoMode: false })),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
 const mockUser = { id: 'user-1', github_login: 'testuser' }

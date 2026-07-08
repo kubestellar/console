@@ -5,6 +5,8 @@
  * triggers the browser's print dialog (Save as PDF).
  */
 
+import DOMPurify from 'dompurify'
+
 import type { MissionControlState } from './types'
 import type { BlueprintLayout } from './types'
 import { generateDefaultPhases } from './BlueprintInfoPanels'
@@ -99,7 +101,8 @@ export function exportFullReport(
     bg.setAttribute('height', '100%')
     bg.setAttribute('fill', '#0f172a')
     clone.insertBefore(bg, clone.firstChild)
-    svgMarkup = new XMLSerializer().serializeToString(clone)
+    const raw = new XMLSerializer().serializeToString(clone)
+    svgMarkup = DOMPurify.sanitize(raw, { USE_PROFILES: { svg: true, svgFilters: true } })
   }
 
   // Cluster summary

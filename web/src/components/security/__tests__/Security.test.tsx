@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -5,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 // --- Mocks (must be declared before importing the component) ---
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: (ns?: string) => ({
     t: (key: string) => {
       const map: Record<string, string> = {
@@ -33,8 +35,10 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
   }),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: true }),
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../hooks/useLocalAgent', () => ({
@@ -102,6 +106,7 @@ vi.mock('../../ui/RotatingTip', () => ({
 
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: (props: Record<string, unknown>) => <div data-testid="skeleton" style={{ width: props.width as number, height: props.height as number }} />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../ui/StatsOverview', () => ({

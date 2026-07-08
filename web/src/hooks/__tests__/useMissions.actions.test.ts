@@ -7,6 +7,11 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
+const { mockIsLocalAgentSuppressed, mockAreOptionalPollersSuppressed } = vi.hoisted(() => ({
+  mockIsLocalAgentSuppressed: vi.fn(() => false),
+  mockAreOptionalPollersSuppressed: vi.fn(() => false),
+}))
+
 const mockStartMission = vi.fn(() => 'started-mission-id')
 const mockCancelMission = vi.fn()
 
@@ -27,9 +32,11 @@ vi.mock('../useMissions.messaging', () => ({
   })),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitMissionRated: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/logger', () => ({
   logger: {
@@ -40,9 +47,19 @@ vi.mock('../../lib/logger', () => ({
   },
 }))
 
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/constants/network')>()
+  return {
+    ...actual,
+    isLocalAgentSuppressed: mockIsLocalAgentSuppressed,
+    areOptionalPollersSuppressed: mockAreOptionalPollersSuppressed,
+  }
+})
+
 import { createMissionActions } from '../useMissions.actions'
 import { createMissionStateUtils, NONE_AGENT, SELECTED_AGENT_KEY } from '../useMissions.state'
 import { emitMissionRated } from '../../lib/analytics'
+import { logger } from '../../lib/logger'
 import type { Mission, StartMissionParams } from '../useMissionTypes'
 import type { MissionProviderState } from '../useMissions.state'
 
@@ -157,6 +174,8 @@ async function flushMicrotasks() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockIsLocalAgentSuppressed.mockReturnValue(false)
+  mockAreOptionalPollersSuppressed.mockReturnValue(false)
   localStorage.clear()
   mockStartMission.mockReturnValue('started-mission-id')
 })
@@ -265,6 +284,47 @@ describe('createMissionActions', () => {
     expect(localStorage.getItem(SELECTED_AGENT_KEY)).toBe(NONE_AGENT)
     expect(connectionApi.ensureConnection).not.toHaveBeenCalled()
     expect(connectionApi.wsSend).not.toHaveBeenCalled()
+  })
+
+  it('selectAgent treats deployment-unavailable agents as expected when suppressed', async () => {
+    mockIsLocalAgentSuppressed.mockReturnValue(true)
+    const ensureConnection = vi.fn(() => Promise.reject(new Error('Agent unavailable in this deployment')))
+    const state = makeState()
+    const { actions } = makeActions(state, makeConnectionApi(ensureConnection))
+
+    actions.selectAgent('claude-code')
+    await flushMicrotasks()
+
+    expect(state.selectAgentPending.current).toBeNull()
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.debug).toHaveBeenCalledWith('[Missions] Agent selection skipped because the agent is unavailable in this deployment')
+  })
+
+  it('connectToAgent treats deployment-unavailable agents as expected when suppressed', async () => {
+    mockAreOptionalPollersSuppressed.mockReturnValue(true)
+    const ensureConnection = vi.fn(() => Promise.reject(new Error('Agent unavailable in this deployment')))
+    const state = makeState()
+    state.wsReconnectAttempts.current = 3
+    const { actions } = makeActions(state, makeConnectionApi(ensureConnection))
+
+    actions.connectToAgent()
+    await flushMicrotasks()
+
+    expect(state.wsReconnectAttempts.current).toBe(0)
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.debug).toHaveBeenCalledWith('[Missions] Agent connection skipped because the agent is unavailable in this deployment')
+  })
+
+  it('connectToAgent still logs unexpected connection failures', async () => {
+    const error = new Error('CONNECTION_FAILED')
+    const ensureConnection = vi.fn(() => Promise.reject(error))
+    const state = makeState()
+    const { actions } = makeActions(state, makeConnectionApi(ensureConnection))
+
+    actions.connectToAgent()
+    await flushMicrotasks()
+
+    expect(logger.error).toHaveBeenCalledWith('[Missions] Failed to connect to agent:', error)
   })
 
   it('confirmPendingReview preserves the pregenerated mission id from pendingReview', () => {

@@ -21,8 +21,7 @@ on:
       - 'web/e2e/fullstack-smoke.spec.ts'
       - '.github/workflows/fullstack-e2e.yml'
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 env:
   # Dev-only placeholder — must be >= 32 chars for the server to accept it

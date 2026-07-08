@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { WhatsNewModal, isUpdateSnoozed } from './WhatsNewModal'
@@ -45,10 +46,12 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitWhatsNewUpdateClicked: vi.fn(),
   emitWhatsNewRemindLater: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../lib/modals', () => ({
   BaseModal: Object.assign(

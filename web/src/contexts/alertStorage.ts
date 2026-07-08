@@ -10,7 +10,7 @@
 import type { Alert } from '../types/alerts'
 import { safeGet, safeSet, safeRemove, safeGetJSON } from '../lib/safeLocalStorage'
 import { STORAGE_KEY_NOTIFIED_ALERT_KEYS } from '../lib/constants'
-import { MS_PER_MINUTE, MS_PER_HOUR } from '../lib/constants/time'
+import { DAYS_PER_MONTH, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../lib/constants/time'
 
 /** Storage key for alerts */
 export const ALERTS_KEY = 'kc_alerts'
@@ -24,7 +24,7 @@ export const MAX_RESOLVED_ALERTS_AFTER_PRUNE = 50
 /** Maximum age (ms) for dedup entries — evict stale entries older than this.
  *  30 days: persistent-condition keys (certificate_error, cluster_unreachable)
  *  must survive across sessions until the cluster recovers; 24 h was too short. */
-export const NOTIFICATION_DEDUP_MAX_AGE_MS = 30 * 24 * MS_PER_HOUR // 30 days
+export const NOTIFICATION_DEDUP_MAX_AGE_MS = DAYS_PER_MONTH * MS_PER_DAY
 
 /** Hard cap on stored dedup keys to prevent unbounded localStorage growth.
  *  When exceeded, the oldest entries (by timestamp) are evicted first. */
@@ -44,7 +44,10 @@ export const NOTIFICATION_COOLDOWN_BY_SEVERITY: Record<string, number> = {
   info: 4 * MS_PER_HOUR,   // 4 hours — informational, minimal interruption
 }
 /** Fallback cooldown when severity is unknown */
-export const DEFAULT_NOTIFICATION_COOLDOWN_MS = 30 * MS_PER_MINUTE // 30 min
+export const DEFAULT_NOTIFICATION_COOLDOWN_MS = NOTIFICATION_COOLDOWN_BY_SEVERITY.warning
+
+/** Legacy DOMException error code for QuotaExceededError (used by older browsers). */
+const DOM_EXCEPTION_QUOTA_EXCEEDED_CODE = 22
 
 /** Load persisted notification dedup map from localStorage (key → timestamp).
  *  Prunes stale entries (older than NOTIFICATION_DEDUP_MAX_AGE_MS) and enforces
@@ -110,12 +113,18 @@ export function loadFromStorage<T>(key: string, defaultValue: T): T {
 
 /** Save to localStorage with error logging (#7576).
  *  Uses localStorage directly instead of safeSetJSON so errors are
- *  observable rather than silently swallowed. */
+ *  observable rather than silently swallowed. Dispatches storage-error event for observability. */
 export function saveToStorage<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (e: unknown) {
-    console.error(`Failed to save ${key} to localStorage:`, e)
+    console.warn(`Failed to save ${key} to localStorage:`, e)
+    // Dispatch custom event for monitoring/observability
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('storage-error', {
+        detail: { operation: 'setItem', key, error: e instanceof Error ? e.message : String(e), timestamp: Date.now() }
+      }))
+    }
   }
 }
 
@@ -146,7 +155,7 @@ export function saveAlerts(alerts: Alert[]): void {
     // QuotaExceededError: DOMException with name 'QuotaExceededError', or legacy
     // browsers that use numeric code 22 instead of the named exception.
     // Pattern matches useMissions/useMetricsHistory for consistency across the codebase.
-    const isQuotaError = e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === 22)
+    const isQuotaError = e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === DOM_EXCEPTION_QUOTA_EXCEEDED_CODE)
     if (isQuotaError) {
       console.warn('[Alerts] localStorage quota exceeded, pruning resolved alerts')
       // Keep all firing alerts + a small number of recent resolved ones
@@ -159,11 +168,28 @@ export function saveAlerts(alerts: Alert[]): void {
       try {
         localStorage.setItem(ALERTS_KEY, JSON.stringify(pruned))
       } catch (retryError: unknown) {
-        console.error('[Alerts] localStorage still full after pruning, clearing alerts', retryError)
+        console.warn('[Alerts] localStorage still full after pruning, clearing alerts', retryError)
+        // Dispatch event for monitoring
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('storage-error', {
+            detail: { operation: 'setItem', key: ALERTS_KEY, error: retryError instanceof Error ? retryError.message : String(retryError), timestamp: Date.now(), severity: 'critical' }
+          }))
+        }
         safeRemove(ALERTS_KEY)
       }
     } else {
       console.error(`Failed to save ${ALERTS_KEY} to localStorage:`, e)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('storage-error', {
+          detail: { 
+            operation: 'setItem', 
+            key: ALERTS_KEY, 
+            error: e instanceof Error ? e.message : String(e), 
+            timestamp: Date.now(), 
+            severity: 'warning'
+          }
+        }))
+      }
     }
   }
 }

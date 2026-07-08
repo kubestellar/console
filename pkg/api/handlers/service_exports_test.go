@@ -73,6 +73,7 @@ func TestServiceExportsHandlers_List(t *testing.T) {
 
 	t.Run("list all", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/k8s/service-exports", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -98,6 +99,7 @@ func TestServiceExportsHandlers_List(t *testing.T) {
 	t.Run("empty cluster", func(t *testing.T) {
 		injectDynamicClusterWithObjects(env, "cluster-empty", scheme, []runtime.Object{})
 		req := httptest.NewRequest("GET", "/api/k8s/service-exports", nil)
+		req.Host = "localhost"
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)

@@ -14,7 +14,7 @@ export const pipelineFlowConfig: UnifiedCardConfig = {
   defaultHeight: 5,
   dataSource: { type: 'hook', hook: 'usePipelineFlow' },
   content: { type: 'custom', component: 'PipelineFlow' },
-  emptyState: { icon: 'GitBranch', title: 'No runs in flight', message: 'All workflows idle', variant: 'success' },
+  emptyState: { icon: 'GitBranch', title: 'No runs in flight', message: 'All workflows idle', variant: 'neutral' },
   loadingState: { type: 'custom' },
   isDemoData: true,
   isLive: true,

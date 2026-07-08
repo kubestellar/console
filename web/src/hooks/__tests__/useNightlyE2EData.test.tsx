@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for useNightlyE2EData — verifies the hook passes correct
  * config to useCache (key, demoData shape, initialData from localStorage).

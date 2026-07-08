@@ -77,12 +77,28 @@ function DeploymentsContent() {
   const totalDeployments = currentTotalDeployments > 0 ? currentTotalDeployments : cachedStats.current.total
   const healthyDeployments = currentTotalDeployments > 0 ? currentHealthyDeployments : cachedStats.current.healthy
   const issueCount = currentTotalDeployments > 0 ? currentIssueCount : cachedStats.current.issues
+  const routeState: 'loaded' | 'partial' | 'unavailable' | 'empty' = error && totalDeployments === 0
+    ? 'unavailable'
+    : isLoading && totalDeployments === 0
+      ? 'partial'
+      : totalDeployments === 0
+        ? 'empty'
+        : 'loaded'
 
   // Stats value getter for the configurable StatsOverview component
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'namespaces':
-        return { value: totalDeployments, sublabel: 'total deployments', onClick: () => drillToAllDeployments(), isClickable: totalDeployments > 0 }
+        return {
+          value: totalDeployments,
+          sublabel: 'total deployments',
+          onClick: () => drillToAllDeployments(),
+          isClickable: totalDeployments > 0,
+          groundtruthFields: {
+            'deployments-total': totalDeployments,
+            'deployments-available': healthyDeployments,
+          },
+        }
       case 'healthy':
         return { value: healthyDeployments, sublabel: 'healthy', onClick: () => drillToAllDeployments('healthy'), isClickable: healthyDeployments > 0 }
       case 'warning':
@@ -90,7 +106,16 @@ function DeploymentsContent() {
       case 'critical':
         return { value: issueCount, sublabel: 'with issues', onClick: () => drillToAllDeployments('issues'), isClickable: issueCount > 0 }
       case 'deployments':
-        return { value: totalDeployments, sublabel: 'deployments', onClick: () => drillToAllDeployments(), isClickable: totalDeployments > 0 }
+        return {
+          value: totalDeployments,
+          sublabel: 'deployments',
+          onClick: () => drillToAllDeployments(),
+          isClickable: totalDeployments > 0,
+          groundtruthFields: {
+            'deployments-total': totalDeployments,
+            'deployments-available': healthyDeployments,
+          },
+        }
       case 'pod_issues':
         return { value: filteredPodIssues.length, sublabel: 'pod issues', onClick: () => drillToAllPods('issues'), isClickable: filteredPodIssues.length > 0 }
       case 'deployment_issues':
@@ -126,7 +151,7 @@ function DeploymentsContent() {
         aria-label="Deployment health: all healthy"
       >
         <CheckCircle className="w-3 h-3" />
-        <span>All healthy</span>
+        <span>{t('deployments.allHealthy')}</span>
       </span>
     )
   }, [issueCount])
@@ -147,6 +172,7 @@ function DeploymentsContent() {
       isRefreshing={dataRefreshing}
       lastUpdated={lastUpdated}
       hasData={deployments.length > 0}
+      routeState={routeState}
       emptyState={{
         title: 'Deployments Dashboard',
         description: 'Add cards to monitor deployment health, rollout progress, and issues across your clusters.' }}

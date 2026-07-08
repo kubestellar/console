@@ -26,7 +26,8 @@
 # same PR as the new exception and explain the rationale in the PR body.
 
 gpu.go
-mcp_resources.go
+# Moved to mcp/ sub-package in #18101 (formerly mcp_resources.go).
+mcp/resources.go
 self_upgrade.go
 console_persistence.go
 # Split from console_persistence.go; same internal reconciler exception.

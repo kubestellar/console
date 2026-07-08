@@ -65,6 +65,7 @@ func performCardProxyRequest(t *testing.T, app *fiber.App, userID uuid.UUID) *ht
 	t.Helper()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/card-proxy?url="+cardProxyTestURL, nil)
+	req.Host = "localhost"
 	req.Header.Set("X-Test-User", userID.String())
 
 	resp, err := app.Test(req, -1)
@@ -122,6 +123,7 @@ func TestCardProxyAuthorization_ViewerForbidden(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/card-proxy?url=https://example.com", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
@@ -149,6 +151,7 @@ func TestCardProxyAuthorization_EditorAllowed(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/card-proxy", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
@@ -169,6 +172,7 @@ func TestCardProxyAuthorization_NilStoreSkipsCheck(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "/api/card-proxy", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)

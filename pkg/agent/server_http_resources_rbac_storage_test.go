@@ -56,6 +56,7 @@ func doRoleBindingsRequest(t *testing.T, srv *Server, method, rawQuery string, b
 		url += "?" + rawQuery
 	}
 	req := httptest.NewRequest(method, url, reqBody)
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -70,6 +71,7 @@ func TestHandleRoleBindingsHTTP_Unauthorized(t *testing.T) {
 	srv, _ := newRBACTestServer(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/rolebindings", strings.NewReader(`{}`))
+	req.Host = "localhost"
 	// No Authorization header
 	rr := httptest.NewRecorder()
 	srv.handleRoleBindingsHTTP(rr, req)
@@ -83,6 +85,7 @@ func TestHandleRoleBindingsHTTP_NilK8sClient(t *testing.T) {
 	srv := &Server{agentToken: testBearerToken, tokenExplicit: true}
 
 	req := httptest.NewRequest(http.MethodPost, "/rolebindings", strings.NewReader(`{}`))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
 	rr := httptest.NewRecorder()
 	srv.handleRoleBindingsHTTP(rr, req)
@@ -104,6 +107,7 @@ func TestHandleRoleBindingsHTTP_CORSPreflight(t *testing.T) {
 	srv, _ := newRBACTestServer(t)
 
 	req := httptest.NewRequest(http.MethodOptions, "/rolebindings", nil)
+	req.Host = "localhost"
 	rr := httptest.NewRecorder()
 	srv.handleRoleBindingsHTTP(rr, req)
 
@@ -118,6 +122,7 @@ func TestCreateRoleBindingHTTP_InvalidJSON(t *testing.T) {
 	srv, _ := newRBACTestServer(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/rolebindings", strings.NewReader(`not-json`))
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
 	rr := httptest.NewRecorder()
 	srv.handleRoleBindingsHTTP(rr, req)

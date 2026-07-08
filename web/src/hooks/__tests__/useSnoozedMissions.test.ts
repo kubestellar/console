@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import type { MissionSuggestion } from '../useMissionSuggestions'
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitSnoozed: vi.fn(),
   emitUnsnoozed: vi.fn(),
-}))
+}
+))
 
 const STORAGE_KEY = 'kubestellar-snoozed-missions'
 const NOW_MS = 1_700_000_000_000
@@ -34,14 +36,16 @@ async function renderSnoozedMissionsHook() {
 
 describe('useSnoozedMissions', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     localStorage.clear()
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
     vi.useFakeTimers()
     vi.setSystemTime(NOW_MS)
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   it('starts with empty snoozed and dismissed lists', async () => {
@@ -52,7 +56,7 @@ describe('useSnoozedMissions', () => {
   })
 
   it('falls back to empty state when persisted JSON is invalid', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     localStorage.setItem(STORAGE_KEY, '{invalid-json')
 
     const { result } = await renderSnoozedMissionsHook()

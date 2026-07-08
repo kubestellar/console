@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Notification Settings Section Tests
  */

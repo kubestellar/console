@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
@@ -17,7 +18,7 @@ const {
 } = vi.hoisted(() => ({
   mockUseClusters: vi.fn(),
   mockUseGlobalFilters: vi.fn(),
-  mockUseDemoMode: vi.fn(),
+  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })),
   mockUseKyverno: vi.fn(),
   mockUseKubescape: vi.fn(),
   mockUseTrivy: vi.fn(),
@@ -38,9 +39,12 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => mockUseGlobalFilters(),
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
-}))
+  getDemoMode: vi.fn(() => false),
+}
+))
 
 vi.mock('../../hooks/useKyverno', () => ({
   useKyverno: () => mockUseKyverno(),
@@ -68,9 +72,11 @@ vi.mock('../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => mockUseDrillDownActions(),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitComplianceDrillDown: vi.fn(),
-}))
+}
+))
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

@@ -27,7 +27,7 @@ const ACTIVE_USERS_FETCH_MIN_INTERVAL_MS = 2_000
 const HEARTBEAT_MIN_INTERVAL_MS = HEARTBEAT_INTERVAL
 const STALE_PRESENCE_TIMEOUT_MS = 45_000
 
-import { MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
+import { MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay, areOptionalPollersSuppressed } from '../lib/constants/network'
 import { getWsAuthParams } from '../lib/utils/wsAuth'
 
 const RECOVERY_DELAY = 30_000 // Retry after circuit breaker trips
@@ -157,6 +157,7 @@ function getSessionId(): string {
 
 // Send heartbeat POST to Netlify Function
 async function sendHeartbeat() {
+  if (areOptionalPollersSuppressed()) return
   if (heartbeatRequestController) return
 
   const elapsedSinceLastHeartbeat = Date.now() - lastHeartbeatAt
@@ -245,6 +246,7 @@ function stopPresenceConnection() {
 
 // Start WebSocket presence connection (backend mode)
 async function startPresenceConnection() {
+  if (areOptionalPollersSuppressed()) return
   if (presenceStarted) return
 
   const token = await getStoredAuthToken()
@@ -377,6 +379,12 @@ function abortActiveUsersFetch() {
 
 // Fetch active users from API
 async function fetchActiveUsers(bypassThrottle = false) {
+  if (areOptionalPollersSuppressed()) {
+    hasFetchedOnce = true
+    notifySubscribers({ loading: false, error: false, stale: false })
+    return
+  }
+
   // Stop polling after too many consecutive failures, but schedule recovery
   if (consecutiveFailures >= MAX_FAILURES) {
     if (pollInterval) {
@@ -496,6 +504,13 @@ export function useActiveUsers() {
   const [, setDemoTick] = useState(0)
 
   useEffect(() => {
+    if (areOptionalPollersSuppressed()) {
+      setIsLoading(false)
+      setHasError(false)
+      setIsStale(false)
+      return
+    }
+
     // On Netlify (no backend): use HTTP heartbeat for presence tracking
     // With backend: use WebSocket presence connection
     if (isDemoModeForced || getDemoMode()) {

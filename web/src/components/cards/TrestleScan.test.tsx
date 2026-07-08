@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Unit tests for the TrestleScan (Compliance Trestle / OSCAL) card component.
  *

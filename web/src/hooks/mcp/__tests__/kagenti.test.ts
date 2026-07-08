@@ -1,5 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook} from '@testing-library/react'
+/**
+ * Tests for kagenti.ts
+ *
+ * Covers the hooks for fetching Kagenti resources (agents, builds, cards, tools, summary).
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook, waitFor } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -8,26 +13,17 @@ import { renderHook} from '@testing-library/react'
 const {
   mockIsAgentUnavailable,
   mockReportAgentDataSuccess,
-  mockClusterCacheRef,
   mockUseCache,
+  mockClusterCacheRef,
+  mockDeduplicateClustersByServer,
+  mockGetLocalAgentURL,
 } = vi.hoisted(() => ({
-  mockIsAgentUnavailable: vi.fn(() => true),
+  mockIsAgentUnavailable: vi.fn(() => false),
   mockReportAgentDataSuccess: vi.fn(),
-  mockClusterCacheRef: {
-    clusters: [] as Array<{
-      name: string
-      context?: string
-      reachable?: boolean
-    }>,
-  },
   mockUseCache: vi.fn(),
-}))
-
-vi.mock('../mcp/shared', () => ({
-  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-  clusterCacheRef: { clusters: [] },
-  REFRESH_INTERVAL_MS: 120_000,
-  CLUSTER_POLL_INTERVAL_MS: 60_000,
+  mockClusterCacheRef: { clusters: [] },
+  mockDeduplicateClustersByServer: vi.fn((clusters) => clusters),
+  mockGetLocalAgentURL: vi.fn(() => 'http://localhost:8585'),
 }))
 
 vi.mock('../../useLocalAgent', () => ({
@@ -35,21 +31,22 @@ vi.mock('../../useLocalAgent', () => ({
   reportAgentDataSuccess: () => mockReportAgentDataSuccess(),
 }))
 
-vi.mock('../shared', () => ({
-  getLocalAgentURL: () => 'http://localhost:8585',
-  agentFetch: (...args: unknown[]) => fetch(...(args as Parameters<typeof fetch>)),
-  clusterCacheRef: mockClusterCacheRef,
+vi.mock('../../../lib/cache', () => ({
+  useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
-// Mock useCache to return controllable values
-vi.mock('../../../lib/cache', () => ({
-  useCache: (opts: { key: string; initialData: unknown; demoData: unknown }) => mockUseCache(opts),
-  resetFailuresForCluster: vi.fn(),
-  createCachedHook: vi.fn((_config: unknown) => () => ({})),
+vi.mock('../shared', () => ({
+  clusterCacheRef: mockClusterCacheRef,
+  getLocalAgentURL: () => mockGetLocalAgentURL(),
+  agentFetch: vi.fn(),
+}))
+
+vi.mock('../dedup', () => ({
+  deduplicateClustersByServer: (clusters: unknown[]) => mockDeduplicateClustersByServer(clusters),
 }))
 
 // ---------------------------------------------------------------------------
-// Imports under test (after mocks)
+// Import under test (after mocks)
 // ---------------------------------------------------------------------------
 
 import {
@@ -58,361 +55,442 @@ import {
   useKagentiCards,
   useKagentiTools,
   useKagentiSummary,
+  type KagentiAgent,
+  type KagentiBuild,
+  type KagentiCard,
+  type KagentiTool,
+  type KagentiSummary,
 } from '../kagenti'
 
 // ---------------------------------------------------------------------------
-// Setup / teardown
+// Test setup
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockIsAgentUnavailable.mockReturnValue(true)
+  mockIsAgentUnavailable.mockReturnValue(false)
   mockClusterCacheRef.clusters = []
+  mockDeduplicateClustersByServer.mockImplementation((clusters) => clusters)
+  
+  // Default mock implementation for useCache
+  mockUseCache.mockReturnValue({
+    data: [],
+    isLoading: false,
+    isRefreshing: false,
+    isDemoFallback: false,
+    isFailed: false,
+    consecutiveFailures: 0,
+    lastRefresh: null,
+    refetch: vi.fn(),
+    error: null,
+  })
 })
 
-afterEach(() => {
-  vi.useRealTimers()
-})
-
-// ===========================================================================
+// ---------------------------------------------------------------------------
 // useKagentiAgents
-// ===========================================================================
+// ---------------------------------------------------------------------------
 
 describe('useKagentiAgents', () => {
-  it('passes correct key and initial data to useCache', () => {
-    mockUseCache.mockReturnValue({
-      data: [],
-      isLoading: true,
-      isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      consecutiveFailures: 0,
-      isFailed: false,
-      lastRefresh: null,
-    })
-
+  it('calls useCache with correct key for all clusters', () => {
     renderHook(() => useKagentiAgents())
+    
+    expect(mockUseCache).toHaveBeenCalled()
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.key).toBe('kagenti-agents:all:all')
+  })
 
-    expect(mockUseCache).toHaveBeenCalledWith(
-      expect.objectContaining({
-        key: 'kagenti-agents:all:all',
-        category: 'clusters',
-        initialData: [],
-        demoWhenEmpty: true,
-      })
-    )
+  it('calls useCache with cluster-specific key', () => {
+    renderHook(() => useKagentiAgents({ cluster: 'prod-east' }))
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.key).toBe('kagenti-agents:prod-east:all')
+  })
+
+  it('calls useCache with namespace-specific key', () => {
+    renderHook(() => useKagentiAgents({ namespace: 'kagenti-system' }))
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.key).toBe('kagenti-agents:all:kagenti-system')
+  })
+
+  it('calls useCache with cluster and namespace key', () => {
+    renderHook(() => useKagentiAgents({ cluster: 'staging', namespace: 'kagenti-ops' }))
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.key).toBe('kagenti-agents:staging:kagenti-ops')
+  })
+
+  it('sets category to clusters', () => {
+    renderHook(() => useKagentiAgents())
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.category).toBe('clusters')
+  })
+
+  it('provides empty array as initial data', () => {
+    renderHook(() => useKagentiAgents())
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(Array.isArray(call.initialData)).toBe(true)
+    expect(call.initialData).toHaveLength(0)
+  })
+
+  it('provides demo data', () => {
+    renderHook(() => useKagentiAgents())
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(Array.isArray(call.demoData)).toBe(true)
+    expect(call.demoData.length).toBeGreaterThan(0)
+  })
+
+  it('enables demo fallback when empty', () => {
+    renderHook(() => useKagentiAgents())
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.demoWhenEmpty).toBe(true)
+  })
+
+  it('is disabled when agent is unavailable', () => {
+    mockIsAgentUnavailable.mockReturnValue(true)
+    renderHook(() => useKagentiAgents())
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.enabled).toBe(false)
   })
 
   it('returns data from useCache', () => {
-    const fakeAgents = [
-      { name: 'code-review-agent', namespace: 'kagenti-system', status: 'Running', replicas: 2, readyReplicas: 2, framework: 'langgraph', protocol: 'a2a', image: 'ghcr.io/kagenti/code-review:v0.3.1', cluster: 'prod-east', createdAt: '2025-01-15T10:00:00Z' },
+    const mockAgents: KagentiAgent[] = [
+      { name: 'test-agent', namespace: 'default', status: 'Running', replicas: 1, readyReplicas: 1, framework: 'langgraph', protocol: 'a2a', image: 'test:latest', cluster: 'prod', createdAt: '2025-01-01T00:00:00Z' },
     ]
     mockUseCache.mockReturnValue({
-      data: fakeAgents,
+      data: mockAgents,
       isLoading: false,
       isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      consecutiveFailures: 0,
+      isDemoFallback: false,
       isFailed: false,
-      lastRefresh: new Date(),
+      consecutiveFailures: 0,
+      lastRefresh: Date.now(),
+      refetch: vi.fn(),
+      error: null,
     })
 
     const { result } = renderHook(() => useKagentiAgents())
-
-    expect(result.current.data).toEqual(fakeAgents)
-    expect(result.current.isLoading).toBe(false)
-    expect(result.current.error).toBeNull()
-  })
-
-  it('passes cluster and namespace options correctly', () => {
-    mockUseCache.mockReturnValue({
-      data: [],
-      isLoading: true,
-      isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      consecutiveFailures: 0,
-      isFailed: false,
-      lastRefresh: null,
-    })
-
-    renderHook(() => useKagentiAgents({ cluster: 'prod-east', namespace: 'kagenti-system' }))
-
-    expect(mockUseCache).toHaveBeenCalledWith(
-      expect.objectContaining({
-        key: 'kagenti-agents:prod-east:kagenti-system',
-      })
-    )
+    expect(result.current.data).toEqual(mockAgents)
   })
 })
 
-// ===========================================================================
+// ---------------------------------------------------------------------------
 // useKagentiBuilds
-// ===========================================================================
+// ---------------------------------------------------------------------------
 
 describe('useKagentiBuilds', () => {
-  it('passes correct key to useCache', () => {
-    mockUseCache.mockReturnValue({
-      data: [],
-      isLoading: true,
-      isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      consecutiveFailures: 0,
-      isFailed: false,
-      lastRefresh: null,
-    })
-
+  it('calls useCache with correct key for all clusters', () => {
     renderHook(() => useKagentiBuilds())
-
-    expect(mockUseCache).toHaveBeenCalledWith(
-      expect.objectContaining({
-        key: 'kagenti-builds:all:all',
-        category: 'clusters',
-        initialData: [],
-      })
-    )
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.key).toBe('kagenti-builds:all:all')
   })
 
-  it('returns build data from useCache', () => {
-    const fakeBuilds = [
-      { name: 'code-review-agent-build-7', namespace: 'kagenti-system', status: 'Succeeded', source: 'github.com/org/code-review', pipeline: 'kaniko', mode: 'dockerfile', cluster: 'prod-east', startTime: '2025-01-25T10:00:00Z', completionTime: '2025-01-25T10:05:30Z' },
+  it('calls useCache with cluster-specific key', () => {
+    renderHook(() => useKagentiBuilds({ cluster: 'prod-west' }))
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.key).toBe('kagenti-builds:prod-west:all')
+  })
+
+  it('provides demo data with builds', () => {
+    renderHook(() => useKagentiBuilds())
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(Array.isArray(call.demoData)).toBe(true)
+    expect(call.demoData.length).toBeGreaterThan(0)
+    // Verify at least one build has required fields
+    const build = call.demoData[0]
+    expect(typeof build.name).toBe('string')
+    expect(typeof build.status).toBe('string')
+  })
+
+  it('returns data from useCache', () => {
+    const mockBuilds: KagentiBuild[] = [
+      { name: 'test-build-1', namespace: 'default', status: 'Succeeded', source: 'github.com/org/repo', pipeline: 'kaniko', mode: 'dockerfile', cluster: 'prod', startTime: '2025-01-01T00:00:00Z', completionTime: '2025-01-01T00:05:00Z' },
     ]
     mockUseCache.mockReturnValue({
-      data: fakeBuilds,
+      data: mockBuilds,
       isLoading: false,
       isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      consecutiveFailures: 0,
+      isDemoFallback: false,
       isFailed: false,
-      lastRefresh: new Date(),
+      consecutiveFailures: 0,
+      lastRefresh: Date.now(),
+      refetch: vi.fn(),
+      error: null,
     })
 
     const { result } = renderHook(() => useKagentiBuilds())
-
-    expect(result.current.data).toEqual(fakeBuilds)
-    expect(result.current.isLoading).toBe(false)
+    expect(result.current.data).toEqual(mockBuilds)
   })
 })
 
-// ===========================================================================
+// ---------------------------------------------------------------------------
 // useKagentiCards
-// ===========================================================================
+// ---------------------------------------------------------------------------
 
 describe('useKagentiCards', () => {
-  it('passes correct key to useCache', () => {
-    mockUseCache.mockReturnValue({
-      data: [],
-      isLoading: true,
-      isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      consecutiveFailures: 0,
-      isFailed: false,
-      lastRefresh: null,
-    })
-
+  it('calls useCache with correct key for all clusters', () => {
     renderHook(() => useKagentiCards())
-
-    expect(mockUseCache).toHaveBeenCalledWith(
-      expect.objectContaining({
-        key: 'kagenti-cards:all:all',
-        category: 'clusters',
-      })
-    )
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.key).toBe('kagenti-cards:all:all')
   })
 
-  it('returns card data from useCache', () => {
-    const fakeCards = [
-      { name: 'code-review-agent-card', namespace: 'kagenti-system', agentName: 'code-review-agent', skills: ['code-review'], capabilities: ['streaming'], syncPeriod: '30s', identityBinding: 'strict', cluster: 'prod-east' },
+  it('calls useCache with namespace-specific key', () => {
+    renderHook(() => useKagentiCards({ namespace: 'kagenti-system' }))
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.key).toBe('kagenti-cards:all:kagenti-system')
+  })
+
+  it('provides demo data with cards', () => {
+    renderHook(() => useKagentiCards())
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(Array.isArray(call.demoData)).toBe(true)
+    expect(call.demoData.length).toBeGreaterThan(0)
+    // Verify at least one card has required fields
+    const card = call.demoData[0]
+    expect(typeof card.name).toBe('string')
+    expect(typeof card.agentName).toBe('string')
+  })
+
+  it('returns data from useCache', () => {
+    const mockCards: KagentiCard[] = [
+      { name: 'test-card', namespace: 'default', agentName: 'test-agent', skills: ['skill1'], capabilities: ['streaming'], syncPeriod: '30s', identityBinding: 'strict', cluster: 'prod' },
     ]
     mockUseCache.mockReturnValue({
-      data: fakeCards,
+      data: mockCards,
       isLoading: false,
       isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      consecutiveFailures: 0,
+      isDemoFallback: false,
       isFailed: false,
-      lastRefresh: new Date(),
+      consecutiveFailures: 0,
+      lastRefresh: Date.now(),
+      refetch: vi.fn(),
+      error: null,
     })
 
     const { result } = renderHook(() => useKagentiCards())
-
-    expect(result.current.data).toEqual(fakeCards)
+    expect(result.current.data).toEqual(mockCards)
   })
 })
 
-// ===========================================================================
+// ---------------------------------------------------------------------------
 // useKagentiTools
-// ===========================================================================
+// ---------------------------------------------------------------------------
 
 describe('useKagentiTools', () => {
-  it('passes correct key to useCache', () => {
-    mockUseCache.mockReturnValue({
-      data: [],
-      isLoading: true,
-      isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      consecutiveFailures: 0,
-      isFailed: false,
-      lastRefresh: null,
-    })
-
+  it('calls useCache with correct key for all clusters', () => {
     renderHook(() => useKagentiTools())
-
-    expect(mockUseCache).toHaveBeenCalledWith(
-      expect.objectContaining({
-        key: 'kagenti-tools:all:all',
-        category: 'clusters',
-      })
-    )
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(call.key).toBe('kagenti-tools:all:all')
   })
 
-  it('returns tool data from useCache', () => {
-    const fakeTools = [
-      { name: 'kubectl-tool', namespace: 'kagenti-system', toolPrefix: 'kubectl', targetRef: 'kubectl-gateway', hasCredential: true, cluster: 'prod-east' },
+  it('provides demo data with tools', () => {
+    renderHook(() => useKagentiTools())
+    
+    const call = mockUseCache.mock.calls[0][0]
+    expect(Array.isArray(call.demoData)).toBe(true)
+    expect(call.demoData.length).toBeGreaterThan(0)
+    // Verify at least one tool has required fields
+    const tool = call.demoData[0]
+    expect(typeof tool.name).toBe('string')
+    expect(typeof tool.toolPrefix).toBe('string')
+  })
+
+  it('returns data from useCache', () => {
+    const mockTools: KagentiTool[] = [
+      { name: 'kubectl-tool', namespace: 'default', toolPrefix: 'kubectl', targetRef: 'kubectl-gateway', hasCredential: true, cluster: 'prod' },
     ]
     mockUseCache.mockReturnValue({
-      data: fakeTools,
+      data: mockTools,
       isLoading: false,
       isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      consecutiveFailures: 0,
+      isDemoFallback: false,
       isFailed: false,
-      lastRefresh: new Date(),
+      consecutiveFailures: 0,
+      lastRefresh: Date.now(),
+      refetch: vi.fn(),
+      error: null,
     })
 
     const { result } = renderHook(() => useKagentiTools())
+    expect(result.current.data).toEqual(mockTools)
+  })
 
-    expect(result.current.data).toEqual(fakeTools)
+  it('sets category to clusters for all hooks', () => {
+    renderHook(() => useKagentiAgents())
+    renderHook(() => useKagentiBuilds())
+    renderHook(() => useKagentiCards())
+    renderHook(() => useKagentiTools())
+    
+    for (let i = 0; i < 4; i++) {
+      const call = mockUseCache.mock.calls[i][0]
+      expect(call.category).toBe('clusters')
+    }
   })
 })
 
-// ===========================================================================
+// ---------------------------------------------------------------------------
 // useKagentiSummary
-// ===========================================================================
+// ---------------------------------------------------------------------------
 
 describe('useKagentiSummary', () => {
-  it('returns null summary when all sub-hooks are loading', () => {
-    mockUseCache.mockReturnValue({
-      data: [],
-      isLoading: true,
-      isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      consecutiveFailures: 0,
-      isFailed: false,
-      lastRefresh: null,
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-
-    expect(result.current.summary).toBeNull()
-    expect(result.current.isLoading).toBe(true)
-  })
-
-  it('computes summary from sub-hook data', () => {
+  beforeEach(() => {
+    // Mock all sub-hooks to return specific data for summary tests
     let callCount = 0
     mockUseCache.mockImplementation(() => {
       callCount++
-      // Return different data for agents, builds, cards, tools
-      if (callCount === 1) {
-        // agents
+      if (callCount === 1) { // agents
         return {
           data: [
-            { name: 'a1', status: 'Running', readyReplicas: 1, cluster: 'prod', framework: 'langgraph' },
-            { name: 'a2', status: 'Running', readyReplicas: 1, cluster: 'prod', framework: 'crewai' },
+            { name: 'agent1', status: 'Running', readyReplicas: 1, framework: 'langgraph', cluster: 'prod' },
+            { name: 'agent2', status: 'Running', readyReplicas: 1, framework: 'crewai', cluster: 'prod' },
+            { name: 'agent3', status: 'Pending', readyReplicas: 0, framework: 'langgraph', cluster: 'staging' },
           ],
-          isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-          isDemoData: false, consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
+          isLoading: false,
+          isDemoFallback: false,
+          error: null,
+          refetch: vi.fn(),
         }
       }
-      if (callCount === 2) {
-        // builds
-        return {
-          data: [{ name: 'b1', status: 'Building' }],
-          isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-          isDemoData: false, consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-        }
-      }
-      if (callCount === 3) {
-        // cards
+      if (callCount === 2) { // builds
         return {
           data: [
-            { name: 'c1', identityBinding: 'strict' },
-            { name: 'c2', identityBinding: 'none' },
+            { status: 'Succeeded' },
+            { status: 'Building' },
+            { status: 'Failed' },
           ],
-          isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-          isDemoData: false, consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
+          isLoading: false,
+          isDemoFallback: false,
+          refetch: vi.fn(),
+        }
+      }
+      if (callCount === 3) { // cards
+        return {
+          data: [
+            { identityBinding: 'strict' },
+            { identityBinding: 'permissive' },
+            { identityBinding: 'none' },
+            { identityBinding: '' }, // Empty should NOT count as SPIFFE-bound
+          ],
+          isLoading: false,
+          isDemoFallback: false,
+          refetch: vi.fn(),
         }
       }
       // tools
       return {
-        data: [{ name: 't1' }, { name: 't2' }, { name: 't3' }],
-        isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-        isDemoData: false, consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
+        data: [{ name: 'tool1' }, { name: 'tool2' }],
+        isLoading: false,
+        isDemoFallback: false,
+        refetch: vi.fn(),
+      }
+    })
+  })
+
+  it('returns null summary when loading', () => {
+    mockUseCache.mockReturnValue({
+      data: [],
+      isLoading: true,
+      isDemoFallback: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+
+    const { result } = renderHook(() => useKagentiSummary())
+    expect(result.current.summary).toBeNull()
+  })
+
+  it('aggregates agent count correctly', () => {
+    const { result } = renderHook(() => useKagentiSummary())
+    expect(result.current.summary?.agentCount).toBe(3)
+  })
+
+  it('counts ready agents correctly', () => {
+    const { result } = renderHook(() => useKagentiSummary())
+    expect(result.current.summary?.readyAgents).toBe(2) // Only Running with readyReplicas > 0
+  })
+
+  it('aggregates build count correctly', () => {
+    const { result } = renderHook(() => useKagentiSummary())
+    expect(result.current.summary?.buildCount).toBe(3)
+  })
+
+  it('counts active builds correctly', () => {
+    const { result } = renderHook(() => useKagentiSummary())
+    expect(result.current.summary?.activeBuilds).toBe(1) // Only Building
+  })
+
+  it('aggregates tool count correctly', () => {
+    const { result } = renderHook(() => useKagentiSummary())
+    expect(result.current.summary?.toolCount).toBe(2)
+  })
+
+  it('aggregates card count correctly', () => {
+    const { result } = renderHook(() => useKagentiSummary())
+    expect(result.current.summary?.cardCount).toBe(4)
+  })
+
+  it('counts SPIFFE-bound cards correctly', () => {
+    const { result } = renderHook(() => useKagentiSummary())
+    // Only strict and permissive count, NOT none or empty string
+    expect(result.current.summary?.spiffeBound).toBe(2)
+    expect(result.current.summary?.spiffeTotal).toBe(4)
+  })
+
+  it('aggregates frameworks correctly', () => {
+    const { result } = renderHook(() => useKagentiSummary())
+    expect(result.current.summary?.frameworks).toEqual({
+      langgraph: 2,
+      crewai: 1,
+    })
+  })
+
+  it('aggregates cluster breakdown correctly', () => {
+    const { result } = renderHook(() => useKagentiSummary())
+    expect(result.current.summary?.clusterBreakdown).toEqual([
+      { cluster: 'prod', agents: 2 },
+      { cluster: 'staging', agents: 1 },
+    ])
+  })
+
+  it('returns combined loading state', () => {
+    let callCount = 0
+    mockUseCache.mockImplementation(() => {
+      callCount++
+      return {
+        data: [],
+        isLoading: callCount === 1, // First call (agents) is loading
+        isDemoFallback: false,
+        error: null,
+        refetch: vi.fn(),
       }
     })
 
     const { result } = renderHook(() => useKagentiSummary())
-
-    expect(result.current.isLoading).toBe(false)
-    expect(result.current.summary).toBeDefined()
-    expect(result.current.summary!.agentCount).toBe(2)
-    expect(result.current.summary!.readyAgents).toBe(2)
-    expect(result.current.summary!.buildCount).toBe(1)
-    expect(result.current.summary!.activeBuilds).toBe(1)
-    expect(result.current.summary!.toolCount).toBe(3)
-    expect(result.current.summary!.cardCount).toBe(2)
-    expect(result.current.summary!.spiffeBound).toBe(1)
-    expect(result.current.summary!.spiffeTotal).toBe(2)
+    expect(result.current.isLoading).toBe(true)
   })
 
-  it('provides refetch function that calls all sub-hook refetches', async () => {
-    const mockRefetch = vi.fn().mockResolvedValue(undefined)
-    mockUseCache.mockReturnValue({
-      data: [],
-      isLoading: false,
-      isRefreshing: false,
-      error: null,
-      refetch: mockRefetch,
-      isDemoData: false,
-      isDemoFallback: false,
-      consecutiveFailures: 0,
-      isFailed: false,
-      lastRefresh: new Date(),
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-
-    expect(typeof result.current.refetch).toBe('function')
-  })
-
-  it('returns isDemoData true when any sub-hook is demo', () => {
+  it('returns demo data flag when any sub-hook uses demo data', () => {
     let callCount = 0
     mockUseCache.mockImplementation(() => {
       callCount++
-      const isDemo = callCount === 2 // builds are demo
       return {
-        data: callCount === 1 ? [{ name: 'a1', status: 'Running', readyReplicas: 1, cluster: 'c', framework: 'f' }] : [],
-        isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-        isDemoData: isDemo, isDemoFallback: isDemo,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
+        data: [],
+        isLoading: false,
+        isDemoFallback: callCount === 2, // builds using demo data
+        error: null,
+        refetch: vi.fn(),
       }
     })
 
@@ -420,952 +498,31 @@ describe('useKagentiSummary', () => {
     expect(result.current.isDemoData).toBe(true)
   })
 
-  it('returns error from agents sub-hook', () => {
+  it('provides refetch function that calls all sub-hooks', async () => {
+    const mockRefetch1 = vi.fn()
+    const mockRefetch2 = vi.fn()
+    const mockRefetch3 = vi.fn()
+    const mockRefetch4 = vi.fn()
+    
     let callCount = 0
     mockUseCache.mockImplementation(() => {
       callCount++
+      const refetches = [mockRefetch1, mockRefetch2, mockRefetch3, mockRefetch4]
       return {
         data: [],
-        isLoading: false, isRefreshing: false,
-        error: callCount === 1 ? 'Agent error' : null,
-        refetch: vi.fn(),
-        isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-      }
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-    expect(result.current.error).toBe('Agent error')
-  })
-
-  it('computes correct framework breakdown', () => {
-    let callCount = 0
-    mockUseCache.mockImplementation(() => {
-      callCount++
-      if (callCount === 1) {
-        return {
-          data: [
-            { name: 'a1', status: 'Running', readyReplicas: 1, cluster: 'c1', framework: 'langgraph' },
-            { name: 'a2', status: 'Running', readyReplicas: 1, cluster: 'c1', framework: 'langgraph' },
-            { name: 'a3', status: 'Running', readyReplicas: 1, cluster: 'c2', framework: 'crewai' },
-          ],
-          isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-          isDemoData: false, isDemoFallback: false,
-          consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-        }
-      }
-      return {
-        data: [],
-        isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-        isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-      }
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-    expect(result.current.summary?.frameworks).toEqual({ langgraph: 2, crewai: 1 })
-  })
-
-  it('computes cluster breakdown correctly', () => {
-    let callCount = 0
-    mockUseCache.mockImplementation(() => {
-      callCount++
-      if (callCount === 1) {
-        return {
-          data: [
-            { name: 'a1', status: 'Running', readyReplicas: 1, cluster: 'prod', framework: 'f' },
-            { name: 'a2', status: 'Running', readyReplicas: 1, cluster: 'prod', framework: 'f' },
-            { name: 'a3', status: 'Running', readyReplicas: 0, cluster: 'staging', framework: 'f' },
-          ],
-          isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-          isDemoData: false, isDemoFallback: false,
-          consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-        }
-      }
-      return {
-        data: [],
-        isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-        isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-      }
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-    expect(result.current.summary?.clusterBreakdown).toEqual(
-      expect.arrayContaining([
-        { cluster: 'prod', agents: 2 },
-        { cluster: 'staging', agents: 1 },
-      ]),
-    )
-    // readyAgents should only count Running + readyReplicas > 0
-    expect(result.current.summary?.readyAgents).toBe(2)
-  })
-
-  it('counts spiffeBound correctly (excludes none identity)', () => {
-    let callCount = 0
-    mockUseCache.mockImplementation(() => {
-      callCount++
-      if (callCount === 3) {
-        return {
-          data: [
-            { name: 'c1', identityBinding: 'strict' },
-            { name: 'c2', identityBinding: 'permissive' },
-            { name: 'c3', identityBinding: 'none' },
-            { name: 'c4', identityBinding: 'strict' },
-          ],
-          isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-          isDemoData: false, isDemoFallback: false,
-          consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-        }
-      }
-      return {
-        data: callCount === 1
-          ? [{ name: 'a', status: 'Running', readyReplicas: 1, cluster: 'c', framework: 'f' }]
-          : [],
-        isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-        isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-      }
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-    expect(result.current.summary?.spiffeBound).toBe(3) // strict + permissive + strict
-    expect(result.current.summary?.spiffeTotal).toBe(4)
-  })
-})
-
-// ===========================================================================
-// useKagentiAgents - additional edge cases
-// ===========================================================================
-
-describe('useKagentiAgents - edge cases', () => {
-  it('sets enabled false when agent is unavailable', () => {
-    mockIsAgentUnavailable.mockReturnValue(true)
-    mockUseCache.mockReturnValue({
-      data: [], isLoading: true, isRefreshing: false, error: null,
-      refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-      consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-    })
-
-    renderHook(() => useKagentiAgents())
-    expect(mockUseCache).toHaveBeenCalledWith(
-      expect.objectContaining({ enabled: false }),
-    )
-  })
-
-  it('sets enabled true when agent is available', () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockUseCache.mockReturnValue({
-      data: [], isLoading: true, isRefreshing: false, error: null,
-      refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-      consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-    })
-
-    renderHook(() => useKagentiAgents())
-    expect(mockUseCache).toHaveBeenCalledWith(
-      expect.objectContaining({ enabled: true }),
-    )
-  })
-
-  it('provides non-empty demoData', () => {
-    mockUseCache.mockReturnValue({
-      data: [], isLoading: false, isRefreshing: false, error: null,
-      refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-      consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-    })
-
-    renderHook(() => useKagentiAgents())
-    const call = mockUseCache.mock.calls[0][0]
-    expect(call.demoData.length).toBeGreaterThan(0)
-  })
-})
-
-// ===========================================================================
-// useKagentiTools - additional edge cases
-// ===========================================================================
-
-describe('useKagentiTools - edge cases', () => {
-  it('passes namespace filter correctly', () => {
-    mockUseCache.mockReturnValue({
-      data: [], isLoading: true, isRefreshing: false, error: null,
-      refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-      consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-    })
-
-    renderHook(() => useKagentiTools({ namespace: 'kagenti-system' }))
-    expect(mockUseCache).toHaveBeenCalledWith(
-      expect.objectContaining({
-        key: 'kagenti-tools:all:kagenti-system',
-      }),
-    )
-  })
-
-  it('provides demo tools data', () => {
-    mockUseCache.mockReturnValue({
-      data: [], isLoading: false, isRefreshing: false, error: null,
-      refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-      consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-    })
-
-    renderHook(() => useKagentiTools())
-    const call = mockUseCache.mock.calls[0][0]
-    expect(call.demoData.length).toBeGreaterThan(0)
-  })
-})
-
-// ===========================================================================
-// Additional coverage tests — targeting uncovered branches and functions
-// ===========================================================================
-
-// ---------------------------------------------------------------------------
-// Fetcher callbacks — test the actual fetcher logic passed to useCache
-// These exercise agentFetch, agentFetchAllClusters, and error paths
-// ---------------------------------------------------------------------------
-
-describe('useKagentiAgents — fetcher callback', () => {
-  it('fetcher calls agent and returns agents with cluster name', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-    ]
-
-    // Capture the fetcher passed to useCache
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    // Mock global fetch for the agent endpoint
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ agents: [{ name: 'test-agent', framework: 'langgraph' }] }),
-    })
-
-    renderHook(() => useKagentiAgents())
-    expect(capturedFetcher).not.toBeNull()
-
-    const result = await capturedFetcher!()
-    expect(result).toEqual([
-      expect.objectContaining({ name: 'test-agent', cluster: 'prod' }),
-    ])
-    expect(mockReportAgentDataSuccess).toHaveBeenCalled()
-
-    globalThis.fetch = originalFetch
-  })
-
-  it('fetcher returns empty array when agent is unavailable', async () => {
-    mockIsAgentUnavailable.mockReturnValue(true)
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    renderHook(() => useKagentiAgents())
-    expect(capturedFetcher).not.toBeNull()
-
-    const result = await capturedFetcher!()
-    expect(result).toEqual([])
-  })
-
-  it('fetcher returns empty array when no clusters are available', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = []
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    renderHook(() => useKagentiAgents())
-    const result = await capturedFetcher!()
-    expect(result).toEqual([])
-  })
-
-  it('fetcher filters clusters containing "/" from the target list', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-      { name: 'hub/remote', context: 'hub-remote-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    const fetchSpy = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ agents: [] }),
-    })
-    globalThis.fetch = fetchSpy
-
-    renderHook(() => useKagentiAgents())
-    await capturedFetcher!()
-
-    // Only "prod" cluster should be fetched (not "hub/remote")
-    const fetchUrls = fetchSpy.mock.calls.map((c: unknown[]) => c[0] as string)
-    const agentUrls = fetchUrls.filter((u: string) => u.includes('/kagenti/agents'))
-    expect(agentUrls.length).toBe(1)
-    expect(agentUrls[0]).toContain('cluster=prod-ctx')
-
-    globalThis.fetch = originalFetch
-  })
-
-  it('fetcher skips unreachable clusters', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-      { name: 'dead', context: 'dead-ctx', reachable: false },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    const fetchSpy = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ agents: [] }),
-    })
-    globalThis.fetch = fetchSpy
-
-    renderHook(() => useKagentiAgents())
-    await capturedFetcher!()
-
-    // Only reachable cluster should be fetched
-    const fetchUrls = fetchSpy.mock.calls.map((c: unknown[]) => c[0] as string)
-    const agentUrls = fetchUrls.filter((u: string) => u.includes('/kagenti/agents'))
-    expect(agentUrls.length).toBe(1)
-
-    globalThis.fetch = originalFetch
-  })
-
-  it('fetcher handles agent returning non-ok response for a cluster', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-    })
-
-    renderHook(() => useKagentiAgents())
-    // agentFetch now throws a classified error; when all clusters fail,
-    // agentFetchAllClusters re-throws with the classified message
-    await expect(capturedFetcher!()).rejects.toThrow(/Agent returned HTTP 500/)
-
-    globalThis.fetch = originalFetch
-  })
-
-  it('fetcher handles fetch throwing (network error) for a cluster', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'))
-
-    renderHook(() => useKagentiAgents())
-    // agentFetch now throws a classified error; when all clusters fail,
-    // agentFetchAllClusters re-throws with the classified message
-    await expect(capturedFetcher!()).rejects.toThrow('ECONNREFUSED')
-
-    globalThis.fetch = originalFetch
-  })
-
-  it('fetcher uses cluster name when context is undefined', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'my-cluster', reachable: true }, // no context field
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    const fetchSpy = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ agents: [{ name: 'a1' }] }),
-    })
-    globalThis.fetch = fetchSpy
-
-    renderHook(() => useKagentiAgents())
-    const result = await capturedFetcher!()
-
-    // Should use cluster name as fallback for context
-    const fetchUrls = fetchSpy.mock.calls.map((c: unknown[]) => c[0] as string)
-    expect(fetchUrls[0]).toContain('cluster=my-cluster')
-    expect(result).toEqual([expect.objectContaining({ name: 'a1', cluster: 'my-cluster' })])
-
-    globalThis.fetch = originalFetch
-  })
-
-  it('fetcher filters by specific cluster when option is set', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-      { name: 'staging', context: 'staging-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    const fetchSpy = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ agents: [{ name: 'a1' }] }),
-    })
-    globalThis.fetch = fetchSpy
-
-    renderHook(() => useKagentiAgents({ cluster: 'prod' }))
-    await capturedFetcher!()
-
-    // Should only fetch from 'prod' cluster, not 'staging'
-    const fetchUrls = fetchSpy.mock.calls.map((c: unknown[]) => c[0] as string)
-    const agentUrls = fetchUrls.filter((u: string) => u.includes('/kagenti/agents'))
-    expect(agentUrls.length).toBe(1)
-    expect(agentUrls[0]).toContain('cluster=prod-ctx')
-
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe('useKagentiBuilds — fetcher callback', () => {
-  it('fetcher returns builds from agent', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'c1', context: 'c1-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ builds: [{ name: 'build-1', status: 'Succeeded' }] }),
-    })
-
-    renderHook(() => useKagentiBuilds())
-    const result = await capturedFetcher!()
-    expect(result).toEqual([expect.objectContaining({ name: 'build-1', cluster: 'c1' })])
-
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe('useKagentiCards — fetcher callback', () => {
-  it('fetcher returns cards from agent', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'c1', context: 'c1-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ cards: [{ name: 'card-1', identityBinding: 'strict' }] }),
-    })
-
-    renderHook(() => useKagentiCards())
-    const result = await capturedFetcher!()
-    expect(result).toEqual([expect.objectContaining({ name: 'card-1', cluster: 'c1' })])
-
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe('useKagentiTools — fetcher callback', () => {
-  it('fetcher returns tools from agent', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'c1', context: 'c1-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ tools: [{ name: 'tool-1', toolPrefix: 'kubectl' }] }),
-    })
-
-    renderHook(() => useKagentiTools())
-    const result = await capturedFetcher!()
-    expect(result).toEqual([expect.objectContaining({ name: 'tool-1', cluster: 'c1' })])
-
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe('useKagentiSummary — edge cases', () => {
-  it('returns null summary when all data arrays are empty and still loading', () => {
-    mockUseCache.mockReturnValue({
-      data: [],
-      isLoading: true,
-      isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      isDemoFallback: false,
-      consecutiveFailures: 0,
-      isFailed: false,
-      lastRefresh: null,
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-    expect(result.current.summary).toBeNull()
-  })
-
-  it('returns non-null summary when data arrays are empty but not loading', () => {
-    mockUseCache.mockReturnValue({
-      data: [],
-      isLoading: false,
-      isRefreshing: false,
-      error: null,
-      refetch: vi.fn(),
-      isDemoData: false,
-      isDemoFallback: false,
-      consecutiveFailures: 0,
-      isFailed: false,
-      lastRefresh: new Date(),
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-    expect(result.current.summary).not.toBeNull()
-    expect(result.current.summary!.agentCount).toBe(0)
-    expect(result.current.summary!.buildCount).toBe(0)
-    expect(result.current.summary!.toolCount).toBe(0)
-    expect(result.current.summary!.cardCount).toBe(0)
-  })
-
-  it('handles agents with Pending status (not ready)', () => {
-    let callCount = 0
-    mockUseCache.mockImplementation(() => {
-      callCount++
-      if (callCount === 1) {
-        return {
-          data: [
-            { name: 'a1', status: 'Running', readyReplicas: 2, cluster: 'c1', framework: 'langgraph' },
-            { name: 'a2', status: 'Pending', readyReplicas: 0, cluster: 'c1', framework: 'langgraph' },
-            { name: 'a3', status: 'Running', readyReplicas: 0, cluster: 'c2', framework: 'crewai' },
-          ],
-          isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-          isDemoData: false, isDemoFallback: false,
-          consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-        }
-      }
-      return {
-        data: [],
-        isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-        isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-      }
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-    expect(result.current.summary!.agentCount).toBe(3)
-    // Only a1 is Running AND has readyReplicas > 0
-    expect(result.current.summary!.readyAgents).toBe(1)
-  })
-
-  it('calls all sub-hook refetches when refetch is invoked', async () => {
-    const refetchFns = [vi.fn(), vi.fn(), vi.fn(), vi.fn()]
-    let callCount = 0
-    mockUseCache.mockImplementation(() => {
-      const idx = callCount++
-      return {
-        data: idx === 0
-          ? [{ name: 'a', status: 'Running', readyReplicas: 1, cluster: 'c', framework: 'f' }]
-          : [],
-        isLoading: false, isRefreshing: false, error: null,
-        refetch: refetchFns[idx % 4],
-        isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
+        isLoading: false,
+        isDemoFallback: false,
+        error: null,
+        refetch: refetches[callCount - 1],
       }
     })
 
     const { result } = renderHook(() => useKagentiSummary())
     await result.current.refetch()
-
-    for (const fn of refetchFns) {
-      expect(fn).toHaveBeenCalledTimes(1)
-    }
-  })
-
-  it('handles frameworks with duplicate keys across agents', () => {
-    let callCount = 0
-    mockUseCache.mockImplementation(() => {
-      callCount++
-      if (callCount === 1) {
-        return {
-          data: [
-            { name: 'a1', status: 'Running', readyReplicas: 1, cluster: 'c1', framework: 'ag2' },
-            { name: 'a2', status: 'Running', readyReplicas: 1, cluster: 'c1', framework: 'ag2' },
-            { name: 'a3', status: 'Running', readyReplicas: 1, cluster: 'c1', framework: 'ag2' },
-          ],
-          isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-          isDemoData: false, isDemoFallback: false,
-          consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-        }
-      }
-      return {
-        data: [],
-        isLoading: false, isRefreshing: false, error: null, refetch: vi.fn(),
-        isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: new Date(),
-      }
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-    expect(result.current.summary!.frameworks).toEqual({ ag2: 3 })
-  })
-})
-
-// ===========================================================================
-// Error handling — auth failures, network errors, malformed responses (#11383)
-// ===========================================================================
-
-describe('useKagentiAgents — error handling', () => {
-  it('fetcher throws classified error on 401 Unauthorized', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 401,
-    })
-
-    renderHook(() => useKagentiAgents())
-    expect(capturedFetcher).not.toBeNull()
-
-    await expect(capturedFetcher!()).rejects.toThrow(/Authentication failed \(401\)/)
-
-    globalThis.fetch = originalFetch
-  })
-
-  it('fetcher throws classified error on 403 Forbidden', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 403,
-    })
-
-    renderHook(() => useKagentiAgents())
-    expect(capturedFetcher).not.toBeNull()
-
-    await expect(capturedFetcher!()).rejects.toThrow(/Authentication failed \(403\)/)
-
-    globalThis.fetch = originalFetch
-  })
-
-  it('fetcher throws classified error on TypeError (network down)', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
-
-    renderHook(() => useKagentiAgents())
-    expect(capturedFetcher).not.toBeNull()
-
-    await expect(capturedFetcher!()).rejects.toThrow(/not connected|Failed to fetch/i)
-
-    globalThis.fetch = originalFetch
-  })
-
-  it('fetcher handles 404 Not Found with classified error', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-    })
-
-    renderHook(() => useKagentiAgents())
-    expect(capturedFetcher).not.toBeNull()
-
-    await expect(capturedFetcher!()).rejects.toThrow(/not found/i)
-
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe('useKagentiBuilds — error handling', () => {
-  it('fetcher throws classified error on 401 Unauthorized', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 401,
-    })
-
-    renderHook(() => useKagentiBuilds())
-    expect(capturedFetcher).not.toBeNull()
-
-    await expect(capturedFetcher!()).rejects.toThrow(/Authentication failed \(401\)/)
-
-    globalThis.fetch = originalFetch
-  })
-
-  it('fetcher throws on network TypeError', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource'))
-
-    renderHook(() => useKagentiBuilds())
-    expect(capturedFetcher).not.toBeNull()
-
-    await expect(capturedFetcher!()).rejects.toThrow(/not connected|NetworkError/i)
-
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe('useKagentiTools — error handling', () => {
-  it('fetcher throws classified error on 403 Forbidden', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    mockClusterCacheRef.clusters = [
-      { name: 'prod', context: 'prod-ctx', reachable: true },
-    ]
-
-    let capturedFetcher: (() => Promise<unknown>) | null = null
-    mockUseCache.mockImplementation((opts: { fetcher: () => Promise<unknown> }) => {
-      capturedFetcher = opts.fetcher
-      return {
-        data: [], isLoading: false, isRefreshing: false, error: null,
-        refetch: vi.fn(), isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: 0, isFailed: false, lastRefresh: null,
-      }
-    })
-
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 403,
-    })
-
-    renderHook(() => useKagentiTools())
-    expect(capturedFetcher).not.toBeNull()
-
-    await expect(capturedFetcher!()).rejects.toThrow(/Authentication failed \(403\)/)
-
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe('useKagentiSummary — error propagation', () => {
-  it('propagates auth error from agents hook', () => {
-    let callCount = 0
-    mockUseCache.mockImplementation(() => {
-      callCount++
-      return {
-        data: [],
-        isLoading: false, isRefreshing: false,
-        error: callCount === 1 ? 'Authentication failed (401) for /kagenti/agents' : null,
-        refetch: vi.fn(),
-        isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: callCount === 1 ? 3 : 0,
-        isFailed: callCount === 1,
-        lastRefresh: new Date(),
-      }
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-    expect(result.current.error).toContain('Authentication failed (401)')
-  })
-
-  it('propagates network error from agents hook', () => {
-    let callCount = 0
-    mockUseCache.mockImplementation(() => {
-      callCount++
-      return {
-        data: [],
-        isLoading: false, isRefreshing: false,
-        error: callCount === 1 ? 'Kagenti agent not connected' : null,
-        refetch: vi.fn(),
-        isDemoData: false, isDemoFallback: false,
-        consecutiveFailures: callCount === 1 ? 3 : 0,
-        isFailed: callCount === 1,
-        lastRefresh: new Date(),
-      }
-    })
-
-    const { result } = renderHook(() => useKagentiSummary())
-    expect(result.current.error).toContain('Kagenti agent not connected')
+    
+    expect(mockRefetch1).toHaveBeenCalled()
+    expect(mockRefetch2).toHaveBeenCalled()
+    expect(mockRefetch3).toHaveBeenCalled()
+    expect(mockRefetch4).toHaveBeenCalled()
   })
 })

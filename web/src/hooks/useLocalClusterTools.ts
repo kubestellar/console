@@ -107,7 +107,7 @@ export function useLocalClusterTools() {
   const { progress: clusterProgress, dismiss: dismissProgress, isStale: clusterProgressIsStale } = useClusterProgress()
 
   // Track pending setTimeout IDs for cleanup on unmount
-  const pendingTimeoutsRef = useRef<NodeJS.Timeout[]>([])
+  const pendingTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   // Fetch detected tools
   const fetchTools = async () => {
@@ -625,7 +625,7 @@ export function useLocalClusterTools() {
       setVclusterInstances([])
       setVclusterClusterStatus([])
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps — fetchTools/fetchVClusterClusterStatus are not memoized
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, isDemoMode, fetchClusters, fetchVClusters])
 
   // Auto-refresh cluster list when a create/delete operation completes

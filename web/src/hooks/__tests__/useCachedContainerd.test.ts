@@ -24,18 +24,24 @@ vi.mock('../../lib/cache', () => ({
   },
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: () => ({ isDemoMode: false }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
 }))
 
-vi.mock('../../lib/constants/network', () => ({
-  FETCH_DEFAULT_TIMEOUT_MS: 10_000,
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+  }
+})
 
 vi.mock('../../lib/constants/time', () => ({
   MS_PER_SECOND: 1000,

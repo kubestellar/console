@@ -12,6 +12,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/feedback"
+	mcphandlers "github.com/kubestellar/console/pkg/api/handlers/mcp"
 	"github.com/kubestellar/console/pkg/api/middleware"
 )
 
@@ -23,7 +25,7 @@ type routeSetupContext struct {
 	publicAPI          fiber.Router
 	api                fiber.Router
 	bodyGuard          fiber.Handler
-	feedback           *handlers.FeedbackHandler
+	feedback           *feedback.FeedbackHandler
 	namespaces         *handlers.NamespaceHandler
 	aiLimiter          fiber.Handler // per-user rate limit for AI-calling endpoints (#17294)
 }
@@ -72,15 +74,17 @@ func (s *Server) reloadOAuth(clientID, clientSecret string) {
 		JWTSecret:      s.config.JWTSecret,
 		FrontendURL:    s.config.FrontendURL,
 		BackendURL:     s.backendURL(),
-		DevUserLogin:   s.config.DevUserLogin,
-		DevUserEmail:   s.config.DevUserEmail,
-		DevUserAvatar:  s.config.DevUserAvatar,
+		AllowedGitHubLogins: s.config.AllowedGitHubLogins,
+		AdminGitHubLogins:   s.config.AdminGitHubLogins,
+		DevUserLogin:        s.config.DevUserLogin,
+		DevUserEmail:        s.config.DevUserEmail,
+		DevUserAvatar:       s.config.DevUserAvatar,
 		GitHubToken:    s.config.GitHubToken,
 		DevMode:        s.config.DevMode,
 		SkipOnboarding: s.config.SkipOnboarding,
 	})
 	s.auth.handler.SetHub(s.hub)
-	s.auth.handler.SetSSECanceller(handlers.CancelUserSSEStreams)
+	s.auth.handler.SetSSECanceller(mcphandlers.CancelUserSSEStreams)
 	slog.Info("[Server] OAuth config hot-reloaded after manifest flow")
 }
 
@@ -93,9 +97,11 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 		JWTSecret:      s.config.JWTSecret,
 		FrontendURL:    s.config.FrontendURL,
 		BackendURL:     s.backendURL(),
-		DevUserLogin:   s.config.DevUserLogin,
-		DevUserEmail:   s.config.DevUserEmail,
-		DevUserAvatar:  s.config.DevUserAvatar,
+		AllowedGitHubLogins: s.config.AllowedGitHubLogins,
+		AdminGitHubLogins:   s.config.AdminGitHubLogins,
+		DevUserLogin:        s.config.DevUserLogin,
+		DevUserEmail:        s.config.DevUserEmail,
+		DevUserAvatar:       s.config.DevUserAvatar,
 		GitHubToken:    s.config.GitHubToken,
 		DevMode:        s.config.DevMode,
 		SkipOnboarding: s.config.SkipOnboarding,
@@ -128,7 +134,7 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 	}
 
 	auth.SetHub(s.hub)
-	auth.SetSSECanceller(handlers.CancelUserSSEStreams)
+	auth.SetSSECanceller(mcphandlers.CancelUserSSEStreams)
 	currentAuthHandler := func() *handlers.AuthHandler {
 		s.auth.oauthMu.RLock()
 		defer s.auth.oauthMu.RUnlock()
@@ -259,8 +265,8 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 		return c.Next()
 	}
 
-	feedbackCfg := handlers.LoadFeedbackConfig()
-	feedbackHandler := handlers.NewFeedbackHandler(s.store, feedbackCfg)
+	feedbackCfg := feedback.LoadFeedbackConfig()
+	feedbackHandler := feedback.NewFeedbackHandler(s.store, feedbackCfg)
 	app.Post("/api/feedback/requests", feedbackBodyGuard, csrfGuard, jwtAuth, feedbackLimiter, feedbackHandler.CreateFeatureRequest)
 
 	apiLimiterSkipPaths := map[string]bool{

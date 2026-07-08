@@ -4,7 +4,7 @@ import { RotateCcw, Trophy, Pause, Play } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
-import { useReportCardDataState } from './CardDataContext'
+import { useReportCardDataState, useCardDemoState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
@@ -99,7 +99,8 @@ function getPlatformY(platform: Platform, x: number): number {
 
 export function KubeKong(_props: CardComponentProps) {
   const { t } = useTranslation('cards')
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
+  const { showDemoBadge } = useCardDemoState({ requires: 'none' })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: showDemoBadge })
   const { isExpanded } = useCardExpanded()
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -134,7 +135,6 @@ export function KubeKong(_props: CardComponentProps) {
   // Persist high score when game ends and current score beats stored best.
   useEffect(() => {
     if (gameOver && score > highScore) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- persists the newly earned best score at game-over time
       setHighScore(score)
       safeSet(KUBE_KONG_HIGHSCORE_KEY, score.toString())
     }

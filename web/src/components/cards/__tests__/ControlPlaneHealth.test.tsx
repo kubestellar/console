@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ControlPlaneHealth } from '../ControlPlaneHealth'
@@ -51,6 +52,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ height }: { height: number }) => <div data-testid="skeleton" style={{ height }} />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 // ── Tests ────────────────────────────────────────────────────────────────────

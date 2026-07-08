@@ -8,7 +8,7 @@ import type { ClusterInfo, ClusterHealth, MCPStatus } from '../types'
 // ---------------------------------------------------------------------------
 const mockFullFetchClusters = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
 const mockConnectSharedWebSocket = vi.hoisted(() => vi.fn())
-const mockUseDemoMode = vi.hoisted(() => vi.fn().mockReturnValue({ isDemoMode: false }))
+const mockUseDemoMode = vi.hoisted(() => vi.fn().mockReturnValue(false))
 const mockIsDemoMode = vi.hoisted(() => vi.fn(() => false))
 const mockApiGet = vi.hoisted(() => vi.fn())
 const mockAgentFetch = vi.hoisted(() => vi.fn())
@@ -93,8 +93,10 @@ vi.mock('../../../lib/demoMode', () => ({
   subscribeDemoMode: vi.fn(),
 }))
 
-vi.mock('../../useDemoMode', () => ({
-  useDemoMode: mockUseDemoMode,
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../useLocalAgent', () => ({

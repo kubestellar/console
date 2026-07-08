@@ -38,9 +38,11 @@ vi.mock('../useLocalAgent', () => ({
     useLocalAgent: mockUseLocalAgent,
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
     emitSessionContext: vi.fn(),
-}))
+}
+))
 
 function wrapper({ children }: { children: React.ReactNode }) {
     return <VersionCheckProvider>{children}</VersionCheckProvider>
@@ -682,6 +684,20 @@ describe('fetchReleases edge cases', () => {
         renderHook(() => useVersionCheck(), { wrapper })
 
         expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), VERSION_CHECK_INTERVAL_MS)
+    })
+
+    describe('loading and error state exposure', () => {
+        it('exposes isChecking state to consumers', () => {
+            const { result } = renderHook(() => useVersionCheck(), { wrapper })
+            expect(result.current).toHaveProperty('isChecking')
+            expect(typeof result.current.isChecking).toBe('boolean')
+        })
+
+        it('exposes error state to consumers', () => {
+            const { result } = renderHook(() => useVersionCheck(), { wrapper })
+            expect(result.current).toHaveProperty('error')
+            expect(result.current.error === null || typeof result.current.error === 'string').toBe(true)
+        })
     })
 })
 

@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { GPUInventory } from '../GPUInventory'
@@ -22,7 +23,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
     nodes: [],
     isLoading: false,
     isRefreshing: false,
-    error: null,
+    error: false,
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
@@ -98,6 +99,7 @@ vi.mock('../../ui/Pagination', () => ({
 
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../ui/ClusterBadge', () => ({
@@ -115,7 +117,7 @@ describe('GPUInventory', () => {
     vi.clearAllMocks()
     const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
     vi.mocked(useCachedGPUNodes).mockReturnValue({
-      nodes: [], isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+      nodes: [], isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
     } as never)
   })
 
@@ -123,7 +125,7 @@ describe('GPUInventory', () => {
     it('renders skeletons when isLoading and no nodes', async () => {
       const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
-        nodes: [], isLoading: true, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        nodes: [], isLoading: true, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValueOnce({ showSkeleton: true, showEmptyState: false } as never)
@@ -145,7 +147,7 @@ describe('GPUInventory', () => {
       const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
-        isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUInventory />)
       expect(screen.getByText('common:common.total')).toBeTruthy()
@@ -160,7 +162,7 @@ describe('GPUInventory', () => {
       const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
-        isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUInventory />)
       expect(screen.getByText(/gpuInventory.gpuCount/)).toBeTruthy()
@@ -172,7 +174,7 @@ describe('GPUInventory', () => {
       const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
-        isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUInventory />)
       expect(screen.getByText('gpu-node-1')).toBeTruthy()
@@ -182,7 +184,7 @@ describe('GPUInventory', () => {
       const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
-        isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUInventory />)
       expect(screen.getByText('cluster-1')).toBeTruthy()
@@ -192,7 +194,7 @@ describe('GPUInventory', () => {
       const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
-        isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUInventory />)
       expect(screen.getByText('NVIDIA A100')).toBeTruthy()
@@ -203,7 +205,7 @@ describe('GPUInventory', () => {
       const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
-        isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUInventory />)
       fireEvent.click(screen.getByText('gpu-node-1'))
@@ -218,7 +220,7 @@ describe('GPUInventory', () => {
       const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
-        isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUInventory />)
       const bar = document.querySelector('.bg-purple-500')
@@ -242,7 +244,7 @@ describe('GPUInventory', () => {
       const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
-        isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUInventory />)
       expect(screen.queryByText('gpuInventory.usingSimulatedData')).toBeNull()
@@ -254,7 +256,7 @@ describe('GPUInventory', () => {
       const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
-        isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUInventory />)
       expect(screen.getByTestId('search')).toBeTruthy()
@@ -264,7 +266,7 @@ describe('GPUInventory', () => {
       const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
-        isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUInventory />)
       expect(screen.getByTestId('cluster-filter')).toBeTruthy()

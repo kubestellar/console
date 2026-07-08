@@ -124,8 +124,8 @@ test.describe('Compute Deep Tests (/compute)', () => {
       // Either cluster list or "no clusters" message should be visible
       try {
         await expect(clusterList).toBeVisible({ timeout: 5000 })
-      } catch {
-        await expect(noClusterMsg).toBeVisible({ timeout: 5000 })
+      } catch (error) { console.error('Error:', error)
+        await expect(noClusterMsg).toBeVisible({ timeout: 5000  })
       }
     })
 
@@ -136,10 +136,10 @@ test.describe('Compute Deep Tests (/compute)', () => {
       const clusterList = page.locator('#cluster-comparison-list')
       try {
         await expect(clusterList).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) { console.error('Error:', error)
         test.skip()
         return
-      }
+       }
 
       // Click the first cluster button in the comparison list
       const clusterButtons = clusterList.locator('button')
@@ -163,10 +163,10 @@ test.describe('Compute Deep Tests (/compute)', () => {
       const clusterList = page.locator('#cluster-comparison-list')
       try {
         await expect(clusterList).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) { console.error('Error:', error)
         test.skip()
         return
-      }
+       }
 
       const clusterButtons = clusterList.locator('button')
       const count = await clusterButtons.count()
@@ -191,10 +191,10 @@ test.describe('Compute Deep Tests (/compute)', () => {
       const clusterList = page.locator('#cluster-comparison-list')
       try {
         await expect(clusterList).toBeVisible({ timeout: 5000 })
-      } catch {
+      } catch (error) { console.error('Error:', error)
         test.skip()
         return
-      }
+       }
 
       const clusterButtons = clusterList.locator('button')
       const count = await clusterButtons.count()
@@ -277,9 +277,9 @@ test.describe('Compute Deep Tests (/compute)', () => {
       try {
         await expect(header).toBeVisible({ timeout: 5000 })
         isHeaderVisible = true
-      } catch {
+      } catch (error) { console.error('Error:', error)
         // Header not visible
-      }
+       }
 
       // If error text is shown, verify it matches expected message
       const errorText = page.getByText('Error loading compute data')
@@ -287,9 +287,9 @@ test.describe('Compute Deep Tests (/compute)', () => {
       try {
         await expect(errorText).toBeVisible({ timeout: 5000 })
         isErrorVisible = true
-      } catch {
+      } catch (error) { console.error('Error:', error)
         // Error not visible
-      }
+       }
 
       // Either the page loaded successfully or showed the error — both are valid
       expect(isHeaderVisible || isErrorVisible).toBe(true)

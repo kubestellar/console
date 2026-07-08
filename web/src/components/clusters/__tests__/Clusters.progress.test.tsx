@@ -1,3 +1,4 @@
+import React from 'react'
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Clusters } from '../Clusters'
@@ -52,8 +53,10 @@ vi.mock('../../../hooks/useLocalAgent', () => ({
   wasAgentEverConnected: () => true,
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: true }),
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
@@ -107,9 +110,11 @@ vi.mock('../../cards/multi-tenancy/missionLoader', () => ({
   loadMissionPrompt: vi.fn(),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitClusterStatsDrillDown: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../lib/constants')>()
@@ -177,6 +182,7 @@ vi.mock('../components', () => ({
 
 vi.mock('../../ui/ClusterCardSkeleton', () => ({
   ClusterCardSkeleton: () => null,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 describe('Clusters progress scaling', () => {

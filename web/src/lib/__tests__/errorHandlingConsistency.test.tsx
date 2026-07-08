@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * End-to-end error handling consistency tests.
  *

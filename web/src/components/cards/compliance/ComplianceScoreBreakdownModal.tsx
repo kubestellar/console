@@ -225,7 +225,7 @@ function OverviewTab({ score, breakdown, scoreCtx, kubescapeData, kyvernoData }:
             <StatBox label="Policies" value={kyvernoTotalPolicies} />
             <StatBox label="Violations" value={kyvernoTotalViolations} color="text-red-400" />
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1.5">
+          <p className="text-xs text-muted-foreground mt-1.5">
             Violations count individual offending resources — a single policy may contribute
             multiple violations, so the violation count is not comparable to the policy count.
           </p>

@@ -15,10 +15,12 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/agent/tokentracker"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/agent/updater"
 )
 
 const (
@@ -47,6 +49,10 @@ const (
 	backendHealthPath        = "/health"
 	backendPortEnvVar        = "BACKEND_PORT"
 
+	// Auto-update health check polling parameters.
+	healthCheckRetries = 15
+	healthCheckDelay   = 2 * time.Second
+
 	maxQueryLimit       = 1000    // Upper bound for client-supplied limit query parameter
 	maxRequestBodyBytes = 1 << 20 // 1MB upper bound for request body reads
 
@@ -61,9 +67,9 @@ const (
 	// via KC_SESSION_TOKEN_QUOTA env var. 0 = unlimited. Default: 5 million.
 	defaultSessionTokenQuota int64 = 5_000_000
 
-	// sessionTokenQuotaEnvVar is the environment variable operators can set
-	// to override the per-session aggregate token limit.
-	sessionTokenQuotaEnvVar = "KC_SESSION_TOKEN_QUOTA"
+	// sessionTokenQuotaEnvVar references the constant from the tokentracker
+	// package for use in the env-parsing logic below.
+	sessionTokenQuotaEnvVar = tokentracker.SessionQuotaEnvVar
 
 	// deployedByAnonymousMarker is the default value recorded on workloads
 	// created via kc-agent when the caller did not supply a "deployedBy"
@@ -158,19 +164,8 @@ type Server struct {
 	agentToken     string // Optional shared secret for authentication
 	tokenExplicit  bool   // true when KC_AGENT_TOKEN was explicitly set (not auto-generated)
 
-	// Token tracking
-	tokenMux          sync.RWMutex
-	tokenFileMux      sync.Mutex  // serializes file I/O in saveTokenUsage to prevent race (#9441)
-	tokenFlushTimer   *time.Timer // debounced flush timer for batched disk writes (#9483)
-	sessionStart      time.Time
-	sessionTokensIn   int64
-	sessionTokensOut  int64
-	todayTokensIn     int64
-	todayTokensOut    int64
-	todayDate         string // YYYY-MM-DD format to detect day change
-	lastSavedIn       int64  // todayTokensIn at last saveTokenUsage, for delta computation (#9730)
-	lastSavedOut      int64  // todayTokensOut at last saveTokenUsage, for delta computation (#9730)
-	sessionTokenQuota int64  // max total tokens per session; 0 = unlimited (#9438)
+	// Token tracking (encapsulated in tokentracker.Tracker)
+	tokens *tokentracker.Tracker
 
 	// Prediction system
 	predictionWorker *PredictionWorker
@@ -205,7 +200,7 @@ type Server struct {
 	dryRunSessionsMu sync.RWMutex
 
 	// Auto-update system
-	updateChecker *UpdateChecker
+	updateChecker *updater.UpdateChecker
 
 	resourceRetryMu    sync.Mutex
 	resourceRetryState map[string]clusterResourceRetryState
@@ -329,7 +324,6 @@ func NewServer(cfg Config) (*Server, error) {
 		}
 	}
 
-	now := time.Now()
 	server := &Server{
 		config:                  cfg,
 		kubectl:                 kubectl,
@@ -339,12 +333,10 @@ func NewServer(cfg Config) (*Server, error) {
 		allowedOrigins:          allowedOrigins,
 		agentToken:              agentToken,
 		tokenExplicit:           tokenExplicit,
-		sessionStart:            now,
-		todayDate:               now.Format("2006-01-02"),
+		tokens:                  tokentracker.New(sessionQuota),
 		activeChatCtxs:          make(map[string]activeChatEntry),
 		dryRunSessions:          make(map[string]bool),
 		resourceRetryState:      make(map[string]clusterResourceRetryState),
-		sessionTokenQuota:       sessionQuota,
 		missionExecutionTimeout: missionExecutionTimeout,
 		stellarClient: &http.Client{
 			Timeout: 5 * time.Second,
@@ -360,7 +352,7 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 
 	// Load persisted token usage from disk
-	server.loadTokenUsage()
+	server.tokens.Load()
 
 	// Initialize prediction system
 	server.predictionWorker = NewPredictionWorker(k8sClient, server.registry, server.BroadcastToClients, server.addTokenUsage)
@@ -373,7 +365,9 @@ func NewServer(cfg Config) (*Server, error) {
 	server.localClusters = kube.NewLocalClusterManager(server.BroadcastToClients)
 
 	// Initialize auto-update checker
-	server.updateChecker = NewUpdateChecker(UpdateCheckerConfig{
+	server.updateChecker = updater.NewUpdateChecker(updater.UpdateCheckerConfig{
+		Version:        Version,
+		HealthCheckFn:  waitForBackendHealth,
 		Broadcast:      server.BroadcastToClients,
 		RestartBackend: server.startBackendProcess,
 		KillBackend:    server.killBackendProcess,

@@ -25,6 +25,10 @@ const NAV_TIMEOUT_MS = 15_000
 
 async function setupClustersDialogTest(page: Page) {
   await mockApiFallback(page)
+  const gpuNodes = [
+    { name: 'gpu-node-1', nodeName: 'gpu-node-1', gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 2, cluster: 'prod-gpu' },
+    { name: 'gpu-node-2', nodeName: 'gpu-node-2', gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 3, cluster: 'prod-gpu' },
+  ]
 
   // Return oauth_configured: true to avoid demo mode fallback
   await page.route('**/health', (route) => {
@@ -44,6 +48,17 @@ async function setupClustersDialogTest(page: Page) {
     })
   })
 
+  // Register the broad local-agent fallback first. Playwright uses the most
+  // recently registered matching route, so specific healthy endpoints below
+  // must be registered after this fallback.
+  await page.route('**/127.0.0.1:8585/**', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'agent not running' }),
+    })
+  )
+
   // Mock local agent — return healthy status so isConnected=true (needed for rename button)
   await page.route('**/127.0.0.1:8585/health', (route) =>
     route.fulfill({
@@ -59,12 +74,21 @@ async function setupClustersDialogTest(page: Page) {
       body: JSON.stringify({ providers: [] }),
     })
   )
-  // Other agent endpoints return 503
-  await page.route('**/127.0.0.1:8585/**', (route) =>
+  await page.route('**/127.0.0.1:8585/gpu-nodes?**', (route) =>
     route.fulfill({
-      status: 503,
+      status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ error: 'agent not running' }),
+      body: JSON.stringify({
+        nodes: gpuNodes,
+      }),
+    })
+  )
+
+  await page.route('**/api/agent/token', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ token: 'test-agent-token' }),
     })
   )
 
@@ -85,8 +109,41 @@ async function setupClustersDialogTest(page: Page) {
 
   // Mock MCP clusters with GPU data + unreachable cluster for rename/remove testing
   await page.route('**/api/mcp/**', (route) => {
-    const url = route.request().url()
-    if (url.includes('/clusters')) {
+    const requestUrl = new URL(route.request().url())
+    const path = requestUrl.pathname
+    if (path.includes('/clusters/') && path.endsWith('/health')) {
+      const clusterName = decodeURIComponent(path.split('/clusters/')[1]?.replace(/\/health$/, '') || '')
+      const health = clusterName === 'offline-cluster'
+        ? {
+            cluster: clusterName,
+            healthy: false,
+            reachable: false,
+            nodeCount: 0,
+            readyNodes: 0,
+            podCount: 0,
+            cpuCores: 0,
+            memoryGB: 0,
+            storageGB: 0,
+            errorType: 'network',
+            errorMessage: 'Connection refused',
+          }
+        : {
+            cluster: clusterName,
+            healthy: true,
+            reachable: true,
+            nodeCount: clusterName === 'prod-east' ? 5 : 4,
+            readyNodes: clusterName === 'prod-east' ? 5 : 4,
+            podCount: clusterName === 'prod-east' ? 45 : 60,
+            cpuCores: 8,
+            memoryGB: 32,
+            storageGB: 100,
+          }
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(health),
+      })
+    } else if (path.endsWith('/clusters')) {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -101,10 +158,7 @@ async function setupClustersDialogTest(page: Page) {
               podCount: 60,
               version: '1.28.0',
               source: 'kubeconfig',
-              gpuNodes: [
-                { nodeName: 'gpu-node-1', gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 2, cluster: 'prod-gpu' },
-                { nodeName: 'gpu-node-2', gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 3, cluster: 'prod-gpu' },
-              ],
+              gpuNodes,
             },
             {
               name: 'prod-east',
@@ -130,15 +184,23 @@ async function setupClustersDialogTest(page: Page) {
           ],
         }),
       })
-    } else if (url.includes('/gpu')) {
+    } else if (path.includes('/gpu-nodes/stream')) {
+      const stream = [
+        `event: cluster_data\ndata: ${JSON.stringify({ cluster: 'prod-gpu', nodes: gpuNodes })}`,
+        'event: done\ndata: {"clusters":1}',
+        '',
+      ].join('\n\n')
+      route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: stream,
+      })
+    } else if (path.includes('/gpu')) {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          nodes: [
-            { nodeName: 'gpu-node-1', gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 2, cluster: 'prod-gpu' },
-            { nodeName: 'gpu-node-2', gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 3, cluster: 'prod-gpu' },
-          ],
+          nodes: gpuNodes,
         }),
       })
     } else {
@@ -154,10 +216,28 @@ async function setupClustersDialogTest(page: Page) {
   // addInitScript does not accumulate and IndexedDB cleanup completes
   // before sessionStorage rehydration (#12088, #12089).
   await setupLiveMode(page)
+  await page.addInitScript((nodes) => {
+    localStorage.setItem('kc_agent_backend_preference', 'kagenti')
+    localStorage.setItem('kubestellar-gpu-cache', JSON.stringify({
+      nodes,
+      lastUpdated: new Date().toISOString(),
+    }))
+  }, gpuNodes)
 
   await page.goto('/clusters')
   await page.waitForLoadState('domcontentloaded')
   await page.getByTestId('clusters-page').waitFor({ state: 'visible', timeout: PAGE_VISIBLE_TIMEOUT_MS })
+}
+
+async function openGPUDetailModal(page: Page) {
+  const gpuStatBlock = page.getByTestId('stat-block-gpus')
+  await expect(gpuStatBlock).toBeVisible({ timeout: DATA_RENDER_TIMEOUT_MS })
+  await expect(gpuStatBlock).toContainText('8', { timeout: DATA_RENDER_TIMEOUT_MS })
+  await gpuStatBlock.click()
+
+  const dialog = page.getByRole('dialog').first()
+  await expect(dialog).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
+  return dialog
 }
 
 // ===========================================================================
@@ -249,8 +329,9 @@ test.describe('Rename and Remove Cluster Dialogs (#11780)', () => {
     const nameInput = dialog.locator('input[type="text"]')
     await expect(nameInput).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
 
-    // Should show the current context name in the dialog
-    await expect(dialog.getByText(/prod-east|prod-gpu/)).toBeVisible()
+    // Should show the current context name in the dialog and seed the input.
+    await expect(dialog.getByText(/Current:/)).toBeVisible()
+    await expect(nameInput).toHaveValue(/offline-cluster|prod-east|prod-gpu/)
   })
 
   test('Rename dialog cancel closes without changes', async ({ page }) => {
@@ -288,12 +369,8 @@ test.describe('Rename and Remove Cluster Dialogs (#11780)', () => {
     const nameInput = dialog.locator('input[type="text"]')
     await nameInput.fill('')
 
-    // Click the Rename submit button
     const submitBtn = dialog.locator('button', { hasText: /^Rename$/ })
-    await submitBtn.click()
-
-    // Should show an error message about empty name
-    await expect(dialog.locator('.text-red-400, [role="alert"]').first()).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
+    await expect(submitBtn).toBeDisabled()
   })
 
   test('Remove cluster dialog opens for unreachable cluster', async ({ page }) => {
@@ -352,25 +429,13 @@ test.describe('GPU Stat Block → GPUDetailModal (#11782)', () => {
     // Wait for page and stat blocks to render
     await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: PAGE_VISIBLE_TIMEOUT_MS })
 
-    // Find the GPUs stat block by its testid
-    const gpuStatBlock = page.getByTestId('stat-block-gpus')
-    await expect(gpuStatBlock).toBeVisible({ timeout: DATA_RENDER_TIMEOUT_MS })
-
-    // Click the GPU stat block
-    await gpuStatBlock.click()
-
     // Assert GPUDetailModal opens — it has title "GPU Resources"
-    const dialog = page.getByRole('dialog').first()
-    await expect(dialog).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
+    const dialog = await openGPUDetailModal(page)
     await expect(dialog.getByText('GPU Resources')).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
   })
 
   test('GPUDetailModal shows GPU information', async ({ page }) => {
-    await expect(page.getByTestId('stat-block-gpus')).toBeVisible({ timeout: DATA_RENDER_TIMEOUT_MS })
-    await page.getByTestId('stat-block-gpus').click()
-
-    const dialog = page.getByRole('dialog').first()
-    await expect(dialog).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
+    const dialog = await openGPUDetailModal(page)
 
     // Modal should show GPU type or node info from mock data
     // Look for any GPU-related content (NVIDIA, GPU count, utilization)
@@ -379,11 +444,7 @@ test.describe('GPU Stat Block → GPUDetailModal (#11782)', () => {
   })
 
   test('GPUDetailModal closes on close button', async ({ page }) => {
-    await expect(page.getByTestId('stat-block-gpus')).toBeVisible({ timeout: DATA_RENDER_TIMEOUT_MS })
-    await page.getByTestId('stat-block-gpus').click()
-
-    const dialog = page.getByRole('dialog').first()
-    await expect(dialog).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
+    const dialog = await openGPUDetailModal(page)
 
     // Close via X button
     const closeBtn = dialog.locator('button[aria-label="Close"], button:has(svg.lucide-x)').first()

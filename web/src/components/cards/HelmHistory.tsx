@@ -359,7 +359,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
             ) : (
               <div className="relative">
                 {/* Timeline line */}
-                <div className="absolute left-[7px] top-4 bottom-4 w-0.5 bg-border" />
+                <div className="absolute left-2 top-4 bottom-4 w-0.5 bg-border" />
 
                 {/* History entries */}
                 <div className="space-y-3">

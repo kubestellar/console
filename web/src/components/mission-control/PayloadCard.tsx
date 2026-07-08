@@ -3,7 +3,7 @@
  * Shows GitHub avatar, maturity badge, category gradient, priority, and remove button.
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { X, Star, ChevronDown, ArrowLeftRight } from 'lucide-react'
@@ -11,6 +11,7 @@ import { Button } from '../ui/Button'
 import { cn } from '../../lib/cn'
 import { MATURITY_CONFIG, CNCF_CATEGORY_GRADIENTS } from '../../lib/cncf-constants'
 import type { PayloadProject } from './types'
+import { useDropdownKeyNav } from '../../hooks/useDropdownKeyNav'
 
 // Reuse InstallerCard's GitHub org mapping
 const PROJECT_TO_GITHUB_ORG: Record<string, string> = {
@@ -66,20 +67,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
   const [depsTooltipPosition, setDepsTooltipPosition] = useState<{ left: number, top: number } | null>(null)
   const [priorityMenuPosition, setPriorityMenuPosition] = useState<{ right: number, bottom: number } | null>(null)
   const priorityBtnRef = useRef<HTMLButtonElement>(null)
-
-  // issue 6743 — Dismiss the priority dropdown when the user presses Escape. Without
-  // this, keyboard users had no way to close the menu once opened.
-  useEffect(() => {
-    if (!showPriorityMenu) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        setShowPriorityMenu(false)
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [showPriorityMenu])
+  const priorityMenuKeyNav = useDropdownKeyNav(() => setShowPriorityMenu(false))
   const depRef = useRef<HTMLSpanElement>(null)
   const gradient = getCategoryGradient(project.category)
   const maturity = project.maturity ? MATURITY_CONFIG[project.maturity] : null
@@ -276,6 +264,8 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
                 <div className="fixed inset-0 z-[9998]" role="presentation" aria-hidden="true" onClick={() => setShowPriorityMenu(false)} />
                 <div
                   className="fixed bg-slate-900 border border-border rounded-lg shadow-lg py-1 z-[9999] min-w-[100px]"
+                  role="menu"
+                  onKeyDown={priorityMenuKeyNav}
                   style={{
                     right: priorityMenuPosition.right,
                     bottom: priorityMenuPosition.bottom,

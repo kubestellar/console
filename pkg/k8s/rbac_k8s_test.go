@@ -72,22 +72,7 @@ func TestParseOpenShiftUser_MissingOptionalFields(t *testing.T) {
 	}
 }
 
-func TestParseOpenShiftUser_InvalidTimestamp(t *testing.T) {
-	obj := unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"name":              "charlie",
-				"creationTimestamp": "not-a-timestamp",
-			},
-		},
-	}
-
-	got := parseOpenShiftUser(obj, "test")
-
-	if got.CreatedAt != nil {
-		t.Errorf("CreatedAt: expected nil for invalid timestamp, got %v", got.CreatedAt)
-	}
-}
+// TestParseOpenShiftUser_InvalidTimestamp removed — canonical version is in rbac_openshift_test.go
 
 // ---------- buildProbeNamespaces ----------
 
@@ -101,7 +86,6 @@ func TestBuildProbeNamespaces_DefaultsOnly(t *testing.T) {
 		t.Errorf("expected first namespace 'default', got %q", got[0])
 	}
 }
-
 
 func TestBuildProbeNamespaces_EnvVarAdded(t *testing.T) {
 	t.Setenv(probeNamespacesEnvVar, "team-a,team-b")

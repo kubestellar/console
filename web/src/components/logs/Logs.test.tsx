@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -8,12 +9,16 @@ vi.mock('../../lib/demoMode', () => ({
   toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => { },
   isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
 }))
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
   getDemoMode: () => true, default: () => true, useDemoMode: () => true, isDemoModeForced: false,
-}))
-vi.mock('../../lib/analytics', () => ({
+}
+))
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-}))
+}
+))
 vi.mock('../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
   tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
@@ -29,16 +34,18 @@ vi.mock('../../lib/dashboards/DashboardPage', () => ({
   ),
 }))
 
+let mockLogsError: string | null = null
+
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => ({
-    clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, refetch: vi.fn(),
+    clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: mockLogsError, refetch: vi.fn(),
   }),
 }))
 
 vi.mock('../../hooks/useCachedData', () => ({
   useCachedEvents: () => ({
     // lastRefresh: null → no lastUpdated timestamp available in test environment
-    events: [], isLoading: false, isRefreshing: false, lastRefresh: null, refetch: vi.fn(),
+    events: [], isLoading: false, isRefreshing: false, error: mockLogsError, lastRefresh: null, refetch: vi.fn(),
   }),
 }))
 
@@ -90,5 +97,15 @@ describe('Logs Component', () => {
     renderLogs()
     const page = screen.getByTestId('dashboard-page')
     expect(page.getAttribute('data-subtitle')).toBeTruthy()
+  })
+
+  it('renders retryable error state when log data fails to load', () => {
+    mockLogsError = 'events api offline'
+    renderLogs()
+
+    expect(screen.getByText('logs.errorLoading')).toBeInTheDocument()
+    expect(screen.getByText('events api offline')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'common.retry' })).toBeInTheDocument()
+    mockLogsError = null
   })
 })

@@ -42,8 +42,10 @@ vi.mock('../../../lib/demoMode', () => ({
   get isNetlifyDeployment() { return mockIsNetlifyDeployment.value },
 }))
 
-vi.mock('../../useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../lib/modeTransition', () => ({
@@ -71,6 +73,11 @@ vi.mock('../../../lib/constants', async (importOriginal) => {
   return { ...actual, STORAGE_KEY_TOKEN: 'token' }
 })
 
+vi.mock('../../../lib/authToken', () => ({
+  getStoredAuthToken: vi.fn().mockImplementation(async () => localStorage.getItem('token')),
+  getStoredAuthTokenSync: vi.fn().mockImplementation(() => localStorage.getItem('token')),
+}))
+
 import { useBuildpackImages } from '../buildpacks'
 
 let cnt = 0
@@ -91,7 +98,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'tk')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsNetlifyDeployment.value = false
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockSubscribePolling.mockReturnValue(vi.fn())
@@ -177,7 +184,7 @@ describe('buildpacks coverage part 1', () => {
   })
 
   it('null images in response: defaults to empty array', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ images: null }) })
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ images: null }) })
     const { result, unmount } = renderHook(() => useBuildpackImages(uc()))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.images).toEqual([])

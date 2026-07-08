@@ -6,7 +6,7 @@ import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { getStoredAuthToken } from '../../lib/authToken'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import { subscribePolling } from './pollingManager'
-import { MCP_HOOK_TIMEOUT_MS, SHORT_DELAY_MS, FOCUS_DELAY_MS } from '../../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS, SHORT_DELAY_MS, FOCUS_DELAY_MS, areOptionalPollersSuppressed } from '../../lib/constants/network'
 import type { HelmRelease, HelmHistoryEntry } from './types'
 
 // Demo Helm releases shown when in demo mode
@@ -152,9 +152,10 @@ export function useHelmReleases(cluster?: string) {
 
   const refetch = useCallback(async (silent = false) => {
     // Skip fetching entirely in forced demo mode (Netlify) — no backend
-    if (isNetlifyDeployment) {
+    if (areOptionalPollersSuppressed() || isNetlifyDeployment) {
       setIsLoading(false)
       setIsRefreshing(false)
+      setError(null)
       notifyListeners(false)
       return
     }

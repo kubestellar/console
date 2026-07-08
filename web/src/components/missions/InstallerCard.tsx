@@ -136,10 +136,10 @@ function ProjectLogo({ cncfProject, iconPath, size }: {
   }
 
   const imgCls = size === 'lg' ? 'w-10 h-10 rounded-lg' : 'w-5 h-5 rounded'
-  /** Semi-transparent white backdrop for logo contrast on colored gradients */
+  /** Semi-transparent backdrop for logo contrast on colored gradients */
   const backdropCls = size === 'lg'
-    ? 'w-12 h-12 rounded-xl bg-white/90 shadow-xs flex items-center justify-center'
-    : 'w-6 h-6 rounded bg-white/90 shadow-xs flex items-center justify-center'
+    ? 'w-12 h-12 rounded-xl bg-background/90 shadow-xs flex items-center justify-center'
+    : 'w-6 h-6 rounded bg-background/90 shadow-xs flex items-center justify-center'
   return (
     <div className={backdropCls}>
       <img

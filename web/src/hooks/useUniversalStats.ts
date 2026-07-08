@@ -92,8 +92,9 @@ export function useUniversalStats() {
 
   // ─── Pod-derived values ───
   const podIssuesList = podIssues || []
-  const { pendingPods, highRestartPods } = useMemo(() => ({
+  const { pendingPods, crashLoopPods, highRestartPods } = useMemo(() => ({
     pendingPods: podIssuesList.filter(p => p.status === 'Pending').length,
+    crashLoopPods: podIssuesList.filter(p => /crashloop|crash loop/i.test([p.status, p.reason, ...(p.issues || [])].filter(Boolean).join(' '))).length,
     highRestartPods: podIssuesList.filter(p => p.restarts > HIGH_RESTART_THRESHOLD).length,
   }), [podIssuesList])
 
@@ -194,15 +195,26 @@ export function useUniversalStats() {
       // Cluster stats
       // ══════════════════════════════════════════
       case 'clusters':
-        return { value: totalClusters, sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: totalClusters > 0 }
+        return { value: totalClusters, groundtruthField: 'clusters-total', sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: totalClusters > 0 }
       case 'healthy':
-        return { value: healthyClusters, sublabel: 'healthy', onClick: () => drillToAllClusters('healthy'), isClickable: healthyClusters > 0 }
+        return { value: healthyClusters, groundtruthField: 'clusters-healthy', sublabel: 'healthy', onClick: () => drillToAllClusters('healthy'), isClickable: healthyClusters > 0 }
       case 'unhealthy':
         return { value: unhealthyClusters, sublabel: 'unhealthy', onClick: () => drillToAllClusters('unhealthy'), isClickable: unhealthyClusters > 0 }
       case 'unreachable':
         return { value: unreachableClusters, sublabel: 'offline', isClickable: false }
       case 'nodes':
-        return { value: totalNodes, progressValue: healthyNodes, max: totalNodes, sublabel: 'total nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
+        return {
+          value: totalNodes,
+          groundtruthFields: {
+            'nodes-total': totalNodes,
+            'nodes-ready': healthyNodes,
+          },
+          progressValue: healthyNodes,
+          max: totalNodes,
+          sublabel: 'total nodes',
+          onClick: () => drillToAllNodes(),
+          isClickable: totalNodes > 0,
+        }
       case 'cpus':
         return { value: totalCPUs, sublabel: 'total CPUs', isClickable: false }
       case 'memory':
@@ -212,7 +224,18 @@ export function useUniversalStats() {
       case 'gpus':
         return { value: realGPUCount, sublabel: 'total GPUs', onClick: () => drillToAllGPU(), isClickable: realGPUCount > 0 }
       case 'pods':
-        return { value: totalPods, sublabel: 'total pods', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
+        return {
+          value: totalPods,
+          groundtruthFields: {
+            'pods-total': totalPods,
+            'pods-running': totalPods,
+            'pods-pending': pendingPods,
+            'pods-crashloop': crashLoopPods,
+          },
+          sublabel: 'total pods',
+          onClick: () => drillToAllPods(),
+          isClickable: totalPods > 0,
+        }
       case 'total_pods':
         return { value: totalPods, sublabel: 'across all clusters', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
 
@@ -220,9 +243,22 @@ export function useUniversalStats() {
       // Workload / Deployment stats
       // ══════════════════════════════════════════
       case 'namespaces':
-        return { value: uniqueNamespaces.size, sublabel: 'namespaces', isClickable: false }
+        return { value: uniqueNamespaces.size, groundtruthField: 'namespaces-total', sublabel: 'namespaces', isClickable: false }
       case 'deployments':
-        return { value: allDeployments.length, sublabel: 'total', onClick: () => drillToAllDeployments(), isClickable: allDeployments.length > 0 }
+        return {
+          value: allDeployments.length,
+          groundtruthFields: {
+            'deployments-total': allDeployments.length,
+            'deployments-available': allDeployments.filter(deployment =>
+              String(deployment.status || '').toLowerCase() === 'running'
+              || Number(deployment.availableReplicas || 0) > 0
+              || (Number(deployment.readyReplicas || 0) === Number(deployment.replicas || 0) && Number(deployment.replicas || 0) > 0)
+            ).length,
+          },
+          sublabel: 'total',
+          onClick: () => drillToAllDeployments(),
+          isClickable: allDeployments.length > 0,
+        }
       case 'pod_issues':
         return { value: podIssuesList.length, sublabel: 'pod issues', onClick: () => drillToAllPods('issues'), isClickable: podIssuesList.length > 0 }
       case 'deployment_issues':
@@ -465,7 +501,7 @@ export function useUniversalStats() {
   }, [
     totalClusters, healthyClusters, unhealthyClusters, unreachableClusters,
     healthyNodes, totalNodes, totalPods, totalCPUs, totalMemoryGB, totalStorageGB, uniqueNamespaces,
-    podIssuesList, pendingPods, highRestartPods,
+    podIssuesList, pendingPods, crashLoopPods, highRestartPods,
     allDeployments, allDeploymentIssues,
     allPVCs, boundPVCs, storageClassCount,
     allServices, lbCount, npCount, cipCount, ingresses,

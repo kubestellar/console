@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { DataResidencyContent as DataResidency } from './DataResidency'
@@ -5,6 +6,10 @@ import { DataResidencyContent as DataResidency } from './DataResidency'
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
+
+vi.mock('../../lib/api', () => ({
+  authFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(url, init)),
 }))
 
 /* ─── Mock data ─── */
@@ -66,6 +71,13 @@ function mockFetchFailure() {
 
 describe('DataResidency', () => {
   beforeEach(() => { vi.restoreAllMocks() })
+
+  it('shows loading state before residency endpoints resolve', () => {
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}) as Promise<Response>)
+    render(<DataResidency />)
+
+    expect(document.querySelector('.animate-spin')).toBeTruthy()
+  })
 
   it('renders summary cards with correct values', async () => {
     mockFetchSuccess()

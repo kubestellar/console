@@ -1,3 +1,4 @@
+import React from 'react'
 import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
@@ -25,6 +26,18 @@ vi.mock('../../../hooks/useTrestle', () => ({
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({ selectedClusters: [] }),
+}))
+
+vi.mock('../../../hooks/useDrillDown', () => ({
+  useDrillDown: () => ({
+    state: { stack: [], isOpen: false, currentView: null },
+    pop: vi.fn(),
+    open: vi.fn(),
+    goTo: vi.fn(),
+    close: vi.fn(),
+    replace: vi.fn(),
+    openOrPush: vi.fn(),
+  }),
 }))
 
 describe('ComplianceDrillDown', () => {

@@ -4,10 +4,10 @@ on:
   issue_comment:
     types: [created]
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  issues: write
 
 jobs:
   assignment-helper:
-    permissions:
-      issues: write
-    uses: kubestellar/infra/.github/workflows/reusable-assignment-helper.yml@af322d48cc67ade7345cabc6a0ed55c6c7040ee4  # main
+    # Pinned to commit SHA to prevent supply-chain drift from mutable @main (fixes #20493)
+    uses: kubestellar/infra/.github/workflows/reusable-assignment-helper.yml@ade15fa68c60c49fec98803ffd259ba24894a756 # main pinned 2026-07-08

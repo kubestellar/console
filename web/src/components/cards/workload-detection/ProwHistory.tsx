@@ -107,7 +107,7 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
 
       {/* Timeline */}
       <div ref={containerRef} className="flex-1 overflow-y-auto relative" style={containerStyle}>
-        <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-border" />
+        <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-border" />
         <div className="space-y-2">
           {items.map((job) => (
             <div key={job.id} className="relative pl-6 group">

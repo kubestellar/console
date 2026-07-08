@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 
@@ -14,7 +15,8 @@ vi.mock('../../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
-vi.mock('../../../../hooks/useDemoMode', () => ({
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
   getDemoMode: () => true, default: () => true,
   useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
@@ -22,10 +24,12 @@ vi.mock('../../../../hooks/useDemoMode', () => ({
   setGlobalDemoMode: vi.fn(),
 }))
 
-vi.mock('../../../../lib/analytics', () => ({
+vi.mock('../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
@@ -51,8 +55,11 @@ vi.mock('../../../../lib/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }))
 
+const mockNodeLoading = false
+let mockNodeFailed = false
+
 vi.mock('../../../../hooks/useCachedData', () => ({
-  useCachedNodes: () => ({ nodes: [], isLoading: false, isFailed: false, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, lastRefresh: Date.now(), refetch: vi.fn() }),
+  useCachedNodes: () => ({ nodes: [], isLoading: mockNodeLoading, isFailed: mockNodeFailed, isDemoFallback: false, isRefreshing: false, consecutiveFailures: 0, lastRefresh: Date.now(), refetch: vi.fn() }),
 }))
 
 import { NodeDrillDown } from '../NodeDrillDown'
@@ -61,5 +68,13 @@ describe('NodeDrillDown', () => {
   it('renders without crashing', () => {
     const { container } = render(<NodeDrillDown data={{ cluster: 'c1', node: 'node1' }} />)
     expect(container).toBeTruthy()
+  })
+
+  it('shows node data error state when cached node lookup fails', () => {
+    mockNodeFailed = true
+    const { getByText } = render(<NodeDrillDown data={{ cluster: 'c1', node: 'node1' }} />)
+
+    expect(getByText('drilldown.nodeDetail.unableToLoad')).toBeInTheDocument()
+    mockNodeFailed = false
   })
 })

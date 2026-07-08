@@ -71,6 +71,7 @@ func TestManifestSetup_RedirectsWhenAlreadyConfigured(t *testing.T) {
 	app.Get("/auth/manifest/setup", h.ManifestSetup)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/setup", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -83,6 +84,7 @@ func TestManifestSetup_RendersFormWhenNotConfigured(t *testing.T) {
 	app.Get("/auth/manifest/setup", h.ManifestSetup)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/setup", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -102,6 +104,7 @@ func TestManifestSetup_ManifestContainsExpectedFields(t *testing.T) {
 	app.Get("/auth/manifest/setup", h.ManifestSetup)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/setup", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 
@@ -141,6 +144,7 @@ func TestManifestCallback_RedirectsWhenAlreadyConfigured(t *testing.T) {
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test123&state=test-state", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -153,6 +157,7 @@ func TestManifestCallback_RedirectsWithoutState(t *testing.T) {
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test123", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -166,6 +171,7 @@ func TestManifestCallback_RedirectsWithoutCode(t *testing.T) {
 
 	state := issueTestManifestState(t, h)
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?state="+state, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -178,6 +184,7 @@ func TestManifestCallback_RejectsInvalidState(t *testing.T) {
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test-code&state=invalid", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -220,6 +227,7 @@ func TestManifestCallback_ExchangesCodeAndPersists(t *testing.T) {
 
 	state := issueTestManifestState(t, h)
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test-code&state="+state, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -253,6 +261,7 @@ func TestManifestCallback_HandlesGitHubError(t *testing.T) {
 
 	state := issueTestManifestState(t, h)
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=bad-code&state="+state, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -287,6 +296,7 @@ func TestManifestCallback_HandlesMissingCredentials(t *testing.T) {
 
 	state := issueTestManifestState(t, h)
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test&state="+state, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -308,6 +318,7 @@ func TestManifestSetup_GHEURLHandling(t *testing.T) {
 	app.Get("/auth/manifest/setup", h.ManifestSetup)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/setup", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -350,6 +361,7 @@ func TestManifestCallback_GHEAPIBase(t *testing.T) {
 
 	state := issueTestManifestState(t, h)
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=ghe-code&state="+state, nil)
+	req.Host = "localhost"
 	app.Test(req, -1)
 	assert.Contains(t, receivedPath, "/api/v3/app-manifests/ghe-code/conversions")
 	mockStore.AssertExpectations(t)
@@ -369,6 +381,7 @@ func TestManifestSetup_RejectsWithoutBootstrapToken(t *testing.T) {
 	app.Get("/auth/manifest/setup", h.ManifestSetup)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/setup", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
@@ -388,6 +401,7 @@ func TestManifestSetup_AcceptsCorrectBootstrapToken(t *testing.T) {
 	app.Get("/auth/manifest/setup", h.ManifestSetup)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/setup?token=secret-bootstrap-token", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -407,6 +421,7 @@ func TestManifestSetup_RejectsWrongBootstrapToken(t *testing.T) {
 	app.Get("/auth/manifest/setup", h.ManifestSetup)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/setup?token=wrong-token", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
@@ -427,6 +442,7 @@ func TestManifestCallback_RejectsWithoutBootstrapToken(t *testing.T) {
 
 	state := issueTestManifestState(t, h)
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test&state="+state, nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
@@ -451,6 +467,7 @@ func TestManifestSetup_AllowsLocalhostWithoutToken(t *testing.T) {
 	// The default test request comes from 0.0.0.0 which is NOT private,
 	// so this test verifies the loopback check works as expected.
 	req := httptest.NewRequest("GET", "/auth/manifest/setup", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	// In test context, Fiber reports IP as 0.0.0.0 which is not private.

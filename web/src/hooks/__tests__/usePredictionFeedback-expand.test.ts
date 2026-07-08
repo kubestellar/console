@@ -28,9 +28,11 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
   return { ...actual, FETCH_DEFAULT_TIMEOUT_MS: 10000 }
 })
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitPredictionFeedbackSubmitted: vi.fn(),
-}))
+}
+))
 
 import { usePredictionFeedback, getFeedbackContext } from '../usePredictionFeedback'
 

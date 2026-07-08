@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * RTL interaction tests for CRDDrillDown (#15406, Part of #4189).
  * 
@@ -93,6 +94,17 @@ describe('CRDDrillDown interactions', () => {
         return JSON.stringify(CRD_JSON)
       }
       return JSON.stringify(INSTANCES_JSON)
+    })
+  })
+
+  it('shows versions loading state while CRD details are still loading', async () => {
+    mockRunKubectl.mockReturnValue(new Promise(() => {}))
+    const { container } = renderWithDrillDown(<CRDDrillDown data={BASE_DATA} />)
+
+    fireEvent.click(screen.getByRole('tab', { name: /Versions \(0\)/ }))
+
+    await waitFor(() => {
+      expect(container.querySelector('.animate-spin')).toBeTruthy()
     })
   })
 

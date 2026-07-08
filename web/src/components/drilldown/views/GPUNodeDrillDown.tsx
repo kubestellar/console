@@ -1,5 +1,5 @@
-import { Box, ChevronRight, Server } from 'lucide-react'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { Box, ChevronRight, Server, ChevronLeft } from 'lucide-react'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useAllPods } from '../../../hooks/useMCP'
 import { Gauge } from '../../charts/Gauge'
@@ -34,6 +34,7 @@ export function GPUNodeDrillDown({ data }: Props) {
   const gpuCount = (data.gpuCount as number) || 0
   const gpuAllocated = (data.gpuAllocated as number) || 0
   const { drillToEvents, drillToPod, drillToCluster } = useDrillDownActions()
+  const { state, pop } = useDrillDown()
   const clusterShort = cluster.split('/').pop() || cluster
 
   const utilizationPercent = gpuCount > 0 ? Math.round((gpuAllocated / gpuCount) * PERCENT_MULTIPLIER) : 0
@@ -54,6 +55,18 @@ export function GPUNodeDrillDown({ data }: Props) {
     <div className="space-y-6">
       {/* Contextual Navigation */}
       <div className="flex items-center gap-6 text-sm">
+        {state.stack.length > 1 && (
+          <button
+            type="button"
+            onClick={pop}
+            className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
+            aria-label={t('drilldown.goBack')}
+            title={t('drilldown.goBack')}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>{t('common.back')}</span>
+          </button>
+        )}
         <button
           onClick={() => drillToCluster(cluster)}
           className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"

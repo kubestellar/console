@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { PodSweeper } from '../PodSweeper'
@@ -31,10 +32,12 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitGameStarted: vi.fn(),
   emitGameEnded: vi.fn(),
-}))
+}
+))
 
 const DEFAULT_PROPS = {
   id: 'pod-sweeper',

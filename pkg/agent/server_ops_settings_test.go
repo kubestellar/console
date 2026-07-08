@@ -43,6 +43,7 @@ func TestServer_HandleSettingsAll(t *testing.T) {
 
 	// 1. Test GET (default settings)
 	req := httptest.NewRequest("GET", "/settings", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 	s.handleSettingsAll(w, req)
 
@@ -66,6 +67,7 @@ func TestServer_HandleSettingsAll(t *testing.T) {
 	newSettings.Theme = "dark"
 	body, _ := json.Marshal(newSettings)
 	req = httptest.NewRequest("PUT", "/settings", bytes.NewReader(body))
+	req.Host = "localhost"
 	w = httptest.NewRecorder()
 	s.handleSettingsAll(w, req)
 
@@ -107,6 +109,7 @@ func TestServer_HandleGetKeysStatus(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/settings/keys", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 	s.handleGetKeysStatus(w, req)
 
@@ -154,6 +157,7 @@ func TestServer_HandleGetKeysStatus_LocalLLMExplicitURL(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/settings/keys", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 	s.handleGetKeysStatus(w, req)
 

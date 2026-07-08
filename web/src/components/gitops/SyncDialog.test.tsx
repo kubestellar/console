@@ -1,5 +1,5 @@
+import React from 'react'
 /// <reference types='@testing-library/jest-dom/vitest' />
-import type React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 
@@ -87,6 +87,16 @@ describe('SyncDialog Component', () => {
   it('renders the app name in the dialog', () => {
     render(<SyncDialog {...defaultProps} />)
     expect(screen.getByText('GitOps Sync: test-app')).toBeInTheDocument()
+  })
+
+  it('shows loading state while drift detection is still running', async () => {
+    fetchMock = makeFetchMock(() => new Promise<Response>(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { container } = render(<SyncDialog {...defaultProps} />)
+
+    expect(await screen.findByText('gitops.detectingDrift')).toBeInTheDocument()
+    expect(container.querySelector('.animate-spin')).toBeTruthy()
   })
 
   // #6159 — substantive integration test: calls the real fetch endpoint the

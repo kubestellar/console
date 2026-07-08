@@ -1,10 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import React from 'react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { SegregationOfDutiesContent as SegregationOfDuties } from './SegregationOfDuties'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
+
+vi.mock('../../lib/api', () => ({
+  authFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(url, init)),
 }))
 
 const mockSummary = {
@@ -36,7 +41,22 @@ function mockFetchSuccess() {
 }
 
 describe('SegregationOfDuties', () => {
-  beforeEach(() => { vi.restoreAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.restoreAllMocks()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('shows loading state before SoD endpoints resolve', () => {
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}) as Promise<Response>)
+    render(<SegregationOfDuties />)
+
+    expect(document.querySelector('.animate-spin')).toBeTruthy()
+  })
 
   it('renders header and compliance score', async () => {
     mockFetchSuccess()

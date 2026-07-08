@@ -3,6 +3,7 @@ import { Theme, themes, getAllThemes, getThemeById, getDefaultTheme } from '../l
 import { emitThemeChanged } from '../lib/analytics'
 import { GOOGLE_FONTS_API_URL } from '../config/externalApis'
 import { createStateContext } from './createStateContext'
+import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
 
 /**
  * Theme Context
@@ -23,7 +24,7 @@ const DEFAULT_FONTS = new Set(['Inter', 'JetBrains Mono'])
 const loadedFonts = new Set<string>()
 
 /**
- * Lazy-load a Google Font by injecting a <link> tag.
+ * Lazy-load a Google Font by injecting a stylesheet link tag.
  * Only loads fonts not already in the default CSS @import.
  */
 function loadThemeFont(fontFamily: string) {
@@ -53,6 +54,15 @@ function getSystemPrefersDark(): boolean {
 function applyTheme(theme: Theme) {
   if (!theme || !theme.colors) {
     console.error('Invalid theme object:', theme)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('theme-error', {
+        detail: { 
+          error: 'Invalid theme object', 
+          timestamp: Date.now(),
+          context: 'theme-validation',
+        }
+      }))
+    }
     return
   }
 
@@ -152,7 +162,13 @@ function applyTheme(theme: Theme) {
       root.classList.remove('theme-gradient-accents')
     }
   } catch (error: unknown) {
-    console.error('Error applying theme:', error)
+    console.warn('Error applying theme:', error)
+    // Dispatch event for monitoring (theme errors shouldn't break the app)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('theme-error', {
+        detail: { error: error instanceof Error ? error.message : String(error), timestamp: Date.now() }
+      }))
+    }
   }
 }
 
@@ -197,12 +213,13 @@ const {
   createFallbackValue: createDefaultThemeContextValue,
 })
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { ThemeContext, useTheme }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeIdState] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY)
+      const stored = safeGetItem(STORAGE_KEY)
       // Handle legacy 'dark'/'light' values
       if (stored === 'dark') return 'kubestellar'
       if (stored === 'light') return 'kubestellar-light'
@@ -227,7 +244,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Track the last selected dark theme for toggle functionality
   const [lastDarkTheme, setLastDarkTheme] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem(LAST_DARK_THEME_KEY) || 'kubestellar'
+      return safeGetItem(LAST_DARK_THEME_KEY) || 'kubestellar'
     }
     return 'kubestellar'
   })
@@ -239,7 +256,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const theme = getThemeById(id)
     if (theme?.dark && id !== 'system') {
       setLastDarkTheme(id)
-      localStorage.setItem(LAST_DARK_THEME_KEY, id)
+      safeSetItem(LAST_DARK_THEME_KEY, id)
     }
   }
 
@@ -258,7 +275,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // paints, preventing a flash of the previous theme's colors (#14183).
   useLayoutEffect(() => {
     applyTheme(currentTheme)
-    localStorage.setItem(STORAGE_KEY, themeId)
+    safeSetItem(STORAGE_KEY, themeId)
     window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
   }, [currentTheme, themeId])
 

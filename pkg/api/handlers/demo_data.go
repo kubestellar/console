@@ -28,8 +28,8 @@ func ErrNoClusterAccess(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": noClusterAccessMsg})
 }
 
-// Demo cluster data - matches frontend getDemoClusters() for consistency
-func getDemoClusters() []k8s.ClusterInfo {
+// Demo cluster data - matches frontend GetDemoClusters() for consistency
+func GetDemoClusters() []k8s.ClusterInfo {
 	return []k8s.ClusterInfo{
 		{Name: "kind-local", Context: "kind-local", Healthy: true, Source: "kubeconfig", NodeCount: 1, PodCount: 15},
 		{Name: "minikube", Context: "minikube", Healthy: true, Source: "kubeconfig", NodeCount: 1, PodCount: 12},
@@ -47,7 +47,7 @@ func getDemoClusters() []k8s.ClusterInfo {
 }
 
 // Demo cluster health data
-func getDemoClusterHealth(cluster string) *k8s.ClusterHealth {
+func GetDemoClusterHealth(cluster string) *k8s.ClusterHealth {
 	healthMap := map[string]*k8s.ClusterHealth{
 		"kind-local":           {Cluster: "kind-local", Healthy: true, Reachable: true, NodeCount: 1, PodCount: 15, CpuCores: 4, MemoryGB: 8},
 		"minikube":             {Cluster: "minikube", Healthy: true, Reachable: true, NodeCount: 1, PodCount: 12, CpuCores: 2, MemoryGB: 4},
@@ -70,7 +70,7 @@ func getDemoClusterHealth(cluster string) *k8s.ClusterHealth {
 }
 
 // Demo pod data
-func getDemoPods() []k8s.PodInfo {
+func GetDemoPods() []k8s.PodInfo {
 	return []k8s.PodInfo{
 		{Name: "frontend-7d8f9b6c5d-x2k4m", Namespace: "production", Cluster: "eks-prod-us-east-1", Status: "Running", Ready: "1/1", Restarts: 0, Age: "3d"},
 		{Name: "api-server-5f6g7h8i9j-a1b2c", Namespace: "production", Cluster: "eks-prod-us-east-1", Status: "Running", Ready: "1/1", Restarts: 1, Age: "2d"},
@@ -86,7 +86,7 @@ func getDemoPods() []k8s.PodInfo {
 }
 
 // Demo pod issues
-func getDemoPodIssues() []k8s.PodIssue {
+func GetDemoPodIssues() []k8s.PodIssue {
 	return []k8s.PodIssue{
 		{Name: "worker-crashed-abc12", Namespace: "production", Cluster: "gke-staging", Status: "CrashLoopBackOff", Reason: "Container crash", Issues: []string{"Back-off restarting failed container"}, Restarts: 15},
 		{Name: "api-pending-xyz89", Namespace: "staging", Cluster: "aks-dev-westeu", Status: "Pending", Reason: "Insufficient memory", Issues: []string{"0/4 nodes available: insufficient memory"}, Restarts: 0},
@@ -96,7 +96,7 @@ func getDemoPodIssues() []k8s.PodIssue {
 }
 
 // Demo events
-func getDemoEvents() []k8s.Event {
+func GetDemoEvents() []k8s.Event {
 	return []k8s.Event{
 		{Type: "Normal", Reason: "Scheduled", Message: "Successfully assigned production/frontend-7d8f9b6c5d-x2k4m to node-1", Namespace: "production", Cluster: "eks-prod-us-east-1", Age: "1h", Count: 1},
 		{Type: "Normal", Reason: "Pulled", Message: "Container image already present on machine", Namespace: "production", Cluster: "eks-prod-us-east-1", Age: "1h", Count: 1},
@@ -110,8 +110,8 @@ func getDemoEvents() []k8s.Event {
 }
 
 // Demo warning events (filtered from events)
-func getDemoWarningEvents() []k8s.Event {
-	events := getDemoEvents()
+func GetDemoWarningEvents() []k8s.Event {
+	events := GetDemoEvents()
 	warnings := make([]k8s.Event, 0)
 	for _, e := range events {
 		if e.Type == "Warning" {
@@ -122,7 +122,7 @@ func getDemoWarningEvents() []k8s.Event {
 }
 
 // Demo nodes
-func getDemoNodes() []k8s.NodeInfo {
+func GetDemoNodes() []k8s.NodeInfo {
 	return []k8s.NodeInfo{
 		{Name: "node-1", Cluster: "eks-prod-us-east-1", Status: "Ready", Roles: []string{"worker"}, CPUCapacity: "8", MemoryCapacity: "32Gi", GPUCount: 0},
 		{Name: "node-2", Cluster: "eks-prod-us-east-1", Status: "Ready", Roles: []string{"worker"}, CPUCapacity: "8", MemoryCapacity: "32Gi", GPUCount: 0},
@@ -135,7 +135,7 @@ func getDemoNodes() []k8s.NodeInfo {
 }
 
 // Demo deployments
-func getDemoDeployments() []k8s.Deployment {
+func GetDemoDeployments() []k8s.Deployment {
 	return []k8s.Deployment{
 		{Name: "frontend", Namespace: "production", Cluster: "eks-prod-us-east-1", Status: "running", Replicas: 3, ReadyReplicas: 3, UpdatedReplicas: 3, AvailableReplicas: 3, Progress: 100},
 		{Name: "api-server", Namespace: "production", Cluster: "eks-prod-us-east-1", Status: "running", Replicas: 5, ReadyReplicas: 5, UpdatedReplicas: 5, AvailableReplicas: 5, Progress: 100},
@@ -148,7 +148,7 @@ func getDemoDeployments() []k8s.Deployment {
 }
 
 // Demo deployment issues
-func getDemoDeploymentIssues() []k8s.DeploymentIssue {
+func GetDemoDeploymentIssues() []k8s.DeploymentIssue {
 	return []k8s.DeploymentIssue{
 		{Name: "worker", Namespace: "production", Cluster: "gke-staging", Replicas: 2, ReadyReplicas: 1, Reason: "ReplicasMismatch", Message: "Only 1 of 2 replicas are ready"},
 		{Name: "batch-processor", Namespace: "batch", Cluster: "eks-prod-us-east-1", Replicas: 3, ReadyReplicas: 0, Reason: "ImagePullBackOff", Message: "Failed to pull image"},
@@ -156,7 +156,7 @@ func getDemoDeploymentIssues() []k8s.DeploymentIssue {
 }
 
 // Demo services
-func getDemoServices() []k8s.Service {
+func GetDemoServices() []k8s.Service {
 	return []k8s.Service{
 		{Name: "frontend-svc", Namespace: "production", Cluster: "eks-prod-us-east-1", Type: "LoadBalancer", ClusterIP: "10.0.0.1", Ports: []string{"80:30080/TCP", "443:30443/TCP"}},
 		{Name: "api-server-svc", Namespace: "production", Cluster: "eks-prod-us-east-1", Type: "ClusterIP", ClusterIP: "10.0.0.2", Ports: []string{"8080/TCP"}},
@@ -166,7 +166,7 @@ func getDemoServices() []k8s.Service {
 }
 
 // Demo security issues
-func getDemoSecurityIssues() []k8s.SecurityIssue {
+func GetDemoSecurityIssues() []k8s.SecurityIssue {
 	return []k8s.SecurityIssue{
 		{Name: "frontend-7d8f9b6c5d-x2k4m", Namespace: "production", Cluster: "eks-prod-us-east-1", Issue: "RunningAsRoot", Severity: "high", Details: "Container is running as root user"},
 		{Name: "api-server", Namespace: "production", Cluster: "eks-prod-us-east-1", Issue: "NoResourceLimits", Severity: "medium", Details: "No CPU/memory limits defined"},
@@ -176,7 +176,7 @@ func getDemoSecurityIssues() []k8s.SecurityIssue {
 }
 
 // Demo jobs
-func getDemoJobs() []k8s.Job {
+func GetDemoJobs() []k8s.Job {
 	return []k8s.Job{
 		{Name: "data-migration-job", Namespace: "batch", Cluster: "eks-prod-us-east-1", Status: "Complete", Completions: "1/1", Duration: "2m30s", Age: "2h"},
 		{Name: "backup-job", Namespace: "backup", Cluster: "openshift-prod", Status: "Complete", Completions: "1/1", Duration: "5m12s", Age: "6h"},
@@ -185,7 +185,7 @@ func getDemoJobs() []k8s.Job {
 }
 
 // Demo HPAs
-func getDemoHPAs() []k8s.HPA {
+func GetDemoHPAs() []k8s.HPA {
 	return []k8s.HPA{
 		{Name: "frontend-hpa", Namespace: "production", Cluster: "eks-prod-us-east-1", Reference: "deployment/frontend", MinReplicas: 2, MaxReplicas: 10, CurrentReplicas: 3, TargetCPU: "70%", CurrentCPU: "45%"},
 		{Name: "api-server-hpa", Namespace: "production", Cluster: "eks-prod-us-east-1", Reference: "deployment/api-server", MinReplicas: 3, MaxReplicas: 20, CurrentReplicas: 5, TargetCPU: "75%", CurrentCPU: "62%"},
@@ -194,7 +194,7 @@ func getDemoHPAs() []k8s.HPA {
 }
 
 // Demo ConfigMaps
-func getDemoConfigMaps() []k8s.ConfigMap {
+func GetDemoConfigMaps() []k8s.ConfigMap {
 	return []k8s.ConfigMap{
 		{Name: "app-config", Namespace: "production", Cluster: "eks-prod-us-east-1", DataCount: 2, Age: "30d"},
 		{Name: "nginx-config", Namespace: "ingress-nginx", Cluster: "openshift-prod", DataCount: 1, Age: "60d"},
@@ -203,7 +203,7 @@ func getDemoConfigMaps() []k8s.ConfigMap {
 }
 
 // Demo Secrets (names only, no actual secret data)
-func getDemoSecrets() []k8s.Secret {
+func GetDemoSecrets() []k8s.Secret {
 	return []k8s.Secret{
 		{Name: "db-credentials", Namespace: "database", Cluster: "aks-dev-westeu", Type: "Opaque", DataCount: 2},
 		{Name: "tls-cert", Namespace: "ingress-nginx", Cluster: "openshift-prod", Type: "kubernetes.io/tls", DataCount: 2},
@@ -213,7 +213,7 @@ func getDemoSecrets() []k8s.Secret {
 }
 
 // Demo ServiceAccounts
-func getDemoServiceAccounts() []k8s.ServiceAccount {
+func GetDemoServiceAccounts() []k8s.ServiceAccount {
 	return []k8s.ServiceAccount{
 		{Name: "default", Namespace: "production", Cluster: "eks-prod-us-east-1"},
 		{Name: "prometheus", Namespace: "monitoring", Cluster: "rancher-mgmt"},
@@ -223,7 +223,7 @@ func getDemoServiceAccounts() []k8s.ServiceAccount {
 }
 
 // Demo PVCs
-func getDemoPVCs() []k8s.PVC {
+func GetDemoPVCs() []k8s.PVC {
 	return []k8s.PVC{
 		{Name: "postgres-data", Namespace: "database", Cluster: "aks-dev-westeu", Status: "Bound", Capacity: "100Gi", StorageClass: "standard"},
 		{Name: "redis-data", Namespace: "cache", Cluster: "eks-prod-us-east-1", Status: "Bound", Capacity: "10Gi", StorageClass: "gp2"},
@@ -233,7 +233,7 @@ func getDemoPVCs() []k8s.PVC {
 }
 
 // Demo PVs
-func getDemoPVs() []k8s.PV {
+func GetDemoPVs() []k8s.PV {
 	return []k8s.PV{
 		{Name: "pv-postgres-data", Cluster: "aks-dev-westeu", Capacity: "100Gi", Status: "Bound", StorageClass: "standard", ReclaimPolicy: "Retain"},
 		{Name: "pv-redis-data", Cluster: "eks-prod-us-east-1", Capacity: "10Gi", Status: "Bound", StorageClass: "gp2", ReclaimPolicy: "Delete"},
@@ -243,7 +243,7 @@ func getDemoPVs() []k8s.PV {
 }
 
 // Demo ResourceQuotas
-func getDemoResourceQuotas() []k8s.ResourceQuota {
+func GetDemoResourceQuotas() []k8s.ResourceQuota {
 	return []k8s.ResourceQuota{
 		{Name: "production-quota", Namespace: "production", Cluster: "eks-prod-us-east-1", Hard: map[string]string{"cpu": "100", "memory": "200Gi", "pods": "100"}, Used: map[string]string{"cpu": "45", "memory": "120Gi", "pods": "67"}},
 		{Name: "staging-quota", Namespace: "staging", Cluster: "gke-staging", Hard: map[string]string{"cpu": "20", "memory": "40Gi", "pods": "50"}, Used: map[string]string{"cpu": "8", "memory": "16Gi", "pods": "23"}},
@@ -251,7 +251,7 @@ func getDemoResourceQuotas() []k8s.ResourceQuota {
 }
 
 // Demo LimitRanges
-func getDemoLimitRanges() []k8s.LimitRange {
+func GetDemoLimitRanges() []k8s.LimitRange {
 	return []k8s.LimitRange{
 		{Name: "default-limits", Namespace: "production", Cluster: "eks-prod-us-east-1", Limits: []k8s.LimitRangeItem{{Type: "Container", Default: map[string]string{"cpu": "500m", "memory": "512Mi"}}}},
 		{Name: "staging-limits", Namespace: "staging", Cluster: "gke-staging", Limits: []k8s.LimitRangeItem{{Type: "Container", Default: map[string]string{"cpu": "250m", "memory": "256Mi"}}}},
@@ -259,7 +259,7 @@ func getDemoLimitRanges() []k8s.LimitRange {
 }
 
 // Demo ReplicaSets
-func getDemoReplicaSets() []k8s.ReplicaSet {
+func GetDemoReplicaSets() []k8s.ReplicaSet {
 	return []k8s.ReplicaSet{
 		{Name: "frontend-7d8f9c6b5", Namespace: "production", Cluster: "eks-prod-us-east-1", Replicas: 3, ReadyReplicas: 3, OwnerName: "frontend", OwnerKind: "Deployment", Age: "2d"},
 		{Name: "api-server-5c4d8e7f2", Namespace: "production", Cluster: "eks-prod-us-east-1", Replicas: 5, ReadyReplicas: 5, OwnerName: "api-server", OwnerKind: "Deployment", Age: "1d"},
@@ -268,7 +268,7 @@ func getDemoReplicaSets() []k8s.ReplicaSet {
 }
 
 // Demo StatefulSets
-func getDemoStatefulSets() []k8s.StatefulSet {
+func GetDemoStatefulSets() []k8s.StatefulSet {
 	return []k8s.StatefulSet{
 		{Name: "postgres", Namespace: "database", Cluster: "aks-dev-westeu", Replicas: 3, ReadyReplicas: 3, Status: "Running", Image: "postgres:15", Age: "30d"},
 		{Name: "redis-cluster", Namespace: "cache", Cluster: "eks-prod-us-east-1", Replicas: 6, ReadyReplicas: 6, Status: "Running", Image: "redis:7", Age: "14d"},
@@ -277,7 +277,7 @@ func getDemoStatefulSets() []k8s.StatefulSet {
 }
 
 // Demo DaemonSets
-func getDemoDaemonSets() []k8s.DaemonSet {
+func GetDemoDaemonSets() []k8s.DaemonSet {
 	return []k8s.DaemonSet{
 		{Name: "fluentd", Namespace: "logging", Cluster: "eks-prod-us-east-1", DesiredScheduled: 5, CurrentScheduled: 5, Ready: 5, Status: "Running", Age: "60d"},
 		{Name: "node-exporter", Namespace: "monitoring", Cluster: "openshift-prod", DesiredScheduled: 3, CurrentScheduled: 3, Ready: 3, Status: "Running", Age: "45d"},
@@ -286,7 +286,7 @@ func getDemoDaemonSets() []k8s.DaemonSet {
 }
 
 // Demo CronJobs
-func getDemoCronJobs() []k8s.CronJob {
+func GetDemoCronJobs() []k8s.CronJob {
 	return []k8s.CronJob{
 		{Name: "db-backup", Namespace: "database", Cluster: "aks-dev-westeu", Schedule: "0 2 * * *", Suspend: false, Active: 0, LastSchedule: "6h ago", Age: "30d"},
 		{Name: "log-cleanup", Namespace: "logging", Cluster: "eks-prod-us-east-1", Schedule: "0 0 * * 0", Suspend: false, Active: 0, LastSchedule: "2d ago", Age: "60d"},
@@ -295,7 +295,7 @@ func getDemoCronJobs() []k8s.CronJob {
 }
 
 // Demo Ingresses
-func getDemoIngresses() []k8s.Ingress {
+func GetDemoIngresses() []k8s.Ingress {
 	return []k8s.Ingress{
 		{Name: "frontend-ingress", Namespace: "production", Cluster: "eks-prod-us-east-1", Class: "nginx", Hosts: []string{"app.example.com"}, Address: "10.0.1.100", Age: "30d"},
 		{Name: "api-ingress", Namespace: "production", Cluster: "eks-prod-us-east-1", Class: "nginx", Hosts: []string{"api.example.com"}, Address: "10.0.1.101", Age: "30d"},
@@ -304,7 +304,7 @@ func getDemoIngresses() []k8s.Ingress {
 }
 
 // Demo NetworkPolicies
-func getDemoNetworkPolicies() []k8s.NetworkPolicy {
+func GetDemoNetworkPolicies() []k8s.NetworkPolicy {
 	return []k8s.NetworkPolicy{
 		{Name: "deny-all", Namespace: "production", Cluster: "eks-prod-us-east-1", PolicyTypes: []string{"Ingress", "Egress"}, PodSelector: "", Age: "60d"},
 		{Name: "allow-frontend", Namespace: "production", Cluster: "eks-prod-us-east-1", PolicyTypes: []string{"Ingress"}, PodSelector: "app=frontend", Age: "60d"},
@@ -313,7 +313,7 @@ func getDemoNetworkPolicies() []k8s.NetworkPolicy {
 }
 
 // Demo GPU nodes
-func getDemoGPUNodeHealth() []k8s.GPUNodeHealthStatus {
+func GetDemoGPUNodeHealth() []k8s.GPUNodeHealthStatus {
 	return []k8s.GPUNodeHealthStatus{
 		{
 			NodeName: "gpu-node-1", Cluster: "vllm-gpu-cluster", Status: "healthy",
@@ -363,7 +363,7 @@ func getDemoGPUNodeHealth() []k8s.GPUNodeHealthStatus {
 	}
 }
 
-func getDemoGPUNodes() []k8s.GPUNode {
+func GetDemoGPUNodes() []k8s.GPUNode {
 	return []k8s.GPUNode{
 		{Name: "gpu-node-1", Cluster: "vllm-gpu-cluster", GPUCount: 8, GPUType: "nvidia.com/gpu", GPUAllocated: 6, GPUMemoryMB: 81920, GPUFamily: "ampere", Manufacturer: "NVIDIA"},
 		{Name: "gpu-node-2", Cluster: "vllm-gpu-cluster", GPUCount: 8, GPUType: "nvidia.com/gpu", GPUAllocated: 4, GPUMemoryMB: 81920, GPUFamily: "ampere", Manufacturer: "NVIDIA"},
@@ -371,8 +371,8 @@ func getDemoGPUNodes() []k8s.GPUNode {
 	}
 }
 
-// getDemoFlatcarNodes returns demo Flatcar Container Linux nodes across multiple clusters.
-func getDemoFlatcarNodes() []k8s.FlatcarNodeInfo {
+// GetDemoFlatcarNodes returns demo Flatcar Container Linux nodes across multiple clusters.
+func GetDemoFlatcarNodes() []k8s.FlatcarNodeInfo {
 	return []k8s.FlatcarNodeInfo{
 		{NodeName: "flatcar-worker-1", Cluster: "k3s-edge", OSImage: "Flatcar Container Linux by Kinvolk 3815.2.5 (Oklo)", KernelVersion: "6.1.85-flatcar"},
 		{NodeName: "flatcar-worker-2", Cluster: "k3s-edge", OSImage: "Flatcar Container Linux by Kinvolk 3815.2.5 (Oklo)", KernelVersion: "6.1.85-flatcar"},
@@ -387,8 +387,8 @@ func getDemoFlatcarNodes() []k8s.FlatcarNodeInfo {
 	}
 }
 
-// getDemoLimaInstances returns demo Lima instances for GET /api/lima.
-func getDemoLimaInstances() []LimaInstanceSummary {
+// GetDemoLimaInstances returns demo Lima instances for GET /api/lima.
+func GetDemoLimaInstances() []LimaInstanceSummary {
 	return []LimaInstanceSummary{
 		{
 			Name:        "lima-k3s",
@@ -438,7 +438,7 @@ func getDemoLimaInstances() []LimaInstanceSummary {
 }
 
 // Demo NVIDIA Operator Status
-func getDemoNVIDIAOperatorStatus() []*k8s.NVIDIAOperatorStatus {
+func GetDemoNVIDIAOperatorStatus() []*k8s.NVIDIAOperatorStatus {
 	return []*k8s.NVIDIAOperatorStatus{
 		{
 			Cluster: "vllm-gpu-cluster",
@@ -463,7 +463,7 @@ func getDemoNVIDIAOperatorStatus() []*k8s.NVIDIAOperatorStatus {
 }
 
 // Demo pod logs
-func getDemoPodLogs() string {
+func GetDemoPodLogs() string {
 	return `2024-01-15T10:30:00Z INFO  Starting application...
 2024-01-15T10:30:01Z INFO  Loading configuration from /etc/config/app.yaml
 2024-01-15T10:30:02Z INFO  Connecting to database at postgres-svc:5432
@@ -477,19 +477,19 @@ func getDemoPodLogs() string {
 2024-01-15T10:34:16Z INFO  Request completed in 45ms`
 }
 
-// getDemoAllClusterHealth returns health for all demo clusters
-func getDemoAllClusterHealth() []k8s.ClusterHealth {
-	clusters := getDemoClusters()
+// GetDemoAllClusterHealth returns health for all demo clusters
+func GetDemoAllClusterHealth() []k8s.ClusterHealth {
+	clusters := GetDemoClusters()
 	health := make([]k8s.ClusterHealth, 0)
 	for _, c := range clusters {
-		h := getDemoClusterHealth(c.Name)
+		h := GetDemoClusterHealth(c.Name)
 		health = append(health, *h)
 	}
 	return health
 }
 
 // getWasmCloudHosts returns demo data for wasmCloud hosts
-func getWasmCloudHosts() []fiber.Map {
+func GetWasmCloudHosts() []fiber.Map {
 	return []fiber.Map{
 		{
 			"id":        "Nxyz1-host-prod-01",
@@ -539,7 +539,7 @@ func getWasmCloudHosts() []fiber.Map {
 }
 
 // getWasmCloudActors returns demo data for wasmCloud actors
-func getWasmCloudActors() []fiber.Map {
+func GetWasmCloudActors() []fiber.Map {
 	return []fiber.Map{
 		{
 			"id":           "Mactor-http-server",
@@ -598,8 +598,8 @@ func getWasmCloudActors() []fiber.Map {
 	}
 }
 
-// getDemoWorkloads returns demo workload data for SSE streaming in demo mode
-func getDemoWorkloads() []v1alpha1.Workload {
+// GetDemoWorkloads returns demo workload data for SSE streaming in demo mode
+func GetDemoWorkloads() []v1alpha1.Workload {
 	now := time.Now()
 	return []v1alpha1.Workload{
 		{Name: "nginx-ingress", Namespace: "ingress-system", Type: "Deployment", Status: "Running", Replicas: 3, ReadyReplicas: 3, Image: "nginx/nginx-ingress:3.4.0", Labels: map[string]string{"app": "nginx-ingress"}, CreatedAt: now.Add(-30 * 24 * time.Hour)},
@@ -610,7 +610,7 @@ func getDemoWorkloads() []v1alpha1.Workload {
 }
 
 // Demo pod network stats — realistic throughput for multi-tenancy topology
-func getDemoPodNetworkStats() []PodNetworkStats {
+func GetDemoPodNetworkStats() []PodNetworkStats {
 	/** Realistic throughput values (bytes/sec) for demo visualization */
 	const kvEth0RxRate int64 = 10240 // 10 KB/s — KubeVirt data-plane rx
 	const kvEth0TxRate int64 = 5120  // 5 KB/s — KubeVirt data-plane tx
@@ -627,8 +627,8 @@ func getDemoPodNetworkStats() []PodNetworkStats {
 			Namespace: "tenant-1-ns1",
 			Component: "kubevirt",
 			Interfaces: []InterfaceStats{
-				{Name: "eth0", RxBytes: kvEth0RxRate * networkStatsPollIntervalSec, TxBytes: kvEth0TxRate * networkStatsPollIntervalSec, RxBytesPerSec: kvEth0RxRate, TxBytesPerSec: kvEth0TxRate},
-				{Name: "eth1", RxBytes: kvEth1RxRate * networkStatsPollIntervalSec, TxBytes: kvEth1TxRate * networkStatsPollIntervalSec, RxBytesPerSec: kvEth1RxRate, TxBytesPerSec: kvEth1TxRate},
+				{Name: "eth0", RxBytes: kvEth0RxRate * NetworkStatsPollIntervalSec, TxBytes: kvEth0TxRate * NetworkStatsPollIntervalSec, RxBytesPerSec: kvEth0RxRate, TxBytesPerSec: kvEth0TxRate},
+				{Name: "eth1", RxBytes: kvEth1RxRate * NetworkStatsPollIntervalSec, TxBytes: kvEth1TxRate * NetworkStatsPollIntervalSec, RxBytesPerSec: kvEth1RxRate, TxBytesPerSec: kvEth1TxRate},
 			},
 		},
 		{
@@ -636,20 +636,21 @@ func getDemoPodNetworkStats() []PodNetworkStats {
 			Namespace: "tenant-1-ns2",
 			Component: "k3s",
 			Interfaces: []InterfaceStats{
-				{Name: "eth0", RxBytes: k3sEth0RxRate * networkStatsPollIntervalSec, TxBytes: k3sEth0TxRate * networkStatsPollIntervalSec, RxBytesPerSec: k3sEth0RxRate, TxBytesPerSec: k3sEth0TxRate},
-				{Name: "eth1", RxBytes: k3sEth1RxRate * networkStatsPollIntervalSec, TxBytes: k3sEth1TxRate * networkStatsPollIntervalSec, RxBytesPerSec: k3sEth1RxRate, TxBytesPerSec: k3sEth1TxRate},
+				{Name: "eth0", RxBytes: k3sEth0RxRate * NetworkStatsPollIntervalSec, TxBytes: k3sEth0TxRate * NetworkStatsPollIntervalSec, RxBytesPerSec: k3sEth0RxRate, TxBytesPerSec: k3sEth0TxRate},
+				{Name: "eth1", RxBytes: k3sEth1RxRate * NetworkStatsPollIntervalSec, TxBytes: k3sEth1TxRate * NetworkStatsPollIntervalSec, RxBytesPerSec: k3sEth1RxRate, TxBytesPerSec: k3sEth1TxRate},
 			},
 		},
 	}
 }
 
-// Helper function to return demo data response
-func demoResponse(c *fiber.Ctx, key string, data interface{}) error {
+// DemoResponse is a helper function to return demo data response.
+// Exported for use in sub-packages like mcp.
+func DemoResponse(c *fiber.Ctx, key string, data interface{}) error {
 	return c.JSON(fiber.Map{key: data, "source": "demo"})
 }
 
-// getDemoCRDs returns synthetic CRD data for demo mode.
-func getDemoCRDs() []CRDSummary {
+// GetDemoCRDs returns synthetic CRD data for demo mode.
+func GetDemoCRDs() []CRDSummary {
 	return []CRDSummary{
 		{Name: "certificates", Group: "cert-manager.io", Version: "v1", Scope: "Namespaced", Status: "Established", Instances: 12, Cluster: "eks-prod-us-east-1", Versions: []CRDVersion{{Name: "v1", Served: true, Storage: true}}},
 		{Name: "clusterissuers", Group: "cert-manager.io", Version: "v1", Scope: "Cluster", Status: "Established", Instances: 3, Cluster: "eks-prod-us-east-1", Versions: []CRDVersion{{Name: "v1", Served: true, Storage: true}}},
@@ -659,8 +660,8 @@ func getDemoCRDs() []CRDSummary {
 	}
 }
 
-// getDemoWebhooks returns synthetic admission webhook data for demo mode.
-func getDemoWebhooks() []WebhookSummary {
+// GetDemoWebhooks returns synthetic admission webhook data for demo mode.
+func GetDemoWebhooks() []WebhookSummary {
 	return []WebhookSummary{
 		{Name: "cert-manager-webhook", Type: "validating", FailurePolicy: "Fail", MatchPolicy: "Equivalent", Rules: 3, Cluster: "eks-prod-us-east-1"},
 		{Name: "cert-manager-webhook", Type: "mutating", FailurePolicy: "Fail", MatchPolicy: "Equivalent", Rules: 2, Cluster: "eks-prod-us-east-1"},

@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -48,24 +49,26 @@ vi.mock('../../hooks/useCachedData', () => ({
   useCachedNamespaces: (cluster?: string) => mockUseCachedNamespaces(cluster),
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../hooks/useDemoMode', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../hooks/useDemoMode')>()
-  return {
-    ...actual,
-    useDemoMode: () => mockUseDemoMode(),
-  }
-})
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
+  useDemoMode: () => mockUseDemoMode(),
+  getDemoMode: vi.fn(() => false),
+}
+))
 
 const mockUseCardLoadingState = vi.fn()
+const mockUseCardDemoState = vi.fn()
 vi.mock('./CardDataContext', () => ({
   useCardLoadingState: (opts: Record<string, unknown>) => mockUseCardLoadingState(opts),
+  useCardDemoState: (opts: Record<string, unknown>) => mockUseCardDemoState(opts),
 }))
 
 vi.mock('../ui/Skeleton', () => ({
   Skeleton: ({ className }: { className?: string }) => (
     <div data-testid="skeleton" className={className} />
   ),
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 function setupMocks(overrides: {
@@ -104,7 +107,7 @@ function setupMocks(overrides: {
       }
     ],
     isLoading: overrides.quotasLoading ?? false,
-    error: null,
+    error: false,
     refetch: vi.fn(),
     isDemoFallback: overrides.isDemoFallback ?? false,
   })
@@ -127,7 +130,7 @@ function setupMocks(overrides: {
       }
     ],
     isLoading: overrides.limitsLoading ?? false,
-    error: null,
+    error: false,
     refetch: vi.fn(),
   })
 
@@ -136,13 +139,19 @@ function setupMocks(overrides: {
     isLoading: overrides.namespacesLoading ?? false,
     isRefreshing: false,
     isDemoFallback: false,
-    error: null,
+    error: false,
     isFailed: false,
     consecutiveFailures: 0,
   })
 
   mockUseDemoMode.mockReturnValue({
     isDemoMode: overrides.isDemoMode ?? false,
+  })
+
+  mockUseCardDemoState.mockReturnValue({
+    shouldUseDemoData: overrides.isDemoMode ?? false,
+    reason: overrides.isDemoMode ? 'global-demo-mode' : null,
+    showDemoBadge: overrides.isDemoMode ?? false,
   })
 
   mockUseCardLoadingState.mockReturnValue({

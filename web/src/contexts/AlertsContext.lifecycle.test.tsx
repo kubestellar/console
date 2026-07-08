@@ -10,7 +10,7 @@ import type { Alert, AlertRule} from '../types/alerts'
 // (which are hoisted to the top of the file by vitest).
 const { mockStartMission, mockUseDemoMode, mockSendNotificationWithDeepLink } = vi.hoisted(() => ({
   mockStartMission: vi.fn(() => 'mock-mission-id'),
-  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
+  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })),
   mockSendNotificationWithDeepLink: vi.fn(),
 }))
 
@@ -29,9 +29,12 @@ vi.mock('../hooks/useMissions', () => ({
   useMissions: vi.fn(() => ({ startMission: mockStartMission })),
 }))
 
-vi.mock('../hooks/useDemoMode', () => ({
-  useDemoMode: mockUseDemoMode,
-}))
+vi.mock('../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../hooks/useDemoMode')>()),
+  useDemoMode: () => mockUseDemoMode(),
+  getDemoMode: vi.fn(() => false),
+}
+))
 
 vi.mock('../hooks/useDeepLink', () => ({
   sendNotificationWithDeepLink: mockSendNotificationWithDeepLink,
@@ -91,7 +94,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   // Re-initialize hoisted mocks after restoreAllMocks clears their implementations
   mockStartMission.mockReturnValue('mock-mission-id')
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   mockSendNotificationWithDeepLink.mockImplementation(() => {})
   // Re-stub globals after restoreAllMocks clears them
   vi.stubGlobal('Notification', { permission: 'granted', requestPermission: vi.fn() })
@@ -766,7 +769,7 @@ describe('Notification permission', () => {
 describe('demo mode alert cleanup', () => {
   it('removes demo-generated alerts when demo mode is turned off', () => {
     // Start with demo mode on
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
 
     const alerts = [
       makeAlert({ id: 'demo-alert', status: 'firing', isDemo: true }),
@@ -781,7 +784,7 @@ describe('demo mode alert cleanup', () => {
     expect(result.current.alerts.length).toBe(3)
 
     // Turn off demo mode
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     rerender()
 
     // Demo alerts should be removed

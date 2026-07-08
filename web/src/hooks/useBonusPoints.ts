@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../lib/auth'
 import { BACKEND_DEFAULT_URL } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, areOptionalPollersSuppressed } from '../lib/constants/network'
 import { MS_PER_MINUTE } from '../lib/constants/time'
 
 /** Client-side cache TTL (15 minutes) */
@@ -76,6 +76,10 @@ export function useBonusPoints() {
   // we simply fall through to the cached value rather than permanently
   // disabling the fetcher for the tab.
   const fetchBonus = useCallback(async () => {
+    if (areOptionalPollersSuppressed()) {
+      setIsLoading(false)
+      return
+    }
     if (!isAuthenticated || isDemoUser || !githubLogin) return
 
     setIsLoading(true)

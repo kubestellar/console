@@ -26,6 +26,7 @@ type ClusterInfo struct {
 	NeverConnected bool   `json:"neverConnected,omitempty"` // true if cluster failed every health probe since startup
 	Source         string `json:"source,omitempty"`
 	NodeCount      int    `json:"nodeCount,omitempty"`
+	ReadyNodes     int    `json:"readyNodes,omitempty"`
 	PodCount       int    `json:"podCount,omitempty"`
 	IsCurrent      bool   `json:"isCurrent,omitempty"`
 }
@@ -64,6 +65,9 @@ type ClusterHealth struct {
 }
 
 func (m *MultiClusterClient) ListClusters(ctx context.Context) ([]ClusterInfo, error) {
+	if m == nil {
+		return nil, ErrNoClusterConfigured
+	}
 	m.mu.RLock()
 	rawConfig := m.rawConfig
 	inClusterConfig := m.inClusterConfig
@@ -158,6 +162,9 @@ func (m *MultiClusterClient) ListClusters(ctx context.Context) ([]ClusterInfo, e
 // via multiple kubeconfig contexts (e.g. "vllm-d" and
 // "default/api-fmaas-vllm-d-fmaas-res-ibm-com:6443/...").
 func (m *MultiClusterClient) DeduplicatedClusters(ctx context.Context) ([]ClusterInfo, error) {
+	if m == nil {
+		return nil, ErrNoClusterConfigured
+	}
 	clusters, err := m.ListClusters(ctx)
 	if err != nil {
 		return nil, err
@@ -343,7 +350,7 @@ func (m *MultiClusterClient) HealthyClusters(ctx context.Context) (healthy []Clu
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	for _, cl := range all {
-		if h, ok := m.healthCache[cl.Context]; ok && !h.Reachable {
+		if h, ok := m.healthCache[cl.Context]; ok && h != nil && !h.Reachable {
 			cl.NeverConnected = h.LastSeen == ""
 			offline = append(offline, cl)
 		} else {

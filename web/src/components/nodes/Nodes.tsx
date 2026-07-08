@@ -11,7 +11,6 @@ import { RotatingTip } from '../ui/RotatingTip'
 import { useTranslation } from 'react-i18next'
 import { useModal } from '../../hooks/useModal'
 import { useGPUTaintFilter, GPUTaintFilterControl } from '../cards/GPUTaintFilter'
-import { isClusterHealthy } from '../clusters/utils'
 
 const NODES_CARDS_KEY = 'kubestellar-nodes-cards'
 
@@ -39,7 +38,7 @@ export function Nodes() {
 
   // Calculate stats
   const totalNodes = reachableClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
-  const healthyNodes = reachableClusters.reduce((sum, c) => sum + (isClusterHealthy(c) ? (c.nodeCount || 0) : 0), 0)
+  const readyNodes = reachableClusters.reduce((sum, c) => sum + (c.readyNodes ?? c.nodeCount ?? 0), 0)
   const totalCPU = reachableClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
   const totalMemoryGB = reachableClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
   const totalPods = reachableClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
@@ -77,12 +76,10 @@ export function Nodes() {
   // so the cascade is bounded and the pattern is the simplest one compatible
   // with the react-hooks/refs rule (which forbids reading `.current` during
   // render).
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (hasCpuCapacity) setCachedCpuUtil(currentCpuUtil)
     if (hasMemoryCapacity) setCachedMemoryUtil(currentMemoryUtil)
   }, [currentCpuUtil, currentMemoryUtil, hasCpuCapacity, hasMemoryCapacity])
-  /* eslint-enable react-hooks/set-state-in-effect */
   const cpuUtilization = hasCpuCapacity ? currentCpuUtil : (cachedCpuUtil ?? 0)
   const memoryUtilization = hasMemoryCapacity ? currentMemoryUtil : (cachedMemoryUtil ?? 0)
 
@@ -92,11 +89,15 @@ export function Nodes() {
       case 'nodes':
         return {
           value: totalNodes,
-          progressValue: healthyNodes,
+          progressValue: readyNodes,
           max: totalNodes,
           sublabel: t('common:nodes.totalNodes'),
           onClick: () => drillToAllNodes(),
           isClickable: totalNodes > 0,
+          groundtruthFields: {
+            'nodes-total': totalNodes,
+            'nodes-ready': readyNodes,
+          },
         }
       case 'cpus':
         return { value: totalCPU, sublabel: t('common:nodes.cpuCores'), onClick: () => drillToAllNodes(), isClickable: totalCPU > 0 }
@@ -107,7 +108,15 @@ export function Nodes() {
       case 'tpus':
         return { value: 0, sublabel: t('common:nodes.tpus'), isClickable: false }
       case 'pods':
-        return { value: totalPods, sublabel: t('common:common.pods'), onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
+        return {
+          value: totalPods,
+          sublabel: t('common:common.pods'),
+          onClick: () => drillToAllPods(),
+          isClickable: totalPods > 0,
+          groundtruthFields: {
+            'pods-total': totalPods,
+          },
+        }
       case 'cpu_util':
         return { value: `${cpuUtilization}%`, sublabel: t('common:common.utilization'), onClick: () => drillToAllNodes(), isClickable: cpuUtilization > 0 }
       case 'memory_util':

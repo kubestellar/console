@@ -14,53 +14,8 @@ func TestUserRole_Constants(t *testing.T) {
 	require.Equal(t, UserRole("viewer"), UserRoleViewer)
 }
 
-func TestUser_JSONSerialization(t *testing.T) {
-	t.Run("marshal includes expected fields", func(t *testing.T) {
-		user := User{
-			GitHubID:    "12345",
-			GitHubLogin: "testuser",
-			Email:       "test@example.com",
-			Role:        UserRoleAdmin,
-			Onboarded:   true,
-		}
-
-		data, err := json.Marshal(user)
-		require.NoError(t, err)
-
-		var m map[string]interface{}
-		require.NoError(t, json.Unmarshal(data, &m))
-
-		require.Equal(t, "12345", m["github_id"])
-		require.Equal(t, "testuser", m["github_login"])
-		require.Equal(t, "test@example.com", m["email"])
-		require.Equal(t, "admin", m["role"])
-		require.Equal(t, true, m["onboarded"])
-	})
-
-	t.Run("omitempty fields are absent when empty", func(t *testing.T) {
-		user := User{
-			GitHubID:    "12345",
-			GitHubLogin: "testuser",
-			Role:        UserRoleViewer,
-		}
-
-		data, err := json.Marshal(user)
-		require.NoError(t, err)
-
-		var m map[string]interface{}
-		require.NoError(t, json.Unmarshal(data, &m))
-
-		// email, slack_id, avatar_url are omitempty
-		_, hasEmail := m["email"]
-		require.False(t, hasEmail, "empty email should be omitted")
-		_, hasSlack := m["slack_id"]
-		require.False(t, hasSlack, "empty slack_id should be omitted")
-		_, hasAvatar := m["avatar_url"]
-		require.False(t, hasAvatar, "empty avatar_url should be omitted")
-		_, hasLastLogin := m["last_login"]
-		require.False(t, hasLastLogin, "nil last_login should be omitted")
-	})
-}
+// TestUser_JSONSerialization lives in user_test.go with more comprehensive
+// subtests (round-trip, nil/pointer last_login, etc.).
 
 func TestDashboard_JSONSerialization(t *testing.T) {
 	t.Run("layout is preserved as raw JSON", func(t *testing.T) {

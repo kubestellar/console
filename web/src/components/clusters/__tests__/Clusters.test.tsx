@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Clusters Page Component Tests
  */
@@ -30,8 +31,10 @@ vi.mock('../../../hooks/useLocalAgent', () => ({
   wasAgentEverConnected: () => false,
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: true }),
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
@@ -72,9 +75,11 @@ vi.mock('../../cards/multi-tenancy/missionLoader', () => ({
   loadMissionPrompt: vi.fn(),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitClusterStatsDrillDown: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
@@ -140,6 +145,7 @@ vi.mock('../components', () => ({
 
 vi.mock('../../ui/ClusterCardSkeleton', () => ({
   ClusterCardSkeleton: () => null,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 describe('Clusters', () => {

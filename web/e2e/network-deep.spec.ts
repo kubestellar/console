@@ -1,9 +1,7 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import {
   setupDemoAndNavigate,
   setupErrorCollector,
-  waitForSubRoute,
-  NETWORK_IDLE_TIMEOUT_MS,
   ELEMENT_VISIBLE_TIMEOUT_MS,
 } from './helpers/setup'
 
@@ -32,22 +30,31 @@ const STAT_SUBLABEL_LOADBALANCER = 'external access'
 const STAT_SUBLABEL_NODEPORT = 'node-level access'
 const STAT_SUBLABEL_CLUSTERIP = 'internal only'
 const STAT_SUBLABEL_ENDPOINTS = 'endpoints'
+const ROUTE_READY_TIMEOUT_MS = 30_000
+
+async function waitForNetworkReady(page: Page) {
+  await expect(page.getByTestId('dashboard-title')).toContainText(PAGE_TITLE, {
+    timeout: ROUTE_READY_TIMEOUT_MS,
+  })
+}
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 test.describe('Network Deep Tests (/network)', () => {
-  test.beforeEach(async ({ page }) => {
+  test.describe.configure({ mode: 'serial' })
+
+  test.beforeEach(async ({ page }, testInfo) => {
+    if (testInfo.title === 'loads without console errors') return
     await setupDemoAndNavigate(page, '/network')
-    await waitForSubRoute(page)
+    await waitForNetworkReady(page)
   })
 
   test('loads without console errors', async ({ page }) => {
     const { errors } = setupErrorCollector(page)
-    // Re-navigate to capture errors from a fresh load
     await setupDemoAndNavigate(page, '/network')
-    await waitForSubRoute(page)
+    await waitForNetworkReady(page)
     expect(errors).toHaveLength(0)
   })
 
@@ -62,7 +69,7 @@ test.describe('Network Deep Tests (/network)', () => {
     // #12090 — Wait for data hydration instead of skipping assertion
     const subtitle = page.locator('text=' + PAGE_SUBTITLE).first()
     // Subtitle may be in a responsive-hidden element on mobile; check if visible with timeout
-    const subtitleVisible = await subtitle.isVisible({ timeout: 5000 }).catch(() => false)
+    const subtitleVisible = await subtitle.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     if (subtitleVisible) {
       await expect(subtitle).toBeVisible()
     } else {
@@ -105,8 +112,9 @@ test.describe('Network Deep Tests (/network)', () => {
 
   test('shows endpoints stat', async ({ page }) => {
     // #12090 — Wait for data hydration instead of skipping assertion
-    const stat = page.locator('text=' + STAT_SUBLABEL_ENDPOINTS).first()
+    const stat = page.getByTestId('stat-block-endpoints')
     await expect(stat).toBeVisible({ timeout: 30000 })
+    await expect(stat).toContainText(STAT_SUBLABEL_ENDPOINTS, { timeout: 30000 })
   })
 
   test('refresh button is clickable', async ({ page }) => {
@@ -135,7 +143,7 @@ test.describe('Network Deep Tests (/network)', () => {
     )
 
     await setupDemoAndNavigate(page, '/network')
-    await waitForSubRoute(page)
+    await waitForNetworkReady(page)
 
     // The page should still render its header even if data fails
     await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
@@ -143,7 +151,7 @@ test.describe('Network Deep Tests (/network)', () => {
     // Check for error message — it may or may not appear depending on demo mode fallback
     // This is a legitimate conditional since error state depends on data availability
     const errorAlert = page.locator('text=' + ERROR_MESSAGE_TEXT).first()
-    const errorVisible = await errorAlert.isVisible({ timeout: 5000 }).catch(() => false)
+    const errorVisible = await errorAlert.isVisible({ timeout: 5000 }).catch((error) => { console.error('Promise error:', error); return false })
     // If the error is shown, verify it is displayed properly
     if (errorVisible) {
       await expect(errorAlert).toBeVisible()

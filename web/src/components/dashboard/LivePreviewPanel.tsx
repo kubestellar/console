@@ -208,7 +208,7 @@ function T2Preview({ source }: { source?: string }) {
           setCardComponent(null)
           return
         }
-        const componentResult = createCardComponent(result.code!)
+        const componentResult = await createCardComponent(result.code!)
         if (cancelled || timedOut) return
         if (componentResult.error) {
           setError(componentResult.error)

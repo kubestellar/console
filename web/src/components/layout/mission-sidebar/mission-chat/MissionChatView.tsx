@@ -83,6 +83,8 @@ export function MissionChat({
   const [editSteps, setEditSteps] = useState<Array<{ title: string; description: string }>>(
     () => (mission.importedFrom?.steps || []).map((step) => ({ title: step.title, description: step.description }))
   )
+  const [isRetrying, setIsRetrying] = useState(false)
+  const [isDismissing, setIsDismissing] = useState(false)
 
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const messagesContentRef = useRef<HTMLDivElement>(null)
@@ -290,11 +292,16 @@ export function MissionChat({
     setTimeout(() => inputRef.current?.focus(), 0)
   }, [input, mission.id, sendMessage, t])
 
-  const handleRetryMission = useCallback(() => {
+  const handleRetryMission = useCallback(async () => {
     const lastUserMessage = [...missionMessages].reverse().find((message) => message.role === 'user')
     const prompt = lastUserMessage?.content || ''
     if (!prompt.trim()) return
-    sendMessage(mission.id, prompt)
+    setIsRetrying(true)
+    try {
+      await sendMessage(mission.id, prompt)
+    } finally {
+      setIsRetrying(false)
+    }
   }, [mission.id, missionMessages, sendMessage])
 
   const handleMicrophoneTranscript = useCallback((text: string) => {
@@ -471,13 +478,29 @@ export function MissionChat({
               mission={mission}
               statusColor={config.color}
               statusLabel={config.label}
-              onDismissMission={() => dismissMission(mission.id)}
+              onDismissMission={async () => {
+                setIsDismissing(true)
+                try {
+                  await dismissMission(mission.id)
+                } finally {
+                  setIsDismissing(false)
+                }
+              }}
               onInputChange={handleInputChange}
               onKeyDown={handleKeyDown}
               onMicrophoneTranscript={handleMicrophoneTranscript}
               onRetryMission={handleRetryMission}
-              onRetryPreflight={() => retryPreflight(mission.id)}
+              onRetryPreflight={async () => {
+                setIsRetrying(true)
+                try {
+                  await retryPreflight(mission.id)
+                } finally {
+                  setIsRetrying(false)
+                }
+              }}
               onSend={handleSend}
+              isRetrying={isRetrying}
+              isDismissing={isDismissing}
             />
           )}
         </div>

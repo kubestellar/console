@@ -34,9 +34,12 @@ const mockUseDemoMode = vi.fn(() => ({
   setDemoMode: vi.fn(),
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   useDemoMode: (...args: unknown[]) => mockUseDemoMode(...args),
-}))
+  getDemoMode: vi.fn(() => false),
+}
+))
 
 const mockRegisterRefetch = vi.fn(() => vi.fn())
 const mockRegisterCacheReset = vi.fn()

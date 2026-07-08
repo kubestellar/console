@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { STORAGE_KEY_HAS_SESSION, STORAGE_KEY_TOKEN } from '../lib/constants'
@@ -14,6 +15,7 @@ const mockTranslate = vi.fn((_key: string, fallback: string, options?: Record<st
 })
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: mockTranslate,
   }),
@@ -48,6 +50,19 @@ describe('InitialInfrastructureGate', () => {
       value: originalLocation,
       writable: true,
     })
+  })
+
+  it('renders loading state before the initial handshake resolves', () => {
+    mockGetState.mockReturnValue(new Promise(() => {}))
+    mockFetchKagentStatus.mockReturnValue(new Promise(() => {}))
+
+    render(
+      <InitialInfrastructureGate>
+        <div>Ready</div>
+      </InitialInfrastructureGate>
+    )
+
+    expect(screen.getByText('Connecting to infrastructure')).toBeInTheDocument()
   })
 
   it('renders children after the initial handshake succeeds', async () => {

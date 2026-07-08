@@ -36,6 +36,9 @@ import {
   Link2,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+import { HStack } from '../ui/HStack'
+import { Button } from '../ui/Button'
 
 const STORAGE_KEY = 'kc-acmm-intro-dismissed'
 const PAPER_URL = 'https://arxiv.org/abs/2604.09388'
@@ -52,19 +55,11 @@ const LEVELS = [
 ] as const
 
 export function isACMMIntroDismissed(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === '1'
-  } catch {
-    return false
-  }
+  return safeGet(STORAGE_KEY) === '1'
 }
 
 function dismissACMMIntro() {
-  try {
-    localStorage.setItem(STORAGE_KEY, '1')
-  } catch {
-    // localStorage unavailable — silently ignore
-  }
+  safeSet(STORAGE_KEY, '1')
 }
 
 /** Source framework badge definitions */
@@ -111,10 +106,10 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
         <div className="space-y-5 text-sm">
           {/* What is ACMM */}
           <section>
-            <div className="flex items-center gap-2 mb-2">
+            <HStack gap="2" className="mb-2">
               <BookOpen className="w-4 h-4 text-primary" />
               <h3 className="font-semibold text-foreground">{t('acmmIntro.whatIsTitle')}</h3>
-            </div>
+            </HStack>
             <p className="text-muted-foreground leading-relaxed">
               {t('acmmIntro.whatIsBody')}
             </p>
@@ -122,10 +117,10 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
 
           {/* The 6 levels */}
           <section>
-            <div className="flex items-center gap-2 mb-2">
+            <HStack gap="2" className="mb-2">
               <Layers className="w-4 h-4 text-primary" />
               <h3 className="font-semibold text-foreground">{t('acmmIntro.levelsTitle')}</h3>
-            </div>
+            </HStack>
             <div className="space-y-1.5">
               {LEVELS.map(({ label, nameKey, descKey }) => (
                 <div key={label} className="flex gap-3">
@@ -149,28 +144,28 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
           {/* Learning, Practice, Traceability — three key concepts */}
           <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="rounded-lg border border-border p-3">
-              <div className="flex items-center gap-2 mb-1.5">
+              <HStack gap="2" className="mb-1.5">
                 <GraduationCap className="w-4 h-4 text-cyan-400" />
                 <h3 className="font-semibold text-foreground text-xs">{t('acmmIntro.learningTitle')}</h3>
-              </div>
+              </HStack>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('acmmIntro.learningBody')}
               </p>
             </div>
             <div className="rounded-lg border border-border p-3">
-              <div className="flex items-center gap-2 mb-1.5">
+              <HStack gap="2" className="mb-1.5">
                 <Repeat className="w-4 h-4 text-yellow-400" />
                 <h3 className="font-semibold text-foreground text-xs">{t('acmmIntro.practiceTitle')}</h3>
-              </div>
+              </HStack>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('acmmIntro.practiceBody')}
               </p>
             </div>
             <div className="rounded-lg border border-border p-3">
-              <div className="flex items-center gap-2 mb-1.5">
+              <HStack gap="2" className="mb-1.5">
                 <Link2 className="w-4 h-4 text-green-400" />
                 <h3 className="font-semibold text-foreground text-xs">{t('acmmIntro.traceabilityTitle')}</h3>
-              </div>
+              </HStack>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('acmmIntro.traceabilityBody')}
               </p>
@@ -246,13 +241,14 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
             />
             {t('acmmIntro.dontShowAgain')}
           </label>
-          <button
+          <Button
             type="button"
             onClick={handleClose}
-            className="px-4 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 transition-colors"
+            variant="primary"
+            size="md"
           >
             {t('acmmIntro.gotIt')}
-          </button>
+          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>

@@ -48,6 +48,12 @@ podSecurityContext:
   # level. Setting it here covers all containers in one place.
   seccompProfile:
     type: RuntimeDefault
+  # #20590: fsGroup ensures the kubelet chowns the mounted PVC
+  # (/app/data) to this GID on pod startup, so the appuser (UID/GID
+  # 1001) can write to the data directory. Without this, the PVC is
+  # owned by root and the container gets "permission denied" on
+  # console.db and the kc-watcher runtime file.
+  fsGroup: 1001
 
 securityContext:
   # #6323/#6324: must be a numeric UID (not `appuser`) so the kubelet
@@ -119,6 +125,12 @@ github:
     clientId: github-client-id
     clientSecret: github-client-secret
 
+# Authentication policy. Empty allowedGitHubLogins preserves the default
+# self-hosted behavior: any GitHub account that completes OAuth can sign in.
+auth:
+  allowedGitHubLogins: ""
+  adminGitHubLogins: ""
+
 # GitHub token for all server-side API access (activity card, feedback, CI, missions, rewards)
 # Requires a PAT with repo scope for full functionality.
 # Set via FEEDBACK_GITHUB_TOKEN env var (GITHUB_TOKEN also accepted as alias).
@@ -179,7 +191,7 @@ persistence:
   size: 1Gi
   storageClass: ""
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
 
 # Database backup configuration
 backup:
@@ -271,6 +283,15 @@ podDisruptionBudget:
 watchdog:
   enabled: true
 
+# Startup probe controls how long Kubernetes waits for the watchdog to become
+# healthy before declaring the pod failed. With failureThreshold * periodSeconds
+# seconds of headroom, this must cover image pull (if not cached) + init container
+# (db-restore) + Go app startup + watchdog initialization.
+# Default: 24 * 5s = 120s. Increase on clusters with slow storage provisioning.
+startupProbe:
+  failureThreshold: 24
+  periodSeconds: 5
+
 # Self-upgrade: allow the console to upgrade its own Deployment image tag
 # from the UI. Creates a namespaced Role granting patch access to Deployments
 # in the release namespace only.
@@ -278,6 +299,17 @@ selfUpgrade:
   enabled: true
 
 # Additional environment variables
+# Use this to pass extra environment variables to the console container.
+#
+# Security hardening:
+#   If you do not use Tier-2 dynamic cards, set DISABLE_DYNAMIC_CARDS=true to
+#   remove 'unsafe-eval' from the Content-Security-Policy header, tightening
+#   the browser XSS mitigation for your deployment (see issue #18326).
+#
+# Example:
+#   extraEnv:
+#     - name: DISABLE_DYNAMIC_CARDS
+#       value: "true"
 extraEnv: []
 
 # Optional kubeconfig mount for multi-cluster installs.

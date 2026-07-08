@@ -26,7 +26,8 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 })
 
 const mockGetDemoMode = vi.fn(() => false)
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   getDemoMode: () => mockGetDemoMode(),
   isDemoModeForced: false,
   isNetlifyDeployment: () => false,
@@ -35,7 +36,8 @@ vi.mock('../useDemoMode', () => ({
   hasRealToken: () => false,
   setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
-}))
+}
+))
 
 const mockAgentFetch = vi.fn((...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])))
 vi.mock('../mcp/shared', () => ({

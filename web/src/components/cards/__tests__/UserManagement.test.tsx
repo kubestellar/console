@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -108,9 +109,12 @@ vi.mock('../../../lib/auth', () => ({
   }),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({
     isDemoMode: mockState.isDemoMode,
+    toggleDemoMode: vi.fn(),
+    setDemoMode: vi.fn(),
   }),
   isDemoModeForced: false,
 }))
@@ -190,10 +194,13 @@ vi.mock('../../ui/Toast', () => ({
   }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitUserRoleChanged: vi.fn(),
   emitUserRemoved: vi.fn(),
-}))
+  getDemoMode: vi.fn(() => false),
+}
+))
 
 vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ placeholder }: { placeholder: string }) => (

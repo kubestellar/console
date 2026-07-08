@@ -154,8 +154,19 @@ func TestValidation_SaveAll_PredictionThresholds(t *testing.T) {
 				}
 
 				// Zero values should get defaults on load
-				if loaded.Predictions.Thresholds.HighRestartCount == 0 {
-					t.Error("HighRestartCount should have default, got 0")
+				if tc.thresholds.HighRestartCount == 0 {
+					if loaded.Predictions.Thresholds.HighRestartCount != 3 {
+						t.Errorf("HighRestartCount = %d, want default 3", loaded.Predictions.Thresholds.HighRestartCount)
+					}
+					if loaded.Predictions.Thresholds.CPUPressure != 80 {
+						t.Errorf("CPUPressure = %d, want default 80", loaded.Predictions.Thresholds.CPUPressure)
+					}
+					if loaded.Predictions.Thresholds.MemoryPressure != 85 {
+						t.Errorf("MemoryPressure = %d, want default 85", loaded.Predictions.Thresholds.MemoryPressure)
+					}
+					if loaded.Predictions.Thresholds.GPUMemoryPressure != 90 {
+						t.Errorf("GPUMemoryPressure = %d, want default 90", loaded.Predictions.Thresholds.GPUMemoryPressure)
+					}
 				}
 			}
 		})
@@ -220,8 +231,16 @@ func TestValidation_SaveAll_TokenUsageSettings(t *testing.T) {
 				}
 
 				// Zero thresholds should get defaults
-				if loaded.TokenUsage.WarningThreshold == 0 {
-					t.Error("WarningThreshold should have default, got 0")
+				if tc.tokenUsage.WarningThreshold == 0 {
+					if loaded.TokenUsage.WarningThreshold != 0.7 {
+						t.Errorf("WarningThreshold = %v, want default 0.7", loaded.TokenUsage.WarningThreshold)
+					}
+					if loaded.TokenUsage.CriticalThreshold != 0.9 {
+						t.Errorf("CriticalThreshold = %v, want default 0.9", loaded.TokenUsage.CriticalThreshold)
+					}
+					if loaded.TokenUsage.StopThreshold != 1.0 {
+						t.Errorf("StopThreshold = %v, want default 1.0", loaded.TokenUsage.StopThreshold)
+					}
 				}
 			}
 		})
@@ -421,7 +440,9 @@ func TestValidation_GetAll_WithoutKey(t *testing.T) {
 	}
 
 	// Add some encrypted data
-	sm.settings.Encrypted.APIKeys = []byte("encrypted-data")
+	sm.settings.Encrypted.APIKeys = &EncryptedField{
+		Ciphertext: "encrypted-data",
+	}
 
 	all, err := sm.GetAll()
 	if err != nil {

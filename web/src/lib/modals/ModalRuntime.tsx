@@ -376,6 +376,7 @@ export function ModalRuntime({
                   onClick={() => handleAction(action)}
                   disabled={action.disabled}
                   title={action.description}
+                  aria-label={action.description || action.label}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     variantStyles[action.variant || 'default']
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -420,6 +421,7 @@ export function ModalRuntime({
 // YAML Parser (future implementation)
 // ============================================================================
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function parseModalYAML(_yaml: string): ModalDefinition {
   // YAML parsing intentionally not implemented - use registerModal() with JS objects
   // If YAML config becomes a requirement, add js-yaml library and implement parser here

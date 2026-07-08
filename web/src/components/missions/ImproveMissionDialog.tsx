@@ -104,7 +104,7 @@ export function ImproveMissionDialog({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="sm" closeOnBackdrop={false} closeOnEscape={true}>
       <BaseModal.Header title={t('missions.improve.title')} icon={MessageSquarePlus} onClose={onClose} />
 
       <BaseModal.Content noPadding>
@@ -166,7 +166,7 @@ export function ImproveMissionDialog({
                   >
                     {selectedCategory === cat.id && (
                       <div className="w-full h-full flex items-center justify-center">
-                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-background" />
                       </div>
                     )}
                   </div>

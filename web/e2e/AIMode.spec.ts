@@ -1,36 +1,51 @@
-import { test, expect, Page } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { setupDemoMode } from './helpers/setup'
+
+const SETTINGS_PAGE_TIMEOUT_MS = 45_000
+const SECTION_TIMEOUT_MS = 10_000
 
 /**
  * Sets up authentication and MCP mocks for AI mode tests
  */
 async function setupAIModeTest(page: Page) {
   await setupDemoMode(page)
+  await page.addInitScript(() => {
+    sessionStorage.setItem('kc-update-toast-seen', '1')
+    localStorage.setItem('kc-hints-suppressed', 'true')
+  })
   await page.goto('/settings')
   await page.waitForLoadState('domcontentloaded')
+  await waitForSettingsPage(page)
+}
+
+async function waitForSettingsPage(page: Page) {
+  const settingsPage = page.getByTestId('settings-page')
+  await expect(settingsPage).toBeVisible({ timeout: SETTINGS_PAGE_TIMEOUT_MS })
+  await expect(
+    settingsPage.getByRole('heading', { name: /^AI Usage Mode$/i })
+  ).toBeVisible({ timeout: SECTION_TIMEOUT_MS })
+  return settingsPage
 }
 
 test.describe('AI Mode Settings', () => {
+  test.describe.configure({ mode: 'serial' })
+
   test.beforeEach(async ({ page }) => {
     await setupAIModeTest(page)
   })
 
   test.describe('AI Mode Section', () => {
     test('displays settings page with AI mode section', async ({ page }) => {
-      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
+      const settingsPage = await waitForSettingsPage(page)
 
-      // Should have AI Usage Mode or AI-related settings - use more specific selector
-      const aiSection = page.getByText(/ai.*mode|intelligence/i)
-      // Verify at least one AI mode heading/label exists
-      await expect(aiSection.first()).toBeVisible({ timeout: 5000 })
-      
       // Verify the section contains actual mode selection buttons
-      const modeButtons = page.getByRole('button', { name: /low|medium|high/i })
+      const modeButtons = settingsPage.getByRole('group', { name: /^AI Usage Mode$/i })
+        .getByRole('button', { name: /low|medium|high/i })
       await expect(modeButtons.first()).toBeVisible({ timeout: 5000 })
     })
 
     test('shows mode selection options', async ({ page }) => {
-      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
+      await waitForSettingsPage(page)
 
       // Should show all three mode buttons (low, medium, high)
       const lowButton = page.getByRole('button', { name: /^low/i })
@@ -46,7 +61,7 @@ test.describe('AI Mode Settings', () => {
 
   test.describe('Mode Selection', () => {
     test('can select low AI mode', async ({ page }) => {
-      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
+      await waitForSettingsPage(page)
 
       // Find and click low mode option
       const lowOption = page.getByRole('button', { name: /low/i }).first()
@@ -72,7 +87,7 @@ test.describe('AI Mode Settings', () => {
     })
 
     test('can select medium AI mode', async ({ page }) => {
-      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
+      await waitForSettingsPage(page)
 
       const mediumOption = page.getByRole('button', { name: /medium/i }).first()
       await expect(mediumOption).toBeVisible({ timeout: 5000 })
@@ -95,7 +110,7 @@ test.describe('AI Mode Settings', () => {
     })
 
     test('can select high AI mode', async ({ page }) => {
-      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
+      await waitForSettingsPage(page)
 
       const highOption = page.getByRole('button', { name: /high/i }).first()
       await expect(highOption).toBeVisible({ timeout: 5000 })
@@ -120,7 +135,7 @@ test.describe('AI Mode Settings', () => {
 
   test.describe('Mode Persistence', () => {
     test('persists AI mode across page reloads', async ({ page }) => {
-      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
+      await waitForSettingsPage(page)
 
       // Set mode to high via UI
       const highOption = page.getByRole('button', { name: /high/i }).first()
@@ -130,7 +145,7 @@ test.describe('AI Mode Settings', () => {
       // Reload page
       await page.reload()
       await page.waitForLoadState('domcontentloaded')
-      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
+      await waitForSettingsPage(page)
 
       // Verify mode is still high in localStorage
       const storedMode = await page.evaluate(() =>
@@ -151,7 +166,7 @@ test.describe('AI Mode Settings', () => {
     })
 
     test('persists AI mode across navigation', async ({ page }) => {
-      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
+      await waitForSettingsPage(page)
 
       // Set mode via UI interaction
       const lowOption = page.getByRole('button', { name: /low/i }).first()
@@ -175,7 +190,7 @@ test.describe('AI Mode Settings', () => {
       // Navigate back
       await page.goto('/settings')
       await page.waitForLoadState('domcontentloaded')
-      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
+      await waitForSettingsPage(page)
 
       // Mode should still be persisted in storage
       const storedMode = await page.evaluate(() =>
@@ -198,7 +213,7 @@ test.describe('AI Mode Settings', () => {
 
   test.describe('Accessibility', () => {
     test('mode buttons are keyboard accessible', async ({ page }) => {
-      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
+      await waitForSettingsPage(page)
 
       const lowButton = page.getByRole('button', { name: /low/i }).first()
       await expect(lowButton).toBeVisible({ timeout: 5000 })

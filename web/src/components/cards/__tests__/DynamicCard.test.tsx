@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -67,6 +68,7 @@ vi.mock('react-i18next', () => ({
 // Stub UI components
 vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ variant }: { variant: string }) => <div data-testid={`skeleton-${variant}`} />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../ui/Pagination', () => ({
@@ -161,8 +163,13 @@ function makeT2Definition(overrides: Partial<DynamicCardDefinition> = {}): Dynam
 
 describe('DynamicCard', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
     mockUseCardData.mockReturnValue(makeUseCardDataReturn())
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('shows missing-config error when config is undefined', () => {
@@ -204,11 +211,11 @@ describe('DynamicCard', () => {
   it('passes safeConfig to Tier2CardRuntime', async () => {
     mockGetDynamicCard.mockReturnValue(makeT2Definition())
     const mockCleanup = vi.fn()
-    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: null })
-    mockCreateCardComponent.mockReturnValue({
+    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: false })
+    mockCreateCardComponent.mockResolvedValue({
       component: () => <div>T2 rendered</div>,
       cleanup: mockCleanup,
-      error: null,
+      error: false,
     })
     await act(async () => {
       render(<DynamicCard config={{ dynamicCardId: 'card-t2', extra: true }} />)
@@ -428,6 +435,7 @@ describe('Tier1CardRuntime', () => {
       }
       render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
       expect(screen.getByTestId('skeleton-text')).toBeInTheDocument()
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled())
 
       // Cleanup
       await act(async () => {
@@ -482,12 +490,14 @@ describe('Tier1CardRuntime', () => {
       await act(async () => {
         render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
       })
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/things',
-        expect.objectContaining({
-          headers: { Authorization: 'Bearer test-token' },
-        })
-      )
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/things',
+          expect.objectContaining({
+            headers: { Authorization: 'Bearer test-token' },
+          })
+        )
+      })
     })
 
     it('sends no Authorization header when token is absent', async () => {
@@ -594,7 +604,12 @@ describe('Tier2CardRuntime', () => {
   const definition = makeT2Definition()
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('shows compiling spinner initially', () => {
@@ -605,11 +620,11 @@ describe('Tier2CardRuntime', () => {
   })
 
   it('renders compiled component on success', async () => {
-    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: null })
-    mockCreateCardComponent.mockReturnValue({
+    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: false })
+    mockCreateCardComponent.mockResolvedValue({
       component: () => <div>Tier2 Works</div>,
       cleanup: vi.fn(),
-      error: null,
+      error: false,
     })
 
     await act(async () => {
@@ -629,8 +644,8 @@ describe('Tier2CardRuntime', () => {
   })
 
   it('shows compilation error returned by createCardComponent', async () => {
-    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: null })
-    mockCreateCardComponent.mockReturnValue({
+    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: false })
+    mockCreateCardComponent.mockResolvedValue({
       component: null,
       cleanup: undefined,
       error: 'Module export missing',
@@ -655,10 +670,10 @@ describe('Tier2CardRuntime', () => {
 
   it('uses compiledCode cache and skips compileCardCode when available', async () => {
     const defWithCache = makeT2Definition({ compiledCode: 'cached-code' })
-    mockCreateCardComponent.mockReturnValue({
+    mockCreateCardComponent.mockResolvedValue({
       component: () => <div>Cached</div>,
       cleanup: vi.fn(),
-      error: null,
+      error: false,
     })
 
     await act(async () => {
@@ -669,11 +684,11 @@ describe('Tier2CardRuntime', () => {
   })
 
   it('shows no-component message when component is null after compile', async () => {
-    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: null })
-    mockCreateCardComponent.mockReturnValue({
+    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: false })
+    mockCreateCardComponent.mockResolvedValue({
       component: null,
       cleanup: undefined,
-      error: null,
+      error: false,
     })
 
     await act(async () => {
@@ -686,11 +701,11 @@ describe('Tier2CardRuntime', () => {
 
   it('calls cleanup on unmount', async () => {
     const cleanup = vi.fn()
-    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: null })
-    mockCreateCardComponent.mockReturnValue({
+    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: false })
+    mockCreateCardComponent.mockResolvedValue({
       component: () => <div>OK</div>,
       cleanup,
-      error: null,
+      error: false,
     })
 
     let unmount!: () => void
@@ -717,11 +732,11 @@ describe('Tier2CardRuntime', () => {
     const ReceivedConfig = vi.fn(({ config }: { config: Record<string, unknown> }) => (
       <div data-testid="cfg">{JSON.stringify(config)}</div>
     ))
-    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: null })
-    mockCreateCardComponent.mockReturnValue({
+    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: false })
+    mockCreateCardComponent.mockResolvedValue({
       component: ReceivedConfig,
       cleanup: vi.fn(),
-      error: null,
+      error: false,
     })
 
     await act(async () => {
@@ -736,11 +751,11 @@ describe('Tier2CardRuntime', () => {
     const ReceivedConfig = vi.fn(({ config }: { config: Record<string, unknown> }) => (
       <div data-testid="cfg">{JSON.stringify(config)}</div>
     ))
-    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: null })
-    mockCreateCardComponent.mockReturnValue({
+    mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: false })
+    mockCreateCardComponent.mockResolvedValue({
       component: ReceivedConfig,
       cleanup: vi.fn(),
-      error: null,
+      error: false,
     })
 
     await act(async () => {
@@ -781,10 +796,8 @@ describe('Tier2CardRuntime', () => {
     })
 
     it('shows error when createCardComponent throws during execution', async () => {
-      mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: null })
-      mockCreateCardComponent.mockImplementation(() => {
-        throw new RangeError('Maximum call stack size exceeded')
-      })
+      mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: false })
+      mockCreateCardComponent.mockRejectedValue(new RangeError('Maximum call stack size exceeded'))
 
       await act(async () => {
         render(<Tier2CardRuntime definition={definition} />)
@@ -822,11 +835,11 @@ describe('Tier2CardRuntime', () => {
     })
 
     it('renders "No component produced" when component is null and error is null', async () => {
-      mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: null })
-      mockCreateCardComponent.mockReturnValue({
+      mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: false })
+      mockCreateCardComponent.mockResolvedValue({
         component: null,
         cleanup: undefined,
-        error: null,
+        error: false,
       })
 
       await act(async () => {
@@ -839,7 +852,7 @@ describe('Tier2CardRuntime', () => {
 
     it('does not call compileCardCode when definition has compiledCode but createCardComponent fails', async () => {
       const defWithCache = makeT2Definition({ compiledCode: 'pre-compiled' })
-      mockCreateCardComponent.mockReturnValue({
+      mockCreateCardComponent.mockResolvedValue({
         component: null,
         cleanup: undefined,
         error: 'Invalid module.exports: not a function',
@@ -856,11 +869,11 @@ describe('Tier2CardRuntime', () => {
 
     it('cleans up even when compilation fails', async () => {
       const cleanup = vi.fn()
-      mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: null })
-      mockCreateCardComponent.mockReturnValue({
+      mockCompileCardCode.mockResolvedValue({ code: 'compiled', error: false })
+      mockCreateCardComponent.mockResolvedValue({
         component: () => <div>OK</div>,
         cleanup,
-        error: null,
+        error: false,
       })
 
       let unmount!: () => void

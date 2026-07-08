@@ -31,6 +31,7 @@ import { useReportCardDataState } from '../CardDataContext'
 import { useDrasiConnections } from '../../../hooks/useDrasiConnections'
 import { useDrasiQueryStream } from '../../../hooks/useDrasiQueryStream'
 import { useDrasiResources } from '../../../hooks/useDrasiResources'
+import { Skeleton } from '../../ui/Skeleton'
 import { DRASI_PROXY_TIMEOUT_MS, FLOW_ANIMATION_INTERVAL_MS } from './DrasiConstants'
 import { demoThemeForConnection, generateDemoData } from './DrasiDemoData'
 import { computeFlows, FLOW_ID_ALL } from './DrasiFlowUtils'
@@ -65,6 +66,7 @@ export function DrasiReactiveGraph() {
   const { t } = useTranslation()
   const {
     data: drasiData,
+    isLoading,
     isRefreshing,
     isDemoData,
     isFailed,
@@ -79,6 +81,26 @@ export function DrasiReactiveGraph() {
     consecutiveFailures,
     hasData: drasiData !== null,
   })
+
+  if (isLoading && !drasiData) {
+    return (
+      <div className="h-full flex flex-col p-3 gap-3">
+        <div className="flex items-center justify-between">
+          <Skeleton variant="rounded" width={200} height={32} />
+          <Skeleton variant="rounded" width={120} height={32} />
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          <Skeleton variant="rounded" height={48} />
+          <Skeleton variant="rounded" height={48} />
+          <Skeleton variant="rounded" height={48} />
+          <Skeleton variant="rounded" height={48} />
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <Skeleton variant="rounded" width="90%" height="80%" className="max-h-96" />
+        </div>
+      </div>
+    )
+  }
 
   const [selectedQueryId, setSelectedQueryId] = useState<string>('q-top-losers')
   const [pinnedQueryId, setPinnedQueryId] = useState<string | null>(null)

@@ -30,8 +30,13 @@ import { api } from '../../lib/api'
 
 describe('useFeatureRequests', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     localStorage.clear()
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('loads demo data when no token', async () => {
@@ -279,11 +284,12 @@ describe('useFeatureRequests', () => {
     expect(result.current.requests[2].id).toBe('other1')
   })
 
-  it('demo mode does not call the API', async () => {
-    // No token = demo mode
+  it('demo mode still settles to demo data when auth resolution is async', async () => {
+    // No token = demo mode. The hook may perform one early read request before
+    // async demo detection resolves, but it must never invoke mutating APIs and
+    // must still settle to demo data.
     const { result } = renderHook(() => useFeatureRequests())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(api.get).not.toHaveBeenCalled()
+    await waitFor(() => expect(result.current.requests.length).toBeGreaterThan(0))
     expect(api.post).not.toHaveBeenCalled()
     expect(api.patch).not.toHaveBeenCalled()
   })

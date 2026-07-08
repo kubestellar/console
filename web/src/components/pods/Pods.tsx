@@ -20,6 +20,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useToast } from '../ui/Toast'
 import { ConfirmDialog } from '../../lib/modals/ConfirmDialog'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
+import { Button } from '../ui/Button'
 
 /** Target pod metadata for the delete confirmation dialog */
 interface PendingDeleteTarget {
@@ -172,6 +173,7 @@ export function Pods() {
     const uniqueIssuePods = new Set(filteredPodIssues.map(p => `${p.cluster}/${p.namespace}/${p.name}`))
     const issueCount = filteredPodIssues.length
     const pendingCount = filteredPodIssues.filter(p => p.reason === 'Pending' || p.status === 'Pending').length
+    const crashLoopCount = filteredPodIssues.filter(p => /crashloop|crash loop/i.test([p.reason, p.status].filter(Boolean).join(' '))).length
     const restartCount = filteredPodIssues.filter(p => (p.restarts || 0) > 5).length
     const clusterCount = visibleClusters.length
 
@@ -180,6 +182,7 @@ export function Pods() {
       healthy: Math.max(0, totalPods - uniqueIssuePods.size),
       issues: issueCount,
       pending: pendingCount,
+      crashloop: crashLoopCount,
       restarts: restartCount,
       clusters: clusterCount
     }
@@ -189,7 +192,18 @@ export function Pods() {
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'total_pods':
-        return { value: stats.totalPods, sublabel: 'total pods', onClick: () => drillToAllPods(), isClickable: stats.totalPods > 0 }
+        return {
+          value: stats.totalPods,
+          sublabel: 'total pods',
+          onClick: () => drillToAllPods(),
+          isClickable: stats.totalPods > 0,
+          groundtruthFields: {
+            'pods-total': stats.totalPods,
+            'pods-running': stats.healthy,
+            'pods-pending': stats.pending,
+            'pods-crashloop': stats.crashloop,
+          },
+        }
       case 'healthy':
         return { value: stats.healthy, sublabel: 'healthy pods', onClick: () => drillToAllPods('healthy'), isClickable: stats.healthy > 0 }
       case 'issues':
@@ -325,41 +339,41 @@ export function Pods() {
 
                   <div className="flex items-center gap-1">
                     <PortalTooltip content={backendActionUnavailable ? backendUnavailableMessage : t('common.restart', 'Restart')}>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={(e) => issue.cluster && handleRestartPod(e, issue.cluster, issue.namespace, issue.name)}
                         disabled={backendActionUnavailable}
-                        className={backendActionUnavailable
-                          ? 'p-1.5 rounded-md text-muted-foreground opacity-50 cursor-not-allowed'
-                          : 'p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md text-muted-foreground hover:text-blue-400 transition-colors'}
+                        className="p-1.5 rounded-md text-muted-foreground hover:bg-black/5 hover:text-blue-400 dark:hover:bg-white/10"
                         aria-label={t('common.restart', 'Restart')}
                         title={backendActionUnavailable ? backendUnavailableMessage : t('common.restart', 'Restart')}
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </button>
+                        icon={<RefreshCw className="w-4 h-4" aria-hidden="true" />}
+                      />
                     </PortalTooltip>
 
                     <PortalTooltip content={t('common.logs', 'Logs')}>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={(e) => issue.cluster && handleShowLogs(e, issue.cluster, issue.namespace, issue.name)}
-                        className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md text-muted-foreground hover:text-purple-400 transition-colors"
-                        aria-label="View logs"
-                      >
-                        <Terminal className="w-4 h-4" />
-                      </button>
+                        className="p-1.5 rounded-md text-muted-foreground hover:bg-black/5 hover:text-purple-400 dark:hover:bg-white/10"
+                        aria-label={t('common.logs', 'Logs')}
+                        title={t('common.logs', 'Logs')}
+                        icon={<Terminal className="w-4 h-4" aria-hidden="true" />}
+                      />
                     </PortalTooltip>
 
                     <PortalTooltip content={backendActionUnavailable ? backendUnavailableMessage : t('common.delete', 'Delete')}>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={(e) => issue.cluster && handleDeletePod(e, issue.cluster, issue.namespace, issue.name)}
                         disabled={backendActionUnavailable}
-                        className={backendActionUnavailable
-                          ? 'p-1.5 rounded-md text-muted-foreground opacity-50 cursor-not-allowed'
-                          : 'p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md text-muted-foreground hover:text-red-400 transition-colors'}
+                        className="p-1.5 rounded-md text-muted-foreground hover:bg-black/5 hover:text-red-400 dark:hover:bg-white/10"
                         aria-label={t('common.delete', 'Delete')}
                         title={backendActionUnavailable ? backendUnavailableMessage : t('common.delete', 'Delete')}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        icon={<Trash2 className="w-4 h-4" aria-hidden="true" />}
+                      />
                     </PortalTooltip>
                   </div>
 

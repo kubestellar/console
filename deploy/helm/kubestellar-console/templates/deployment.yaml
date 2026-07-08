@@ -10,10 +10,11 @@ spec:
   selector:
     matchLabels:
       {{- include "kubestellar-console.selectorLabels" . | nindent 6 }}
-  {{- if .Values.persistence.enabled }}
   strategy:
-    type: Recreate
-  {{- end }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -101,6 +102,7 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
@@ -110,14 +112,17 @@ spec:
           {{- if .Values.watchdog.enabled }}
           # Startup probe gives the watchdog reverse proxy time to initialize
           # before liveness/readiness probes begin. Without this, the pod may
-          # enter CrashLoopBackOff on slow nodes.
+          # enter CrashLoopBackOff on slow nodes or clusters with slow block
+          # storage provisioning (e.g. IBM VPC Block on vllm-d).
+          # Budget = startupProbe.failureThreshold * startupProbe.periodSeconds.
+          # Default: 24 * 5s = 120s. Configurable via .Values.startupProbe.
           startupProbe:
             httpGet:
               path: /watchdog/health
               port: http
             initialDelaySeconds: 5
-            periodSeconds: 5
-            failureThreshold: 12
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
           {{- end }}
           livenessProbe:
             httpGet:
@@ -181,6 +186,16 @@ spec:
                 secretKeyRef:
                   name: {{ include "kubestellar-console.fullname" . }}
                   key: github-client-secret
+            {{- end }}
+            {{- with .Values.auth }}
+            {{- if .allowedGitHubLogins }}
+            - name: AUTH_ALLOWED_GITHUB_LOGINS
+              value: {{ .allowedGitHubLogins | quote }}
+            {{- end }}
+            {{- if .adminGitHubLogins }}
+            - name: AUTH_ADMIN_GITHUB_LOGINS
+              value: {{ .adminGitHubLogins | quote }}
+            {{- end }}
             {{- end }}
             {{- if or .Values.claude.existingSecret .Values.claude.apiKey }}
             - name: CLAUDE_API_KEY

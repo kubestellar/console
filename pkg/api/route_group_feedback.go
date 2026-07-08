@@ -4,6 +4,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/feedback"
+	"github.com/kubestellar/console/pkg/api/handlers/rewards"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -29,7 +31,7 @@ func (g *feedbackRouteGroup) Register(routes *routeSetupContext) {
 	api := routes.api
 	feedbackHandler := routes.feedback
 	if feedbackHandler == nil {
-		feedbackHandler = handlers.NewFeedbackHandler(g.store, handlers.LoadFeedbackConfig())
+		feedbackHandler = feedback.NewFeedbackHandler(g.store, feedback.LoadFeedbackConfig())
 		routes.feedback = feedbackHandler
 	}
 
@@ -48,7 +50,7 @@ func (g *feedbackRouteGroup) Register(routes *routeSetupContext) {
 	api.Post("/notifications/:id/read", feedbackHandler.MarkNotificationRead)
 	api.Post("/notifications/read-all", feedbackHandler.MarkAllNotificationsRead)
 
-	rewardsHandler := handlers.NewRewardsHandler(handlers.RewardsConfig{
+	rewardsHandler := rewards.NewRewardsHandler(rewards.RewardsConfig{
 		GitHubToken: g.githubToken,
 		Orgs:        g.rewardOrgs,
 	})
@@ -57,10 +59,10 @@ func (g *feedbackRouteGroup) Register(routes *routeSetupContext) {
 	}
 	api.Get("/rewards/github", rewardsHandler.GetGitHubRewards)
 
-	badgeHandler := handlers.NewBadgeHandler(rewardsHandler, g.store)
+	badgeHandler := rewards.NewBadgeHandler(rewardsHandler, g.store)
 	g.app.Get("/api/rewards/badge/:github_login", routes.publicLimiter, badgeHandler.GetBadge)
 
-	rewardsPersistence := handlers.NewRewardsPersistenceHandler(g.store)
+	rewardsPersistence := rewards.NewRewardsPersistenceHandler(g.store)
 	api.Get("/rewards/me", rewardsPersistence.GetUserRewards)
 	api.Put("/rewards/me", rewardsPersistence.UpdateUserRewards)
 	api.Post("/rewards/coins", rewardsPersistence.IncrementCoins)

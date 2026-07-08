@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 
@@ -9,7 +10,8 @@ vi.mock('../../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
-vi.mock('../../../../hooks/useDemoMode', () => ({
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
   getDemoMode: () => true, default: () => true,
   useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
@@ -17,10 +19,12 @@ vi.mock('../../../../hooks/useDemoMode', () => ({
   setGlobalDemoMode: vi.fn(),
 }))
 
-vi.mock('../../../../lib/analytics', () => ({
+vi.mock('../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
@@ -75,7 +79,7 @@ vi.mock('../../CardDataContext', () => ({
 }))
 
 vi.mock('../../../../hooks/mcp/crossplane', () => ({
-  useCrossplaneManagedResources: () => ({ resources: [], isLoading: false, isRefreshing: false, error: null, consecutiveFailures: 0, isFailed: false, isDemoData: false }),
+  useCrossplaneManagedResources: () => ({ resources: [], isLoading: false, isRefreshing: false, error: false, consecutiveFailures: 0, isFailed: false, isDemoData: false }),
 }))
 
 import { CrossplaneManagedResources } from '../CrossplaneManagedResources'

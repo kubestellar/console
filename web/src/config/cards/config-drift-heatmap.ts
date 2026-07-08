@@ -10,7 +10,7 @@ export const configDriftHeatmapConfig: UnifiedCardConfig = {
   defaultWidth: 6,
   defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'useMultiClusterInsights' },
-  content: { type: 'custom' },
+  content: { type: 'custom', componentName: 'ConfigDriftHeatmap' },
   emptyState: {
     icon: 'Diff',
     title: 'No config drift detected',

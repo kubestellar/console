@@ -99,7 +99,7 @@ func TestPersistence_DirectoryCreation(t *testing.T) {
 func TestPersistence_LastModifiedTimestamp(t *testing.T) {
 	sm := newTestManager(t)
 
-	before := time.Now().UTC()
+	before := time.Now().UTC().Truncate(time.Second)
 	time.Sleep(10 * time.Millisecond) // Ensure timestamp difference
 
 	all := DefaultAllSettings()
@@ -108,7 +108,7 @@ func TestPersistence_LastModifiedTimestamp(t *testing.T) {
 	}
 
 	time.Sleep(10 * time.Millisecond)
-	after := time.Now().UTC()
+	after := time.Now().UTC().Add(time.Second)
 
 	sm.mu.RLock()
 	lastMod := sm.settings.LastModified

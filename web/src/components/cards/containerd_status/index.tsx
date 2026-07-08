@@ -13,7 +13,7 @@
  */
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, Box, CheckCircle, PauseCircle, Server, StopCircle } from 'lucide-react'
+import { AlertTriangle, Box, CheckCircle, PauseCircle, RefreshCw, Server, StopCircle } from 'lucide-react'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedContainerd } from '../../../hooks/useCachedContainerd'
@@ -52,7 +52,7 @@ function ContainerRow({ item }: { item: ContainerdContainer }) {
           <span className="text-xs font-mono truncate">{item.id}</span>
         </div>
         <span
-          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${STATE_BADGE[item.state]}`}
+          className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${STATE_BADGE[item.state]}`}
         >
           {item.state}
         </span>
@@ -63,7 +63,7 @@ function ContainerRow({ item }: { item: ContainerdContainer }) {
         <span className="truncate shrink-0 ml-2">{item.uptime}</span>
       </div>
 
-      <div className="text-[11px] text-muted-foreground/80 flex flex-wrap items-center justify-between gap-2">
+      <div className="text-xs text-muted-foreground/80 flex flex-wrap items-center justify-between gap-2">
         <span className="truncate">{item.namespace}</span>
         <span className="truncate shrink-0 ml-2">{item.node}</span>
       </div>
@@ -80,7 +80,9 @@ export function ContainerdStatus() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    error,
     lastRefresh,
+    refetch,
   } = useCachedContainerd()
 
   const hasAnyData = data.containers.length > 0
@@ -92,6 +94,7 @@ export function ContainerdStatus() {
     hasAnyData,
     isFailed,
     consecutiveFailures,
+    errorMessage: error ?? undefined,
     lastRefresh,
   })
 
@@ -110,9 +113,17 @@ export function ContainerdStatus() {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-3">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">{t('containerdStatus.fetchFailed', 'Failed to fetch containerd status')}</p>
+        {error && <p className="text-xs text-muted-foreground max-w-xs text-center">{error}</p>}
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm"
+        >
+          <RefreshCw className="w-4 h-4" />
+          {t('common.retry', 'Retry')}
+        </button>
       </div>
     )
   }

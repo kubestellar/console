@@ -75,6 +75,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   // Auto-select a cluster only when the visible choice is unambiguous.
   useEffect(() => {
     if (selectedCluster || clusters.length !== SINGLE_VISIBLE_CLUSTER_COUNT) return
+    // clusters[0] is intentional: only auto-selected when exactly ONE cluster exists (unambiguous choice)
     setSelectedCluster(clusters[0].name)
   }, [clusters, selectedCluster])
 

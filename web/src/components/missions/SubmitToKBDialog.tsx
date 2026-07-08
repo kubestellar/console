@@ -302,7 +302,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={!isSubmitPending} closeOnEscape={!isSubmitPending}>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false} closeOnEscape={!isSubmitPending}>
       <BaseModal.Header title={t('missions.submitToKB.title')} icon={BookUp} onClose={isSubmitPending ? undefined : onClose} />
 
       <BaseModal.Content noPadding>

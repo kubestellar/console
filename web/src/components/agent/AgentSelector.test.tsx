@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect } from 'vitest'
 import { AgentSelector } from './AgentSelector'
 import { buildVisibleAgents, sectionAgents, CLUSTER_PROVIDER_KEYS } from './agentSelectorUtils'

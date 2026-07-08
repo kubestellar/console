@@ -77,6 +77,7 @@ func TestKagentiHandlers(t *testing.T) {
 	// 2. Test handleKagentiAgents
 	t.Run("Agents", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/kagenti/agents?cluster=c1", nil)
+		req.Host = "localhost"
 		rr := httptest.NewRecorder()
 		s.handleKagentiAgents(rr, req)
 
@@ -95,6 +96,7 @@ func TestKagentiHandlers(t *testing.T) {
 	// 3. Test handleKagentiBuilds
 	t.Run("Builds", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/kagenti/builds?cluster=c1", nil)
+		req.Host = "localhost"
 		rr := httptest.NewRecorder()
 		s.handleKagentiBuilds(rr, req)
 
@@ -109,6 +111,7 @@ func TestKagentiHandlers(t *testing.T) {
 	// 4. Test handleKagentiSummary
 	t.Run("Summary", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/kagenti/summary?cluster=c1", nil)
+		req.Host = "localhost"
 		rr := httptest.NewRecorder()
 		s.handleKagentiSummary(rr, req)
 

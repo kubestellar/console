@@ -39,19 +39,21 @@ export function shareMetricsBetweenSameServerClusters(clusters: ClusterInfo[]): 
     const source = serverMetrics.get(cluster.server)
     if (!source) return cluster
 
-    // Check if we need to copy anything - include nodeCount, podCount, and capacity/requests
+    // Check if we need to copy anything - include node/ready/pod counts and capacity/requests
     const needsNodes = cluster.nodeCount === undefined && source.nodeCount !== undefined && source.nodeCount > 0
+    const needsReadyNodes = cluster.readyNodes === undefined && source.readyNodes !== undefined && source.readyNodes >= 0
     const needsPods = cluster.podCount === undefined && source.podCount !== undefined && source.podCount > 0
     const needsCapacity = !cluster.cpuCores && source.cpuCores
     const needsRequests = !cluster.cpuRequestsCores && source.cpuRequestsCores
 
-    if (!needsNodes && !needsPods && !needsCapacity && !needsRequests) return cluster
+    if (!needsNodes && !needsReadyNodes && !needsPods && !needsCapacity && !needsRequests) return cluster
 
     // Copy all health metrics from the source cluster (node/pod counts, capacity, requests)
     return {
       ...cluster,
       // Node and pod counts - critical for dashboard display
       nodeCount: needsNodes ? source.nodeCount : cluster.nodeCount,
+      readyNodes: needsReadyNodes ? source.readyNodes : cluster.readyNodes,
       podCount: needsPods ? source.podCount : cluster.podCount,
       // Also copy healthy and reachable flags when we copy node data
       healthy: needsNodes ? source.healthy : cluster.healthy,

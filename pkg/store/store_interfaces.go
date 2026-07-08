@@ -4,6 +4,7 @@ package store
 // interfaces so callers can depend on narrower contracts.
 type Store interface {
 	UserStore
+	TeamStore
 	OnboardingStore
 	DashboardStore
 	CardStore
@@ -28,6 +29,7 @@ type Store interface {
 var (
 	_ Store                      = (*SQLiteStore)(nil)
 	_ UserStore                  = (*SQLiteStore)(nil)
+	_ TeamStore                  = (*SQLiteStore)(nil)
 	_ OnboardingStore            = (*SQLiteStore)(nil)
 	_ DashboardStore             = (*SQLiteStore)(nil)
 	_ CardStore                  = (*SQLiteStore)(nil)

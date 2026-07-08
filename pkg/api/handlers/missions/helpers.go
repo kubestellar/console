@@ -29,3 +29,20 @@ func requireAdmin(c *fiber.Ctx, s interface{ GetUser(context.Context, uuid.UUID)
 	}
 	return nil
 }
+
+// prototypePollutionImageKeys blocks keys that can pollute JavaScript Object
+// prototypes. Missions may reference container images; we apply the same
+// prototype-pollution mitigation used in nightly E2E handlers.
+var prototypePollutionImageKeys = map[string]struct{}{
+	"__proto__":   {},
+	"constructor": {},
+	"prototype":   {},
+}
+
+// isSafeImageKey returns true if the key is not a prototype-pollution vector.
+// Used when parsing image references from mission YAML to prevent prototype
+// pollution attacks (CWE-1321).
+func isSafeImageKey(key string) bool {
+	_, blocked := prototypePollutionImageKeys[key]
+	return !blocked
+}

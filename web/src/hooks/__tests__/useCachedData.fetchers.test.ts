@@ -667,6 +667,34 @@ describe('useCachedData', () => {
       const fetcher = capturedOpts.fetcher as () => Promise<unknown>
       await expect(fetcher()).rejects.toThrow('No authentication token')
     })
+
+    it('fetcher uses same-origin cookies when only kc-has-session is present', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+
+      localStorage.removeItem('kc_token')
+      localStorage.setItem('kc-has-session', 'true')
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        text: vi.fn().mockResolvedValue(JSON.stringify({ pods: [{ name: 'cookie-pod' }] })),
+      }))
+
+      const { useCachedPods } = await loadModule()
+      useCachedPods('my-cluster')
+
+      const fetcher = capturedOpts.fetcher as () => Promise<unknown>
+      await fetcher()
+
+      const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
+      expect(fetchCall[1].credentials).toBe('same-origin')
+      expect(fetchCall[1].headers.Authorization).toBeUndefined()
+      expect(fetchCall[1].headers['X-Requested-With']).toBe('XMLHttpRequest')
+
+      vi.unstubAllGlobals()
+    })
   })
 
   // ========================================================================

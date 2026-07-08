@@ -8,6 +8,8 @@ import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { Skeleton } from '../ui/Skeleton'
+import { Button } from '../ui/Button'
+import { TextArea } from '../ui/TextArea'
 
 /** Number of skeleton rows to display while chat loads */
 const CHAT_SKELETON_ROWS = 3
@@ -268,12 +270,14 @@ export function CardChat({
                 <div className="text-sm whitespace-pre-wrap">{message.content}</div>
                 {message.action && (
                   <div className="mt-2 pt-2 border-t border-white/10">
-                    <button
+                    <Button
                       onClick={() => onApplyAction?.(message.action)}
-                      className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-300 hover:bg-green-500/30"
+                      variant="accent"
+                      size="sm"
+                      className="bg-green-500/20 text-green-300 hover:bg-green-500/30"
                     >
                       {t('cardChat.apply')}: {message.action.type.replace('_', ' ')}
-                    </button>
+                    </Button>
                   </div>
                 )}
                 <div className="flex flex-wrap items-center justify-between gap-y-2 mt-1">
@@ -281,16 +285,13 @@ export function CardChat({
                     {new Date(message.timestamp).toLocaleTimeString()}
                   </span>
                   {message.role === 'assistant' && (
-                    <button
+                    <Button
                       onClick={() => handleCopy(message.id, message.content)}
-                      className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10"
-                    >
-                      {copiedId === message.id ? (
-                        <CheckCircle className="w-3 h-3 text-green-400" />
-                      ) : (
-                        <Copy className="w-3 h-3 opacity-50" />
-                      )}
-                    </button>
+                      variant="ghost"
+                      size="sm"
+                      icon={copiedId === message.id ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 opacity-50" />}
+                      className="p-1"
+                    />
                   )}
                 </div>
               </div>
@@ -326,26 +327,30 @@ export function CardChat({
           {/* Quick prompts */}
           <div className="flex flex-wrap gap-2">
             {quickPrompts.map((prompt, i) => (
-              <button
+              <Button
                 key={i}
                 onClick={() => handleQuickPrompt(prompt)}
-                className="text-xs px-2 py-1 rounded-full bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                variant="secondary"
+                size="sm"
+                className="rounded-full"
               >
                 {prompt}
-              </button>
+              </Button>
             ))}
           </div>
 
           {/* Input */}
           <div className="flex gap-2">
             <div className="flex-1 relative">
-              <textarea
+              <TextArea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={t('cardChat.askOrCommand')}
-                className="w-full px-4 py-3 pr-12 rounded-xl bg-secondary border border-border text-foreground text-sm resize-none h-12 max-h-32"
+                textAreaSize="lg"
+                resizable={false}
+                className="pr-12 rounded-xl h-12 max-h-32 border-border"
                 rows={1}
                 disabled={isLoading}
               />
@@ -353,18 +358,16 @@ export function CardChat({
                 <Sparkles className="w-4 h-4 text-purple-400" />
               </div>
             </div>
-            <button
+            <Button
               onClick={handleSend}
               disabled={!input.trim() || isLoading}
+              variant="accent"
+              size="lg"
+              icon={<Send className="w-5 h-5" />}
               className={cn(
-                'p-3 rounded-xl transition-colors',
-                input.trim() && !isLoading
-                  ? 'bg-purple-500 text-foreground hover:bg-purple-600'
-                  : 'bg-secondary text-muted-foreground'
+                input.trim() && !isLoading && 'bg-purple-500 hover:bg-purple-600'
               )}
-            >
-              <Send className="w-5 h-5" />
-            </button>
+            />
           </div>
         </div>
       </BaseModal.Footer>

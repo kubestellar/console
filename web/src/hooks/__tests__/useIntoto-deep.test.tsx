@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Deep coverage tests for useIntoto.ts — internal cache helpers,
  * demo data generators, and emptyStatus via module re-import.
@@ -25,7 +26,8 @@ vi.mock('../useCachedKubectlMulti', () => ({
   useCachedKubectlMulti: (...a: unknown[]) => mockUseCachedKubectl(...a),
 }))
 
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
     createCachedHook: vi.fn(),
   getDemoMode: () => true,
   useDemoMode: () => ({ isDemoMode: true }),

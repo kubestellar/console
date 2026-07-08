@@ -61,6 +61,7 @@ func (s *Server) setupHealthRoutes() {
 			"oauth_configured": s.oauthConfigured(),
 			"in_cluster":       inCluster,
 			"no_local_agent":   noLocalAgent,
+			"suppress_optional_pollers": s.config.SuppressOptionalPollers,
 			"install_method":   detectInstallMethod(inCluster),
 			"project":          s.config.ConsoleProject,
 			"workloads": fiber.Map{

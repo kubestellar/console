@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { AlertCircle, Play, Zap, Key, Check, Trash2, ShieldCheck, RefreshCw } from 'lucide-react'
+import { AlertCircle, Check, Key, Loader2, Play, RefreshCw, ShieldCheck, Trash2, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../lib/cn'
 import { useReportCardDataState } from '../CardDataContext'
@@ -80,6 +80,7 @@ export const QuantumControlPanel: React.FC = () => {
   const [mutationError, setMutationError] = useState<string | null>(null)
   const [showClearCredentialsDialog, setShowClearCredentialsDialog] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
+  const [isExecuting, setIsExecuting] = useState(false)
   const [statusTab, setStatusTab] = useState<'system' | 'job'>('system')
   // Marks the wall-clock time of the last `authenticated:true` we observed in
   // THIS browser session. Persisted cache entries from a prior session don't
@@ -164,7 +165,7 @@ export const QuantumControlPanel: React.FC = () => {
     hasAuthError && !isAuthErrorTransient && requiresIBM
       ? (lastIbmError?.message ?? authStatusError)
       : null
-  const error = fatalError ?? authErrorForBanner
+  const error = fatalError || authErrorForBanner
 
   // Three-state credential badge, driven by the workload's explicit
   // `tokenStored` field (v0.4.0+ — see web/src/hooks/useCachedQuantum.ts):
@@ -298,6 +299,7 @@ export const QuantumControlPanel: React.FC = () => {
   }, [showClearCredentialsDialog, isClearing])
 
   const handleExecute = async () => {
+    setIsExecuting(true)
     setMutationError(null)
     setControl(prev => ({ ...prev, executing: true }))
     try {
@@ -371,6 +373,7 @@ export const QuantumControlPanel: React.FC = () => {
       setMutationError(err instanceof Error ? err.message : t('quantumControlPanel.executionError'))
     } finally {
       setControl(prev => ({ ...prev, executing: false }))
+      setIsExecuting(false)
     }
   }
 
@@ -686,11 +689,11 @@ export const QuantumControlPanel: React.FC = () => {
           <div className="flex gap-2">
             <button
               onClick={handleExecute}
-              disabled={control.executing}
-              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:opacity-50 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+              disabled={control.executing || isExecuting}
+              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
             >
-              <Play className="w-4 h-4" />
-              <span className="text-sm">{control.executing ? 'Executing...' : control.loop_mode ? 'Update Parameters' : 'Execute Circuit'}</span>
+              {(control.executing || isExecuting) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              <span className="text-sm">{(control.executing || isExecuting) ? 'Executing...' : control.loop_mode ? 'Update Parameters' : 'Execute Circuit'}</span>
             </button>
             <button
               onClick={handleLoopModeToggle}

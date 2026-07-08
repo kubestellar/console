@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { NamespaceOverview } from '../NamespaceOverview'
@@ -38,6 +39,7 @@ const TRANSLATIONS: Record<string, string> = {
 }
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, fallback?: string) => TRANSLATIONS[key] || fallback || key,
   }),

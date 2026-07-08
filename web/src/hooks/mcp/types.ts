@@ -11,6 +11,7 @@ export interface ClusterInfo {
   neverConnected?: boolean
   source?: string
   nodeCount?: number
+  readyNodes?: number
   podCount?: number
   // Total allocatable resources (capacity)
   cpuCores?: number

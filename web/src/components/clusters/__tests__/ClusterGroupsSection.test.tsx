@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * ClusterGroupsSection Component Tests
  */

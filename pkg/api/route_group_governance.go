@@ -2,8 +2,10 @@ package api
 
 import (
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/compliance"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/services/team"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -24,6 +26,20 @@ func newGovernanceRouteGroup(store store.Store, k8sClient *k8s.MultiClusterClien
 func (g *governanceRouteGroup) Register(routes *routeSetupContext) {
 	api := routes.api
 
+	teamSvc := team.New(g.store, g.store)
+	teams := handlers.NewTeamHandler(teamSvc)
+	api.Get("/teams", teams.ListAllTeams)
+	api.Post("/teams", teams.CreateTeam)
+	api.Get("/teams/mine", teams.GetUserTeams)
+	api.Get("/teams/:id", teams.GetTeam)
+	api.Put("/teams/:id", teams.UpdateTeam)
+	api.Delete("/teams/:id", teams.DeleteTeam)
+	api.Get("/teams/:id/members", teams.ListTeamMembers)
+	api.Post("/teams/:id/members", teams.AddTeamMember)
+	api.Delete("/teams/:id/members/:userId", teams.RemoveTeamMember)
+	api.Put("/teams/:id/members/:userId/role", teams.UpdateTeamMemberRole)
+	
+
 	rbac := handlers.NewRBACHandler(g.store, g.k8sClient)
 	api.Get("/users", rbac.ListConsoleUsers)
 	api.Put("/users/:id/role", rbac.UpdateUserRole)
@@ -38,9 +54,9 @@ func (g *governanceRouteGroup) Register(routes *routeSetupContext) {
 	auditHandler := handlers.NewAuditHandler(g.store)
 	api.Get("/admin/audit-log", auditHandler.GetAuditLog)
 
-	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)
+	complianceFrameworks := compliance.NewComplianceFrameworksHandler(nil)
 	complianceFrameworks.RegisterRoutes(api.Group("/compliance/frameworks"))
-	complianceReports := handlers.NewComplianceReportsHandler(nil)
+	complianceReports := compliance.NewComplianceReportsHandler(nil)
 	complianceReports.RegisterRoutes(api.Group("/compliance/frameworks"))
 
 	routes.namespaces = handlers.NewNamespaceHandler(g.store, g.k8sClient)
@@ -51,6 +67,6 @@ func (g *governanceRouteGroup) Register(routes *routeSetupContext) {
 	api.Get("/admin/rate-limit-status", adminHandler.GetRateLimitStatus)
 
 	// SIEM export (admin-only, moved from public routes — fix #16518).
-	siemHandler := handlers.NewSIEMHandler(g.store)
+	siemHandler := compliance.NewSIEMHandler(g.store)
 	siemHandler.RegisterRoutes(api)
 }

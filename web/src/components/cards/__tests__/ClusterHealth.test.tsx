@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -39,8 +40,9 @@ vi.mock('../../../hooks/useMobile', () => ({
 }))
 
 const mockIsDemoMode = vi.fn(() => false)
-vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   isDemoModeForced: () => false,
   getDemoMode: () => false,
   canToggleDemoMode: () => true,
@@ -84,6 +86,7 @@ vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ variant }: { variant: string }) => <div data-testid={`skeleton-${variant}`} />,
   SkeletonStats: () => <div data-testid="skeleton-stats" />,
   SkeletonList: () => <div data-testid="skeleton-list" />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 vi.mock('../../ui/StatusBadge', () => ({
@@ -113,7 +116,8 @@ vi.mock('../../ui/Tooltip', () => ({
   ),
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
+vi.mock('../../../lib/constants/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/constants/network')>()),
   CARD_LOADING_TIMEOUT_MS: 30000,
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
 }))
@@ -131,16 +135,31 @@ vi.mock('../../clusters/ClusterDetailModal', () => ({
   ),
 }))
 
-vi.mock('../../../lib/cards/CardComponents', () => ({
-  CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <input data-testid="search-input" value={value} onChange={(e) => onChange(e.target.value)} />
-  ),
-  CardControlsRow: () => <div data-testid="card-controls-row" />,
-  CardPaginationFooter: ({ needsPagination }: { needsPagination: boolean }) =>
-    needsPagination ? <div data-testid="pagination" /> : null,
-  CardAIActions: () => <div data-testid="ai-actions" />,
-  CardEmptyState: ({ title, message }: { title?: string; message?: string; icon?: unknown }) => <div data-testid="empty-state">{title}{message && <span>{message}</span>}</div>,
-}))
+vi.mock('../../../lib/cards/CardComponents', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/cards/CardComponents')>()
+
+  return {
+    ...actual,
+    CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+      <input data-testid="search-input" value={value} onChange={(e) => onChange(e.target.value)} />
+    ),
+    CardControlsRow: ({
+      clusterIndicator,
+    }: {
+      clusterIndicator?: { selectedCount: number; totalCount: number }
+    }) => (
+      <div data-testid="card-controls-row">
+        {clusterIndicator && (
+          <span>{clusterIndicator.selectedCount}/{clusterIndicator.totalCount}</span>
+        )}
+      </div>
+    ),
+    CardPaginationFooter: ({ needsPagination }: { needsPagination: boolean }) =>
+      needsPagination ? <div data-testid="pagination" /> : null,
+    CardAIActions: () => <div data-testid="ai-actions" />,
+    CardEmptyState: ({ title, message }: { title?: string; message?: string; icon?: unknown }) => <div data-testid="empty-state">{title}{message && <span>{message}</span>}</div>,
+  }
+})
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -415,7 +434,7 @@ describe('ClusterHealth', () => {
         deduplicatedClusters: clusters,
         isLoading: false,
         isRefreshing: false,
-        error: null,
+        error: false,
         lastRefresh: null,
         consecutiveFailures: 0,
         isFailed: false,

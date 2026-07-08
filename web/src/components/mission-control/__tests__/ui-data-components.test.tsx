@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { PayloadCard } from '../PayloadCard'
@@ -223,7 +224,7 @@ describe('ClusterReadinessCard', () => {
           projectNames: ['falco'],
           readiness: { overallScore: 85, cpuHeadroomPercent: 75, memHeadroomPercent: 75, storageHeadroomPercent: 100 },
           warnings: []
-        } as unknown as any}
+        }}
       />
     )
     
@@ -244,7 +245,7 @@ describe('ClusterReadinessCard', () => {
           projectNames: [],
           readiness: { overallScore: 85 },
           warnings: []
-        } as unknown as any}
+        }}
       />
     )
     
@@ -392,7 +393,7 @@ describe('FixerDefinitionPanel', () => {
         onRemoveProject={vi.fn()}
         onUpdatePriority={vi.fn()}
         aiStreaming={true}
-        planningMission={{ status: 'running', messages: [] } as unknown as any}
+        planningMission={{ status: 'running', messages: [] }}
       />
     )
     

@@ -7,6 +7,8 @@ import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
 import { ConfirmMissionPromptDialog } from '../../missions/ConfirmMissionPromptDialog'
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { useModalState } from '../../../lib/modals'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 /** Timeout for fetching KB guide data (ms) */
 const KB_FETCH_TIMEOUT_MS = 10_000
@@ -22,16 +24,17 @@ export interface InstallCTAFlowProps {
  * 2. ClusterSelectionDialog (when agent connected)
  * 3. ConfirmMissionPromptDialog (review/edit prompt)
  * 4. Manual install guide modal (when agent not connected)
+ *
+ * This component subscribes to demo mode state to hide itself when demo mode
+ * is toggled off, ensuring the CTA doesn't persist after switching to live data.
  */
 export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { startMission, openSidebar } = useMissions()
   const { status: agentStatus } = useLocalAgent()
   const isAgentConnected = agentStatus === 'connected'
-
-  const installInfo = CARD_INSTALL_MAP[cardType]
-
-  const [showClusterSelect, setShowClusterSelect] = useState(false)
+  const { isDemoMode } = useDemoMode()
+  const { isOpen: showClusterSelect, open: openClusterSelect, close: closeClusterSelect } = useModalState()
   const [showInstallGuide, setShowInstallGuide] = useState<{
     mission: { mission?: { title?: string; description?: string; steps?: { title?: string; description?: string }[] } }
   } | null>(null)
@@ -42,6 +45,13 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   const [isPreparingInstall, setIsPreparingInstall] = useState(false)
   const [installError, setInstallError] = useState<string | null>(null)
 
+  // Hide the CTA when demo mode is off
+  if (!isDemoMode) {
+    return null
+  }
+
+  const installInfo = CARD_INSTALL_MAP[cardType]
+
   const installProjectName = installInfo?.project ?? t('cards:installFlow.componentsFallback', 'components')
   const installCtaLabel = isPreparingInstall
     ? t('cards:installFlow.loading', 'Loading install flow…')
@@ -51,7 +61,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
     if (isPreparingInstall) return
     setInstallError(null)
     if (isAgentConnected && installInfo) {
-      setShowClusterSelect(true)
+      openClusterSelect()
     } else if (installInfo) {
       setIsPreparingInstall(true)
       try {
@@ -77,7 +87,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   return (
     <>
       {/* Install CTA button */}
-      <div className="mt-auto border-t border-yellow-500/10 pt-2">
+      <div className="border-t border-yellow-500/10 pt-2">
         <button
           onClick={(e) => { e.stopPropagation(); void handleClick() }}
           disabled={isPreparingInstall}
@@ -86,16 +96,16 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
           {isPreparingInstall ? <Loader2 className="h-3 w-3 shrink-0 animate-spin" /> : <Sparkles className="h-3 w-3 shrink-0" />}
           <span className="min-w-0 whitespace-normal break-words">{installCtaLabel}</span>
         </button>
-        {installError && <p className="mt-2 text-[11px] text-red-300">{installError} <button type="button" className="underline underline-offset-2" onClick={() => void handleClick()}>{t('common:actions.retry')}</button></p>}
+        {installError && <p className="mt-2 text-xs text-red-300">{installError} <button type="button" className="underline underline-offset-2" onClick={() => void handleClick()}>{t('common:actions.retry')}</button></p>}
       </div>
 
       {/* Cluster selection dialog (agent available) */}
       {showClusterSelect && installInfo && (
         <ClusterSelectionDialog
           open={showClusterSelect}
-          onCancel={() => setShowClusterSelect(false)}
+          onCancel={closeClusterSelect}
           onSelect={async (clusters) => {
-            setShowClusterSelect(false)
+            closeClusterSelect()
             setInstallError(null)
             setIsPreparingInstall(true)
             try {
@@ -105,6 +115,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
                 installInfo.kbPaths,
               )
               const clusterContext = clusters.length > 0
+                // clusters[0] is intentional: used only when length === 1 (singular message)
                 ? `\n\n**Target cluster(s):** ${clusters.join(', ')}\n\nPlease install on ${clusters.length === 1 ? `cluster "${clusters[0]}"` : `the following clusters: ${clusters.join(', ')}`}.`
                 : ''
               setPendingMission({ prompt: prompt + clusterContext, clusters })

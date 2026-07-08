@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
+// Unmock both demoMode and useDemoMode to test hook integration
+vi.unmock('../../lib/demoMode')
+vi.unmock('../useDemoMode')
+
 // Keys must match the values from lib/constants/storage.ts
 const DEMO_MODE_KEY = 'kc-demo-mode'
 const _TOKEN_KEY = 'token'

@@ -106,6 +106,13 @@ func (s *Server) validateToken(r *http.Request) bool {
 	return false
 }
 
+// ValidateToken is the exported wrapper for validateToken, required by
+// httputil.HandlerContext interface (#18334). This enables extracted handler
+// files to call the method via the interface without coupling to Server.
+func (s *Server) ValidateToken(r *http.Request) bool {
+	return s.validateToken(r)
+}
+
 // isRealWebSocketUpgrade returns true only when the request carries all
 // three headers that a browser sends for a genuine WebSocket handshake:
 //   - Upgrade: websocket
@@ -187,8 +194,12 @@ func matchOrigin(origin, allowed string) bool {
 		}
 		// Extract the subdomain part between the scheme and the suffix
 		middle := origin[len(scheme) : len(origin)-len(suffix)]
-		// Must be non-empty (at least one subdomain level)
-		return len(middle) > 0
+		// Must be non-empty (at least one subdomain level).
+		// RFC 6454 §6.1 defines Origin as scheme://host[:port] with NO path
+		// component. Reject any "/" in the middle segment to block crafted
+		// non-browser Origins like https://evil.com/.trusted.com from
+		// matching *.trusted.com (#19941).
+		return len(middle) > 0 && !strings.Contains(middle, "/")
 	}
 	// Exact match
 	if origin == allowed {

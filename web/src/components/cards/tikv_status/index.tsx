@@ -85,7 +85,9 @@ export function TikvStatus() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    error,
     lastRefresh,
+    refetch,
   } = useCachedTikv()
 
   // Rule: never show demo data while still loading
@@ -107,6 +109,7 @@ export function TikvStatus() {
     hasAnyData,
     isFailed,
     consecutiveFailures,
+    errorMessage: error ?? undefined,
     lastRefresh,
   })
 
@@ -117,7 +120,18 @@ export function TikvStatus() {
   if (showEmptyState) {
     return (
       <div className="h-full flex items-center justify-center p-4">
-        <EmptyState icon={<AlertTriangle className="w-8 h-8 text-red-400" />} title={t('tikvStatus.fetchFailed', 'Failed to fetch TiKV status')} />
+        <div className="flex flex-col items-center gap-3">
+          <AlertTriangle className="w-8 h-8 text-red-400" />
+          <p className="text-sm font-medium text-red-400">{t('tikvStatus.fetchFailed', 'Failed to fetch TiKV status')}</p>
+          {error && <p className="text-xs text-muted-foreground max-w-xs text-center">{error}</p>}
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm"
+          >
+            <RefreshCw className="w-4 h-4" />
+            {t('common.retry', 'Retry')}
+          </button>
+        </div>
       </div>
     )
   }
@@ -228,13 +242,13 @@ export function TikvStatus() {
                     <span className="text-xs font-medium truncate font-mono">
                       store-{storeId}
                     </span>
-                    <span className="text-[11px] text-muted-foreground truncate">
+                    <span className="text-xs text-muted-foreground truncate">
                       {address}
                     </span>
                   </div>
                   <span
                     className={cn(
-                      'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+                      'text-xs px-1.5 py-0.5 rounded-full shrink-0',
                       stateUp
                         ? 'bg-green-500/20 text-green-400'
                         : 'bg-red-500/20 text-red-400',

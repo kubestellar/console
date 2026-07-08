@@ -10,7 +10,7 @@ import type { Alert, AlertRule} from '../types/alerts'
 // (which are hoisted to the top of the file by vitest).
 const { mockStartMission, mockUseDemoMode, mockSendNotificationWithDeepLink } = vi.hoisted(() => ({
   mockStartMission: vi.fn(() => 'mock-mission-id'),
-  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
+  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })),
   mockSendNotificationWithDeepLink: vi.fn(),
 }))
 
@@ -29,9 +29,12 @@ vi.mock('../hooks/useMissions', () => ({
   useMissions: vi.fn(() => ({ startMission: mockStartMission })),
 }))
 
-vi.mock('../hooks/useDemoMode', () => ({
-  useDemoMode: mockUseDemoMode,
-}))
+vi.mock('../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../hooks/useDemoMode')>()),
+  useDemoMode: () => mockUseDemoMode(),
+  getDemoMode: vi.fn(() => false),
+}
+))
 
 vi.mock('../hooks/useDeepLink', () => ({
   sendNotificationWithDeepLink: mockSendNotificationWithDeepLink,
@@ -91,7 +94,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   // Re-initialize hoisted mocks after restoreAllMocks clears their implementations
   mockStartMission.mockReturnValue('mock-mission-id')
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   mockSendNotificationWithDeepLink.mockImplementation(() => {})
   // Re-stub globals after restoreAllMocks clears them
   vi.stubGlobal('Notification', { permission: 'granted', requestPermission: vi.fn() })

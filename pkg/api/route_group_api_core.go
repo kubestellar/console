@@ -11,6 +11,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/transport"
+	"github.com/kubestellar/console/pkg/api/handlers/compliance"
+	"github.com/kubestellar/console/pkg/api/handlers/github"
 	"github.com/kubestellar/console/pkg/api/handlers/missions"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/notifications"
@@ -22,14 +25,14 @@ type apiCoreRouteGroup struct {
 	app                 *fiber.App
 	store               store.Store
 	config              Config
-	hub                 *handlers.Hub
+	hub                 *transport.Hub
 	notificationService *notifications.Service
 	persistenceStore    *store.PersistenceStore
 	k8sClient           *k8s.MultiClusterClient
 	done                <-chan struct{}
 }
 
-func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *handlers.Hub, notificationService *notifications.Service, persistenceStore *store.PersistenceStore, k8sClient *k8s.MultiClusterClient, done <-chan struct{}) *apiCoreRouteGroup {
+func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *transport.Hub, notificationService *notifications.Service, persistenceStore *store.PersistenceStore, k8sClient *k8s.MultiClusterClient, done <-chan struct{}) *apiCoreRouteGroup {
 	return &apiCoreRouteGroup{
 		app:                 app,
 		store:               store,
@@ -112,7 +115,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 		return c.Status(resp.StatusCode).Send(body)
 	})
 
-	githubProxy := handlers.NewGitHubProxyHandler(g.config.GitHubToken, g.store)
+	githubProxy := github.NewGitHubProxyHandler(g.config.GitHubToken, g.store)
 	githubTokenAdminOnly := func(c *fiber.Ctx) error {
 		if err := handlers.RequireAdmin(c, g.store); err != nil {
 			return err
@@ -123,7 +126,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Post("/github/token", githubTokenAdminOnly, githubProxy.SaveToken)
 	api.Delete("/github/token", githubTokenAdminOnly, githubProxy.DeleteToken)
 
-	githubPipelines := handlers.NewGitHubPipelinesHandler(g.config.GitHubToken, g.store)
+	githubPipelines := github.NewGitHubPipelinesHandler(g.config.GitHubToken, g.store)
 	api.Get("/github-pipelines", githubPipelines.Serve)
 	api.Post("/github-pipelines", githubPipelines.Serve)
 	api.Get("/github-pipelines/health", githubPipelines.HandleHealth)
@@ -133,8 +136,8 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 
 	api.Get("/github/*", githubProxy.Proxy)
 
-	api.Get("/acmm/scan", handlers.ACMMScanHandler)
-	api.Get("/acmm/badge", handlers.ACMMBadgeHandler)
+	api.Get("/acmm/scan", compliance.ACMMScanHandler)
+	api.Get("/acmm/badge", compliance.ACMMBadgeHandler)
 
 	settingsHandler := handlers.NewSettingsHandler(settings.GetSettingsManager(), g.store)
 	api.Get("/settings", settingsHandler.GetSettings)
@@ -217,11 +220,15 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Get("/persistence/deployments", persistenceHandler.ListWorkloadDeployments)
 	api.Get("/persistence/deployments/:name", persistenceHandler.GetWorkloadDeployment)
 
-	nightlyE2E := handlers.NewNightlyE2EHandler(g.config.GitHubToken)
+	nightlyE2E := github.NewNightlyE2EHandler(g.config.GitHubToken)
 	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)
 	api.Get("/nightly-e2e/run-logs", nightlyE2E.GetRunLogs)
 
-	kubaraCatalog := handlers.NewKubaraCatalogHandler(g.config.GitHubToken, g.config.KubaraCatalogRepo, g.config.KubaraCatalogPath)
+	kubaraCatalog, err := handlers.NewKubaraCatalogHandler(g.config.GitHubToken, g.config.KubaraCatalogRepo, g.config.KubaraCatalogPath)
+	if err != nil {
+		slog.Error("Failed to initialize Kubara catalog handler; catalog routes will be unavailable", "error", err)
+		return
+	}
 	api.Get("/kubara/catalog", kubaraCatalog.GetCatalog)
 	api.Get("/kubara/config", kubaraCatalog.GetConfig)
 }

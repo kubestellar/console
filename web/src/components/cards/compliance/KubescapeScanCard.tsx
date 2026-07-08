@@ -232,12 +232,12 @@ Please proceed step by step.`,
           return (
             <div className="text-center mb-2">
               <span className={`text-xs font-semibold ${context.color}`}>{context.label}</span>
-              <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{context.description}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{context.description}</p>
             </div>
           )
         })()}
 
-        <div className="flex items-center justify-center gap-3 mb-2 text-[10px] text-muted-foreground">
+        <div className="flex items-center justify-center gap-3 mb-2 text-xs text-muted-foreground">
           <span>{filtered.passedControls} {t('cards:kubescapeScan.passed')}</span>
           <span className="text-muted-foreground/30">|</span>
           <span className={filtered.failedControls > 0 ? 'text-red-400' : ''}>{filtered.failedControls} {t('cards:kubescapeScan.failed')}</span>
@@ -273,7 +273,7 @@ Please proceed step by step.`,
                   </span>
                 </div>
                 {frameworkInfo && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{frameworkInfo.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{frameworkInfo.description}</p>
                 )}
                 <div className="mt-1 h-1 rounded-full bg-secondary overflow-hidden">
                   <div

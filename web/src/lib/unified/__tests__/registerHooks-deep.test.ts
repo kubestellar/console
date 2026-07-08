@@ -14,14 +14,16 @@ import { useEffect, useState } from 'react'
 // ── Hoisted mocks ──────────────────────────────────────────────────
 
 const { mockUseDemoMode } = vi.hoisted(() => ({
-  mockUseDemoMode: vi.fn().mockReturnValue({ isDemoMode: false }),
+  mockUseDemoMode: vi.fn().mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
   getDemoMode: () => mockUseDemoMode().isDemoMode,
   isDemoModeForced: false,
-}))
+}
+))
 
 vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPodIssues: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
@@ -82,7 +84,7 @@ import { registerUnifiedHooks } from '../registerHooks'
 beforeEach(() => {
   vi.clearAllMocks()
   vi.useFakeTimers()
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
 })
 
 afterEach(() => {
@@ -118,7 +120,7 @@ describe('useDemoDataHook deep branches', () => {
   }
 
   it('returns empty data and isLoading=false in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const demoData = [{ id: 1, value: 'test' }]
     const { result } = renderHook(() => useDemoDataHookSimulation(demoData))
 
@@ -130,7 +132,7 @@ describe('useDemoDataHook deep branches', () => {
   })
 
   it('returns empty data while loading in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const demoData = [{ id: 1 }]
     const { result } = renderHook(() => useDemoDataHookSimulation(demoData))
 
@@ -140,7 +142,7 @@ describe('useDemoDataHook deep branches', () => {
   })
 
   it('returns demo data after timer fires in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const demoData = [{ id: 1, metric: 42 }]
     const { result } = renderHook(() => useDemoDataHookSimulation(demoData))
 
@@ -151,7 +153,7 @@ describe('useDemoDataHook deep branches', () => {
   })
 
   it('cleans up timer on unmount before it fires', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const { unmount } = renderHook(() => useDemoDataHookSimulation([{ id: 1 }]))
 
     // Unmount before timer fires
@@ -161,7 +163,7 @@ describe('useDemoDataHook deep branches', () => {
   })
 
   it('transitions from demo to non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const demoData = [{ id: 1 }]
     const { result, rerender } = renderHook(() => useDemoDataHookSimulation(demoData))
 
@@ -169,14 +171,14 @@ describe('useDemoDataHook deep branches', () => {
     expect(result.current.data).toEqual(demoData)
 
     // Switch to non-demo
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     rerender()
     act(() => { vi.advanceTimersByTime(0) })
     expect(result.current.data).toEqual([])
   })
 
   it('refetch function is a no-op', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const { result } = renderHook(() => useDemoDataHookSimulation([]))
     expect(() => result.current.refetch()).not.toThrow()
   })

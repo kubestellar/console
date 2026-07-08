@@ -107,13 +107,13 @@ function PluginRow({
         <span className="text-xs font-mono truncate" title={plugin.name}>
           {plugin.name}
         </span>
-        <span className="text-[11px] text-muted-foreground shrink-0">
+        <span className="text-xs text-muted-foreground shrink-0">
           v{plugin.version}
         </span>
       </div>
       <span
         className={cn(
-          'text-[11px] px-1.5 py-0.5 rounded-full shrink-0',
+          'text-xs px-1.5 py-0.5 rounded-full shrink-0',
           pluginStatusClass(plugin.status),
         )}
       >
@@ -133,8 +133,8 @@ function TemplateRow({ template }: { template: BackstageScaffolderTemplate }) {
         </span>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[11px] text-muted-foreground">{template.type}</span>
-        <span className="text-[11px] text-muted-foreground truncate max-w-[120px]">
+        <span className="text-xs text-muted-foreground">{template.type}</span>
+        <span className="text-xs text-muted-foreground truncate max-w-[120px]">
           {template.owner}
         </span>
       </div>
@@ -298,7 +298,7 @@ export function BackstageStatus() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('backstageStatus.sectionCatalog', 'Catalog')}
             </h3>
-            <span className="text-[11px] text-muted-foreground ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {t('backstageStatus.lastSync', 'synced')}:{' '}
               <span className="text-foreground">{formatRelative(data.lastCatalogSync, t)}</span>
             </span>
@@ -309,7 +309,7 @@ export function BackstageStatus() {
                 key={kind}
                 className="rounded-md bg-secondary/30 px-2 py-1.5 flex flex-wrap items-center justify-between gap-y-2"
               >
-                <span className="text-[11px] text-muted-foreground truncate">
+                <span className="text-xs text-muted-foreground truncate">
                   {kindLabels[kind] ?? kind}
                 </span>
                 <span className="text-xs font-mono text-foreground ml-2">

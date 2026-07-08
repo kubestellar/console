@@ -46,6 +46,13 @@ const (
 	ActionUpdateGPUReservation = "update_gpu_reservation"
 	ActionDeleteGPUReservation = "delete_gpu_reservation"
 	ActionShareMissionGitHub   = "share_mission_github"
+
+	// Team management mutations.
+	ActionCreateTeam       = "create_team"
+	ActionUpdateTeam       = "update_team"
+	ActionDeleteTeam       = "delete_team"
+	ActionAddTeamMember    = "add_team_member"
+	ActionRemoveTeamMember = "remove_team_member"
 )
 
 // storeMu guards the package-level store reference.

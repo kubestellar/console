@@ -5,11 +5,12 @@ on:
     branches: [main]
     paths: [deploy.sh]
 
-permissions: {}
+permissions: read-all
 
 jobs:
   update-checksum:
     permissions:
+      # contents: write required to commit the updated deploy.sh.sha256 checksum file
       contents: write
     runs-on: ubuntu-latest
     steps:

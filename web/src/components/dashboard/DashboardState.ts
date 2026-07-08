@@ -200,19 +200,19 @@ export function useDashboardState() {
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
-        return { value: clusterCount, sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: clusterCount > 0 }
+        return { value: clusterCount, groundtruthField: 'dashboard-clusters-total', sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: clusterCount > 0 }
       case 'healthy':
-        return { value: healthyClusters, sublabel: 'healthy', onClick: () => drillToAllClusters('healthy'), isClickable: healthyClusters > 0 }
+        return { value: healthyClusters, groundtruthField: 'dashboard-healthy-clusters', sublabel: 'healthy', onClick: () => drillToAllClusters('healthy'), isClickable: healthyClusters > 0 }
       case 'warnings':
         return { value: 0, sublabel: 'warnings', isClickable: false }
       case 'errors':
-        return { value: unhealthyClusters, sublabel: 'unhealthy', onClick: () => drillToAllClusters('unhealthy'), isClickable: unhealthyClusters > 0 }
+        return { value: unhealthyClusters, groundtruthField: 'dashboard-error-clusters', sublabel: 'unhealthy', onClick: () => drillToAllClusters('unhealthy'), isClickable: unhealthyClusters > 0 }
       case 'namespaces':
-        return { value: totalNamespaces, sublabel: 'namespaces', onClick: () => navigate(ROUTES.NAMESPACES), isClickable: totalNamespaces > 0 }
+        return { value: totalNamespaces, groundtruthField: 'dashboard-namespaces-total', sublabel: 'namespaces', onClick: () => navigate(ROUTES.NAMESPACES), isClickable: totalNamespaces > 0 }
       case 'nodes':
-        return { value: totalNodes, progressValue: healthyNodes, max: totalNodes, sublabel: 'total nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
+        return { value: totalNodes, groundtruthField: 'dashboard-nodes-total', progressValue: healthyNodes, max: totalNodes, sublabel: 'total nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
       case 'pods':
-        return { value: totalPods, sublabel: 'pods', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
+        return { value: totalPods, groundtruthField: 'dashboard-pods-total', sublabel: 'pods', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
       default:
         return { value: '-' }
     }

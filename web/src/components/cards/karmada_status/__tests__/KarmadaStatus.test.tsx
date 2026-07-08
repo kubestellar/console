@@ -1,3 +1,4 @@
+import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { KarmadaStatus } from '../KarmadaStatus'
@@ -20,6 +21,7 @@ vi.mock('../../../ui/Skeleton', () => ({
   Skeleton: ({ className }: { className?: string }) => <div className={`animate-pulse ${className}`} />,
   SkeletonStats: ({ className }: { className?: string }) => <div className={`animate-pulse ${className}`} />,
   SkeletonList: ({ className }: { className?: string }) => <div className={`animate-pulse ${className}`} />,
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 // Mock CardSearchInput

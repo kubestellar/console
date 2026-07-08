@@ -1,4 +1,6 @@
 import { useRef, useEffect } from 'react'
+import { AlertTriangle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -24,12 +26,14 @@ const DEFAULT_LOGS_CARDS = [
 ]
 
 export function Logs() {
-  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters } = useClusters()
-  const { events, isLoading: eventsLoading, isRefreshing: eventsRefreshing, lastRefresh, refetch: refetchEvents } = useCachedEvents()
+  const { t } = useTranslation()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, error: clustersError, refetch: refetchClusters } = useClusters()
+  const { events, isLoading: eventsLoading, isRefreshing: eventsRefreshing, error: eventsError, lastRefresh, refetch: refetchEvents } = useCachedEvents()
   const warningEvents = events.filter(e => e.type === 'Warning')
   const lastUpdated = lastRefresh ? new Date(lastRefresh) : null
   const isLoading = clustersLoading || eventsLoading
   const isRefreshing = clustersRefreshing || eventsRefreshing
+  const error = clustersError || eventsError
 
   const { drillToAllEvents, drillToAllClusters } = useDrillDownActions()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -129,6 +133,25 @@ export function Logs() {
       emptyState={{
         title: 'Logs & Events Dashboard',
         description: 'Add cards to monitor Kubernetes events, application logs, and system messages across your clusters.' }}
-    />
+    >
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-400">{t('logs.errorLoading', 'Could not load logs data')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{error}</p>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                className="mt-3 inline-flex items-center rounded-lg bg-red-500/15 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/25"
+              >
+                {t('common.retry', 'Retry')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </DashboardPage>
   )
 }

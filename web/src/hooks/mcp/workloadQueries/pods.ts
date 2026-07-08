@@ -147,6 +147,17 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const sseAbortRef = useRef<AbortController | null>(null)
+  const refreshIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const scheduleRefreshIndicatorClear = useCallback(() => {
+    if (refreshIndicatorTimeoutRef.current) {
+      clearTimeout(refreshIndicatorTimeoutRef.current)
+    }
+    refreshIndicatorTimeoutRef.current = setTimeout(() => {
+      setIsRefreshing(false)
+      refreshIndicatorTimeoutRef.current = null
+    }, MIN_REFRESH_INDICATOR_MS)
+  }, [])
 
   const refetch = useCallback(async (silent = false) => {
     // In demo mode, use demo data
@@ -166,7 +177,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       setError(null)
       if (!silent) {
         setIsRefreshing(true)
-        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+        scheduleRefreshIndicatorClear()
       } else {
         setIsRefreshing(false)
       }
@@ -181,7 +192,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       setIsLoading(false)
       if (!silent) {
         setIsRefreshing(true)
-        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+        scheduleRefreshIndicatorClear()
       } else {
         setIsRefreshing(false)
       }
@@ -257,12 +268,12 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
     } finally {
       setIsLoading(false)
       if (!silent) {
-        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+        scheduleRefreshIndicatorClear()
       } else {
         setIsRefreshing(false)
       }
     }
-  }, [cluster, namespace, sortBy, limit, cacheKey])
+  }, [cacheKey, cluster, limit, namespace, scheduleRefreshIndicatorClear, sortBy])
 
   useEffect(() => {
     const hasCachedData = podsCache && podsCache.key === cacheKey
@@ -283,6 +294,10 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       unsubscribePolling()
       unregisterRefetch()
       sseAbortRef.current?.abort()
+      if (refreshIndicatorTimeoutRef.current) {
+        clearTimeout(refreshIndicatorTimeoutRef.current)
+        refreshIndicatorTimeoutRef.current = null
+      }
     }
   }, [refetch, cacheKey, consecutiveFailures])
 

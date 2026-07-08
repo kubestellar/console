@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * CardRequestDialog unit tests
  *
@@ -6,7 +7,6 @@
  * retry flow, toast feedback, and close button.
  */
 
-import type React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 
@@ -24,9 +24,11 @@ vi.mock('../../../lib/api', () => ({
   api: { post: mockApiPost },
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitGroundControlCardRequestOpened: mockEmitCardRequest,
-}))
+}
+))
 
 vi.mock('../../ui/Toast', () => ({
   useToast: () => ({ showToast: mockShowToast }),

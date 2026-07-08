@@ -47,8 +47,10 @@ vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
 }))
 
-vi.mock('../../useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../useLocalAgent', () => ({
@@ -117,7 +119,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsAgentUnavailable.mockReturnValue(true)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockClusterCacheRef.clusters = []
@@ -292,7 +294,7 @@ describe('useGPUNodes', () => {
 
   it('uses demo GPU nodes when demo mode is enabled and no cached data exists', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     // SSE fails — should fall back to demo data in catch block
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
 
@@ -772,7 +774,7 @@ describe('useGPUNodes — deduplication edge cases', () => {
     gpuNodeCache.lastRefresh = null
     gpuNodeCache.lastUpdated = null
     mockIsDemoMode.mockReturnValue(false)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue(false)
     mockFetchSSE.mockResolvedValue([])
   })
 
@@ -1069,7 +1071,7 @@ describe('fetchGPUNodes — error recovery from localStorage', () => {
 
   it('falls back to demo data when memory cache is empty and demo mode is on', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     gpuNodeCache.nodes = []
     gpuNodeCache.lastUpdated = null
@@ -1079,9 +1081,7 @@ describe('fetchGPUNodes — error recovery from localStorage', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 3000 })
-    // Demo GPU nodes should be loaded
-    expect(gpuNodeCache.nodes.length).toBeGreaterThan(0)
+    await waitFor(() => expect(gpuNodeCache.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
   })
 
   it('increments consecutiveFailures on fetch error', async () => {

@@ -82,21 +82,26 @@ func validateHelmChartArg(chart string) error {
 	return nil
 }
 
-// validateHelmChartHost checks OCI chart references for SSRF. When the chart
-// starts with "oci://", the host portion is resolved and validated against
-// blocked IP ranges to prevent in-cluster network probing (#17530).
+// validateHelmChartHost validates the host portion of any URL-scheme chart
+// reference (oci://, https://, http://) against blocked IP ranges to prevent
+// SSRF. Plain repo/chart references and local paths have no URL scheme and
+// are not checked here.
+//
+// Previously this only checked oci:// references (#17530). Extended to cover
+// https:// chart archive URLs which helm also fetches over the network (#18074).
 func validateHelmChartHost(chart string) error {
-	if !strings.HasPrefix(chart, "oci://") {
+	// Only URL-scheme references contain a host to validate.
+	if !strings.Contains(chart, "://") {
 		return nil
 	}
-	// Parse as URL to extract host.
 	u, err := url.Parse(chart)
 	if err != nil {
-		return fmt.Errorf("invalid OCI chart reference: %w", err)
+		return fmt.Errorf("invalid chart reference URL: %w", err)
 	}
 	host := u.Hostname()
 	if host == "" {
-		return fmt.Errorf("OCI chart reference must include a host")
+		// No host in the URL (shouldn't happen for oci:// or https://, but be defensive).
+		return nil
 	}
 	return ssrf.ValidateHost(host)
 }

@@ -22,7 +22,7 @@ export const consoleAiOfflineDetectionConfig: UnifiedCardConfig = {
       { field: 'reason', header: 'Reason', render: 'truncate', width: 150 },
     ],
   },
-  emptyState: { icon: 'WifiOff', title: 'All Online', message: 'All clusters are online', variant: 'success' },
+  emptyState: { icon: 'WifiOff', title: 'All Online', message: 'All clusters are online', variant: 'neutral' },
   loadingState: { type: 'list', rows: 3 },
   isDemoData: false,
   isLive: true,

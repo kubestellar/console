@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -223,7 +224,7 @@ describe('PodIssues', () => {
     })
 
     it('shows fallback error message when error is null', () => {
-      setupDefaults({ isFailed: true, error: null, issues: [] })
+      setupDefaults({ isFailed: true, error: false, issues: [] })
       render(<PodIssues />)
       expect(screen.getByText('podIssues.apiUnavailable')).toBeInTheDocument()
     })

@@ -1,3 +1,4 @@
+import React from 'react'
 import '@testing-library/jest-dom/vitest'
 import { render, renderHook, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -12,6 +13,7 @@ const { tSpy, closeSpy, toggleSpy, openSpy, setIsOpenSpy } = vi.hoisted(() => ({
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: tSpy,
     i18n: { language: 'en', changeLanguage: vi.fn() },

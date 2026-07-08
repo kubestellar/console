@@ -34,6 +34,7 @@ func TestAPIContract_Version(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/api/version", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -68,6 +69,7 @@ func TestAPIContract_Me(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/api/me", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -114,6 +116,7 @@ func TestAPIContract_Health(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/health", nil)
+	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	require.NotNil(t, resp)

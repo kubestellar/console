@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Deep branch-coverage tests for Dashboard.tsx logic
  *
@@ -35,12 +36,14 @@ vi.mock('../../../lib/api', () => ({
   UnauthenticatedError: class extends Error {},
 }))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitCardAdded: vi.fn(),
   emitCardRemoved: vi.fn(),
   emitCardDragged: vi.fn(),
   emitCardConfigured: vi.fn(),
-}))
+}
+))
 
 const mockLocation = { pathname: '/', key: 'default', search: '', hash: '', state: null }
 vi.mock('react-router-dom', () => ({
@@ -175,7 +178,12 @@ vi.mock('../../../lib/cache', () => ({ setAutoRefreshPaused: vi.fn(), createCach
 vi.mock('../../../hooks/useRefreshIndicator', () => ({
   useRefreshIndicator: (fn: () => void) => ({ showIndicator: false, triggerRefresh: fn }),
 }))
-vi.mock('../../../hooks/useDemoMode', () => ({ getDemoMode: () => false, isDemoModeForced: false }))
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
+  getDemoMode: () => false,
+  isDemoModeForced: false,
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+}))
 
 let mockDashboardHealthStatus: 'healthy' | 'warning' | 'critical' | 'empty' = 'healthy'
 vi.mock('../../../hooks/useDashboardHealth', () => ({

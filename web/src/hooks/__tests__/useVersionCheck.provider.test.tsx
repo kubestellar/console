@@ -37,9 +37,11 @@ vi.mock('../useLocalAgent', () => ({
     useLocalAgent: mockUseLocalAgent,
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
     emitSessionContext: vi.fn(),
-}))
+}
+))
 
 function wrapper({ children }: { children: React.ReactNode }) {
     return <VersionCheckProvider>{children}</VersionCheckProvider>
@@ -57,6 +59,8 @@ describe('cache behaviour', () => {
     })
 
     afterEach(() => {
+        vi.clearAllTimers()
+        vi.useRealTimers()
         vi.restoreAllMocks()
         vi.unstubAllGlobals()
     })
@@ -160,6 +164,8 @@ describe('VersionCheckProvider', () => {
     })
 
     afterEach(() => {
+        vi.clearAllTimers()
+        vi.useRealTimers()
         vi.restoreAllMocks()
         vi.unstubAllGlobals()
     })
@@ -319,6 +325,7 @@ describe('toggle-sensitive polling', () => {
     })
 
     afterEach(() => {
+        vi.clearAllTimers()
         vi.useRealTimers()
         vi.restoreAllMocks()
         vi.unstubAllGlobals()
@@ -418,6 +425,18 @@ describe('toggle-sensitive polling', () => {
         // At least one additional call from the interval
         expect(callsAfterPoll).toBeGreaterThan(callsBeforePoll)
     })
+
+    describe('loading and error state exposure', () => {
+        it('exposes isChecking state to consumers', () => {
+            const { result } = renderHook(() => useVersionCheck(), { wrapper })
+            expect(result.current).toHaveProperty('isChecking')
+            expect(typeof result.current.isChecking).toBe('boolean')
+        })
+
+        it('exposes error state to consumers', () => {
+            const { result } = renderHook(() => useVersionCheck(), { wrapper })
+            expect(result.current).toHaveProperty('error')
+            expect(result.current.error === null || typeof result.current.error === 'string').toBe(true)
+        })
+    })
 })
-
-

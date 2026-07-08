@@ -54,6 +54,7 @@ func TestServer_HandleKagentCRDAgents(t *testing.T) {
 
 	// 2. Test request
 	req := httptest.NewRequest("GET", "/kagent-crds/agents?cluster=cluster1", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleKagentCRDAgents(w, req)
@@ -99,6 +100,7 @@ func TestServer_HandleKagentCRDSummary(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("GET", "/kagent-crds/summary?cluster=cluster1", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 
 	s.handleKagentCRDSummary(w, req)

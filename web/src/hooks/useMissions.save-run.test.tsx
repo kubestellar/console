@@ -15,9 +15,10 @@ vi.mock('./mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
-vi.mock('./useDemoMode', () => ({
+vi.mock('./useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: vi.fn(() => false),
-  default: vi.fn(() => false),
 }))
 vi.mock('./useLocalAgent', () => ({
   useLocalAgent: vi.fn(() => ({ isConnected: false })),
@@ -62,7 +63,8 @@ vi.mock('../lib/constants', async (importOriginal) => {
   LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
 } })
 
-vi.mock('../lib/analytics', () => ({
+vi.mock('../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/analytics')>()),
   emitMissionStarted: vi.fn(),
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
@@ -71,7 +73,8 @@ vi.mock('../lib/analytics', () => ({
   emitWsAuthMissing: vi.fn(),
   emitSseAuthFailure: vi.fn(),
   emitSessionRefreshFailure: vi.fn(),
-}))
+}
+))
 
 vi.mock('../lib/missions/preflightCheck', () => ({
   runPreflightCheck: vi.fn().mockResolvedValue({ ok: true }),
@@ -1014,5 +1017,13 @@ describe('cancelling mission receives terminal messages', () => {
     const mission = result.current.missions.find(m => m.id === missionId)
     expect(mission?.status).toBe('cancelled')
     expect(mission?.messages.some(m => m.content.includes('backend unreachable'))).toBe(true)
+  })
+
+  describe('loading state exposure', () => {
+    it('exposes agentsLoading state to consumers', () => {
+      const { result } = renderHook(() => useMissions(), { wrapper })
+      expect(result.current).toHaveProperty('agentsLoading')
+      expect(typeof result.current.agentsLoading).toBe('boolean')
+    })
   })
 })

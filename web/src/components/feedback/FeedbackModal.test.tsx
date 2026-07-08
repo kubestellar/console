@@ -1,4 +1,4 @@
-import type React from 'react'
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import * as FeedbackModalModule from './FeedbackModal'
@@ -28,7 +28,8 @@ vi.mock('../ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitFeedbackSubmitted: vi.fn(),
   emitLinkedInShare: vi.fn(),
   emitScreenshotAttached: vi.fn(),
@@ -36,7 +37,8 @@ vi.mock('../../lib/analytics', () => ({
   emitScreenshotUploadSuccess: vi.fn(),
   getRecentBrowserErrors: () => [],
   getRecentFailedApiCalls: () => [],
-}))
+}
+))
 
 vi.mock('../../lib/clipboard', () => ({
   copyBlobToClipboard: vi.fn(),
@@ -83,9 +85,13 @@ vi.mock('../../lib/constants', () => ({
   COPY_FEEDBACK_TIMEOUT_MS: 2000,
 }))
 
-vi.mock('../../lib/constants/network', () => ({
-  FEEDBACK_UPLOAD_TIMEOUT_MS: 30000,
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FEEDBACK_UPLOAD_TIMEOUT_MS: 30000,
+  }
+})
 
 vi.mock('./FeatureRequestTypes', () => ({
   MAX_VIDEO_SIZE_BYTES: 10 * 1024 * 1024,

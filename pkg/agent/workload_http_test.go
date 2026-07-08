@@ -24,6 +24,7 @@ func newWorkloadTestServer() *Server {
 func postJSON(handler http.HandlerFunc, path string, body interface{}) *httptest.ResponseRecorder {
 	buf, _ := json.Marshal(body)
 	req := httptest.NewRequest("POST", path, bytes.NewReader(buf))
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:3000")
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -153,6 +154,7 @@ func TestHandleScaleHTTP_RejectsGET(t *testing.T) {
 	s := newWorkloadTestServer()
 
 	req := httptest.NewRequest("GET", "/scale", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:3000")
 	w := httptest.NewRecorder()
 	s.handleScaleHTTP(w, req)
@@ -169,6 +171,7 @@ func TestHandleScaleHTTP_CORSMethodsHeader(t *testing.T) {
 	s := newWorkloadTestServer()
 
 	req := httptest.NewRequest("OPTIONS", "/scale", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:3000")
 	w := httptest.NewRecorder()
 	s.handleScaleHTTP(w, req)
@@ -184,6 +187,7 @@ func TestHandleDeployWorkloadHTTP_CORSMethodsHeader(t *testing.T) {
 	s := newWorkloadTestServer()
 
 	req := httptest.NewRequest("OPTIONS", "/workloads/deploy", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:3000")
 	w := httptest.NewRecorder()
 	s.handleDeployWorkloadHTTP(w, req)
@@ -199,6 +203,7 @@ func TestHandleDeleteWorkloadHTTP_CORSMethodsHeader(t *testing.T) {
 	s := newWorkloadTestServer()
 
 	req := httptest.NewRequest("OPTIONS", "/workloads/delete", nil)
+	req.Host = "localhost"
 	req.Header.Set("Origin", "http://localhost:3000")
 	w := httptest.NewRecorder()
 	s.handleDeleteWorkloadHTTP(w, req)

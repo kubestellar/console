@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -26,8 +27,9 @@ vi.mock('../../../hooks/useMCP', () => ({
 }))
 
 const mockIsDemoMode = vi.fn(() => false)
-vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   isDemoModeForced: () => false,
   getDemoMode: () => false,
   canToggleDemoMode: () => true,
@@ -197,7 +199,7 @@ function setupDefaults({
     isRefreshing,
     isFailed,
     consecutiveFailures,
-    error: null,
+    error: false,
     lastRefresh: null,
   })
   mockUseCardLoadingState.mockReturnValue({})

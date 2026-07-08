@@ -1,9 +1,11 @@
+import React from 'react'
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 
 let mockTaglines: string[] = []
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => {
       if (key === 'navbar.taglines') {

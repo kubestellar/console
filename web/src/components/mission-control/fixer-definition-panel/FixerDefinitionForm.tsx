@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Loader2, Plus, Search, Sparkles } from 'lucide-react'
 import { type RefObject } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '../../ui/Button'
 import { PayloadGrid } from '../PayloadGrid'
 import type { Mission } from '../../../hooks/useMissions'
@@ -76,6 +77,7 @@ export function FixerDefinitionForm({
   onUpdatePriority,
   onCardClick,
 }: FixerDefinitionFormProps) {
+  const { t } = useTranslation()
   const modifierKeyLabel = typeof navigator !== 'undefined' && navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'
 
   return (
@@ -206,13 +208,13 @@ export function FixerDefinitionForm({
             {isManualCatalogLoading && (
               <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>Loading additional catalog workloads…</span>
+                <span>{t('missionControl.fixerDefinition.loadingCatalogWorkloads')}</span>
               </p>
             )}
 
             {manualCatalogError && !isManualCatalogLoading && (
               <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-100">
-                <span>Could not load the latest workload catalog. Static suggestions are still available.</span>
+                <span>{t('missionControl.fixerDefinition.catalogLoadError')}</span>
                 <Button variant="ghost" size="sm" onClick={onRetryManualCatalog}>
                   Retry
                 </Button>

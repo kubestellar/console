@@ -2497,7 +2497,31 @@
       "dryRunValidation": "Dry-run validation",
       "unifiedDeployment": "Unified deployment"
     },
-    "projectAdded": "Project added to mission"
+    "projectAdded": "Project added to mission",
+    "blueprintInfo": {
+      "phasedSafetyFeatures": "Safety Features",
+      "parallelConsiderations": "Considerations",
+      "safeForProduction": "Safe for production environments",
+      "automaticPauseOnFailure": "Automatic pause on failure",
+      "retrySkipIndividual": "Retry/skip individual projects",
+      "dependenciesValidatedPerPhase": "Dependencies validated per phase",
+      "rollbackPlanGenerated": "Rollback plan generated for each phase",
+      "allMissionsParallel": "All missions launched in parallel",
+      "noDependencyGating": "No dependency gating — order not guaranteed",
+      "fastestDeployment": "Fastest possible deployment",
+      "failuresDontBlock": "Failures don't block other projects",
+      "manualInterventionNeeded": "May need manual intervention if deps fail"
+    },
+    "approval": {
+      "issueWillInclude": "Issue will include",
+      "phasedRolloutPlan": "Phased rollout plan with estimates",
+      "approvalChecklist": "Approval checklist for reviewers",
+      "checkingGitHubAccess": "Checking GitHub access…"
+    },
+    "fixerDefinition": {
+      "loadingCatalogWorkloads": "Loading additional catalog workloads…",
+      "catalogLoadError": "Could not load the latest workload catalog. Static suggestions are still available."
+    }
   },
   "auth": {
     "sessionExpiresSoon": "Session expires soon",
@@ -2605,7 +2629,6 @@
     "yourRequestsCount_one": "{{count}} request",
     "yourRequestsCount_other": "{{count}} requests",
     "reportBugOrFeature": "Report a bug or request a feature",
-    "viewFullLeaderboard": "View Full Leaderboard",
     "draftRestored": "Draft restored."
   },
   "nps": {
@@ -2796,7 +2819,8 @@
     "upgradeFailed": "Upgrade failed"
   },
   "updates": {
-    "loadingPullRequests": "Loading recent pull requests…"
+    "loadingRecentPullRequests": "Loading recent pull requests…",
+    "updateNow": "Update now"
   },
   "drilldown": {
     "goBack": "Go back",
@@ -5082,7 +5106,8 @@
     "viewResourceAria": "View {{kind}} resources"
   },
   "deployments": {
-    "errorLoading": "Error loading deployment data"
+    "errorLoading": "Error loading deployment data",
+    "allHealthy": "All healthy"
   },
   "workloads": {
     "title": "Workloads",
@@ -5424,7 +5449,10 @@
     "logoutTitle": "Log Out?",
     "logoutMessage": "You will be logged out and all session data will be cleared.",
     "clearTokensTitle": "Clear All Tokens?",
-    "clearTokensMessage": "This will remove all stored tokens including agent and authentication tokens. You will need to log in again."
+    "clearTokensMessage": "This will remove all stored tokens including agent and authentication tokens. You will need to log in again.",
+    "removeCardTitle": "Remove Card?",
+    "removeCardMessageWithTitle": "Are you sure you want to remove \"{{title}}\" from your dashboard? You can add it back later from the card catalog.",
+    "removeCardMessage": "Are you sure you want to remove this card from your dashboard? You can add it back later from the card catalog."
   },
   "saveResolution": "Save Resolution",
   "shareToOrg": "Share to Org",
@@ -5444,8 +5472,86 @@
     "loadingNamespaces": "Loading namespaces…",
     "updatingEllipsis": "Updating..."
   },
-  "updates": {
-    "loadingRecentPullRequests": "Loading recent pull requests…",
-    "updateNow": "Update now"
-  }
+  "teams": {
+    "teams": "Teams",
+    "createTeam": "Create Team",
+    "deleteTeam": "Delete Team",
+    "deleteTeamTitle": "Delete Team",
+    "deleteTeamMessage": "Are you sure you want to delete this team? This action cannot be undone.",
+    "noTeams": "No teams yet. Create one to get started.",
+    "teamName": "Team Name",
+    "teamNamePlaceholder": "e.g. Platform Team",
+    "description": "Description",
+    "descriptionPlaceholder": "What does this team own?",
+    "members": "Members",
+    "member": "Member",
+    "admin": "Admin",
+    "teamAdmins": "Team Admins",
+    "teamMembers": "Members",
+    "addMember": "Add Member",
+    "removeMember": "Remove",
+    "removeMemberTitle": "Remove Member",
+    "removeMemberMessage": "Are you sure you want to remove this member from the team?",
+    "userId": "User ID",
+    "role": "Role",
+    "accessGrants": "Access Grants",
+    "grantAccess": "Grant Access",
+    "grantAccessTo": "Grant Access to {{teamName}}",
+    "granting": "Granting...",
+    "noAccessGrants": "No access grants yet. Grant this team access to a cluster or namespace.",
+    "scope": "Scope",
+    "namespaceScoped": "Namespace-scoped (RoleBinding)",
+    "clusterScoped": "Cluster-wide (ClusterRoleBinding)",
+    "cluster": "Cluster",
+    "selectCluster": "Select a cluster",
+    "namespace": "Namespace",
+    "selectNamespace": "Select a namespace",
+    "applyToAllClusters": "Apply to all clusters"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "doesn't exist yet — but it could!",
+    "ctaTitle": "Ship it in hours, not months",
+    "ctaDescription": "KubeStellar Console uses AI-powered repo automation to go from feature request to production in hours. Open an issue and watch the magic happen.",
+    "ctaButton": "Request this feature",
+    "popularPages": "Popular pages",
+    "goBack": "Go back",
+    "home": "Home"
+  },
+  "quickLinks": {
+    "dashboard": "Dashboard",
+    "clusters": "Clusters",
+    "compliance": "Compliance",
+    "deploy": "Deploy",
+    "marketplace": "Marketplace",
+    "cost": "Cost"
+  },
+  "sizes": {
+    "extraSmall": "Extra Small",
+    "small": "Small",
+    "medium": "Medium"
+  },
+  "stories": {
+    "collapsibleContent": "This is the content of the collapsible section.",
+    "hiddenByDefault": "This content is hidden by default.",
+    "podSecurityPass": "Pod Security Standards: Pass",
+    "networkPoliciesPass": "Network Policies: Pass",
+    "resourceLimitsPass": "Resource Limits: Pass",
+    "deprecatedAPIUsage": "Deprecated API usage detected"
+  },
+  "scope": "Scope",
+  "severityFilters": {
+    "allSeverities": "All Severities",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "all": "All severities"
+  },
+  "statusFilters": {
+    "allStatuses": "All statuses",
+    "approved": "Approved",
+    "unapproved": "Unapproved"
+  },
+  "clearSelection": "Clear selection"
 }

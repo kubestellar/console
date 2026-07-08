@@ -9,7 +9,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { RotatingTip } from '../ui/RotatingTip'
 import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
-import { SHORT_DELAY_MS } from '../../lib/constants/network'
+import { SHORT_DELAY_MS, isLocalAgentSuppressed } from '../../lib/constants/network'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useCachedSecurityIssues } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
@@ -68,7 +68,7 @@ export function Security() {
   // When demo mode is OFF and agent is not connected, force skeleton display
   // Also show skeleton during mode switching for smooth transitions
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceSkeletonForOffline = (!isDemoMode && isAgentOffline && !isInClusterMode() && !wasAgentEverConnected()) || isModeSwitching
+  const forceSkeletonForOffline = (!isDemoMode && isAgentOffline && !isInClusterMode() && !isLocalAgentSuppressed() && !wasAgentEverConnected()) || isModeSwitching
 
   // Fetch cached security issues (stale-while-revalidate pattern)
   const { issues: cachedSecurityIssues, isLoading: securityLoading, isRefreshing: securityRefreshing } = useCachedSecurityIssues()

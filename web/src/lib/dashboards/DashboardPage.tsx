@@ -71,6 +71,8 @@ export interface DashboardPageProps {
   hasData?: boolean
   /** Error message to display (optional) */
   error?: string | null
+  /** Machine-readable live route state for semantic canary tests. */
+  routeState?: 'loaded' | 'partial' | 'unavailable' | 'empty'
   /** Dashboard-specific content (rendered below cards) */
   children?: ReactNode
   /** Content rendered between stats and cards section (e.g., tabs, filters) */
@@ -129,6 +131,7 @@ export function DashboardPage({
   lastUpdated,
   hasData = true,
   error,
+  routeState,
   children,
   beforeCards,
   headerExtra,
@@ -230,6 +233,15 @@ export function DashboardPage({
   // Combined refreshing state
   const isRefreshing = externalRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing
+  const liveRouteState = routeState ?? (
+    isLoading && !hasData
+      ? 'partial'
+      : error && !hasData
+        ? 'unavailable'
+        : hasData
+          ? 'loaded'
+          : 'empty'
+  )
 
   // Bridge: when CardWrapper's "Export Widget" calls studioContext.openAddCardModal(),
   // it sets isAddCardModalOpen in the DashboardContext. Sync that into our local
@@ -448,7 +460,7 @@ export function DashboardPage({
     // fixed-position children (FAB, customizer, modals) must live OUTSIDE it
     // to avoid clipping when ancestors create a new containing block (issue 8464).
     <>
-      <div ref={dashboardRef} className="pt-4 min-w-0 max-w-full overflow-x-hidden" data-testid={testId}>
+      <div ref={dashboardRef} className="pt-4 min-w-0 max-w-full overflow-x-hidden" data-testid={testId} data-live-route-state={liveRouteState} data-live-source="k8s">
         {/* Header */}
         <DashboardHeader
           title={title}

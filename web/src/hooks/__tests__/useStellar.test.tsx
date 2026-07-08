@@ -54,6 +54,7 @@ interface MockEventSource {
   onopen: ((e: Event) => void) | null
   onerror: ((e: Event) => void) | null
   addEventListener: ReturnType<typeof vi.fn>
+  removeEventListener: ReturnType<typeof vi.fn>
   close: ReturnType<typeof vi.fn>
   readyState: number
   _listeners: EventSourceListeners
@@ -74,6 +75,11 @@ function createMockEventSource(): MockEventSource {
     addEventListener: vi.fn().mockImplementation((event: string, handler: EventListener) => {
       listeners[event] = listeners[event] || []
       listeners[event].push(handler)
+    }),
+    removeEventListener: vi.fn().mockImplementation((event: string, handler: EventListener) => {
+      if (listeners[event]) {
+        listeners[event] = listeners[event].filter(h => h !== handler)
+      }
     }),
     _listeners: listeners,
     _triggerOpen() {
@@ -139,7 +145,14 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.clearAllTimers()
   vi.useRealTimers()
+  eventSourceInstances.forEach(es => {
+    Object.keys(es._listeners).forEach(eventName => {
+      es._listeners[eventName] = []
+    })
+  })
+  eventSourceInstances = []
   vi.unstubAllGlobals()
   vi.clearAllMocks()
   localStorage.clear()
@@ -285,21 +298,25 @@ describe('StellarProvider — batch scheduling', () => {
 
   it('automatically refreshes when the configured batch interval elapses', async () => {
     vi.useFakeTimers()
-    localStorage.setItem(STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS, String(STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS))
+    try {
+      localStorage.setItem(STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS, String(STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS))
 
-    renderWithProvider()
-    await act(async () => { await Promise.resolve() })
+      renderWithProvider()
+      await act(async () => { await Promise.resolve() })
 
-    mockStellarApi.getState.mockClear()
-    mockStellarApi.getNotifications.mockClear()
+      mockStellarApi.getState.mockClear()
+      mockStellarApi.getNotifications.mockClear()
 
-    await act(async () => {
-      vi.advanceTimersByTime(STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS)
-      await Promise.resolve()
-    })
+      await act(async () => {
+        vi.advanceTimersByTime(STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS)
+        await Promise.resolve()
+      })
 
-    expect(mockStellarApi.getState).toHaveBeenCalledTimes(1)
-    expect(mockStellarApi.getNotifications).toHaveBeenCalledTimes(1)
+      expect(mockStellarApi.getState).toHaveBeenCalledTimes(1)
+      expect(mockStellarApi.getNotifications).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('runs a batch immediately when requested', async () => {
@@ -515,13 +532,16 @@ describe('StellarProvider — SSE events', () => {
 
   it('SSE error triggers isConnected false', async () => {
     vi.useFakeTimers()
-    const { capturedRef } = renderWithProvider()
-    await act(async () => { await Promise.resolve() })
-    const es = eventSourceInstances[0]
-    es._triggerOpen()
-    await act(async () => { es._triggerError() })
-    expect(capturedRef.current?.isConnected).toBe(false)
-    vi.useRealTimers()
+    try {
+      const { capturedRef } = renderWithProvider()
+      await act(async () => { await Promise.resolve() })
+      const es = eventSourceInstances[0]
+      es._triggerOpen()
+      await act(async () => { es._triggerError() })
+      expect(capturedRef.current?.isConnected).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 
@@ -824,24 +844,27 @@ describe('StellarProvider — SSE lifecycle (#14220)', () => {
 
   it('clears token poll interval on unmount before poll completes', async () => {
     vi.useFakeTimers()
-    localStorage.clear()
-    Object.defineProperty(document, 'cookie', {
-      writable: true,
-      value: '',
-    })
+    try {
+      localStorage.clear()
+      Object.defineProperty(document, 'cookie', {
+        writable: true,
+        value: '',
+      })
 
-    const { unmount } = renderWithProvider()
-    await act(async () => { await Promise.resolve() })
-    unmount()
+      const { unmount } = renderWithProvider()
+      await act(async () => { await Promise.resolve() })
+      unmount()
 
-    const eventSourceCountAfterUnmount = eventSourceInstances.length
-    await act(async () => {
-      vi.advanceTimersByTime(STELLAR_TOKEN_POLL_MAX_ATTEMPTS * STELLAR_TOKEN_POLL_INTERVAL_MS)
-    })
+      const eventSourceCountAfterUnmount = eventSourceInstances.length
+      await act(async () => {
+        vi.advanceTimersByTime(STELLAR_TOKEN_POLL_MAX_ATTEMPTS * STELLAR_TOKEN_POLL_INTERVAL_MS)
+      })
 
-    expect(mockStellarApi.getState).not.toHaveBeenCalled()
-    expect(eventSourceInstances).toHaveLength(eventSourceCountAfterUnmount)
-    vi.useRealTimers()
+      expect(mockStellarApi.getState).not.toHaveBeenCalled()
+      expect(eventSourceInstances).toHaveLength(eventSourceCountAfterUnmount)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

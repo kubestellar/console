@@ -102,8 +102,8 @@ export function ResourceImbalanceDetector() {
           symbol: 'none',
           data: [{
             xAxis: avgValue,
-            label: { formatter: `Avg ${avgValue}%`, position: 'start', color: '#f59e0b', fontSize: CHART_AXIS_FONT_SIZE },
-            lineStyle: { color: '#f59e0b', type: 'dashed' },
+            label: { formatter: `Avg ${avgValue}%`, position: 'start', color: '#fbbf24', fontSize: CHART_AXIS_FONT_SIZE },
+            lineStyle: { color: '#fbbf24', type: 'dashed' },
           }],
         },
       }],

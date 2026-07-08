@@ -1,3 +1,4 @@
+import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -93,6 +94,13 @@ function mockSuccessResponses() {
 describe('SigningStatusDashboard', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+  })
+
+  it('shows loading state before signing endpoints resolve', () => {
+    mockedAuthFetch.mockReturnValue(new Promise(() => {}) as Promise<Response>)
+    render(<SigningStatusDashboard />)
+
+    expect(screen.getByText('Loading signing status…')).toBeInTheDocument()
   })
 
   it('renders summary and image tab data after successful fetch', async () => {

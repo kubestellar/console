@@ -1,3 +1,4 @@
+import React from 'react'
 import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -25,7 +26,8 @@ const {
   mockUseMissions: vi.fn(),
 }))
 
-vi.mock('../../../../hooks/useDemoMode', () => ({
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
   useDemoMode: () => ({
     isDemoMode: demoModeState.isDemoMode,
     toggleDemoMode: mockToggleDemoMode,

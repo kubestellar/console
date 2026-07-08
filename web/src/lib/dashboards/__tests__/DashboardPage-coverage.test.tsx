@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * DashboardPage-coverage — tests for uncovered branches in DashboardPage.tsx
  *
@@ -147,7 +148,7 @@ vi.mock('../../../hooks/useUniversalStats', () => ({
   useUniversalStats: () => ({
     getStatValue: (id: string) => ({ value: id, sublabel: '' }),
   }),
-  createMergedStatValueGetter: (a: Function, b: Function) => (id: string) => a(id) ?? b(id),
+  createMergedStatValueGetter: (a: (id: string) => unknown, b: (id: string) => unknown) => (id: string) => a(id) ?? b(id),
 }))
 vi.mock('../../../hooks/useRefreshIndicator', () => ({
   useRefreshIndicator: (fn: () => void) => ({

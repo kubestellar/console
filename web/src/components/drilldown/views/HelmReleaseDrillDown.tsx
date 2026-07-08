@@ -169,7 +169,7 @@ export function HelmReleaseDrillDown({ data }: Props) {
     if (result.success) {
       // Refresh data after rollback
       fetchReleaseInfo()
-      fetchHistory()
+      fetchHistory(true)
     }
   }
 
@@ -228,8 +228,8 @@ export function HelmReleaseDrillDown({ data }: Props) {
   }
 
   // Fetch release history
-  const fetchHistory = async () => {
-    if (!agentConnected || releaseHistory) return
+  const fetchHistory = async (force = false) => {
+    if (!agentConnected || (releaseHistory && !force)) return
     setHistoryLoading(true)
     try {
       const output = await runHelm(['history', releaseName, '-n', namespace, '-o', 'json'])
@@ -252,8 +252,9 @@ export function HelmReleaseDrillDown({ data }: Props) {
       }
     } catch {
       setReleaseHistory([])
+    } finally {
+      setHistoryLoading(false)
     }
-    setHistoryLoading(false)
   }
 
   // Fetch release resources (manifest)
@@ -532,7 +533,7 @@ Please:
                     )}
                     <div className="flex items-center gap-1.5">
                       <RefreshCw className="w-4 h-4" />
-                      <span>Revision: {releaseRevision || releaseInfo?.revision || '1'}</span>
+                      <span>Revision: {releaseInfo?.revision || releaseRevision || '1'}</span>
                     </div>
                   </div>
                   {releaseInfo?.updated && (
@@ -695,7 +696,7 @@ Please:
                           {new Date(rev.updated).toLocaleDateString()}
                         </span>
                         {/* Show rollback button for non-current revisions */}
-                        {String(rev.revision) !== (releaseRevision || releaseInfo?.revision) && (
+                        {String(rev.revision) !== (releaseInfo?.revision || releaseRevision) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()

@@ -88,7 +88,7 @@ const NODES: FlowNode[] = [
   { id: 'decode-1', label: 'Decode-1', x: 90, y: 66, type: 'decode', color: NODE_COLOR_DECODE, load: 67 },
 ]
 
-function buildRawNodes(selectedStack: LLMdStack | null, isDemoMode: boolean): FlowNode[] {
+export function buildRawNodes(selectedStack: LLMdStack | null, isDemoMode: boolean): FlowNode[] {
   if (!selectedStack && isDemoMode) {
     return NODES
   }
@@ -198,7 +198,7 @@ function buildRawNodes(selectedStack: LLMdStack | null, isDemoMode: boolean): Fl
   return nodes
 }
 
-function buildNodePodMap(selectedStack: LLMdStack | null): Record<string, string[]> {
+export function buildNodePodMap(selectedStack: LLMdStack | null): Record<string, string[]> {
   if (!selectedStack) return {}
 
   const map: Record<string, string[]> = {}
@@ -232,7 +232,7 @@ function buildNodePodMap(selectedStack: LLMdStack | null): Record<string, string
   return map
 }
 
-function buildLinks(dynamicNodes: FlowNode[]): FlowLink[] {
+export function buildLinks(dynamicNodes: FlowNode[]): FlowLink[] {
   const flowLinks: FlowLink[] = [
     { source: 'requests', target: 'epp', value: 450, percentage: 100, type: 'prefill' },
   ]
@@ -327,7 +327,7 @@ function buildLinks(dynamicNodes: FlowNode[]): FlowLink[] {
   return flowLinks
 }
 
-function buildSummaryMetrics(links: FlowLink[]): RoutingSummaryMetrics {
+export function buildSummaryMetrics(links: FlowLink[]): RoutingSummaryMetrics {
   const prefillTotal = links
     .filter(link => link.source === 'epp' && link.target.startsWith('prefill'))
     .reduce((sum, link) => sum + link.value, 0)
@@ -344,7 +344,7 @@ function buildSummaryMetrics(links: FlowLink[]): RoutingSummaryMetrics {
   }
 }
 
-function scaleNodesForExpanded(rawNodes: FlowNode[], isExpanded: boolean): FlowNode[] {
+export function scaleNodesForExpanded(rawNodes: FlowNode[], isExpanded: boolean): FlowNode[] {
   if (!isExpanded || rawNodes.length === 0) {
     return rawNodes
   }

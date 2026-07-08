@@ -15,6 +15,7 @@ export const gpuOverviewConfig: UnifiedCardConfig = {
   dataSource: { type: 'hook', hook: 'useGPUNodes' },
   content: {
     type: 'custom',
+    componentName: 'GPUOverview',
   },
   emptyState: { icon: 'Cpu', title: 'No GPUs', message: 'No GPU data available', variant: 'info' },
   loadingState: { type: 'stats', count: 4 },

@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../lib/auth'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { areOptionalPollersSuppressed, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type { GitHubRewardsResponse, GitHubContribution, GitHubRewardType, GitHubRewardsBreakdown } from '../types/rewards'
 import { GITHUB_REWARD_POINTS } from '../types/rewards'
 import { MS_PER_MINUTE } from '../lib/constants/time'
@@ -230,7 +230,7 @@ export function useGitHubRewards() {
   }, [githubLogin, isDemoUser])
 
   const fetchRewards = useCallback(async (signal?: AbortSignal) => {
-    if (!isAuthenticated || isDemoUser || !githubLogin) return
+    if (!isAuthenticated || isDemoUser || !githubLogin || areOptionalPollersSuppressed()) return
 
     setIsLoading(true)
     try {

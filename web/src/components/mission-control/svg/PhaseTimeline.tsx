@@ -84,11 +84,9 @@ export function PhaseTimeline({ phases, progress, viewBoxWidth, y }: PhaseTimeli
 
             {/* Separator */}
             {i > 0 && (
-              <line
-                x1={segX}
-                y1={y + 3}
-                x2={segX}
-                y2={y + barHeight - 3}
+              <path
+                d={`M ${segX} ${y + 3} L ${segX} ${y + barHeight - 3}`}
+                fill="none"
                 stroke={SLATE_600}
                 strokeWidth={0.5}
                 opacity={0.5}

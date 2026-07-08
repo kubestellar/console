@@ -113,4 +113,21 @@ describe('CiliumStatus', () => {
         })
         expect(screen.getByText('1.14.0')).toBeInTheDocument()
     })
+
+    it('handles error state when data fetch fails', () => {
+        mockUseCachedCiliumStatus.mockReturnValue({
+            data: { status: 'Healthy', nodes: [], networkPolicies: 0, endpoints: 0, hubble: { enabled: false, flowsPerSecond: 0 } },
+            isLoading: false,
+            isRefreshing: false,
+            isDemoData: false,
+            isFailed: true,
+            consecutiveFailures: 1,
+            lastRefresh: null,
+            refetch: vi.fn(),
+        })
+
+        render(<CiliumStatus />)
+
+        expect(screen.queryByText('node-1')).not.toBeInTheDocument()
+    })
 })

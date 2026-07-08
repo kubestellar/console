@@ -39,6 +39,7 @@ func TestSwapHandlers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("GET", "/api/swaps", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 
@@ -69,6 +70,7 @@ func TestSwapHandlers(t *testing.T) {
 
 		body := `{"duration": "1h"}`
 		req := httptest.NewRequest("POST", "/api/swaps/"+swapID.String()+"/snooze", strings.NewReader(body))
+		req.Host = "localhost"
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 		require.NoError(t, err)
@@ -99,6 +101,7 @@ func TestSwapHandlers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("POST", "/api/swaps/"+swapID.String()+"/execute", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 
@@ -120,6 +123,7 @@ func TestSwapHandlers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("POST", "/api/swaps/"+swapID.String()+"/cancel", nil)
+		req.Host = "localhost"
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 

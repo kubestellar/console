@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { SnoozedSwap } from '../../../hooks/useSnoozedCards'

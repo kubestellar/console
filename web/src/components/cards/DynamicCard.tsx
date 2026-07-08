@@ -472,7 +472,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
         }
 
         // Create component from compiled code
-        const componentResult = createCardComponent(code)
+        const componentResult = await createCardComponent(code)
         if (cancelled) return
 
         if (componentResult.error) {

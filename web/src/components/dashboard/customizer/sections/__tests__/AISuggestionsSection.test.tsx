@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
@@ -19,9 +20,13 @@ vi.mock('../../../shared/cardCatalog', () => ({
 }))
 
 // Mock RETRY_DELAY_MS to 0 so setTimeout resolves near-instantly
-vi.mock('../../../../../lib/constants/network', () => ({
-  RETRY_DELAY_MS: 0,
-}))
+vi.mock('../../../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    RETRY_DELAY_MS: 0,
+  }
+})
 
 import { AISuggestionsSection } from '../AISuggestionsSection'
 
@@ -38,7 +43,8 @@ describe('AISuggestionsSection', () => {
   })
 
   afterEach(() => {
-    vi.clearAllTimers()
+    vi.useRealTimers()
+    vi.clearAllMocks()
   })
 
   it('renders query input and generate button', () => {

@@ -28,7 +28,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { ClusterCardSkeleton } from '../ui/ClusterCardSkeleton'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useTranslation } from 'react-i18next'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, STORAGE_KEY_CLUSTER_ORDER, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, STORAGE_KEY_CLUSTER_ORDER, FETCH_DEFAULT_TIMEOUT_MS, isLocalAgentSuppressed } from '../../lib/constants'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { useModalState } from '../../lib/modals'
 import { useToast } from '../ui/Toast'
@@ -69,7 +69,7 @@ export function Clusters() {
   // When demo mode is OFF and agent is not connected, force skeleton display
   // Also show skeleton during mode switching for smooth transitions
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !wasAgentEverConnected()
+  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !isLocalAgentSuppressed() && !wasAgentEverConnected()
   const { isClusterAdmin, loading: permissionsLoading } = usePermissions()
   const {
     selectedClusters: globalSelectedClusters,
@@ -278,12 +278,14 @@ export function Clusters() {
       case 'clusters':
         return {
           value: stats.total,
+          groundtruthField: 'clusters-total',
           sublabel: 'total clusters',
           onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('all'); setShowClusterGrid(true) },
           isClickable: stats.total > 0 }
       case 'healthy':
         return {
           value: stats.healthy,
+          groundtruthField: 'clusters-healthy',
           sublabel: 'healthy',
           max: clusterStatusProgressMax,
           onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('healthy'); setShowClusterGrid(true) },
@@ -305,6 +307,10 @@ export function Clusters() {
       case 'nodes':
         return {
           value: hasData ? stats.totalNodes : '-',
+          groundtruthFields: {
+            'nodes-total': hasData ? stats.totalNodes : '-',
+            'nodes-ready': stats.healthyNodes,
+          },
           progressValue: stats.healthyNodes,
           max: stats.totalNodes,
           sublabel: 'total nodes',
@@ -337,6 +343,12 @@ export function Clusters() {
       case 'pods':
         return {
           value: hasData ? stats.totalPods : '-',
+          groundtruthFields: {
+            'pods-total': hasData ? stats.totalPods : '-',
+            'pods-running': hasData ? stats.totalPods : '-',
+            'pods-pending': 0,
+            'pods-crashloop': 0,
+          },
           sublabel: 'running pods',
           onClick: () => { emitClusterStatsDrillDown('pods'); navigate(ROUTES.WORKLOADS) },
           isClickable: hasData }
@@ -347,11 +359,29 @@ export function Clusters() {
 
   const getStatValue = getDashboardStatValue
   const clusterStatusProgressMax = Math.max(stats.total, MIN_CLUSTER_PROGRESS_TOTAL)
+  const clusterGroundtruthFields: Record<string, number> = {
+    'clusters-total': stats.total,
+    'clusters-healthy': stats.healthy,
+    'clusters-unhealthy': stats.unhealthy,
+    'clusters-unreachable': stats.unreachable,
+    'nodes-total': stats.totalNodes,
+    'nodes-ready': stats.healthyNodes,
+    'pods-total': stats.totalPods,
+    'pods-running': stats.totalPods,
+    'pods-pending': 0,
+    'pods-crashloop': 0,
+  }
 
   // ── beforeCards: Stale banner + Cluster Info Cards + Cluster Groups ──
 
   const beforeCardsContent = (
     <>
+      {Object.entries(clusterGroundtruthFields).map(([field, value]) => (
+        <span key={field} className="sr-only" data-groundtruth-field={field}>
+          {value}
+        </span>
+      ))}
+
       {/* Stale Kubeconfig Contexts Banner */}
       {stats.staleContexts > 0 && (
         <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg border bg-yellow-500/10 border-yellow-500/20 text-yellow-300">

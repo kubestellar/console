@@ -1,0 +1,44 @@
+# Hashed requirements for console-app-smoke.yml and console-app-roundtrip.yml.
+# Used with: pip install --quiet --require-hashes -r .github/requirements-smoke.txt
+#
+# Regenerate with:
+#   pip download --only-binary :all: --platform manylinux_2_17_x86_64 \
+#     --python-version 3.12 cryptography==<ver> pyjwt==<ver> -d wheels/
+#   pip hash wheels/*.whl
+# or verify hashes at: https://pypi.org/pypi/<pkg>/<ver>/json (urls[].digests.sha256)
+#
+# Hashes cover all manylinux x86_64 wheels (glibc variants: 2.17/2.28/2.34)
+# for the ubuntu-latest GitHub Actions runner (glibc >= 2.34 on ubuntu-24.04).
+#
+# Bumped from pyjwt==2.12.1 / cryptography==46.0.7 to fix:
+#   - GHSA-537c-gmf6-5ccf: Vulnerable OpenSSL in cryptography wheels < 48.0.1
+#   - GHSA-jfh8-c2jp-5v3q: PyJWT algorithm confusion / HMAC secret bypass
+#   - GHSA-75c5-xw7c-p5pm: PyJWT unauthenticated DoS via Base64URL decoding
+#   - GHSA-4g5p-m5c9-4hr6: PyJWKClient missing scheme allowlist (CVE-2024-21643)
+#   - GHSA-3hm7-gc48-mgs4: PyJWT algorithm allow-list bypass in PyJWK
+#   - GHSA-hrxr-8g4c-5q8c: PyJWKClient unbounded JWKS requests (DoS)
+
+pyjwt==2.13.0 \
+    --hash=sha256:66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728
+
+# cryptography 48.0.1 uses cffi 2.x as its C backend (see below).
+# cp311-abi3 wheels work for Python 3.11+; cp39-abi3 wheels are the fallback.
+# Include all three manylinux glibc-variant wheels — pip picks the most specific.
+cryptography==48.0.1 \
+    --hash=sha256:f0d27a5696721ef7a672b8c810f6aded391058e0b9486e63e6d93baf765da691 \
+    --hash=sha256:3752f2dbc8f07a30aad2932c986cea495b03bb554887828225da104f732852b6 \
+    --hash=sha256:0ee6ea481db1ab889cba043ec1eda17bb9c1ea79db6722f779c3667f9f70322f \
+    --hash=sha256:86be3b1b0b6bf09482fb50a979c508d2950ed95f5621ec77f4e385962006b83a \
+    --hash=sha256:88c852a0ae366e262e5a1744b685e6a433dc8788dd2a277e418bf4904203609d \
+    --hash=sha256:b74ca3b8e5ecdd833bf6a002ca41b4793bb27fb8f1c06ffaf2643c9e9140e31b
+
+# cffi is a transitive dependency of cryptography >= 47.0.0.
+# Wheels are Python-version specific: cp311/cp312/cp313.
+cffi==2.1.0 \
+    --hash=sha256:aa7a1b53a2a4452ada2d1b5dade9960b2522f1e61293a811a077439e39029565 \
+    --hash=sha256:1e9f50d192a3e525b15a75ab5114e442d83d657b7ec29182a991bc9a88fd3a66 \
+    --hash=sha256:799416bae98336e400981ff6e532d67d5c709cfb30afb79865a1315f94b0e224
+
+# pycparser is a transitive dependency of cffi.
+pycparser==3.0 \
+    --hash=sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992

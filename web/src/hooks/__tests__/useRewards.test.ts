@@ -16,10 +16,12 @@ vi.mock('../../lib/demoMode', () => ({
   getDemoMode: () => mockGetDemoMode(),
 }))
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitEvent: vi.fn(),
   emitRewardUnlocked: vi.fn(),
-}))
+}
+))
 
 const mockUser = { id: 'test-user-123', github_login: 'tester' }
 const mockUseAuth = vi.fn(() => ({ user: mockUser, isAuthenticated: true }))

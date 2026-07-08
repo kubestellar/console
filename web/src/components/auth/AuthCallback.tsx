@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { Loader2 } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { getLastRoute } from '../../hooks/useLastRoute'
@@ -9,6 +10,7 @@ import { safeGetItem, safeRemoveItem, safeSetItem } from '../../lib/utils/localS
 import { setAgentToken } from '../../hooks/mcp/agentFetch'
 import { emitError, emitGitHubConnected } from '../../lib/analytics'
 import { STORAGE_KEY_HAS_SESSION } from '../../lib/constants/storage'
+import { isLocalAgentSuppressed } from '../../lib/constants/network'
 
 /** Timeout (ms) for the /auth/refresh call that confirms the HttpOnly cookie session. */
 const AUTH_REFRESH_TIMEOUT_MS = 5_000
@@ -102,6 +104,12 @@ export function AuthCallback() {
         // Fetch the kc-agent shared secret so agentFetch() and WebSocket
         // connections can authenticate with the local agent via expiring
         // session-scoped token storage.
+        if (isLocalAgentSuppressed()) {
+          const _isOnboarded = data.onboarded ?? onboarded
+          void _isOnboarded // reserved for future onboarding routing
+          return refreshUser()
+        }
+
         const agentController = new AbortController()
         const agentTimeoutId = setTimeout(() => agentController.abort(), AUTH_REFRESH_TIMEOUT_MS)
         return fetch('/api/agent/token', {
@@ -174,7 +182,7 @@ export function AuthCallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-terminal">
       <div className="text-center">
-        <div className="spinner w-12 h-12 mx-auto mb-4" role="status" />
+        <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-primary" role="status" aria-label={status} />
         <p className="text-muted-foreground">{status}</p>
       </div>
     </div>

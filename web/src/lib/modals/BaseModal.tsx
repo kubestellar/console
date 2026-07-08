@@ -192,6 +192,7 @@ export function BaseModal({
           onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation() }}
         >
           <ModalTitleIdContext.Provider value={titleId}>
             <ModalEscapeContext.Provider value={escapeContextValue}>
@@ -259,9 +260,9 @@ function ModalHeader({
               {title}
             </h2>
             {description && (
-              <p className="text-sm text-muted-foreground truncate">
+              <div className="text-sm text-muted-foreground truncate">
                 {description}
-              </p>
+              </div>
             )}
           </div>
 

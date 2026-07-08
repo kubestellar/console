@@ -228,14 +228,14 @@ export const ComplianceReportsContent = memo(function ComplianceReportsContent()
 
       {/* Info Section */}
       <div className="rounded-xl border border-border bg-card/50 p-6">
-        <h2 className="text-lg font-medium text-foreground mb-3">About Compliance Reports</h2>
+        <div className="text-lg font-medium text-foreground mb-3">About Compliance Reports</div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
           <div>
-            <h3 className="font-medium text-muted-foreground mb-1">PDF Reports</h3>
+            <div className="font-medium text-muted-foreground mb-1">PDF Reports</div>
             <p>Audit-ready documents with cover page, executive summary, per-control findings, evidence, and remediation steps. Suitable for sharing with auditors and compliance teams.</p>
           </div>
           <div>
-            <h3 className="font-medium text-muted-foreground mb-1">JSON Reports</h3>
+            <div className="font-medium text-muted-foreground mb-1">JSON Reports</div>
             <p>Machine-readable structured data following the KubeStellar compliance report schema (v1). Ideal for integration with GRC platforms, SIEM systems, and automated pipelines.</p>
           </div>
         </div>

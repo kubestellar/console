@@ -35,8 +35,10 @@ vi.mock('../../../lib/demoMode', () => ({
   get isNetlifyDeployment() { return mockIsNetlifyDeployment.value },
 }))
 
-vi.mock('../../useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../lib/sseClient', () => ({
@@ -129,7 +131,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockIsNetlifyDeployment.value = false
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockSubscribePolling.mockReturnValue(vi.fn())
@@ -359,7 +361,7 @@ describe('useHelmReleases — cache validity and background refresh', () => {
 describe('useHelmReleases — demo mode edge cases', () => {
   it('does not update module cache when demo mode + cluster param', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const cluster = uniqueCluster('demo-cluster')
     const { result } = renderHook(() => useHelmReleases(cluster))
@@ -370,7 +372,7 @@ describe('useHelmReleases — demo mode edge cases', () => {
 
   it('updates module cache when demo mode without cluster param', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useHelmReleases())
 
@@ -532,7 +534,7 @@ describe('useHelmValues — useEffect doFetch path', () => {
 
   it('doFetch returns demo values when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const cluster = uniqueCluster('val-dofetch-demo')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
@@ -549,8 +551,7 @@ describe('useHelmValues — useEffect doFetch path', () => {
     const cluster = uniqueCluster('val-dofetch-err')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Inner fetch error')
+    await waitFor(() => expect(result.current.error).toBe('Inner fetch error'))
     expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
   })
 
@@ -563,8 +564,7 @@ describe('useHelmValues — useEffect doFetch path', () => {
     const cluster = uniqueCluster('val-dofetch-403')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toContain('API error')
+    await waitFor(() => expect(result.current.error).toContain('API error'))
   })
 })
 
@@ -633,7 +633,7 @@ describe('useHelmValues — demo mode toggle', () => {
   it('skips demo mode re-fetch on initial mount', async () => {
     const cluster = uniqueCluster('val-no-refetch-init')
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 

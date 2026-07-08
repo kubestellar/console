@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ThanosStatus } from '../index'
@@ -21,7 +22,7 @@ vi.mock('../../../../hooks/useCachedThanosStatus', () => ({
         isLoading: false,
         isRefreshing: false,
         isDemoFallback: false,
-        error: null,
+        error: false,
         isFailed: false,
         consecutiveFailures: 0,
         lastRefresh: Date.now(),

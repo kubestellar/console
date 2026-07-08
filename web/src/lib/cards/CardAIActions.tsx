@@ -1,4 +1,4 @@
-import { type MouseEvent } from 'react'
+import { type KeyboardEvent, type MouseEvent } from 'react'
 import { Stethoscope, Wrench } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { ApiKeyPromptModal, useApiKeyCheck } from '../../components/cards/console-missions/shared'
@@ -29,9 +29,9 @@ export interface CardAIActionsProps {
   /** Override the default repair prompt */
   repairPrompt?: string
   /** Custom diagnose handler (bypasses startMission) */
-  onDiagnose?: (e: MouseEvent) => void
+  onDiagnose?: (e: MouseEvent | KeyboardEvent<HTMLDivElement>) => void
   /** Custom repair handler (bypasses startMission) */
-  onRepair?: (e: MouseEvent) => void
+  onRepair?: (e: MouseEvent | KeyboardEvent<HTMLDivElement>) => void
 }
 
 /**
@@ -61,7 +61,7 @@ export function CardAIActions({
   const issuesList = issues.map(i => `- ${i.name}: ${i.message}`).join('\n')
   const hasIssues = issues.length > 0
 
-  const handleDiagnose = (e: MouseEvent) => {
+  const handleDiagnose = (e: MouseEvent | KeyboardEvent<HTMLDivElement>) => {
     e.stopPropagation()
     if (onDiagnose) { onDiagnose(e); return }
     checkKeyAndRun(() => {
@@ -82,7 +82,7 @@ Please provide:
     })
   }
 
-  const handleRepair = (e: MouseEvent) => {
+  const handleRepair = (e: MouseEvent | KeyboardEvent<HTMLDivElement>) => {
     e.stopPropagation()
     if (onRepair) { onRepair(e); return }
     checkKeyAndRun(() => {
@@ -105,27 +105,43 @@ For each issue, please:
     })
   }
 
+  const handleActionKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    action: (event: MouseEvent | KeyboardEvent<HTMLDivElement>) => void,
+  ) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      action(event)
+    }
+  }
+
   return (
     <div
       className={`flex items-center gap-0.5 ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={handleDiagnose}
+        onKeyDown={(event) => handleActionKeyDown(event, handleDiagnose)}
         className="p-1 rounded text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 transition-colors"
         title={`Diagnose ${name}`}
       >
         <Stethoscope className="w-3.5 h-3.5" />
-      </button>
+      </div>
 
       {showRepair && (
-        <button
+        <div
+          role="button"
+          tabIndex={0}
           onClick={handleRepair}
+          onKeyDown={(event) => handleActionKeyDown(event, handleRepair)}
           className="p-1 rounded text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
           title={`${repairLabel} ${name}`}
         >
           <Wrench className="w-3.5 h-3.5" />
-        </button>
+        </div>
       )}
 
       {showKeyPrompt && (

@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -23,10 +24,13 @@ vi.mock('../../../../hooks/useGitHubPipelines', async (importOriginal) => {
   }
 })
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../../hooks/useDemoMode', () => ({
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
   useDemoMode: () => mockUseDemoMode(),
-}))
+  getDemoMode: vi.fn(() => false),
+}
+))
 
 const mockUseCardLoadingState = vi.fn()
 vi.mock('../../CardDataContext', () => ({
@@ -95,7 +99,7 @@ function setupMatrix(data: MatrixPayload | null, opts: { isLoading?: boolean; er
 describe('WorkflowMatrix', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({})
     setupMatrix(DEMO_MATRIX)
   })
@@ -159,7 +163,7 @@ describe('WorkflowMatrix', () => {
 
   describe('demo data path', () => {
     it('passes isDemoData=true to useCardLoadingState in demo mode', () => {
-      mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+      mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
       render(<WorkflowMatrix />)
       expect(mockUseCardLoadingState).toHaveBeenCalledWith(
         expect.objectContaining({ isDemoData: true, hasAnyData: true }),

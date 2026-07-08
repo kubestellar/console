@@ -77,7 +77,8 @@ vi.mock('../../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
-vi.mock('../../../../hooks/useDemoMode', () => ({
+vi.mock('../../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../hooks/useDemoMode')>()),
   getDemoMode: () => true, default: () => true,
   useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
@@ -85,10 +86,12 @@ vi.mock('../../../../hooks/useDemoMode', () => ({
   setGlobalDemoMode: vi.fn(),
 }))
 
-vi.mock('../../../../lib/analytics', () => ({
+vi.mock('../../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
@@ -111,6 +114,10 @@ vi.mock('../../../../hooks/useMissions', () => ({
 
 vi.mock('../../../../hooks/useLocalAgent', () => ({
   useLocalAgent: () => ({ isConnected: mockAgentConnected }),
+}))
+
+vi.mock('../../../../hooks/useBackendHealth', () => ({
+  useBackendHealth: () => ({ status: 'connected', inCluster: false }),
 }))
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
@@ -153,6 +160,21 @@ vi.mock('../../../cards/console-missions/shared', () => ({
     dismissPrompt: vi.fn(),
   }),
   ApiKeyPromptModal: () => null,
+}))
+
+vi.mock('../PodDrillDown.tabs', () => ({
+  usePodTabs: () => ({
+    TABS: [
+      { id: 'overview', label: 'drilldown.tabs.overview', icon: () => null },
+      { id: 'logs', label: 'drilldown.tabs.logs', icon: () => null },
+      { id: 'events', label: 'drilldown.tabs.events', icon: () => null },
+      { id: 'yaml', label: 'drilldown.tabs.yaml', icon: () => null },
+      { id: 'describe', label: 'drilldown.tabs.describe', icon: () => null },
+      { id: 'exec', label: 'drilldown.tabs.exec', icon: () => null },
+      { id: 'related', label: 'drilldown.tabs.related', icon: () => null },
+    ],
+  }),
+  useContainerNames: () => ['container-1'],
 }))
 
 // Additional mocks needed to fully mock AsyncData hook with state changes
@@ -372,12 +394,12 @@ metadata:
     expect(screen.getByText('drilldown.fields.cluster')).toBeInTheDocument()
 
     // Namespace navigation
-    const nsBtn = screen.getByRole('button', { name: /drilldown.fields.namespace/ })
+    const nsBtn = screen.getByRole('button', { name: /View namespace ns1/ })
     await userEvent.click(nsBtn)
     expect(mockDrillToNamespace).toHaveBeenCalledWith('c1', 'ns1')
 
     // Cluster navigation
-    const clusterBtn = screen.getByRole('button', { name: /drilldown.fields.cluster/ })
+    const clusterBtn = screen.getByRole('button', { name: /View cluster c1/ })
     await userEvent.click(clusterBtn)
     expect(mockDrillToCluster).toHaveBeenCalledWith('c1')
   })

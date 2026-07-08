@@ -18,9 +18,11 @@ vi.mock('../../lib/constants/storage', async (importOriginal) => {
   }
 })
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitStreakDay: vi.fn(),
-}))
+}
+))
 
 // ---------------------------------------------------------------------------
 // Helpers

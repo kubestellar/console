@@ -3,6 +3,7 @@ package gitops
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -45,6 +46,7 @@ fi
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators?cluster=test-cluster", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -83,6 +85,7 @@ fi
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions?cluster=test-cluster", nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -102,8 +105,9 @@ func TestGitOpsOperators_ListOperators_Validation(t *testing.T) {
 	env.App.Get("/api/gitops/operators", handler.ListOperators)
 
 	// Invalid cluster name
-	req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators?cluster=bad;name", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators?cluster="+url.QueryEscape("bad;name"), nil)
 	require.NoError(t, err)
+	req.Host = "localhost"
 	resp, err := env.App.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -127,8 +131,9 @@ func TestGitOpsOperators_StreamOperators_Validation(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators/stream?cluster="+tc.cluster, nil)
+			req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators/stream?cluster="+url.QueryEscape(tc.cluster), nil)
 			require.NoError(t, err)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			assert.Equal(t, tc.status, resp.StatusCode)
@@ -153,8 +158,9 @@ func TestGitOpsOperators_StreamSubscriptions_Validation(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			req, err := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions/stream?cluster="+tc.cluster, nil)
+			req, err := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions/stream?cluster="+url.QueryEscape(tc.cluster), nil)
 			require.NoError(t, err)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			assert.Equal(t, tc.status, resp.StatusCode)
@@ -179,8 +185,9 @@ func TestGitOpsOperators_StreamHelmReleases_Validation(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/stream?cluster="+tc.cluster, nil)
+			req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/stream?cluster="+url.QueryEscape(tc.cluster), nil)
 			require.NoError(t, err)
+			req.Host = "localhost"
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			assert.Equal(t, tc.status, resp.StatusCode)

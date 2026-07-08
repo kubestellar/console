@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo, useCallback, memo } from 'react'
+import i18next from 'i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { sodDashboardConfig } from '../../config/dashboards/segregation-of-duties'
 import {
   Users, ShieldAlert, CheckCircle2, XCircle, AlertTriangle,
   Loader2, RefreshCw, Filter, UserCheck, UserX,
 } from 'lucide-react'
+import { cn } from '../../lib/cn'
 import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
@@ -94,7 +96,7 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
   if (error) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
       <p className="text-red-400 font-medium">{error}</p>
-      <button onClick={fetchData} className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1 p-3 min-h-11 min-w-11"><RefreshCw className="w-4 h-4" /> Retry</button>
+      <button onClick={fetchData} className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1 p-3 min-h-11 min-w-11"><RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} /> Retry</button>
     </div>
   )
 
@@ -126,7 +128,7 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
 
       <div className="flex gap-1 border-b border-border pb-0">
         {(['violations', 'principals', 'rules'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab ? 'bg-secondary text-foreground border-b-2 border-indigo-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 min-h-11 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab ? 'bg-secondary text-foreground border-b-2 border-indigo-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}>
             {tab === 'violations' && `Violations (${violations.length})`}
             {tab === 'principals' && `Principals (${principals.length})`}
             {tab === 'rules' && `Rules (${rules.length})`}
@@ -140,11 +142,11 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
             <Filter className="w-4 h-4 text-muted-foreground" />
             <div className="w-40">
               <Select value={filterSeverity} onChange={e => setFilterSeverity(e.target.value)} selectSize="sm">
-                <option value="all">All severities</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="all">{i18next.t('common:severityFilters.all', 'All severities')}</option>
+                <option value="critical">{i18next.t('common:severityFilters.critical', 'Critical')}</option>
+                <option value="high">{i18next.t('common:severityFilters.high', 'High')}</option>
+                <option value="medium">{i18next.t('common:severityFilters.medium', 'Medium')}</option>
+                <option value="low">{i18next.t('common:severityFilters.low', 'Low')}</option>
               </Select>
             </div>
           </div>

@@ -231,7 +231,7 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
               passPercent >= 80 ? 'text-green-400' : passPercent >= 50 ? 'text-yellow-400' : 'text-red-400'
             }`}>{passPercent}%</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px]">
+          <div className="flex items-center gap-1.5 text-xs">
             <span className="text-green-400">{stats.pass} pass</span>
             <span className="text-red-400">{stats.fail} fail</span>
             {stats.warn > 0 && <span className="text-yellow-400">{stats.warn} warn</span>}
@@ -320,7 +320,7 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
                   {verifyCmd && (
                     <button
                       onClick={() => toggleVerify(verifyKey)}
-                      className="flex items-center gap-0.5 mt-1 text-[10px] text-blue-400 hover:text-blue-300"
+                      className="flex items-center gap-0.5 mt-1 text-xs text-blue-400 hover:text-blue-300"
                       aria-label={`${isVerifyOpen ? 'Hide' : 'Show'} verification command for ${f.category}`}
                       aria-expanded={isVerifyOpen}
                     >
@@ -330,7 +330,7 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
                     </button>
                   )}
                   {isVerifyOpen && verifyCmd && (
-                    <pre className="mt-1 p-1.5 rounded bg-muted/50 text-[10px] text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all font-mono">
+                    <pre className="mt-1 p-1.5 rounded bg-muted/50 text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all font-mono">
                       {verifyCmd}
                     </pre>
                   )}

@@ -180,6 +180,7 @@ func TestHandler_MissingBearerToken_401(t *testing.T) {
 	for _, e := range endpoints {
 		t.Run(e, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, e, nil)
+			req.Host = "localhost"
 			req.Header.Set("Origin", "http://localhost:8080")
 			// No Authorization header at all — the strict test.
 			w := httptest.NewRecorder()
@@ -208,6 +209,7 @@ func TestHandler_EmptyRegistry_ReturnsEmpty(t *testing.T) {
 	s := newFederationTestServer(t, kcfg, testBearerToken)
 
 	req := httptest.NewRequest(http.MethodGet, "/federation/detect", nil)
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
 	w := httptest.NewRecorder()
 	s.handleFederationDetect(w, req)
@@ -233,6 +235,7 @@ func TestHandler_EmptyRegistry_ReturnsEmpty(t *testing.T) {
 	// items slice (not null) under an empty registry.
 	for _, e := range []string{"/federation/clusters", "/federation/groups", "/federation/pending-joins"} {
 		req := httptest.NewRequest(http.MethodGet, e, nil)
+		req.Host = "localhost"
 		req.Header.Set("Authorization", "Bearer "+testBearerToken)
 		w := httptest.NewRecorder()
 		switch e {
@@ -488,6 +491,7 @@ func TestHandler_MultiHubFanOut(t *testing.T) {
 	s := newFederationTestServer(t, kcfg, testBearerToken)
 
 	req := httptest.NewRequest(http.MethodGet, "/federation/clusters", nil)
+	req.Host = "localhost"
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
 	w := httptest.NewRecorder()
 	s.handleFederationClusters(w, req)
@@ -529,6 +533,7 @@ func TestRequireBearerToken_NoAuthConfigured(t *testing.T) {
 	s := newFederationTestServer(t, "", "")
 
 	req := httptest.NewRequest(http.MethodGet, "/federation/detect", nil)
+	req.Host = "localhost"
 	w := httptest.NewRecorder()
 	// No token header AND no agentToken set — should pass the gate.
 	if !s.requireBearerToken(w, req) {

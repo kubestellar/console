@@ -60,6 +60,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/safego"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -304,6 +305,10 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	}
 	if init.Cluster == "" || init.Namespace == "" || init.Pod == "" {
 		agentExecWriteError(conn, "Missing cluster, namespace, or pod")
+		return
+	}
+	if err := kube.ValidateKubeContext(init.Cluster); err != nil {
+		agentExecWriteError(conn, "Invalid cluster context")
 		return
 	}
 	if len(init.Command) == 0 {

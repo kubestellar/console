@@ -63,7 +63,7 @@ type LimaListResponse struct {
 func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
 		return c.JSON(LimaListResponse{
-			LimaInstances: getDemoLimaInstances(),
+			LimaInstances: GetDemoLimaInstances(),
 			IsDemoData:    true,
 		})
 	}
@@ -77,7 +77,7 @@ func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	if cluster != "" {
-		if err := mcpValidateName("cluster", cluster); err != nil {
+		if err := ValidateK8sName("cluster", cluster); err != nil {
 			return err
 		}
 	}

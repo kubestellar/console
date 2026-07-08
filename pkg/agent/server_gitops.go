@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/ssrf"
 )
 
 // gitopsDefaultTimeout bounds a single drift-detect / sync HTTP request. The
@@ -31,12 +33,6 @@ const gitOpsTempDirPrefix = "gitops-"
 var gitopsLookupIPAddr = func(ctx context.Context, host string) ([]net.IPAddr, error) {
 	return net.DefaultResolver.LookupIPAddr(ctx, host)
 }
-
-var (
-	_, gitopsCGNATNet, _        = net.ParseCIDR("100.64.0.0/10")
-	_, gitopsCloudMetadataIP, _ = net.ParseCIDR("169.254.169.254/32")
-	_, gitopsIETFProtocolNet, _ = net.ParseCIDR("192.0.0.0/24")
-)
 
 // agentDriftedResource mirrors pkg/api/handlers/gitops.go#DriftedResource.
 // Kept local to pkg/agent because the agent cannot import pkg/api/handlers
@@ -100,15 +96,7 @@ func normalizeGitopsHost(host string) string {
 	return strings.ToLower(host)
 }
 
-// isGitopsBlockedIP mirrors pkg/api/handlers/card_proxy.go:isBlockedIP.
-func isGitopsBlockedIP(ip net.IP) bool {
-	if ip == nil {
-		return true
-	}
-	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() ||
-		gitopsCGNATNet.Contains(ip) || gitopsCloudMetadataIP.Contains(ip) || gitopsIETFProtocolNet.Contains(ip)
-}
+
 
 func validateGitopsResolvedIPs(ctx context.Context, host string) error {
 	normalizedHost := normalizeGitopsHost(host)
@@ -116,7 +104,7 @@ func validateGitopsResolvedIPs(ctx context.Context, host string) error {
 		return fmt.Errorf("repository URL must include a host")
 	}
 	if ip := net.ParseIP(normalizedHost); ip != nil {
-		if isGitopsBlockedIP(ip) {
+		if ssrf.IsBlockedIP(ip) {
 			return fmt.Errorf("repository host resolves to a blocked IP address")
 		}
 		return nil
@@ -133,7 +121,7 @@ func validateGitopsResolvedIPs(ctx context.Context, host string) error {
 		return fmt.Errorf("repository host did not resolve to any IP addresses")
 	}
 	for _, ip := range ips {
-		if isGitopsBlockedIP(ip.IP) {
+		if ssrf.IsBlockedIP(ip.IP) {
 			return fmt.Errorf("repository host resolves to a blocked IP address")
 		}
 	}

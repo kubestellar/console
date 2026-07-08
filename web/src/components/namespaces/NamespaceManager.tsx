@@ -1,4 +1,4 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
+ 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Folder,
@@ -31,7 +31,7 @@ import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../lib/auth'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
-import { NAMESPACE_ABORT_TIMEOUT_MS } from '../../lib/constants/network'
+import { NAMESPACE_ABORT_TIMEOUT_MS, isLocalAgentSuppressed } from '../../lib/constants/network'
 import { NamespaceCard, NamespaceCardSkeleton } from './NamespaceCard'
 import { DeleteConfirmModal } from './DeleteConfirmModal'
 import { CreateNamespaceModal } from './CreateNamespaceModal'
@@ -43,6 +43,7 @@ type ClusterNamespaceStatus = 'unavailable' | 'accessDenied'
 
 // Cache for namespace data per cluster - persists across filter changes
 const namespaceCache = new Map<string, NamespaceDetails[]>()
+const AUTO_REFRESH_INTERVAL_MS = 30000
 
 function buildFallbackNamespaces(namespaces: string[], cluster: string): NamespaceDetails[] {
   return Array.from(new Set(namespaces.filter(Boolean)))
@@ -175,8 +176,11 @@ export function NamespaceManager() {
     }
 
     const buildNamespacesFromPods = async (cluster: string, requestCluster: string): Promise<NamespaceDetails[]> => {
+      const podEndpoint = isLocalAgentSuppressed()
+        ? `/api/mcp/pods?cluster=${encodeURIComponent(requestCluster)}&limit=1000`
+        : `${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(requestCluster)}&limit=1000`
       const response = await authFetch(
-        `${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(requestCluster)}&limit=1000`,
+        podEndpoint,
         { headers: { Accept: 'application/json' } }
       )
       if (!response.ok) {
@@ -206,46 +210,48 @@ export function NamespaceManager() {
         let backendAuthFailed = false
         let podFallbackFailed = false
 
-        try {
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), NAMESPACE_ABORT_TIMEOUT_MS)
-          const response = await authFetch(
-            `${LOCAL_AGENT_HTTP_URL}/namespaces?cluster=${encodeURIComponent(requestCluster)}`,
-            { signal: controller.signal, headers: { Accept: 'application/json' } }
-          )
-          clearTimeout(timeoutId)
+        if (!isLocalAgentSuppressed()) {
+          try {
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), NAMESPACE_ABORT_TIMEOUT_MS)
+            const response = await authFetch(
+              `${LOCAL_AGENT_HTTP_URL}/namespaces?cluster=${encodeURIComponent(requestCluster)}`,
+              { signal: controller.signal, headers: { Accept: 'application/json' } }
+            )
+            clearTimeout(timeoutId)
 
-          if (response.ok) {
-            const data = await response.json() as {
-              namespaces?: Array<{
-                name: string
-                status?: string
-                labels?: Record<string, string>
-                createdAt?: string
-              }>
+            if (response.ok) {
+              const data = await response.json() as {
+                namespaces?: Array<{
+                  name: string
+                  status?: string
+                  labels?: Record<string, string>
+                  createdAt?: string
+                }>
+              }
+              if (Array.isArray(data.namespaces)) {
+                clusterNamespaces = data.namespaces.map(ns => ({
+                  name: ns.name,
+                  cluster,
+                  status: ns.status || 'Active',
+                  labels: ns.labels,
+                  createdAt: ns.createdAt || new Date().toISOString()
+                }))
+              }
+            } else if (response.status === 401 || response.status === 403) {
+              agentAuthFailed = true
+            } else {
+              agentFailed = true
             }
-            if (Array.isArray(data.namespaces)) {
-              clusterNamespaces = data.namespaces.map(ns => ({
-                name: ns.name,
-                cluster,
-                status: ns.status || 'Active',
-                labels: ns.labels,
-                createdAt: ns.createdAt || new Date().toISOString()
-              }))
-            }
-          } else if (response.status === 401 || response.status === 403) {
-            agentAuthFailed = true
-          } else {
+          } catch (err: unknown) {
             agentFailed = true
-          }
-        } catch (err: unknown) {
-          agentFailed = true
-          if (err instanceof DOMException && err.name === 'AbortError') {
-            console.warn(`[NamespaceManager] ${t('namespaces.errors.requestTimedOut')}`, cluster)
-            showToast(t('namespaces.errors.requestTimedOut'), 'error')
-          } else if (err instanceof TypeError) {
-            console.warn(`[NamespaceManager] ${t('namespaces.errors.agentNotReachable')}`, cluster)
-            showToast(t('namespaces.errors.agentNotReachable'), 'error')
+            if (err instanceof DOMException && err.name === 'AbortError') {
+              console.warn(`[NamespaceManager] ${t('namespaces.errors.requestTimedOut')}`, cluster)
+              showToast(t('namespaces.errors.requestTimedOut'), 'error')
+            } else if (err instanceof TypeError) {
+              console.warn(`[NamespaceManager] ${t('namespaces.errors.agentNotReachable')}`, cluster)
+              showToast(t('namespaces.errors.agentNotReachable'), 'error')
+            }
           }
         }
 
@@ -413,7 +419,7 @@ export function NamespaceManager() {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchNamespaces(true)
-    }, 30000)
+    }, AUTO_REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [fetchNamespaces])
 
@@ -440,6 +446,16 @@ export function NamespaceManager() {
     ns.name.startsWith('openshift-') ||
     ns.name === 'default'
   )
+  const unavailableClusterCount = Object.values(clusterStatuses).filter(status => status === 'unavailable').length
+  const routeState = loading || loadingClusters.size > 0
+    ? 'partial'
+    : error && namespaces.length === 0
+      ? 'unavailable'
+      : namespaces.length === 0
+        ? 'empty'
+        : unavailableClusterCount > 0
+          ? 'partial'
+          : 'loaded'
 
   const handleDeleteNamespace = async (ns: NamespaceDetails) => {
     setNamespaceToDelete(ns)
@@ -486,7 +502,7 @@ export function NamespaceManager() {
     if (!isAdmin) return
     if (!selectedNamespace) return
 
-    if (!confirm(`Revoke access for ${binding.subjectName}?`)) {
+    if (!window.confirm(`Revoke access for ${binding.subjectName}?`)) {
       return
     }
 
@@ -522,7 +538,7 @@ export function NamespaceManager() {
   // Show loading while clusters are being fetched
   if (clustersLoading) {
     return (
-      <div className="min-h-full flex flex-col items-center justify-center p-6">
+      <div className="min-h-full flex flex-col items-center justify-center p-6" data-live-route-state="partial" data-live-source="k8s">
         <RefreshCw className="w-16 h-16 text-blue-400 mb-4 animate-spin" />
         <h2 className="text-xl font-semibold text-white mb-2">Loading Clusters...</h2>
         <p className="text-muted-foreground text-center max-w-md">
@@ -535,7 +551,7 @@ export function NamespaceManager() {
   // Show message if no clusters are selected
   if (targetClusters.length === 0) {
     return (
-      <div className="min-h-full flex flex-col items-center justify-center p-6">
+      <div className="min-h-full flex flex-col items-center justify-center p-6" data-live-route-state="empty" data-live-source="k8s">
         <AlertTriangle className="w-16 h-16 text-yellow-400 mb-4" />
         <h2 className="text-xl font-semibold text-white mb-2">No Clusters Selected</h2>
         <p className="text-muted-foreground text-center max-w-md">
@@ -546,7 +562,9 @@ export function NamespaceManager() {
   }
 
   return (
-    <div className="min-h-full flex flex-col p-6">
+    <div className="min-h-full flex flex-col p-6" data-live-route-state={routeState} data-live-source="k8s">
+      <span className="sr-only" data-groundtruth-field="namespaces-total">{namespaces.length}</span>
+      <span className="sr-only" data-groundtruth-field="namespaces-unavailable-clusters">{unavailableClusterCount}</span>
       {/* Header */}
       <DashboardHeader
         title="Namespace Manager"

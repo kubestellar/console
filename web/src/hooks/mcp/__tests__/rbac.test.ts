@@ -21,8 +21,10 @@ vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
 }))
 
-vi.mock('../../useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../lib/api', () => ({
@@ -60,7 +62,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockRegisterRefetch.mockReturnValue(vi.fn())
 })
 
@@ -96,7 +98,7 @@ describe('useK8sRoles', () => {
 
   it('returns demo roles when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sRoles('eks-prod-us-east-1'))
 
@@ -137,7 +139,7 @@ describe('useK8sRoles', () => {
 
   it('filters demo roles by cluster to only matching cluster', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sRoles('eks-prod-us-east-1'))
 
@@ -152,7 +154,7 @@ describe('useK8sRoles', () => {
 
   it('returns all demo roles across clusters when cluster is undefined', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sRoles())
 
@@ -167,7 +169,7 @@ describe('useK8sRoles', () => {
 
   it('distinguishes cluster-scoped vs namespace-scoped roles in demo data', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sRoles('eks-prod-us-east-1'))
 
@@ -289,7 +291,7 @@ describe('useK8sRoles', () => {
 
   it('uses "all" placeholder in refetch key when cluster/namespace are omitted', () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     renderHook(() => useK8sRoles())
 
@@ -317,7 +319,7 @@ describe('useK8sRoles', () => {
 
   it('every demo role has a positive ruleCount', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sRoles())
 
@@ -329,7 +331,7 @@ describe('useK8sRoles', () => {
 
   it('demo cluster filter returns empty for unknown cluster name', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sRoles('nonexistent-cluster'))
 
@@ -365,7 +367,7 @@ describe('useK8sRoleBindings', () => {
 
   it('returns demo bindings when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sRoleBindings('eks-prod-us-east-1'))
 
@@ -405,7 +407,7 @@ describe('useK8sRoleBindings', () => {
 
   it('filters demo bindings by cluster only', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sRoleBindings('gke-staging'))
 
@@ -419,7 +421,7 @@ describe('useK8sRoleBindings', () => {
 
   it('namespace filter includes cluster-scoped bindings (isCluster=true)', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() =>
       useK8sRoleBindings('eks-prod-us-east-1', 'default'),
@@ -438,7 +440,7 @@ describe('useK8sRoleBindings', () => {
 
   it('demo bindings contain all three subject kinds: User, Group, ServiceAccount', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sRoleBindings())
 
@@ -456,7 +458,7 @@ describe('useK8sRoleBindings', () => {
 
   it('demo bindings reference both Role and ClusterRole roleKind', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sRoleBindings())
 
@@ -536,7 +538,7 @@ describe('useK8sRoleBindings', () => {
 
   it('uses "all" placeholders when cluster/namespace are omitted', () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     renderHook(() => useK8sRoleBindings())
 
@@ -548,7 +550,7 @@ describe('useK8sRoleBindings', () => {
 
   it('ServiceAccount subjects carry a namespace field in demo data', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sRoleBindings('gke-staging'))
 
@@ -614,7 +616,7 @@ describe('useK8sServiceAccounts', () => {
 
   it('returns demo service accounts when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sServiceAccounts('eks-prod-us-east-1'))
 
@@ -645,7 +647,7 @@ describe('useK8sServiceAccounts', () => {
 
   it('filters by namespace when provided in demo mode', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sServiceAccounts('eks-prod-us-east-1', 'monitoring'))
 
@@ -658,7 +660,7 @@ describe('useK8sServiceAccounts', () => {
 
   it('filters demo SAs by cluster only when no namespace given', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sServiceAccounts('gke-staging'))
 
@@ -673,7 +675,7 @@ describe('useK8sServiceAccounts', () => {
 
   it('filters demo SAs by both cluster and namespace simultaneously', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() =>
       useK8sServiceAccounts('eks-prod-us-east-1', 'default'),
@@ -691,7 +693,7 @@ describe('useK8sServiceAccounts', () => {
 
   it('demo SAs include secrets arrays', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sServiceAccounts())
 
@@ -704,7 +706,7 @@ describe('useK8sServiceAccounts', () => {
 
   it('some demo SAs have roles while others do not', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sServiceAccounts())
 
@@ -791,7 +793,7 @@ describe('useK8sServiceAccounts', () => {
 
   it('uses "all" placeholder in refetch key when params are omitted', () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     renderHook(() => useK8sServiceAccounts())
 
@@ -825,7 +827,7 @@ describe('useK8sServiceAccounts', () => {
 
   it('demo cluster filter returns empty for unknown cluster name', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useK8sServiceAccounts('nonexistent-cluster'))
 

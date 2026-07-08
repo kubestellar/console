@@ -47,6 +47,7 @@ func (h *MissionsHandler) RegisterRoutes(g fiber.Router) {
 func (h *MissionsHandler) RegisterPublicRoutes(g fiber.Router) {
 	g.Get("/browse", h.BrowseConsoleKB)
 	g.Get("/file", h.GetMissionFile)
+	g.Get("/search", h.SearchMissions)
 	g.Get("/scores", h.GetKBScores)
 	g.Get("/scores/:project/:id", h.GetMissionScore)
 }

@@ -6,11 +6,13 @@ vi.mock('../mcp/shared', () => ({
   REFRESH_INTERVAL_MS: 120_000,
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
-vi.mock('../useDemoMode', () => ({
+vi.mock('../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../useDemoMode')>()),
   getDemoMode: vi.fn(() => false),
   isDemoModeForced: false,
   default: vi.fn(() => false),
-}))
+}
+))
 vi.mock('../useLocalAgent', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../useLocalAgent')>()
   return {
@@ -44,7 +46,8 @@ vi.mock('../../lib/constants', async (importOriginal) => {
     LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
   }
 })
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitMissionStarted: vi.fn(),
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
@@ -52,7 +55,8 @@ vi.mock('../../lib/analytics', () => ({
   emitAgentTokenFailure: vi.fn(),
   emitWsAuthMissing: vi.fn(),
   emitSseAuthFailure: vi.fn(),
-}))
+}
+))
 
 const { __missionsTestables } = await import('../useMissions')
 

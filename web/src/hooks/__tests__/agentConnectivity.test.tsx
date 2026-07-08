@@ -1,3 +1,4 @@
+import React from 'react'
 /**
  * Tests for agent connectivity detection and loopback failure paths.
  *
@@ -31,7 +32,10 @@ vi.mock('../mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
   isDemoModeForced: false,
 }))
 
@@ -46,12 +50,14 @@ const mockEmitAgentDisconnected = vi.fn()
 const mockEmitAgentProvidersDetected = vi.fn()
 const mockEmitConversionStep = vi.fn()
 
-vi.mock('../../lib/analytics', () => ({
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
   emitAgentConnected: (...args: unknown[]) => mockEmitAgentConnected(...args),
   emitAgentDisconnected: (...args: unknown[]) => mockEmitAgentDisconnected(...args),
   emitAgentProvidersDetected: (...args: unknown[]) => mockEmitAgentProvidersDetected(...args),
   emitConversionStep: (...args: unknown[]) => mockEmitConversionStep(...args),
-}))
+}
+))
 
 vi.mock('../../lib/utils/localStorage', () => ({
   safeGetItem: vi.fn(() => null),
@@ -871,6 +877,20 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
         expect(step.title).toBeTruthy()
         expect(step.command).toBeTruthy()
       })
+    })
+  })
+
+  describe('loading and error state exposure', () => {
+    it('exposes connection type state to consumers', () => {
+      const { result } = renderHook(() => useLocalAgent())
+      expect(result.current).toHaveProperty('status')
+      expect(['connected', 'disconnected', 'degraded', 'auth_error', 'connecting']).toContain(result.current.status)
+    })
+
+    it('exposes error state to consumers', () => {
+      const { result } = renderHook(() => useLocalAgent())
+      expect(result.current).toHaveProperty('error')
+      expect(result.current.error === null || typeof result.current.error === 'string').toBe(true)
     })
   })
 })

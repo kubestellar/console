@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getNextBatchTime, resolveStellarBatchIntervalMs } from '../components/stellar/lib/time'
 import { STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS } from '../lib/constants/storage'
+import { areOptionalPollersSuppressed } from '../lib/constants/network'
 import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
 import { stellarApi } from '../services/stellar'
 import type { ProviderSession, StellarAction, StellarActivity, StellarNotification, StellarObservation, StellarOperationalState, StellarSolve, StellarSolveProgress, StellarTask, StellarWatch } from '../types/stellar'
@@ -12,6 +13,7 @@ export const STELLAR_RECONNECT_MAX_MS = 30000
 export const STELLAR_TOKEN_POLL_INTERVAL_MS = 100
 export const STELLAR_TOKEN_POLL_MAX_ATTEMPTS = 30
 export const STELLAR_MISSION_TRIGGER_EVENT = 'stellar:mission_trigger'
+const STELLAR_REFRESH_REQUEST_COUNT = 7
 
 export interface StellarMissionTriggerPayload {
   solveId: string
@@ -35,7 +37,7 @@ function parseStellarEvent<T>(event: Event, eventName: string): T | null {
   try {
     return JSON.parse((event as MessageEvent).data) as T
   } catch (err) {
-    console.warn(`stellar: malformed ${eventName} event JSON`, err)
+    console.error(`stellar: malformed ${eventName} event JSON`, err)
     return null
   }
 }
@@ -51,6 +53,12 @@ function mergeNotificationUpdate(items: StellarNotification[], updated: StellarN
 }
 function getStoredStellarBatchIntervalMs(): number {
   return resolveStellarBatchIntervalMs(safeGetItem(STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS))
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) return error.message
+  if (typeof error === 'string' && error.trim()) return error
+  return fallback
 }
 
 export function useStellarSource() {
@@ -75,7 +83,7 @@ export function useStellarSource() {
     try {
       const persisted = localStorage.getItem('kc_selected_agent')
       if (persisted && persisted !== 'none') return { provider: persisted, model: '', source: 'user-default' as const, isCli: true }
-    } catch {}
+    } catch { /* localStorage may be unavailable */ }
     return null
   })
   const [solves, setSolves] = useState<StellarSolve[]>([])
@@ -92,6 +100,9 @@ export function useStellarSource() {
   const [nextBatchAtMs, setNextBatchAtMs] = useState(() => getNextBatchTime(batchIntervalMs))
   const [isBatchRefreshing, setIsBatchRefreshing] = useState(false)
   const batchRefreshInFlightRef = useRef(false)
+  const setOperationalError = useCallback((error: unknown, fallback: string) => {
+    setConnectionError(getErrorMessage(error, fallback))
+  }, [])
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
@@ -114,6 +125,12 @@ export function useStellarSource() {
   }, [batchIntervalMs])
 
   const refreshState = useCallback(async () => {
+    if (areOptionalPollersSuppressed()) {
+      setConnectionError(null)
+      setIsConnected(false)
+      return
+    }
+
     const results = await Promise.allSettled([
       stellarApi.getState(),
       stellarApi.getNotifications(STELLAR_DEFAULT_FETCH_LIMIT, true),
@@ -131,8 +148,19 @@ export function useStellarSource() {
     if (results[5].status === 'fulfilled') setSolves(results[5].value || [])
     if (results[6].status === 'fulfilled') setActivity(results[6].value || [])
     const failures = results.filter(result => result.status === 'rejected')
-    if (failures.length > 0) console.warn('stellar: refreshState partial failure —', failures.length, 'of 7 calls failed')
-  }, [setNotifications])
+    if (failures.length === 0) {
+      setConnectionError(null)
+      return
+    }
+    console.error('stellar: refreshState partial failure —', failures.length, 'of', STELLAR_REFRESH_REQUEST_COUNT, 'calls failed')
+    const firstFailure = failures[0]
+    setOperationalError(
+      firstFailure.status === 'rejected' ? firstFailure.reason : null,
+      failures.length === 1
+        ? 'Failed to refresh Stellar state'
+        : `Failed to refresh Stellar state (${failures.length}/${STELLAR_REFRESH_REQUEST_COUNT} requests failed)`,
+    )
+  }, [setNotifications, setOperationalError])
   const scheduleNextBatch = useCallback((intervalMs = batchIntervalMsRef.current) => {
     setNextBatchAtMs(getNextBatchTime(intervalMs))
   }, [])
@@ -143,13 +171,14 @@ export function useStellarSource() {
     try {
       await refreshState()
     } catch (err) {
-      console.warn('stellar: batch refresh failed:', err)
+      console.error('stellar: batch refresh failed:', err)
+      setOperationalError(err, 'Failed to refresh Stellar state')
     } finally {
       batchRefreshInFlightRef.current = false
       setIsBatchRefreshing(false)
       scheduleNextBatch()
     }
-  }, [refreshState, scheduleNextBatch])
+  }, [refreshState, scheduleNextBatch, setOperationalError])
   const setBatchIntervalMs = useCallback((intervalMs: number) => {
     const nextIntervalMs = resolveStellarBatchIntervalMs(intervalMs)
     batchIntervalMsRef.current = nextIntervalMs
@@ -162,6 +191,14 @@ export function useStellarSource() {
   }, [refreshBatch])
 
   const connectSSE = useCallback(() => {
+    if (areOptionalPollersSuppressed()) {
+      esRef.current?.close()
+      esRef.current = null
+      setIsConnected(false)
+      setConnectionError(null)
+      return
+    }
+
     esRef.current?.close()
     const es = new EventSource('/api/stellar/stream', { withCredentials: true })
     const on = <T,>(eventName: string, handler: (payload: T) => void) => {
@@ -192,7 +229,8 @@ export function useStellarSource() {
         [notif.id]: { solveId: 'pending', eventId: notif.id, step: 'reading', message: 'Auto-solve triggered — Stellar is investigating…', actionsTaken: 0, status: 'running' },
       })
       stellarApi.startSolve(notif.id).catch(err => {
-        console.warn('stellar: auto-solve for critical event failed:', notif.id, err)
+        console.error('stellar: auto-solve for critical event failed:', notif.id, err)
+        setOperationalError(err, 'Failed to auto-solve critical event')
         setSolveProgress(prev => {
           const copy = { ...prev }
           delete copy[notif.id]
@@ -267,12 +305,14 @@ export function useStellarSource() {
     on<StellarMissionTriggerPayload>('mission_trigger', payload => {
       window.dispatchEvent(new CustomEvent(STELLAR_MISSION_TRIGGER_EVENT, { detail: payload }))
     })
-  }, [setNotifications])
+  }, [setNotifications, setOperationalError])
 
   useEffect(() => {
     reconnectRef.current = connectSSE
   }, [connectSSE])
   useEffect(() => {
+    if (areOptionalPollersSuppressed()) return
+
     if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current)
     const delayMs = Math.max(0, nextBatchAtMs - Date.now())
     batchTimeoutRef.current = setTimeout(() => { void refreshBatch() }, delayMs)
@@ -283,6 +323,11 @@ export function useStellarSource() {
     }
   }, [nextBatchAtMs, refreshBatch])
   useEffect(() => {
+    if (areOptionalPollersSuppressed()) {
+      esRef.current?.close()
+      return
+    }
+
     const waitForToken = () => new Promise<void>(resolve => {
       if (hasStellarAuthCredentials()) {
         resolve()
@@ -307,7 +352,8 @@ export function useStellarSource() {
       try {
         await refreshState()
       } catch (err) {
-        console.warn('stellar: init failed:', err)
+        console.error('stellar: init failed:', err)
+        setOperationalError(err, 'Failed to initialize Stellar state')
       }
       scheduleNextBatch()
       connectSSE()
@@ -328,7 +374,7 @@ export function useStellarSource() {
       }
       esRef.current?.close()
     }
-  }, [connectSSE, refreshState, scheduleNextBatch])
+  }, [connectSSE, refreshState, scheduleNextBatch, setOperationalError])
 
   const unreadCount = notifications.filter(item => !item.read).length
   const acknowledgeNotification = useCallback(async (id: string) => {
@@ -425,7 +471,7 @@ export function useStellarSource() {
     try {
       await stellarApi.resolveWatch(id)
     } catch {
-      stellarApi.getWatches().then(setWatches).catch(() => {})
+      stellarApi.getWatches().then(setWatches).catch(() => void 0)
     }
   }, [])
   const dismissWatch = useCallback(async (id: string) => {
@@ -433,13 +479,13 @@ export function useStellarSource() {
     try {
       await stellarApi.dismissWatch(id)
     } catch {
-      stellarApi.getWatches().then(setWatches).catch(() => {})
+      stellarApi.getWatches().then(setWatches).catch(() => void 0)
     }
   }, [])
   const snoozeWatch = useCallback(async (id: string, minutes: number) => {
     try {
       await stellarApi.snoozeWatch(id, minutes)
-    } catch {}
+    } catch { /* snooze is best-effort */ }
   }, [])
   const dismissCatchUp = useCallback(() => setCatchUp(null), [])
   const startSolve = useCallback(async (eventID: string) => {

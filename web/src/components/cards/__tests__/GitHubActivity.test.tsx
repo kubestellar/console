@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -17,19 +18,23 @@ vi.mock('../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
+const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }))
+vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   getDemoMode: () => true, default: () => true,
   useDemoMode: () => mockUseDemoMode(),
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
   canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
-}))
+}
+))
 
-vi.mock('../../../lib/analytics', () => ({
+vi.mock('../../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
-}))
+}
+))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
@@ -108,7 +113,7 @@ describe('GitHubActivity', () => {
       data: buildLoadedCacheData(),
       isLoading: false,
       isRefreshing: false,
-      error: null,
+      error: false,
       isDemoFallback: true,
       refetch: mockRefetch,
     })
@@ -141,7 +146,7 @@ describe('GitHubActivity', () => {
       },
       isLoading: true,
       isRefreshing: false,
-      error: null,
+      error: false,
       isDemoFallback: false,
       refetch: mockRefetch,
     })
@@ -188,7 +193,7 @@ describe('GitHubActivity', () => {
       data: buildLoadedCacheData({ prs: [stalePr, ...demo.prs.slice(1)] }),
       isLoading: false,
       isRefreshing: false,
-      error: null,
+      error: false,
       isDemoFallback: true,
       refetch: mockRefetch,
     })
@@ -215,7 +220,7 @@ describe('GitHubActivity', () => {
       data: buildLoadedCacheData({ prs: [stalePr] }),
       isLoading: false,
       isRefreshing: false,
-      error: null,
+      error: false,
       isDemoFallback: true,
       refetch: mockRefetch,
     })

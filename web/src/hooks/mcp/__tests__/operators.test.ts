@@ -32,8 +32,10 @@ vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
 }))
 
-vi.mock('../../useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+vi.mock('../../useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode(), toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../../lib/api', () => ({
@@ -79,7 +81,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  mockUseDemoMode.mockReturnValue(false)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockSubscribeClusterCache.mockReturnValue(vi.fn())
   mockFetchSSE.mockResolvedValue([])
@@ -117,7 +119,7 @@ describe('useOperators', () => {
 
   it('returns demo operators when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useOperators())
 
@@ -196,7 +198,7 @@ describe('useOperatorSubscriptions', () => {
 
   it('returns demo subscriptions when demo mode is active', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useOperatorSubscriptions())
 
@@ -316,7 +318,7 @@ describe('useOperators – cluster filter', () => {
 
   it('demo mode returns operators scoped to the given cluster', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useOperators('prod-east'))
 
@@ -353,7 +355,7 @@ describe('useOperators – empty/missing data handling', () => {
 
   it('handles demo mode with no clusters in cache', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     mockClusterCacheRef.clusters = []
 
     const { result } = renderHook(() => useOperators())
@@ -561,7 +563,7 @@ describe('useOperatorSubscriptions – cluster filter', () => {
 
   it('demo mode returns subscriptions scoped to the given cluster', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
 
     const { result } = renderHook(() => useOperatorSubscriptions('prod-east'))
 
@@ -597,7 +599,7 @@ describe('useOperatorSubscriptions – empty/missing data handling', () => {
 
   it('handles demo mode with no clusters in cache', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     mockClusterCacheRef.clusters = []
 
     const { result } = renderHook(() => useOperatorSubscriptions())
@@ -683,7 +685,7 @@ describe('useOperatorSubscriptions – REST fills missing cluster field', () => 
 describe('useOperatorSubscriptions – demo data with multiple clusters', () => {
   it('returns subscriptions for all cached clusters when no filter', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     mockClusterCacheRef.clusters = [
       { name: 'cluster-a', context: 'cluster-a' },
       { name: 'cluster-b', context: 'cluster-b' },
@@ -701,7 +703,7 @@ describe('useOperatorSubscriptions – demo data with multiple clusters', () => 
 describe('useOperators – demo data with multiple clusters', () => {
   it('returns operators for all cached clusters when no filter', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    mockUseDemoMode.mockReturnValue(true)
     mockClusterCacheRef.clusters = [
       { name: 'cluster-a', context: 'cluster-a' },
       { name: 'cluster-b', context: 'cluster-b' },
