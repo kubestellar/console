@@ -38,7 +38,6 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   // --- Cluster + cluster-groups filter ---
   const {
     rawSelectedClusters,
-    selectedClusters,
     setSelectedClusters,
     toggleCluster,
     selectAllClusters,
@@ -58,7 +57,6 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   // --- Severity filter ---
   const {
     rawSelectedSeverities,
-    selectedSeverities,
     setSelectedSeverities,
     toggleSeverity,
     selectAllSeverities,
@@ -71,7 +69,6 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   // --- Status filter ---
   const {
     rawSelectedStatuses,
-    selectedStatuses,
     setSelectedStatuses,
     toggleStatus,
     selectAllStatuses,
@@ -88,7 +85,6 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   )
   const {
     rawSelectedDistributions,
-    selectedDistributions,
     setSelectedDistributions,
     toggleDistribution,
     selectAllDistributions,
