@@ -329,4 +329,46 @@ describe('createCardComponent — sandbox hardening (#19866)', () => {
       expect(result.error).toMatch(/AsyncFunction/)
     })
   })
+
+  describe('#20712 — wrapper variable leakage prevention', () => {
+    it('blocks __globalThis wrapper variable (BLOCKED_GLOBALS bypass)', async () => {
+      const code = `
+        var f = __globalThis.fetch;
+        module.exports.default = function() { return null; };
+      `
+      const result = await createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/__globalThis/)
+    })
+
+    it('blocks __scope wrapper variable (scope object access)', async () => {
+      const code = `
+        var s = __scope;
+        module.exports.default = function() { return null; };
+      `
+      const result = await createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/__scope/)
+    })
+
+    it('blocks Object.getOwnPropertyNames for global enumeration', async () => {
+      const code = `
+        var n = Object.getOwnPropertyNames({});
+        module.exports.default = function() { return null; };
+      `
+      const result = await createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/Object\.getOwnPropertyNames/)
+    })
+
+    it('blocks Object.getOwnPropertySymbols for global enumeration', async () => {
+      const code = `
+        var s = Object.getOwnPropertySymbols({});
+        module.exports.default = function() { return null; };
+      `
+      const result = await createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/Object\.getOwnPropertySymbols/)
+    })
+  })
 })
