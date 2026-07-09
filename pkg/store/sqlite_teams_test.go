@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func createTestUser(t *testing.T, s *SQLiteStore, login string) uuid.UUID {
+func createTeamTestUser(t *testing.T, s *SQLiteStore, login string) uuid.UUID {
 	t.Helper()
 	id := uuid.New()
 	err := s.CreateUser(context.Background(), &models.User{
@@ -26,8 +26,8 @@ func TestSQLiteTeams_CreateAndGet(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "creator")
-	memberID := createTestUser(t, store, "member1")
+	creatorID := createTeamTestUser(t, store, "creator")
+	memberID := createTeamTestUser(t, store, "member1")
 
 	team := &models.Team{
 		Name:        "Alpha Team",
@@ -53,8 +53,8 @@ func TestSQLiteTeams_CreateAssignsAdminToCreator(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "admin-creator")
-	memberID := createTestUser(t, store, "regular-member")
+	creatorID := createTeamTestUser(t, store, "admin-creator")
+	memberID := createTeamTestUser(t, store, "regular-member")
 
 	team := &models.Team{
 		Name:      "Role Test Team",
@@ -90,8 +90,8 @@ func TestSQLiteTeams_GetWithMembers(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "wm-creator")
-	memberID := createTestUser(t, store, "wm-member")
+	creatorID := createTeamTestUser(t, store, "wm-creator")
+	memberID := createTeamTestUser(t, store, "wm-member")
 
 	team := &models.Team{
 		Name:      "Members Team",
@@ -119,7 +119,7 @@ func TestSQLiteTeams_Update(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "upd-creator")
+	creatorID := createTeamTestUser(t, store, "upd-creator")
 	team := &models.Team{
 		Name:        "Original Name",
 		Description: "Original Desc",
@@ -134,6 +134,7 @@ func TestSQLiteTeams_Update(t *testing.T) {
 
 	got, err := store.GetTeam(ctx, team.ID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	require.Equal(t, "Updated Name", got.Name)
 	require.Equal(t, "Updated Desc", got.Description)
 }
@@ -142,8 +143,8 @@ func TestSQLiteTeams_Delete(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "del-creator")
-	memberID := createTestUser(t, store, "del-member")
+	creatorID := createTeamTestUser(t, store, "del-creator")
+	memberID := createTeamTestUser(t, store, "del-member")
 	team := &models.Team{
 		Name:      "Delete Me",
 		CreatedBy: creatorID,
@@ -167,7 +168,7 @@ func TestSQLiteTeams_ListAll(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "list-creator")
+	creatorID := createTeamTestUser(t, store, "list-creator")
 
 	for i := 0; i < 3; i++ {
 		team := &models.Team{
@@ -190,8 +191,8 @@ func TestSQLiteTeams_ListByUser(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	user1 := createTestUser(t, store, "filter-user1")
-	user2 := createTestUser(t, store, "filter-user2")
+	user1 := createTeamTestUser(t, store, "filter-user1")
+	user2 := createTeamTestUser(t, store, "filter-user2")
 
 	team1 := &models.Team{Name: "User1 Team", CreatedBy: user1}
 	team2 := &models.Team{Name: "User2 Team", CreatedBy: user2}
@@ -208,7 +209,7 @@ func TestSQLiteTeams_ListPagination(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "page-creator")
+	creatorID := createTeamTestUser(t, store, "page-creator")
 	for i := 0; i < 5; i++ {
 		team := &models.Team{
 			Name:      "Page Team " + string(rune('A'+i)),
@@ -233,8 +234,8 @@ func TestSQLiteTeams_AddMember(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "add-creator")
-	newMember := createTestUser(t, store, "add-new")
+	creatorID := createTeamTestUser(t, store, "add-creator")
+	newMember := createTeamTestUser(t, store, "add-new")
 
 	team := &models.Team{Name: "Add Member Team", CreatedBy: creatorID}
 	require.NoError(t, store.CreateTeam(ctx, team, []uuid.UUID{creatorID}))
@@ -251,8 +252,8 @@ func TestSQLiteTeams_RemoveMember(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "rm-creator")
-	memberID := createTestUser(t, store, "rm-member")
+	creatorID := createTeamTestUser(t, store, "rm-creator")
+	memberID := createTeamTestUser(t, store, "rm-member")
 
 	team := &models.Team{Name: "Remove Member Team", CreatedBy: creatorID}
 	require.NoError(t, store.CreateTeam(ctx, team, []uuid.UUID{creatorID, memberID}))
@@ -270,8 +271,8 @@ func TestSQLiteTeams_UpdateMemberRole(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "role-creator")
-	memberID := createTestUser(t, store, "role-member")
+	creatorID := createTeamTestUser(t, store, "role-creator")
+	memberID := createTeamTestUser(t, store, "role-member")
 
 	team := &models.Team{Name: "Role Update Team", CreatedBy: creatorID}
 	require.NoError(t, store.CreateTeam(ctx, team, []uuid.UUID{creatorID, memberID}))
@@ -294,8 +295,8 @@ func TestSQLiteTeams_ListTeamMembers_OrderByRole(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "order-admin")
-	memberID := createTestUser(t, store, "order-member")
+	creatorID := createTeamTestUser(t, store, "order-admin")
+	memberID := createTeamTestUser(t, store, "order-member")
 
 	team := &models.Team{Name: "Order Team", CreatedBy: creatorID}
 	require.NoError(t, store.CreateTeam(ctx, team, []uuid.UUID{creatorID, memberID}))
@@ -312,8 +313,8 @@ func TestSQLiteTeams_GetUserTeams(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	user := createTestUser(t, store, "userteams-user")
-	other := createTestUser(t, store, "userteams-other")
+	user := createTeamTestUser(t, store, "userteams-user")
+	other := createTeamTestUser(t, store, "userteams-other")
 
 	team1 := &models.Team{Name: "UT Team 1", CreatedBy: user}
 	team2 := &models.Team{Name: "UT Team 2", CreatedBy: other}
@@ -329,7 +330,7 @@ func TestSQLiteTeams_CreateWithEmptyMembers(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "empty-creator")
+	creatorID := createTeamTestUser(t, store, "empty-creator")
 	team := &models.Team{
 		Name:      "Empty Team",
 		CreatedBy: creatorID,
@@ -341,6 +342,7 @@ func TestSQLiteTeams_CreateWithEmptyMembers(t *testing.T) {
 
 	got, err := store.GetTeam(ctx, team.ID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	require.Equal(t, 0, got.MemberCount)
 }
 
@@ -348,7 +350,7 @@ func TestSQLiteTeams_CreateWithPresetID(t *testing.T) {
 	store := OpenTestDB(t)
 	ctx := context.Background()
 
-	creatorID := createTestUser(t, store, "preset-creator")
+	creatorID := createTeamTestUser(t, store, "preset-creator")
 	presetID := uuid.New()
 
 	team := &models.Team{
