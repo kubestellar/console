@@ -44,7 +44,7 @@ const PVCS_CACHE_KEY = 'kubestellar-pvcs-cache'
 
 interface PVCsCache {
   data: PVC[]
-  timestamp: Date
+  timestamp: string
   key: string
 }
 
@@ -57,9 +57,9 @@ function loadPVCsCacheFromStorage(cacheKey: string): { data: PVC[], timestamp: D
     if (stored) {
       const parsed = JSON.parse(stored)
       if (parsed.key === cacheKey && Array.isArray(parsed.data) && parsed.data.length > 0) {
-        const timestamp = parsed.timestamp ? new Date(parsed.timestamp) : new Date()
+        const timestamp = parsed.timestamp || new Date().toISOString()
         pvcsCache = { data: parsed.data, timestamp, key: cacheKey }
-        return { data: parsed.data, timestamp }
+        return { data: parsed.data, timestamp: new Date(timestamp) }
       }
     }
   } catch {
@@ -73,7 +73,7 @@ function savePVCsCacheToStorage() {
     try {
       localStorage.setItem(PVCS_CACHE_KEY, JSON.stringify({
         data: pvcsCache.data,
-        timestamp: pvcsCache.timestamp.toISOString(),
+        timestamp: pvcsCache.timestamp,
         key: pvcsCache.key
       }))
     } catch {
@@ -191,7 +191,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
 
           if (anySuccess) {
             const now = new Date()
-            pvcsCache = { data: allPVCs, timestamp: now, key: cacheKey }
+            pvcsCache = { data: allPVCs, timestamp: now.toISOString(), key: cacheKey }
             savePVCsCacheToStorage()
             if (!isMountedRef.current) return
             setPVCs(allPVCs)
@@ -244,7 +244,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
 
           if (anySuccess) {
             const now = new Date()
-            pvcsCache = { data: allPVCs, timestamp: now, key: cacheKey }
+            pvcsCache = { data: allPVCs, timestamp: now.toISOString(), key: cacheKey }
             savePVCsCacheToStorage()
             if (!isMountedRef.current) return
             setPVCs(allPVCs)
@@ -283,7 +283,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
             const newData = data.pvcs || []
             const now = new Date()
 
-            pvcsCache = { data: newData, timestamp: now, key: cacheKey }
+            pvcsCache = { data: newData, timestamp: now.toISOString(), key: cacheKey }
             savePVCsCacheToStorage()
 
             if (!isMountedRef.current) return
@@ -310,7 +310,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
       const now = new Date()
 
       // Update module-level cache
-      pvcsCache = { data: newData, timestamp: now, key: cacheKey }
+      pvcsCache = { data: newData, timestamp: now.toISOString(), key: cacheKey }
       savePVCsCacheToStorage()
 
       if (!isMountedRef.current) return
