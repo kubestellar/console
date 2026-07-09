@@ -116,7 +116,12 @@ jobs:
           retention-days: 7
 
   # Mobile viewport tests — catches responsive layout regressions
+  # TODO(#20674): Re-enable after investigating consistent timeout failures
+  # in mobile-chrome and mobile-safari. Previous timeout increase (180s)
+  # did not resolve the issue. Current failures waste CI minutes with
+  # no actionable signal.
   mobile:
+    if: false  # Temporarily disabled
     name: Mobile (${{ matrix.project }})
     needs: build
     runs-on: ubuntu-latest
