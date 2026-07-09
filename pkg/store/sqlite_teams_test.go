@@ -134,6 +134,7 @@ func TestSQLiteTeams_Update(t *testing.T) {
 
 	got, err := store.GetTeam(ctx, team.ID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	require.Equal(t, "Updated Name", got.Name)
 	require.Equal(t, "Updated Desc", got.Description)
 }
@@ -341,6 +342,7 @@ func TestSQLiteTeams_CreateWithEmptyMembers(t *testing.T) {
 
 	got, err := store.GetTeam(ctx, team.ID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	require.Equal(t, 0, got.MemberCount)
 }
 
