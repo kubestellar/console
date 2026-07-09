@@ -240,10 +240,15 @@ export async function createCardComponent(compiledCode: string): Promise<Dynamic
     // Note: no ES module `export` syntax — the module communicates its result
     // back via a globalThis side-effect. This lets the same source string work
     // with both blob URL import() (production) and new Function() eval (tests).
+    //
+    // The globalThis reference is captured before entering strict mode to prevent
+    // "Cannot access 'globalThis' before initialization" errors in test environments
+    // where new Function() creates an isolated scope without automatic globalThis binding.
     const moduleSource = `
+      const __globalThis = (typeof globalThis !== 'undefined' ? globalThis : (typeof global !== 'undefined' ? global : this));
       "use strict";
-      const __scope = globalThis['${scopeId}'];
-      if (__scope) delete globalThis['${scopeId}'];
+      const __scope = __globalThis['${scopeId}'];
+      if (__scope) delete __globalThis['${scopeId}'];
       const { ${scopeKeys.join(', ')} } = __scope || {};
 
       var exports = {};
@@ -251,7 +256,7 @@ export async function createCardComponent(compiledCode: string): Promise<Dynamic
 
       ${compiledCode}
 
-      globalThis['${scopeId}__result'] = module.exports.default || module.exports;
+      __globalThis['${scopeId}__result'] = module.exports.default || module.exports;
     `
 
     try {
