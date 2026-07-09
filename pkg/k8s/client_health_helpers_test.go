@@ -7,22 +7,23 @@ import (
 
 func TestRedactedMessage(t *testing.T) {
 	tests := []struct {
+		name     string
 		errType  string
 		expected string
 	}{
-		{"timeout", "cluster probe timed out"},
-		{"config", "cluster credential helper misconfigured"},
-		{"auth", "authentication or authorization failure"},
-		{"network", "cluster unreachable (network error)"},
-		{"certificate", "TLS certificate validation failed"},
-		{"not_found", "cluster context not found in kubeconfig"},
-		{"unknown", "cluster health check failed"},
-		{"", "cluster health check failed"},
-		{"something_else", "cluster health check failed"},
+		{"timeout", "timeout", "cluster probe timed out"},
+		{"config", "config", "cluster credential helper misconfigured"},
+		{"auth", "auth", "authentication or authorization failure"},
+		{"network", "network", "cluster unreachable (network error)"},
+		{"certificate", "certificate", "TLS certificate validation failed"},
+		{"not_found", "not_found", "cluster context not found in kubeconfig"},
+		{"unknown", "unknown", "cluster health check failed"},
+		{"empty string", "", "cluster health check failed"},
+		{"something_else", "something_else", "cluster health check failed"},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.errType, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			got := redactedMessage(tt.errType)
 			if got != tt.expected {
 				t.Errorf("redactedMessage(%q) = %q, want %q", tt.errType, got, tt.expected)
@@ -33,23 +34,24 @@ func TestRedactedMessage(t *testing.T) {
 
 func TestIsNumericPort_AdditionalCases(t *testing.T) {
 	tests := []struct {
+		name     string
 		input    string
 		expected bool
 	}{
-		{"443", true},
-		{"8080", true},
-		{"0", true},
-		{"65535", true},
-		{"", false},
-		{"abc", false},
-		{"123abc", false},
-		{"12.34", false},
-		{"-1", false},
-		{"6443 ", false},
+		{"valid port 443", "443", true},
+		{"valid port 8080", "8080", true},
+		{"zero", "0", true},
+		{"max port", "65535", true},
+		{"empty string", "", false},
+		{"alphabetic", "abc", false},
+		{"mixed alphanumeric", "123abc", false},
+		{"decimal", "12.34", false},
+		{"negative", "-1", false},
+		{"trailing space", "6443 ", false},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			got := isNumericPort(tt.input)
 			if got != tt.expected {
 				t.Errorf("isNumericPort(%q) = %v, want %v", tt.input, got, tt.expected)
@@ -100,19 +102,20 @@ func TestApiServerDialAddr(t *testing.T) {
 }
 
 func TestFormatAge(t *testing.T) {
+	now := time.Now()
 	tests := []struct {
 		name     string
 		input    time.Time
 		expected string
 	}{
 		{"Zero time", time.Time{}, ""},
-		{"5 minutes ago", time.Now().Add(-5 * time.Minute), "5m"},
-		{"30 minutes ago", time.Now().Add(-30 * time.Minute), "30m"},
-		{"61 minutes ago", time.Now().Add(-61 * time.Minute), "1h"},
-		{"3 hours ago", time.Now().Add(-3 * time.Hour), "3h"},
-		{"12 hours ago", time.Now().Add(-12 * time.Hour), "12h"},
-		{"2 days ago", time.Now().Add(-48 * time.Hour), "2d"},
-		{"7 days ago", time.Now().Add(-168 * time.Hour), "7d"},
+		{"5 minutes ago", now.Add(-5 * time.Minute), "5m"},
+		{"30 minutes ago", now.Add(-30 * time.Minute), "30m"},
+		{"61 minutes ago", now.Add(-61 * time.Minute), "1h"},
+		{"3 hours ago", now.Add(-3 * time.Hour), "3h"},
+		{"12 hours ago", now.Add(-12 * time.Hour), "12h"},
+		{"2 days ago", now.Add(-48 * time.Hour), "2d"},
+		{"7 days ago", now.Add(-168 * time.Hour), "7d"},
 	}
 
 	for _, tt := range tests {
