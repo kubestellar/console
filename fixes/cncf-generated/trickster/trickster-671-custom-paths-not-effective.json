@@ -1,0 +1,73 @@
+{
+  "version": "kc-mission-v1",
+  "name": "trickster-671-custom-paths-not-effective",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "trickster: Custom paths not effective",
+    "description": "Custom paths not effective. Community-requested feature.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current trickster deployment",
+        "description": "Verify your trickster version and configuration:\n```bash\nkubectl get pods -n trickster -l app.kubernetes.io/name=trickster\nhelm list -n trickster 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working trickster installation."
+      },
+      {
+        "title": "Review trickster configuration",
+        "description": "Inspect the relevant trickster configuration:\n```bash\nkubectl get all -n trickster -l app.kubernetes.io/name=trickster\nkubectl get configmap -n trickster -l app.kubernetes.io/part-of=trickster\n```\nHi，\n   I tested paths functionality by referring to the profile of paths.md."
+      },
+      {
+        "title": "Apply the fix for Custom paths not effective",
+        "description": "The `SetDefaults` function now copies over custom paths to the returned options by iterating the \"old\" routes (after they've had their own SetDefaults called) and setting the value for each key to a clone of the \"old\" value.\n\nThis was brought to my attention in issue #671, and my testing indicates that it resolves that issue; however, due to issues with the posted config (happens with copying over sometimes), my test wasn't an exact replica, so I will wait to hear from the issue creator. #655\n\nSee the source issue for community-verified solutions."
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n trickster -l app.kubernetes.io/name=trickster\nkubectl get events -n trickster --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Custom paths not effective\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "The `SetDefaults` function now copies over custom paths to the returned options by iterating the \"old\" routes (after they've had their own SetDefaults called) and setting the value for each key to a clone of the \"old\" value.",
+      "codeSnippets": []
+    }
+  },
+  "metadata": {
+    "tags": [
+      "trickster",
+      "sandbox",
+      "observability",
+      "feature"
+    ],
+    "cncfProjects": [
+      "trickster"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "sandbox",
+    "sourceUrls": {
+      "issue": "https://github.com/trickstercache/trickster/issues/671",
+      "repo": "https://github.com/trickstercache/trickster",
+      "pr": "https://github.com/trickstercache/trickster/pull/672"
+    },
+    "reactions": 0,
+    "comments": 11,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with trickster installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-09T07:34:35.891Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
