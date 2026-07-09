@@ -1,0 +1,78 @@
+{
+  "version": "kc-mission-v1",
+  "name": "operator-framework-5072-helm-based-operator-constantly-upgrading-release",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "operator-framework: Helm based operator constantly upgrading release",
+    "description": "Helm based operator constantly upgrading release. Community-requested feature.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current operator-framework deployment",
+        "description": "Verify your operator-framework version and configuration:\n```bash\nkubectl get pods -n operator-framework -l app.kubernetes.io/name=operator-framework\nhelm list -n operator-framework 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working operator-framework installation."
+      },
+      {
+        "title": "Review operator-framework configuration",
+        "description": "Inspect the relevant operator-framework configuration:\n```bash\nkubectl get all -n operator-framework -l app.kubernetes.io/name=operator-framework\nkubectl get configmap -n operator-framework -l app.kubernetes.io/part-of=operator-framework\n```\n## Bug Report\r\n\r\n\r\n\r\n#### What did you do?\r\n\r\n\r\nInstalled helm based operator https://github.com/IBM/ibm-platform-api-operator\r\n\r\n#### What did you expect to see?\r\n\r\n\r\nThe controller's logs should be relatively clean and there should only be one"
+      },
+      {
+        "title": "Apply the fix for Helm based operator constantly upgrading release",
+        "description": "the fix is being backported now, so hopefully this week!\n```yaml\n#### Environment\n\n**Operator type:**\n\n<!-- Uncomment one or more of the following lines corresponding to the language of the operator type -->\n\n<!-- /language go -->\n<!-- /language ansible -->\n/language helm\n\n**Kubernetes cluster type:**\n\n<!-- The type of cluster used for testing/deployment, ex. \"vanilla\", \"OpenShift\" -->\n\nOpenshift\n\n`$ operator-sdk version`\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n operator-framework -l app.kubernetes.io/name=operator-framework\nkubectl get events -n operator-framework --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Helm based operator constantly upgrading release\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "the fix is being backported now, so hopefully this week!",
+      "codeSnippets": [
+        "#### Environment\n\n**Operator type:**\n\n<!-- Uncomment one or more of the following lines corresponding to the language of the operator type -->\n\n<!-- /language go -->\n<!-- /language ansible -->\n/language helm\n\n**Kubernetes cluster type:**\n\n<!-- The type of cluster used for testing/deployment, ex. \"vanilla\", \"OpenShift\" -->\n\nOpenshift\n\n`$ operator-sdk version`"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "operator-framework",
+      "incubating",
+      "app-definition",
+      "deploy"
+    ],
+    "cncfProjects": [
+      "operator-framework"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Namespace",
+      "Serviceaccount"
+    ],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "deploy"
+    ],
+    "maturity": "incubating",
+    "sourceUrls": {
+      "issue": "https://github.com/operator-framework/operator-sdk/issues/5072",
+      "repo": "https://github.com/operator-framework/operator-sdk"
+    },
+    "reactions": 2,
+    "comments": 10,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with operator-framework installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-09T07:25:05.265Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
