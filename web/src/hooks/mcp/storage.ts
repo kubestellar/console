@@ -793,11 +793,16 @@ if (typeof window !== 'undefined') {
   })
 }
 
+function resetPVCsCache() {
+  pvcsCache = null
+}
+
 export const __storageTestables = {
   getDemoPVCs,
   getDemoResourceQuotas,
   getDemoLimitRanges,
   loadPVCsCacheFromStorage,
   savePVCsCacheToStorage,
+  resetPVCsCache,
   PVCS_CACHE_KEY,
 }

@@ -7,11 +7,13 @@ const {
   getDemoLimitRanges,
   loadPVCsCacheFromStorage,
   savePVCsCacheToStorage,
+  resetPVCsCache,
   PVCS_CACHE_KEY,
 } = mod.__storageTestables
 
 beforeEach(() => {
   localStorage.clear()
+  resetPVCsCache()
 })
 
 describe('getDemoPVCs', () => {

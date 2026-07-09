@@ -21,11 +21,12 @@ import type { WeeklyActivity, GitTreeEntry } from "./helpers";
 const MAX_RESPONSE_BYTES = 3_000_000;
 
 async function readCappedJson<T>(res: Response): Promise<T> {
-  const contentLength = parseInt(res.headers.get("content-length") || "0", 10);
+  const cloned = res.clone();
+  const contentLength = parseInt(cloned.headers.get("content-length") || "0", 10);
   if (contentLength > MAX_RESPONSE_BYTES) {
     throw new Error(`Response too large: content-length ${contentLength} exceeds ${MAX_RESPONSE_BYTES}`);
   }
-  const text = await res.text();
+  const text = await cloned.text();
   if (text.length > MAX_RESPONSE_BYTES) {
     throw new Error(`Response too large: body ${text.length} bytes exceeds ${MAX_RESPONSE_BYTES}`);
   }
