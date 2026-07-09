@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUserRole_Constants(t *testing.T) {
+func TestUserRole_StringValues(t *testing.T) {
 	require.Equal(t, "admin", string(UserRoleAdmin))
 	require.Equal(t, "editor", string(UserRoleEditor))
 	require.Equal(t, "viewer", string(UserRoleViewer))
@@ -43,9 +43,9 @@ func TestConsoleUserWithRole_JSONSerialization(t *testing.T) {
 	userID := uuid.New()
 	user := ConsoleUserWithRole{
 		User: User{
-			ID:       userID,
-			Username: "testuser",
-			Email:    "test@example.com",
+			ID:          userID,
+			GitHubLogin: "testuser",
+			Email:       "test@example.com",
 		},
 		Role: UserRoleEditor,
 	}
@@ -56,12 +56,12 @@ func TestConsoleUserWithRole_JSONSerialization(t *testing.T) {
 	var decoded ConsoleUserWithRole
 	require.NoError(t, json.Unmarshal(data, &decoded))
 	require.Equal(t, userID, decoded.ID)
-	require.Equal(t, "testuser", decoded.Username)
+	require.Equal(t, "testuser", decoded.GitHubLogin)
 	require.Equal(t, "test@example.com", decoded.Email)
 	require.Equal(t, UserRoleEditor, decoded.Role)
 }
 
-func TestK8sSubjectKind_Constants(t *testing.T) {
+func TestK8sSubjectKind_StringValues(t *testing.T) {
 	require.Equal(t, "User", string(K8sSubjectUser))
 	require.Equal(t, "Group", string(K8sSubjectGroup))
 	require.Equal(t, "ServiceAccount", string(K8sSubjectServiceAccount))
