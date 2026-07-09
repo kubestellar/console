@@ -95,13 +95,14 @@ export function usePVCs(cluster?: string, namespace?: string) {
   }
 
   const cached = getCachedData()
+  const cachedTimestamp = cached?.timestamp ? (cached.timestamp instanceof Date ? cached.timestamp : new Date(cached.timestamp)) : null
   const [pvcs, setPVCs] = useState<PVC[]>(cached?.data || [])
   const [isLoading, setIsLoading] = useState(!cached)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(cachedTimestamp)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(cachedTimestamp)
 
   // Track mounted state to prevent state updates after unmount (StrictMode)
   const isMountedRef = useRef(true)
