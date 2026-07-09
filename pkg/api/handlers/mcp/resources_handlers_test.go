@@ -36,7 +36,7 @@ func allResourceHandlers() []resourceHandlerRoute {
 
 // namespacedResourceHandlers returns only handlers that validate the namespace
 // query parameter via mcpValidateClusterAndNamespace. GetPVs and GetFlatcarNodes
-// are cluster-scoped and only validate the cluster name.
+// are cluster-scoped resources and only validate the cluster name.
 func namespacedResourceHandlers() []resourceHandlerRoute {
 	return []resourceHandlerRoute{
 		{"GetConfigMaps", "/configmaps", func(h *MCPHandlers, app *fiber.App) { app.Get("/configmaps", h.GetConfigMaps) }, "configmaps"},
@@ -61,8 +61,8 @@ func newResourceErrorApp() *fiber.App {
 	})
 }
 
-// TestResourceHandlers_DemoMode verifies that every resource handler returns
-// 200 with demo data when the X-Demo-Mode header is set.
+// TestResourceHandlers_DemoMode verifies that resource handlers with demo
+// support return 200 with the expected JSON key when X-Demo-Mode is set.
 func TestResourceHandlers_DemoMode(t *testing.T) {
 	env := setupTestEnv(t)
 
@@ -78,7 +78,8 @@ func TestResourceHandlers_DemoMode(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, fiber.StatusOK, resp.StatusCode, "demo mode should return 200")
 
-			body, _ := io.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
 			assert.Contains(t, string(body), hr.demoKey,
 				"demo response should contain the %q key", hr.demoKey)
 		})
@@ -100,7 +101,8 @@ func TestResourceHandlers_DemoMode_WasmCloud(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
 		assert.Contains(t, string(body), "hosts")
 	})
 
@@ -115,7 +117,8 @@ func TestResourceHandlers_DemoMode_WasmCloud(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
 		assert.Contains(t, string(body), "actors")
 	})
 }
@@ -295,7 +298,8 @@ func TestGetPodLogs_DemoMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
 	assert.Contains(t, string(body), "logs")
 }
 
@@ -331,9 +335,9 @@ func TestCallDeployTool_NoBridge(t *testing.T) {
 	assert.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)
 }
 
-// TestCallOpsTool_NilBridge verifies CallOpsTool returns 503 when bridge is nil
-// regardless of request body content.
-func TestCallOpsTool_NilBridge(t *testing.T) {
+// TestCallOpsTool_NilBridgeNoBody verifies CallOpsTool returns 503 when bridge
+// is nil regardless of whether a request body is present.
+func TestCallOpsTool_NilBridgeNoBody(t *testing.T) {
 	env := setupTestEnv(t)
 	app := newResourceErrorApp()
 	h := NewMCPHandlers(nil, env.K8sClient, env.Store)
@@ -362,7 +366,8 @@ func TestWasmCloudHandlers_NonDemoMode(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
 		assert.Contains(t, string(body), "hosts")
 	})
 
@@ -376,7 +381,8 @@ func TestWasmCloudHandlers_NonDemoMode(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
 		assert.Contains(t, string(body), "actors")
 	})
 }
