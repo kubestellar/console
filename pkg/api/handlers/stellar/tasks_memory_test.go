@@ -402,7 +402,7 @@ func TestListMemory_DefaultParams(t *testing.T) {
 	app, mockStore, userID := newTasksMemoryTestApp(t)
 
 	expected := []store.StellarMemoryEntry{
-		{ID: "m1", UserID: userID, Category: "incident", Content: "pod crash"},
+		{ID: "m1", UserID: userID, Category: "incident", Summary: "pod crash"},
 	}
 	mockStore.On("ListStellarMemoryEntries", userID, "", "", stellarDefaultListLimit, 0).Return(expected, nil).Once()
 
