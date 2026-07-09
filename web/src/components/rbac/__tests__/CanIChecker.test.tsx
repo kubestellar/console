@@ -515,8 +515,8 @@ describe('CanIChecker — Edge Cases', () => {
     const checkBtn = screen.getByTestId('can-i-check')
     await userEvent.click(checkBtn)
 
-    // Should either fall back to default or use empty string
-    expect(mockCheckPermission).toHaveBeenCalled()
+    // Should not call permission check with empty verb
+    expect(mockCheckPermission).not.toHaveBeenCalled()
   })
 
   it('handles empty custom resource input', async () => {
@@ -531,7 +531,7 @@ describe('CanIChecker — Edge Cases', () => {
     const checkBtn = screen.getByTestId('can-i-check')
     await userEvent.click(checkBtn)
 
-    expect(mockCheckPermission).toHaveBeenCalled()
+    expect(mockCheckPermission).not.toHaveBeenCalled()
   })
 
   it('handles wildcard resources', async () => {
