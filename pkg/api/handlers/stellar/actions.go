@@ -17,6 +17,7 @@ import (
 	"github.com/kubestellar/console/pkg/stellar/scheduler"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/api/handlers/auth"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 type createStellarActionRequest struct {
@@ -447,9 +448,9 @@ func (h *Handler) executeDirectAction(c *fiber.Ctx, userID string, body executeA
 }
 
 func (h *Handler) executeLLMAction(c *fiber.Ctx, userID string, body executeActionRequest) error {
-	prompt := body.Prompt
+	prompt := sanitize.PromptString(body.Prompt)
 	if prompt == "" {
-		prompt = body.Description
+		prompt = sanitize.PromptString(body.Description)
 	}
 
 	resolved, err := h.resolveProviderAndModel(c.UserContext(), userID, "", "")
@@ -457,7 +458,7 @@ func (h *Handler) executeLLMAction(c *fiber.Ctx, userID string, body executeActi
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no AI provider configured"})
 	}
 
-	state, _ := h.buildOperationalState(c.UserContext(), userID, body.Cluster)
+	state, _ := h.buildOperationalState(c.UserContext(), userID, sanitize.PromptString(body.Cluster))
 	if state == nil {
 		state = &OperationalState{
 			GeneratedAt:      time.Now().UTC(),
@@ -466,15 +467,16 @@ func (h *Handler) executeLLMAction(c *fiber.Ctx, userID string, body executeActi
 			ClustersWatching: []string{},
 		}
 	}
-	memories, _ := h.store.ListStellarMemoryEntries(c.UserContext(), userID, body.Cluster, "", 5, 0)
+	sanitizedCluster := sanitize.PromptString(body.Cluster)
+	memories, _ := h.store.ListStellarMemoryEntries(c.UserContext(), userID, sanitizedCluster, "", 5, 0)
 	tasks, _ := h.store.GetOpenTasks(c.UserContext(), userID)
-	contextString := buildLLMContext(state, memories, tasks, body.Cluster)
+	contextString := buildLLMContext(state, memories, tasks, sanitizedCluster)
 
 	messages := []providers.Message{
 		{Role: "system", Content: prompts.MissionExecution},
 		{Role: "user", Content: "Current cluster state:\n" + contextString},
 		{Role: "assistant", Content: "Got it. What do you need?"},
-		{Role: "user", Content: fmt.Sprintf("Cluster: %s\nNamespace: %s\nResource: %s\n\nTask: %s", body.Cluster, body.Namespace, body.Name, prompt)},
+		{Role: "user", Content: fmt.Sprintf("Cluster: %s\nNamespace: %s\nResource: %s\n\nTask: %s", sanitizedCluster, sanitize.PromptString(body.Namespace), sanitize.PromptString(body.Name), prompt)},
 	}
 
 	startTime := time.Now()
