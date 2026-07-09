@@ -9,11 +9,13 @@ const {
   getDemoAllPods,
   loadPodsCacheFromStorage,
   savePodsCacheToStorage,
+  resetPodsCache,
   PODS_CACHE_KEY,
 } = mod.__workloadsTestables
 
 beforeEach(() => {
   localStorage.clear()
+  resetPodsCache()
 })
 
 describe('getDemoPods', () => {
