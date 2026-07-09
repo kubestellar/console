@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -182,7 +183,7 @@ func TestGetPods_InvalidLabelSelector(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet,
-				"/pods?cluster=test-cluster&namespace=default&labelSelector="+tc.selector, nil)
+				"/pods?cluster=test-cluster&namespace=default&labelSelector="+url.QueryEscape(tc.selector), nil)
 			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
 			assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
