@@ -106,6 +106,8 @@ jobs:
         run: |
           npm run preview &
           npx wait-on http://localhost:4173 --timeout 120000
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
 
       - name: Run Playwright tests
         env:
@@ -299,6 +301,8 @@ jobs:
         run: |
           npm run preview &
           npx wait-on http://localhost:4173 --timeout 120000
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
 
       - name: Run mobile tests
         run: |
@@ -354,6 +358,8 @@ jobs:
         run: |
           npm run preview &
           npx wait-on http://localhost:4173 --timeout 120000
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
 
       - name: Run accessibility tests
         run: |

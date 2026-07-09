@@ -61,6 +61,16 @@ const FORBIDDEN_SANDBOX_PATTERNS: Array<{ re: RegExp; label: string }> = [
   { re: /\bString\.raw\b/, label: 'String.raw' },
   { re: /\bgetOwnPropertyDescriptor\b/, label: 'getOwnPropertyDescriptor' },
   { re: /\bimport\s*\(/, label: 'dynamic import()' },
+  // #20712: Block wrapper-internal variable names that are in scope when card code runs.
+  // __globalThis and __scope are defined in the moduleSource wrapper before ${compiledCode}
+  // is injected; without these patterns a card could reference them to bypass BLOCKED_GLOBALS.
+  { re: /\b__globalThis\b/, label: '__globalThis (sandbox wrapper variable)' },
+  { re: /\b__scope\b/, label: '__scope (sandbox wrapper variable)' },
+  // Block low-level Object reflection APIs that enumerate all own properties/symbols.
+  // Object.keys/values/entries are deliberately NOT blocked here as they are commonly
+  // needed in legitimate card code (iterating props, config objects, API responses).
+  { re: /\bObject\.getOwnPropertyNames\b/, label: 'Object.getOwnPropertyNames' },
+  { re: /\bObject\.getOwnPropertySymbols\b/, label: 'Object.getOwnPropertySymbols' },
 ]
 
 /**
