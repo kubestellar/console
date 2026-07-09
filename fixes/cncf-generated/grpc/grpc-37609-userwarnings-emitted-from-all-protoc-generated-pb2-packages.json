@@ -1,0 +1,79 @@
+{
+  "version": "kc-mission-v1",
+  "name": "grpc-37609-userwarnings-emitted-from-all-protoc-generated-pb2-packages",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "grpc: UserWarnings emitted from all protoc-generated _pb2 packages",
+    "description": "UserWarnings emitted from all protoc-generated _pb2 packages. This issue affects 15+ users.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify grpc troubleshoot symptoms",
+        "description": "Check for the issue in your grpc setup:\ngRPC library — check your language-specific package (e.g., pip show grpcio, npm ls @grpc/grpc-js)\nCheck your build output and test logs for errors related to this issue."
+      },
+      {
+        "title": "Review grpc configuration",
+        "description": "Review the relevant grpc configuration:\n### What version of gRPC and what language are you using?\nPython\n\nPackage versions:\n* grpcio 1.66.1\n* grpcio-tools 1.66.1\n\n### What operating system (Linux, Windows,...) and version?\nWindows 11 Version 23H2 (OS Build 22631.4037)\n\n### What runtime /"
+      },
+      {
+        "title": "Apply the fix for UserWarnings emitted from all protoc-generated _pb2 packages",
+        "description": "This warning was removed completely on the protobuf side in https://github.com/protocolbuffers/protobuf/issues/18096. It went in https://github.com/protocolbuffers/protobuf/commit/83569cff3de3b3641e0410479e61f13972c5d469, and they backported it as a patch release to `v5.28.3`:\n```yaml\n>>> import test_pb2\nC:\\temp\\grpc-test\\venv\\Lib\\site-packages\\google\\protobuf\\runtime_version.py:112: UserWarning: Protobuf gencode version 5.27.2 is older than the runtime version 5.28.0 at test.proto. Please avoid checked-in Protobuf gencode that can be obsolete.\n  warnings.warn(\n>>>\n```"
+      },
+      {
+        "title": "Upgrade grpc to include the fix",
+        "description": "If the fix is included in a newer release, upgrade grpc:\nUpdate the grpc dependency in your project manifest to the latest version.\nSee the project's releases: https://github.com/grpc/grpc/releases"
+      },
+      {
+        "title": "Confirm UserWarnings emitted from all protoc-generated… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\nTest grpc to confirm the issue is resolved.\nConfirm that the issue symptoms are gone."
+      }
+    ],
+    "resolution": {
+      "summary": "This warning was removed completely on the protobuf side in https://github.com/protocolbuffers/protobuf/issues/18096.",
+      "codeSnippets": [
+        ">>> import test_pb2\nC:\\temp\\grpc-test\\venv\\Lib\\site-packages\\google\\protobuf\\runtime_version.py:112: UserWarning: Protobuf gencode version 5.27.2 is older than the runtime version 5.28.0 at test.proto. Please avoid checked-in Protobuf gencode that can be obsolete.\n  warnings.warn(\n>>>",
+        "That's similar to what I've ended up going with, though I'm doing it via an `__init__.py` file in the same directory as the generated `_pb2.py` files so the `with warnings.catch_warnings()` block isn't required around any imports, i.e. `__init__.py` just contains the following:",
+        "**5.28.3:**"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "grpc",
+      "incubating",
+      "networking",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "grpc"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "incubating",
+    "sourceUrls": {
+      "issue": "https://github.com/grpc/grpc/issues/37609",
+      "repo": "https://github.com/grpc/grpc"
+    },
+    "reactions": 15,
+    "comments": 14,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "tools": [
+      "protoc"
+    ],
+    "description": "gRPC library — check your language-specific package (e.g., pip show grpcio, npm ls @grpc/grpc-js)"
+  },
+  "security": {
+    "scannedAt": "2026-07-09T07:17:09.328Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
