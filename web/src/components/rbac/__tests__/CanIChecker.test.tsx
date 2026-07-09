@@ -311,7 +311,7 @@ describe('CanIChecker — Form Interactions', () => {
 
     expect(mockCheckPermission).toHaveBeenCalledWith(
       expect.objectContaining({
-        apiGroup: 'custom.example.com',
+        group: 'custom.example.com',
       })
     )
   })
@@ -618,7 +618,7 @@ describe('CanIChecker — API Group Handling', () => {
     expect(mockCheckPermission).toHaveBeenCalledWith(
       expect.objectContaining({
         resource: 'deployments',
-        apiGroup: 'apps',
+        group: 'apps',
       })
     )
   })
@@ -635,7 +635,7 @@ describe('CanIChecker — API Group Handling', () => {
     expect(mockCheckPermission).toHaveBeenCalledWith(
       expect.objectContaining({
         resource: 'pods',
-        apiGroup: '',
+        group: '',
       })
     )
   })
@@ -658,7 +658,7 @@ describe('CanIChecker — API Group Handling', () => {
     expect(mockCheckPermission).toHaveBeenCalledWith(
       expect.objectContaining({
         resource: 'deployments',
-        apiGroup: 'override.example.com',
+        group: 'override.example.com',
       })
     )
   })
