@@ -22,7 +22,8 @@ on:
     - cron: "30 6 * * *"
   workflow_dispatch:
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 
 env:
   # Public gist that holds the computed history. Not a secret.

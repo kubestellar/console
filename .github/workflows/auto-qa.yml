@@ -45,7 +45,8 @@ env:
   NODE_VERSION: "22"
   GO_VERSION: "1.26.4"
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   auto-qa:

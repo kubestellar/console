@@ -27,7 +27,8 @@ on:
         type: boolean
 
 # Least-privilege: read-only by default; jobs declare write scopes individually
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 
 # Prevent concurrent scheduled releases (allow manual runs to queue)
 concurrency:

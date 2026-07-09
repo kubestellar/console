@@ -8,7 +8,8 @@ on:
       - 'web/src/lib/a11y/**'
       - 'web/src/lib/accessibility.ts'
 
-permissions: read-all
+permissions:
+  contents: read
 
 env:
   CI: true
