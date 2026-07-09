@@ -465,6 +465,9 @@ jobs:
           clusterName: "$LIVE_CLUSTER_NAME"
           service:
             type: ClusterIP
+          serviceAccount:
+            create: false
+            name: "$LIVE_SERVICE_ACCOUNT"
           podSecurityContext:
             seccompProfile:
               type: RuntimeDefault
