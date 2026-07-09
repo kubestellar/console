@@ -409,8 +409,9 @@ describe('CanIChecker — Result Display (Denied)', () => {
 
     render(<CanIChecker />)
 
-    // Should show denied indicator
-    expect(screen.getByText(/does not have permission/i)).toBeInTheDocument()
+    // Should show denied indicator (i18n mock returns key as-is)
+    expect(screen.getByText('rbac.denied')).toBeInTheDocument()
+    expect(screen.getByText(/User does not have permission/i)).toBeInTheDocument()
   })
 
   it('shows denied result without reason', () => {
