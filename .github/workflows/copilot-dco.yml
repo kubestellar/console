@@ -4,9 +4,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-# Least-privilege: read-all at workflow level; each job declares only the
+# Least-privilege: deny all at workflow level; each job declares only the
 # permissions it needs. See Scorecard TokenPermissionsID alerts #1328, #902.
-permissions: read-all
+permissions: {}
 
 jobs:
   copilot-dco:
