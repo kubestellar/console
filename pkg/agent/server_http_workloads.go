@@ -10,10 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
-	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // handleScaleHTTP scales a workload (Deployment or StatefulSet) to the given
@@ -420,7 +421,7 @@ func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request
 	defer cancel()
 
 	if err := s.k8sClient.DeleteWorkload(ctx, req.Cluster, req.Namespace, req.Name); err != nil {
-		slog.Warn("error deleting workload", "cluster", req.Cluster, "namespace", req.Namespace, "name", req.Name, "error", err)
+		slog.Warn("error deleting workload", "cluster", sanitize.LogString(req.Cluster), "namespace", sanitize.LogString(req.Namespace), "name", sanitize.LogString(req.Name), "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{
 			"success": false,
@@ -472,7 +473,7 @@ func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	pods, err := s.k8sClient.GetPods(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching pods", "error", err)
+		slog.Warn("error fetching pods", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}

@@ -130,7 +130,7 @@ func (uc *UpdateChecker) checkReleaseChannel(channel string) {
 	}
 
 	if latest == nil || latest.TagName == currentVersion {
-		slog.Info("[AutoUpdate] already on latest release", "channel", channel, "version", sanitize.LogString(currentVersion))
+		slog.Info("[AutoUpdate] already on latest release", "channel", sanitize.LogString(channel), "version", sanitize.LogString(currentVersion))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:   "done",
 			Message:  fmt.Sprintf("Already up to date — running latest %s release", channel),

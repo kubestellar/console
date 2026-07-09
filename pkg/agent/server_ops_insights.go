@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // handleInsightsEnrich accepts heuristic insight summaries and returns AI enrichments
@@ -108,7 +110,7 @@ func (s *Server) handleVClusterCheck(w http.ResponseWriter, r *http.Request) {
 	if context != "" {
 		status, err := s.localClusters.CheckVClusterOnCluster(context)
 		if err != nil {
-			slog.Error("[Insights] failed to check vcluster on cluster", "context", context, "error", err)
+			slog.Error("[Insights] failed to check vcluster on cluster", "context", sanitize.LogString(context), "error", err)
 			http.Error(w, sanitizeAgentError("check vcluster status", err), http.StatusInternalServerError)
 			return
 		}

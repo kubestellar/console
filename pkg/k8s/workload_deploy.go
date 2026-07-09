@@ -113,7 +113,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 	// 2. Resolve dependencies (ConfigMaps, Secrets, SA, RBAC, PVCs, Services, Ingress, NetworkPolicy, HPA, PDB)
 	bundle, err := m.ResolveDependencies(ctx, sourceCluster, namespace, sourceObj, opts)
 	if err != nil {
-		slog.Warn("[deploy] dependency resolution failed", "error", err)
+		slog.Warn("[deploy] dependency resolution failed", "cluster", sanitize.LogString(sourceCluster), "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
 		bundle = &DependencyBundle{Workload: sourceObj}
 	}
 	if len(bundle.Warnings) > 0 {

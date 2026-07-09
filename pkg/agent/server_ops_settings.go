@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -79,7 +80,7 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 
 	cm.InvalidateKeyValidity(provider)
 	s.refreshProviderAvailability()
-	slog.Info("API key removed", "provider", provider)
+	slog.Info("API key removed", "provider", sanitize.LogString(provider))
 	writeJSON(w, map[string]bool{"success": true})
 }
 
@@ -342,7 +343,7 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 		if !valid {
 			w.WriteHeader(http.StatusBadRequest)
 			if validationErr != nil {
-				slog.Error("API key validation error", "error", validationErr)
+				slog.Error("API key validation error", "provider", sanitize.LogString(req.Provider), "error", validationErr)
 			}
 			writeJSON(w, protocol.ErrorPayload{Code: "invalid_key", Message: "Invalid API key"})
 			return
@@ -366,7 +367,7 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.refreshProviderAvailability()
-	slog.Info("provider configured", "provider", req.Provider, "hasKey", req.APIKey != "", "hasBaseURL", req.BaseURL != "", "hasModel", req.Model != "")
+	slog.Info("provider configured", "provider", sanitize.LogString(req.Provider), "hasKey", req.APIKey != "", "hasBaseURL", req.BaseURL != "", "hasModel", req.Model != "")
 	writeJSON(w, map[string]any{"success": true, "provider": req.Provider})
 }
 
