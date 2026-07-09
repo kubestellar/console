@@ -199,15 +199,19 @@ func TestK8sRoleBinding_JSONSerialization(t *testing.T) {
 		IsCluster: false,
 		RoleName:  "admin",
 		RoleKind:  "ClusterRole",
-		Subjects: []struct {
+	}
+	binding.Subjects = append(binding.Subjects,
+		struct {
 			Kind      K8sSubjectKind `json:"kind"`
 			Name      string         `json:"name"`
 			Namespace string         `json:"namespace,omitempty"`
-		}{
-			{Kind: K8sSubjectUser, Name: "alice"},
-			{Kind: K8sSubjectServiceAccount, Name: "deployer", Namespace: "ci"},
-		},
-	}
+		}{Kind: K8sSubjectUser, Name: "alice"},
+		struct {
+			Kind      K8sSubjectKind `json:"kind"`
+			Name      string         `json:"name"`
+			Namespace string         `json:"namespace,omitempty"`
+		}{Kind: K8sSubjectServiceAccount, Name: "deployer", Namespace: "ci"},
+	)
 
 	data, err := json.Marshal(binding)
 	require.NoError(t, err)
