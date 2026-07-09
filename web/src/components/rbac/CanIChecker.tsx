@@ -520,7 +520,7 @@ function CanICheckerContent() {
           >
             {checking ? t('rbac.checking') : t('rbac.checkPermission')}
           </Button>
-          {result && (
+          {(result || error) && (
             <Button
               variant="secondary"
               size="lg"
