@@ -531,7 +531,7 @@ describe('CanIChecker — Edge Cases', () => {
     const checkBtn = screen.getByTestId('can-i-check')
     await userEvent.click(checkBtn)
 
-    expect(mockCheckPermission).toHaveBeenCalled()
+    expect(mockCheckPermission).not.toHaveBeenCalled()
   })
 
   it('handles wildcard resources', async () => {
