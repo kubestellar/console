@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 func (uc *UpdateChecker) run(ctx context.Context) {
@@ -128,7 +130,7 @@ func (uc *UpdateChecker) checkReleaseChannel(channel string) {
 	}
 
 	if latest == nil || latest.TagName == currentVersion {
-		slog.Info("[AutoUpdate] already on latest release", "channel", channel, "version", currentVersion)
+		slog.Info("[AutoUpdate] already on latest release", "channel", channel, "version", sanitize.LogString(currentVersion))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:   "done",
 			Message:  fmt.Sprintf("Already up to date — running latest %s release", channel),
@@ -137,7 +139,7 @@ func (uc *UpdateChecker) checkReleaseChannel(channel string) {
 		return
 	}
 
-	slog.Info("[AutoUpdate] new release available", "current", currentVersion, "latest", latest.TagName)
+	slog.Info("[AutoUpdate] new release available", "current", sanitize.LogString(currentVersion), "latest", sanitize.LogString(latest.TagName))
 
 	switch installMethod {
 	case "binary":
@@ -146,4 +148,3 @@ func (uc *UpdateChecker) checkReleaseChannel(channel string) {
 		uc.executeDevReleaseUpdate(latest)
 	}
 }
-

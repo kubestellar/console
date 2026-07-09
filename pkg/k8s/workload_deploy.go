@@ -73,7 +73,6 @@ func (m *MultiClusterClient) ResolveWorkloadDependencies(
 	return workloadKind, bundle, nil
 }
 
-
 // DeployWorkload fetches a workload manifest from the source cluster and applies it to target clusters
 func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, namespace, name string, targetClusters []string, replicas int32, opts *DeployOptions) (*v1alpha1.DeployResponse, error) {
 	if opts == nil {
@@ -119,7 +118,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 	}
 	if len(bundle.Warnings) > 0 {
 		for _, w := range bundle.Warnings {
-			slog.Info("[deploy] dependency warning", "warning", w)
+			slog.Info("[deploy] dependency warning", "warning", sanitize.LogString(w))
 		}
 	}
 

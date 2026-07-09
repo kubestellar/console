@@ -12,6 +12,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/ai"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // InsightEnrichmentCacheTTL is how long individual enrichments are cached
@@ -265,7 +266,7 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 
 		resp, err := provider.Chat(ctx, req)
 		if err != nil {
-			slog.Error("[InsightWorker] provider failed", "provider", name, "error", err)
+			slog.Error("[InsightWorker] provider failed", "provider", sanitize.LogString(name), "error", err)
 			continue
 		}
 		if resp == nil {
@@ -274,7 +275,7 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 
 		enrichments, err := parseEnrichmentResponse(resp.Content, insights)
 		if err != nil {
-			slog.Error("[InsightWorker] failed to parse response", "provider", name, "error", err)
+			slog.Error("[InsightWorker] failed to parse response", "provider", sanitize.LogString(name), "error", err)
 			continue
 		}
 
@@ -333,7 +334,7 @@ func buildInsightEnrichmentPrompt(insights []InsightSummary) string {
 		if len(insight.Metrics) > 0 {
 			metricsJSON, err := json.Marshal(insight.Metrics)
 			if err != nil {
-				slog.Warn("[InsightWorker] failed to marshal metrics, omitting from prompt", "insightID", insight.ID, "error", err)
+				slog.Warn("[InsightWorker] failed to marshal metrics, omitting from prompt", "insightID", sanitize.LogString(insight.ID), "error", err)
 			} else {
 				b.WriteString(fmt.Sprintf("Metrics: %s\n", string(metricsJSON)))
 			}

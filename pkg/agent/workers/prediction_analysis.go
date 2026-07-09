@@ -100,7 +100,7 @@ func (w *PredictionWorker) runAnalysis(specificProviders []string) {
 	w.lastRun = time.Now()
 	w.mu.Unlock()
 
-	slog.Info("[PredictionWorker] analysis complete", "predictions", len(filtered), "providers", usedProviders)
+	slog.Info("[PredictionWorker] analysis complete", "predictions", len(filtered), "providers", sanitize.LogStrings(usedProviders))
 
 	// Broadcast to WebSocket clients
 	if w.broadcast != nil {
@@ -502,5 +502,3 @@ func (w *PredictionWorker) mergePredictions(byProvider map[string][]AIPrediction
 
 	return result
 }
-
-

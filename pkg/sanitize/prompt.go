@@ -76,3 +76,16 @@ func LogString(input string) string {
 	}
 	return logInjectionReplacer.Replace(input)
 }
+
+// LogStrings sanitizes a slice of user-controlled strings for logging.
+// Each element is passed through LogString; the result is joined with commas.
+func LogStrings(values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	parts := make([]string, len(values))
+	for i, v := range values {
+		parts[i] = LogString(v)
+	}
+	return strings.Join(parts, ", ")
+}
