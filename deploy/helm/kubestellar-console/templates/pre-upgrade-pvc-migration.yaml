@@ -56,10 +56,10 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   backoffLimit: 3
-  # Hard deadline prevents a stuck hook from consuming Helm's --timeout budget.
-  # The migration script uses kubectl delete --timeout=120s per PVC; 360s gives
-  # enough headroom for two PVCs and retries while leaving Helm's 10m window intact.
-  activeDeadlineSeconds: 360
+  # Extended deadline to handle PVCs stuck in Terminating state.
+  # Each PVC now gets 180s delete timeout; 600s allows for two PVCs,
+  # retries, and status checks while staying within Helm's 10m window.
+  activeDeadlineSeconds: 600
   template:
     metadata:
       labels:
@@ -131,13 +131,29 @@ spec:
                   return 0
                 fi
 
+                # Check if PVC is already being deleted
+                local pvc_phase
+                pvc_phase=$(kubectl get pvc "$pvc_name" -n "$NAMESPACE" -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+                
+                local deletion_timestamp
+                deletion_timestamp=$(kubectl get pvc "$pvc_name" -n "$NAMESPACE" -o jsonpath='{.metadata.deletionTimestamp}' 2>/dev/null || echo "")
+
+                echo "  PVC phase: ${pvc_phase:-unknown}"
+                
+                if [ -n "$deletion_timestamp" ]; then
+                  echo "  PVC is already being deleted (deletionTimestamp: $deletion_timestamp)."
+                  echo "  Skipping delete operation. Helm will recreate with correct access mode."
+                  return 0
+                fi
+
                 echo "  Access mode mismatch detected!"
                 echo "  Deleting PVC to allow recreation with $TARGET_ACCESS_MODE..."
                 
-                if kubectl delete pvc "$pvc_name" -n "$NAMESPACE" --wait=true --timeout=120s; then
+                # Extended timeout from 120s to 180s to handle slow deletions
+                if kubectl delete pvc "$pvc_name" -n "$NAMESPACE" --wait=true --timeout=180s; then
                   echo "  PVC deleted successfully."
                 else
-                  echo "  ERROR: Failed to delete PVC."
+                  echo "  ERROR: Failed to delete PVC within timeout."
                   return 1
                 fi
               }
