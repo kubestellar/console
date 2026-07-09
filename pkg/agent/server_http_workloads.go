@@ -259,26 +259,26 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := kube.ValidateDNS1123Label("workloadName", req.WorkloadName); err != nil {
-		slog.Error("invalid workload name for deploy request", "workloadName", req.WorkloadName, "error", err)
+		slog.Error("invalid workload name for deploy request", "workloadName", sanitize.LogString(req.WorkloadName), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
-		slog.Error("invalid namespace for deploy request", "namespace", req.Namespace, "error", err)
+		slog.Error("invalid namespace for deploy request", "namespace", sanitize.LogString(req.Namespace), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateKubeContext(req.SourceCluster); err != nil {
-		slog.Error("invalid source cluster for deploy request", "sourceCluster", req.SourceCluster, "error", err)
+		slog.Error("invalid source cluster for deploy request", "sourceCluster", sanitize.LogString(req.SourceCluster), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	for _, tc := range req.TargetClusters {
 		if err := kube.ValidateKubeContext(tc); err != nil {
-			slog.Error("invalid target cluster for deploy request", "targetCluster", tc, "error", err)
+			slog.Error("invalid target cluster for deploy request", "targetCluster", sanitize.LogString(tc), "error", err)
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 			return
@@ -307,7 +307,7 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 
 	result, err := s.k8sClient.DeployWorkload(ctx, req.SourceCluster, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas, opts)
 	if err != nil {
-		slog.Warn("error deploying workload", "namespace", req.Namespace, "name", req.WorkloadName, "sourceCluster", req.SourceCluster, "targetClusters", req.TargetClusters, "error", err)
+		slog.Warn("error deploying workload", "namespace", sanitize.LogString(req.Namespace), "name", sanitize.LogString(req.WorkloadName), "sourceCluster", sanitize.LogString(req.SourceCluster), "targetClusters", sanitize.LogStrings(req.TargetClusters), "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{
 			"success": false,
@@ -390,19 +390,19 @@ func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := kube.ValidateKubeContext(req.Cluster); err != nil {
-		slog.Error("invalid cluster for delete workload request", "cluster", req.Cluster, "error", err)
+		slog.Error("invalid cluster for delete workload request", "cluster", sanitize.LogString(req.Cluster), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
-		slog.Error("invalid namespace for delete workload request", "namespace", req.Namespace, "error", err)
+		slog.Error("invalid namespace for delete workload request", "namespace", sanitize.LogString(req.Namespace), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("name", req.Name); err != nil {
-		slog.Error("invalid workload name for delete request", "name", req.Name, "error", err)
+		slog.Error("invalid workload name for delete request", "name", sanitize.LogString(req.Name), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
