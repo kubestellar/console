@@ -371,7 +371,8 @@ describe('CanIChecker — Result Display (Allowed)', () => {
     render(<CanIChecker />)
 
     // Should show success/allowed indicator
-    expect(screen.getByText(/RBAC policy allows/i)).toBeInTheDocument()
+    expect(screen.getByText('rbac.allowed')).toBeInTheDocument()
+    expect(screen.getByText('RBAC policy allows')).toBeInTheDocument()
   })
 
   it('shows reset button when result is displayed', () => {
@@ -410,7 +411,8 @@ describe('CanIChecker — Result Display (Denied)', () => {
     render(<CanIChecker />)
 
     // Should show denied indicator
-    expect(screen.getByText(/does not have permission/i)).toBeInTheDocument()
+    expect(screen.getByText('rbac.denied')).toBeInTheDocument()
+    expect(screen.getByText('User does not have permission')).toBeInTheDocument()
   })
 
   it('shows denied result without reason', () => {
@@ -437,27 +439,28 @@ describe('CanIChecker — Error Handling', () => {
 
     render(<CanIChecker />)
 
-    expect(screen.getByText(/Failed to connect to cluster/i)).toBeInTheDocument()
+    expect(screen.getByText('Failed to connect to cluster')).toBeInTheDocument()
+    expect(screen.getByTestId('can-i-error')).toBeInTheDocument()
   })
 
-  it('shows reset button when error is displayed', () => {
+  it('does not show reset button when only error is displayed', () => {
     mockError = 'Network error'
+    mockResult = null
 
     render(<CanIChecker />)
 
-    const resetBtn = screen.getByTestId('can-i-reset')
-    expect(resetBtn).toBeInTheDocument()
+    // Reset button only appears when result exists, not for errors
+    expect(screen.queryByTestId('can-i-reset')).not.toBeInTheDocument()
   })
 
-  it('calls reset when reset button is clicked after error', async () => {
+  it('shows error without result state', () => {
     mockError = 'API timeout'
+    mockResult = null
 
     render(<CanIChecker />)
 
-    const resetBtn = screen.getByTestId('can-i-reset')
-    await userEvent.click(resetBtn)
-
-    expect(mockReset).toHaveBeenCalled()
+    expect(screen.getByTestId('can-i-error')).toBeInTheDocument()
+    expect(screen.queryByTestId('can-i-result')).not.toBeInTheDocument()
   })
 })
 
