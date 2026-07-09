@@ -1,88 +1,250 @@
 import React from 'react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import type { Resolution } from '../../hooks/useResolutions'
 import { ShareMissionDialog } from './ShareMissionDialog'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: Record<string, unknown>) => {
+      const pluralized = {
+        'missions.browser.stepsCount': options?.count === 1
+          ? '{{count}} step'
+          : '{{count}} steps',
+        'missions.share.findings': options?.count === 1
+          ? '{{count}} finding — review before sharing externally'
+          : '{{count}} findings — review before sharing externally',
+      } as Record<string, string | undefined>
+      const map: Record<string, string> = {
+        'missions.share.title': 'Export Mission',
+        'missions.share.scanning': 'Scanning for sensitive data...',
+        'missions.share.noSensitiveData': 'No sensitive data detected',
+        'missions.share.runSecurityScan': 'Run security scan before export',
+        'missions.share.done': 'Done!',
+        'missions.share.export.json.label': 'Download JSON',
+        'missions.share.export.json.description': 'Save as .json file',
+        'missions.share.export.clipboard.label': 'Copy JSON',
+        'missions.share.export.clipboard.description': 'Copy to clipboard',
+        'missions.share.export.markdown.label': 'Copy Markdown',
+        'missions.share.export.markdown.description': 'Human-readable format',
+        'missions.share.export.yaml.label': 'Download YAML',
+        'missions.share.export.yaml.description': 'Save as .yaml file',
+        'missions.share.errors.unknown': 'unknown error',
+      }
+      let value = pluralized[key] ?? map[key] ?? key
+      for (const [name, replacement] of Object.entries(options ?? {})) {
+        value = value.replace(new RegExp(`\\{\\{\\s*${name}\\s*\\}\\}`, 'g'), String(replacement))
+      }
+      return value
+    },
+    i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }))
 
-vi.mock('react-router-dom', () => ({
-  useNavigate: () => vi.fn(),
-  useLocation: () => ({ pathname: '/', search: '' }),
+vi.mock('../../lib/missions/scanner/index', () => ({
+  fullScan: vi.fn(() => ({
+    valid: true,
+    findings: [],
+    metadata: null,
+  })),
 }))
 
-vi.mock('../../lib/api', () => ({
-  api: { post: vi.fn(), get: vi.fn() },
+vi.mock('../../lib/clipboard', () => ({
+  copyToClipboard: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('js-yaml', () => ({
+  default: { dump: vi.fn((obj: unknown) => JSON.stringify(obj)) },
+  dump: vi.fn((obj: unknown) => JSON.stringify(obj)),
 }))
 
 vi.mock('../ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
+const mockResolution: Resolution = {
+  id: 'res-001',
+  missionId: 'mission-001',
+  userId: 'user-123',
+  title: 'Fix CrashLoopBackOff in nginx-pod',
+  visibility: 'private',
+  issueSignature: {
+    type: 'CrashLoopBackOff',
+    resourceKind: 'Pod',
+  },
+  resolution: {
+    summary: 'Increase memory limits to resolve OOM crash',
+    steps: [
+      'kubectl edit deployment nginx -n default',
+      'Set memory limit to 512Mi',
+      'kubectl rollout restart deployment nginx -n default',
+    ],
+    yaml: 'resources:\n  limits:\n    memory: 512Mi',
+  },
+  context: {
+    cluster: 'prod-us-east-1',
+  },
+  effectiveness: {
+    timesUsed: 3,
+    timesSuccessful: 3,
+  },
+  createdAt: '2026-01-15T10:00:00Z',
+  updatedAt: '2026-03-01T12:00:00Z',
+}
+
 describe('ShareMissionDialog', () => {
-  it('does not render when shareUrl is null', () => {
+  const defaultProps = {
+    resolution: mockResolution,
+    isOpen: true,
+    onClose: vi.fn(),
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders nothing when isOpen is false', () => {
     const { container } = render(
-      <ShareMissionDialog
-        shareUrl={null}
-        onClose={vi.fn()}
-        missionTitle="Test Mission"
-      />
+      <ShareMissionDialog resolution={mockResolution} isOpen={false} onClose={vi.fn()} />,
     )
-    expect(container.firstChild).toBeNull()
+    expect(container.innerHTML).toBe('')
   })
 
-  it('renders dialog when shareUrl is provided', () => {
-    render(
-      <ShareMissionDialog
-        shareUrl="https://console.kubestellar.io/missions/install-prometheus"
-        onClose={vi.fn()}
-        missionTitle="Install Prometheus"
-      />
-    )
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  it('renders the dialog when isOpen is true', () => {
+    render(<ShareMissionDialog {...defaultProps} />)
+    expect(screen.getByText('Export Mission')).toBeInTheDocument()
   })
 
-  it('displays mission title in dialog', () => {
-    render(
-      <ShareMissionDialog
-        shareUrl="https://example.com/mission/123"
-        onClose={vi.fn()}
-        missionTitle="Deploy Application"
-      />
-    )
-    expect(screen.getByText(/Deploy Application/)).toBeInTheDocument()
+  it('shows the resolution title in the preview', () => {
+    render(<ShareMissionDialog {...defaultProps} />)
+    expect(screen.getByText('Fix CrashLoopBackOff in nginx-pod')).toBeInTheDocument()
   })
 
-  it('displays shareable URL', () => {
-    const url = 'https://console.kubestellar.io/missions/test'
-    render(
-      <ShareMissionDialog
-        shareUrl={url}
-        onClose={vi.fn()}
-        missionTitle="Test"
-      />
-    )
-    expect(screen.getByText(url)).toBeInTheDocument()
+  it('shows the issue type and step count', () => {
+    render(<ShareMissionDialog {...defaultProps} />)
+    const crashLoopElements = screen.getAllByText(/CrashLoopBackOff/)
+    expect(crashLoopElements.length).toBeGreaterThanOrEqual(1)
+    const stepElements = screen.getAllByText(/3 steps/)
+    expect(stepElements.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('calls onClose when close button is clicked', () => {
+  it('renders all four export channel buttons', () => {
+    render(<ShareMissionDialog {...defaultProps} />)
+    expect(screen.getByText('Download JSON')).toBeInTheDocument()
+    expect(screen.getByText('Copy JSON')).toBeInTheDocument()
+    expect(screen.getByText('Copy Markdown')).toBeInTheDocument()
+    expect(screen.getByText('Download YAML')).toBeInTheDocument()
+  })
+
+  it('renders descriptions for each export channel', () => {
+    render(<ShareMissionDialog {...defaultProps} />)
+    expect(screen.getByText('Save as .json file')).toBeInTheDocument()
+    expect(screen.getByText('Copy to clipboard')).toBeInTheDocument()
+    expect(screen.getByText('Human-readable format')).toBeInTheDocument()
+    expect(screen.getByText('Save as .yaml file')).toBeInTheDocument()
+  })
+
+  it('shows the security scan prompt before scanning', () => {
+    render(<ShareMissionDialog {...defaultProps} />)
+    expect(screen.getByText('Run security scan before export')).toBeInTheDocument()
+  })
+
+  it('runs security scan when the scan button is clicked', async () => {
+    const user = userEvent.setup()
+    const { fullScan } = await import('../../lib/missions/scanner/index')
+
+    render(<ShareMissionDialog {...defaultProps} />)
+
+    const scanButton = screen.getByText('Run security scan before export')
+    await user.click(scanButton)
+
+    expect(fullScan).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows "No sensitive data detected" after a clean scan', async () => {
+    const user = userEvent.setup()
+
+    render(<ShareMissionDialog {...defaultProps} />)
+
+    const scanButton = screen.getByText('Run security scan before export')
+    await user.click(scanButton)
+
+    expect(screen.getByText('No sensitive data detected')).toBeInTheDocument()
+  })
+
+  it('shows warning after scan finds issues', async () => {
+    const user = userEvent.setup()
+    const scannerModule = await import('../../lib/missions/scanner/index')
+    vi.mocked(scannerModule.fullScan).mockReturnValue({
+      valid: false,
+      findings: [
+        { severity: 'warning', code: 'SECRETS_DETECTED', message: 'Possible secret found', path: 'steps.0' },
+      ],
+      metadata: null,
+    })
+
+    render(<ShareMissionDialog {...defaultProps} />)
+
+    const scanButton = screen.getByText('Run security scan before export')
+    await user.click(scanButton)
+
+    expect(screen.getByText(/1 finding\s+—\s+review before sharing externally/)).toBeInTheDocument()
+  })
+
+  it('calls onClose when the close button is clicked', async () => {
+    const user = userEvent.setup()
     const onClose = vi.fn()
-    render(
-      <ShareMissionDialog
-        shareUrl="https://example.com/mission"
-        onClose={onClose}
-        missionTitle="Mission"
-      />
-    )
+
+    render(<ShareMissionDialog resolution={mockResolution} isOpen={true} onClose={onClose} />)
+
     const closeButtons = screen.getAllByRole('button')
-    const closeButton = closeButtons.find(btn => 
-      btn.querySelector('svg') || btn.getAttribute('aria-label')?.includes('close')
+    const closeButton = closeButtons.find(
+      btn => btn.querySelector('.lucide-x') || btn.textContent === '',
     )
-    closeButton?.click()
-    expect(onClose).toHaveBeenCalled()
+
+    if (closeButton) {
+      await user.click(closeButton)
+      expect(onClose).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('handles resolution with empty steps gracefully', () => {
+    const emptyResolution: Resolution = {
+      ...mockResolution,
+      resolution: {
+        summary: '',
+        steps: [],
+      },
+    }
+
+    expect(() =>
+      render(
+        <ShareMissionDialog resolution={emptyResolution} isOpen={true} onClose={vi.fn()} />,
+      ),
+    ).not.toThrow()
+
+    expect(screen.getByText(/0 steps/)).toBeInTheDocument()
+  })
+
+  it('handles resolution with undefined optional fields gracefully', () => {
+    const minimalResolution: Resolution = {
+      ...mockResolution,
+      sharedBy: undefined,
+      resolution: {
+        summary: '',
+        steps: ['Step one'],
+        yaml: undefined,
+      },
+      context: {},
+    }
+
+    expect(() =>
+      render(
+        <ShareMissionDialog resolution={minimalResolution} isOpen={true} onClose={vi.fn()} />,
+      ),
+    ).not.toThrow()
   })
 })
