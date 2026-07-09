@@ -151,28 +151,50 @@ jobs:
             --color "b60205" \
             2>/dev/null || true
 
-      - name: Check for existing issue
+      - name: Check for existing build-broken issue
         if: steps.go_build.outcome == 'failure' || steps.npm_install.outcome == 'failure' || steps.frontend_build.outcome == 'failure'
         id: check_issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          SEARCH_TITLE="Build broken after merging PR #${PR_NUMBER}"
+          # Search for ANY open "Build broken" issue, not just one for this PR.
+          # When the build on main is broken, every merged PR triggers this
+          # workflow and sees the same failure — filing one issue is enough.
           EXISTING=$(gh issue list \
             --repo "${{ github.repository }}" \
             --state open \
-            --label "kind/bug" \
-            --search "in:title \"${SEARCH_TITLE}\"" \
-            --json number,title \
-            --jq ".[] | select(.title | contains(\"PR #${PR_NUMBER}\")) | .number" \
+            --label "kind/bug,priority/critical" \
+            --search "in:title \"Build broken after merging PR\"" \
+            --json number \
+            --jq '.[0].number // empty' \
           )
           if [ -n "$EXISTING" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Found existing issue #${EXISTING}, skipping creation"
+            echo "existing_issue=$EXISTING" >> "$GITHUB_OUTPUT"
+            echo "Found existing build-broken issue #${EXISTING}, will comment instead of creating"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "existing_issue=" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Comment on existing build-broken issue
+        if: >-
+          (steps.go_build.outcome == 'failure' || steps.npm_install.outcome == 'failure' || steps.frontend_build.outcome == 'failure') &&
+          steps.check_issue.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXISTING_ISSUE: ${{ steps.check_issue.outputs.existing_issue }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          gh issue comment "$EXISTING_ISSUE" \
+            --repo "${{ github.repository }}" \
+            --body "Also broken after merging PR [#${PR_NUMBER}](${PR_URL}) — same build failure. [Workflow run](${SERVER_URL}/${REPO}/actions/runs/${RUN_ID})." \
+            || true
 
       - name: Create issue for build failure
         if: >-

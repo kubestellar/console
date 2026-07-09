@@ -108,6 +108,9 @@ homebrew-tap-*/
 marketplace-fix*
 kubestellar-mcp
 
+# Beads ledger (scanner coordination — never commit)
+.beads/
+
 # Agent-generated operational artifacts (write outside worktree, not to repo)
 cron_scan_log.md
 release-failure-diagnosis.md
