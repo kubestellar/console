@@ -44,5 +44,7 @@ export const __workloadsTestables = {
   getDemoAllPods,
   loadPodsCacheFromStorage,
   savePodsCacheToStorage,
+  resetPodsCache,
+  resetDeploymentsCache,
   PODS_CACHE_KEY,
 }

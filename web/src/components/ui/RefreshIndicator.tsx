@@ -70,7 +70,7 @@ export const RefreshIndicator = memo(function RefreshIndicator({
     (Date.now() - lastUpdated.getTime()) > staleThresholdMinutes * MS_PER_MINUTE
 
   const iconSize = size === 'xs' ? 'w-2.5 h-2.5' : size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'
-  const textSize = size === 'xs' ? 'text-[9px]' : size === 'sm' ? 'text-2xs' : 'text-xs'
+  const textSize = size === 'xs' ? 'text-2xs' : size === 'sm' ? 'text-2xs' : 'text-xs'
 
   const tooltip = lastUpdated
     ? `Last updated: ${lastUpdated.toLocaleTimeString()}`
