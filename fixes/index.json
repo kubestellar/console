@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-09T07:45:52.247Z",
-  "count": 1630,
+  "generatedAt": "2026-07-09T09:26:23.523Z",
+  "count": 1631,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -63655,6 +63655,44 @@
       "type": "feature",
       "installMethods": [],
       "maturity": "community",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/trickster/trickster-671-custom-paths-not-effective.json",
+      "title": "trickster: Custom paths not effective",
+      "description": "Custom paths not effective. Community-requested feature.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "trickster",
+        "sandbox",
+        "observability",
+        "feature"
+      ],
+      "cncfProjects": [
+        "trickster"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "beginner",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "sandbox",
       "qualityScore": 100,
       "qualityPass": true,
       "qualityBreakdown": {
