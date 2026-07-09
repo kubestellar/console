@@ -31,7 +31,7 @@ func TestRedactedMessage(t *testing.T) {
 	}
 }
 
-func TestIsNumericPort(t *testing.T) {
+func TestIsNumericPort_AdditionalCases(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected bool
