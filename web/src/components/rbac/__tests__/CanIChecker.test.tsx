@@ -49,12 +49,10 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../ui/Button', () => ({
-  Button: ({ children, onClick, disabled, variant, ...rest }: Record<string, unknown>) => (
+  Button: ({ children, disabled, ...props }: Record<string, unknown>) => (
     <button
-      onClick={onClick as () => void}
       disabled={disabled as boolean}
-      data-variant={variant as string}
-      {...rest}
+      {...props}
     >
       {children as React.ReactNode}
     </button>
@@ -374,8 +372,10 @@ describe('CanIChecker — Result Display (Allowed)', () => {
     const checkBtn = screen.getByTestId('can-i-check')
     await userEvent.click(checkBtn)
 
-    // Verify checkPermission was called
-    expect(mockCheckPermission).toHaveBeenCalled()
+    // Verify checkPermission was called - wait for async handleCheck to complete
+    await waitFor(() => {
+      expect(mockCheckPermission).toHaveBeenCalled()
+    })
     
     // Reset button should appear when result exists (controlled by result, not checkedSnapshot)
     expect(screen.getByTestId('can-i-reset')).toBeInTheDocument()
@@ -420,8 +420,10 @@ describe('CanIChecker — Result Display (Denied)', () => {
     const checkBtn = screen.getByTestId('can-i-check')
     await userEvent.click(checkBtn)
 
-    // Verify checkPermission was called
-    expect(mockCheckPermission).toHaveBeenCalled()
+    // Verify checkPermission was called - wait for async handleCheck to complete
+    await waitFor(() => {
+      expect(mockCheckPermission).toHaveBeenCalled()
+    })
     
     // Reset button should appear when result exists (controlled by result, not checkedSnapshot)
     expect(screen.getByTestId('can-i-reset')).toBeInTheDocument()
@@ -610,7 +612,9 @@ describe('CanIChecker — Edge Cases', () => {
     await userEvent.click(checkBtn)
 
     // Should have been called, but exact count depends on debouncing implementation
-    expect(mockCheckPermission).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(mockCheckPermission).toHaveBeenCalled()
+    })
   })
 })
 
