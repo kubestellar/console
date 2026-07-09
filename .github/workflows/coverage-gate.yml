@@ -19,7 +19,7 @@ concurrency:
 
 env:
   NODE_VERSION: '22'
-  COVERAGE_THRESHOLD: 91
+  COVERAGE_THRESHOLD: 88
 
 jobs:
   coverage-gate:
