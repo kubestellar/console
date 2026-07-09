@@ -333,6 +333,9 @@ describe('CanIChecker — Form Interactions', () => {
 describe('CanIChecker — Loading State', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockChecking = false
+    mockResult = null
+    mockError = null
   })
 
   it('shows loading indicator when checking permissions', () => {
@@ -362,6 +365,8 @@ describe('CanIChecker — Result Display (Allowed)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockChecking = false
+    mockResult = null
+    mockError = null
   })
 
   it('shows allowed result when permission is granted', () => {
@@ -401,6 +406,8 @@ describe('CanIChecker — Result Display (Denied)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockChecking = false
+    mockResult = null
+    mockError = null
   })
 
   it('shows denied result when permission is not granted', () => {
@@ -430,6 +437,7 @@ describe('CanIChecker — Error Handling', () => {
     vi.clearAllMocks()
     mockChecking = false
     mockResult = null
+    mockError = null
   })
 
   it('shows error message when API call fails', () => {
