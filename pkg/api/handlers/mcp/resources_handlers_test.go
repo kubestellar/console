@@ -29,8 +29,23 @@ func allResourceHandlers() []resourceHandlerRoute {
 		{"GetResourceQuotas", "/quotas", func(h *MCPHandlers, app *fiber.App) { app.Get("/quotas", h.GetResourceQuotas) }, "resourceQuotas"},
 		{"GetLimitRanges", "/limits", func(h *MCPHandlers, app *fiber.App) { app.Get("/limits", h.GetLimitRanges) }, "limitRanges"},
 		{"GetIngresses", "/ingresses", func(h *MCPHandlers, app *fiber.App) { app.Get("/ingresses", h.GetIngresses) }, "ingresses"},
-		{"GetNetworkPolicies", "/netpol", func(h *MCPHandlers, app *fiber.App) { app.Get("/netpol", h.GetNetworkPolicies) }, "networkPolicies"},
+		{"GetNetworkPolicies", "/netpol", func(h *MCPHandlers, app *fiber.App) { app.Get("/netpol", h.GetNetworkPolicies) }, "networkpolicies"},
 		{"GetFlatcarNodes", "/flatcar", func(h *MCPHandlers, app *fiber.App) { app.Get("/flatcar", h.GetFlatcarNodes) }, "nodes"},
+	}
+}
+
+// namespacedResourceHandlers returns only handlers that validate the namespace
+// query parameter via mcpValidateClusterAndNamespace. GetPVs and GetFlatcarNodes
+// are cluster-scoped and only validate the cluster name.
+func namespacedResourceHandlers() []resourceHandlerRoute {
+	return []resourceHandlerRoute{
+		{"GetConfigMaps", "/configmaps", func(h *MCPHandlers, app *fiber.App) { app.Get("/configmaps", h.GetConfigMaps) }, "configmaps"},
+		{"GetServiceAccounts", "/serviceaccounts", func(h *MCPHandlers, app *fiber.App) { app.Get("/serviceaccounts", h.GetServiceAccounts) }, "serviceAccounts"},
+		{"GetPVCs", "/pvcs", func(h *MCPHandlers, app *fiber.App) { app.Get("/pvcs", h.GetPVCs) }, "pvcs"},
+		{"GetResourceQuotas", "/quotas", func(h *MCPHandlers, app *fiber.App) { app.Get("/quotas", h.GetResourceQuotas) }, "resourceQuotas"},
+		{"GetLimitRanges", "/limits", func(h *MCPHandlers, app *fiber.App) { app.Get("/limits", h.GetLimitRanges) }, "limitRanges"},
+		{"GetIngresses", "/ingresses", func(h *MCPHandlers, app *fiber.App) { app.Get("/ingresses", h.GetIngresses) }, "ingresses"},
+		{"GetNetworkPolicies", "/netpol", func(h *MCPHandlers, app *fiber.App) { app.Get("/netpol", h.GetNetworkPolicies) }, "networkpolicies"},
 	}
 }
 
@@ -145,10 +160,12 @@ func TestResourceHandlers_InvalidCluster(t *testing.T) {
 }
 
 // TestResourceHandlers_InvalidNamespace verifies invalid namespace names return 400.
+// Only tests handlers that validate namespace (excludes cluster-scoped GetPVs
+// and GetFlatcarNodes which only validate cluster name).
 func TestResourceHandlers_InvalidNamespace(t *testing.T) {
 	env := setupTestEnv(t)
 
-	for _, hr := range allResourceHandlers() {
+	for _, hr := range namespacedResourceHandlers() {
 		t.Run(hr.name, func(t *testing.T) {
 			app := newResourceErrorApp()
 			h := NewMCPHandlers(nil, env.K8sClient, env.Store)
@@ -314,18 +331,11 @@ func TestCallDeployTool_NoBridge(t *testing.T) {
 	assert.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)
 }
 
-// TestCallOpsTool_InvalidBody verifies CallOpsTool rejects invalid JSON body.
-func TestCallOpsTool_InvalidBody(t *testing.T) {
+// TestCallOpsTool_NilBridge verifies CallOpsTool returns 503 when bridge is nil
+// regardless of request body content.
+func TestCallOpsTool_NilBridge(t *testing.T) {
 	env := setupTestEnv(t)
 	app := newResourceErrorApp()
-	// Use a non-nil bridge scenario won't apply here since body parsing fails first,
-	// but we still need bridge=nil to test the 503 before body parsing.
-	// Actually, test the body parsing failure path: bridge must not be nil.
-	// Since we can't easily create a real bridge, test with nil bridge — but the
-	// 503 will fire before body parsing. So we skip this particular path and
-	// focus on validateToolName coverage which is in tool_allowlist_test.go.
-
-	// Test missing body with nil bridge → 503 (bridge check comes first)
 	h := NewMCPHandlers(nil, env.K8sClient, env.Store)
 	app.Post("/ops", h.CallOpsTool)
 
@@ -334,7 +344,6 @@ func TestCallOpsTool_InvalidBody(t *testing.T) {
 	req.Header.Set("X-User-ID", testAdminUserID.String())
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
-	// Bridge is nil, so 503 is returned before body parsing
 	assert.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)
 }
 
