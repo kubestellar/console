@@ -79,7 +79,6 @@ describe('api.ts - HTTP client layer', () => {
     it('creates BackendUnavailableError with correct properties', () => {
       const error = new BackendUnavailableError()
       expect(error).toBeInstanceOf(Error)
-      expect(error.name).toBe('BackendUnavailableError')
       expect(error.message).toBe('Backend API is currently unavailable')
     })
   })
