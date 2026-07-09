@@ -32,6 +32,8 @@ export function useClusterContext(): {
     if (healthyClusters.length === 0) return null
 
     // Pick primary cluster (current context or first healthy)
+    // healthyClusters[0] is intentional: fallback when no current context exists; aggregates
+    // mission recommendations across clusters, so primary is used for provider/distribution metadata only
     const primary = healthyClusters.find(c => c.isCurrent) ?? healthyClusters[0]
 
     // Build resources[] from operators + helm releases

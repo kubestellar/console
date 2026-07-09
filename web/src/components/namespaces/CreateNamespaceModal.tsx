@@ -15,6 +15,7 @@ interface CreateNamespaceModalProps {
 export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceModalProps) {
   const { t } = useTranslation()
   const [name, setName] = useState('')
+  // clusters[0] is intentional: initial dropdown selection — user can pick any cluster from dropdown (line 87)
   const [cluster, setCluster] = useState(clusters[0] || '')
   const [teamLabel, setTeamLabel] = useState('')
   const [creating, setCreating] = useState(false)

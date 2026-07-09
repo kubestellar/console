@@ -76,6 +76,8 @@ export function ClusterFilterProvider({ children }: { children: ReactNode }) {
 
   const clearAll = useCallback(() => {
     // Select just the first cluster if available
+    // availableClusters[0] is intentional: user explicitly clicked "Clear All" — choose arbitrary
+    // cluster as new selection (vs. empty which means "all"). First cluster is consistent choice.
     if (availableClusters.length > 0) {
       setSelectedClustersState([availableClusters[0]])
     }
