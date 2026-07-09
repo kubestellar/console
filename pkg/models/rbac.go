@@ -42,8 +42,8 @@ type K8sUser struct {
 type OpenShiftUser struct {
 	Name       string   `json:"name"`
 	FullName   string   `json:"fullName,omitempty"`
-	Identities []string `json:"identities,omitempty"`
-	Groups     []string `json:"groups,omitempty"`
+	Identities []string `json:"identities"`
+	Groups     []string `json:"groups"`
 	Cluster    string   `json:"cluster"`
 	// CreatedAt is a pointer so that `omitempty` actually omits it when unset.
 	// With a value-type time.Time, the JSON encoder never treats a zero-value
@@ -81,8 +81,8 @@ type K8sServiceAccount struct {
 	Name      string   `json:"name"`
 	Namespace string   `json:"namespace"`
 	Cluster   string   `json:"cluster"`
-	Secrets   []string `json:"secrets,omitempty"`
-	Roles     []string `json:"roles,omitempty"`
+	Secrets   []string `json:"secrets"`
+	Roles     []string `json:"roles"`
 	// CreatedAt is a pointer so that `omitempty` actually omits it when unset.
 	// See OpenShiftUser.CreatedAt and issue #6759.
 	CreatedAt *time.Time `json:"createdAt,omitempty"`
