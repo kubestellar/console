@@ -101,3 +101,29 @@ func TestLogString_SafeInput(t *testing.T) {
 		t.Fatalf("expected safe input unchanged, got %q", got)
 	}
 }
+
+func TestLogStrings_Basic(t *testing.T) {
+	input := []string{"hello\nworld", "safe", "inject\rme"}
+	got := LogStrings(input)
+	expected := "hello⏎world, safe, inject⏎me"
+	if got != expected {
+		t.Fatalf("expected %q, got %q", expected, got)
+	}
+}
+
+func TestLogStrings_Empty(t *testing.T) {
+	if got := LogStrings(nil); got != "" {
+		t.Fatalf("expected empty string, got %q", got)
+	}
+	if got := LogStrings([]string{}); got != "" {
+		t.Fatalf("expected empty string for empty slice, got %q", got)
+	}
+}
+
+func TestLogStrings_SingleElement(t *testing.T) {
+	got := LogStrings([]string{"one\ntwo"})
+	expected := "one⏎two"
+	if got != expected {
+		t.Fatalf("expected %q, got %q", expected, got)
+	}
+}
