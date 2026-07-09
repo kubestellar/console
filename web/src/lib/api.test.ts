@@ -10,6 +10,11 @@ import {
   RateLimitError,
   BackendUnavailableError,
 } from './api'
+import {
+  getStoredAuthToken,
+  getStoredAuthTokenSync,
+  clearStoredAuthToken,
+} from './authToken'
 
 // Mock dependencies
 vi.mock('./authToken', () => ({
@@ -43,7 +48,6 @@ describe('api.ts - HTTP client layer', () => {
     localStorage.clear()
     
     // Mock getStoredAuthToken to return a valid token by default
-    const { getStoredAuthToken } = await import('./authToken')
     vi.mocked(getStoredAuthToken).mockResolvedValue('test-token-123')
   })
 
@@ -287,7 +291,6 @@ describe('api.ts - HTTP client layer', () => {
     })
 
     it('throws UnauthenticatedError when no token for protected endpoint', async () => {
-      const { getStoredAuthToken } = await import('./authToken')
       vi.mocked(getStoredAuthToken).mockResolvedValue(null)
       
       await expect(api.get('/api/protected')).rejects.toThrow(UnauthenticatedError)
@@ -295,7 +298,6 @@ describe('api.ts - HTTP client layer', () => {
     })
 
     it('allows public API paths without token', async () => {
-      const { getStoredAuthToken } = await import('./authToken')
       vi.mocked(getStoredAuthToken).mockResolvedValue(null)
       
       fetchMock.mockResolvedValueOnce(
