@@ -1,0 +1,7 @@
+# Pinned Python dependencies for the visual-regression issue-agent triage tooling
+# (scripts/visual-diff-triage.py -> scripts/visual_triage/). Pillow is only needed by the
+# image-processing subcommands (triage / eval / self-test); the JSON-only subcommands
+# (metrics / ingest-verdict / merge-ledger) import it lazily and do not require it.
+#
+# Keep this pinned to a concrete, known-good release so CI is reproducible. Bump deliberately.
+Pillow==11.3.0

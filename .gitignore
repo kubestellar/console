@@ -59,6 +59,10 @@ data/
 *.db
 *.sqlite
 
+# Python bytecode (scripts/visual_triage/ package)
+__pycache__/
+*.pyc
+
 # Go
 vendor/
 

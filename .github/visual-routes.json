@@ -1,0 +1,149 @@
+{
+  "_comment": "Single source of route/component/contract metadata for the visual-regression issue-agent handoff. Consumed by BOTH the Python package (scripts/visual_triage/context.py reads `routes` + `route_keywords`) and the workflow cjs (.github/scripts/visual-regression-failure-issue.cjs reads `suites` + `generic_suggested_files`). Keep this file in the sparse-checkout list of visual-regression-failure-issue.yml.",
+  "routes": {
+    "/": {
+      "component_hint": "dashboard shell / card grid",
+      "purpose": "Main landing dashboard summarizing cluster, policy, workload, and operational cards."
+    },
+    "/clusters": {
+      "component_hint": "clusters page / cluster inventory",
+      "purpose": "Cluster management view showing registered clusters, status, and navigation context."
+    },
+    "/settings": {
+      "component_hint": "settings page",
+      "purpose": "Configuration surface for user, integration, and console settings."
+    },
+    "/ci-cd": {
+      "component_hint": "CI/CD dashboard cards",
+      "purpose": "Pipeline and deployment status dashboard for CI/CD workflows."
+    },
+    "/cluster-admin": {
+      "component_hint": "cluster admin page",
+      "purpose": "Administrative cluster operations and management controls."
+    },
+    "/workloads": {
+      "component_hint": "workloads overview",
+      "purpose": "Workload inventory and health overview across clusters/namespaces."
+    },
+    "/quantum": {
+      "component_hint": "quantum demo cards",
+      "purpose": "Quantum demo UI with circuit, histogram, qubit grid, and control cards."
+    },
+    "/compliance": {
+      "component_hint": "compliance dashboard",
+      "purpose": "Compliance, policy, and posture overview for the environment."
+    }
+  },
+  "route_keywords": [
+    { "keyword": "clusters", "route": "/clusters" },
+    { "keyword": "settings", "route": "/settings" },
+    { "keyword": "cicd", "route": "/ci-cd" },
+    { "keyword": "cluster-admin", "route": "/cluster-admin" },
+    { "keyword": "workloads", "route": "/workloads" },
+    { "keyword": "quantum", "route": "/quantum" },
+    { "keyword": "compliance", "route": "/compliance" }
+  ],
+  "generic_suggested_files": [
+    "web/e2e/visual/**",
+    "web/e2e/helpers/setup.ts",
+    "web/src/App.tsx",
+    "web/src/config/routes.ts",
+    "web/src/components/**",
+    "web/src/hooks/**",
+    "web/src/lib/**",
+    ".github/workflows/visual-regression.yml",
+    ".github/workflows/visual-regression-failure-issue.yml"
+  ],
+  "suites": [
+    {
+      "match": "app-visual-regression.spec.ts",
+      "name": "Core app visual regression",
+      "routes": ["/", "/clusters", "/settings"],
+      "contract": "Core dashboard, clusters, and settings layouts must stay stable against committed baselines.",
+      "suggestedFiles": [
+        "web/e2e/visual/app-visual-regression.spec.ts",
+        "web/src/App.tsx",
+        "web/src/config/routes.ts",
+        "web/src/components/**"
+      ]
+    },
+    {
+      "match": "app-dashboard-routes-visual.spec.ts",
+      "name": "Dashboard routes visual regression",
+      "routes": ["/ci-cd", "/ai-ml", "/workloads", "/alerts", "/gitops", "/pods", "/nodes", "/deploy", "/security", "/cost", "/network", "/storage", "/events", "/compliance", "/helm", "/compute", "/deployments", "/services"],
+      "contract": "Dashboard route layouts must remain visually stable across key product routes.",
+      "suggestedFiles": [
+        "web/e2e/visual/app-dashboard-routes-visual.spec.ts",
+        "web/src/config/routes.ts",
+        "web/src/components/**",
+        "web/src/hooks/**"
+      ]
+    },
+    {
+      "match": "app-dashboard-filter-panel-layout.spec.ts",
+      "name": "Dashboard filter panel layout",
+      "routes": ["/"],
+      "contract": "The global filter panel must open without shifting dashboard stats or layout.",
+      "suggestedFiles": [
+        "web/e2e/visual/app-dashboard-filter-panel-layout.spec.ts",
+        "web/src/components/**",
+        "web/src/hooks/**"
+      ]
+    },
+    {
+      "match": "app-compliance-filter-panel-visual.spec.ts",
+      "name": "Compliance filter panel visual regression",
+      "routes": ["/compliance"],
+      "contract": "The global filter panel must overlay the compliance page without layout shift.",
+      "suggestedFiles": [
+        "web/e2e/visual/app-compliance-filter-panel-visual.spec.ts",
+        "web/src/components/**",
+        "web/src/hooks/**"
+      ]
+    },
+    {
+      "match": "app-cluster-admin-visual.spec.ts",
+      "name": "Cluster admin visual regression",
+      "routes": ["/cluster-admin"],
+      "contract": "Cluster admin page layouts must remain visually stable across desktop and tablet viewports.",
+      "suggestedFiles": [
+        "web/e2e/visual/app-cluster-admin-visual.spec.ts",
+        "web/src/components/**",
+        "web/src/hooks/**"
+      ]
+    },
+    {
+      "match": "app-cicd-visual.spec.ts",
+      "name": "CI/CD visual regression",
+      "routes": ["/ci-cd"],
+      "contract": "CI/CD dashboard screenshots must stay stable across initial, populated, full-page, and tablet views.",
+      "suggestedFiles": [
+        "web/e2e/visual/app-cicd-visual.spec.ts",
+        "web/src/components/**",
+        "web/src/hooks/**"
+      ]
+    },
+    {
+      "match": "app-workloads-visual.spec.ts",
+      "name": "Workloads visual regression",
+      "routes": ["/workloads"],
+      "contract": "Workloads page layouts and grouped sections must stay visually stable.",
+      "suggestedFiles": [
+        "web/e2e/visual/app-workloads-visual.spec.ts",
+        "web/src/components/**",
+        "web/src/hooks/**"
+      ]
+    },
+    {
+      "match": "app-quantum-visual.spec.ts",
+      "name": "Quantum visual regression",
+      "routes": ["/quantum"],
+      "contract": "Quantum cards, control panel, and circuit viewer visuals must remain stable.",
+      "suggestedFiles": [
+        "web/e2e/visual/app-quantum-visual.spec.ts",
+        "web/src/components/**",
+        "web/src/hooks/**"
+      ]
+    }
+  ]
+}

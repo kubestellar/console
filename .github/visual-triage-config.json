@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "thresholds": {
+    "pixel_channel_threshold": 16,
+    "noise_changed_area_ratio": 0.001,
+    "crop_padding_px": 16,
+    "max_regions": 4,
+    "max_crop_area_ratio": 0.25,
+    "focus_grid_rows": 3,
+    "focus_grid_cols": 3,
+    "target_handoff_precision": 0.95,
+    "min_samples": 50,
+    "eval_min_accuracy": 0.8
+  },
+  "issue_agent": {
+    "high_risk_globs": [
+      "web/src/components/auth/**",
+      "web/src/lib/auth.tsx",
+      "web/src/lib/api.ts",
+      "web/src/**/*security*",
+      "web/src/**/*billing*",
+      "pkg/api/**/auth*",
+      "cmd/console/**/auth*"
+    ]
+  },
+  "tuning_file": ".github/triage-tuning.json",
+  "ledger_file": ".github/triage-ledger.jsonl"
+}
