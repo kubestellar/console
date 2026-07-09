@@ -94,7 +94,7 @@ jobs:
 
       - name: Install Playwright WebKit
         working-directory: web
-        run: npx playwright install webkit
+        run: npx playwright install --with-deps webkit
 
       - name: Mint signed live test session
         env:
