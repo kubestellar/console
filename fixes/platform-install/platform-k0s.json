@@ -6,67 +6,65 @@
   "authorGithub": "kubestellar",
   "mission": {
     "title": "Install and Configure k0s (Zero Friction Kubernetes)",
-    "description": "k0s is a lightweight, all-inclusive Kubernetes distribution designed for simplicity and ease of use. It is ideal for users looking to quickly bootstrap Kubernetes clusters on any infrastructure, including cloud, bare metal, and edge environments. The key trade-off is that while it simplifies installation, it may not offer the extensive customization options available in other distributions.",
+    "description": "k0s is a lightweight, all-inclusive Kubernetes distribution designed for ease of use and quick deployment. It is ideal for cloud, bare metal, and edge environments, offering a single binary for installation. Key trade-offs include simplicity at the cost of advanced features found in other distributions.",
     "type": "deploy",
     "status": "completed",
     "estimatedMinutes": 15,
     "steps": [
       {
-        "title": "Install the k0s binary",
-        "description": "This step installs the k0s binary on your system, which is required to create and manage your Kubernetes cluster.\n\n```bash\n\ncurl -sSL https://github.com/k0sproject/k0s/releases/download/v1.30.0+k0s.0/k0s-v1.30.0+k0s.0-linux-amd64 -o /usr/local/bin/k0s\n\nchmod +x /usr/local/bin/k0s\n\n```\n\n> Download the k0s binary\n> Make the binary executable",
+        "title": "Install k0s CLI",
+        "description": "This step installs the k0s command-line interface, which is necessary for managing your Kubernetes cluster.\n\n```bash\n\ncurl -sSL https://get.k0s.sh | sudo sh\n\n```\n\n> This command downloads and installs the latest k0s binary.",
         "commands": [
-          "curl -sSL https://github.com/k0sproject/k0s/releases/download/v1.30.0+k0s.0/k0s-v1.30.0+k0s.0-linux-amd64 -o /usr/local/bin/k0s",
-          "chmod +x /usr/local/bin/k0s"
+          "curl -sSL https://get.k0s.sh | sudo sh"
         ]
       },
       {
-        "title": "Initialize the k0s controller",
-        "description": "This command initializes the k0s controller, which will manage the Kubernetes cluster.\n\n```bash\n\nk0s init --single\n\n```\n\n> Creates a single-node cluster",
+        "title": "Initialize the k0s Controller",
+        "description": "This step initializes the k0s controller, which will manage the Kubernetes cluster.\n\n```bash\n\nsudo k0s install controller\n\n```\n\n> This command sets up the controller on the host.",
         "commands": [
-          "k0s init --single"
+          "sudo k0s install controller"
         ]
       },
       {
-        "title": "Start the k0s controller",
-        "description": "This command starts the k0s controller to run your Kubernetes cluster.\n\n```bash\n\nk0s start\n\n```\n\n> Starts the k0s controller",
+        "title": "Start the k0s Controller",
+        "description": "This step starts the k0s controller service, allowing it to manage the Kubernetes cluster.\n\n```bash\n\nsudo k0s start\n\n```\n\n> This command starts the k0s controller.",
         "commands": [
-          "k0s start"
+          "sudo k0s start"
         ]
       },
       {
-        "title": "Verify the cluster is running",
-        "description": "This command checks the status of the nodes in your cluster to ensure everything is functioning correctly.\n\n```bash\n\nkubectl get nodes\n\n```\n\n> Verify that the node is in a Ready state",
+        "title": "Configure kubeconfig",
+        "description": "This step sets up the kubeconfig file, which allows you to interact with your Kubernetes cluster using kubectl.\n\n```bash\n\nsudo k0s kubeconfig admin > ~/.kube/config\n\n```\n\n> This command generates the kubeconfig file for the admin user.",
+        "commands": [
+          "sudo k0s kubeconfig admin > ~/.kube/config"
+        ]
+      },
+      {
+        "title": "Verify the Cluster",
+        "description": "This step checks that the cluster is running correctly and that the nodes are ready.\n\n```bash\n\nkubectl get nodes\n\n```\n\n> This command lists all nodes in the cluster and their status.",
         "commands": [
           "kubectl get nodes"
-        ]
-      },
-      {
-        "title": "Post-installation configuration",
-        "description": "Configure additional features like autoscaling and monitoring as needed.\n\n```bash\n\nkubectl apply -f https://raw.githubusercontent.com/k0sproject/k0s/master/examples/autoscaler.yaml\n\n```\n\n> Example for enabling autoscaling",
-        "commands": [
-          "kubectl apply -f https://raw.githubusercontent.com/k0sproject/k0s/master/examples/autoscaler.yaml"
         ]
       }
     ],
     "uninstall": [
       {
         "title": "Uninstall k0s",
-        "description": "This step will remove the k0s installation and all associated data. Be aware that this will delete your Kubernetes cluster and all resources within it.\n\n```bash\n\nk0s stop\n\nrm -rf /var/lib/k0s\n\n```\n\n> Stop the k0s controller\n> Remove all k0s data",
+        "description": "This step removes the k0s installation and all associated resources. Be aware that this will delete all cluster data.\n\n```bash\n\nsudo k0s stop\n\nsudo k0s uninstall\n\n```\n\n> Stops the k0s controller.\n> Uninstalls k0s and removes all resources.",
         "commands": [
-          "k0s stop",
-          "rm -rf /var/lib/k0s"
+          "sudo k0s stop",
+          "sudo k0s uninstall"
         ]
       }
     ],
     "upgrade": [
       {
         "title": "Upgrade k0s",
-        "description": "Before upgrading, ensure you back up your cluster data. This process will upgrade the k0s binary and restart the controller.\n\n```bash\n\nkubectl get nodes -o wide\n\ncurl -sSL https://github.com/k0sproject/k0s/releases/download/v1.31.0+k0s.0/k0s-v1.31.0+k0s.0-linux-amd64 -o /usr/local/bin/k0s\n\nchmod +x /usr/local/bin/k0s\n\nk0s upgrade\n\nkubectl get nodes\n\n```\n\n> Backup current node status\n> Download the new k0s binary\n> Make the new binary executable\n> Upgrade the k0s controller\n> Verify nodes are in Ready state post-upgrade",
+        "description": "Before upgrading, ensure you backup your cluster data. This step performs the upgrade and verifies the installation.\n\n```bash\n\nsudo k0s stop\n\ncurl -sSL https://get.k0s.sh | sudo sh\n\nsudo k0s start\n\nkubectl get nodes\n\n```\n\n> Stops the k0s controller before upgrading.\n> Re-installs the latest k0s binary.\n> Starts the k0s controller after the upgrade.\n> Verifies that all nodes are in a ready state after the upgrade.",
         "commands": [
-          "kubectl get nodes -o wide",
-          "curl -sSL https://github.com/k0sproject/k0s/releases/download/v1.31.0+k0s.0/k0s-v1.31.0+k0s.0-linux-amd64 -o /usr/local/bin/k0s",
-          "chmod +x /usr/local/bin/k0s",
-          "k0s upgrade",
+          "sudo k0s stop",
+          "curl -sSL https://get.k0s.sh | sudo sh",
+          "sudo k0s start",
           "kubectl get nodes"
         ]
       }
@@ -74,38 +72,37 @@
     "troubleshooting": [
       {
         "title": "Error: 'k0s: command not found'",
-        "description": "**Cause:** The k0s binary is not installed or not in the PATH.\n\n**Fix:**\nEnsure the k0s binary is installed and located in /usr/local/bin."
+        "description": "**Cause:** The k0s CLI is not installed or not in the PATH.\n\n**Fix:**\nReinstall k0s using the installation command."
       },
       {
-        "title": "Error: 'kubelet not running'",
-        "description": "**Cause:** The k0s controller may not have started correctly.\n\n**Fix:**\nRun 'k0s start' to start the k0s controller."
+        "title": "Error: 'no nodes available in cluster'",
+        "description": "**Cause:** The k0s controller is not running or nodes are not joined.\n\n**Fix:**\nCheck the status of the k0s controller and ensure nodes are properly joined."
       },
       {
-        "title": "Error: 'kubectl get nodes' returns no nodes",
-        "description": "**Cause:** The cluster may not be initialized or the controller is not running.\n\n**Fix:**\nRun 'k0s init --single' and 'k0s start'."
+        "title": "Error: 'kubeconfig file not found'",
+        "description": "**Cause:** The kubeconfig file is not generated or is in the wrong location.\n\n**Fix:**\nRun 'sudo k0s kubeconfig admin > ~/.kube/config' to generate the kubeconfig file."
       },
       {
-        "title": "Error: 'k0s upgrade' fails with version mismatch",
-        "description": "**Cause:** The k0s binary version does not match the cluster version.\n\n**Fix:**\nEnsure the k0s binary is the same version as the cluster.\n\n**Affected versions:** <= 1.30"
+        "title": "Error: 'context deadline exceeded'",
+        "description": "**Cause:** The Kubernetes API server is not reachable.\n\n**Fix:**\nCheck the network configuration and ensure the k0s controller is running."
       }
     ],
     "versionNotes": [
       {
         "version": "v1.31",
-        "changes": "Added support for multi-cluster management, improved logging features.",
-        "deprecations": "Deprecated the old CLI flags for cluster management.",
+        "changes": "Improved support for multi-node installations and enhanced security features.",
+        "deprecations": "Deprecated legacy networking options.",
         "migrationSteps": "Run 'k0s upgrade' to migrate from previous versions."
       }
     ],
     "resolution": {
-      "summary": "You should see output from 'kubectl get nodes' showing your node in a Ready state.",
+      "summary": "You should see a list of nodes with the status 'Ready' when running 'kubectl get nodes'.",
       "codeSnippets": [
-        "curl -sSL https://github.com/k0sproject/k0s/releases/download/v1.30.0+k0s.0/k0s-v1.30.0+k0s.0-linux-amd64 -o /usr/local/bin/k0s",
-        "chmod +x /usr/local/bin/k0s",
-        "k0s init --single",
-        "k0s start",
-        "kubectl get nodes",
-        "kubectl apply -f https://raw.githubusercontent.com/k0sproject/k0s/master/examples/autoscaler.yaml"
+        "curl -sSL https://get.k0s.sh | sudo sh",
+        "sudo k0s install controller",
+        "sudo k0s start",
+        "sudo k0s kubeconfig admin > ~/.kube/config",
+        "kubectl get nodes"
       ]
     }
   },
@@ -144,13 +141,13 @@
       "cli"
     ],
     "containerImages": [
-      "docker.io/k0sproject/k0s:v1.30.0+k0s.0"
+      "docker.io/k0sproject/k0s:v1.36.2+k0s.0"
     ],
     "sourceUrls": {
       "docs": "https://docs.k0sproject.io/",
       "repo": "https://github.com/k0sproject/k0s"
     },
-    "qualityScore": 99
+    "qualityScore": 90
   },
   "prerequisites": {
     "kubernetes": ">=1.25",
@@ -160,10 +157,10 @@
     ],
     "cloudCLI": "none",
     "resources": "Minimum 2 vCPU, 4GB RAM per node",
-    "description": "Ensure you have the required tools and resources before starting the installation."
+    "description": "Ensure you have the necessary tools and resources before starting the installation."
   },
   "security": {
-    "scannedAt": "2026-05-29T18:47:31.774Z",
+    "scannedAt": "2026-07-09T18:36:26.794Z",
     "scannerVersion": "platform-install-gen-2.0.0",
     "sanitized": true,
     "findings": []

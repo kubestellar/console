@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-09T09:26:23.523Z",
-  "count": 1631,
+  "generatedAt": "2026-07-09T18:38:44.984Z",
+  "count": 1632,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -26751,7 +26751,7 @@
     {
       "path": "fixes/platform-install/platform-k0s.json",
       "title": "Install and Configure k0s (Zero Friction Kubernetes)",
-      "description": "k0s is a lightweight, all-inclusive Kubernetes distribution designed for simplicity and ease of use. It is ideal for users looking to quickly bootstrap Kubernetes clusters on any infrastructure, inclu",
+      "description": "k0s is a lightweight, all-inclusive Kubernetes distribution designed for ease of use and quick deployment. It is ideal for cloud, bare metal, and edge environments, offering a single binary for instal",
       "category": "platform-install",
       "missionClass": "install",
       "author": "KubeStellar Bot",
@@ -26779,7 +26779,7 @@
       "installMethods": [
         "cli"
       ],
-      "qualityScore": 99,
+      "qualityScore": 90,
       "qualityPass": true,
       "qualityBreakdown": {
         "clarity": 100,
@@ -31924,6 +31924,50 @@
       ],
       "projectVersion": "v0.54.0",
       "maturity": "sandbox",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/platform-install/platform-rancher.json",
+      "title": "Install and Configure Rancher / RKE2",
+      "description": "Rancher is a complete container management platform that simplifies the deployment and management of Kubernetes clusters across various environments. It is ideal for organizations looking to manage mu",
+      "category": "platform-install",
+      "missionClass": "install",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "installation",
+        "configuration",
+        "distribution",
+        "distribution",
+        "suse"
+      ],
+      "cncfProjects": [],
+      "targetResourceKinds": [
+        "Namespace",
+        "Deployment",
+        "Service"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "installation",
+        "configuration"
+      ],
+      "type": "deploy",
+      "installMethods": [
+        "cli",
+        "kubectl"
+      ],
       "qualityScore": 100,
       "qualityPass": true,
       "qualityBreakdown": {

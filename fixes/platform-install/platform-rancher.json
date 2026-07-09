@@ -1,0 +1,174 @@
+{
+  "version": "kc-mission-v1",
+  "name": "platform-rancher",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Rancher / RKE2",
+    "description": "Rancher is a complete container management platform that simplifies the deployment and management of Kubernetes clusters across various environments. It is ideal for organizations looking to manage multiple Kubernetes clusters with ease, but it requires careful resource management and monitoring to ensure optimal performance.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 30,
+    "steps": [
+      {
+        "title": "Install the Rancher CLI",
+        "description": "This step installs the Rancher CLI, which is necessary for managing Rancher from the command line.\n\n```bash\n\ncurl -L https://github.com/rancher/cli/releases/download/v2.14.3/rancher-darwin-amd64 -o rancher && chmod +x rancher && sudo mv rancher /usr/local/bin/\n\n```\n\n> For macOS users; adjust the URL for Linux or Windows.",
+        "commands": [
+          "curl -L https://github.com/rancher/cli/releases/download/v2.14.3/rancher-darwin-amd64 -o rancher && chmod +x rancher && sudo mv rancher /usr/local/bin/"
+        ]
+      },
+      {
+        "title": "Create a Kubernetes Cluster",
+        "description": "This command creates a new Kubernetes cluster using RKE2 with specified version, node count, and region.\n\n```bash\n\ncurl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION=v1.30.0 sh -\n\nsudo systemctl enable rke2-server && sudo systemctl start rke2-server\n\n```\n\n> This installs RKE2 on the server.\n> This starts the RKE2 server.",
+        "commands": [
+          "curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION=v1.30.0 sh -",
+          "sudo systemctl enable rke2-server && sudo systemctl start rke2-server"
+        ]
+      },
+      {
+        "title": "Set up kubeconfig",
+        "description": "This step configures the kubeconfig file to allow kubectl to communicate with the newly created cluster.\n\n```bash\n\nsudo cat /etc/rancher/rke2/rke2.yaml > ~/.kube/config\n\n```\n\n> This copies the RKE2 kubeconfig to your home directory.",
+        "commands": [
+          "sudo cat /etc/rancher/rke2/rke2.yaml > ~/.kube/config"
+        ]
+      },
+      {
+        "title": "Verify Cluster Nodes",
+        "description": "This command checks the status of the nodes in the Kubernetes cluster to ensure they are ready.\n\n```bash\n\nkubectl get nodes\n\n```\n\n> You should see your nodes listed with a status of 'Ready'.",
+        "commands": [
+          "kubectl get nodes"
+        ]
+      },
+      {
+        "title": "Post-Install Configuration",
+        "description": "This step involves setting up monitoring and autoscaling for your cluster.\n\n```bash\n\nkubectl apply -f https://github.com/rancher/rancher/blob/release/v2.14.3/manifests/rancher-monitoring.yaml\n\nkubectl apply -f https://github.com/rancher/rancher/blob/release/v2.14.3/manifests/rancher-autoscaler.yaml\n\n```\n\n> This installs Rancher monitoring.\n> This installs Rancher autoscaler.",
+        "commands": [
+          "kubectl apply -f https://github.com/rancher/rancher/blob/release/v2.14.3/manifests/rancher-monitoring.yaml",
+          "kubectl apply -f https://github.com/rancher/rancher/blob/release/v2.14.3/manifests/rancher-autoscaler.yaml"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall Rancher",
+        "description": "This step removes Rancher and its associated resources. Be aware that this may lead to data loss and orphaned resources.\n\n```bash\n\nkubectl delete -f https://github.com/rancher/rancher/blob/release/v2.14.3/manifests/rancher.yaml\n\nsudo systemctl stop rke2-server && sudo systemctl disable rke2-server\n\n```\n\n> This deletes the Rancher deployment.\n> This stops and disables the RKE2 server.",
+        "commands": [
+          "kubectl delete -f https://github.com/rancher/rancher/blob/release/v2.14.3/manifests/rancher.yaml",
+          "sudo systemctl stop rke2-server && sudo systemctl disable rke2-server"
+        ]
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Upgrade Rancher",
+        "description": "Before upgrading, ensure you back up your data, then upgrade Rancher and verify the installation.\n\n```bash\n\nkubectl get all --all-namespaces > backup.txt\n\nkubectl apply -f https://github.com/rancher/rancher/blob/release/v2.14.3/manifests/rancher.yaml\n\nkubectl get pods -n cattle-system\n\n```\n\n> Backup current resources.\n> This applies the new Rancher manifest.\n> Verify that all Rancher pods are running.",
+        "commands": [
+          "kubectl get all --all-namespaces > backup.txt",
+          "kubectl apply -f https://github.com/rancher/rancher/blob/release/v2.14.3/manifests/rancher.yaml",
+          "kubectl get pods -n cattle-system"
+        ]
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Error: 'Unable to connect to the server: x509: certificate signed by unknown authority'",
+        "description": "**Cause:** This indicates that the kubeconfig is not set up correctly or the server certificate is not trusted.\n\n**Fix:**\nEnsure the kubeconfig file is correctly copied and permissions are set. Use 'sudo cp /etc/rancher/rke2/rke2.yaml ~/.kube/config'."
+      },
+      {
+        "title": "Error: 'Failed to pull image: rpc error: code = Unknown desc = Error response from daemon: pull access denied'",
+        "description": "**Cause:** This indicates that the image repository is not accessible or the image does not exist.\n\n**Fix:**\nCheck the image name and ensure you have access to the repository."
+      },
+      {
+        "title": "Error: 'node not found'",
+        "description": "**Cause:** This indicates that the node is not registered with the cluster.\n\n**Fix:**\nCheck the node status and ensure it is properly joined to the cluster."
+      },
+      {
+        "title": "Error: 'context deadline exceeded'",
+        "description": "**Cause:** This indicates that the Kubernetes API server is not reachable.\n\n**Fix:**\nCheck the network connectivity and ensure the RKE2 server is running."
+      }
+    ],
+    "versionNotes": [
+      {
+        "version": "v2.14.3",
+        "changes": "Added support for Kubernetes v1.30, improved RBAC configurations, and enhanced monitoring capabilities.",
+        "deprecations": "Deprecated support for Kubernetes versions below 1.27.",
+        "migrationSteps": "If upgrading from v2.10, ensure to migrate your configurations to the new RBAC model."
+      }
+    ],
+    "resolution": {
+      "summary": "You should see output similar to 'NAME STATUS ROLES AGE VERSION' with nodes listed as 'Ready'.",
+      "codeSnippets": [
+        "curl -L https://github.com/rancher/cli/releases/download/v2.14.3/rancher-darwin-amd64 -o rancher && chmod +x rancher && sudo mv rancher /usr/local/bin/",
+        "curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION=v1.30.0 sh -",
+        "sudo systemctl enable rke2-server && sudo systemctl start rke2-server",
+        "sudo cat /etc/rancher/rke2/rke2.yaml > ~/.kube/config",
+        "kubectl get nodes",
+        "kubectl apply -f https://github.com/rancher/rancher/blob/release/v2.14.3/manifests/rancher-monitoring.yaml",
+        "kubectl apply -f https://github.com/rancher/rancher/blob/release/v2.14.3/manifests/rancher-autoscaler.yaml"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "distribution",
+      "distribution",
+      "suse"
+    ],
+    "platform": "rancher",
+    "platformType": "distribution",
+    "platformProvider": "SUSE",
+    "platformVersions": [
+      "2.8",
+      "2.9",
+      "2.10"
+    ],
+    "supportedK8sVersions": [
+      "1.27",
+      "1.28",
+      "1.29",
+      "1.30"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Namespace",
+      "Deployment",
+      "Service"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "cli",
+      "kubectl"
+    ],
+    "containerImages": [
+      "rancher/rancher:v2.14.3"
+    ],
+    "sourceUrls": {
+      "docs": "https://ranchermanager.docs.rancher.com/",
+      "repo": "https://github.com/rancher/rancher"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.27",
+    "tools": [
+      "kubectl",
+      "helm 3.x"
+    ],
+    "cloudCLI": "none",
+    "resources": "Minimum 2 vCPU, 4GB RAM per node",
+    "description": "Ensure your environment meets the minimum hardware and software requirements."
+  },
+  "security": {
+    "scannedAt": "2026-07-09T18:35:16.671Z",
+    "scannerVersion": "platform-install-gen-2.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
