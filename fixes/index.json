@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-09T07:10:26.932Z",
-  "count": 1628,
+  "generatedAt": "2026-07-09T07:45:52.247Z",
+  "count": 1630,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -20379,6 +20379,50 @@
       ],
       "qualitySuggestions": [
         "Add a final step to verify that the fix was successfully applied (e.g., checking pod status)"
+      ]
+    },
+    {
+      "path": "fixes/cncf-generated/grpc/grpc-37609-userwarnings-emitted-from-all-protoc-generated-pb2-packages.json",
+      "title": "grpc: UserWarnings emitted from all protoc-generated _pb2 packages",
+      "description": "UserWarnings emitted from all protoc-generated _pb2 packages. This issue affects 15+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "grpc",
+        "incubating",
+        "networking",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "grpc"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "incubating",
+      "qualityScore": 90,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 30
+      },
+      "qualityIssues": [
+        "No verification step or command found",
+        "Missing expected output or log checks"
+      ],
+      "qualitySuggestions": [
+        "Add a final step to verify that the fix was successfully applied (e.g., checking pod status)",
+        "Include command outputs or log tailing instructions (e.g., kubectl get events/logs) to help users confirm success"
       ]
     },
     {
@@ -55550,6 +55594,48 @@
         "troubleshoot"
       ],
       "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "incubating",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/operator-framework/operator-framework-5072-helm-based-operator-constantly-upgrading-release.json",
+      "title": "operator-framework: Helm based operator constantly upgrading release",
+      "description": "Helm based operator constantly upgrading release. Community-requested feature.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "operator-framework",
+        "incubating",
+        "app-definition",
+        "deploy"
+      ],
+      "cncfProjects": [
+        "operator-framework"
+      ],
+      "targetResourceKinds": [
+        "Deployment",
+        "Namespace",
+        "Serviceaccount"
+      ],
+      "difficulty": "advanced",
+      "issueTypes": [
+        "deploy"
+      ],
+      "type": "deploy",
       "installMethods": [],
       "maturity": "incubating",
       "qualityScore": 100,
