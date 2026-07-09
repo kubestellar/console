@@ -48,9 +48,27 @@ fi
 # Worker count is controlled by vite.config.ts (maxWorkers/minWorkers),
 # not by CLI args — CLI override was causing OOM by forcing 3 workers when
 # vite.config correctly limited to 1 for CI memory constraints (#20007).
+#
+# In CI, run tests in shards to reduce parent process memory footprint. With
+# 2100+ test files, the Vitest parent process accumulates results in memory
+# for final reporting, causing OOM on 7GB runners even with 1 worker (#20007).
+# Running 4 shards sequentially reduces peak memory by ~75%.
 OUTPUT_FILE="vitest-output.log"
 EXIT_CODE=0
-npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --reporter=verbose 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
+
+if [ -n "${CI:-}" ]; then
+  # CI: run in 4 shards sequentially, combining output
+  echo "Running tests in 4 shards to prevent OOM..."
+  > "$OUTPUT_FILE"  # Clear file
+  for shard in 1 2 3 4; do
+    echo ""
+    echo "=== Shard $shard/4 ==="
+    npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --reporter=verbose --shard=$shard/4 2>&1 | tee -a "$OUTPUT_FILE" || EXIT_CODE=$?
+  done
+else
+  # Local: run all tests at once
+  npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --reporter=verbose 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
+fi
 
 if [ "$EXIT_CODE" -ne 0 ]; then
   # Check if all tests actually passed despite the non-zero exit
