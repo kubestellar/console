@@ -122,7 +122,7 @@ func (s *Server) handleEventsStreamSSE(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if evt.Type == watch.Error {
-				slog.Warn("watch error event", "cluster", sanitize.LogString(cluster), "object", evt.Object)
+				slog.Warn("watch error event", "cluster", sanitize.LogString(cluster), "object", sanitize.LogString(fmt.Sprint(evt.Object)))
 				sseWriteError(w, flusher, "watch error")
 				return
 			}

@@ -243,7 +243,7 @@ func (s *Server) resolveFederationContexts(ctx context.Context, r *http.Request)
 type configResolver func(contextName string) (*rest.Config, error)
 
 func newFederationError(provider federation.FederationProviderName, hubContext, operation string, err error) *federation.FederationError {
-	slog.Error("federation provider request failed", "provider", provider, "hubContext", sanitize.LogString(hubContext), "operation", sanitize.LogString(operation), "error", err)
+	slog.Error("federation provider request failed", "provider", sanitize.LogString(string(provider)), "hubContext", sanitize.LogString(hubContext), "operation", sanitize.LogString(operation), "error", err)
 	return &federation.FederationError{
 		Provider:   provider,
 		HubContext: hubContext,
@@ -563,7 +563,7 @@ func (s *Server) handleFederationAction(w http.ResponseWriter, r *http.Request) 
 
 	result, err := ap.Execute(ctx, cfg, req)
 	if err != nil {
-		slog.Error("federation action execution failed", "provider", req.Provider, "actionID", sanitize.LogString(req.ActionID), "hubContext", sanitize.LogString(req.HubContext), "error", err)
+		slog.Error("federation action execution failed", "provider", sanitize.LogString(string(req.Provider)), "actionID", sanitize.LogString(req.ActionID), "hubContext", sanitize.LogString(req.HubContext), "error", err)
 		writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("execute federation action", err))
 		return
 	}

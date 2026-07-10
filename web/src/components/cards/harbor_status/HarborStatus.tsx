@@ -189,9 +189,9 @@ function RepositoryRow({
 }) {
   const { t } = useTranslation('cards')
 
-  const parts = repo.name.split('/')
+  const parts = (repo.name || '').split('/')
   const projectName = parts.length > 1 ? parts[0] : ''
-  const repoName = parts.length > 1 ? parts.slice(1).join('/') : repo.name
+  const repoName = parts.length > 1 ? (parts || []).slice(1).join('/') : repo.name
 
   return (
     <div

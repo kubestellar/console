@@ -3,6 +3,8 @@ package agent
 import (
 	"log/slog"
 	"net/http"
+
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 const (
@@ -47,7 +49,7 @@ func requireCSRF(next http.Handler) http.Handler {
 
 		if r.Header.Get(csrfHeaderName) != csrfHeaderValue {
 			slog.Warn("[CSRF] request rejected: missing or invalid CSRF header",
-				"ip", r.RemoteAddr, "method", r.Method, "path", r.URL.Path)
+				"ip", sanitize.LogString(r.RemoteAddr), "method", sanitize.LogString(r.Method), "path", sanitize.LogString(r.URL.Path))
 			http.Error(w, csrfForbiddenMsg, http.StatusForbidden)
 			return
 		}

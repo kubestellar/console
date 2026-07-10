@@ -96,13 +96,13 @@ type CRDAgent struct {
 }
 
 type CRDTool struct {
-	Name            string             `json:"name"`
-	Namespace       string             `json:"namespace"`
-	Cluster         string             `json:"cluster"`
-	Kind            string             `json:"kind"`
-	URL             string             `json:"url"`
-	Config          string             `json:"config"`
-	DiscoveredTools []DiscoveredTool   `json:"discoveredTools"`
+	Name            string           `json:"name"`
+	Namespace       string           `json:"namespace"`
+	Cluster         string           `json:"cluster"`
+	Kind            string           `json:"kind"`
+	URL             string           `json:"url"`
+	Config          string           `json:"config"`
+	DiscoveredTools []DiscoveredTool `json:"discoveredTools"`
 }
 
 type DiscoveredTool struct {

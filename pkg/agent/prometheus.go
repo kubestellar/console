@@ -11,8 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/client-go/rest"
 	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/sanitize"
+	"k8s.io/client-go/rest"
 )
 
 // promClientCache reuses http.Client instances keyed by cluster API server URL.
