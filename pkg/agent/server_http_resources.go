@@ -12,6 +12,7 @@ import (
 	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 const (
@@ -128,7 +129,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		nodes, err := s.k8sClient.GetGPUNodes(ctx, cluster)
 		if err != nil {
 			retryIn := s.recordClusterResourceFailure(resourceName, cluster)
-			slog.Warn("error fetching nodes", "cluster", cluster, "error", err, "retryIn", retryIn)
+			slog.Warn("error fetching nodes", "cluster", sanitize.LogString(cluster), "error", err, "retryIn", retryIn)
 			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}
@@ -187,7 +188,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		nodes, err := s.k8sClient.GetNodes(ctx, cluster)
 		if err != nil {
 			retryIn := s.recordClusterResourceFailure(resourceName, cluster)
-			slog.Warn("error fetching nodes", "cluster", cluster, "error", err, "retryIn", retryIn)
+			slog.Warn("error fetching nodes", "cluster", sanitize.LogString(cluster), "error", err, "retryIn", retryIn)
 			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
+	"github.com/kubestellar/console/pkg/sanitize"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -94,13 +95,13 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validateHelmK8sName(req.AppName, "appName"); err != nil {
-		slog.Error("invalid ArgoCD app name", "appName", req.AppName, "error", err)
+		slog.Error("invalid ArgoCD app name", "appName", sanitize.LogString(req.AppName), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("", err), "success": false})
 		return
 	}
 	if err := validateHelmK8sName(req.Cluster, "cluster"); err != nil {
-		slog.Error("invalid ArgoCD cluster", "cluster", req.Cluster, "error", err)
+		slog.Error("invalid ArgoCD cluster", "cluster", sanitize.LogString(req.Cluster), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("", err), "success": false})
 		return
@@ -118,13 +119,13 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	if namespace == "" {
 		namespace = defaultArgoNamespace
 	} else if err := validateHelmK8sName(namespace, "namespace"); err != nil {
-		slog.Error("invalid ArgoCD namespace", "namespace", namespace, "error", err)
+		slog.Error("invalid ArgoCD namespace", "namespace", sanitize.LogString(namespace), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("", err), "success": false})
 		return
 	}
 
-	slog.Info("[agent ArgoCD] triggering sync", "namespace", namespace, "app", req.AppName, "cluster", req.Cluster)
+	slog.Info("[agent ArgoCD] triggering sync", "namespace", sanitize.LogString(namespace), "app", sanitize.LogString(req.AppName), "cluster", sanitize.LogString(req.Cluster))
 
 	// Strategy 1: ArgoCD REST API if a token is configured in the agent env.
 	argoToken := os.Getenv("ARGOCD_AUTH_TOKEN")
@@ -153,7 +154,7 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 		)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			slog.Warn("[agent ArgoCD] CLI sync failed, falling back to annotation patching", "error", err, "output", string(output))
+			slog.Warn("[agent ArgoCD] CLI sync failed, falling back to annotation patching", "error", err, "output", sanitize.LogString(string(output)))
 		} else {
 			// #8040: success response shape mirrors backend TriggerArgoSync.
 			writeJSON(w, map[string]interface{}{
@@ -168,7 +169,7 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	// Strategy 3: Annotate the Application to trigger a refresh + sync.
 	dynamicClient, err := s.k8sClient.GetDynamicClient(req.Cluster)
 	if err != nil {
-		slog.Error("failed to get ArgoCD dynamic client", "cluster", req.Cluster, "error", err)
+		slog.Error("failed to get ArgoCD dynamic client", "cluster", sanitize.LogString(req.Cluster), "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("get cluster client", err), "success": false})
 		return
@@ -179,7 +180,7 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 
 	app, err := dynamicClient.Resource(v1alpha1.ArgoApplicationGVR).Namespace(namespace).Get(ctx, req.AppName, metav1.GetOptions{})
 	if err != nil {
-		slog.Error("failed to get ArgoCD application", "cluster", req.Cluster, "namespace", namespace, "appName", req.AppName, "error", err)
+		slog.Error("failed to get ArgoCD application", "cluster", sanitize.LogString(req.Cluster), "namespace", sanitize.LogString(namespace), "appName", sanitize.LogString(req.AppName), "error", err)
 		w.WriteHeader(http.StatusNotFound)
 		writeJSON(w, map[string]interface{}{
 			"error":   sanitizeAgentError("get application", err),
@@ -209,7 +210,7 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	app.SetUnstructuredContent(content)
 
 	if _, err := dynamicClient.Resource(v1alpha1.ArgoApplicationGVR).Namespace(namespace).Update(ctx, app, metav1.UpdateOptions{}); err != nil {
-		slog.Error("failed to trigger ArgoCD sync", "cluster", req.Cluster, "namespace", namespace, "appName", req.AppName, "error", err)
+		slog.Error("failed to trigger ArgoCD sync", "cluster", sanitize.LogString(req.Cluster), "namespace", sanitize.LogString(namespace), "appName", sanitize.LogString(req.AppName), "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("trigger sync", err), "success": false})
 		return
@@ -288,7 +289,7 @@ func (s *Server) discoverArgoServerURL(ctx context.Context, cluster string) stri
 
 	clientset, err := s.k8sClient.GetClient(cluster)
 	if err != nil {
-		slog.Warn("[agent ArgoCD] server discovery failed: cannot get client", "cluster", cluster, "error", err)
+		slog.Warn("[agent ArgoCD] server discovery failed: cannot get client", "cluster", sanitize.LogString(cluster), "error", err)
 		return ""
 	}
 
@@ -301,12 +302,12 @@ func (s *Server) discoverArgoServerURL(ctx context.Context, cluster string) stri
 			if len(svc.Spec.Ports) > 0 {
 				inClusterURL := fmt.Sprintf("https://%s.%s.svc:%d", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port)
 				slog.Info("[agent ArgoCD] server discovery: found in-cluster service; set ARGOCD_SERVER_URL to override when running kc-agent on localhost",
-					"cluster", cluster, "url", inClusterURL)
+					"cluster", sanitize.LogString(cluster), "url", sanitize.LogString(inClusterURL))
 				return inClusterURL
 			}
-			slog.Warn("[agent ArgoCD] server discovery: argocd-server service has no ports", "namespace", ns)
+			slog.Warn("[agent ArgoCD] server discovery: argocd-server service has no ports", "namespace", sanitize.LogString(ns))
 		}
 	}
-	slog.Info("[agent ArgoCD] server discovery: argocd-server service not found; set ARGOCD_SERVER_URL to point kc-agent at a reachable URL", "cluster", cluster)
+	slog.Info("[agent ArgoCD] server discovery: argocd-server service not found; set ARGOCD_SERVER_URL to point kc-agent at a reachable URL", "cluster", sanitize.LogString(cluster))
 	return ""
 }

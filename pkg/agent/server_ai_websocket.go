@@ -13,9 +13,10 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/safego"
-	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // wsGoroutineDrainTimeout is the maximum time handleWebSocket waits for
@@ -97,7 +98,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.clientsMux.Unlock()
 	}()
 
-	slog.Info("client connected", "addr", conn.RemoteAddr(), "origin", r.Header.Get("Origin"))
+	slog.Info("client connected", "addr", conn.RemoteAddr(), "origin", sanitize.LogString(r.Header.Get("Origin")))
 
 	// writeMu is the single per-connection mutex shared by broadcasts
 	// (prediction_worker) and request/stream handlers. Using the same
@@ -209,7 +210,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 									Type:    protocol.TypeError,
 									Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error during chat streaming"},
 								}); err != nil {
-									slog.Error("[WS] failed to write panic response", "msgID", m.ID, "error", err)
+									slog.Error("[WS] failed to write panic response", "msgID", sanitize.LogString(m.ID), "error", err)
 									closed.Store(true)
 								}
 								if clearErr := clearWSWriteDeadline(conn, "[WS] failed to clear WebSocket write deadline",
@@ -255,7 +256,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 									Type:    protocol.TypeError,
 									Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error during kubectl execution"},
 								}); err != nil {
-									slog.Error("[WS] failed to write kubectl panic response", "msgID", m.ID, "error", err)
+									slog.Error("[WS] failed to write kubectl panic response", "msgID", sanitize.LogString(m.ID), "error", err)
 									closed.Store(true)
 								}
 								if clearErr := clearWSWriteDeadline(conn, "[WS] failed to clear WebSocket write deadline",
@@ -318,7 +319,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 									Type:    protocol.TypeError,
 									Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error"},
 								}); err != nil {
-									slog.Error("[WS] failed to write async panic response", "msgID", m.ID, "error", err)
+									slog.Error("[WS] failed to write async panic response", "msgID", sanitize.LogString(m.ID), "error", err)
 									closed.Store(true)
 								}
 								if clearErr := clearWSWriteDeadline(conn, "[WS] failed to clear WebSocket write deadline",

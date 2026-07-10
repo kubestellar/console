@@ -120,18 +120,39 @@ export default defineConfig(({ mode }) => ({
             ['cards-quantum', ['/src/components/cards/quantum/', '/src/components/cards/cardRegistry.quantum']],
             ['cards-networking', ['/src/components/cards/cilium_status/', '/src/components/cards/linkerd_status/', '/src/components/cards/envoy_status/', '/src/components/cards/contour_status/', '/src/components/cards/cni_status/', '/src/components/cards/coredns_status/', '/src/components/cards/nats_status/', '/src/components/cards/grpc_status/']],
             ['cards-platform', ['/src/components/cards/crossplane-status/', '/src/components/cards/knative_status/', '/src/components/cards/keda_status/', '/src/components/cards/dapr_status/', '/src/components/cards/kubevela_status/', '/src/components/cards/harbor_status/', '/src/components/cards/strimzi_status/', '/src/components/cards/volcano_status/', '/src/components/cards/openkruise_status/', '/src/components/cards/cardRegistry.platform']],
+            // Further split cards-misc into granular chunks to reduce 2.5M bundle
+            ['cards-storage', ['/src/components/cards/cubefs_status/', '/src/components/cards/dragonfly_status/', '/src/components/cards/fluid_status/', '/src/components/cards/tikv_status/', '/src/components/cards/vitess_status/', '/src/components/cards/trino_gateway/']],
+            ['cards-runtime', ['/src/components/cards/containerd_status/', '/src/components/cards/crio_status/', '/src/components/cards/flatcar_status/', '/src/components/cards/lima_status/', '/src/components/cards/wasmcloud_status/']],
+            ['cards-devops', ['/src/components/cards/buildpacks-status/', '/src/components/cards/chaos_mesh_status/', '/src/components/cards/cloud_custodian_status/', '/src/components/cards/cloudevents_status/', '/src/components/cards/console-missions/', '/src/components/cards/pipelines/']],
+            ['cards-monitoring', ['/src/components/cards/slo_compliance/', '/src/components/cards/workload-detection/', '/src/components/cards/workload-monitor/', '/src/components/cards/change_timeline/', '/src/components/cards/failover_timeline/']],
+            ['cards-data', ['/src/components/cards/artifact_hub_status/', '/src/components/cards/backstage_status/', '/src/components/cards/rss/', '/src/components/cards/weather/', '/src/components/cards/insights/']],
+            ['cards-security-extra', ['/src/components/cards/openfga_status/', '/src/components/cards/openfeature_status/', '/src/components/cards/tuf_status/']],
+            ['cards-platform-extra', ['/src/components/cards/drasi/', '/src/components/cards/karmada_status/', '/src/components/cards/openyurt_status/', '/src/components/cards/multi-tenancy/']],
+            ['cards-ui', ['/src/components/cards/gadget/', '/src/components/cards/card-wrapper/', '/src/components/cards/cluster-resource-tree/']],
+            ['cards-shared', ['/src/components/cards/shared/']],
             ['cards-misc', ['/src/components/cards/']],
-            ['drilldown', ['/src/components/drilldown/']],
-            ['dashboard-core', ['/src/components/dashboard/', '/src/lib/dashboards/', '/src/lib/unified/dashboard/']],
-            ['layout-shell', ['/src/components/layout/']],
+            // Split drilldown into modal and views to reduce 468KB chunk
+            ['drilldown-modal', ['/src/components/drilldown/DrillDownModal']],
+            ['drilldown-views', ['/src/components/drilldown/']],
+            // Split dashboard into separate chunks to reduce bundle size
+            ['dashboard-custom', ['/src/components/dashboard/CustomDashboard']],
+            ['dashboard-mini', ['/src/components/dashboard/MiniDashboard']],
+            ['dashboard-main', ['/src/components/dashboard/Dashboard.tsx']],
+            ['dashboard-unified', ['/src/lib/unified/dashboard/']],
+            ['dashboard-lib', ['/src/lib/dashboards/']],
+            // Split layout-shell into smaller chunks to reduce 396KB chunk
+            ['layout-header', ['/src/components/layout/Header', '/src/components/layout/Sidebar']],
+            ['layout-components', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
             ['contexts-providers', ['/src/contexts/']],
             ['hooks-data', ['/src/hooks/']],
             ['lib-cache', ['/src/lib/cache/']],
             ['lib-utils', ['/src/lib/utils', '/src/lib/cn.ts', '/src/lib/constants.ts']],
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
-            // Split app shell to reduce massive app-routes chunk
+            // Split app shell to reduce massive 5.5M app-routes chunk
             ['app-router', ['/src/components/router/', '/src/lib/router/']],
+            ['app-routes-lazy', ['/src/routes/lazyRoutes']],
+            ['app-routes-config', ['/src/routes/AppRoutes']],
             ['app-routes', ['/src/App.tsx']],
             ['app-shell', ['/src/hooks/usePersistedSettings']],
             ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
@@ -151,7 +172,9 @@ export default defineConfig(({ mode }) => ({
           // three.js ecosystem (split into smaller chunks to reduce three-core and three-drei)
           if (id.includes('/three-stdlib/')) return 'three-stdlib-vendor'
           if (id.includes('/@react-three/fiber/')) return 'three-fiber-vendor'
-          // Split drei into sub-chunks to reduce 304KB chunk
+          // Split drei into sub-chunks to reduce 1012KB drei-core chunk
+          if (id.includes('/@react-three/drei/') && id.includes('/core/shaders/')) return 'drei-shaders-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/Text3D')) return 'drei-text3d-vendor'
           if (id.includes('/@react-three/drei/') && id.includes('/core/')) return 'drei-core-vendor'
           if (id.includes('/@react-three/drei/') && id.includes('/web/')) return 'drei-web-vendor'
           if (id.includes('/@react-three/drei/')) return 'drei-helpers-vendor'
@@ -170,6 +193,9 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/@xterm/addon-fit/')) return 'xterm-addon-fit-vendor'
           if (id.includes('/@xterm/addon-web-links/')) return 'xterm-addon-links-vendor'
           if (id.includes('/@xterm/addon-')) return 'xterm-addon-vendor'
+          // Further split xterm-core by internal modules to reduce 336KB chunk
+          if (id.includes('/@xterm/xterm/') && id.includes('/common/')) return 'xterm-common-vendor'
+          if (id.includes('/@xterm/xterm/') && id.includes('/browser/')) return 'xterm-browser-vendor'
           if (id.includes('/@xterm/xterm/')) return 'xterm-core-vendor'
           if (id.includes('/@xterm/')) return 'xterm-vendor'
           // UI libraries
@@ -224,6 +250,19 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/immer/')) return 'immer-vendor'
           // Split async utilities
           if (id.includes('/p-limit/') || id.includes('/p-queue/')) return 'async-vendor'
+          // Split additional common large libraries to reduce generic vendor chunk
+          if (id.includes('/@radix-ui/react-')) return 'radix-vendor'
+          if (id.includes('/@radix-ui/')) return 'radix-primitives-vendor'
+          if (id.includes('/@floating-ui/')) return 'floating-ui-vendor'
+          if (id.includes('/@popperjs/')) return 'popper-vendor'
+          if (id.includes('/react-virtualized/') || id.includes('/react-window/')) return 'virtualization-vendor'
+          if (id.includes('/react-hook-form/')) return 'form-vendor'
+          if (id.includes('/react-select/')) return 'select-vendor'
+          if (id.includes('/monaco-editor/')) return 'monaco-vendor'
+          if (id.includes('/prismjs/') || id.includes('/prism-react-renderer/')) return 'prism-vendor'
+          if (id.includes('/highlight.js/')) return 'highlight-vendor'
+          if (id.includes('/sql.js/') || id.includes('/@sqlite/')) return 'sqlite-vendor'
+          if (id.includes('/kubernetes-client/') || id.includes('/@kubernetes/')) return 'k8s-client-vendor'
           return 'vendor'
         },
       },

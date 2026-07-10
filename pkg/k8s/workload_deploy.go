@@ -346,7 +346,7 @@ func applyDependencies(
 				// Not managed by console — skip to avoid overwriting user resources
 				result.Action = "skipped"
 				results = append(results, result)
-				slog.Info("[deploy] skipped (not console-managed)", "kind", dep.Kind, "name", dep.Name)
+				slog.Info("[deploy] skipped (not console-managed)", "kind", dep.Kind, "name", sanitize.LogString(dep.Name))
 				continue
 			}
 			// Console-managed — update
@@ -355,10 +355,10 @@ func applyDependencies(
 			if err != nil {
 				result.Action = "failed"
 				result.Error = err.Error()
-				slog.Error("[deploy] failed to update dependency", "kind", dep.Kind, "name", dep.Name, "error", err)
+				slog.Error("[deploy] failed to update dependency", "kind", dep.Kind, "name", sanitize.LogString(dep.Name), "error", err)
 			} else {
 				result.Action = "updated"
-				slog.Info("[deploy] updated dependency", "kind", dep.Kind, "name", dep.Name)
+				slog.Info("[deploy] updated dependency", "kind", dep.Kind, "name", sanitize.LogString(dep.Name))
 			}
 		} else if apierrors.IsNotFound(err) {
 			// Resource doesn't exist — create
@@ -366,16 +366,16 @@ func applyDependencies(
 			if err != nil {
 				result.Action = "failed"
 				result.Error = err.Error()
-				slog.Error("[deploy] failed to create dependency", "kind", dep.Kind, "name", dep.Name, "error", err)
+				slog.Error("[deploy] failed to create dependency", "kind", dep.Kind, "name", sanitize.LogString(dep.Name), "error", err)
 			} else {
 				result.Action = "created"
-				slog.Info("[deploy] created dependency", "kind", dep.Kind, "name", dep.Name)
+				slog.Info("[deploy] created dependency", "kind", dep.Kind, "name", sanitize.LogString(dep.Name))
 			}
 		} else {
 			// Real error (network, RBAC, etc.) — do not assume resource is missing
 			result.Action = "failed"
 			result.Error = err.Error()
-			slog.Error("[deploy] failed to check dependency", "kind", dep.Kind, "name", dep.Name, "error", err)
+			slog.Error("[deploy] failed to check dependency", "kind", dep.Kind, "name", sanitize.LogString(dep.Name), "error", err)
 		}
 
 		results = append(results, result)
@@ -650,7 +650,7 @@ func (m *MultiClusterClient) DeleteWorkload(ctx context.Context, cluster, namesp
 			}
 			return fmt.Errorf("failed to delete %s %s/%s on cluster %s: %w", g.kind, namespace, name, cluster, err)
 		}
-		slog.Info("[delete] deleted workload", "kind", g.kind, "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "cluster", sanitize.LogString(cluster))
+		slog.Info("[delete] deleted workload", "kind", sanitize.LogString(g.kind), "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "cluster", sanitize.LogString(cluster))
 		return nil
 	}
 
@@ -765,7 +765,7 @@ func (m *MultiClusterClient) LabelClusterNodes(ctx context.Context, cluster stri
 		})
 		if retryErr != nil {
 			slog.Error("[LabelClusterNodes] failed to label node after retries",
-				"node", nodeName, "cluster", cluster, "error", retryErr)
+				"node", sanitize.LogString(nodeName), "cluster", sanitize.LogString(cluster), "error", retryErr)
 			errs = append(errs, fmt.Errorf("node %s: %w", nodeName, retryErr))
 		}
 	}
@@ -816,7 +816,7 @@ func (m *MultiClusterClient) RemoveClusterNodeLabels(ctx context.Context, cluste
 		})
 		if retryErr != nil {
 			slog.Error("[RemoveClusterNodeLabels] failed to update node after retries",
-				"node", nodeName, "cluster", cluster, "error", retryErr)
+				"node", sanitize.LogString(nodeName), "cluster", sanitize.LogString(cluster), "error", retryErr)
 			errs = append(errs, fmt.Errorf("node %s: %w", nodeName, retryErr))
 		}
 	}

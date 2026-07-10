@@ -3,9 +3,10 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"log/slog"
 	"net/http"
-	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 // handleNamespacesHTTP serves namespace operations for a cluster. GET lists
@@ -90,13 +91,13 @@ func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 	// render a specific error and so we don't lean on the apiserver for
 	// validation.
 	if err := kube.ValidateKubeContext(req.Cluster); err != nil {
-		slog.Error("invalid cluster for create namespace request", "cluster", req.Cluster, "error", err)
+		slog.Error("invalid cluster for create namespace request", "cluster", sanitize.LogString(req.Cluster), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("name", req.Name); err != nil {
-		slog.Error("invalid namespace name for create request", "name", req.Name, "error", err)
+		slog.Error("invalid namespace name for create request", "name", sanitize.LogString(req.Name), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
@@ -107,7 +108,7 @@ func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ns, err := s.k8sClient.CreateNamespace(ctx, req.Cluster, req.Name, req.Labels)
 	if err != nil {
-		slog.Warn("error creating namespace", "cluster", req.Cluster, "name", req.Name, "error", err)
+		slog.Warn("error creating namespace", "cluster", sanitize.LogString(req.Cluster), "name", sanitize.LogString(req.Name), "error", err)
 		status, msg := mapK8sErrorToHTTP(err)
 		w.WriteHeader(status)
 		writeJSON(w, map[string]interface{}{"success": false, "error": msg, "source": "agent"})
@@ -131,13 +132,13 @@ func (s *Server) deleteNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 	// #8034 followup: validate inputs at the HTTP boundary before calling the
 	// Kubernetes client, matching the pattern in createNamespaceHTTP.
 	if err := kube.ValidateKubeContext(cluster); err != nil {
-		slog.Error("invalid cluster for delete namespace request", "cluster", cluster, "error", err)
+		slog.Error("invalid cluster for delete namespace request", "cluster", sanitize.LogString(cluster), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("name", name); err != nil {
-		slog.Error("invalid namespace name for delete request", "name", name, "error", err)
+		slog.Error("invalid namespace name for delete request", "name", sanitize.LogString(name), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
@@ -147,7 +148,7 @@ func (s *Server) deleteNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	if err := s.k8sClient.DeleteNamespace(ctx, cluster, name); err != nil {
-		slog.Warn("error deleting namespace", "cluster", cluster, "name", name, "error", err)
+		slog.Warn("error deleting namespace", "cluster", sanitize.LogString(cluster), "name", sanitize.LogString(name), "error", err)
 		status, msg := mapK8sErrorToHTTP(err)
 		w.WriteHeader(status)
 		writeJSON(w, map[string]interface{}{"success": false, "error": msg, "source": "agent"})

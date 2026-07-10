@@ -120,20 +120,20 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := kube.ValidateDNS1123Label("namespace", namespace); err != nil {
-		slog.Error("invalid namespace for scale request", "namespace", namespace, "error", err)
+		slog.Error("invalid namespace for scale request", "namespace", sanitize.LogString(namespace), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("workloadName", name); err != nil {
-		slog.Error("invalid workload name for scale request", "workloadName", name, "error", err)
+		slog.Error("invalid workload name for scale request", "workloadName", sanitize.LogString(name), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	for _, tc := range targetClusters {
 		if err := kube.ValidateKubeContext(tc); err != nil {
-			slog.Error("invalid target cluster for scale request", "targetCluster", tc, "error", err)
+			slog.Error("invalid target cluster for scale request", "targetCluster", sanitize.LogString(tc), "error", err)
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 			return
@@ -155,7 +155,7 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.k8sClient.ScaleWorkload(ctx, namespace, name, targetClusters, replicas)
 	if err != nil {
-		slog.Warn("error scaling resource", "namespace", namespace, "name", name, "targetClusters", targetClusters, "error", err)
+		slog.Warn("error scaling resource", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "targetClusters", sanitize.LogStrings(targetClusters), "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{
 			"success": false,
@@ -570,7 +570,7 @@ func (s *Server) handlePodsStreamSSE(w http.ResponseWriter, r *http.Request) {
 			defer mu.Unlock()
 
 			if err != nil {
-				slog.Warn("[SSE] cluster pod fetch failed", "cluster", clusterName, "error", err)
+				slog.Warn("[SSE] cluster pod fetch failed", "cluster", sanitize.LogString(clusterName), "error", err)
 				payload := map[string]string{"cluster": clusterName, "error": sanitizeAgentError("list pods", err)}
 				data, _ := json.Marshal(payload)
 				fmt.Fprintf(bw, "event: cluster_error\ndata: %s\n\n", data)
@@ -583,7 +583,7 @@ func (s *Server) handlePodsStreamSSE(w http.ResponseWriter, r *http.Request) {
 			payload := map[string]interface{}{"cluster": clusterName, "pods": pods}
 			data, marshalErr := json.Marshal(payload)
 			if marshalErr != nil {
-				slog.Error("[SSE] failed to marshal pods", "cluster", clusterName, "error", marshalErr)
+				slog.Error("[SSE] failed to marshal pods", "cluster", sanitize.LogString(clusterName), "error", marshalErr)
 				return
 			}
 			fmt.Fprintf(bw, "event: cluster_data\ndata: %s\n\n", data)
@@ -690,7 +690,7 @@ func (s *Server) handleJobsStreamSSE(w http.ResponseWriter, r *http.Request) {
 			defer mu.Unlock()
 
 			if err != nil {
-				slog.Warn("[SSE] cluster job fetch failed", "cluster", clusterName, "error", err)
+				slog.Warn("[SSE] cluster job fetch failed", "cluster", sanitize.LogString(clusterName), "error", err)
 				payload := map[string]string{"cluster": clusterName, "error": sanitizeAgentError("list jobs", err)}
 				data, _ := json.Marshal(payload)
 				fmt.Fprintf(bw, "event: cluster_error\ndata: %s\n\n", data)
@@ -703,7 +703,7 @@ func (s *Server) handleJobsStreamSSE(w http.ResponseWriter, r *http.Request) {
 			payload := map[string]interface{}{"cluster": clusterName, "jobs": jobs}
 			data, marshalErr := json.Marshal(payload)
 			if marshalErr != nil {
-				slog.Error("[SSE] failed to marshal jobs", "cluster", clusterName, "error", marshalErr)
+				slog.Error("[SSE] failed to marshal jobs", "cluster", sanitize.LogString(clusterName), "error", marshalErr)
 				return
 			}
 			fmt.Fprintf(bw, "event: cluster_data\ndata: %s\n\n", data)

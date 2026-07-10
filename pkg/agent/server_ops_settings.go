@@ -266,7 +266,7 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 				status.Valid = &valid
 				cm.SetKeyValidity(p.name, valid)
 				if err != nil {
-					slog.Error("API key validation error", "provider", p.name, "error", err)
+					slog.Error("API key validation error", "provider", sanitize.LogString(p.name), "error", err)
 					status.Error = "validation failed"
 				}
 			}

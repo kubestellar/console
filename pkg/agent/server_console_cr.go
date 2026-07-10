@@ -28,6 +28,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // consoleCRRequestTimeout is the per-request deadline applied to CR writes.
@@ -59,7 +60,7 @@ func (s *Server) resolveConsoleCRTarget(w http.ResponseWriter, r *http.Request) 
 	}
 	dyn, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Error("failed to resolve console CR target", "cluster", cluster, "namespace", namespace, "error", err)
+		slog.Error("failed to resolve console CR target", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
 		writeJSONError(w, http.StatusServiceUnavailable, sanitizeAgentError("resolve console CR target", err))
 		return nil, "", false
 	}
@@ -108,7 +109,7 @@ func (s *Server) handleConsoleCRManagedWorkloads(w http.ResponseWriter, r *http.
 		}
 		created, err := persistence.CreateManagedWorkload(ctx, &mw)
 		if err != nil {
-			slog.Error("failed to create managed workload", "namespace", namespace, "name", mw.Name, "error", err)
+			slog.Error("failed to create managed workload", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(mw.Name), "error", err)
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("create managed workload", err))
 			return
 		}
@@ -130,7 +131,7 @@ func (s *Server) handleConsoleCRManagedWorkloads(w http.ResponseWriter, r *http.
 		mw.Namespace = namespace
 		updated, err := persistence.UpdateManagedWorkload(ctx, &mw)
 		if err != nil {
-			slog.Error("failed to update managed workload", "namespace", namespace, "name", name, "error", err)
+			slog.Error("failed to update managed workload", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("update managed workload", err))
 			return
 		}
@@ -143,7 +144,7 @@ func (s *Server) handleConsoleCRManagedWorkloads(w http.ResponseWriter, r *http.
 			return
 		}
 		if err := persistence.DeleteManagedWorkload(ctx, namespace, name); err != nil {
-			slog.Error("failed to delete managed workload", "namespace", namespace, "name", name, "error", err)
+			slog.Error("failed to delete managed workload", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("delete managed workload", err))
 			return
 		}
@@ -194,7 +195,7 @@ func (s *Server) handleConsoleCRClusterGroups(w http.ResponseWriter, r *http.Req
 		}
 		created, err := persistence.CreateClusterGroup(ctx, &cg)
 		if err != nil {
-			slog.Error("failed to create cluster group", "namespace", namespace, "name", cg.Name, "error", err)
+			slog.Error("failed to create cluster group", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(cg.Name), "error", err)
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("create cluster group", err))
 			return
 		}
@@ -216,7 +217,7 @@ func (s *Server) handleConsoleCRClusterGroups(w http.ResponseWriter, r *http.Req
 		cg.Namespace = namespace
 		updated, err := persistence.UpdateClusterGroup(ctx, &cg)
 		if err != nil {
-			slog.Error("failed to update cluster group", "namespace", namespace, "name", name, "error", err)
+			slog.Error("failed to update cluster group", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("update cluster group", err))
 			return
 		}
@@ -229,7 +230,7 @@ func (s *Server) handleConsoleCRClusterGroups(w http.ResponseWriter, r *http.Req
 			return
 		}
 		if err := persistence.DeleteClusterGroup(ctx, namespace, name); err != nil {
-			slog.Error("failed to delete cluster group", "namespace", namespace, "name", name, "error", err)
+			slog.Error("failed to delete cluster group", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("delete cluster group", err))
 			return
 		}
@@ -283,7 +284,7 @@ func (s *Server) handleConsoleCRWorkloadDeployments(w http.ResponseWriter, r *ht
 		}
 		created, err := persistence.CreateWorkloadDeployment(ctx, &wd)
 		if err != nil {
-			slog.Error("failed to create workload deployment", "namespace", namespace, "name", wd.Name, "error", err)
+			slog.Error("failed to create workload deployment", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(wd.Name), "error", err)
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("create workload deployment", err))
 			return
 		}
@@ -297,7 +298,7 @@ func (s *Server) handleConsoleCRWorkloadDeployments(w http.ResponseWriter, r *ht
 			return
 		}
 		if err := persistence.DeleteWorkloadDeployment(ctx, namespace, name); err != nil {
-			slog.Error("failed to delete workload deployment", "namespace", namespace, "name", name, "error", err)
+			slog.Error("failed to delete workload deployment", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("delete workload deployment", err))
 			return
 		}
@@ -346,7 +347,7 @@ func (s *Server) handleConsoleCRWorkloadDeploymentStatus(w http.ResponseWriter, 
 	// just a WorkloadDeploymentStatus, not the whole WD.
 	current, err := persistence.GetWorkloadDeployment(ctx, namespace, name)
 	if err != nil {
-		slog.Error("failed to get workload deployment", "namespace", namespace, "name", name, "error", err)
+		slog.Error("failed to get workload deployment", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
 		writeJSONError(w, http.StatusNotFound, sanitizeAgentError("get workload deployment", err))
 		return
 	}
@@ -358,7 +359,7 @@ func (s *Server) handleConsoleCRWorkloadDeploymentStatus(w http.ResponseWriter, 
 	current.Status = status
 	updated, err := persistence.UpdateWorkloadDeploymentStatus(ctx, current)
 	if err != nil {
-		slog.Error("failed to update workload deployment status", "namespace", namespace, "name", name, "error", err)
+		slog.Error("failed to update workload deployment status", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
 		writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("update workload deployment status", err))
 		return
 	}

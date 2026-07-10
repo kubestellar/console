@@ -13,6 +13,7 @@ import (
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 const (
@@ -79,7 +80,7 @@ func (s *Server) enrichKagentiChatRequest(ctx context.Context, provider AIProvid
 
 	k8sContext, err := s.buildKagentiK8sContext(ctx, clusterContext)
 	if err != nil {
-		slog.Warn("[Chat] failed to build kagenti cluster context", "error", err, "clusterContext", clusterContext)
+		slog.Warn("[Chat] failed to build kagenti cluster context", "error", err, "clusterContext", sanitize.LogString(clusterContext))
 		return
 	}
 	if k8sContext == "" {
@@ -338,7 +339,7 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 	defer cancel()
 	resp, err := provider.Chat(ctx, chatReq)
 	if err != nil {
-		slog.Error("[Chat] execution error", "agent", agentName, "error", err, "timeout", handleChatMessageTimeout)
+		slog.Error("[Chat] execution error", "agent", sanitize.LogString(agentName), "error", err, "timeout", handleChatMessageTimeout)
 		if ctx.Err() == context.DeadlineExceeded {
 			return s.errorResponse(msg.ID, "timeout",
 				fmt.Sprintf("AI agent did not respond within %s", handleChatMessageTimeout))
@@ -442,11 +443,11 @@ func (s *Server) handleSelectAgentMessage(msg protocol.Message) protocol.Message
 	// Store the agent selection per-session (not globally)
 	previousAgent := s.registry.GetSelectedAgent(sessionID)
 	if err := s.registry.SetSelectedAgent(sessionID, req.Agent); err != nil {
-		slog.Error("set selected agent error", "error", err, "sessionID", sessionID)
+		slog.Error("set selected agent error", "error", err, "sessionID", sanitize.LogString(sessionID))
 		return s.errorResponse(msg.ID, "invalid_agent", "invalid agent selection")
 	}
 
-	slog.Info("agent selected", "agent", req.Agent, "sessionID", sessionID, "previous", previousAgent)
+	slog.Info("agent selected", "agent", sanitize.LogString(req.Agent), "sessionID", sanitize.LogString(sessionID), "previous", sanitize.LogString(previousAgent))
 
 	return protocol.Message{
 		ID:   msg.ID,

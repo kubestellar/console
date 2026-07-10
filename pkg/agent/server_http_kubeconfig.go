@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // handleRenameContextHTTP renames a kubeconfig context
@@ -63,7 +64,7 @@ func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	slog.Info("renamed context", "from", req.OldName, "to", req.NewName)
+	slog.Info("renamed context", "from", sanitize.LogString(req.OldName), "to", sanitize.LogString(req.NewName))
 	writeJSON(w, protocol.RenameContextResponse{Success: true, OldName: req.OldName, NewName: req.NewName})
 }
 
@@ -221,7 +222,7 @@ func (s *Server) handleKubeconfigRemoveHTTP(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := s.k8sClient.RemoveContext(req.Context); err != nil {
-		slog.Error("[kubeconfig] failed to remove context", "context", req.Context, "error", err)
+		slog.Error("[kubeconfig] failed to remove context", "context", sanitize.LogString(req.Context), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]string{"error": sanitizeAgentError("remove cluster context", err)})
 		return
@@ -265,7 +266,7 @@ func (s *Server) handleKubeconfigAddHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	slog.Info("added cluster via form", "context", req.ContextName, "cluster", req.ClusterName)
+	slog.Info("added cluster via form", "context", sanitize.LogString(req.ContextName), "cluster", sanitize.LogString(req.ClusterName))
 	writeJSON(w, kubeconfigAddResponse{Success: true})
 }
 

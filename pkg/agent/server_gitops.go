@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/ssrf"
 )
 
@@ -95,8 +96,6 @@ func normalizeGitopsHost(host string) string {
 	host = strings.TrimSuffix(host, "]")
 	return strings.ToLower(host)
 }
-
-
 
 func validateGitopsResolvedIPs(ctx context.Context, host string) error {
 	normalizedHost := normalizeGitopsHost(host)
@@ -282,15 +281,15 @@ func gitopsIsKustomizeDir(path string) bool {
 func gitopsCleanupTempDir(dir string) {
 	cleanDir := filepath.Clean(dir)
 	if filepath.Dir(cleanDir) != os.TempDir() || !strings.HasPrefix(filepath.Base(cleanDir), gitOpsTempDirPrefix) {
-		slog.Warn("[agent] SECURITY: refused to delete directory outside managed gitops temp dir", "dir", dir)
+		slog.Warn("[agent] SECURITY: refused to delete directory outside managed gitops temp dir", "dir", sanitize.LogString(dir))
 		return
 	}
 	if strings.Contains(cleanDir, "..") {
-		slog.Warn("[agent] SECURITY: refused to delete directory with path traversal", "dir", dir)
+		slog.Warn("[agent] SECURITY: refused to delete directory with path traversal", "dir", sanitize.LogString(dir))
 		return
 	}
 	if err := os.RemoveAll(cleanDir); err != nil {
-		slog.Warn("[agent] failed to cleanup temp directory", "dir", cleanDir, "error", err)
+		slog.Warn("[agent] failed to cleanup temp directory", "dir", sanitize.LogString(cleanDir), "error", err)
 	}
 }
 
@@ -433,7 +432,7 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 	// Validate K8s name params before passing to kubectl CLI.
 	for field, val := range map[string]string{"cluster": req.Cluster, "namespace": req.Namespace} {
 		if err := validateHelmK8sName(val, field); err != nil {
-			slog.Error("invalid GitOps detect-drift input", "field", field, "value", val, "error", err)
+			slog.Error("invalid GitOps detect-drift input", "field", sanitize.LogString(field), "value", sanitize.LogString(val), "error", err)
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 			return
@@ -442,7 +441,7 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 
 	// Validate path parameter to prevent path traversal attacks.
 	if err := validateGitopsPath(req.Path); err != nil {
-		slog.Error("invalid GitOps detect-drift path", "path", req.Path, "error", err)
+		slog.Error("invalid GitOps detect-drift path", "path", sanitize.LogString(req.Path), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 		return
@@ -505,7 +504,7 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 				resp.Drifted = true
 				resp.Resources = gitopsParseDiffOutput(diffOutput, req.Namespace)
 			} else {
-				slog.Warn("[agent] detect-drift: kubectl diff failed", "stderr", stderr.String())
+				slog.Warn("[agent] detect-drift: kubectl diff failed", "stderr", sanitize.LogString(stderr.String()))
 				w.WriteHeader(http.StatusInternalServerError)
 				writeJSON(w, map[string]string{"error": sanitizeAgentError("detect drift", runErr), "source": "agent"})
 				return
@@ -556,7 +555,7 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 	}
 	for field, val := range map[string]string{"cluster": req.Cluster, "namespace": req.Namespace} {
 		if err := validateHelmK8sName(val, field); err != nil {
-			slog.Error("invalid GitOps sync input", "field", field, "value", val, "error", err)
+			slog.Error("invalid GitOps sync input", "field", sanitize.LogString(field), "value", sanitize.LogString(val), "error", err)
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 			return
@@ -565,7 +564,7 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 
 	// Validate path parameter to prevent path traversal attacks.
 	if err := validateGitopsPath(req.Path); err != nil {
-		slog.Error("invalid GitOps sync path", "path", req.Path, "error", err)
+		slog.Error("invalid GitOps sync path", "path", sanitize.LogString(req.Path), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 		return
@@ -614,7 +613,7 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		slog.Warn("[agent] sync: kubectl apply failed", "error", err, "stderr", stderr.String())
+		slog.Warn("[agent] sync: kubectl apply failed", "error", err, "stderr", sanitize.LogString(stderr.String()))
 		msg := sanitizeAgentError("sync manifests", err)
 		// Backend returns 200 with Success=false and the stderr in Errors. Do
 		// the same here so frontend behavior is identical after the Phase 4

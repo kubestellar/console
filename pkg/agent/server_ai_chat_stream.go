@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 func decodeOptionalString(value any) (string, bool) {
@@ -143,7 +144,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		}
 		if err != nil {
 			slog.Error("[Chat] WebSocket write failed; marking connection closed",
-				"msgID", outMsg.ID, "type", outMsg.Type, "error", err)
+				"msgID", sanitize.LogString(outMsg.ID), "type", outMsg.Type, "error", err)
 			closed.Store(true)
 		}
 	}
@@ -221,7 +222,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 			delete(s.dryRunSessions, req.SessionID)
 			s.dryRunSessionsMu.Unlock()
 		}()
-		slog.Info("[Chat] dry-run mode enforced for session", "sessionID", req.SessionID)
+		slog.Info("[Chat] dry-run mode enforced for session", "sessionID", sanitize.LogString(req.SessionID))
 	}
 
 	// Determine which agent to use
@@ -236,14 +237,14 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	// Smart agent routing: if the prompt suggests command execution, prefer tool-capable agents
 	// Also check conversation history for tool execution context
 	needsTools := s.promptNeedsToolExecution(req.Prompt)
-	slog.Info("[Chat] smart routing", "prompt", truncateString(req.Prompt, 50), "needsTools", needsTools, "currentAgent", agentName, "isToolCapable", s.isToolCapableAgent(agentName))
+	slog.Info("[Chat] smart routing", "prompt", sanitize.LogString(truncateString(req.Prompt, 50)), "needsTools", needsTools, "currentAgent", sanitize.LogString(agentName), "isToolCapable", s.isToolCapableAgent(agentName))
 
 	if !needsTools && len(req.History) > 0 {
 		// Check if any message in history suggests tool execution was requested
 		for _, h := range req.History {
 			if s.promptNeedsToolExecution(h.Content) {
 				needsTools = true
-				slog.Info("[Chat] history contains tool execution request", "content", truncateString(h.Content, 50))
+				slog.Info("[Chat] history contains tool execution request", "content", sanitize.LogString(truncateString(h.Content, 50)))
 				break
 			}
 		}
@@ -252,27 +253,27 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	if needsTools && !s.isToolCapableAgent(agentName) {
 		// Try mixed-mode: use thinking agent + CLI execution agent
 		if toolAgent := s.findToolCapableAgent(); toolAgent != "" {
-			slog.Info("[Chat] mixed-mode routing", "thinking", agentName, "execution", toolAgent)
+			slog.Info("[Chat] mixed-mode routing", "thinking", sanitize.LogString(agentName), "execution", sanitize.LogString(toolAgent))
 			s.handleMixedModeChat(ctx, conn, msg, req, agentName, toolAgent, req.SessionID, writeMu, closed)
 			return
 		}
-		slog.Info("[Chat] no tool-capable agent available, keeping current (best-effort)", "agent", agentName)
+		slog.Info("[Chat] no tool-capable agent available, keeping current (best-effort)", "agent", sanitize.LogString(agentName))
 	}
 
-	slog.Info("[Chat] final agent selection", "requested", req.Agent, "forceAgent", forceAgent, "selected", agentName, "sessionID", req.SessionID)
+	slog.Info("[Chat] final agent selection", "requested", sanitize.LogString(req.Agent), "forceAgent", sanitize.LogString(forceAgent), "selected", sanitize.LogString(agentName), "sessionID", sanitize.LogString(req.SessionID))
 
 	// Get the provider
 	provider, err := s.registry.Get(agentName)
 	if err != nil {
 		// Try default agent
-		slog.Info("[Chat] agent not found, trying default", "agent", agentName)
+		slog.Info("[Chat] agent not found, trying default", "agent", sanitize.LogString(agentName))
 		provider, err = s.registry.GetDefault()
 		if err != nil {
 			safeWrite(ctx, s.errorResponse(msg.ID, "no_agent", "No AI agent available. Please configure an API key"))
 			return
 		}
 		agentName = provider.Name()
-		slog.Info("[Chat] using default agent", "agent", agentName)
+		slog.Info("[Chat] using default agent", "agent", sanitize.LogString(agentName))
 	}
 
 	if !provider.IsAvailable() {
@@ -406,15 +407,15 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 			if ctx.Err() != nil {
 				// Distinguish timeout from user-initiated cancel (#2375)
 				if ctx.Err() == context.DeadlineExceeded {
-					slog.Info("[Chat] session timed out", "sessionID", req.SessionID, "timeout", s.missionExecutionTimeout)
+					slog.Info("[Chat] session timed out", "sessionID", sanitize.LogString(req.SessionID), "timeout", s.missionExecutionTimeout)
 					safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
 						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(s.missionExecutionTimeout.Minutes()))))
 					return
 				}
-				slog.Info("[Chat] session cancelled", "sessionID", req.SessionID)
+				slog.Info("[Chat] session cancelled", "sessionID", sanitize.LogString(req.SessionID))
 				return
 			}
-			slog.Error("[Chat] streaming execution error", "agent", agentName, "error", err)
+			slog.Error("[Chat] streaming execution error", "agent", sanitize.LogString(agentName), "error", err)
 			code, msg2 := classifyProviderError(err)
 			// Use background context so the error reaches the client even if
 			// the mission context expired between the ctx.Err() check above
@@ -434,15 +435,15 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 			if ctx.Err() != nil {
 				// Distinguish timeout from user-initiated cancel (#2375)
 				if ctx.Err() == context.DeadlineExceeded {
-					slog.Info("[Chat] session timed out", "sessionID", req.SessionID, "timeout", s.missionExecutionTimeout)
+					slog.Info("[Chat] session timed out", "sessionID", sanitize.LogString(req.SessionID), "timeout", s.missionExecutionTimeout)
 					safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
 						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(s.missionExecutionTimeout.Minutes()))))
 					return
 				}
-				slog.Info("[Chat] session cancelled", "sessionID", req.SessionID)
+				slog.Info("[Chat] session cancelled", "sessionID", sanitize.LogString(req.SessionID))
 				return
 			}
-			slog.Error("[Chat] execution error", "agent", agentName, "error", err)
+			slog.Error("[Chat] execution error", "agent", sanitize.LogString(agentName), "error", err)
 			code, msg2 := classifyProviderError(err)
 			// Use background context so the error reaches the client even if
 			// the mission context expired (#6997).
@@ -454,12 +455,12 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	// Don't send result if cancelled
 	if ctx.Err() != nil {
 		if ctx.Err() == context.DeadlineExceeded {
-			slog.Info("[Chat] session timed out after completion", "sessionID", req.SessionID)
+			slog.Info("[Chat] session timed out after completion", "sessionID", sanitize.LogString(req.SessionID))
 			safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
 				fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(s.missionExecutionTimeout.Minutes()))))
 			return
 		}
-		slog.Info("[Chat] session cancelled after completion", "sessionID", req.SessionID)
+		slog.Info("[Chat] session cancelled after completion", "sessionID", sanitize.LogString(req.SessionID))
 		return
 	}
 
@@ -541,7 +542,7 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 			// Session exists but belongs to a different connection — reject.
 			s.activeChatCtxsMu.Unlock()
 			slog.Warn("[Chat] SECURITY: rejected cancel from non-owning connection",
-				"sessionID", req.SessionID, "requester", conn.RemoteAddr())
+				"sessionID", sanitize.LogString(req.SessionID), "requester", conn.RemoteAddr())
 			writeMu.Lock()
 			if err := setWSWriteDeadline(conn, "[Chat] failed to set WebSocket write deadline",
 				"msgID", msg.ID, "type", protocol.TypeError); err == nil {
@@ -554,7 +555,7 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 					},
 				}); err != nil {
 					slog.Error("[Chat] failed to write unauthorized cancel error to WebSocket",
-						"sessionID", req.SessionID, "error", err)
+						"sessionID", sanitize.LogString(req.SessionID), "error", err)
 				}
 				_ = clearWSWriteDeadline(conn, "[Chat] failed to clear WebSocket write deadline",
 					"msgID", msg.ID, "type", protocol.TypeError)
@@ -568,9 +569,9 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 
 	if ok {
 		entry.cancel()
-		slog.Info("[Chat] cancelled chat", "sessionID", req.SessionID)
+		slog.Info("[Chat] cancelled chat", "sessionID", sanitize.LogString(req.SessionID))
 	} else {
-		slog.Info("[Chat] no active chat to cancel", "sessionID", req.SessionID)
+		slog.Info("[Chat] no active chat to cancel", "sessionID", sanitize.LogString(req.SessionID))
 	}
 
 	writeMu.Lock()
@@ -590,7 +591,7 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 			},
 		}); err != nil {
 			slog.Error("[Chat] failed to write cancel ack to WebSocket",
-				"sessionID", req.SessionID, "cancelled", ok, "error", err)
+				"sessionID", sanitize.LogString(req.SessionID), "cancelled", ok, "error", err)
 		}
 		_ = clearWSWriteDeadline(conn, "[Chat] failed to clear WebSocket write deadline",
 			"msgID", msg.ID, "type", protocol.TypeResult)
@@ -667,9 +668,9 @@ func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if ok {
 		entry.cancel()
-		slog.Info("[Chat] cancelled chat via HTTP", "sessionID", req.SessionID)
+		slog.Info("[Chat] cancelled chat via HTTP", "sessionID", sanitize.LogString(req.SessionID))
 	} else {
-		slog.Info("[Chat] no active chat to cancel via HTTP", "sessionID", req.SessionID)
+		slog.Info("[Chat] no active chat to cancel via HTTP", "sessionID", sanitize.LogString(req.SessionID))
 	}
 
 	w.Header().Set("Content-Type", "application/json")
