@@ -13,6 +13,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // Progress percentage constants for cluster creation/deletion phases
@@ -99,7 +101,7 @@ func NewLocalClusterManager(broadcast func(string, interface{})) *LocalClusterMa
 func (m *LocalClusterManager) broadcastProgress(tool, name, status, message string, progress int) {
 	if m.broadcast == nil {
 		slog.Debug("[LocalCluster] no broadcast listener, progress event dropped",
-			"tool", tool, "name", name, "status", status, "progress", progress)
+			"tool", sanitize.LogString(tool), "name", sanitize.LogString(name), "status", sanitize.LogString(status), "progress", progress)
 		return
 	}
 	m.broadcast("local_cluster_progress", map[string]interface{}{
