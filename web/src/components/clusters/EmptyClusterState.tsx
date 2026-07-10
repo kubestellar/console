@@ -1,5 +1,6 @@
 import { Server, Plus, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Button } from '../ui/Button'
 
 interface EmptyClusterStateProps {
   onAddCluster: () => void
@@ -54,13 +55,15 @@ export function EmptyClusterState({ onAddCluster, agentConnected, agentDegraded,
       <p className="text-sm text-muted-foreground mb-6 max-w-md">
         {t('cluster.noClusterDesc')}
       </p>
-      <button
+      <Button
         onClick={onAddCluster}
-        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+        variant="accent"
+        size="lg"
+        icon={<Plus className="w-4 h-4" />}
+        className="bg-purple-600 hover:bg-purple-500 text-white"
       >
-        <Plus className="w-4 h-4" />
         {t('cluster.addCluster')}
-      </button>
+      </Button>
     </div>
   )
 }

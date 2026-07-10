@@ -4,6 +4,7 @@ import { X, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MissionDetailView } from "../missions/MissionDetailView";
 import type { MissionExport } from "../../lib/missions/types";
+import { Button } from "../ui/Button";
 
 /** Timeout (ms) for fetching mission install guide files from the API */
 const MISSION_FILE_FETCH_TIMEOUT_MS = 5_000;
@@ -127,12 +128,14 @@ export function AgentInstallGuide({
       ref={(el) => el?.focus()}
     >
       <div className="relative bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col w-[900px] max-h-[85vh]">
-        <button
+        <Button
           onClick={onClose}
-          className="absolute top-3 right-3 z-10 p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
+          variant="ghost"
+          size="sm"
+          icon={<X className="w-4 h-4" />}
+          className="absolute top-3 right-3 z-10"
+          aria-label="Close install guide"
+        />
         <div className="flex-1 overflow-y-auto scroll-enhanced p-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
