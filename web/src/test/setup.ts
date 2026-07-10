@@ -8,41 +8,43 @@ const isBrowserEnvironment = typeof window !== 'undefined'
 // This prevents "Cannot find module" errors in Netlify function tests that run in node environment
 if (isBrowserEnvironment) {
   // Mock react-i18next globally to prevent i18n.ts from failing when imported
-  // by vite.config.ts or other modules. Uses importOriginal to get the real
-  // initReactI18next object that i18n.ts needs.
-  vi.mock('react-i18next', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('react-i18next')>()
-    return {
-      ...actual,
-      useTranslation: () => ({
-        t: (key: string, options?: Record<string, unknown>) => {
-          // Preserve specific LaunchSequence strings used in tests
-          if (key === 'missionControl.launchSequence.missionFailed') return 'Mission failed'
-          if (key === 'missionControl.launchSequence.missionCancelled') return 'Mission cancelled'
-          // Support Deploying X projects in Y phase with pluralization
-          if (key.includes('missionControl.launchSequence.deployingProjects')) {
-            const count = typeof options?.count === 'number' ? options!.count as number : 0
-            const phaseCount = typeof options?.phaseCount === 'number' ? options!.phaseCount as number : 0
-            return `Deploying ${count} project${count === 1 ? '' : 's'} in ${phaseCount} phase`
+  // by components under test. Avoids importOriginal to prevent loading the real
+  // react-i18next module tree (and its transitive deps) in every test worker,
+  // which caused "failed to load" OOM crashes in coverage suite CI runs (#20789).
+  // The initReactI18next stub satisfies i18n.ts's `.use(initReactI18next)` call;
+  // i18n.ts already guards with `if (initReactI18next)` for safety.
+  vi.mock('react-i18next', () => ({
+    useTranslation: () => ({
+      t: (key: string, options?: Record<string, unknown>) => {
+        // Preserve specific LaunchSequence strings used in tests
+        if (key === 'missionControl.launchSequence.missionFailed') return 'Mission failed'
+        if (key === 'missionControl.launchSequence.missionCancelled') return 'Mission cancelled'
+        // Support Deploying X projects in Y phase with pluralization
+        if (key.includes('missionControl.launchSequence.deployingProjects')) {
+          const count = typeof options?.count === 'number' ? options!.count as number : 0
+          const phaseCount = typeof options?.phaseCount === 'number' ? options!.phaseCount as number : 0
+          return `Deploying ${count} project${count === 1 ? '' : 's'} in ${phaseCount} phase`
+        }
+        // Generic interpolation: replace {{key}} placeholders when options provided
+        if (options && typeof key === 'string') {
+          let s = key
+          for (const [k, v] of Object.entries(options)) {
+            s = s.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
           }
-          // Generic interpolation: replace {{key}} placeholders when options provided
-          if (options && typeof key === 'string') {
-            let s = key
-            for (const [k, v] of Object.entries(options)) {
-              s = s.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
-            }
-            return s
-          }
-          // Default: return the key as a fallback
-          return key
-        },
-        i18n: { language: 'en', changeLanguage: vi.fn() },
-      }),
-      Trans: ({ children }: { children: React.ReactNode }) => children,
-      // initReactI18next is imported from the actual module above, so tests that import
-      // i18n.ts (via vite.config.ts) don't crash
-    }
-  })
+          return s
+        }
+        // Default: return the key as a fallback
+        return key
+      },
+      i18n: { language: 'en', changeLanguage: vi.fn() },
+    }),
+    Trans: ({ children }: { children: React.ReactNode }) => children,
+    initReactI18next: { type: '3rdParty', init: () => {} },
+    I18nextProvider: ({ children }: { children: React.ReactNode }) => children,
+    withTranslation: () => (Component: unknown) => Component,
+    Translation: ({ children }: { children: (t: (k: string) => string) => React.ReactNode }) =>
+      children((k: string) => k),
+  }))
 
   // Mock lib/demoMode globally to prevent module-level initialization that accesses
   // localStorage and getStoredAuthTokenSync at import time. This ensures tests don't
