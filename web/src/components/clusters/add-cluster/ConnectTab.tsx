@@ -5,6 +5,8 @@ import { CopyButton } from './CopyButton'
 import { useConnectTabContext } from './ConnectTabContext'
 import type { ConnectStep, CloudProvider } from './types'
 import { Button } from '../../ui/Button'
+import { Input } from '../../ui/Input'
+import { TextArea } from '../../ui/TextArea'
 
 // Cloud provider IAM auth commands — two steps: authenticate, then register cluster
 const CLOUD_IAM_COMMANDS: Record<CloudProvider, { auth: string; register: string; cliName: string }> = {
@@ -102,12 +104,13 @@ export function ConnectTab() {
           {connectStep === 1 && (
             <div className="space-y-3">
               <label className="text-sm font-medium text-foreground">{t('cluster.connectServerUrl')}</label>
-              <input
+              <Input
                 type="text"
                 value={serverUrl}
                 onChange={(e) => setServerUrl(e.target.value)}
                 placeholder={t('cluster.connectServerPlaceholder')}
-                className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
+                inputSize="lg"
+                className="dark:border-white/10 focus:border-purple-500"
               />
               {connectError && (
                 <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
@@ -172,12 +175,13 @@ export function ConnectTab() {
               {authType === 'token' && (
                 <div className="space-y-1.5">
                   <label className="text-xs text-muted-foreground">{t('cluster.connectTokenLabel')}</label>
-                  <input
+                  <Input
                     type="password"
                     value={token}
                     onChange={(e) => setToken(e.target.value)}
                     placeholder={t('cluster.connectTokenPlaceholder')}
-                    className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono"
+                    inputSize="lg"
+                    className="dark:border-white/10 focus:border-purple-500 font-mono"
                   />
                 </div>
               )}
@@ -186,22 +190,24 @@ export function ConnectTab() {
                 <div className="space-y-2">
                   <div className="space-y-1.5">
                     <label className="text-xs text-muted-foreground">{t('cluster.connectCertLabel')}</label>
-                    <textarea
+                    <TextArea
                       value={certData}
                       onChange={(e) => setCertData(e.target.value)}
                       rows={3}
                       placeholder="-----BEGIN CERTIFICATE-----"
-                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono resize-none"
+                      textAreaSize="lg"
+                      className="dark:border-white/10 focus:border-purple-500 font-mono text-xs"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs text-muted-foreground">{t('cluster.connectKeyLabel')}</label>
-                    <textarea
+                    <TextArea
                       value={keyData}
                       onChange={(e) => setKeyData(e.target.value)}
                       rows={3}
                       placeholder="-----BEGIN RSA PRIVATE KEY-----"
-                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono resize-none"
+                      textAreaSize="lg"
+                      className="dark:border-white/10 focus:border-purple-500 font-mono text-xs"
                     />
                   </div>
                 </div>
@@ -276,15 +282,17 @@ export function ConnectTab() {
                     <div className="space-y-2 pl-1">
                       <div className="space-y-1.5">
                         <label className="text-xs text-muted-foreground">{t('cluster.connectCaLabel')}</label>
-                        <textarea
+                        <TextArea
                           value={caData}
                           onChange={(e) => setCaData(e.target.value)}
                           rows={3}
                           placeholder="-----BEGIN CERTIFICATE-----"
-                          className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono resize-none"
+                          textAreaSize="lg"
+                          className="dark:border-white/10 focus:border-purple-500 font-mono text-xs"
                         />
                       </div>
                       <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                        {/* eslint-disable-next-line no-restricted-syntax -- no Checkbox component exists yet */}
                         <input
                           type="checkbox"
                           checked={skipTls}
@@ -327,32 +335,35 @@ export function ConnectTab() {
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">{t('cluster.connectContextName')}</label>
-                <input
+                <Input
                   type="text"
                   value={contextName}
                   onChange={(e) => setContextName(e.target.value)}
                   placeholder="my-cluster"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
+                  inputSize="lg"
+                  className="dark:border-white/10 focus:border-purple-500"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">{t('cluster.connectClusterName')}</label>
-                <input
+                <Input
                   type="text"
                   value={clusterName}
                   onChange={(e) => setClusterName(e.target.value)}
                   placeholder="my-cluster"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
+                  inputSize="lg"
+                  className="dark:border-white/10 focus:border-purple-500"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground">{t('cluster.connectNamespace')}</label>
-                <input
+                <Input
                   type="text"
                   value={namespace}
                   onChange={(e) => setNamespace(e.target.value)}
                   placeholder="default"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
+                  inputSize="lg"
+                  className="dark:border-white/10 focus:border-purple-500"
                 />
               </div>
 
