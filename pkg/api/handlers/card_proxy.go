@@ -17,6 +17,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/ssrf"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -233,7 +234,7 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 		})
 	}
 
-	slog.Info("[CardProxy] proxied request", "clientIP", c.IP(), "host", host, "status", resp.StatusCode, "bytes", len(body))
+	slog.Info("[CardProxy] proxied request", "clientIP", sanitize.LogString(c.IP()), "host", host, "status", resp.StatusCode, "bytes", len(body))
 
 	h.sanitizeResponse(c, resp)
 
