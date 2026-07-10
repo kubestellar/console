@@ -77,7 +77,7 @@ export function UnifiedDashboard({
           }
         }
       } catch (error) {
-        console.warn('Failed to restore unified dashboard cards', error)
+        console.error('Failed to restore unified dashboard cards', error)
         nextState.error = t('errors.storageRestoreFailed')
       }
     }
@@ -95,7 +95,7 @@ export function UnifiedDashboard({
             }
           }
         } catch (error) {
-          console.warn('Failed to restore unified dashboard tab cards', error)
+          console.error('Failed to restore unified dashboard tab cards', error)
           nextState.error = t('errors.storageRestoreFailed')
         }
       }

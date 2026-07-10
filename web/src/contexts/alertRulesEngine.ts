@@ -257,7 +257,7 @@ export function createAlertRulesEngine({
       const enabledChannels = getEnabledChannels(rule)
       if (enabledChannels.length > 0) {
         localSendNotifications(newAlert, enabledChannels).catch(error => {
-          console.warn('[AlertsContext] firing notification send failed:', error)
+          console.error('[AlertsContext] firing notification send failed:', error)
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('alert-notification-error', {
               detail: { 
