@@ -39,7 +39,8 @@ on:
     - cron: "0 * * * *"
   workflow_dispatch:
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 concurrency:
   group: auth-login-smoke
   cancel-in-progress: true
