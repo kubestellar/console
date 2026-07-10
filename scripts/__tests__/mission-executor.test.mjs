@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { sanitizeArg, runBinary, validateCommand, ALLOWED_BASE_COMMANDS } from '../mission-executor.mjs'
+import { sanitizeArg, runBinary, validateCommand, parseCommand, ALLOWED_BASE_COMMANDS } from '../mission-executor.mjs'
 
 // ─── ALLOWED_BASE_COMMANDS ───────────────────────────────────────────
 
@@ -288,6 +288,85 @@ describe('validateCommand', () => {
       const result = validateCommand('xargs -exec cat')
       expect(result.safe).toBe(false)
       expect(result.reason).toContain('find/xargs -exec')
+    })
+  })
+})
+
+// ─── parseCommand ────────────────────────────────────────────────────
+
+describe('parseCommand', () => {
+  describe('basic tokenization', () => {
+    it('splits simple commands', () => {
+      expect(parseCommand('kubectl get pods')).toEqual(['kubectl', 'get', 'pods'])
+    })
+
+    it('handles single argument', () => {
+      expect(parseCommand('echo')).toEqual(['echo'])
+    })
+
+    it('handles multiple spaces', () => {
+      expect(parseCommand('kubectl   get   pods')).toEqual(['kubectl', 'get', 'pods'])
+    })
+
+    it('handles leading/trailing spaces', () => {
+      expect(parseCommand('  kubectl get pods  ')).toEqual(['kubectl', 'get', 'pods'])
+    })
+
+    it('returns empty array for empty string', () => {
+      expect(parseCommand('')).toEqual([])
+    })
+  })
+
+  describe('quoted strings', () => {
+    it('handles double-quoted arguments', () => {
+      expect(parseCommand('echo "hello world"')).toEqual(['echo', 'hello world'])
+    })
+
+    it('handles single-quoted arguments', () => {
+      expect(parseCommand("echo 'hello world'")).toEqual(['echo', 'hello world'])
+    })
+
+    it('preserves spaces inside quotes', () => {
+      expect(parseCommand('kubectl get pods -l "app=my app"')).toEqual([
+        'kubectl', 'get', 'pods', '-l', 'app=my app',
+      ])
+    })
+
+    it('handles mixed quotes', () => {
+      expect(parseCommand(`echo "it's" 'a "test"'`)).toEqual(['echo', "it's", 'a "test"'])
+    })
+
+    it('handles empty quoted strings (skipped by tokenizer)', () => {
+      // parseCommand uses `if (current)` which skips empty tokens
+      expect(parseCommand('echo "" end')).toEqual(['echo', 'end'])
+    })
+  })
+
+  describe('escaped characters', () => {
+    it('handles escaped spaces', () => {
+      expect(parseCommand('echo hello\\ world')).toEqual(['echo', 'hello world'])
+    })
+
+    it('handles escaped quotes', () => {
+      expect(parseCommand('echo \\"quoted\\"')).toEqual(['echo', '"quoted"'])
+    })
+
+    it('handles escape at end of string', () => {
+      expect(parseCommand('echo test\\')).toEqual(['echo', 'test'])
+    })
+  })
+
+  describe('complex commands', () => {
+    it('handles kubectl with JSON path', () => {
+      expect(parseCommand('kubectl get pod -o "jsonpath={.status.phase}"')).toEqual([
+        'kubectl', 'get', 'pod', '-o', 'jsonpath={.status.phase}',
+      ])
+    })
+
+    it('handles flags with equals', () => {
+      expect(parseCommand('helm install --set key=value release chart')).toEqual([
+        'helm', 'install', '--set', 'key=value', 'release', 'chart',
+      ])
     })
   })
 })
