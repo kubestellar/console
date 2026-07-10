@@ -4,6 +4,9 @@ import { CloudProviderIcon } from '../../ui/CloudProviderIcon'
 import { CopyButton } from './CopyButton'
 import { useConnectTabContext } from './ConnectTabContext'
 import type { ConnectStep, CloudProvider } from './types'
+import { Button } from '../../ui/Button'
+import { Input } from '../../ui/Input'
+import { TextArea } from '../../ui/TextArea'
 
 // Cloud provider IAM auth commands — two steps: authenticate, then register cluster
 const CLOUD_IAM_COMMANDS: Record<CloudProvider, { auth: string; register: string; cliName: string }> = {
@@ -101,12 +104,13 @@ export function ConnectTab() {
           {connectStep === 1 && (
             <div className="space-y-3">
               <label className="text-sm font-medium text-foreground">{t('cluster.connectServerUrl')}</label>
-              <input
+              <Input
                 type="text"
                 value={serverUrl}
                 onChange={(e) => setServerUrl(e.target.value)}
                 placeholder={t('cluster.connectServerPlaceholder')}
-                className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
+                inputSize="lg"
+                className="dark:border-white/10 focus:border-purple-500"
               />
               {connectError && (
                 <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
@@ -114,13 +118,13 @@ export function ConnectTab() {
                 </div>
               )}
               <div className="flex justify-end">
-                <button
+                <Button
                   onClick={() => goToConnectStep(2)}
                   disabled={!serverUrl.trim()}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border dark:border-white/10"
+                  variant="secondary"
                 >
                   {t('cluster.connectNext')}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -130,50 +134,54 @@ export function ConnectTab() {
             <div className="space-y-3">
               <label className="text-sm font-medium text-foreground">{t('cluster.connectAuthType')}</label>
               <div className="grid grid-cols-3 gap-2">
-                <button
+                <Button
                   onClick={() => setAuthType('token')}
+                  variant="ghost"
                   className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
                     authType === 'token'
                       ? 'border-purple-500 bg-purple-500/10 text-foreground'
                       : 'border-border dark:border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
                   }`}
+                  icon={<KeyRound className="w-4 h-4 shrink-0" />}
                 >
-                  <KeyRound className="w-4 h-4 shrink-0" />
                   {t('cluster.connectAuthToken')}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setAuthType('certificate')}
+                  variant="ghost"
                   className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
                     authType === 'certificate'
                       ? 'border-purple-500 bg-purple-500/10 text-foreground'
                       : 'border-border dark:border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
                   }`}
+                  icon={<Shield className="w-4 h-4 shrink-0" />}
                 >
-                  <Shield className="w-4 h-4 shrink-0" />
                   {t('cluster.connectAuthCert')}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setAuthType('cloud-iam')}
+                  variant="ghost"
                   className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
                     authType === 'cloud-iam'
                       ? 'border-purple-500 bg-purple-500/10 text-foreground'
                       : 'border-border dark:border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
                   }`}
+                  icon={<Cloud className="w-4 h-4 shrink-0" />}
                 >
-                  <Cloud className="w-4 h-4 shrink-0" />
                   {t('cluster.connectAuthIAM')}
-                </button>
+                </Button>
               </div>
 
               {authType === 'token' && (
                 <div className="space-y-1.5">
                   <label className="text-xs text-muted-foreground">{t('cluster.connectTokenLabel')}</label>
-                  <input
+                  <Input
                     type="password"
                     value={token}
                     onChange={(e) => setToken(e.target.value)}
                     placeholder={t('cluster.connectTokenPlaceholder')}
-                    className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono"
+                    inputSize="lg"
+                    className="dark:border-white/10 focus:border-purple-500 font-mono"
                   />
                 </div>
               )}
@@ -182,22 +190,24 @@ export function ConnectTab() {
                 <div className="space-y-2">
                   <div className="space-y-1.5">
                     <label className="text-xs text-muted-foreground">{t('cluster.connectCertLabel')}</label>
-                    <textarea
+                    <TextArea
                       value={certData}
                       onChange={(e) => setCertData(e.target.value)}
                       rows={3}
                       placeholder="-----BEGIN CERTIFICATE-----"
-                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono resize-none"
+                      textAreaSize="lg"
+                      className="dark:border-white/10 focus:border-purple-500 font-mono text-xs"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs text-muted-foreground">{t('cluster.connectKeyLabel')}</label>
-                    <textarea
+                    <TextArea
                       value={keyData}
                       onChange={(e) => setKeyData(e.target.value)}
                       rows={3}
                       placeholder="-----BEGIN RSA PRIVATE KEY-----"
-                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono resize-none"
+                      textAreaSize="lg"
+                      className="dark:border-white/10 focus:border-purple-500 font-mono text-xs"
                     />
                   </div>
                 </div>
@@ -210,12 +220,13 @@ export function ConnectTab() {
                   {/* Provider selector */}
                   <div className="grid grid-cols-4 gap-2">
                     {(['eks', 'gke', 'aks', 'openshift'] as CloudProvider[]).map((p) => (
-                      <button
+                      <Button
                         key={p}
                         onClick={() => setSelectedCloudProvider(p)}
                         aria-label={t('actions.selectCloudProviderAria', {
                           provider: t(`cluster.cloudIAMProvider${p.toUpperCase() === 'EKS' ? 'AWS' : p.toUpperCase() === 'GKE' ? 'GKE' : p.toUpperCase() === 'AKS' ? 'AKS' : 'OpenShift'}`),
                         })}
+                        variant="ghost"
                         className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-xs transition-colors ${
                           selectedCloudProvider === p
                             ? 'border-purple-500 bg-purple-500/10 text-foreground'
@@ -224,7 +235,7 @@ export function ConnectTab() {
                       >
                         <CloudProviderIcon provider={p} size={20} />
                         {t(`cluster.cloudIAMProvider${p.toUpperCase() === 'EKS' ? 'AWS' : p.toUpperCase() === 'GKE' ? 'GKE' : p.toUpperCase() === 'AKS' ? 'AKS' : 'OpenShift'}`)}
-                      </button>
+                      </Button>
                     ))}
                   </div>
 
@@ -257,27 +268,31 @@ export function ConnectTab() {
               {/* Advanced options (only for token/certificate) */}
               {authType !== 'cloud-iam' && (
                 <>
-                  <button
+                  <Button
                     onClick={() => setShowAdvanced(!showAdvanced)}
+                    variant="ghost"
+                    size="sm"
+                    icon={showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                     {t('cluster.connectAdvanced')}
-                  </button>
+                  </Button>
 
                   {showAdvanced && (
                     <div className="space-y-2 pl-1">
                       <div className="space-y-1.5">
                         <label className="text-xs text-muted-foreground">{t('cluster.connectCaLabel')}</label>
-                        <textarea
+                        <TextArea
                           value={caData}
                           onChange={(e) => setCaData(e.target.value)}
                           rows={3}
                           placeholder="-----BEGIN CERTIFICATE-----"
-                          className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden font-mono resize-none"
+                          textAreaSize="lg"
+                          className="dark:border-white/10 focus:border-purple-500 font-mono text-xs"
                         />
                       </div>
                       <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                        {/* eslint-disable-next-line no-restricted-syntax -- no Checkbox component exists yet */}
                         <input
                           type="checkbox"
                           checked={skipTls}
@@ -292,13 +307,13 @@ export function ConnectTab() {
               )}
 
               <div className="flex justify-between">
-                <button
+                <Button
                   onClick={() => setConnectStep(1)}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors border border-border dark:border-white/10"
+                  variant="secondary"
                 >
                   {t('cluster.connectBack')}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => goToConnectStep(3)}
                   disabled={
                     authType === 'token'
@@ -307,10 +322,10 @@ export function ConnectTab() {
                         ? (!certData.trim() || !keyData.trim())
                         : false // cloud-iam: user authenticates via CLI, no UI input required to proceed
                   }
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border dark:border-white/10"
+                  variant="secondary"
                 >
                   {t('cluster.connectNext')}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -320,32 +335,35 @@ export function ConnectTab() {
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">{t('cluster.connectContextName')}</label>
-                <input
+                <Input
                   type="text"
                   value={contextName}
                   onChange={(e) => setContextName(e.target.value)}
                   placeholder="my-cluster"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
+                  inputSize="lg"
+                  className="dark:border-white/10 focus:border-purple-500"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">{t('cluster.connectClusterName')}</label>
-                <input
+                <Input
                   type="text"
                   value={clusterName}
                   onChange={(e) => setClusterName(e.target.value)}
                   placeholder="my-cluster"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
+                  inputSize="lg"
+                  className="dark:border-white/10 focus:border-purple-500"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground">{t('cluster.connectNamespace')}</label>
-                <input
+                <Input
                   type="text"
                   value={namespace}
                   onChange={(e) => setNamespace(e.target.value)}
                   placeholder="default"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
+                  inputSize="lg"
+                  className="dark:border-white/10 focus:border-purple-500"
                 />
               </div>
 
@@ -377,42 +395,41 @@ export function ConnectTab() {
               )}
 
               <div className="flex items-center justify-between gap-2 pt-1">
-                <button
+                <Button
                   onClick={() => { resetTestResult(); setConnectStep(2) }}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors border border-border dark:border-white/10"
+                  variant="secondary"
                 >
                   {t('cluster.connectBack')}
-                </button>
+                </Button>
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     onClick={handleTestConnection}
                     disabled={connectState === 'testing' || !contextName.trim() || !clusterName.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border dark:border-white/10"
+                    variant="secondary"
+                    loading={connectState === 'testing'}
+                    icon={connectState === 'testing' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : undefined}
                   >
                     {connectState === 'testing' ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        {t('cluster.connectTesting')}
-                      </>
+                      t('cluster.connectTesting')
                     ) : (
                       t('cluster.connectTestButton')
                     )}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={handleAddCluster}
                     disabled={connectState === 'adding' || !contextName.trim() || !clusterName.trim() || testResult?.reachable === false}
                     title={testResult?.reachable === false ? t('cluster.connectAddDisabledAfterTestFail') : undefined}
+                    variant="primary"
+                    loading={connectState === 'adding'}
+                    icon={connectState === 'adding' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : undefined}
                     className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {connectState === 'adding' ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        {t('cluster.connectAdding')}
-                      </>
+                      t('cluster.connectAdding')
                     ) : (
                       t('cluster.connectAddButton')
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
