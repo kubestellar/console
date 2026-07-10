@@ -25,7 +25,8 @@ import { useModalState } from "../../lib/modals";
 import { safeGetItem, safeSetItem } from "../../lib/utils/localStorage";
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl';
 import { AgentApprovalDialog, hasApprovedAgents } from "./AgentApprovalDialog";
-import { AgentInstallGuide, fetchMissionFile } from "./AgentInstallGuide";
+import { AgentInstallGuide } from "./AgentInstallGuide";
+import { fetchMissionFile } from "./AgentInstallGuideData";
 import type { MissionExport, MissionStep } from '../../lib/missions/types';
 import { ClusterSelectionDialog } from "../missions/ClusterSelectionDialog";
 import {
