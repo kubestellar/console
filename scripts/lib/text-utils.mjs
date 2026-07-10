@@ -129,7 +129,7 @@ export function extractFromNumberedTemplate(text) {
     .map(p => p.trim())
     .filter(p => {
       if (p.length < 20) return false
-      if (/^#\d+\s*$/.test(p) || /^https:\/\/github\.com/.test(p)) return false
+      if (/^#\d+\s*$/.test(p) || /^https:\/\/github\.com\//.test(p)) return false
       if (/^(yes|no|none|n\/a)\.?\s*$/i.test(p)) return false
       if (p.length < 80 && /^(not that|i think|i believe|possibly|maybe|probably|sure|thanks|thank you)/i.test(p)) return false
       if (/^#\d+[\s\n]*(?:#\d+[\s\n]*)*$/.test(p)) return false
