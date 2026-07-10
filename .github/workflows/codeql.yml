@@ -1,32 +1,50 @@
-name: CodeQL Analysis
+name: CodeQL Security Analysis
 
 on:
-  push:
-    branches: ["master"]
-  pull_request:
-    branches: ["master"]
   schedule:
-    - cron: '0 4 * * 1' # Weekly Monday 04:00 UTC
-  workflow_dispatch: # Allow manual trigger
+    # Run nightly at 5:30 AM UTC
+    - cron: '30 5 * * *'
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
-  analyze:
-    name: Analyze (javascript-typescript)
-    runs-on: ubuntu-latest
+  analyze-javascript:
+    name: Analyze JavaScript/TypeScript
     permissions:
-      contents: read
       security-events: write
+      contents: read
+      actions: read
+      packages: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
         with:
           languages: javascript-typescript
+          queries: security-extended
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        with:
+          category: "/language:javascript-typescript"
