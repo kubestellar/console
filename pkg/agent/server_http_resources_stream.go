@@ -13,6 +13,7 @@ import (
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 const resourceStreamPerClusterTimeout = 15 * time.Second
@@ -122,7 +123,7 @@ func handleClusterResourceStreamSSE[T any](s *Server, w http.ResponseWriter, r *
 
 			if err != nil {
 				retryIn := s.recordClusterResourceFailure(resourceName, clusterName)
-				slog.Warn("[SSE] cluster resource fetch failed", "cluster", clusterName, "resource", resourceName, "error", err, "retryIn", retryIn)
+				slog.Warn("[SSE] cluster resource fetch failed", "cluster", sanitize.LogString(clusterName), "resource", resourceName, "error", err, "retryIn", retryIn)
 				payload := map[string]string{"cluster": clusterName, "error": sanitizeAgentError("list resources", err)}
 				data, _ := json.Marshal(payload)
 				fmt.Fprintf(bw, "event: cluster_error\ndata: %s\n\n", data)
@@ -136,7 +137,7 @@ func handleClusterResourceStreamSSE[T any](s *Server, w http.ResponseWriter, r *
 			payload := map[string]interface{}{"cluster": clusterName, itemsKey: items}
 			data, marshalErr := json.Marshal(payload)
 			if marshalErr != nil {
-				slog.Error("[SSE] failed to marshal cluster resource payload", "cluster", clusterName, "resource", itemsKey, "error", marshalErr)
+				slog.Error("[SSE] failed to marshal cluster resource payload", "cluster", sanitize.LogString(clusterName), "resource", itemsKey, "error", marshalErr)
 				return
 			}
 			fmt.Fprintf(bw, "event: cluster_data\ndata: %s\n\n", data)

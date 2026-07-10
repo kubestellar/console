@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -147,14 +148,14 @@ func (s *Server) queryCiliumCluster(ctx context.Context, contextName string) cil
 
 	client, err := s.k8sClient.GetClient(contextName)
 	if err != nil {
-		slog.Debug("cilium: cannot get client", "cluster", contextName, "error", err)
+		slog.Debug("cilium: cannot get client", "cluster", sanitize.LogString(contextName), "error", err)
 		return result
 	}
 
 	// 1. Query Cilium DaemonSet — if missing, Cilium is not installed on this cluster.
 	ds, err := client.AppsV1().DaemonSets(ciliumNamespace).Get(ctx, ciliumDaemonSetName, metav1.GetOptions{})
 	if err != nil {
-		slog.Debug("cilium: DaemonSet not found", "cluster", contextName, "error", err)
+		slog.Debug("cilium: DaemonSet not found", "cluster", sanitize.LogString(contextName), "error", err)
 		return result
 	}
 	result.hasCilium = true
@@ -164,7 +165,7 @@ func (s *Server) queryCiliumCluster(ctx context.Context, contextName string) cil
 		LabelSelector: ciliumLabelK8sApp,
 	})
 	if err != nil {
-		slog.Debug("cilium: failed to list pods", "cluster", contextName, "error", err)
+		slog.Debug("cilium: failed to list pods", "cluster", sanitize.LogString(contextName), "error", err)
 	} else {
 		allReady := true
 		someNotReady := false
@@ -197,7 +198,7 @@ func (s *Server) queryCiliumCluster(ctx context.Context, contextName string) cil
 	// 3. Query NetworkPolicy count across all namespaces.
 	netpols, err := client.NetworkingV1().NetworkPolicies("").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		slog.Debug("cilium: failed to list network policies", "cluster", contextName, "error", err)
+		slog.Debug("cilium: failed to list network policies", "cluster", sanitize.LogString(contextName), "error", err)
 	} else {
 		result.networkPolicies = len(netpols.Items)
 	}
@@ -212,7 +213,7 @@ func (s *Server) queryCiliumCluster(ctx context.Context, contextName string) cil
 		}
 		endpointList, listErr := dynClient.Resource(gvr).Namespace("").List(ctx, metav1.ListOptions{})
 		if listErr != nil {
-			slog.Debug("cilium: CiliumEndpoint CRD not available", "cluster", contextName, "error", listErr)
+			slog.Debug("cilium: CiliumEndpoint CRD not available", "cluster", sanitize.LogString(contextName), "error", listErr)
 		} else {
 			result.endpoints = len(endpointList.Items)
 		}

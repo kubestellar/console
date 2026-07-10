@@ -84,7 +84,7 @@ func (h *ManifestHandler) checkBootstrapAuth(c *fiber.Ctx) error {
 	if h.bootstrapToken != "" {
 		provided := c.Query("token")
 		if subtle.ConstantTimeCompare([]byte(h.bootstrapToken), []byte(provided)) != 1 {
-			slog.Warn("[Manifest] bootstrap access denied — invalid or missing token", "ip", c.IP())
+			slog.Warn("[Manifest] bootstrap access denied — invalid or missing token", "ip", sanitize.LogString(c.IP()))
 			return fiber.NewError(fiber.StatusForbidden, "bootstrap token required")
 		}
 		return nil
@@ -92,7 +92,7 @@ func (h *ManifestHandler) checkBootstrapAuth(c *fiber.Ctx) error {
 
 	// No explicit token configured — restrict to loopback/private IPs.
 	if !isBootstrapAllowedIP(c.IP()) {
-		slog.Warn("[Manifest] bootstrap access denied — non-private IP without token", "ip", c.IP())
+		slog.Warn("[Manifest] bootstrap access denied — non-private IP without token", "ip", sanitize.LogString(c.IP()))
 		return fiber.NewError(fiber.StatusForbidden,
 			"manifest bootstrap is restricted; set CONSOLE_BOOTSTRAP_TOKEN or access from localhost")
 	}

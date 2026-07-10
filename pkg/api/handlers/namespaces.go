@@ -12,6 +12,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -80,7 +81,7 @@ func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 
 	namespaces, err := h.k8sClient.ListNamespacesWithDetails(ctx, cluster)
 	if err != nil {
-		slog.Warn("[Namespaces] failed to list namespaces", "cluster", cluster, "error", err)
+		slog.Warn("[Namespaces] failed to list namespaces", "cluster", sanitize.LogString(cluster), "error", err)
 		return namespaceListError(err)
 	}
 

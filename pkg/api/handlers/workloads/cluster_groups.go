@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // ClusterFilter is a single condition on cluster metadata
@@ -61,7 +62,7 @@ func (h *WorkloadHandlers) LoadPersistedClusterGroups() {
 	for name, data := range persisted {
 		var g ClusterGroup
 		if err := json.Unmarshal(data, &g); err != nil {
-			slog.Error("[Workloads] failed to unmarshal persisted cluster group", "name", name, "error", err)
+			slog.Error("[Workloads] failed to unmarshal persisted cluster group", "name", sanitize.LogString(name), "error", err)
 			continue
 		}
 		clusterGroups[name] = g
@@ -108,11 +109,11 @@ func (h *WorkloadHandlers) persistClusterGroup(ctx context.Context, name string,
 	}
 	data, err := json.Marshal(g)
 	if err != nil {
-		slog.Error("[Workloads] failed to marshal cluster group for persistence", "name", name, "error", err)
+		slog.Error("[Workloads] failed to marshal cluster group for persistence", "name", sanitize.LogString(name), "error", err)
 		return
 	}
 	if err := h.store.SaveClusterGroup(ctx, name, data); err != nil {
-		slog.Error("[Workloads] failed to persist cluster group", "name", name, "error", err)
+		slog.Error("[Workloads] failed to persist cluster group", "name", sanitize.LogString(name), "error", err)
 	}
 }
 
@@ -122,7 +123,7 @@ func (h *WorkloadHandlers) deletePersistedClusterGroup(ctx context.Context, name
 		return
 	}
 	if err := h.store.DeleteClusterGroup(ctx, name); err != nil {
-		slog.Error("[Workloads] failed to delete persisted cluster group", "name", name, "error", err)
+		slog.Error("[Workloads] failed to delete persisted cluster group", "name", sanitize.LogString(name), "error", err)
 	}
 }
 
