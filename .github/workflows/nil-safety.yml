@@ -22,7 +22,7 @@ on:
         type: boolean
 
 env:
-  GO_VERSION: "1.26.4"
+  GO_VERSION: "1.26.5"
 
 permissions: read-all  # default read; writes scoped to job below
 
