@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -121,7 +122,7 @@ func (s *Server) gpuHealthCronJobInstall(w http.ResponseWriter, r *http.Request)
 	defer cancel()
 
 	if err := s.k8sClient.InstallGPUHealthCronJob(ctx, body.Cluster, body.Namespace, body.Schedule, body.Tier); err != nil {
-		slog.Warn("[agent] GPU health cronjob install failed", "cluster", body.Cluster, "error", err)
+		slog.Warn("[agent] GPU health cronjob install failed", "cluster", sanitize.LogString(body.Cluster), "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("install GPU health CronJob", err), "source": "agent"})
 		return
@@ -155,7 +156,7 @@ func (s *Server) gpuHealthCronJobUninstall(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 
 	if err := s.k8sClient.UninstallGPUHealthCronJob(ctx, body.Cluster, body.Namespace); err != nil {
-		slog.Warn("[agent] GPU health cronjob uninstall failed", "cluster", body.Cluster, "error", err)
+		slog.Warn("[agent] GPU health cronjob uninstall failed", "cluster", sanitize.LogString(body.Cluster), "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("remove GPU health CronJob", err), "source": "agent"})
 		return

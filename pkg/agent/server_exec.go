@@ -62,6 +62,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -328,15 +329,10 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		cmdBinary = init.Command[0]
 	}
 	slog.Info("[AgentExec] exec session",
-		"cluster", init.Cluster,
-		"namespace", init.Namespace,
-		"pod", init.Pod,
-		"container", init.Container,
-		"command_binary", cmdBinary,
-		"command_argc", len(init.Command),
+		"cluster", sanitize.LogString(init.Cluster), "namespace", sanitize.LogString(init.Namespace), "pod", sanitize.LogString(init.Pod), "container", sanitize.LogString(init.Container), "command_binary", sanitize.LogString(cmdBinary), "command_argc", len(init.Command),
 		"tty", init.TTY,
 	)
-	slog.Debug("[AgentExec] full exec command", "command", init.Command)
+	slog.Debug("[AgentExec] full exec command", "command", sanitize.LogStrings(init.Command))
 
 	// Resolve clientset + REST config for the target cluster. These come
 	// from the user's kubeconfig via the shared *k8s.MultiClusterClient; the
@@ -345,13 +341,13 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	// applies to the backend handler does NOT apply here.
 	clientset, err := s.k8sClient.GetClient(init.Cluster)
 	if err != nil {
-		slog.Error("[Exec] failed to get client", "cluster", init.Cluster, "error", err)
+		slog.Error("[Exec] failed to get client", "cluster", sanitize.LogString(init.Cluster), "error", err)
 		agentExecWriteError(conn, "Failed to get cluster client")
 		return
 	}
 	restConfig, err := s.k8sClient.GetRestConfig(init.Cluster)
 	if err != nil {
-		slog.Error("[Exec] failed to get REST config", "cluster", init.Cluster, "error", err)
+		slog.Error("[Exec] failed to get REST config", "cluster", sanitize.LogString(init.Cluster), "error", err)
 		agentExecWriteError(conn, "Failed to get cluster configuration")
 		return
 	}

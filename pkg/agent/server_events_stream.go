@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -22,9 +23,9 @@ const (
 	sseWatchTimeout      = 10 * time.Minute // server-side watch timeout before re-establishing
 
 	// Event forwarding concurrency limits
-	maxConcurrentForwards    = 32               // max parallel event forwards to Stellar backend
-	forwardTimeout           = 10 * time.Second // HTTP request timeout for event forwarding
-	semaphoreAcquireTimeout  = 1 * time.Second  // max wait time to acquire semaphore before dropping event
+	maxConcurrentForwards   = 32               // max parallel event forwards to Stellar backend
+	forwardTimeout          = 10 * time.Second // HTTP request timeout for event forwarding
+	semaphoreAcquireTimeout = 1 * time.Second  // max wait time to acquire semaphore before dropping event
 )
 
 // sseEvent is the JSON envelope sent over the SSE stream for each Kubernetes event.
@@ -80,7 +81,7 @@ func (s *Server) handleEventsStreamSSE(w http.ResponseWriter, r *http.Request) {
 
 	client, err := s.k8sClient.GetClient(cluster)
 	if err != nil {
-		slog.Error("failed to get event stream client", "cluster", cluster, "error", err)
+		slog.Error("failed to get event stream client", "cluster", sanitize.LogString(cluster), "error", err)
 		sseWriteError(w, flusher, sanitizeAgentError("get cluster client", err))
 		return
 	}
@@ -91,7 +92,7 @@ func (s *Server) handleEventsStreamSSE(w http.ResponseWriter, r *http.Request) {
 		TimeoutSeconds: ptrInt64(int64(sseWatchTimeout.Seconds())),
 	})
 	if err != nil {
-		slog.Warn("failed to start event watch", "cluster", cluster, "error", err)
+		slog.Warn("failed to start event watch", "cluster", sanitize.LogString(cluster), "error", err)
 		sseWriteError(w, flusher, sanitizeAgentError("watch events", err))
 		return
 	}
@@ -121,7 +122,7 @@ func (s *Server) handleEventsStreamSSE(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if evt.Type == watch.Error {
-				slog.Warn("watch error event", "cluster", cluster, "object", evt.Object)
+				slog.Warn("watch error event", "cluster", sanitize.LogString(cluster), "object", evt.Object)
 				sseWriteError(w, flusher, "watch error")
 				return
 			}
@@ -219,9 +220,7 @@ func (s *Server) forwardEventToStellar(event sseEventSummary) {
 	case <-ctx.Done():
 		// Timeout waiting for semaphore — drop event to prevent backlog
 		slog.Warn("stellar: dropped event (semaphore timeout)",
-			"cluster", event.Cluster,
-			"namespace", event.Namespace,
-			"reason", event.Reason)
+			"cluster", sanitize.LogString(event.Cluster), "namespace", sanitize.LogString(event.Namespace), "reason", sanitize.LogString(event.Reason))
 		return
 	}
 

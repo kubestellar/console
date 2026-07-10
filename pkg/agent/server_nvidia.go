@@ -116,7 +116,7 @@ func (s *Server) handleNvidiaOperatorsHTTP(w http.ResponseWriter, r *http.Reques
 
 				client, err := s.k8sClient.GetClient(cl.Name)
 				if err != nil {
-					slog.Warn("[NvidiaOperators] failed to get client", "cluster", cl.Name, "error", err)
+					slog.Warn("[NvidiaOperators] failed to get client", "cluster", sanitize.LogString(cl.Name), "error", err)
 					return
 				}
 				status := detectNvidiaOperators(clusterCtx, cl.Name, client)

@@ -1,10 +1,11 @@
 package agent
 
 import (
-	"github.com/kubestellar/console/pkg/agent/kube"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"log/slog"
 	"net/http"
 
@@ -201,7 +202,7 @@ func (s *Server) createRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
 	// so we return a specific 400 instead of passing empty/malformed values
 	// down to the apiserver and getting back an opaque 500.
 	if err := kube.ValidateKubeContext(req.Cluster); err != nil {
-		slog.Error("invalid cluster for role binding request", "cluster", req.Cluster, "error", err)
+		slog.Error("invalid cluster for role binding request", "cluster", sanitize.LogString(req.Cluster), "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
@@ -255,7 +256,7 @@ func (s *Server) createRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	if err := s.k8sClient.CreateRoleBinding(ctx, k8sReq); err != nil {
-		slog.Warn("error creating role binding", "cluster", req.Cluster, "namespace", req.Namespace, "name", bindingName, "error", err)
+		slog.Warn("error creating role binding", "cluster", sanitize.LogString(req.Cluster), "namespace", sanitize.LogString(req.Namespace), "name", sanitize.LogString(bindingName), "error", err)
 		status, msg := mapK8sErrorToHTTP(err)
 		w.WriteHeader(status)
 		writeJSON(w, map[string]interface{}{"success": false, "error": msg, "source": "agent"})
@@ -288,7 +289,7 @@ func (s *Server) deleteRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	if err := s.k8sClient.DeleteRoleBinding(ctx, cluster, namespace, name, isCluster); err != nil {
-		slog.Warn("error deleting role binding", "cluster", cluster, "namespace", namespace, "name", name, "isCluster", isCluster, "error", err)
+		slog.Warn("error deleting role binding", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "isCluster", isCluster, "error", err)
 		status, msg := mapK8sErrorToHTTP(err)
 		w.WriteHeader(status)
 		writeJSON(w, map[string]interface{}{"success": false, "error": msg, "source": "agent"})
@@ -402,7 +403,7 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	kind, bundle, err := s.k8sClient.ResolveWorkloadDependencies(ctx, cluster, namespace, name)
 	if err != nil {
-		slog.Warn("error resolving dependencies", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
+		slog.Warn("error resolving dependencies", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "cluster", sanitize.LogString(cluster), "error", err)
 		writeJSON(w, map[string]interface{}{
 			"workload":     name,
 			"kind":         "Deployment",

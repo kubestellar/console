@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -35,7 +36,7 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 		}
 	}
 
-	slog.Warn("SECURITY: rejected WebSocket connection from unauthorized origin", "origin", origin)
+	slog.Warn("SECURITY: rejected WebSocket connection from unauthorized origin", "origin", sanitize.LogString(origin))
 	return false
 }
 

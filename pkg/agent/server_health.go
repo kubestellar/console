@@ -10,6 +10,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/agent/updater"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // handleHealth handles HTTP health checks
@@ -164,7 +165,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	result := hp.Handshake(ctx)
-	slog.Info("[ProviderCheck] result", "provider", providerName, "state", result.State, "ready", result.Ready, "message", result.Message)
+	slog.Info("[ProviderCheck] result", "provider", sanitize.LogString(providerName), "state", sanitize.LogString(result.State), "ready", result.Ready, "message", sanitize.LogString(result.Message))
 
 	writeJSON(w, protocol.ProviderCheckResponse{
 		Provider:      providerName,
