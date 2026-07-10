@@ -26,9 +26,11 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm ci || npm install
+        working-directory: scripts
+        run: npm ci
 
       - name: Run fuzz tests
+        working-directory: scripts
         run: |
           # Run existing tests with extended iterations for fuzzing coverage
           npm test || echo "Tests completed with fuzzing iterations"
@@ -38,62 +40,60 @@ jobs:
 
       - name: Property-based testing for JSON schema
         run: |
-          cat > fuzz-schema.mjs << 'EOF'
-          import { readFileSync, readdirSync } from 'fs';
-          import { join } from 'path';
+          node --input-type=module <<'EOF'
+          import { readFileSync, readdirSync } from 'node:fs'
+          import { join } from 'node:path'
 
-          // Fuzz test: validate all JSON files parse correctly
-          const fixesDirs = ['fixes/cncf-generated', 'fixes/cncf-install', 'fixes/llm-d', 'fixes/platform-install'];
-          let errors = 0;
+          const fixesDirs = ['fixes/cncf-generated', 'fixes/cncf-install', 'fixes/llm-d', 'fixes/platform-install']
+          let errors = 0
 
-          fixesDirs.forEach(dir => {
+          for (const dir of fixesDirs) {
             try {
-              const files = readdirSync(dir, { recursive: true }).filter(f => f.endsWith('.json'));
-              files.forEach(file => {
+              const files = readdirSync(dir, { recursive: true }).filter(file => file.endsWith('.json'))
+              for (const file of files) {
                 try {
-                  JSON.parse(readFileSync(join(dir, file), 'utf-8'));
-                } catch (e) {
-                  console.error(`Parse error in ${dir}/${file}:`, e.message);
-                  errors++;
+                  JSON.parse(readFileSync(join(dir, file), 'utf-8'))
+                } catch (error) {
+                  console.error(`Parse error in ${dir}/${file}:`, error.message)
+                  errors += 1
                 }
-              });
-            } catch (e) {
-              // Directory might not exist
+              }
+            } catch {
+              // Directory might not exist in smaller checkouts.
             }
-          });
+          }
 
           if (errors > 0) {
-            console.error(`\nFuzzing found ${errors} JSON parsing errors`);
-            process.exit(1);
+            console.error(`\nFuzzing found ${errors} JSON parsing errors`)
+            process.exit(1)
           }
-          console.log('✓ All JSON files parsed successfully');
-          EOF
 
-          node fuzz-schema.mjs
+          console.log('✓ All JSON files parsed successfully')
+          EOF
 
       - name: Fuzz mission scanner
         run: |
-          # Test scanner with malformed inputs
-          cat > fuzz-scanner.mjs << 'EOF'
+          node --input-type=module <<'EOF'
+          import { scanMissionFile } from './scripts/scanner.mjs'
+
           const malformedInputs = [
-            '{"version":"kc-mission-v1"}', // Missing required fields
-            '{"name":null}', // Null values
-            '{"steps":[]}', // Empty arrays
-            '{"metadata":{"tags":["'.repeat(1000) + '"]}}', // Deep nesting
-          ];
+            '{"version":"kc-mission-v1"}',
+            '{"name":null}',
+            '{"steps":[]}',
+            '{"metadata":{"tags":["'.repeat(1000) + '"]}}',
+          ]
 
-          console.log('Fuzzing scanner with malformed inputs...');
-          let handled = 0;
-          malformedInputs.forEach((input, i) => {
-            try {
-              JSON.parse(input);
-              handled++;
-            } catch (e) {
-              // Expected for malformed JSON
-              handled++;
+          console.log('Fuzzing scanner with malformed inputs...')
+          let handled = 0
+
+          for (const input of malformedInputs) {
+            const result = scanMissionFile(input)
+            if (result.error || (result.schema && !result.schema.valid)) {
+              handled += 1
+              continue
             }
-          });
-          console.log(`✓ Handled ${handled}/${malformedInputs.length} malformed inputs gracefully`);
-          EOF
+            handled += 1
+          }
 
-          node fuzz-scanner.mjs
+          console.log(`✓ Handled ${handled}/${malformedInputs.length} malformed inputs gracefully`)
+          EOF

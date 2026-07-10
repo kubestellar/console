@@ -44,14 +44,14 @@ function getToken() {
 // NOTE: `env` removed — `env <binary>` is a known allowlist escape (e.g.
 //   `env bash -c 'evil'` runs bash even though bash is not in this set).
 //   Environment variables should be set via spawnSync's `env:` option instead.
-// NOTE: `xargs` and `find` are retained but validated against shell-interpreter
-//   arguments in validateCommand() below.
+// NOTE: interpreter-capable tools such as awk/sed/find/xargs are excluded
+//   because they can reintroduce arbitrary command execution via their own DSLs.
 const ALLOWED_BASE_COMMANDS = new Set([
   'kubectl', 'helm', 'curl', 'cat', 'echo', 'grep',
-  'awk', 'sed', 'jq', 'yq', 'kustomize', 'istioctl', 'date', 'ls',
+  'jq', 'yq', 'kustomize', 'istioctl', 'date', 'ls',
   'sleep', 'timeout', 'base64', 'tr', 'cut', 'wc', 'head', 'tail',
   'printf', 'test', 'true', 'false', 'mkdir', 'rm', 'cp', 'mv',
-  'sort', 'uniq', 'xargs', 'find', 'which',
+  'sort', 'uniq', 'which',
 ])
 
 /**
@@ -139,6 +139,67 @@ function parseCommand(cmd) {
   return args
 }
 
+function sanitizeArg(arg) {
+  if (/[\0\r\n]/.test(arg)) {
+    throw new Error('Arguments may not contain control characters')
+  }
+  if (/[$`|><&;]/.test(arg) || arg.includes('$(')) {
+    throw new Error(`Unsafe argument rejected: ${arg}`)
+  }
+  return `${arg}`
+}
+
+function runBinary(binary, cmdArgs, { timeoutMs = STEP_TIMEOUT_MS, input } = {}) {
+  if (!ALLOWED_BASE_COMMANDS.has(binary)) {
+    return {
+      success: false,
+      output: `[BLOCKED] Disallowed command: ${binary}`,
+      exitCode: 1,
+      error: `Security: Disallowed command: ${binary}`,
+    }
+  }
+
+  try {
+    const safeArgs = cmdArgs.map(sanitizeArg)
+    const result = spawnSync(binary, safeArgs, {
+      encoding: 'utf-8',
+      timeout: timeoutMs,
+      shell: false,
+      env: { ...process.env, TERM: 'dumb' },
+      input,
+    })
+
+    if (result.error) {
+      return {
+        success: false,
+        output: result.error.message,
+        exitCode: 1,
+        error: result.error.message,
+      }
+    }
+
+    const output = (result.stdout || '') + (result.stderr || '')
+
+    if (result.status === 0) {
+      return { success: true, output: output.trim(), exitCode: 0 }
+    }
+
+    return {
+      success: false,
+      output: output.trim(),
+      exitCode: result.status || 1,
+      error: `Command exited with code ${result.status}`,
+    }
+  } catch (err) {
+    return {
+      success: false,
+      output: err.message,
+      exitCode: 1,
+      error: err.message,
+    }
+  }
+}
+
 function execCommand(cmd, timeoutMs = STEP_TIMEOUT_MS) {
   const check = validateCommand(cmd)
   if (!check.safe) {
@@ -181,34 +242,7 @@ function execCommand(cmd, timeoutMs = STEP_TIMEOUT_MS) {
       }
     }
 
-    const result = spawnSync(safeBinary, cmdArgs, {
-      encoding: 'utf-8',
-      timeout: timeoutMs,
-      shell: false,
-      env: { ...process.env, TERM: 'dumb' },
-    })
-    
-    if (result.error) {
-      return {
-        success: false,
-        output: result.error.message,
-        exitCode: 1,
-        error: result.error.message,
-      }
-    }
-    
-    const output = (result.stdout || '') + (result.stderr || '')
-    
-    if (result.status === 0) {
-      return { success: true, output: output.trim(), exitCode: 0 }
-    } else {
-      return {
-        success: false,
-        output: output.trim(),
-        exitCode: result.status || 1,
-        error: `Command exited with code ${result.status}`,
-      }
-    }
+    return runBinary(safeBinary, cmdArgs, { timeoutMs })
   } catch (err) {
     return {
       success: false,
@@ -453,13 +487,26 @@ async function executeMission(missionPath) {
 
   // Create isolated namespace
   if (!DRY_RUN) {
-    execCommand(`kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply -f -`)
+    const namespaceManifest = runBinary('kubectl', ['create', 'namespace', namespace, '--dry-run=client', '-o', 'yaml'])
+    if (namespaceManifest.success) {
+      runBinary('kubectl', ['apply', '-f', '-'], { input: namespaceManifest.output })
+    }
+  }
+
+  const kubectlVersion = runBinary('kubectl', ['version', '--client', '-o', 'json'])
+  let kubernetesVersion = 'unknown'
+  if (kubectlVersion.success) {
+    try {
+      kubernetesVersion = JSON.parse(kubectlVersion.output).clientVersion?.gitVersion || 'unknown'
+    } catch {
+      kubernetesVersion = 'unknown'
+    }
   }
 
   const missionContext = {
     namespace,
     cluster_type: 'kind',
-    kubernetes_version: execCommand('kubectl version --client -o json 2>/dev/null | grep gitVersion || echo "unknown"').output,
+    kubernetes_version: kubernetesVersion,
     available_tools: ['kubectl', 'helm', 'curl'],
     note: 'This is a Kind cluster — no LoadBalancer, no cloud storage. Use NodePort or port-forward.',
   }
@@ -495,8 +542,10 @@ async function executeMission(missionPath) {
   // Final verification: ask LLM to confirm overall status
   console.log(`\n  🔍 Final verification...`)
   if (!DRY_RUN) {
-    const podsResult = execCommand(`kubectl get pods -n ${namespace} --no-headers 2>/dev/null || echo "no pods"`)
-    const svcsResult = execCommand(`kubectl get svc -n ${namespace} --no-headers 2>/dev/null || echo "no services"`)
+    const podsExec = runBinary('kubectl', ['get', 'pods', '-n', namespace, '--no-headers'])
+    const svcsExec = runBinary('kubectl', ['get', 'svc', '-n', namespace, '--no-headers'])
+    const podsResult = podsExec.success ? podsExec : { ...podsExec, output: 'no pods' }
+    const svcsResult = svcsExec.success ? svcsExec : { ...svcsExec, output: 'no services' }
 
     conversationHistory.push({
       role: 'user',
@@ -528,7 +577,7 @@ async function executeMission(missionPath) {
   // Cleanup
   console.log(`  🧹 Cleaning up namespace ${namespace}...`)
   if (!DRY_RUN) {
-    execCommand(`kubectl delete namespace ${namespace} --wait=false 2>/dev/null || true`)
+    runBinary('kubectl', ['delete', 'namespace', namespace, '--wait=false'])
   }
 
   report.duration_ms = Date.now() - startTime
@@ -561,15 +610,15 @@ async function main() {
 
   // Verify cluster connectivity
   console.log('🔌 Checking cluster connectivity...')
-  const clusterCheck = execCommand('kubectl cluster-info --request-timeout=10s 2>&1 | head -3')
+  const clusterCheck = runBinary('kubectl', ['cluster-info', '--request-timeout=10s'])
   if (!clusterCheck.success) {
     console.error('❌ Cannot connect to cluster:', clusterCheck.output)
     process.exit(1)
   }
-  console.log(`✅ Connected: ${clusterCheck.output.split('\n')[0]}`)
+  console.log(`✅ Connected: ${(clusterCheck.output || '').split('\n').slice(0, 3)[0]}`)
 
   // Verify helm is available
-  const helmCheck = execCommand('helm version --short 2>/dev/null')
+  const helmCheck = runBinary('helm', ['version', '--short'])
   console.log(`✅ Helm: ${helmCheck.success ? helmCheck.output : 'not available'}`)
 
   const results = []
