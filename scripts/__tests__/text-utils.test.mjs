@@ -158,6 +158,27 @@ describe('extractFromNumberedTemplate', () => {
     expect(extractFromNumberedTemplate(null)).toBe('')
     expect(extractFromNumberedTemplate('')).toBe('')
   })
+
+  it('filters out legitimate GitHub issue references', () => {
+    const input = '## 1. Related issues\n#42\n\n## 2. Description\nThis fixes the caching layer for large clusters with 100+ namespaces'
+    const result = extractFromNumberedTemplate(input)
+    expect(result).not.toContain('#42')
+    expect(result).toContain('caching layer')
+  })
+
+  it('filters out legitimate GitHub URLs (regression for CWE-020 CodeQL #145)', () => {
+    const input = '## 1. Related issues\nhttps://github.com/kubestellar/console/issues/123\n\n## 2. Description\nThis addresses the timeout bug in namespace reconciliation logic'
+    const result = extractFromNumberedTemplate(input)
+    expect(result).not.toContain('https://github.com/kubestellar')
+    expect(result).toContain('timeout bug')
+  })
+
+  it('does NOT filter spoofed hostnames like github.com.attacker.com (CWE-020 fix)', () => {
+    const input = '## 1. Context\nhttps://github.com.attacker.com/payload/evil is a reference to the vulnerability\n\n## 2. Fix\nUpdated the regex to require a trailing slash after github.com to prevent hostname confusion'
+    const result = extractFromNumberedTemplate(input)
+    // The spoofed URL should NOT be filtered out — it's not a real GitHub URL
+    expect(result).toContain('github.com.attacker.com')
+  })
 })
 
 describe('extractFromBoldTemplate', () => {
@@ -292,5 +313,90 @@ describe('redactCredentials', () => {
     expect(result).not.toContain('realpass123')
     expect(result).not.toContain('real-token-456')
     expect(result).not.toContain('real-key-789')
+  })
+})
+
+// ─── stripPRTemplate ──────────────────────────────────────────────────
+
+describe('stripPRTemplate', () => {
+  it('handles null/empty', () => {
+    expect(stripPRTemplate(null)).toBe('')
+    expect(stripPRTemplate('')).toBe('')
+  })
+
+  it('strips HTML comments', () => {
+    const input = '<!-- This is a comment -->\nActual description of the change'
+    const result = stripPRTemplate(input)
+    expect(result).not.toContain('<!--')
+    expect(result).toContain('Actual description')
+  })
+
+  it('strips nested HTML comments', () => {
+    const input = '<!-- outer <!-- inner --> still comment -->\nReal content here'
+    const result = stripPRTemplate(input)
+    expect(result).toContain('Real content')
+  })
+
+  it('strips checklist items', () => {
+    const input = 'Description\n- [x] Tests added\n- [ ] Docs updated\n\nThe real fix'
+    const result = stripPRTemplate(input)
+    expect(result).not.toContain('[x]')
+    expect(result).not.toContain('[ ]')
+  })
+
+  it('strips "Fixes/Closes" lines with issue numbers', () => {
+    const input = 'Fixes #123\nCloses #456\n\nThis PR adds retry logic for network timeouts'
+    const result = stripPRTemplate(input)
+    expect(result).not.toContain('Fixes #123')
+    expect(result).not.toContain('Closes #456')
+    expect(result).toContain('retry logic')
+  })
+
+  it('strips "Fixes" lines with full GitHub URLs', () => {
+    const input = 'Fixes https://github.com/kubestellar/console/issues/789\n\nAdds validation for namespace names'
+    const result = stripPRTemplate(input)
+    expect(result).not.toContain('github.com/kubestellar')
+    expect(result).toContain('validation for namespace')
+  })
+
+  it('strips GitHub asset URLs', () => {
+    const input = 'See screenshot: https://github.com/org/repo/assets/12345/image.png\n\nThe component renders correctly now'
+    const result = stripPRTemplate(input)
+    expect(result).not.toContain('assets/12345')
+    expect(result).toContain('renders correctly')
+  })
+
+  it('strips Signed-off-by lines', () => {
+    const input = 'Fix timeout\n\nSigned-off-by: Dev <dev@example.com>'
+    const result = stripPRTemplate(input)
+    expect(result).not.toContain('Signed-off-by')
+    expect(result).toContain('Fix timeout')
+  })
+
+  it('strips @ mentions and cc lines', () => {
+    const input = 'cc @reviewer1 @reviewer2\n\nThis optimizes the query planner for multi-cluster environments'
+    const result = stripPRTemplate(input)
+    expect(result).not.toContain('@reviewer1')
+    expect(result).toContain('query planner')
+  })
+
+  it('strips /kind and /area labels', () => {
+    const input = '/kind bug\n/area networking\n\nFixes the DNS resolution timeout in federated services'
+    const result = stripPRTemplate(input)
+    expect(result).not.toContain('/kind')
+    expect(result).not.toContain('/area')
+    expect(result).toContain('DNS resolution')
+  })
+
+  it('strips bold-header template questions', () => {
+    const input = '**What type of PR is this?**\nBug fix\n\n**What this PR does:**\nFixes a race condition in the event loop that caused duplicate notifications'
+    const result = stripPRTemplate(input)
+    expect(result).toContain('race condition')
+  })
+
+  it('preserves substantive content', () => {
+    const input = '## Summary\n\nThis PR refactors the authentication middleware to support both JWT and session-based auth simultaneously.'
+    const result = stripPRTemplate(input)
+    expect(result).toContain('refactors the authentication middleware')
   })
 })
