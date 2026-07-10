@@ -5,6 +5,7 @@ import { ClusterReadinessCard } from './ClusterReadinessCard'
 import type { ClusterInfo } from '../../hooks/mcp/types'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 

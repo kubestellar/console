@@ -5,7 +5,9 @@ import { RequestApprovalModal } from './RequestApprovalModal'
 import type { MissionControlState } from './types'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key }),
+  initReactI18next: { type: '3rdParty', init: () => {} },
 }))
 
 vi.mock('react-router-dom', () => ({
