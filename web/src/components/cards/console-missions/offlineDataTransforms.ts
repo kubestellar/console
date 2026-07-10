@@ -135,37 +135,37 @@ export function analyzeRootCause(node: NodeData): { cause: string; details: stri
   if (problems.includes('MemoryPressure')) {
     return {
       cause: 'Memory pressure',
-      details: details.join('; ') || 'Node is running low on memory. Pods may be evicted.'
+      details: (details || []).join('; ') || 'Node is running low on memory. Pods may be evicted.'
     }
   }
   if (problems.includes('DiskPressure')) {
     return {
       cause: 'Disk pressure',
-      details: details.join('; ') || 'Node is running low on disk space. Image pulls may fail.'
+      details: (details || []).join('; ') || 'Node is running low on disk space. Image pulls may fail.'
     }
   }
   if (problems.includes('PIDPressure')) {
     return {
       cause: 'PID pressure',
-      details: details.join('; ') || 'Node is running low on process IDs. New processes may fail to start.'
+      details: (details || []).join('; ') || 'Node is running low on process IDs. New processes may fail to start.'
     }
   }
   if (problems.includes('NetworkUnavailable')) {
     return {
       cause: 'Network unavailable',
-      details: details.join('; ') || 'Network is not configured correctly. Pods may not be able to communicate.'
+      details: (details || []).join('; ') || 'Network is not configured correctly. Pods may not be able to communicate.'
     }
   }
   if (problems.includes('KubeletDown') || problems.includes('ContainerRuntimeUnhealthy')) {
     return {
       cause: 'Kubelet/Runtime issue',
-      details: details.join('; ') || 'Kubelet or container runtime is not responding.'
+      details: (details || []).join('; ') || 'Kubelet or container runtime is not responding.'
     }
   }
 
   return {
-    cause: problems.join(', '),
-    details: details.join('; ') || 'Multiple conditions are affecting this node.'
+    cause: (problems || []).join(', '),
+    details: (details || []).join('; ') || 'Multiple conditions are affecting this node.'
   }
 }
 
