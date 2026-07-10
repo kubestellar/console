@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -90,7 +91,7 @@ func (s *Server) handleNvidiaOperatorsHTTP(w http.ResponseWriter, r *http.Reques
 	if cluster != "" {
 		client, err := s.k8sClient.GetClient(cluster)
 		if err != nil {
-			slog.Warn("[NvidiaOperators] failed to get client", "cluster", cluster, "error", err)
+			slog.Warn("[NvidiaOperators] failed to get client", "cluster", sanitize.LogString(cluster), "error", err)
 			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // =============================================================================
@@ -143,7 +144,7 @@ func (s *Server) handlePredictionsFeedback(w http.ResponseWriter, r *http.Reques
 
 	// For now, just acknowledge - feedback is stored client-side
 	// In the future, this could store to a database for model improvement
-	slog.Info("[Predictions] feedback received", "predictionID", req.PredictionID, "feedback", req.Feedback)
+	slog.Info("[Predictions] feedback received", "predictionID", sanitize.LogString(req.PredictionID), "feedback", sanitize.LogString(req.Feedback))
 
 	writeJSON(w, map[string]string{
 		"status": "recorded",
