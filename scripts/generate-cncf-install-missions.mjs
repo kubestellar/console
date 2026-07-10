@@ -958,6 +958,14 @@ async function main() {
         console.log(`  [DRY RUN] Would write: ${gateResult.tier === 'draft' ? draftPath : outPath}`)
       } else {
         const targetPath = gateResult.tier === 'draft' ? draftPath : outPath
+        
+        // Path traversal guard (CWE-22)
+        const resolvedPath = join(process.cwd(), targetPath)
+        const resolvedSolutionsDir = join(process.cwd(), SOLUTIONS_DIR)
+        if (!resolvedPath.startsWith(resolvedSolutionsDir + '/') && resolvedPath !== resolvedSolutionsDir) {
+          throw new Error(`Path traversal detected: ${targetPath}`)
+        }
+        
         writeFileSync(targetPath, JSON.stringify(mission, null, 2) + '\n')
         console.log(`  ✅ Written: ${targetPath.split('/').pop()} (${methods})`)
       }

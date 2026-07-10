@@ -100,6 +100,16 @@ async function callLLM(mission) {
   const token = process.env.LLM_TOKEN || GITHUB_TOKEN
   if (!token) return null
 
+  // Endpoint validation guard (CWE-441)
+  const ALLOWED_ENDPOINT_PREFIXES = [
+    'https://models.inference.ai.azure.com/',
+    'https://api.openai.com/',
+    'https://api.githubcopilot.com/',
+  ]
+  if (!ALLOWED_ENDPOINT_PREFIXES.some(prefix => LLM_ENDPOINT.startsWith(prefix))) {
+    throw new Error(`Untrusted LLM_ENDPOINT: ${LLM_ENDPOINT}`)
+  }
+
   const prompt = buildEnrichPrompt(mission)
 
   for (let attempt = 0; attempt <= 2; attempt++) {

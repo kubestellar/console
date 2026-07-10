@@ -899,6 +899,13 @@ async function main() {
     const isDraft = gateResult.verdict === 'draft'
     const outPath = join(SOLUTIONS_DIR, isDraft ? filename.replace('.json', '.draft.json') : filename)
 
+    // Path traversal guard (CWE-22)
+    const resolvedPath = join(process.cwd(), outPath)
+    const resolvedSolutionsDir = join(process.cwd(), SOLUTIONS_DIR)
+    if (!resolvedPath.startsWith(resolvedSolutionsDir + '/') && resolvedPath !== resolvedSolutionsDir) {
+      throw new Error(`Path traversal detected: ${outPath}`)
+    }
+
     if (!DRY_RUN) {
       writeFileSync(outPath, JSON.stringify(mission, null, 2))
       console.log(`  Wrote: ${outPath}`)
