@@ -38,7 +38,8 @@ on:
 # Cluster deploys themselves are serialized by per-job concurrency below.
 
 # Least-privilege: read-only by default; jobs declare write scopes individually
-permissions: read-all
+permissions:
+  contents: read
 
 concurrency:
   group: build-deploy-kc-${{ github.event.pull_request.number || github.run_id }}
