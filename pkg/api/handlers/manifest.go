@@ -18,6 +18,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/client"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/store"
 )
 
