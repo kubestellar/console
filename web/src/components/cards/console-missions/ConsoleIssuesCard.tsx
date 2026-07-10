@@ -86,8 +86,8 @@ export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
 
   const doStartRepair = () => {
     const issuesSummary = [
-      ...podIssues.slice(0, 5).map(p => `- Pod ${p.name} (${p.namespace}): ${p.status}`),
-      ...deploymentIssues.slice(0, 5).map(d => `- Deployment ${d.name} (${d.namespace}): ${d.readyReplicas}/${d.replicas} ready`),
+      ...(podIssues || []).slice(0, 5).map(p => `- Pod ${p.name} (${p.namespace}): ${p.status}`),
+      ...(deploymentIssues || []).slice(0, 5).map(d => `- Deployment ${d.name} (${d.namespace}): ${d.readyReplicas}/${d.replicas} ready`),
     ].join('\n')
 
     startMission({

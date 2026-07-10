@@ -13,6 +13,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/httputil"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,13 +96,13 @@ type CRDAgent struct {
 }
 
 type CRDTool struct {
-	Name            string             `json:"name"`
-	Namespace       string             `json:"namespace"`
-	Cluster         string             `json:"cluster"`
-	Kind            string             `json:"kind"`
-	URL             string             `json:"url"`
-	Config          string             `json:"config"`
-	DiscoveredTools []DiscoveredTool   `json:"discoveredTools"`
+	Name            string           `json:"name"`
+	Namespace       string           `json:"namespace"`
+	Cluster         string           `json:"cluster"`
+	Kind            string           `json:"kind"`
+	URL             string           `json:"url"`
+	Config          string           `json:"config"`
+	DiscoveredTools []DiscoveredTool `json:"discoveredTools"`
 }
 
 type DiscoveredTool struct {
@@ -841,7 +842,7 @@ func (h *Handlers) HandleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 			httputil.WriteJSON(w, map[string]any{"agents": []any{}})
 			return
 		}
-		slog.Warn("error listing kagenti agents", "cluster", cluster, "error", err)
+		slog.Warn("error listing kagenti agents", "cluster", sanitize.LogString(cluster), "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"agents": []any{}, "error": "internal server error"})
 		return
@@ -926,7 +927,7 @@ func (h *Handlers) HandleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 			httputil.WriteJSON(w, map[string]any{"builds": []any{}})
 			return
 		}
-		slog.Warn("error listing kagenti builds", "cluster", cluster, "error", err)
+		slog.Warn("error listing kagenti builds", "cluster", sanitize.LogString(cluster), "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"builds": []any{}, "error": "internal server error"})
 		return
@@ -1006,7 +1007,7 @@ func (h *Handlers) HandleKagentiCards(w http.ResponseWriter, r *http.Request) {
 			httputil.WriteJSON(w, map[string]any{"cards": []any{}})
 			return
 		}
-		slog.Warn("error listing kagenti cards", "cluster", cluster, "error", err)
+		slog.Warn("error listing kagenti cards", "cluster", sanitize.LogString(cluster), "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"cards": []any{}, "error": "internal server error"})
 		return
@@ -1079,7 +1080,7 @@ func (h *Handlers) HandleKagentiTools(w http.ResponseWriter, r *http.Request) {
 			httputil.WriteJSON(w, map[string]any{"tools": []any{}})
 			return
 		}
-		slog.Warn("error listing kagenti tools", "cluster", cluster, "error", err)
+		slog.Warn("error listing kagenti tools", "cluster", sanitize.LogString(cluster), "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"tools": []any{}, "error": "internal server error"})
 		return

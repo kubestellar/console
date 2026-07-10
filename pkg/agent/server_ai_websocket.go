@@ -98,7 +98,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.clientsMux.Unlock()
 	}()
 
-	slog.Info("client connected", "addr", conn.RemoteAddr(), "origin", sanitize.LogString(r.Header.Get("Origin")))
+	slog.Info("client connected", "addr", sanitize.LogString(conn.RemoteAddr().String()), "origin", sanitize.LogString(r.Header.Get("Origin")))
 
 	// writeMu is the single per-connection mutex shared by broadcasts
 	// (prediction_worker) and request/stream handlers. Using the same
@@ -309,7 +309,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Error("[WS] recovered from panic in async handler", "panic", r, "msgType", m.Type)
+						slog.Error("[WS] recovered from panic in async handler", "panic", r, "msgType", sanitize.LogString(string(m.Type)))
 						if !closed.Load() {
 							writeMu.Lock()
 							if err := setWSWriteDeadline(conn, "[WS] failed to set WebSocket write deadline",
@@ -380,10 +380,10 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	case <-drainDone:
 		// All goroutines exited cleanly.
 	case <-time.After(wsGoroutineDrainTimeout):
-		slog.Warn("[WebSocket] timed out waiting for goroutines to drain; closing connection", "addr", conn.RemoteAddr())
+		slog.Warn("[WebSocket] timed out waiting for goroutines to drain; closing connection", "addr", sanitize.LogString(conn.RemoteAddr().String()))
 	}
 
-	slog.Info("client disconnected", "addr", conn.RemoteAddr())
+	slog.Info("client disconnected", "addr", sanitize.LogString(conn.RemoteAddr().String()))
 }
 
 // handleMessage processes incoming messages (non-streaming).

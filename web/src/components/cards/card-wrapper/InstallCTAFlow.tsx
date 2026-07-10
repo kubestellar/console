@@ -114,9 +114,10 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
                 `Install and configure ${installInfo.project} for live data on the "${title}" dashboard card.`,
                 installInfo.kbPaths,
               )
-              const clusterContext = clusters.length > 0
+              const safeClusters = clusters || []
+              const clusterContext = safeClusters.length > 0
                 // clusters[0] is intentional: used only when length === 1 (singular message)
-                ? `\n\n**Target cluster(s):** ${clusters.join(', ')}\n\nPlease install on ${clusters.length === 1 ? `cluster "${clusters[0]}"` : `the following clusters: ${clusters.join(', ')}`}.`
+                ? `\n\n**Target cluster(s):** ${safeClusters.join(', ')}\n\nPlease install on ${safeClusters.length === 1 ? `cluster "${safeClusters[0]}"` : `the following clusters: ${safeClusters.join(', ')}`}.`
                 : ''
               setPendingMission({ prompt: prompt + clusterContext, clusters })
             } catch {
@@ -144,7 +145,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
               title: `Install ${installInfo.project}`,
               description: `Install and configure ${installInfo.project}`,
               type: 'deploy',
-              cluster: clusters.length > 0 ? clusters.join(',') : undefined,
+              cluster: (clusters || []).length > 0 ? (clusters || []).join(',') : undefined,
               initialPrompt: editedPrompt,
               skipReview: true,
             })

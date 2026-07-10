@@ -124,7 +124,7 @@ export function RootCauseAnalyzer({
                 )}
                 onClick={(e) => {
                   e.stopPropagation()
-                  const summary = group.items.map(item => `- ${item.name} (${item.cluster}): ${item.reason}`).join('\n')
+                  const summary = (group.items || []).map(item => `- ${item.name} (${item.cluster}): ${item.reason}`).join('\n')
                   startMission({
                     title: `Diagnose: ${group.cause}`,
                     description: `Diagnosing ${group.items.length} items with root cause: ${group.cause}`,

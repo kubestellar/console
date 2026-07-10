@@ -11,8 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/client-go/rest"
 	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/sanitize"
+	"k8s.io/client-go/rest"
 )
 
 // promClientCache reuses http.Client instances keyed by cluster API server URL.
@@ -120,7 +121,7 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 
 	config, err := s.k8sClient.GetRestConfig(cluster)
 	if err != nil {
-		slog.Error("[Prometheus] failed to get cluster config", "cluster", cluster, "error", err)
+		slog.Error("[Prometheus] failed to get cluster config", "cluster", sanitize.LogString(cluster), "error", err)
 		writePrometheusError(w, http.StatusBadGateway, "failed to get cluster configuration")
 		return
 	}

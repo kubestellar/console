@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react'
 import i18next from 'i18next'
 import { emitError, markErrorReported } from '../lib/analytics'
 import { isChunkLoadError } from '../lib/chunkErrors'
+import { Button } from './ui/Button'
 
 interface Props {
   children: ReactNode
@@ -89,29 +90,33 @@ export class PageErrorBoundary extends Component<Props, State> {
             </div>
           )}
           <div className="flex items-center gap-3">
-            <button
+            <Button
               onClick={this.handleRecover}
-              className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors"
+              variant="secondary"
+              size="lg"
               aria-label="Try rendering the page again"
             >
               {i18next.t('common:pageError.tryAgain', 'Try again')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={this.handleGoHome}
-              className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              variant="secondary"
+              size="lg"
+              icon={<ArrowLeft className="w-4 h-4" aria-hidden="true" />}
               aria-label="Go back to the dashboard"
             >
-              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
               {i18next.t('common:pageError.goHome', 'Dashboard')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={this.handleReload}
-              className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              variant="accent"
+              size="lg"
+              icon={<RefreshCw className="w-4 h-4" aria-hidden="true" />}
+              className="bg-purple-500 hover:bg-purple-600 text-white"
               aria-label="Reload the page"
             >
-              <RefreshCw className="w-4 h-4" aria-hidden="true" />
               {i18next.t('common:pageError.reload', 'Reload')}
-            </button>
+            </Button>
           </div>
         </div>
       )
