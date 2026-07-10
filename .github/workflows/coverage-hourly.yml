@@ -308,7 +308,9 @@ jobs:
                   const pr = merged[0];
                   prBlame = `\n- **PR**: [#${pr.number} — ${pr.title}](${pr.html_url}) by @${pr.user.login}`;
                 }
-              } catch (_) {}
+              } catch (err) {
+                console.log(`Could not fetch PR info: ${err.message}`);
+              }
 
               // Open an issue to alert the team
               try {
