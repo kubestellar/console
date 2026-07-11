@@ -452,14 +452,23 @@ The chart default (`runAsUser: 1001`) is correct for Kind/Minikube but
 breaks OpenShift silently — the helm upgrade rolls back with no
 container-level error message.
 
-Fix: null out just the UID/GID numbers so SCC can inject its own values
+Fix: use the bundled `values-openshift.yaml` overlay, which already nulls out
+`runAsUser`, `runAsGroup`, and `fsGroup` so the SCC can inject its own values
 while keeping `runAsNonRoot: true` intact (PodSecurity `restricted` still
 requires it — see [#6353](https://github.com/kubestellar/console/issues/6353)):
 
 ```bash
 helm upgrade kc ./deploy/helm/kubestellar-console -n kubestellar-console \
+  -f deploy/helm/kubestellar-console/values-openshift.yaml
+```
+
+If you are not using the overlay file, you can also null the fields manually:
+
+```bash
+helm upgrade kc ./deploy/helm/kubestellar-console -n kubestellar-console \
   --set securityContext.runAsUser=null \
-  --set securityContext.runAsGroup=null
+  --set securityContext.runAsGroup=null \
+  --set podSecurityContext.fsGroup=null
 ```
 
 ### `container has runAsNonRoot and image has non-numeric user (appuser)`
