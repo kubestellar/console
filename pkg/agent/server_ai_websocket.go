@@ -198,7 +198,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Error("[Chat] recovered from panic in streaming handler", "panic", r)
+						slog.Error("[Chat] recovered from panic in streaming handler", "panic", sanitize.LogString(fmt.Sprint(r)))
 						// Send error frame to the client so the frontend
 						// can display an error state instead of spinning forever.
 						if !closed.Load() {
@@ -245,7 +245,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Error("[Kubectl] recovered from panic in message handler", "panic", r)
+						slog.Error("[Kubectl] recovered from panic in message handler", "panic", sanitize.LogString(fmt.Sprint(r)))
 						// Notify the client about the panic so the UI can show an error
 						if !closed.Load() {
 							writeMu.Lock()
@@ -309,7 +309,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Error("[WS] recovered from panic in async handler", "panic", r, "msgType", sanitize.LogString(string(m.Type)))
+						slog.Error("[WS] recovered from panic in async handler", "panic", sanitize.LogString(fmt.Sprint(r)), "msgType", sanitize.LogString(string(m.Type)))
 						if !closed.Load() {
 							writeMu.Lock()
 							if err := setWSWriteDeadline(conn, "[WS] failed to set WebSocket write deadline",

@@ -280,7 +280,7 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 				// --- Offline / unhealthy nodes ---
 				nodes, nodeErr := w.k8sClient.GetNodes(clusterCtx, cl.Context)
 				if nodeErr != nil {
-					slog.Error("[PredictionWorker] error getting nodes", "cluster", cl.Name, "error", nodeErr)
+					slog.Error("[PredictionWorker] error getting nodes", "cluster", sanitize.LogString(cl.Name), "error", nodeErr)
 				} else {
 					localOffline := make([]NodeSummary, 0)
 					for _, n := range nodes {

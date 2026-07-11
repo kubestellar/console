@@ -98,10 +98,13 @@ export function ImproveMissionDialog({
   ]
 
   const handleSubmit = () => {
+    if (!mission) return
     const url = buildIssueUrl(mission, selectedCategory || 'other', activeSection, details)
     window.open(url, '_blank', 'noopener,noreferrer')
     onClose()
   }
+
+  if (!mission) return null
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="sm" closeOnBackdrop={false} closeOnEscape={true}>

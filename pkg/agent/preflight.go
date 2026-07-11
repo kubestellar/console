@@ -8,17 +8,19 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
 	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 const (
-	kubeAPIPreflightTimeout     = 5 * time.Second
-	defaultHTTPSAPIServerPort   = "443"
-	defaultHTTPAPIServerPort    = "80"
-	wslTroubleshootingDoc       = "docs/troubleshooting.md"
-	loopbackIPv4Address         = "127.0.0.1"
-	loopbackIPv6Address         = "::1"
-	loopbackHostname            = "localhost"
+	kubeAPIPreflightTimeout   = 5 * time.Second
+	defaultHTTPSAPIServerPort = "443"
+	defaultHTTPAPIServerPort  = "80"
+	wslTroubleshootingDoc     = "docs/troubleshooting.md"
+	loopbackIPv4Address       = "127.0.0.1"
+	loopbackIPv6Address       = "::1"
+	loopbackHostname          = "localhost"
 )
 
 func runKubeAPIPreflightChecks(kubectl *kube.KubectlProxy) {
@@ -46,17 +48,17 @@ func runKubeAPIPreflightChecks(kubectl *kube.KubectlProxy) {
 		guidance := buildKubeAPIPreflightGuidance(apiServerAddress)
 		if isConnectionRefusedError(dialErr) || isLoopbackAPIServer(cluster.Server) {
 			slog.Error("Failed to connect to Kubernetes API during kc-agent startup",
-				"cluster", cluster.Context,
-				"apiServer", apiServerAddress,
+				"cluster", sanitize.LogString(cluster.Context),
+				"apiServer", sanitize.LogString(apiServerAddress),
 				"error", dialErr,
-				"guidance", guidance,
+				"guidance", sanitize.LogString(guidance),
 			)
 			continue
 		}
 
 		slog.Warn("Kubernetes API pre-flight connectivity check failed",
-			"cluster", cluster.Context,
-			"apiServer", apiServerAddress,
+			"cluster", sanitize.LogString(cluster.Context),
+			"apiServer", sanitize.LogString(apiServerAddress),
 			"error", dialErr,
 		)
 	}

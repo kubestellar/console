@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 var privateIPNets = func() []*net.IPNet {
@@ -162,20 +163,20 @@ func (s *Server) ValidateAllKeys() {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			slog.Info("validating API key", "provider", providerName)
+			slog.Info("validating API key", "provider", sanitize.LogString(providerName))
 			valid, err := s.validateAPIKey(providerName)
 
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
-				slog.Error("API key validation error (will retry)", "provider", providerName, "error", err)
+				slog.Error("API key validation error (will retry)", "provider", sanitize.LogString(providerName), "error", err)
 				return
 			}
 			cm.SetKeyValidity(providerName, valid)
 			if valid {
-				slog.Info("API key is valid", "provider", providerName)
+				slog.Info("API key is valid", "provider", sanitize.LogString(providerName))
 			} else {
-				slog.Warn("API key is INVALID", "provider", providerName)
+				slog.Warn("API key is INVALID", "provider", sanitize.LogString(providerName))
 			}
 		})
 	}

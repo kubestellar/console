@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, AlertTriangle } from 'lucide-react'
+import { cn } from '@/lib/cn'
 import { getIcon } from '../icons'
 import { DashboardCard } from './types'
 import { CardWrapper } from '../../components/cards/CardWrapper'
@@ -250,7 +251,7 @@ export function DashboardHeader({
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh data"
             >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+              <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
             </button>
           )}
           {extra}

@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"time"
+
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // execReplaceFunc is the function used to replace the current process via exec.
@@ -18,7 +20,7 @@ var execReplaceFunc = ExecReplace
 func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 	scriptPath := repoPath + "/startup-oauth.sh"
 	if _, err := os.Stat(scriptPath); err != nil {
-		slog.Info("[AutoUpdate] startup-oauth.sh not found, falling back to exec", "path", scriptPath)
+		slog.Info("[AutoUpdate] startup-oauth.sh not found, falling back to exec", "path", sanitize.LogString(scriptPath))
 		uc.selfUpdateFallback(repoPath)
 		return
 	}
@@ -29,7 +31,7 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 	logPath := repoPath + "/data/auto-update-restart.log"
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		slog.Warn("[AutoUpdate] cannot create restart log", "path", logPath, "error", err)
+		slog.Warn("[AutoUpdate] cannot create restart log", "path", sanitize.LogString(logPath), "error", err)
 		logFile = nil
 	}
 
@@ -53,7 +55,7 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 		return
 	}
 
-	slog.Info("[AutoUpdate] startup-oauth.sh spawned, exiting for restart", "pid", cmd.Process.Pid, "log", logPath)
+	slog.Info("[AutoUpdate] startup-oauth.sh spawned, exiting for restart", "pid", cmd.Process.Pid, "log", sanitize.LogString(logPath))
 
 	// Give the script a moment to start before we exit
 	time.Sleep(1 * time.Second)

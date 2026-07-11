@@ -14,13 +14,14 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/agent/tokentracker"
+	"github.com/kubestellar/console/pkg/agent/updater"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/settings"
-	"github.com/kubestellar/console/pkg/agent/kube"
-	"github.com/kubestellar/console/pkg/agent/updater"
 )
 
 const (
@@ -269,7 +270,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Log non-default origins so users can verify their configuration
 	if len(allowedOrigins) > len(defaultAllowedOrigins) {
-		slog.Info("custom allowed origins configured", "origins", allowedOrigins[len(defaultAllowedOrigins):])
+		slog.Info("custom allowed origins configured", "origins", sanitize.LogStrings(allowedOrigins[len(defaultAllowedOrigins):]))
 	}
 
 	// Shared secret for authentication. When KC_AGENT_TOKEN is not set,
@@ -466,7 +467,7 @@ func (s *Server) Start() error {
 				channel = "stable"
 			}
 			s.updateChecker.Configure(true, channel)
-			slog.Info("auto-update started", "channel", channel)
+			slog.Info("auto-update started", "channel", sanitize.LogString(channel))
 		}
 	}
 
