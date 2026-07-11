@@ -102,7 +102,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
 
         if (response.ok) {
           const data = await response.json()
-          const nsData = data.namespaces || []
+          const nsData = Array.isArray(data.namespaces) ? data.namespaces : []
           if (nsData.length > 0) {
             // Extract just the namespace names
             const nsNames = nsData.map((ns: { name?: string; Name?: string }) => ns.name || ns.Name || '').filter(Boolean)
@@ -154,7 +154,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
       })
       if (resp.ok) {
         const data = await resp.json()
-        const nsNames = (data || []).map((ns: { name?: string; Name?: string }) => ns.name || ns.Name || '').filter(Boolean)
+        const nsNames = (Array.isArray(data) ? data : []).map((ns: { name?: string; Name?: string }) => ns.name || ns.Name || '').filter(Boolean)
         if (nsNames.length > 0) {
           setNamespaces(mergeWithClusterCache(nsNames, cluster))
           setError(null)
