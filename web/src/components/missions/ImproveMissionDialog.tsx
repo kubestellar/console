@@ -13,8 +13,8 @@ import {
 } from 'lucide-react'
 import { buildGitHubIssueUrl } from '@/lib/githubUrls'
 import { cn } from '../../lib/cn'
-import { TextArea } from '../ui/TextArea'
 import { BaseModal } from '../../lib/modals/BaseModal'
+import { TextArea } from '../ui/TextArea'
 import type { MissionExport } from '../../lib/missions/types'
 
 const IMPROVEMENT_CATEGORIES = [
@@ -195,7 +195,7 @@ export function ImproveMissionDialog({
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               placeholder={t('missions.improve.detailsPlaceholder')}
-              className="w-full h-24 resize-none"
+              className="h-24 placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-purple-500"
             />
           </div>
         </div>
