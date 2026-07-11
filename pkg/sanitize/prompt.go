@@ -58,15 +58,23 @@ func PromptStrings(values []string) []string {
 	return sanitized
 }
 
+// logUnsafeCharsRe matches control characters (except tab which is harmless
+// in logs), ANSI escape sequences, null bytes, and Unicode line/paragraph
+// separators that could be exploited for log injection (CWE-117).
+var logUnsafeCharsRe = regexp.MustCompile(`[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\x{2028}\x{2029}]|\x1b(?:\[[0-9;]*[A-Za-z]|\][^\x07]*\x07|.)`)
+
 var logInjectionReplacer = strings.NewReplacer(
-	"\n", "⏎",
-	"\r", "⏎",
+	"\n", "\u23ce",
+	"\r", "\u23ce",
 )
 
 // LogString sanitizes user-controlled input before logging to prevent
-// log injection attacks (CWE-117). It replaces newline and carriage-return
-// characters with a visible placeholder (⏎) so attackers cannot forge
-// additional log entries or corrupt log aggregation pipelines.
+// log injection attacks (CWE-117). It:
+//   - Replaces newline/carriage-return with a visible placeholder (\u23ce)
+//   - Strips ANSI escape sequences (terminal manipulation)
+//   - Strips null bytes (C-based log aggregator truncation)
+//   - Strips control characters (VT, FF, BS, BEL, DEL)
+//   - Strips Unicode line/paragraph separators (U+2028, U+2029)
 //
 // Use this for any user-controlled value passed to log.Printf, slog.Info,
 // zerolog, or other structured logging calls.
@@ -74,7 +82,9 @@ func LogString(input string) string {
 	if input == "" {
 		return ""
 	}
-	return logInjectionReplacer.Replace(input)
+	sanitized := logInjectionReplacer.Replace(input)
+	sanitized = logUnsafeCharsRe.ReplaceAllString(sanitized, "")
+	return sanitized
 }
 
 // LogStrings sanitizes a slice of user-controlled strings for logging.
