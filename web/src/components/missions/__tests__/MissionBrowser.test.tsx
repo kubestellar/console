@@ -45,7 +45,7 @@ vi.mock('react-i18next', () => ({
       }
       let value = map[key] ?? key
       for (const [name, replacement] of Object.entries(options ?? {})) {
-        value = value.replace(new RegExp(`\{\{\s*${name}\s*\}\}`, 'g'), String(replacement))
+        value = value.replace(new RegExp(`\\{\\{\\s*${name}\\s*\\}\\}`, 'g'), String(replacement))
       }
       return value
     },
