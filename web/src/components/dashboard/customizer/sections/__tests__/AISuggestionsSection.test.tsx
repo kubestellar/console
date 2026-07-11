@@ -1,1 +1,188 @@
-aW1wb3J0IFJlYWN0IGZyb20gJ3JlYWN0JwppbXBvcnQgeyBkZXNjcmliZSwgaXQsIGV4cGVjdCwgdmksIGJlZm9yZUVhY2gsIGFmdGVyRWFjaCB9IGZyb20gJ3ZpdGVzdCcKaW1wb3J0IHsgcmVuZGVyLCBzY3JlZW4sIGZpcmVFdmVudCwgd2FpdEZvciB9IGZyb20gJ0B0ZXN0aW5nLWxpYnJhcnkvcmVhY3QnCgovLyAtLS0tIG1vY2tzIC0tLS0KY29uc3QgbW9ja0dlbmVyYXRlQ2FyZFN1Z2dlc3Rpb25zID0gdmkuZm4oKQoKdmkubW9jaygncmVhY3QtaTE4bmV4dCcsICgpID0+ICh7CiAgaW5pdFJlYWN0STE4bmV4dDogeyB0eXBlOiAnM3JkUGFydHknLCBpbml0OiAoKSA9PiB7fSB9LAogIHVzZVRyYW5zbGF0aW9uOiAoKSA9PiAoewogICAgdDogKGs6IHN0cmluZywgZD86IHN0cmluZyB8IFJlY29yZDxzdHJpbmcsIHVua25vd24+KSA9PgogICAgICB0eXBlb2YgZCA9PT0gJ3N0cmluZycgPyBkIDogaywKICB9KSwKfSkpCgp2aS5tb2NrKCcuLi8uLi8uLi9zaGFyZWQvY2FyZENhdGFsb2cnLCAoKSA9PiAoewogIHZpc3VhbGl6YXRpb25JY29uczogeyBjaGFydDogJ/CfkYonLCB0YWJsZTogJ/CfkYsnIH0sCiAgd3JhcEFiYnJldmlhdGlvbnM6ICh0ZXh0OiBzdHJpbmcpID0+IHRleHQsCiAgZ2VuZXJhdGVDYXJkU3VnZ2VzdGlvbnM6ICguLi5hcmdzOiB1bmtub3duW10pID0+IG1vY2tHZW5lcmF0ZUNhcmRTdWdnZXN0aW9ucyguLi5hcmdzKSwKfSkpCgovLyBNb2NrIFJFVFJZX0RFTEFZX01TIHRvIDAgc28gc2V0VGltZW91dCByZXNvbHZlcyBuZWFyLWluc3RhbnRseQp2aS5tb2NrKCcuLi8uLi8uLi8uLi8uLi9saWIvY29uc3RhbnRzL25ldHdvcmsnLCBhc3luYyAoaW1wb3J0T3JpZ2luYWwpID0+IHsKICBjb25zdCBhY3R1YWwgPSBhd2FpdCBpbXBvcnRPcmlnaW5hbCgpIGFzIFJlY29yZDxzdHJpbmcsIHVua25vd24+CiAgcmV0dXJuIHsKICAgIC4uLmFjdHVhbCwKICAgIFJFVFJZX0RFTEFZX01TOiAwLAogIH0KfSkKCmltcG9ydCB7IEFJc3VnZ2VzdGlvbnNTZWN0aW9uIH0gZnJvbSAnLi4vQUlTdWdnZXN0aW9uc1NlY3Rpb24nCgpkZXNjcmliZSgnQUlTdWdnZXN0aW9uc1NlY3Rpb24nLCAoKSA9PiB7CiAgY29uc3QgZGVmYXVsdFByb3BzID0gewogICAgZXhpc3RpbmdDYXJkVHlwZXM6IFtdIGFzIHN0cmluZ1tdLAogICAgb25BZGRDYXJkczogdmkuZm4oKSwKICAgIGRhc2hib2FyZE5hbWU6ICdNeSBEYXNoYm9hcmQnLAogICAgb25Ib3ZlckNhcmQ6IHZpLmZuKCksCiAgfQoKICBiZWZvcmVFYWNoKCgpID0+IHsKICAgIHZpLmNsZWFyQWxsTW9ja3MoKQogIH0pCgogIGFmdGVyRWFjaCgoKSA9PiB7CiAgICB2aS5jbGVhckFsbFRpbWVycygpCiAgICB2aS51c2VSZWFsVGltZXJzKCkKICAgIHZpLmNsZWFyQWxsTW9ja3MoKQogIH0pCgogIGl0KCdyZW5kZXJzIHF1ZXJ5IGlucHV0IGFuZCBnZW5lcmF0ZSBidXR0b24nLCAoKSA9PiB7CiAgICByZW5kZXIoPEFJU3VnZ2VzdGlvbnNTZWN0aW9uIHsuLi5kZWZhdWx0UHJvcHN9IC8+KQogICAgZXhwZWN0KHNjcmVlbi5nZXRCeVBsYWNlaG9sZGVyVGV4dCgnZGFzaGJvYXJkLmFkZENhcmQuYWlQbGFjZWhvbGRlcicpKS50b0JlSW5UaGVEb2N1bWVudCgpCiAgICBleHBlY3Qoc2NyZWVuLmdldEJ5VGV4dCgnZGFzaGJvYXJkLmFkZENhcmQuZ2VuZXJhdGUnKSkudG9CZUluVGhlRG9jdW1lbnQoKQogIH0pCgogIGl0KCdyZW5kZXJzIGV4YW1wbGUgcXVlcnkgYnV0dG9ucycsICgpID0+IHsKICAgIHJlbmRlcig8QUlTdWdnZXN0aW9uc1NlY3Rpb24gey4uLmRlZmF1bHRQcm9wc30gLz4pCiAgICBleHBlY3Qoc2NyZWVuLmdldEJ5VGV4dCgnZGFzaGJvYXJkLmFkZENhcmQuZXhhbXBsZUdwdVV0aWwnKSkudG9CZUluVGhlRG9jdW1lbnQoKQogICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoJ2Rhc2hib2FyZC5hZGRDYXJkLmV4YW1wbGVQb2RJc3N1ZXMnKSkudG9CZUluVGhlRG9jdW1lbnQoKQogIH0pCgogIGl0KCdkaXNhYmxlcyBnZW5lcmF0ZSBidXR0b24gd2hlbiBxdWVyeSBpcyBlbXB0eScsICgpID0+IHsKICAgIHJlbmRlcig8QUlTdWdnZXN0aW9uc1NlY3Rpb24gey4uLmRlZmF1bHRQcm9wc30gLz4pCiAgICBjb25zdCBidG4gPSBzY3JlZW4uZ2V0QnlUZXh0KCdkYXNoYm9hcmQuYWRkQ2FyZC5nZW5lcmF0ZScpLmNsb3Nlc3QoJ2J1dHRvbicpIQogICAgZXhwZWN0KGJ0bikudG9CZURpc2FibGVkKCkKICB9KQoKICBpdCgnZ2VuZXJhdGVzIHN1Z2dlc3Rpb25zIHdoZW4gY2xpY2tpbmcgYW4gZXhhbXBsZSBxdWVyeScsIGFzeW5jICgpID0+IHsKICAgIGNvbnN0IHN1Z2dlc3Rpb25zID0gWwogICAgICB7IHR5cGU6ICdjYXJkLWEnLCB0aXRsZTogJ0NhcmQgQScsIGRlc2NyaXB0aW9uOiAnRGVzYyBBJywgdmlzdWFsaXphdGlvbjogJ2NoYXJ0JyB9LAogICAgXQogICAgbW9ja0dlbmVyYXRlQ2FyZFN1Z2dlc3Rpb25zLm1vY2tSZXR1cm5WYWx1ZShzdWdnZXN0aW9ucykKCiAgICByZW5kZXIoPEFJU3VnZ2VzdGlvbnNTZWN0aW9uIHsuLi5kZWZhdWx0UHJvcHN9IC8+KQoKICAgIC8vIEV4YW1wbGUgYnV0dG9uIHBhc3NlcyB0aGUgcXVlcnkgZGlyZWN0bHkgdG8gaGFuZGxlR2VuZXJhdGVXaXRoUXVlcnksIGJ5cGFzc2luZyBzdGF0ZQogICAgZmlyZUV2ZW50LmNsaWNrKHNjcmVlbi5nZXRCeVRleHQoJ2Rhc2hib2FyZC5hZGRDYXJkLmV4YW1wbGVHcHVVdGlsJykpCgogICAgYXdhaXQgd2FpdEZvcigoKSA9PiB7CiAgICAgIGV4cGVjdChtb2NrR2VuZXJhdGVDYXJkU3VnZ2VzdGlvbnMpLnRvSGF2ZUJlZW5DYWxsZWRXaXRoKCdkYXNoYm9hcmQuYWRkQ2FyZC5leGFtcGxlR3B1VXRpbCcpCiAgICB9KQogICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoJ0NhcmQgQScpKS50b0JlSW5UaGVEb2N1bWVudCgpCiAgfSkKCiAgaXQoJ21hcmtzIGV4aXN0aW5nIGNhcmRzIGFzIGFscmVhZHkgYWRkZWQgdmlhIGV4YW1wbGUgcXVlcnknLCBhc3luYyAoKSA9PiB7CiAgICBjb25zdCBzdWdnZXN0aW9ucyA9IFsKICAgICAgeyB0eXBlOiAnZXhpc3RpbmctY2FyZCcsIHRpdGxlOiAnRXhpc3RpbmcnLCBkZXNjcmlwdGlvbjogJ0QnLCB2aXN1YWxpemF0aW9uOiAnY2hhcnQnIH0sCiAgICBdCiAgICBtb2NrR2VuZXJhdGVDYXJkU3VnZ2VzdGlvbnMubW9ja1JldHVyblZhbHVlKHN1Z2dlc3Rpb25zKQoKICAgIHJlbmRlcig8QUlTdWdnZXN0aW9uc1NlY3Rpb24gey4uLmRlZmF1bHRQcm9wc30gZXhpc3RpbmdDYXJkVHlwZXM9e1snZXhpc3RpbmctY2FyZCddfSAvPikKCiAgICBmaXJlRXZlbnQuY2xpY2soc2NyZWVuLmdldEJ5VGV4dCgnZGFzaGJvYXJkLmFkZENhcmQuZXhhbXBsZUdwdVV0aWwnKSkKCiAgICBhd2FpdCB3YWl0Rm9yKCgpID0+IHsKICAgICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoJ2Rhc2hib2FyZC5hZGRDYXJkLmFscmVhZHlBZGRlZCcpKS50b0JlSW5UaGVEb2N1bWVudCgpCiAgICB9KQogIH0pCgogIGl0KCd0b2dnbGVzIGNhcmQgc2VsZWN0aW9uIGFuZCBjYWxscyBvbkFkZENhcmRzJywgYXN5bmMgKCkgPT4gewogICAgY29uc3Qgc3VnZ2VzdGlvbnMgPSBbCiAgICAgIHsgdHlwZTogJ2NhcmQtYScsIHRpdGxlOiAnQ2FyZCBBJywgZGVzY3JpcHRpb246ICdEJywgdmlzdWFsaXphdGlvbjogJ2NoYXJ0JyB9LAogICAgICB7IHR5cGU6ICdjYXJkLWInLCB0aXRsZTogJ0NhcmQgQicsIGRlc2NyaXB0aW9uOiAnRCcsIHZpc3VhbGl6YXRpb246ICd0YWJsZScgfSwKICAgIF0KICAgIG1vY2tHZW5lcmF0ZUNhcmRTdWdnZXN0aW9ucy5tb2NrUmV0dXJuVmFsdWUoc3VnZ2VzdGlvbnMpCgogICAgY29uc3Qgb25BZGRDYXJkcyA9IHZpLmZuKCkKICAgIHJlbmRlcig8QUlTdWdnZXN0aW9uc1NlY3Rpb24gey4uLmRlZmF1bHRQcm9wc30gb25BZGRDYXJKPW97b25BZGRDYXJkc30gLz4pCgogICAgZmlyZUV2ZW50LmNsaWNrKHNjcmVlbi5nZXRCeVRleHQoJ2Rhc2hib2FyZC5hZGRDYXJkLmV4YW1wbGVHcHVVdGlsJykpCgogICAgYXdhaXQgd2FpdEZvcigoKSA9PiB7CiAgICAgIGV4cGVjdChzY3JlZW4uZ2V0QnlUZXh0KCdDYXJkIEEnKSkudG9CZUluVGhlRG9jdW1lbnQoKQogICAgfSkKCiAgICAvLyBCb3RoIGF1dG8tc2VsZWN0ZWQ7IGRlc2VsZWN0IGNhcmQtYQogICAgZmlyZUV2ZW50LmNsaWNrKHNjcmVlbi5nZXRCeVRleHQoJ0NhcmQgQScpLmNsb3Nlc3QoJ2J1dHRvbicpISkKCiAgICAvLyBBZGQgcmVtYWluaW5nIHNlbGVjdGVkIGNhcmRzCiAgICBmaXJlRXZlbnQuY2xpY2soc2NyZWVuLmdldEJ5VGV4dCgvZGFzaGJvYXJkXC5hZGRDYXJkXC5hZGRDb3VudC8pLmNsb3Nlc3QoJ2J1dHRvbicpISkKICAgIGV4cGVjdChvbkFkZENhcmRzKS50b0hhdmVCZWVuQ2FsbGVkV2l0aChbc3VnZ2VzdGlvbnNbMV1dKQogIH0pCgogIGl0KCd0cmlnZ2VycyBvbkhvdmVyQ2FyZCBvbiBtb3VzZSBlbnRlci9sZWF2ZScsIGFzeW5jICgpID0+IHsKICAgIGNvbnN0IHN1Z2dlc3Rpb25zID0gWwogICAgICB7IHR5cGU6ICdjYXJkLWEnLCB0aXRsZTogJ0NhcmQgQScsIGRlc2NyaXB0aW9uOiAnRGVzYyBBJywgdmlzdWFsaXphdGlvbjogJ2NoYXJ0JyB9LAogICAgXQogICAgbW9ja0dlbmVyYXRlQ2FyZFN1Z2dlc3Rpb25zLm1vY2tSZXR1cm5WYWx1ZShzdWdnZXN0aW9ucykKICAgIGNvbnN0IG9uSG92ZXJDYXJkID0gdmkuZm4oKQoKICAgIHJlbmRlcig8QUlTdWdnZXN0aW9uc1NlY3Rpb24gey4uLmRlZmF1bHRQcm9wc30gb25Ib3ZlckNhcmQ9e29uSG92ZXJDYXJkfSAvPikKCiAgICBmaXJlRXZlbnQuY2xpY2soc2NyZWVuLmdldEJ5VGV4dCgnZGFzaGJvYXJkLmFkZENhcmQuZXhhbXBsZUdwdVV0aWwnKSkKCiAgICBhd2FpdCB3YWl0Rm9yKCgpID0+IHsKICAgICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoJ0NhcmQgQScpKS50b0JlSW5UaGVEb2N1bWVudCgpCiAgICB9KQoKICAgIGNvbnN0IGNhcmRCdG4gPSBzY3JlZW4uZ2V0QnlUZXh0KCdDYXJkIEEnKS5jbG9zZXN0KCdidXR0b24nKSEKICAgIGZpcmVFdmVudC5tb3VzZUVudGVyKGNhcmRCdG4pCiAgICBleHBlY3Qob25Ib3ZlckNhcmQpLnRvSGF2ZUJlZW5DYWxsZWRXaXRoKHN1Z2dlc3Rpb25zWzBdKQoKICAgIGZpcmVFdmVudC5tb3VzZUxlYXZlKGNhcmRCdG4pCiAgICBleHBlY3Qob25Ib3ZlckNhcmQpLnRvSGF2ZUJlZW5DYWxsZWRXaXRoKG51bGwpCiAgfSkKCiAgaXQoJ2dlbmVyYXRlcyB2aWEgaW5wdXQgYW5kIEVudGVyIGtleScsIGFzeW5jICgpID0+IHsKICAgIC8vIFVzZSB0aGUgaW5wdXQgKyBFbnRlciBwYXRoLiBUaGUgRW50ZXIgaGFuZGxlciBjYWxscyBoYW5kbGVHZW5lcmF0ZSgpCiAgICAvLyB3aGljaCByZWFkcyBxdWVyeSBmcm9tIHN0YXRlLgogICAgbW9ja0dlbmVyYXRlQ2FyZFN1Z2dlc3Rpb25zLm1vY2tSZXR1cm5WYWx1ZShbCiAgICAgIHsgdHlwZTogJ2NhcmQtYScsIHRpdGxlOiAnQ2FyZCBBJywgZGVzY3JpcHRpb246ICdEZXNjJywgdmlzdWFsaXphdGlvbjogJ2NoYXJ0JyB9LAogICAgXSkKCiAgICByZW5kZXIoPEFJU3VnZ2VzdGlvbnNTZWN0aW9uIHsuLi5kZWZhdWx0UHJvcHN9IC8+KQogICAgY29uc3QgaW5wdXQgPSBzY3JlZW4uZ2V0QnlQbGFjZWhvbGRlclRleHQoJ2Rhc2hib2FyZC5hZGRDYXJkLmFpUGxhY2Vob2xkZXInKQoKICAgIC8vIENoYW5nZSB0aGUgaW5wdXQgYW5kIGxldCBSZWFjdCB1cGRhdGUgc3RhdGUKICAgIGZpcmVFdmVudC5jaGFuZ2UoaW5wdXQsIHsgdGFyZ2V0OiB7IHZhbHVlOiAncG9kcycgfSB9KQoKICAgIC8vIFByZXNzIEVudGVyIOKAlCBoYW5kbGVHZW5lcmF0ZSByZWFkcyBxdWVyeSBmcm9tIHN0YXRlCiAgICBmaXJlRXZlbnQua2V5RG93bihpbnB1dCwgeyBrZXk6ICdFbnRlcicgfSkKCiAgICBhd2FpdCB3YWl0Rm9yKCgpID0+IHsKICAgICAgZXhwZWN0KG1vY2tHZW5lcmF0ZUNhcmRTdWdnZXN0aW9ucykudG9IYXZlQmVlbkNhbGxlZFdpdGgoJ3BvZHMnKQogICAgfSkKICB9KQoKICBpdCgnZ2VuZXJhdGVzIHZpYSBpbnB1dCBhbmQgZ2VuZXJhdGUgYnV0dG9uIGNsaWNrJywgYXN5bmMgKCkgPT4gewogICAgY29uc3Qgc3VnZ2VzdGlvbnMgPSBbCiAgICAgIHsgdHlwZTogJ2NhcmQtYScsIHRpdGxlOiAnQ2FyZCBBJywgZGVzY3JpcHRpb246ICdEZXNjIEEnLCB2aXN1YWxpemF0aW9uOiAnY2hhcnQnIH0sCiAgICAgIHsgdHlwZTogJ2NhcmQtYicsIHRpdGxlOiAnQ2FyZCBCJywgZGVzY3JpcHRpb246ICdEZXNjIEInLCB2aXN1YWxpemF0aW9uOiAndGFibGUnIH0sCiAgICBdCiAgICBtb2NrR2VuZXJhdGVDYXJkU3VnZ2VzdGlvbnMubW9ja1JldHVyblZhbHVlKHN1Z2dlc3Rpb25zKQoKICAgIHJlbmRlcig8QUlTdWdnZXN0aW9uc1NlY3Rpb24gey4uLmRlZmF1bHRQcm9wc30gLz4pCiAgICBjb25zdCBpbnB1dCA9IHNjcmVlbi5nZXRCeVBsYWNlaG9sZGVyVGV4dCgnZGFzaGJvYXJkLmFkZENhcmQuYWlQbGFjZWhvbGRlcicpCgogICAgZmlyZUV2ZW50LmNoYW5nZShpbnB1dCwgeyB0YXJnZXQ6IHsgdmFsdWU6ICdncHUgbW9uaXRvcmluZycgfSB9KQogICAgZmlyZUV2ZW50LmNsaWNrKHNjcmVlbi5nZXRCeVRleHQoJ2Rhc2hib2FyZC5hZGRDYXJkLmdlbmVyYXRlJykuY2xvc2VzdCgnYnV0dG9uJykhKQoKICAgIGF3YWl0IHdhaXRGb3IoKCkgPT4gewogICAgICBleHBlY3QobW9ja0dlbmVyYXRlQ2FyZFN1Z2dlc3Rpb25zKS50b0hhdmVCZWVuQ2FsbGVkV2l0aCgnZ3B1IG1vbml0b3JpbmcnKQogICAgfSkKICAgIGV4cGVjdChzY3JlZW4uZ2V0QnlUZXh0KCdDYXJkIEEnKSkudG9CZUluVGhlRG9jdW1lbnQoKQogICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoJ0NhcmQgQicpKS50b0JlSW5UaGVEb2N1bWVudCgpCiAgfSkKfSkK
+import React from 'react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+
+// ---- mocks ----
+const mockGenerateCardSuggestions = vi.fn()
+
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (k: string, d?: string | Record<string, unknown>) =>
+      typeof d === 'string' ? d : k,
+  }),
+}))
+
+vi.mock('../../../shared/cardCatalog', () => ({
+  visualizationIcons: { chart: '👊', table: '👋' },
+  wrapAbbreviations: (text: string) => text,
+  generateCardSuggestions: (...args: unknown[]) => mockGenerateCardSuggestions(...args),
+}))
+
+// Mock RETRY_DELAY_MS to 0 so setTimeout resolves near-instantly
+vi.mock('../../../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    RETRY_DELAY_MS: 0,
+  }
+})
+
+import { AIsuggestionsSection } from '../AISuggestionsSection'
+
+describe('AISuggestionsSection', () => {
+  const defaultProps = {
+    existingCardTypes: [] as string[],
+    onAddCards: vi.fn(),
+    dashboardName: 'My Dashboard',
+    onHoverCard: vi.fn(),
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    vi.clearAllMocks()
+  })
+
+  it('renders query input and generate button', () => {
+    render(<AISuggestionsSection {...defaultProps} />)
+    expect(screen.getByPlaceholderText('dashboard.addCard.aiPlaceholder')).toBeInTheDocument()
+    expect(screen.getByText('dashboard.addCard.generate')).toBeInTheDocument()
+  })
+
+  it('renders example query buttons', () => {
+    render(<AISuggestionsSection {...defaultProps} />)
+    expect(screen.getByText('dashboard.addCard.exampleGpuUtil')).toBeInTheDocument()
+    expect(screen.getByText('dashboard.addCard.examplePodIssues')).toBeInTheDocument()
+  })
+
+  it('disables generate button when query is empty', () => {
+    render(<AISuggestionsSection {...defaultProps} />)
+    const btn = screen.getByText('dashboard.addCard.generate').closest('button')!
+    expect(btn).toBeDisabled()
+  })
+
+  it('generates suggestions when clicking an example query', async () => {
+    const suggestions = [
+      { type: 'card-a', title: 'Card A', description: 'Desc A', visualization: 'chart' },
+    ]
+    mockGenerateCardSuggestions.mockReturnValue(suggestions)
+
+    render(<AISuggestionsSection {...defaultProps} />)
+
+    // Example button passes the query directly to handleGenerateWithQuery, bypassing state
+    fireEvent.click(screen.getByText('dashboard.addCard.exampleGpuUtil'))
+
+    await waitFor(() => {
+      expect(mockGenerateCardSuggestions).toHaveBeenCalledWith('dashboard.addCard.exampleGpuUtil')
+    })
+    expect(screen.getByText('Card A')).toBeInTheDocument()
+  })
+
+  it('marks existing cards as already added via example query', async () => {
+    const suggestions = [
+      { type: 'existing-card', title: 'Existing', description: 'D', visualization: 'chart' },
+    ]
+    mockGenerateCardSuggestions.mockReturnValue(suggestions)
+
+    render(<AISuggestionsSection {...defaultProps} existingCardTypes={['existing-card']} />)
+
+    fireEvent.click(screen.getByText('dashboard.addCard.exampleGpuUtil'))
+
+    await waitFor(() => {
+      expect(screen.getByText('dashboard.addCard.alreadyAdded')).toBeInTheDocument()
+    })
+  })
+
+  it('toggles card selection and calls onAddCards', async () => {
+    const suggestions = [
+      { type: 'card-a', title: 'Card A', description: 'D', visualization: 'chart' },
+      { type: 'card-b', title: 'Card B', description: 'D', visualization: 'table' },
+    ]
+    mockGenerateCardSuggestions.mockReturnValue(suggestions)
+
+    const onAddCards = vi.fn()
+    render(<AISuggestionsSection {...defaultProps} onAddCarJ=o{onAddCards} />)
+
+    fireEvent.click(screen.getByText('dashboard.addCard.exampleGpuUtil'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Card A')).toBeInTheDocument()
+    })
+
+    // Both auto-selected; deselect card-a
+    fireEvent.click(screen.getByText('Card A').closest('button')!)
+
+    // Add remaining selected cards
+    fireEvent.click(screen.getByText(/dashboard\.addCard\.addCount/).closest('button')!)
+    expect(onAddCards).toHaveBeenCalledWith([suggestions[1]])
+  })
+
+  it('triggers onHoverCard on mouse enter/leave', async () => {
+    const suggestions = [
+      { type: 'card-a', title: 'Card A', description: 'Desc A', visualization: 'chart' },
+    ]
+    mockGenerateCardSuggestions.mockReturnValue(suggestions)
+    const onHoverCard = vi.fn()
+
+    render(<AISuggestionsSection {...defaultProps} onHoverCard={onHoverCard} />)
+
+    fireEvent.click(screen.getByText('dashboard.addCard.exampleGpuUtil'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Card A')).toBeInTheDocument()
+    })
+
+    const cardBtn = screen.getByText('Card A').closest('button')!
+    fireEvent.mouseEnter(cardBtn)
+    expect(onHoverCard).toHaveBeenCalledWith(suggestions[0])
+
+    fireEvent.mouseLeave(cardBtn)
+    expect(onHoverCard).toHaveBeenCalledWith(null)
+  })
+
+  it('generates via input and Enter key', async () => {
+    // Use the input + Enter path. The Enter handler calls handleGenerate()
+    // which reads query from state.
+    mockGenerateCardSuggestions.mockReturnValue([
+      { type: 'card-a', title: 'Card A', description: 'Desc', visualization: 'chart' },
+    ])
+
+    render(<AISuggestionsSection {...defaultProps} />)
+    const input = screen.getByPlaceholderText('dashboard.addCard.aiPlaceholder')
+
+    // Change the input and let React update state
+    fireEvent.change(input, { target: { value: 'pods' } })
+
+    // Press Enter — handleGenerate reads query from state
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    await waitFor(() => {
+      expect(mockGenerateCardSuggestions).toHaveBeenCalledWith('pods')
+    })
+  })
+
+  it('generates via input and generate button click', async () => {
+    const suggestions = [
+      { type: 'card-a', title: 'Card A', description: 'Desc A', visualization: 'chart' },
+      { type: 'card-b', title: 'Card B', description: 'Desc B', visualization: 'table' },
+    ]
+    mockGenerateCardSuggestions.mockReturnValue(suggestions)
+
+    render(<AISuggestionsSection {...defaultProps} />)
+    const input = screen.getByPlaceholderText('dashboard.addCard.aiPlaceholder')
+
+    fireEvent.change(input, { target: { value: 'gpu monitoring' } })
+    fireEvent.click(screen.getByText('dashboard.addCard.generate').closest('button')!)
+
+    await waitFor(() => {
+      expect(mockGenerateCardSuggestions).toHaveBeenCalledWith('gpu monitoring')
+    })
+    expect(screen.getByText('Card A')).toBeInTheDocument()
+    expect(screen.getByText('Card B')).toBeInTheDocument()
+  })
+})

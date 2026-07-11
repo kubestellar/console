@@ -1,1 +1,309 @@
-aW1wb3J0IFJlYWN0IGZyb20gJ3JlYWN0JwppbXBvcnQgeyBkZXNjcmliZSwgaXQsIGV4cGVjdCwgdmksIGJlZm9yZUVhY2gsIGFmdGVyRWFjaCB9IGZyb20gJ3ZpdGVzdCcKaW1wb3J0ICdAdGVzdGluZy1saWJyYXJ5L2plc3QtZG9tL3ZpdGVzdCcKaW1wb3J0IHsgcmVuZGVyLCBzY3JlZW4sIHdhaXRGb3IgfSBmcm9tICdAdGVzdGluZy1saWJyYXJ5L3JlYWN0JwppbXBvcnQgdXNlckV2ZW50IGZyb20gJ0B0ZXN0aW5nLWxpYnJhcnkvdXNlci1ldmVudCcKaW1wb3J0IHsgTmFtZXNwYWNlQWNjZXNzUGFuZWwgfSBmcm9tICcuLi9OYW1lc3BhY2VBY2Nlc3NQYW5lbCcKaW1wb3J0IHsgYXBpLCBhdXRoRmV0Y2ggfSBmcm9tICcuLi8uLi8uLi9saWIvYXBpJwppbXBvcnQgdHlwZSB7IE5hbWVzcGFjZURldGFpbHMsIE5hbWVzcGFjZUFjY2Vzc0VudHJ5IH0gZnJvbSAnLi4vdHlwZXMnCgovKioKICogTmFtZXNwYWNlQWNjZXNzUGFuZWwgQ29tcG9uZW50IFRlc3RzCiAqIAogKiBUZXN0cyByZW5kZXJpbmcgb2YgYWNjZXNzIGVudHJpZXMsIHJldm9jYXRpb24gY2FsbGJhY2ssIGFkbWluLW9ubHkKICogYmVoYXZpb3IsIGxvYWRpbmcgc3RhdGVzLCBlcnJvciBoYW5kbGluZywgYW5kICJHcmFudCBBY2Nlc3MiIGJ1dHRvbi4KICovCgovLyDilIDilIAgTW9ja3Mg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACgp2aS5tb2NrKCcuLi8uLi8uLi9saWIvYXBpJywgKCkgPT4gKHsKICBhcGk6IHsKICAgIGdldDogdmkuZm4oKSwKICB9LAogIGF1dGhGZXRjaDogdmkuZm4oKSwKfSkpCgp2aS5tb2NrKCcuLi8uLi91aS9DbHVzdGVyQmFkZ2UnLCAoKSA9PiAoewogIENsdXN0ZXJCYWRnZTogKHsgY2x1c3RlciB9OiB7IGNsdXN0ZXI6IHN0cmluZyB9KSA9PiA8ZGl2IGRhdGEtdGVzdGlkPSJjbHVzdGVyLWJhZGdlIj57Y2x1c3Rlcn08L2Rpdj4sCn0pKQoKdmkubW9jaygnLi4vLi4vdWkvVG9hc3QnLCAoKSA9PiAoewogIHVzZVRvYXN0OiAoKSA9PiAoewogICAgc2hvd1RvYXN0OiB2aS5mbigpLAogIH0pLAp9KSkKCnZpLm1vY2soJ3JlYWN0LWkxOG5leHQnLCAoKSA9PiAoewogIGluaXRSZWFjdEkxOG5leHQ6IHsgdHlwZTogJzNyZFBhcnR5JywgaW5pdDogKCkgPT4ge30gfSwKICB1c2VUcmFuc2xhdGlvbjogKCkgPT4gKHsKICAgIHQ6IChrZXk6IHN0cmluZywgZmFsbGJhY2s/OiBzdHJpbmcpID0+IGZhbGxiYWNrIHx8IGtleSwKICB9KSwKfSkpCgovLyDilIDilIAgVGVzdCBEYXRhIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAoKY29uc3QgbW9ja05hbWVzcGFjZTogTmFtZXNwYWNlRGV0YWlscyA9IHsKICBuYW1lOiAndGVzdC1uYW1lc3BhY2UnLAogIGNsdXN0ZXI6ICdjbHVzdGVyLTEnLAogIHN0YXR1czogJ0FjdGl2ZScsCiAgY3JlYXRlZEF0OiAnMjAyNC0wMS0wMVQwMDowMDowMFonLAp9Cgpjb25zdCBtb2NrQWNjZXNzRW50cmllczogTmFtZXNwYWNlQWNjZXNzRW50cnlbXSA9IFsKICB7CiAgICBiaW5kaW5nTmFtZTogJ2JpbmRpbmctMScsCiAgICByb2xlTmFtZTogJ2FkbWluJywKICAgIHN1YmplY3ROYW1lOiAnYWxpY2UnLAogICAgc3ViamVjdEtpbmQ6ICdVc2VyJywKICB9LAogIHsKICAgIGJpbmRpbmdOYW1lOiAnYmluZGluZy0yJywKICAgIHJvbGVOYW1lOiAnZWRpdCcsCiAgICBzdWJqZWN0TmFtZTogJ2JvYicsCiAgICBzdWJqZWN0S2luZDogJ1NlcnZpY2VBY2NvdW50JywKICB9LApdCgovLyDilIDilIAgVGVzdHMg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACgpkZXNjcmliZSgnTmFtZXNwYWNlQWNjZXNzUGFuZWwnLCAoKSA9PiB7CiAgY29uc3QgbW9ja09uR3JhbnRBY2Nlc3MgPSB2aS5mbigpCgogIGJlZm9yZUVhY2goKCkgPT4gewogICAgdmkuY2xlYXJBbGxNb2NrcygpCiAgICB2aS5tb2NrZWQod2luZG93LCB7IHBhcnRpYWw6IHRydWUgfSkuY29uZmlybSA9IHZpLmZuKCgpID0+IHRydWUpCiAgfSkKCiAgYWZ0ZXJFYWNoKCgpID0+IHsKICAgIHZpLmNsZWFyQWxsVGltZXJzKCkKICAgIHZpLnVzZVJlYWxUaW1lcnMoKQogICAgdmkucmVzdG9yZUFsbE1vY2tzKCkKICB9KQoKICBpdCgncmVuZGVycyBub3RoaW5nIHdoZW4gbmFtZXNwYWNlIGlzIG51bGwnLCAoKSA9PiB7CiAgICBjb25zdCB7IGNvbnRhaW5lciB9ID0gcmVuZGVyKAogICAgICA8TmFtZXNwYWNlQWNjZXNzUGFuZWwKICAgICAgICBuYW1lc3BhY2U9e251bGx9CiAgICAgICAgaXNBZG1pbj17dHJ1ZX0KICAgICAgICBvbkdyYW50QWNjZXNzPXttb2NrT25HcmFudEFjY2Vzc30KICAgICAgLz4KICAgICkKCiAgICBleHBlY3QoY29udGFpbmVyKS50b0JlRW1wdHlET01FbGVtZW50KCkKICB9KQoKICBpdCgncmVuZGVycyBuYW1lc3BhY2UgbmFtZSBhbmQgY2x1c3RlciBiYWRnZScsICgpID0+IHsKICAgIHZpLm1vY2tlZChhcGkuZ2V0KS5tb2NrUmVzb2x2ZWRWYWx1ZSh7IGRhdGE6IHsgYmluZGluZ3M6IFtdIH0gfSkKCiAgICByZW5kZXIoCiAgICAgIDxOYW1lc3BhY2VBY2Nlc3NQYW5lbAogICAgICAgIG5hbWVzcGFjZT17bW9ja05hbWVzcGFjZX0KICAgICAgICBpc0FkbWluPXt0cnVlfQogICAgICAgIG9uR3JhbnRBY2Nlc3M9e21vY2tPbkdyYW50QWNjZXNzfQogICAgICAvPgogICAgKQoKICAgIGV4cGVjdChzY3JlZW4uZ2V0QnlUZXh0KCd0ZXN0LW5hbWVzcGFjZScpKS50b0JlSW5UaGVEb2N1bWVudCgpCiAgICBleHBlY3Qoc2NyZWVuLmdldEJ5VGVzdElkKCdjbHVzdGVyLWJhZGdlJykpLnRvSGF2ZVRleHRDb250ZW50KCdjbHVzdGVyLTEnKQogIH0pCgogIGl0KCdzaG93cyBhZG1pbi1yZXF1aXJlZCBtZXNzYWdlIGZvciBub24tYWRtaW4gdXNlcnMnLCAoKSA9PiB7CiAgICByZW5kZXIoCiAgICAgIDxOYW1lc3BhY2VBY2Nlc3NQYW5lbAogICAgICAgIG5hbWVzcGFjZT17bW9ja05hbWVzcGFjZX0KICAgICAgICBpc0FkbWluPXtmYWxzZX0KICAgICAgICBvbkdyYW50QWNjZXNzPXttb2NrT25HcmFudEFjY2Vzc30KICAgICAgLz4KICAgICkKCiAgICBleHBlY3Qoc2NyZWVuLmdldEJ5VGV4dCgvQWRtaW4gYWNjZXNzIHJlcXVpcmVkIHRvIHZpZXcgcm9sZSBiaW5kaW5ncy9pKSkudG9CZUluVGhlRG9jdW1lbnQoKQogIH0pCgogIGl0KCdmZXRjaGVzIGFuZCBkaXNwbGF5cyBhY2Nlc3MgZW50cmllcyBmb3IgYWRtaW4gdXNlcnMnLCBhc3luYyAoKSA9PiB7CiAgICB2aS5tb2NrZWQoYXBpLmdldCkubW9ja1Jlc29sdmVkVmFsdWUoeyBkYXRhOiB7IGJpbmRpbmdzOiBtb2NrQWNjZXNzRW50cmllcyB9IH0pCgogICAgcmVuZGVyKAogICAgICA8TmFtZXNwYWNlQWNjZXNzUGFuZWwKICAgICAgICBuYW1lc3BhY2U9e21vY2tOYW1lc3BhY2V9CiAgICAgICAgaXNBZG1pbj17dHJ1ZX0KICAgICAgICBvbkdyYW50QWNjZXNzPXttb2NrT25HcmFudEFjY2Vzc30KICAgICAgLz4KICAgICkKCiAgICBhd2FpdCB3YWl0Rm9yKCgpID0+IHsKICAgICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoJ2FsaWNlJykpLnRvQmVJblRoZURvY3VtZW50KCkKICAgIH0pCgogICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoJ2JvYicpKS50b0JlSW5UaGVEb2N1bWVudCgpCiAgICBleHBlY3Qoc2NyZWVuLmdldEJ5VGV4dCgnUm9sZTogYWRtaW4nKSkudG9CZUluVGhlRG9jdW1lbnQoKQogICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoJ1JvbGU6IGVkaXQnKSkudG9CZUluVGhlRG9jdW1lbnQoKQogIH0pCgogIGl0KCdzaG93cyBsb2FkaW5nIHNwaW5uZXIgd2hpbGUgZmV0Y2hpbmcgYWNjZXNzJywgYXN5bmMgKCkgPT4gewogICAgdmkubW9ja2VkKGFwaS5nZXQpLm1vY2tJbXBsZW1lbnRhdGlvbigKICAgICAgKCkgPT4gbmV3IFByb21pc2UocmVzb2x2ZSA9PiBzZXRUaW1lb3V0KCgpID0+IHJlc29sdmUoeyBkYXRhOiB7IGJpbmRpbmdzOiBbXSB9IH0pLCAxMDApKQogICAgKQoKICAgIHJlbmRlcigKICAgICAgPE5hbWVzcGFjZUFjY2Vzc1BhbmVsCiAgICAgICAgbmFtZXNwYWNlPXttb2NrTmFtZXNwYWNlfQogICAgICAgIGlzQWRtaW49e3RydWV9CiAgICAgICAgb25HcmFudEFjY2Vzcz17bW9ja09uR3JhbnRBY2Nlc3N9CiAgICAgIC8+CiAgICApCgogICAgZXhwZWN0KHNjcmVlbi5nZXRCeVJvbGUoJ2dlbmVyaWMnLCB7IG5hbWU6IC9zcGlubmVyL2kgfSkgfHwgZG9jdW1lbnQucXVlcnlTZWxlY3RvcignLnNwaW5uZXInKSkudG9CZVRydXRoeSgpCgogICAgYXdhaXQgd2FpdEZvcigoKSA9PiB7CiAgICAgIGV4cGVjdChzY3JlZW4ucXVlcnlCeVJvbGUoJ2dlbmVyaWMnLCB7IG5hbWU6IC9zcGlubmVyL2kgfSkpLm5vdC50b0JlSW5UaGVEb2N1bWVudCgpCiAgICB9KQogIH0pCgogIGl0KCdzaG93cyAibm8gcm9sZSBiaW5kaW5ncyIgbWVzc2FnZSB3aGVuIGVudHJpZXMgYXJlIGVtcHR5JywgYXN5bmMgKCkgPT4gewogICAgdmkubW9ja2VkKGFwaS5nZXQpLm1vY2tSZXNvbHZlZFZhbHVlKHsgZGF0YTogeyBiaW5kaW5nczogW10gfSB9KQoKICAgIHJlbmRlcigKICAgICAgPE5hbWVzcGFjZUFjY2Vzc1BhbmVsCiAgICAgICAgbmFtZXNwYWNlPXttb2NrTmFtZXNwYWNlfQogICAgICAgIGlzQWRtaW49e3RydWV9CiAgICAgICAgb25HcmFudEFjY2Vzcz17bW9ja09uR3JhbnRBY2Nlc3N9CiAgICAgIC8+CiAgICApCgogICAgYXdhaXQgd2FpdEZvcigoKSA9PiB7CiAgICAgIGV4cGVjdChzY3JlZW4uZ2V0QnlUZXh0KC9ObyByb2xlIGJpbmRpbmdzIGZvdW5kL2kpKS50b0JlSW5UaGVEb2N1bWVudCgpCiAgICB9KQogIH0pCgogIGl0KCdkaXNwbGF5cyBzdWJqZWN0IGtpbmQgYmFkZ2VzJywgYXN5bmMgKCkgPT4gewogICAgdmkubW9ja2VkKGFwaS5nZXQpLm1vY2tSZXNvbHZlZFZhbHVlKHsgZGF0YTogeyBiaW5kaW5nczogbW9ja0FjY2Vzc0VudHJpZXMgfSB9KQoKICAgIHJlbmRlcigKICAgICAgPE5hbWVzcGFjZUFjY2Vzc1BhbmVsCiAgICAgICAgbmFtZXNwYWNlPXttb2NrTmFtZXNwYWNlfQogICAgICAgIGlzQWRtaW49e3RydWV9CiAgICAgICAgb25HcmFudEFjY2Vzcz17bW9ja09uR3JhbnRBY2Nlc3N9CiAgICAgIC8+CiAgICApCgogICAgYXdhaXQgd2FpdEZvcigoKSA9PiB7CiAgICAgIGV4cGVjdChzY3JlZW4uZ2V0QnlUZXh0KCdVc2VyJykpLnRvQmVJblRoZURvY3VtZW50KCkKICAgIH0pCgogICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoJ1NlcnZpY2VBY2NvdW50JykpLnRvQmVJblRoZURvY3VtZW50KCkKICB9KQoKICBpdCgnY2FsbHMgb25HcmFudEFjY2VzcyB3aGVuICJHcmFudCBBY2Nlc3MiIGJ1dHRvbiBpcyBjbGlja2VkJywgYXN5bmMgKCkgPT4gewogICAgdmkubW9ja2VkKGFwaS5nZXQpLm1vY2tSZXNvbHZlZFZhbHVlKHsgZGF0YTogeyBiaW5kaW5nczogW10gfSB9KQoKICAgIHJlbmRlcigKICAgICAgPE5hbWVzcGFjZUFjY2Vzc1BhbmVsCiAgICAgICAgbmFtZXNwYWNlPXttb2NrTmFtZXNwYWNlfQogICAgICAgIGlzQWRtaW49e3RydWV9CiAgICAgICAgb25HcmFudEFjY2Vzcz17bW9ja09uR3JhbnRBY2Nlc3N9CiAgICAgIC8+CiAgICApCgogICAgY29uc3QgZ3JhbnRCdXR0b24gPSBhd2FpdCBzY3JlZW4uZmluZEJ5Um9sZSgnYnV0dG9uJywgeyBuYW1lOiAvR3JhbnQgQWNjZXNzL2kgfSkKICAgIGF3YWl0IHVzZXJFdmVudC5jbGljaChncmFudEJ1dHRvbikKCiAgICBleHBlY3QobW9ja09uR3JhbnRBY2Nlc3MpLnRvSGF2ZUJlZW5DYWxsZWRUaW1lcygxKQogIH0pCgogIGl0KCdoYW5kbGVzIHJldm9rZSBhY2Nlc3MgY2xpY2sgd2l0aCBjb25maXJtYXRpb24nLCBhc3luYyAoKSA9PiB7CiAgICB2aS5tb2NrZWQoYXBpLmdldCkubW9ja1Jlc29sdmVkVmFsdWUoeyBkYXRhOiB7IGJpbmRpbmdzOiBtb2NrQWNjZXNzRW50cmllcyB9IH0pCiAgICB2aS5tb2NrZWQoYXV0aEZldGNoKS5tb2NrUmVzb2x2ZWRWYWx1ZSh7IG9rOiB0cnVlIH0gYXMgUmVzcG9uc2UpCgogICAgcmVuZGVyKAogICAgICA8TmFtZXNwYWNlQWNjZXNzUGFuZWwKICAgICAgICBuYW1lc3BhY2U9e21vY2tOYW1lc3BhY2V9CiAgICAgICAgaXNBZG1pbj17dHJ1ZX0KICAgICAgICBvbkdyYW50QWNjZXNzPXttb2NrT25HcmFudEFjY2Vzc30KICAgICAgLz4KICAgICkKCiAgICBhd2FpdCB3YWl0Rm9yKCgpID0+IHsKICAgICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoJ2FsaWNlJykpLnRvQmVJblRoZURvY3VtZW50KCkKICAgIH0pCgogICAgY29uc3QgcmV2b2tlQnV0dG9ucyA9IHNjcmVlbi5nZXRBbGxCeVRpdGxlKC9SZXZva2UgYWNjZXNzL2kpCiAgICBhd2FpdCB1c2VyRXZlbnQuY2xpY2socmV2b2tlQnV0dG9uc1swXSkKCiAgICBleHBlY3Qod2luZG93LmNvbmZpcm0pLnRvSGF2ZUJlZW5DYWxsZWRXaXRoKCdSZXZva2UgYWNjZXNzIGZvciBhbGljZT8nKQogICAgZXhwZWN0KGF1dGhGZXRjaCkudG9IYXZlQmVlbkNhbGxlZFdpdGgoCiAgICAgIGV4cGVjdC5zdHJpbmdDb250YWluaW5nKCcvcm9sZWJpbmRpbmdzJyksCiAgICAgIGV4cGVjdC5vYmplY3RDb250YWluaW5nKHsgbWV0aG9kOiAnREVMRVRFJyB9KQogICAgKQogIH0pCgogIGl0KCdkb2VzIG5vdCByZXZva2UgaWYgdXNlciBjYW5jZWxzIGNvbmZpcm1hdGlvbicsIGFzeW5jICgpID0+IHsKICAgIHZpLm1vY2tlZCh3aW5kb3csIHsgcGFydGlhbDogdHJ1ZSB9KS5jb25maXJtID0gdmkuZm4oKCkgPT4gZmFsc2UpCiAgICB2aS5tb2NrZWQoYXBpLmdldCkubW9ja1Jlc29sdmVkVmFsdWUoeyBkYXRhOiB7IGJpbmRpbmdzOiBtb2NrQWNjZXNzRW50cmllcyB9IH0pCgogICAgcmVuZGVyKAogICAgICA8TmFtZXNwYWNlQWNjZXNzUGFuZWwKICAgICAgICBuYW1lc3BhY2U9e21vY2tOYW1lc3BhY2V9CiAgICAgICAgaXNBZG1pbj17dHJ1ZX0KICAgICAgICBvbkdyYW50QWNjZXNzPXttb2NrT25HcmFudEFjY2Vzc30KICAgICAgLz4KICAgICkKCiAgICBhd2FpdCB3YWl0Rm9yKCgpID0+IHsKICAgICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoJ2FsaWNlJykpLnRvQmVJblRoZURvY3VtZW50KCkKICAgIH0pCgogICAgY29uc3QgcmV2b2tlQnV0dG9ucyA9IHNjcmVlbi5nZXRBbGxCeVRpdGxlKC9SZXZva2UgYWNjZXNzL2kpCiAgICBhd2FpdCB1c2VyRXZlbnQuY2xpY2socmV2b2tlQnV0dG9uc1swXSkKCiAgICBleHBlY3QoYXV0aEZldGNoKS5ub3QudG9IYXZlQmVlbkNhbGxlZCgpCiAgfSkKCiAgaXQoJ2hhbmRsZXMgZmV0Y2ggYWNjZXNzIGVycm9yIGdyYWNlZnVsbHknLCBhc3luYyAoKSA9PiB7CiAgICB2aS5tb2NrZWQoYXBpLmdldCkubW9ja1JlamVjdGVkVmFsdWUobmV3IEVycm9yKCc0MDMgRm9yYmlkZGVuJykpCgogICAgcmVuZGVyKAogICAgICA8TmFtZXNwYWNlQWNjZXNzUGFuZWwKICAgICAgICBuYW1lc3BhY2U9e21vY2tOYW1lc3BhY2V9CiAgICAgICAgaXNBZG1pbj17dHJ1ZX0KICAgICAgICBvbkdyYW50QWNjZXNzPXttb2NrT25HcmFudEFjY2Vzc30KICAgICAgLz4KICAgICkKCiAgICBhd2FpdCB3YWl0Rm9yKCgpID0+IHsKICAgICAgZXhwZWN0KHNjcmVlbi5nZXRCeVRleHQoL05vIHJvbGUgYmluZGluZ3MgZm91bmQvaSkpLnRvQmVJblRoZURvY3VtZW50KCkKICAgIH0pCiAgfSkKCiAgaXQoJ3JlZmV0Y2hlcyBhY2Nlc3MgZW50cmllcyBhZnRlciBuYW1lc3BhY2UgY2hhbmdlcycsIGFzeW5jICgpID0+IHsKICAgIHZpLm1vY2tlZChhcGkuZ2V0KS5tb2NrUmVzb2x2ZWRWYWx1ZSh7IGRhdGE6IHsgYmluZGluZ3M6IG1vY2tBY2Nlc3NFbnRyaWVzIH0gfSkKCiAgICBjb25zdCB7IHJlcmVuZGVyIH0gPSByZW5kZXIoCiAgICAgIDxOYW1lc3BhY2VBY2Nlc3NQYW5lbAogICAgICAgIG5hbWVzcGFjZT17bW9ja05hbWVzcGFjZX0KICAgICAgICBpc0FkbWluPXt0cnVlfQogICAgICAgIG9uR3JhbnRBY2Nlc3M9e21vY2tPbkdyYW50QWNjZXNzfQogICAgICAvPgogICAgKQoKICAgIGF3YWl0IHdhaXRGb3IoKCkgPT4gewogICAgICBleHBlY3Qoc2NyZWVuLmdldEJ5VGV4dCgnYWxpY2UnKSkudG9CZUluVGhlRG9jdW1lbnQoKQogICAgfSkKCiAgICBjb25zdCBuZXdOYW1lc3BhY2U6IE5hbWVzcGFjZURldGFpbHMgPSB7CiAgICAgIC4uLm1vY2tOYW1lc3BhY2UsCiAgICAgIG5hbWU6ICdhbm90aGVyLW5hbWVzcGFjZScsCiAgICB9CgogICAgcmVyZW5kZXIoCiAgICAgIDxOYW1lc3BhY2VBY2Nlc3NQYW5lbAogICAgICAgIG5hbWVzcGFjZT17bmV3TmFtZXNwYWNlfQogICAgICAgIGlzQWRtaW49e3RydWV9CiAgICAgICAgb25HcmFudEFjY2Vzcz17bW9ja09uR3JhbnRBY2Nlc3N9CiAgICAgIC8+CiAgICApCgogICAgYXdhaXQgd2FpdEZvcigoKSA9PiB7CiAgICAgIGV4cGVjdChhcGkuZ2V0KS50b0hhdmVCZWVuQ2FsbGVkVGltZXMoMikKICAgIH0pCiAgfSkKfSkK
+import React from 'react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import '@testing-library/jest-dom/vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { NamespaceAccessPanel } from '../NamespaceAccessPanel'
+import { api, authFetch } from '../../../lib/api'
+import type { NamespaceDetails, NamespaceAccessEntry } from '../types'
+
+/**
+ * NamespaceAccessPanel Component Tests
+ * 
+ * Tests rendering of access entries, revocation callback, admin-only
+ * behavior, loading states, error handling, and "Grant Access" button.
+ */
+
+// ── Mocks ──────────────────────────────────────────────────────────────────
+
+vi.mock('../../../lib/api', () => ({
+  api: {
+    get: vi.fn(),
+  },
+  authFetch: vi.fn(),
+}))
+
+vi.mock('../../ui/ClusterBadge', () => ({
+  ClusterBadge: ({ cluster }: { cluster: string }) => <div data-testid="cluster-badge">{cluster}</div>,
+}))
+
+vi.mock('../../ui/Toast', () => ({
+  useToast: () => ({
+    showToast: vi.fn(),
+  }),
+}))
+
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (key: string, fallback?: string) => fallback || key,
+  }),
+}))
+
+// ── Test Data ──────────────────────────────────────────────────────────────
+
+const mockNamespace: NamespaceDetails = {
+  name: 'test-namespace',
+  cluster: 'cluster-1',
+  status: 'Active',
+  createdAt: '2024-01-01T00:00:00Z',
+}
+
+const mockAccessEntries: NamespaceAccessEntry[] = [
+  {
+    bindingName: 'binding-1',
+    roleName: 'admin',
+    subjectName: 'alice',
+    subjectKind: 'User',
+  },
+  {
+    bindingName: 'binding-2',
+    roleName: 'edit',
+    subjectName: 'bob',
+    subjectKind: 'ServiceAccount',
+  },
+]
+
+// ── Tests ──────────────────────────────────────────────────────────────────
+
+describe('NamespaceAccessPanel', () => {
+  const mockOnGrantAccess = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(window, { partial: true }).confirm = vi.fn(() => true)
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('renders nothing when namespace is null', () => {
+    const { container } = render(
+      <NamespaceAccessPanel
+        namespace={null}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('renders namespace name and cluster badge', () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { bindings: [] } })
+
+    render(
+      <NamespaceAccessPanel
+        namespace={mockNamespace}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    expect(screen.getByText('test-namespace')).toBeInTheDocument()
+    expect(screen.getByTestId('cluster-badge')).toHaveTextContent('cluster-1')
+  })
+
+  it('shows admin-required message for non-admin users', () => {
+    render(
+      <NamespaceAccessPanel
+        namespace={mockNamespace}
+        isAdmin={false}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    expect(screen.getByText(/Admin access required to view role bindings/i)).toBeInTheDocument()
+  })
+
+  it('fetches and displays access entries for admin users', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { bindings: mockAccessEntries } })
+
+    render(
+      <NamespaceAccessPanel
+        namespace={mockNamespace}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('bob')).toBeInTheDocument()
+    expect(screen.getByText('Role: admin')).toBeInTheDocument()
+    expect(screen.getByText('Role: edit')).toBeInTheDocument()
+  })
+
+  it('shows loading spinner while fetching access', async () => {
+    vi.mocked(api.get).mockImplementation(
+      () => new Promise(resolve => setTimeout(() => resolve({ data: { bindings: [] } }), 100))
+    )
+
+    render(
+      <NamespaceAccessPanel
+        namespace={mockNamespace}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    expect(screen.getByRole('generic', { name: /spinner/i }) || document.querySelector('.spinner')).toBeTruthy()
+
+    await waitFor(() => {
+      expect(screen.queryByRole('generic', { name: /spinner/i })).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows "no role bindings" message when entries are empty', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { bindings: [] } })
+
+    render(
+      <NamespaceAccessPanel
+        namespace={mockNamespace}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/No role bindings found/i)).toBeInTheDocument()
+    })
+  })
+
+  it('displays subject kind badges', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { bindings: mockAccessEntries } })
+
+    render(
+      <NamespaceAccessPanel
+        namespace={mockNamespace}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('User')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('ServiceAccount')).toBeInTheDocument()
+  })
+
+  it('calls onGrantAccess when "Grant Access" button is clicked', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { bindings: [] } })
+
+    render(
+      <NamespaceAccessPanel
+        namespace={mockNamespace}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    const grantButton = await screen.findByRole('button', { name: /Grant Access/i })
+    await userEvent.clich(grantButton)
+
+    expect(mockOnGrantAccess).toHaveBeenCalledTimes(1)
+  })
+
+  it('handles revoke access click with confirmation', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { bindings: mockAccessEntries } })
+    vi.mocked(authFetch).mockResolvedValue({ ok: true } as Response)
+
+    render(
+      <NamespaceAccessPanel
+        namespace={mockNamespace}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+
+    const revokeButtons = screen.getAllByTitle(/Revoke access/i)
+    await userEvent.click(revokeButtons[0])
+
+    expect(window.confirm).toHaveBeenCalledWith('Revoke access for alice?')
+    expect(authFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/rolebindings'),
+      expect.objectContaining({ method: 'DELETE' })
+    )
+  })
+
+  it('does not revoke if user cancels confirmation', async () => {
+    vi.mocked(window, { partial: true }).confirm = vi.fn(() => false)
+    vi.mocked(api.get).mockResolvedValue({ data: { bindings: mockAccessEntries } })
+
+    render(
+      <NamespaceAccessPanel
+        namespace={mockNamespace}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+
+    const revokeButtons = screen.getAllByTitle(/Revoke access/i)
+    await userEvent.click(revokeButtons[0])
+
+    expect(authFetch).not.toHaveBeenCalled()
+  })
+
+  it('handles fetch access error gracefully', async () => {
+    vi.mocked(api.get).mockRejectedValue(new Error('403 Forbidden'))
+
+    render(
+      <NamespaceAccessPanel
+        namespace={mockNamespace}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/No role bindings found/i)).toBeInTheDocument()
+    })
+  })
+
+  it('refetches access entries after namespace changes', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { bindings: mockAccessEntries } })
+
+    const { rerender } = render(
+      <NamespaceAccessPanel
+        namespace={mockNamespace}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+
+    const newNamespace: NamespaceDetails = {
+      ...mockNamespace,
+      name: 'another-namespace',
+    }
+
+    rerender(
+      <NamespaceAccessPanel
+        namespace={newNamespace}
+        isAdmin={true}
+        onGrantAccess={mockOnGrantAccess}
+      />
+    )
+
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledTimes(2)
+    })
+  })
+})
