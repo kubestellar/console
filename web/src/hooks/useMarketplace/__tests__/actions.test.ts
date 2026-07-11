@@ -449,12 +449,18 @@ describe('useMarketplaceActions.removeItem', () => {
 // ── useInstalledMarketplaceItems ────────────────────────────────
 
 describe('useInstalledMarketplaceItems', () => {
+  const notifyInstalledStorageChanged = () => {
+    window.dispatchEvent(new StorageEvent('storage', { key: 'kc-marketplace-installed' }))
+  }
+
   beforeEach(() => {
     localStorage.clear()
+    notifyInstalledStorageChanged()
   })
 
   afterEach(() => {
     localStorage.clear()
+    notifyInstalledStorageChanged()
   })
 
   it('returns empty object when nothing installed', () => {
@@ -466,6 +472,7 @@ describe('useInstalledMarketplaceItems', () => {
     localStorage.setItem('kc-marketplace-installed', JSON.stringify({
       'my-dash': { dashboardId: 'd1', installedAt: '2024-01-01', type: 'dashboard' },
     }))
+    notifyInstalledStorageChanged()
     const { result } = renderHook(() => useInstalledMarketplaceItems())
     expect(result.current).toBeDefined()
   })
