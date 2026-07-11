@@ -28,6 +28,10 @@ vi.mock('../../../hooks/mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
+vi.mock('../../../lib/api', () => ({
+  authFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+}))
+
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))
@@ -54,6 +58,10 @@ vi.mock('../../../components/ui/Toast', () => ({
   useToast: () => ({
     showToast: vi.fn(),
   }),
+}))
+
+vi.mock('../../../lib/auth', () => ({
+  useAuth: () => ({ user: null }),
 }))
 
 const mockFetch = vi.fn()

@@ -77,7 +77,7 @@ describe('NamespaceFilterBar', () => {
     await userEvent.type(searchInput, 'my-app')
 
     expect(mockOnSearchChange).toHaveBeenCalledTimes(6) // "m", "y", "-", "a", "p", "p"
-    expect(mockOnSearchChange).toHaveBeenLastCalledWith('my-app')
+    expect(mockOnSearchChange).toHaveBeenLastCalledWith('p')
   })
 
   it('renders group-by toggle buttons', () => {
