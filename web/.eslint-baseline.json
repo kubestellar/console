@@ -9508,126 +9508,126 @@
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 92,
+    "line": 85,
     "column": 3,
     "message": "'REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 93,
+    "line": 86,
     "column": 3,
     "message": "'CLUSTER_POLL_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 94,
+    "line": 87,
     "column": 3,
     "message": "'GPU_POLL_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 95,
+    "line": 88,
     "column": 3,
     "message": "'CACHE_TTL_MS' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 96,
+    "line": 89,
     "column": 3,
     "message": "'MIN_REFRESH_INDICATOR_MS' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 97,
+    "line": 90,
     "column": 3,
     "message": "'getLocalAgentURL' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 99,
+    "line": 92,
     "column": 3,
     "message": "'getEffectiveInterval' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 102,
+    "line": 95,
     "column": 3,
     "message": "'shouldMarkOffline' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 103,
+    "line": 96,
     "column": 3,
     "message": "'recordClusterFailure' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 105,
+    "line": 98,
     "column": 3,
     "message": "'clusterDisplayName' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 106,
+    "line": 99,
     "column": 3,
     "message": "'fetchWithRetry' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 115,
+    "line": 108,
     "column": 3,
     "message": "'notifyClusterSubscribers' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 116,
+    "line": 109,
     "column": 3,
     "message": "'notifyClusterSubscribersDebounced' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 119,
+    "line": 112,
     "column": 3,
     "message": "'setInitialFetchStarted' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 122,
+    "line": 115,
     "column": 3,
     "message": "'initialFetchStarted' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 123,
+    "line": 116,
     "column": 3,
     "message": "'healthCheckFailures' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 128,
+    "line": 121,
     "column": 3,
     "message": "'clusterCacheRef' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 129,
+    "line": 122,
     "column": 3,
     "message": "'subscribeClusterCache' is defined but never used. Allowed unused vars must match /^_/u."
   },
