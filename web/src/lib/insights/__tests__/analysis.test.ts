@@ -400,4 +400,4 @@ describe('getTopInsights', () => {
     })) as MultiClusterInsight[]
     expect(getTopInsights(insights)).toHaveLength(5)
   })
-}
+})
