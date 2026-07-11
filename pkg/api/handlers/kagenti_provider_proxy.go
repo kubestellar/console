@@ -15,6 +15,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -133,7 +134,7 @@ func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
 
 	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, enrichedMessage, req.ContextID, nil)
 	if err != nil {
-		slog.Error("kagenti provider invoke failed", "error", err, "agent", req.Agent, "namespace", req.Namespace)
+		slog.Error("kagenti provider invoke failed", "error", err, "agent", sanitize.LogString(req.Agent), "namespace", sanitize.LogString(req.Namespace))
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "upstream error"})
 	}
 	// stream is closed inside the stream writer callback.
@@ -317,7 +318,7 @@ func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
 
 	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, message, "", nil)
 	if err != nil {
-		slog.Error("kagenti provider tool invocation failed", "error", err, "agent", req.Agent, "namespace", req.Namespace, "tool", req.Tool)
+		slog.Error("kagenti provider tool invocation failed", "error", err, "agent", sanitize.LogString(req.Agent), "namespace", sanitize.LogString(req.Namespace), "tool", sanitize.LogString(req.Tool))
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "upstream error"})
 	}
 	defer stream.Close()
@@ -530,7 +531,7 @@ func (h *KagentiProviderProxyHandler) handleGetPodList(c *fiber.Ctx, args map[st
 
 	pods, err := h.k8sClient.GetPods(ctx, cluster, namespace)
 	if err != nil {
-		slog.Error("get_pod_list failed", "error", err, "cluster", cluster, "namespace", namespace)
+		slog.Error("get_pod_list failed", "error", err, "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to fetch pods"})
 	}
 
@@ -567,7 +568,7 @@ func (h *KagentiProviderProxyHandler) handleGetEvents(c *fiber.Ctx, args map[str
 
 	events, err := h.k8sClient.GetEvents(ctx, cluster, namespace, limit)
 	if err != nil {
-		slog.Error("get_events failed", "error", err, "cluster", cluster, "namespace", namespace)
+		slog.Error("get_events failed", "error", err, "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to fetch events"})
 	}
 

@@ -21,6 +21,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/middleware"
 	k8sclient "github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -201,7 +202,7 @@ func (h *SelfUpgradeHandler) GetStatus(c *fiber.Ctx) error {
 	// Discover the Deployment
 	dep, err := h.findDeployment(ctx, client, namespace)
 	if err != nil {
-		slog.Error("[self-upgrade] failed to find deployment", "namespace", namespace, "error", err)
+		slog.Error("[self-upgrade] failed to find deployment", "namespace", sanitize.LogString(namespace), "error", err)
 		resp.Reason = "deployment not found"
 		return c.JSON(resp)
 	}
@@ -321,7 +322,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	// Discover the Deployment
 	dep, err := h.findDeployment(ctx, client, namespace)
 	if err != nil {
-		slog.Error("[self-upgrade] failed to find deployment", "namespace", namespace, "error", err)
+		slog.Error("[self-upgrade] failed to find deployment", "namespace", sanitize.LogString(namespace), "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(SelfUpgradeTriggerResponse{
 			Error: "deployment not found",
 		})
@@ -377,7 +378,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	}
 	newImage := repo + ":" + req.ImageTag + digest
 
-	slog.Info("[self-upgrade] upgrading deployment", "namespace", namespace, "deployment", dep.Name, "from", currentImage, "to", newImage)
+	slog.Info("[self-upgrade] upgrading deployment", "namespace", sanitize.LogString(namespace), "deployment", dep.Name, "from", currentImage, "to", newImage)
 
 	// #7976: Do NOT broadcast a progress event here. Earlier versions emitted
 	// `progress: 20` with a "Patching deployment image to X" message BEFORE

@@ -5,6 +5,7 @@ import { PayloadCard } from './PayloadCard'
 import type { PayloadProject } from './types'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
