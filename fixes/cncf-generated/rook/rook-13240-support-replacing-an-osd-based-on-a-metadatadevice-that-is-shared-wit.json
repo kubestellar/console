@@ -1,0 +1,76 @@
+{
+  "version": "kc-mission-v1",
+  "name": "rook-13240-support-replacing-an-osd-based-on-a-metadatadevice-that-is-shared-wit",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "rook: Support replacing an OSD based on a metadataDevice that is shared with multiple OSDs on a node",
+    "description": "Support replacing an OSD based on a metadataDevice that is shared with multiple OSDs on a node. Requested by 11+ users.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current rook deployment",
+        "description": "Verify your rook version and configuration:\n```bash\nkubectl get pods -n rook -l app.kubernetes.io/name=rook\nhelm list -n rook 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working rook installation."
+      },
+      {
+        "title": "Review rook configuration",
+        "description": "Inspect the relevant rook configuration:\n```bash\nkubectl get all -n rook -l app.kubernetes.io/name=rook\nkubectl get configmap -n rook -l app.kubernetes.io/part-of=rook\n```\n**Is this a bug report or feature request?**\n* Feature Request\n\n**What should the feature do:**\nRook should allow replacing a single OSD on a node where multiple OSDs are configured to share a metadataDevice."
+      },
+      {
+        "title": "Apply the fix for Support replacing an OSD based on a metadataDevice that is…",
+        "description": "As [document](https://rook.io/docs/rook/v1.12/CRDs/Cluster/host-cluster/#specific-nodes-and-devices) mentioned, configuration can be specified at cluster level, the node level or device level config like below. \n\ncluster level:\n```yaml\nstorage:\n    useAllNodes: false\n    useAllDevices: false\n   \n```yaml\nceph-volume lvm batch --prepare <deviceA> <deviceB> <deviceC> --db-devices <metadataDevice>\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n rook -l app.kubernetes.io/name=rook\nkubectl get events -n rook --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Support replacing an OSD based on a metadataDevice that is…\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "As [document](https://rook.io/docs/rook/v1.12/CRDs/Cluster/host-cluster/#specific-nodes-and-devices) mentioned, configuration can be specified at cluster level, the node level or device level config like below.",
+      "codeSnippets": [
+        "ceph-volume lvm batch --prepare <deviceA> <deviceB> <deviceC> --db-devices <metadataDevice>",
+        "storage:\n    useAllNodes: false\n    useAllDevices: false\n    deviceFilter:\n    config:\n      metadataDevice: /dev/nmve01\n    nodes:\n    - name: \"172.17.4.201\"\n      devices:             \n      - name: \"sdb\"\n      - name: \"sdc1\"",
+        "storage:\n    useAllNodes: false\n    useAllDevices: false\n    deviceFilter:\n    nodes:\n    - name: \"172.17.4.201\"\n      config:\n        metadataDevice: /dev/nmve01\n      devices:             \n      - name: \"sdb\"\n      - name: \"sdc1\""
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "rook",
+      "graduated",
+      "storage",
+      "feature"
+    ],
+    "cncfProjects": [
+      "rook"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/rook/rook/issues/13240",
+      "repo": "https://github.com/rook/rook"
+    },
+    "reactions": 11,
+    "comments": 45,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with rook installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-11T06:52:25.263Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
