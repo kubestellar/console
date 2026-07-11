@@ -24,7 +24,10 @@ jobs:
       - name: Install script dependencies
         # --ignore-scripts prevents postinstall/preinstall lifecycle hooks from executing
         # arbitrary code during npm install (supply-chain hardening, fixes #20483)
-        run: npm install --no-save --ignore-scripts js-yaml@4.1.0
+        working-directory: .github/guardrails-scripts
+        # Install from the committed lockfile (pinned, hashes verified) rather
+        # than resolving js-yaml at run time (Scorecard Pinned-Dependencies, #20483).
+        run: npm ci --ignore-scripts
         
       - name: Check Scanner Merge Eligibility
         id: check
@@ -32,7 +35,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const yaml = require('js-yaml');
+            const yaml = require('.github/guardrails-scripts/node_modules/js-yaml');
             
             // Load scanner config
             const configPath = '.github/scanner-config.yml';
