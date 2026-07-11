@@ -29,8 +29,9 @@ export function TeamDetail({ team, onBack, onUpdateTeam: _onUpdateTeam, onDelete
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={onBack} className="p-1 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
+        <button onClick={onBack} className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors text-sm">
           <ArrowLeft className="w-4 h-4" />
+          {t('common.back')}
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-2">

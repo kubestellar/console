@@ -96,12 +96,13 @@ vi.mock('../useClusterResourceQuery', () => ({
   useClusterResourceQuery: () => ({ data: [], isLoading: false, error: null }),
 }))
 
-import { usePVCs } from '../storage'
+import { usePVCs, __storageTestables } from '../storage'
 
 describe('storage hooks - usePVCs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    __storageTestables.resetPVCsCache()
     mockIsAgentUnavailable.mockReturnValue(false)
     mockIsDemoMode.mockReturnValue(false)
     mockUseDemoMode.mockReturnValue(false)
@@ -282,7 +283,7 @@ describe('storage hooks - usePVCs', () => {
 
     mockKubectlProxy.getPVCs.mockRejectedValue(new Error('kubectl also fails'))
 
-    const { result, rerender } = renderHook(() => usePVCs('cluster-a'))
+    const { result, rerender: _rerender } = renderHook(() => usePVCs('cluster-a'))
 
     // First failure
     await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThan(0))

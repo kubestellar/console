@@ -707,7 +707,12 @@ if (typeof window !== 'undefined') {
   })
 }
 
+function resetServicesCache() {
+  servicesCache = null
+}
+
 export const __networkingTestables = {
   loadServicesCacheFromStorage,
   getDemoServices,
+  resetServicesCache,
 }
