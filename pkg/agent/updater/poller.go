@@ -87,7 +87,7 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 	}
 
 	if latestSHA == currentSHA || currentSHA == "" {
-		slog.Info("[AutoUpdate] already up to date, no update needed", "sha", short(currentSHA))
+		slog.Info("[AutoUpdate] already up to date, no update needed", "sha", sanitize.LogString(short(currentSHA)))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:   "done",
 			Message:  "Already up to date — no changes on main",
@@ -96,7 +96,7 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 		return
 	}
 
-	slog.Info("[AutoUpdate] new commit on main", "from", short(currentSHA), "to", short(latestSHA))
+	slog.Info("[AutoUpdate] new commit on main", "from", sanitize.LogString(short(currentSHA)), "to", sanitize.LogString(short(latestSHA)))
 	uc.executeDeveloperUpdate(latestSHA)
 }
 

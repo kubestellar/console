@@ -1,8 +1,6 @@
 package providers
 
 import (
-	"github.com/kubestellar/console/pkg/agent/procutil"
-	"github.com/kubestellar/console/pkg/ai"
 	"bufio"
 	"context"
 	"fmt"
@@ -13,7 +11,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/agent/procutil"
+	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // authRefreshCooldown prevents hammering `gh auth token` on repeated failures.
@@ -328,7 +329,7 @@ func (c *CopilotCLIProvider) doStreamChat(ctx context.Context, req *ai.ChatReque
 	if waitErr != nil {
 		slog.Error("[CopilotCLI] command finished with error", "error", waitErr)
 		if se := stderrContent.String(); se != "" {
-			slog.Info("[CopilotCLI] stderr output", "stderr", se)
+			slog.Info("[CopilotCLI] stderr output", "stderr", sanitize.LogString(se))
 		}
 	}
 

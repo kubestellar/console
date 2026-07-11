@@ -1,8 +1,6 @@
 package providers
 
 import (
-	"github.com/kubestellar/console/pkg/agent/procutil"
-	"github.com/kubestellar/console/pkg/ai"
 	"bufio"
 	"context"
 	"fmt"
@@ -12,6 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/agent/procutil"
+	"github.com/kubestellar/console/pkg/ai"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // AntigravityProvider implements the ai.Provider interface for Google Antigravity CLI
@@ -122,7 +124,7 @@ func (a *AntigravityProvider) Handshake(ctx context.Context) *ai.HandshakeResult
 
 	out, err := exec.CommandContext(checkCtx, a.cliPath, "--version").CombinedOutput()
 	if err != nil {
-		slog.Error("[Antigravity] handshake failed", "error", err, "output", string(out))
+		slog.Error("[Antigravity] handshake failed", "error", err, "output", sanitize.LogString(string(out)))
 		return &ai.HandshakeResult{
 			Ready:   false,
 			State:   "failed",
