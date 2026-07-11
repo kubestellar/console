@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kubestellar-console
+
+labels:
+  - includeSelectors: false
+    includeTemplates: true
+    pairs:
+      app.kubernetes.io/name: kubestellar-console
+      app.kubernetes.io/instance: kubestellar-console
+      app.kubernetes.io/part-of: kubestellar
+      owner: kubestellar
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - clusterrole.yaml
+  - clusterrolebinding.yaml
+  - self-upgrade-role.yaml
+  - self-upgrade-rolebinding.yaml
+  - pvc.yaml
+  - pvc-backups.yaml
+  - service.yaml
+  - deployment.yaml
+  - cronjob-db-backup.yaml
+
+# Single place to bump the console version — keep in sync with
+# deploy/helm/kubestellar-console/Chart.yaml appVersion.
+images:
+  - name: ghcr.io/kubestellar/console
+    newTag: 0.3.29

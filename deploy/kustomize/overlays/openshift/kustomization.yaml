@@ -1,0 +1,7 @@
+# OpenShift overlay — starter experience plus an edge-terminated Route.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../starter
+  - route.yaml
