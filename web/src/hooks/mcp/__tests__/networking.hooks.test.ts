@@ -96,12 +96,13 @@ vi.mock('../../useCachedData/demoData', () => ({
   ]),
 }))
 
-import { useServices, useIngresses } from '../networking'
+import { useServices, useIngresses, __networkingTestables } from '../networking'
 
 describe('networking hooks - useServices', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    __networkingTestables.resetServicesCache()
     mockIsAgentUnavailable.mockReturnValue(false)
     mockIsDemoMode.mockReturnValue(false)
     mockUseDemoMode.mockReturnValue(false)
@@ -356,6 +357,7 @@ describe('networking hooks - useIngresses', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    __networkingTestables.resetServicesCache()
     mockIsAgentUnavailable.mockReturnValue(false)
     mockIsDemoMode.mockReturnValue(false)
     mockUseDemoMode.mockReturnValue(false)

@@ -96,12 +96,13 @@ vi.mock('../useClusterResourceQuery', () => ({
   useClusterResourceQuery: () => ({ data: [], isLoading: false, error: null }),
 }))
 
-import { usePVCs } from '../storage'
+import { usePVCs, __storageTestables } from '../storage'
 
 describe('storage hooks - usePVCs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    __storageTestables.resetPVCsCache()
     mockIsAgentUnavailable.mockReturnValue(false)
     mockIsDemoMode.mockReturnValue(false)
     mockUseDemoMode.mockReturnValue(false)
