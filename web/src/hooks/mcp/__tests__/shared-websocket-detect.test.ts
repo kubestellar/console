@@ -89,14 +89,14 @@ import {
   MIN_REFRESH_INDICATOR_MS as _MIN_REFRESH_INDICATOR_MS,
   getLocalAgentURL as _getLocalAgentURL,
   // Pure functions
-  getEffectiveInterval,
+  getEffectiveInterval as _getEffectiveInterval,
   shareMetricsBetweenSameServerClusters,
   deduplicateClustersByServer,
   shouldMarkOffline,
-  recordClusterFailure,
+  recordClusterFailure as _recordClusterFailure,
   clearClusterFailure,
   clusterDisplayName as _clusterDisplayName,
-  fetchWithRetry,
+  fetchWithRetry as _fetchWithRetry,
   // Async functions
   fullFetchClusters,
   refreshSingleCluster,
@@ -112,14 +112,14 @@ import {
   setInitialFetchStarted as _setInitialFetchStarted,
   setHealthCheckFailures,
   getHealthCheckFailures,
-  initialFetchStarted,
+  initialFetchStarted as _initialFetchStarted,
   healthCheckFailures,
   // WebSocket
   sharedWebSocket,
   cleanupSharedWebSocket,
   // Cache ref
   clusterCacheRef as _clusterCacheRef,
-  subscribeClusterCache,
+  subscribeClusterCache as _subscribeClusterCache,
 } from '../shared'
 import { clearAgentToken, setAgentToken } from '../agentFetch'
 
