@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ImproveMissionDialog } from './ImproveMissionDialog'
@@ -32,6 +31,7 @@ describe('ImproveMissionDialog', () => {
     const { container } = render(
       <ImproveMissionDialog
         mission={null}
+        isOpen={false}
         onClose={vi.fn()}
       />
     )
@@ -51,6 +51,7 @@ describe('ImproveMissionDialog', () => {
     render(
       <ImproveMissionDialog
         mission={mission}
+        isOpen={true}
         onClose={vi.fn()}
       />
     )
@@ -70,6 +71,7 @@ describe('ImproveMissionDialog', () => {
     render(
       <ImproveMissionDialog
         mission={mission}
+        isOpen={true}
         onClose={vi.fn()}
       />
     )
@@ -90,6 +92,7 @@ describe('ImproveMissionDialog', () => {
     render(
       <ImproveMissionDialog
         mission={mission}
+        isOpen={true}
         onClose={onClose}
       />
     )

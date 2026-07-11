@@ -16,6 +16,15 @@ vi.mock('../../../hooks/mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
+vi.mock('../../../lib/api', () => ({
+  authFetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+    const token = localStorage.getItem('token')
+    const headers = new Headers(init?.headers)
+    if (token) headers.set('Authorization', `Bearer ${token}`)
+    return globalThis.fetch(url, { ...init, headers })
+  },
+}))
+
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))
@@ -34,6 +43,10 @@ vi.mock('../../../lib/modals', () => ({
 
 vi.mock('../../../components/ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
+}))
+
+vi.mock('../../../lib/auth', () => ({
+  useAuth: () => ({ user: null }),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -93,7 +106,6 @@ describe('NamespaceManager auth and offline handling', () => {
   it('falls back to the backend when the local agent rejects the first namespace request', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'dev-user' }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify([
         {
           name: 'team-a',
@@ -121,9 +133,6 @@ describe('NamespaceManager auth and offline handling', () => {
     expect(agentCallHeaders).toBeInstanceOf(Headers)
     expect((agentCallHeaders as Headers).get('Authorization')).toBe('Bearer jwt-token')
 
-    const authProbeCall = findFetchCall('/api/me')
-    expect(authProbeCall?.[1]).toEqual(expect.objectContaining({ credentials: 'include' }))
-
     const backendCall = findFetchCall('/api/namespaces?cluster=cluster-1')
     expect(backendCall).toBeDefined()
   })
@@ -140,7 +149,6 @@ describe('NamespaceManager auth and offline handling', () => {
     })
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'dev-user' }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify([
         {
           name: 'team-a',
@@ -157,7 +165,6 @@ describe('NamespaceManager auth and offline handling', () => {
     })
 
     expect(findFetchCall(':8585/namespaces?cluster=cluster-1-context')).toBeDefined()
-    expect(findFetchCall('/api/me')).toBeDefined()
     expect(findFetchCall('/api/namespaces?cluster=cluster-1-context')).toBeDefined()
   })
 

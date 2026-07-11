@@ -7233,28 +7233,28 @@
   {
     "file": "src/components/teams/TeamAccessGrants.tsx",
     "rule": "no-restricted-syntax",
-    "line": 172,
+    "line": 173,
     "column": 19,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
   {
     "file": "src/components/teams/TeamAccessGrants.tsx",
     "rule": "no-restricted-syntax",
-    "line": 183,
+    "line": 185,
     "column": 19,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/teams/TeamAccessGrants.tsx",
     "rule": "no-restricted-syntax",
-    "line": 196,
+    "line": 198,
     "column": 19,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
   {
     "file": "src/components/teams/TeamAccessGrants.tsx",
     "rule": "no-restricted-syntax",
-    "line": 210,
+    "line": 213,
     "column": 17,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },

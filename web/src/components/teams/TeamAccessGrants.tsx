@@ -155,8 +155,9 @@ export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAcces
             )}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">{t('teams.scope')}</label>
+                <label htmlFor="grant-scope-select" className="block text-sm font-medium text-muted-foreground mb-1">{t('teams.scope')}</label>
                 <select
+                  id="grant-scope-select"
                   value={scope}
                   onChange={e => setScope(e.target.value as 'namespace' | 'cluster')}
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white"
@@ -167,9 +168,10 @@ export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAcces
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">{t('teams.cluster')}</label>
+                <label htmlFor="grant-cluster-select" className="block text-sm font-medium text-muted-foreground mb-1">{t('teams.cluster')}</label>
                 <div className="flex items-center gap-2">
                   <select
+                    id="grant-cluster-select"
                     value={selectedCluster}
                     onChange={e => setSelectedCluster(e.target.value)}
                     className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-white"
@@ -192,8 +194,9 @@ export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAcces
 
               {scope === 'namespace' && !applyToAll && (
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">{t('teams.namespace')}</label>
+                  <label htmlFor="grant-namespace-select" className="block text-sm font-medium text-muted-foreground mb-1">{t('teams.namespace')}</label>
                   <select
+                    id="grant-namespace-select"
                     value={selectedNamespace}
                     onChange={e => setSelectedNamespace(e.target.value)}
                     disabled={!selectedCluster}
@@ -206,8 +209,9 @@ export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAcces
               )}
 
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common.role')}</label>
+                <label htmlFor="grant-role-select" className="block text-sm font-medium text-muted-foreground mb-1">{t('common.role')}</label>
                 <select
+                  id="grant-role-select"
                   value={role}
                   onChange={e => setRole(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white"

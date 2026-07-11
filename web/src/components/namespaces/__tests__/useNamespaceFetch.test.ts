@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { useNamespaceFetch, namespaceCache, getCachedNamespacesForCluster } from '../useNamespaceFetch'
 import { authFetch } from '../../../lib/api'
 import { clusterCacheRef } from '../../../hooks/mcp/shared'
@@ -226,7 +226,9 @@ describe('useNamespaceFetch', () => {
 
     const initialLastUpdated = result.current.lastUpdated
 
-    vi.advanceTimersByTime(30000) // AUTO_REFRESH_INTERVAL_MS
+    await act(async () => {
+      vi.advanceTimersByTime(30000) // AUTO_REFRESH_INTERVAL_MS
+    })
 
     await waitFor(() => {
       expect(result.current.lastUpdated).not.toBe(initialLastUpdated)

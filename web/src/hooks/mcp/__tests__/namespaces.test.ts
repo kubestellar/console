@@ -50,6 +50,7 @@ vi.mock('../../../lib/api', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
   },
+  authFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(url, init)),
 }))
 
 vi.mock('../../../lib/kubectlProxy', () => ({
