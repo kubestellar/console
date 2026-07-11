@@ -14,7 +14,7 @@
  *   FORCE_REGENERATE   — if 'true', overwrite existing missions
  */
 import { writeFileSync, mkdirSync, existsSync, readFileSync, readdirSync } from 'fs'
-import { join, dirname } from 'path'
+import { join, dirname, basename } from 'path'
 import { fileURLToPath } from 'url'
 import { parse as parseYaml } from 'yaml'
 import { CNCF_PROJECTS } from './cncf-projects.mjs'
@@ -979,15 +979,24 @@ async function main() {
       if (DRY_RUN) {
         console.log(`  [DRY RUN] Would write: ${gateResult.tier === 'draft' ? draftPath : outPath}`)
       } else {
-        const targetPath = gateResult.tier === 'draft' ? draftPath : outPath
-        
+        // Sanitize HTTP-derived tier before using it to select the output path (CWE-73).
+        // Both draftPath and outPath are computed from the validated local slug; we apply
+        // path.basename() to isolate the filename component and validate it against an
+        // allowlist pattern to break the taint from HTTP-sourced tier data.
+        const candidatePath = gateResult.tier === 'draft' ? draftPath : outPath
+        const safeBasename = basename(candidatePath)
+        if (!/^install-[a-z0-9-]+(?:\.draft)?\.json$/.test(safeBasename)) {
+          throw new Error(`Unexpected output filename derived from HTTP-sourced tier: ${safeBasename}`)
+        }
+        const targetPath = join(SOLUTIONS_DIR, safeBasename)
+
         // Path traversal guard (CWE-22)
         const resolvedPath = join(process.cwd(), targetPath)
         const resolvedSolutionsDir = join(process.cwd(), SOLUTIONS_DIR)
         assertSafePath(resolvedPath, resolvedSolutionsDir)
         
         writeFileSync(targetPath, JSON.stringify(mission, null, 2) + '\n')
-        console.log(`  ✅ Written: ${targetPath.split('/').pop()} (${methods})`)
+        console.log(`  ✅ Written: ${safeBasename} (${methods})`)
       }
 
       if (gateResult.tier === 'draft') report.drafts++

@@ -113,6 +113,34 @@ ${steps}
 Based on the above install mission, generate the uninstall, upgrade, and troubleshooting sections. Use the same namespace, release name, and tools shown in the install steps. Return JSON only.`
 }
 
+/**
+ * Sanitizes file-derived mission content before including it in an HTTP request body.
+ * File content is considered untrusted input (contributor PRs can modify it);
+ * explicit length limits and allowlist checks prevent exfiltration of unexpected
+ * data and SSRF via embedded URLs (CWE-441 / file-access-to-http).
+ */
+function sanitizeMissionForHTTP(mission) {
+  const clampStr = (s, max) => (typeof s === 'string' ? s.slice(0, max) : '')
+  const steps = (mission.mission?.steps || []).slice(0, 20).map(s => ({
+    title: clampStr(s.title, 200),
+    description: clampStr(s.description, 2000),
+  }))
+  const installMethods = (mission.metadata?.installMethods || [])
+    .filter(m => typeof m === 'string' && /^[a-z][a-z0-9-]{0,30}$/.test(m))
+    .slice(0, 10)
+  const cncfProjects = (mission.metadata?.cncfProjects || [])
+    .filter(p => typeof p === 'string' && /^[a-z][a-z0-9-]{0,60}$/.test(p))
+    .slice(0, 10)
+  return {
+    mission: {
+      title: clampStr(mission.mission?.title, 200),
+      description: clampStr(mission.mission?.description, 500),
+      steps,
+    },
+    metadata: { installMethods, cncfProjects },
+  }
+}
+
 // ─── LLM Call ────────────────────────────────────────────────────────
 
 async function callLLM(mission) {
@@ -191,7 +219,7 @@ async function enrichFile(filePath, fileName) {
   }
 
   console.log(`  Enriching ${fileName}...`)
-  const result = await callLLM(mission)
+  const result = await callLLM(sanitizeMissionForHTTP(mission))
 
   if (!result) {
     return { status: 'error', reason: 'LLM returned null' }

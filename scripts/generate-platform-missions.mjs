@@ -17,7 +17,7 @@
  *   FORCE_REGENERATE   — if 'true', overwrite existing missions
  */
 import { writeFileSync, mkdirSync, existsSync, readFileSync, readdirSync } from 'fs'
-import { join, dirname } from 'path'
+import { join, dirname, basename } from 'path'
 import { fileURLToPath } from 'url'
 import { K8S_PLATFORMS, getPlatformByName } from './k8s-platforms.mjs'
 import { OTHER_PROJECTS } from './other-projects.mjs'
@@ -916,9 +916,19 @@ async function main() {
     // 5. Write mission file
     const slug = slugify(platform.name)
     assertSafeSlug(slug, 'platform.name')
-    const filename = `platform-${slug}.json`
-    const isDraft = gateResult.verdict === 'draft'
-    const outPath = join(SOLUTIONS_DIR, isDraft ? filename.replace('.json', '.draft.json') : filename)
+    // Sanitize HTTP-derived verdict before using it to construct the file path (CWE-73).
+    // The verdict is computed from LLM output; use an explicit allowlist to prevent
+    // tainted data from influencing the filename beyond the '.draft.' infix.
+    // path.basename() strips any residual path separators as a final safeguard.
+    const VERDICT_SUFFIX_MAP = Object.freeze({ draft: '.draft', pass: '', review: '' })
+    const verdictSuffix = Object.prototype.hasOwnProperty.call(VERDICT_SUFFIX_MAP, gateResult.verdict)
+      ? VERDICT_SUFFIX_MAP[gateResult.verdict]
+      : ''
+    const outFilename = basename(`platform-${slug}${verdictSuffix}.json`)
+    if (!/^platform-[a-z0-9-]+(?:\.draft)?\.json$/.test(outFilename)) {
+      throw new Error(`Unexpected output filename derived from HTTP-sourced verdict: ${outFilename}`)
+    }
+    const outPath = join(SOLUTIONS_DIR, outFilename)
 
     // Path traversal guard (CWE-22)
     const resolvedPath = join(process.cwd(), outPath)
