@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { NavigationShell } from '../NavigationShell'
+import type { UpdateProgress } from '../../../types/updates'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -26,7 +27,7 @@ vi.mock('../../PageErrorBoundary', () => ({
 }))
 
 vi.mock('../../updates/UpdateProgressBanner', () => ({
-  UpdateProgressBanner: ({ progress }: { progress: any }) => 
+  UpdateProgressBanner: ({ progress }: { progress: UpdateProgress | null }) => 
     progress ? <div data-testid="update-banner">Update Progress</div> : null,
 }))
 
