@@ -375,8 +375,28 @@ async function checkVersionFreshness(helmRepoUrl, chartName, currentVersion) {
 }
 
 // ─── Slug / Title helpers ────────────────────────────────────────────
-function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') }
+export function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') }
 function titleCase(s) { return s.replace(/(^|[\s-])(\w)/g, (_, p, c) => p + c.toUpperCase()) }
+
+/**
+ * Asserts that a slug is safe for use in file-path construction (CWE-20).
+ * Throws if the slug contains path separators, dots, or starts with a dash.
+ */
+export function assertSafeSlug(slug, source = 'unknown') {
+  if (!slug || slug.includes('/') || slug.includes('\\') || slug.includes('.') || slug.startsWith('-')) {
+    throw new Error(`Unsafe slug generated from ${source}: ${slug}`)
+  }
+}
+
+/**
+ * Asserts that a resolved file path stays within the allowed directory (CWE-22).
+ * Throws if the path escapes the allowed directory root.
+ */
+export function assertSafePath(resolvedTarget, resolvedAllowedDir) {
+  if (!resolvedTarget.startsWith(resolvedAllowedDir + '/') && resolvedTarget !== resolvedAllowedDir) {
+    throw new Error(`Path traversal detected: ${resolvedTarget}`)
+  }
+}
 
 // ─── Quality Gate ────────────────────────────────────────────────────
 const SAFE_CLI_COMMANDS = /\b(kubectl|helm|gcloud|eksctl|az|oci|aws|doctl|linode-cli|vkectl|oc|k3s|k0s|microk8s|snap|curl|wget|apt|yum|dnf|brew)\b/
@@ -895,10 +915,7 @@ async function main() {
 
     // 5. Write mission file
     const slug = slugify(platform.name)
-    // Validate slug is safe (CWE-20: no path separators, no dots)
-    if (!slug || slug.includes('/') || slug.includes('\\') || slug.includes('.') || slug.startsWith('-')) {
-      throw new Error(`Unsafe slug generated from platform.name: ${slug}`)
-    }
+    assertSafeSlug(slug, 'platform.name')
     const filename = `platform-${slug}.json`
     const isDraft = gateResult.verdict === 'draft'
     const outPath = join(SOLUTIONS_DIR, isDraft ? filename.replace('.json', '.draft.json') : filename)
@@ -906,9 +923,7 @@ async function main() {
     // Path traversal guard (CWE-22)
     const resolvedPath = join(process.cwd(), outPath)
     const resolvedSolutionsDir = join(process.cwd(), SOLUTIONS_DIR)
-    if (!resolvedPath.startsWith(resolvedSolutionsDir + '/') && resolvedPath !== resolvedSolutionsDir) {
-      throw new Error(`Path traversal detected: ${outPath}`)
-    }
+    assertSafePath(resolvedPath, resolvedSolutionsDir)
 
     if (!DRY_RUN) {
       writeFileSync(outPath, JSON.stringify(mission, null, 2))

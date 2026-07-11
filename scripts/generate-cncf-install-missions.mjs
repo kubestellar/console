@@ -718,6 +718,26 @@ function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80)
 }
 
+/**
+ * Asserts that a slug is safe for use in file-path construction (CWE-20).
+ * Throws if the slug contains path separators, dots, or starts with a dash.
+ */
+export function assertSafeSlug(slug, source = 'unknown') {
+  if (!slug || slug.includes('/') || slug.includes('\\') || slug.includes('.') || slug.startsWith('-')) {
+    throw new Error(`Unsafe slug generated from ${source}: ${slug}`)
+  }
+}
+
+/**
+ * Asserts that a resolved file path stays within the allowed directory (CWE-22).
+ * Throws if the path escapes the allowed directory root.
+ */
+export function assertSafePath(resolvedTarget, resolvedAllowedDir) {
+  if (!resolvedTarget.startsWith(resolvedAllowedDir + '/') && resolvedTarget !== resolvedAllowedDir) {
+    throw new Error(`Path traversal detected: ${resolvedTarget}`)
+  }
+}
+
 // ─── Report ──────────────────────────────────────────────────────────
 
 function formatReport(report) {
@@ -811,10 +831,7 @@ async function main() {
 
     // Skip if already exists (unless FORCE_REGENERATE)
     const slug = slugify(project.name)
-    // Validate slug is safe (CWE-20: no path separators, no dots)
-    if (!slug || slug.includes('/') || slug.includes('\\') || slug.includes('.') || slug.startsWith('-')) {
-      throw new Error(`Unsafe slug generated from project.name: ${slug}`)
-    }
+    assertSafeSlug(slug, 'project.name')
     const outPath = join(SOLUTIONS_DIR, `install-${slug}.json`)
     const draftPath = join(SOLUTIONS_DIR, `install-${slug}.draft.json`)
     if (!FORCE_REGENERATE && (existsSync(outPath) || existsSync(draftPath))) {
@@ -967,9 +984,7 @@ async function main() {
         // Path traversal guard (CWE-22)
         const resolvedPath = join(process.cwd(), targetPath)
         const resolvedSolutionsDir = join(process.cwd(), SOLUTIONS_DIR)
-        if (!resolvedPath.startsWith(resolvedSolutionsDir + '/') && resolvedPath !== resolvedSolutionsDir) {
-          throw new Error(`Path traversal detected: ${targetPath}`)
-        }
+        assertSafePath(resolvedPath, resolvedSolutionsDir)
         
         writeFileSync(targetPath, JSON.stringify(mission, null, 2) + '\n')
         console.log(`  ✅ Written: ${targetPath.split('/').pop()} (${methods})`)
