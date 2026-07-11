@@ -16,14 +16,17 @@ vi.mock('node:child_process', () => ({
   default: { execFileSync: mockExecFileSync },
 }))
 
-vi.mock('node:fs', () => ({
-  writeFileSync: mockWriteFileSync,
-  mkdirSync: mockMkdirSync,
-  mkdtempSync: mockMkdtempSync,
-  rmSync: mockRmSync,
-  existsSync: mockExistsSync,
-  readFileSync: mockReadFileSync,
-}))
+vi.mock('node:fs', () => {
+  const mocked = {
+    writeFileSync: mockWriteFileSync,
+    mkdirSync: mockMkdirSync,
+    mkdtempSync: mockMkdtempSync,
+    rmSync: mockRmSync,
+    existsSync: mockExistsSync,
+    readFileSync: mockReadFileSync,
+  }
+  return { ...mocked, default: mocked }
+})
 
 describe('collectK8sGroundTruth', () => {
   const originalEnv = process.env
