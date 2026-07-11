@@ -637,20 +637,6 @@
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
   {
-    "file": "src/components/agent/AgentInstallGuide.tsx",
-    "rule": "react-refresh/only-export-components",
-    "line": 12,
-    "column": 14,
-    "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
-  },
-  {
-    "file": "src/components/agent/AgentInstallGuide.tsx",
-    "rule": "react-refresh/only-export-components",
-    "line": 18,
-    "column": 23,
-    "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
-  },
-  {
     "file": "src/components/agent/AgentSelector.test.tsx",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 1,
@@ -3976,69 +3962,6 @@
     "message": "'React' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
-    "file": "src/components/clusters/add-cluster/ConnectTab.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 104,
-    "column": 15,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/clusters/add-cluster/ConnectTab.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 171,
-    "column": 19,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/clusters/add-cluster/ConnectTab.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 185,
-    "column": 21,
-    "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
-  },
-  {
-    "file": "src/components/clusters/add-cluster/ConnectTab.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 195,
-    "column": 21,
-    "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
-  },
-  {
-    "file": "src/components/clusters/add-cluster/ConnectTab.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 272,
-    "column": 25,
-    "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
-  },
-  {
-    "file": "src/components/clusters/add-cluster/ConnectTab.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 281,
-    "column": 25,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/clusters/add-cluster/ConnectTab.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 323,
-    "column": 17,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/clusters/add-cluster/ConnectTab.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 333,
-    "column": 17,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/clusters/add-cluster/ConnectTab.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 343,
-    "column": 17,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
     "file": "src/components/clusters/add-cluster/ConnectTabContext.tsx",
     "rule": "react-refresh/only-export-components",
     "line": 20,
@@ -6097,13 +6020,6 @@
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
-    "file": "src/components/missions/ImproveMissionDialog.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 190,
-    "column": 13,
-    "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
-  },
-  {
     "file": "src/components/missions/MissionBrowser.components.test.tsx",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 6,
@@ -6276,6 +6192,13 @@
     "rule": "react-refresh/only-export-components",
     "line": 109,
     "column": 17,
+    "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+  },
+  {
+    "file": "src/components/missions/MissionContentContext.tsx",
+    "rule": "react-refresh/only-export-components",
+    "line": 118,
+    "column": 14,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
   {
@@ -6683,13 +6606,6 @@
     "line": 233,
     "column": 13,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
-  },
-  {
-    "file": "src/components/namespaces/NamespaceManager.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 605,
-    "column": 11,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/nodes/__tests__/Nodes.test.tsx",
@@ -9508,126 +9424,126 @@
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 92,
+    "line": 85,
     "column": 3,
     "message": "'REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 93,
+    "line": 86,
     "column": 3,
     "message": "'CLUSTER_POLL_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 94,
+    "line": 87,
     "column": 3,
     "message": "'GPU_POLL_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 95,
+    "line": 88,
     "column": 3,
     "message": "'CACHE_TTL_MS' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 96,
+    "line": 89,
     "column": 3,
     "message": "'MIN_REFRESH_INDICATOR_MS' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 97,
+    "line": 90,
     "column": 3,
     "message": "'getLocalAgentURL' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 99,
+    "line": 92,
     "column": 3,
     "message": "'getEffectiveInterval' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 102,
+    "line": 95,
     "column": 3,
     "message": "'shouldMarkOffline' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 103,
+    "line": 96,
     "column": 3,
     "message": "'recordClusterFailure' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 105,
+    "line": 98,
     "column": 3,
     "message": "'clusterDisplayName' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 106,
+    "line": 99,
     "column": 3,
     "message": "'fetchWithRetry' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 115,
+    "line": 108,
     "column": 3,
     "message": "'notifyClusterSubscribers' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 116,
+    "line": 109,
     "column": 3,
     "message": "'notifyClusterSubscribersDebounced' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 119,
+    "line": 112,
     "column": 3,
     "message": "'setInitialFetchStarted' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 122,
+    "line": 115,
     "column": 3,
     "message": "'initialFetchStarted' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 123,
+    "line": 116,
     "column": 3,
     "message": "'healthCheckFailures' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 128,
+    "line": 121,
     "column": 3,
     "message": "'clusterCacheRef' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/shared-websocket-detect.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 129,
+    "line": 122,
     "column": 3,
     "message": "'subscribeClusterCache' is defined but never used. Allowed unused vars must match /^_/u."
   },
