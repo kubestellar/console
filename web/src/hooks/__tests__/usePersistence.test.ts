@@ -22,6 +22,11 @@ vi.mock('../../lib/auth', () => ({
   useAuth: () => ({ token: mockToken }),
 }))
 
+// Make authFetch delegate to global.fetch so per-test fetch mocks are intercepted
+vi.mock('../../lib/api', () => ({
+  authFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+}))
+
 vi.mock('../../lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return {
