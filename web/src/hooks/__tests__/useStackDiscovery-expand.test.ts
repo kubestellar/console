@@ -6,8 +6,7 @@ import { renderHook, act } from '@testing-library/react'
 const mockGetDemoMode = vi.fn(() => false)
 const mockExec = vi.fn()
 
-vi.mock('../useDemoMode', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../useDemoMode')>()),
+vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   getDemoMode: mockGetDemoMode,
 }))

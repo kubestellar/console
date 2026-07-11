@@ -438,7 +438,7 @@ describe('useMarketplaceActions.removeItem', () => {
     const { result } = renderHook(() => useMarketplaceActions(installed))
 
     await act(async () => {
-      await result.current.removeItem(makeItem())
+      await result.current.removeItem(makeItem({ type: 'theme' }))
     })
 
     expect(removeCustomTheme).toHaveBeenCalledWith('test-item')
