@@ -237,7 +237,7 @@ export function QuantumHistogramCard() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
         <p className="text-sm text-muted-foreground">{t('cards:quantumHistogram.loginPrompt')}</p>
-        <Button variant="primary" size="lg" onClick={login}>
+        <Button variant="primary" size="lg" onClick={() => login()}>
           {t('common:login.continueWithGitHub')}
         </Button>
       </div>

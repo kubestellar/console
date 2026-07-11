@@ -149,7 +149,7 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
         <p className="text-gray-500">Please log in to view quantum data</p>
         <button
           type="button"
-          onClick={login}
+          onClick={() => login()}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
         >
           Continue with GitHub
