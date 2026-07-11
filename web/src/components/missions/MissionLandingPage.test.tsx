@@ -12,6 +12,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
+  useParams: () => ({}),
 }))
 
 vi.mock('../../hooks/useDemoMode', () => ({
