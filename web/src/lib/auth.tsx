@@ -18,6 +18,7 @@ import { setDemoMode as setGlobalDemoMode } from './demoMode'
 import { AuthRefreshResponseSchema, UserSchema } from './schemas'
 import { validateResponse } from './schemas/validate'
 import { ROUTES } from '../config/routes'
+import { redirectToDevLogin, type LoginOptions } from './devLogin'
 
 interface User {
   id: string
@@ -28,12 +29,6 @@ interface User {
   avatar_url?: string
   role?: 'admin' | 'editor' | 'viewer'
   onboarded: boolean
-}
-
-/** Options for login(). `preferDemo` skips the in-cluster dev-login redirect
- *  so the "Continue in Demo Mode" button always lands in demo mode (#20823). */
-export interface LoginOptions {
-  preferDemo?: boolean
 }
 
 interface AuthContextType {
@@ -61,16 +56,6 @@ const EXPIRY_WARNING_THRESHOLD_MS = 30 * 60_000
 const MAX_CACHED_USER_AGE_MS = 5 * 60 * 1_000
 /** #6067 — interval for background re-validation when the backend is unreachable. */
 const BACKEND_REVALIDATE_INTERVAL_MS = 30_000
-
-/** #20823 — backend auth entry point. With no GitHub OAuth app configured the
- *  backend falls through to a passwordless dev-login that sets an HttpOnly
- *  JWT cookie and redirects back to /auth/callback. */
-const DEV_LOGIN_PATH = '/auth/github'
-
-/** #20823 — named helper so tests can stub the navigation. */
-export function redirectToDevLogin(): void {
-  window.location.assign(DEV_LOGIN_PATH)
-}
 
 /**
  * Decode the expiry timestamp from a JWT without verifying signature.
