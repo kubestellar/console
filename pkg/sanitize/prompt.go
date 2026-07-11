@@ -58,10 +58,11 @@ func PromptStrings(values []string) []string {
 	return sanitized
 }
 
-// logUnsafeCharsRe matches control characters (except tab which is harmless
-// in logs), ANSI escape sequences, null bytes, and Unicode line/paragraph
-// separators that could be exploited for log injection (CWE-117).
-var logUnsafeCharsRe = regexp.MustCompile(`[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\x{2028}\x{2029}]|\x1b(?:\[[0-9;]*[A-Za-z]|\][^\x07]*\x07|.)`)
+// logUnsafeCharsRe matches ANSI escape sequences first (to consume the full
+// sequence), then individual dangerous control characters, null bytes, and
+// Unicode line/paragraph separators. ESC (0x1b) is excluded from the
+// character class so the ANSI branch consumes multi-byte sequences properly.
+var logUnsafeCharsRe = regexp.MustCompile(`\x1b(?:\[[0-9;]*[A-Za-z]|\][^\x07]*\x07|.)|[\x00-\x08\x0B\x0C\x0E-\x1A\x1C-\x1F\x7F\x{2028}\x{2029}]`)
 
 var logInjectionReplacer = strings.NewReplacer(
 	"\n", "\u23ce",
