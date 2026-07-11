@@ -67,6 +67,7 @@ vi.mock('../../lib/imageCompression', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (_k: string, fallback?: string) => fallback || _k }),
   initReactI18next: { type: '3rdParty', init: vi.fn() },
 }))

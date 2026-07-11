@@ -5,6 +5,7 @@ import { FlightPlanBlueprint } from './FlightPlanBlueprint'
 import type { MissionControlState } from './types'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 

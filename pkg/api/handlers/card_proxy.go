@@ -18,6 +18,7 @@ import (
 	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/ssrf"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 	"github.com/kubestellar/console/pkg/store"
 )
 
