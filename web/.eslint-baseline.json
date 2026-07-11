@@ -17054,7 +17054,7 @@
   {
     "file": "src/lib/dashboards/DashboardComponents.tsx",
     "rule": "no-restricted-syntax",
-    "line": 237,
+    "line": 238,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
