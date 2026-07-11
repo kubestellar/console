@@ -283,7 +283,7 @@ describe('storage hooks - usePVCs', () => {
 
     mockKubectlProxy.getPVCs.mockRejectedValue(new Error('kubectl also fails'))
 
-    const { result, rerender } = renderHook(() => usePVCs('cluster-a'))
+    const { result, rerender: _rerender } = renderHook(() => usePVCs('cluster-a'))
 
     // First failure
     await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThan(0))
