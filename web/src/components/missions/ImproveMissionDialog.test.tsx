@@ -32,6 +32,7 @@ describe('ImproveMissionDialog', () => {
     const { container } = render(
       <ImproveMissionDialog
         mission={null}
+        isOpen={false}
         onClose={vi.fn()}
       />
     )
@@ -51,6 +52,7 @@ describe('ImproveMissionDialog', () => {
     render(
       <ImproveMissionDialog
         mission={mission}
+        isOpen={true}
         onClose={vi.fn()}
       />
     )
@@ -70,6 +72,7 @@ describe('ImproveMissionDialog', () => {
     render(
       <ImproveMissionDialog
         mission={mission}
+        isOpen={true}
         onClose={vi.fn()}
       />
     )
@@ -90,6 +93,7 @@ describe('ImproveMissionDialog', () => {
     render(
       <ImproveMissionDialog
         mission={mission}
+        isOpen={true}
         onClose={onClose}
       />
     )

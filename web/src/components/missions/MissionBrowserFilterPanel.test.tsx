@@ -111,7 +111,7 @@ describe('MissionBrowserFilterPanel', () => {
         filteredRecommendationsCount={50}
       />
     )
-    const clearButton = screen.getAllByRole('button').find(btn => btn.textContent?.includes('missions.browser.clearFilters'))
+    const clearButton = screen.getAllByRole('button').find(btn => btn.textContent?.includes('actions.clearAll'))
     clearButton?.click()
     expect(onClearAllFilters).toHaveBeenCalled()
   })
