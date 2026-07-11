@@ -13,6 +13,7 @@ const { mockExecFileSync, mockWriteFileSync, mockMkdirSync, mockMkdtempSync, moc
 
 vi.mock('node:child_process', () => ({
   execFileSync: mockExecFileSync,
+  default: { execFileSync: mockExecFileSync },
 }))
 
 vi.mock('node:fs', () => ({
