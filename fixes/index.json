@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-11T00:18:26.600Z",
-  "count": 1632,
+  "generatedAt": "2026-07-11T07:16:00.773Z",
+  "count": 1633,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -59561,6 +59561,44 @@
       "targetResourceKinds": [
         "Persistentvolume"
       ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/rook/rook-13240-support-replacing-an-osd-based-on-a-metadatadevice-that-is-shared-wit.json",
+      "title": "rook: Support replacing an OSD based on a metadataDevice that is shared with multiple OSDs on a node",
+      "description": "Support replacing an OSD based on a metadataDevice that is shared with multiple OSDs on a node. Requested by 11+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "rook",
+        "graduated",
+        "storage",
+        "feature"
+      ],
+      "cncfProjects": [
+        "rook"
+      ],
+      "targetResourceKinds": [],
       "difficulty": "intermediate",
       "issueTypes": [
         "feature"
