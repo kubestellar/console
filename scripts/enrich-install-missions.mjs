@@ -31,6 +31,16 @@ const LLM_ENDPOINT = process.env.LLM_ENDPOINT || 'https://models.inference.ai.az
 const LLM_MODEL = process.env.LLM_MODEL || 'gpt-4o-mini'
 const LLM_TIMEOUT_MS = 60_000
 
+// Validate LLM_ENDPOINT at module load time (CWE-441: prevent SSRF)
+const ALLOWED_ENDPOINT_PREFIXES = [
+  'https://models.inference.ai.azure.com/',
+  'https://api.openai.com/',
+  'https://api.githubcopilot.com/',
+]
+if (!ALLOWED_ENDPOINT_PREFIXES.some(prefix => LLM_ENDPOINT.startsWith(prefix))) {
+  throw new Error(`Untrusted LLM_ENDPOINT: ${LLM_ENDPOINT}. Must start with one of: ${ALLOWED_ENDPOINT_PREFIXES.join(', ')}`)
+}
+
 const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 
 // ─── Prompt ──────────────────────────────────────────────────────────
@@ -99,16 +109,6 @@ Based on the above install mission, generate the uninstall, upgrade, and trouble
 async function callLLM(mission) {
   const token = process.env.LLM_TOKEN || GITHUB_TOKEN
   if (!token) return null
-
-  // Endpoint validation guard (CWE-441)
-  const ALLOWED_ENDPOINT_PREFIXES = [
-    'https://models.inference.ai.azure.com/',
-    'https://api.openai.com/',
-    'https://api.githubcopilot.com/',
-  ]
-  if (!ALLOWED_ENDPOINT_PREFIXES.some(prefix => LLM_ENDPOINT.startsWith(prefix))) {
-    throw new Error(`Untrusted LLM_ENDPOINT: ${LLM_ENDPOINT}`)
-  }
 
   const prompt = buildEnrichPrompt(mission)
 

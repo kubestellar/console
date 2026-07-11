@@ -466,7 +466,7 @@ function applyQualityGate(mission) {
   }
 
   // /master/ or /main/ branch URLs (fragile)
-  if (/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/(master|main)\//i.test(allText)) {
+  if (/^https?:\/\/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/(master|main)\//mi.test(allText)) {
     score -= 5
     issues.push('Uses /master/ or /main/ branch URL (should pin to release tag)')
   }
@@ -895,6 +895,10 @@ async function main() {
 
     // 5. Write mission file
     const slug = slugify(platform.name)
+    // Validate slug is safe (CWE-20: no path separators, no dots)
+    if (!slug || slug.includes('/') || slug.includes('\\') || slug.includes('.') || slug.startsWith('-')) {
+      throw new Error(`Unsafe slug generated from platform.name: ${slug}`)
+    }
     const filename = `platform-${slug}.json`
     const isDraft = gateResult.verdict === 'draft'
     const outPath = join(SOLUTIONS_DIR, isDraft ? filename.replace('.json', '.draft.json') : filename)

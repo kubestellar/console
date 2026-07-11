@@ -810,8 +810,13 @@ async function main() {
     console.log(`\n── ${project.name} (${project.repo}) ──`)
 
     // Skip if already exists (unless FORCE_REGENERATE)
-    const outPath = join(SOLUTIONS_DIR, `install-${slugify(project.name)}.json`)
-    const draftPath = join(SOLUTIONS_DIR, `install-${slugify(project.name)}.draft.json`)
+    const slug = slugify(project.name)
+    // Validate slug is safe (CWE-20: no path separators, no dots)
+    if (!slug || slug.includes('/') || slug.includes('\\') || slug.includes('.') || slug.startsWith('-')) {
+      throw new Error(`Unsafe slug generated from project.name: ${slug}`)
+    }
+    const outPath = join(SOLUTIONS_DIR, `install-${slug}.json`)
+    const draftPath = join(SOLUTIONS_DIR, `install-${slug}.draft.json`)
     if (!FORCE_REGENERATE && (existsSync(outPath) || existsSync(draftPath))) {
       console.log('  Already exists, skipping (use FORCE_REGENERATE=true to overwrite)')
       continue
