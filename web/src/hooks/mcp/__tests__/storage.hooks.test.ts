@@ -92,7 +92,7 @@ vi.mock('../../../lib/cache/fetcherUtils', () => ({
   isClusterModeBackend: () => false,
 }))
 
-vi.mock('./useClusterResourceQuery', () => ({
+vi.mock('../useClusterResourceQuery', () => ({
   useClusterResourceQuery: () => ({ data: [], isLoading: false, error: null }),
 }))
 

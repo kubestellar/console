@@ -14,6 +14,7 @@ import {
 import { buildGitHubIssueUrl } from '@/lib/githubUrls'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals/BaseModal'
+import { TextArea } from '../ui/TextArea'
 import type { MissionExport } from '../../lib/missions/types'
 
 const IMPROVEMENT_CATEGORIES = [
@@ -98,10 +99,13 @@ export function ImproveMissionDialog({
   ]
 
   const handleSubmit = () => {
+    if (!mission) return
     const url = buildIssueUrl(mission, selectedCategory || 'other', activeSection, details)
     window.open(url, '_blank', 'noopener,noreferrer')
     onClose()
   }
+
+  if (!mission) return null
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="sm" closeOnBackdrop={false} closeOnEscape={true}>
@@ -187,11 +191,11 @@ export function ImproveMissionDialog({
             <label className="text-sm font-medium text-foreground mb-2 block">
               {t('missions.improve.detailsLabel')}
             </label>
-            <textarea
+            <TextArea
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               placeholder={t('missions.improve.detailsPlaceholder')}
-              className="w-full h-24 px-3 py-2 text-sm rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-hidden focus:ring-1 focus:ring-purple-500"
+              className="h-24 placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-purple-500"
             />
           </div>
         </div>

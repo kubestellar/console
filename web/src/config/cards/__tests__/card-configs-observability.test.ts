@@ -77,7 +77,7 @@ describe('Observability card configs', () => {
       expect(config.emptyState).toBeDefined()
       expect(config.emptyState!.title).toBeTruthy()
       expect(config.emptyState!.message).toBeTruthy()
-      expect(config.emptyState!.variant).toMatch(/^(info|success|warning|error)$/)
+      expect(config.emptyState!.variant).toMatch(/^(info|success|warning|error|neutral)$/)
     })
 
     it.each(observabilityCards)('$name has description', ({ config }) => {

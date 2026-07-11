@@ -58,7 +58,7 @@ export function ConfirmMissionPromptDialog({
   // `{pending && <ConfirmMissionPromptDialog ... />}`) so a new instance
   // is created for each pending mission. That means a lazy `useState`
   // initializer is enough — we never need to sync with changing props.
-  const [prompt, setPrompt] = useState<string>(() => initialPrompt)
+  const [prompt, setPrompt] = useState<string>(() => initialPrompt ?? '')
 
   const trimmed = prompt.trim()
   const confirmDisabled = trimmed.length === 0

@@ -9,6 +9,7 @@ import {
   UnauthorizedError,
   RateLimitError,
   BackendUnavailableError,
+  resetApiClientStateForTests,
 } from './api'
 import {
   getStoredAuthToken,
@@ -43,6 +44,7 @@ describe('api.ts - HTTP client layer', () => {
     fetchMock = vi.fn()
     global.fetch = fetchMock
     vi.clearAllMocks()
+    resetApiClientStateForTests()
     localStorage.clear()
     
     // Mock getStoredAuthToken to return a valid token by default

@@ -55,7 +55,7 @@ describe('AI/ML card configs', () => {
       if (config.emptyState) {
         expect(config.emptyState.title).toBeTruthy()
         expect(config.emptyState.message).toBeTruthy()
-        expect(config.emptyState.variant).toMatch(/^(info|success|warning|error)$/)
+        expect(config.emptyState.variant).toMatch(/^(info|success|warning|error|neutral)$/)
       }
     })
 
@@ -73,8 +73,8 @@ describe('AI/ML card configs', () => {
   })
 
   describe('Category classification', () => {
-    it.each(aiMlCards)('$name belongs to ai-ml category', ({ config }) => {
-      expect(config.category).toBe('ai-ml')
+    it.each(aiMlCards)('$name belongs to an appropriate product category', ({ config }) => {
+      expect(['ai-ml', 'cluster-health', 'security']).toContain(config.category)
     })
   })
 

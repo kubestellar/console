@@ -11,10 +11,8 @@ const { mockExecFileSync, mockWriteFileSync, mockMkdirSync, mockMkdtempSync, moc
 
 vi.mock('node:child_process', async () => {
   const actual = await vi.importActual<typeof import('node:child_process')>('node:child_process')
-  return {
-    ...actual,
-    execFileSync: mockExecFileSync,
-  }
+  const mocked = { ...actual, execFileSync: mockExecFileSync }
+  return { ...mocked, default: mocked }
 })
 
 vi.mock('node:fs', async () => {
