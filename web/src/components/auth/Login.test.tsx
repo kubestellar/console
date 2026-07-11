@@ -1,7 +1,7 @@
 import React from 'react'
 /// <reference types='@testing-library/jest-dom/vitest' />
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import '../../test/utils/setupMocks'
@@ -17,7 +17,7 @@ vi.mock('../../lib/auth', () => ({
 }))
 
 /** Resolved value for the OAuth probe — overridden per-test when needed. */
-let oauthProbeResult = { backendUp: false, oauthConfigured: false }
+let oauthProbeResult = { backendUp: false, oauthConfigured: false, inCluster: false }
 
 vi.mock('../../lib/api', () => ({
   checkOAuthConfiguredWithRetry: () => Promise.resolve(oauthProbeResult),
@@ -39,7 +39,7 @@ describe('Login Component', () => {
     )
 
   beforeEach(() => {
-    oauthProbeResult = { backendUp: false, oauthConfigured: false }
+    oauthProbeResult = { backendUp: false, oauthConfigured: false, inCluster: false }
     mockLogin.mockClear()
   })
 
@@ -77,7 +77,7 @@ describe('Login Component', () => {
 
   describe('OAuth setup wizard (backendUp && !oauthConfigured)', () => {
     beforeEach(() => {
-      oauthProbeResult = { backendUp: true, oauthConfigured: false }
+      oauthProbeResult = { backendUp: true, oauthConfigured: false, inCluster: false }
     })
 
     it('shows the setup notice when backend is up but OAuth is not configured', async () => {
@@ -101,6 +101,42 @@ describe('Login Component', () => {
       await waitFor(() => {
         expect(screen.getByTestId('demo-mode-button')).toBeInTheDocument()
       })
+    })
+
+    it('does not render the cluster-access button when not in-cluster', async () => {
+      renderLogin()
+      await waitFor(() => {
+        expect(screen.getByTestId('oauth-setup-notice')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('cluster-access-button')).not.toBeInTheDocument()
+    })
+
+    it('passes preferDemo to login() from the demo mode button', async () => {
+      renderLogin()
+      await waitFor(() => {
+        expect(screen.getByTestId('demo-mode-button')).toBeInTheDocument()
+      })
+      fireEvent.click(screen.getByTestId('demo-mode-button'))
+      expect(mockLogin).toHaveBeenCalledWith({ preferDemo: true })
+    })
+  })
+
+  describe('In-cluster dev-login (backendUp && !oauthConfigured && inCluster) — #20823', () => {
+    beforeEach(() => {
+      oauthProbeResult = { backendUp: true, oauthConfigured: false, inCluster: true }
+    })
+
+    it('renders the "Continue with cluster access" button', async () => {
+      renderLogin()
+      await waitFor(() => {
+        expect(screen.getByTestId('cluster-access-button')).toBeInTheDocument()
+      })
+      expect(
+        screen.getByRole('button', { name: 'login.continueWithClusterAccess' }),
+      ).toBeInTheDocument()
+      // Existing options remain available
+      expect(screen.getByTestId('github-setup-button')).toBeInTheDocument()
+      expect(screen.getByTestId('demo-mode-button')).toBeInTheDocument()
     })
   })
 })

@@ -30,12 +30,18 @@ interface User {
   onboarded: boolean
 }
 
+/** Options for login(). `preferDemo` skips the in-cluster dev-login redirect
+ *  so the "Continue in Demo Mode" button always lands in demo mode (#20823). */
+export interface LoginOptions {
+  preferDemo?: boolean
+}
+
 interface AuthContextType {
   user: User | null
   token: string | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: () => void
+  login: (opts?: LoginOptions) => void
   logout: () => void
   setToken: (token: string, onboarded: boolean) => void
   refreshUser: (overrideToken?: string) => Promise<void>
@@ -55,6 +61,16 @@ const EXPIRY_WARNING_THRESHOLD_MS = 30 * 60_000
 const MAX_CACHED_USER_AGE_MS = 5 * 60 * 1_000
 /** #6067 — interval for background re-validation when the backend is unreachable. */
 const BACKEND_REVALIDATE_INTERVAL_MS = 30_000
+
+/** #20823 — backend auth entry point. With no GitHub OAuth app configured the
+ *  backend falls through to a passwordless dev-login that sets an HttpOnly
+ *  JWT cookie and redirects back to /auth/callback. */
+const DEV_LOGIN_PATH = '/auth/github'
+
+/** #20823 — named helper so tests can stub the navigation. */
+export function redirectToDevLogin(): void {
+  window.location.assign(DEV_LOGIN_PATH)
+}
 
 /**
  * Decode the expiry timestamp from a JWT without verifying signature.
@@ -284,106 +300,120 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // OAUTH_STARTUP_RETRY_ATTEMPTS times before giving up.
       let backendUp = false
       let oauthConfigured = false
+      let inCluster = false
       try {
-        ({ backendUp, oauthConfigured } = await checkOAuthConfiguredWithRetry())
+        ({ backendUp, oauthConfigured, inCluster } = await checkOAuthConfiguredWithRetry())
       } catch {
         // Complete failure — fall through to demo mode
       }
 
-      if (backendUp && oauthConfigured) {
+      if (backendUp) {
         // #6925 — Only attempt /auth/refresh if we have evidence of a prior
         // session. The HttpOnly cookie is invisible to JS, so we check the
         // kc-has-session localStorage hint set during the OAuth callback.
         // Without this gate, fresh visitors see a spurious 401 in DevTools.
         const hadPriorSession = !!safeGet(STORAGE_KEY_HAS_SESSION)
-        if (!hadPriorSession) {
-          // No prior session — go straight to login page, no network call
-          return
-        }
-        // #6066 — If the user has a valid HttpOnly cookie from a previous
-        // session, /auth/refresh will mint a new JWT. Try that before showing
-        // the login page so a page reload can restore the session silently.
-        try {
-          const refreshResponse = await fetch('/auth/refresh', {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              // #6588 — CSRF gate on /auth/refresh
-              'X-Requested-With': 'XMLHttpRequest',
-            },
-            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-          })
-          if (refreshResponse.ok) {
-            // #6590 — /auth/refresh delivers the new JWT EXCLUSIVELY via the
-            // HttpOnly kc_auth cookie. The body carries only
-            // { refreshed: true, onboarded }. Since the cookie is HttpOnly,
-            // we cannot read the token from JS — but the JWTAuth middleware
-            // accepts the cookie on subsequent requests, so we can call
-            // /api/me directly via cookie credentials to populate the user.
-            const rawRefresh = await refreshResponse.json().catch(() => null)
-            const data = validateResponse(AuthRefreshResponseSchema, rawRefresh, '/auth/refresh')
-            if (data?.refreshed) {
-              try {
-                localStorage.setItem(STORAGE_KEY_HAS_SESSION, 'true')
-              } catch {
-                // localStorage quota — best-effort hint
-              }
-              // Fetch kc-agent token so agentFetch/WebSocket can authenticate
-              if (!isLocalAgentSuppressed()) {
+        if (hadPriorSession) {
+          // #6066 — If the user has a valid HttpOnly cookie from a previous
+          // session, /auth/refresh will mint a new JWT. Try that before showing
+          // the login page so a page reload can restore the session silently.
+          // #20823 — This also restores passwordless dev-login sessions on
+          // in-cluster installs without OAuth, so the restore attempt runs
+          // whenever the backend is up, not only when OAuth is configured.
+          try {
+            const refreshResponse = await fetch('/auth/refresh', {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'Content-Type': 'application/json',
+                // #6588 — CSRF gate on /auth/refresh
+                'X-Requested-With': 'XMLHttpRequest',
+              },
+              signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+            })
+            if (refreshResponse.ok) {
+              // #6590 — /auth/refresh delivers the new JWT EXCLUSIVELY via the
+              // HttpOnly kc_auth cookie. The body carries only
+              // { refreshed: true, onboarded }. Since the cookie is HttpOnly,
+              // we cannot read the token from JS — but the JWTAuth middleware
+              // accepts the cookie on subsequent requests, so we can call
+              // /api/me directly via cookie credentials to populate the user.
+              const rawRefresh = await refreshResponse.json().catch(() => null)
+              const data = validateResponse(AuthRefreshResponseSchema, rawRefresh, '/auth/refresh')
+              if (data?.refreshed) {
                 try {
-                  const agentRes = await fetch('/api/agent/token', {
-                    credentials: 'same-origin',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-                  })
-                  if (agentRes.ok) {
-                    const agentData = await agentRes.json()
-                    if (agentData.token) {
-                      setAgentToken(agentData.token)
-                    }
-                  }
+                  localStorage.setItem(STORAGE_KEY_HAS_SESSION, 'true')
                 } catch {
-                  // Non-fatal: agent auth may fail while the browser session remains intact.
+                  // localStorage quota — best-effort hint
                 }
-              }
-              const meResponse = await fetch('/api/me', {
-                credentials: 'include',
-                signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-              })
-              if (meResponse.ok) {
-                const rawUser = await meResponse.json().catch(() => null)
-                const userData = validateResponse(UserSchema, rawUser, '/api/me') as User | null
-                if (userData) {
-                  setUser(userData)
-                  cacheUser(userData)
+                // Fetch kc-agent token so agentFetch/WebSocket can authenticate
+                if (!isLocalAgentSuppressed()) {
                   try {
-                    localStorage.setItem(AUTH_USER_CACHE_VALIDATED_KEY, String(Date.now()))
+                    const agentRes = await fetch('/api/agent/token', {
+                      credentials: 'same-origin',
+                      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+                    })
+                    if (agentRes.ok) {
+                      const agentData = await agentRes.json()
+                      if (agentData.token) {
+                        setAgentToken(agentData.token)
+                      }
+                    }
                   } catch {
-                    // localStorage quota — best-effort
+                    // Non-fatal: agent auth may fail while the browser session remains intact.
                   }
-                  setAnalyticsUserId(userData.id)
-                  setAnalyticsUserProperties({ auth_mode: 'github-oauth' })
-                  return
+                }
+                const meResponse = await fetch('/api/me', {
+                  credentials: 'include',
+                  signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+                })
+                if (meResponse.ok) {
+                  const rawUser = await meResponse.json().catch(() => null)
+                  const userData = validateResponse(UserSchema, rawUser, '/api/me') as User | null
+                  if (userData) {
+                    setUser(userData)
+                    cacheUser(userData)
+                    try {
+                      localStorage.setItem(AUTH_USER_CACHE_VALIDATED_KEY, String(Date.now()))
+                    } catch {
+                      // localStorage quota — best-effort
+                    }
+                    setAnalyticsUserId(userData.id)
+                    // #20823 — sessions restored on no-OAuth installs came from
+                    // the backend's passwordless dev-login, not GitHub OAuth.
+                    setAnalyticsUserProperties({ auth_mode: oauthConfigured ? 'github-oauth' : 'dev-login' })
+                    return
+                  }
                 }
               }
             }
+            // #6930 — A 401/403 from /auth/refresh is a definitive signal that
+            // the server session has expired. Clear the session hint so future
+            // page loads don't keep hitting /auth/refresh in a loop.
+            const HTTP_UNAUTHORIZED = 401
+            const HTTP_FORBIDDEN = 403
+            if (refreshResponse.status === HTTP_UNAUTHORIZED || refreshResponse.status === HTTP_FORBIDDEN) {
+              localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
+            }
+          } catch {
+            // Refresh failed (network error / timeout) — fall through to show
+            // login page. Do NOT clear kc-has-session here: the server may be
+            // temporarily unreachable and the session could still be valid.
           }
-          // #6930 — A 401/403 from /auth/refresh is a definitive signal that
-          // the server session has expired. Clear the session hint so future
-          // page loads don't keep hitting /auth/refresh in a loop.
-          const HTTP_UNAUTHORIZED = 401
-          const HTTP_FORBIDDEN = 403
-          if (refreshResponse.status === HTTP_UNAUTHORIZED || refreshResponse.status === HTTP_FORBIDDEN) {
-            localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
-          }
-        } catch {
-          // Refresh failed (network error / timeout) — fall through to show
-          // login page. Do NOT clear kc-has-session here: the server may be
-          // temporarily unreachable and the session could still be valid.
         }
-        // OAuth configured + no valid cookie — show login page
-        return
+        if (oauthConfigured) {
+          // OAuth configured + no valid cookie — show login page
+          return
+        }
+        // #20823 — In-cluster install without GitHub OAuth: the backend's
+        // /auth/github endpoint falls through to the passwordless dev-login,
+        // which sets an HttpOnly JWT cookie and redirects back. Use it instead
+        // of demo mode unless the user explicitly chose demo mode.
+        if (inCluster && safeGet(STORAGE_KEY_DEMO_MODE) !== 'true') {
+          redirectToDevLogin()
+          return
+        }
       }
       setDemoMode()
       return
@@ -535,7 +565,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [setDemoMode])
 
-  const login = useCallback(async () => {
+  const login = useCallback(async (opts?: LoginOptions) => {
     // Demo mode enabled via:
     // 1. Explicit environment variable VITE_DEMO_MODE=true
     // 2. Netlify deploy previews (deploy-preview-* hostnames) - safe because these are ephemeral test environments
@@ -548,10 +578,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Single check: backend availability + OAuth config (the /health endpoint returns both)
     let backendUp = false
     let oauthConfigured = false
+    let inCluster = false
     try {
-      ({ backendUp, oauthConfigured } = await checkOAuthConfigured())
+      ({ backendUp, oauthConfigured, inCluster } = await checkOAuthConfigured())
     } catch {
       // Backend unreachable — fall through to demo mode
+    }
+
+    // #20823 — In-cluster install without GitHub OAuth: use the backend's
+    // passwordless dev-login instead of demo mode, unless the caller
+    // explicitly asked for demo mode (the "Continue in Demo Mode" button).
+    if (!opts?.preferDemo && !explicitDemoMode && backendUp && !oauthConfigured && inCluster) {
+      emitLogin('dev-login')
+      emitConversionStep(2, 'login', { method: 'dev-login' })
+      redirectToDevLogin()
+      return
     }
 
     // When backend is up but no OAuth is configured (e.g. Helm install with no agent),

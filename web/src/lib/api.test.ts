@@ -169,7 +169,7 @@ describe('api.ts - HTTP client layer', () => {
       
       const result = await checkOAuthConfigured()
       
-      expect(result).toEqual({ backendUp: true, oauthConfigured: true })
+      expect(result).toEqual({ backendUp: true, oauthConfigured: true, inCluster: false })
     })
 
     it('returns backendUp=true and oauthConfigured=false when not configured', async () => {
@@ -179,7 +179,7 @@ describe('api.ts - HTTP client layer', () => {
       
       const result = await checkOAuthConfigured()
       
-      expect(result).toEqual({ backendUp: true, oauthConfigured: false })
+      expect(result).toEqual({ backendUp: true, oauthConfigured: false, inCluster: false })
     })
 
     it('returns backendUp=false when /health returns non-200', async () => {
@@ -187,7 +187,7 @@ describe('api.ts - HTTP client layer', () => {
       
       const result = await checkOAuthConfigured()
       
-      expect(result).toEqual({ backendUp: false, oauthConfigured: false })
+      expect(result).toEqual({ backendUp: false, oauthConfigured: false, inCluster: false })
     })
 
     it('returns backendUp=false on network error', async () => {
@@ -195,7 +195,7 @@ describe('api.ts - HTTP client layer', () => {
       
       const result = await checkOAuthConfigured()
       
-      expect(result).toEqual({ backendUp: false, oauthConfigured: false })
+      expect(result).toEqual({ backendUp: false, oauthConfigured: false, inCluster: false })
     })
 
     it('handles empty response body gracefully', async () => {
@@ -219,7 +219,7 @@ describe('api.ts - HTTP client layer', () => {
       const result = await checkOAuthConfiguredWithRetry()
       const elapsed = Date.now() - start
       
-      expect(result).toEqual({ backendUp: true, oauthConfigured: true })
+      expect(result).toEqual({ backendUp: true, oauthConfigured: true, inCluster: false })
       expect(elapsed).toBeLessThan(500) // Should not wait if first attempt succeeds
     })
 
@@ -233,7 +233,7 @@ describe('api.ts - HTTP client layer', () => {
       
       const result = await checkOAuthConfiguredWithRetry()
       
-      expect(result).toEqual({ backendUp: true, oauthConfigured: true })
+      expect(result).toEqual({ backendUp: true, oauthConfigured: true, inCluster: false })
       expect(fetchMock).toHaveBeenCalledTimes(3)
     })
   })

@@ -212,6 +212,10 @@ export function Login() {
   // mode. This gives self-hosted users a clear "Sign in with GitHub" path
   // (addresses kubestellar/kubestellar#3761).
   const [showOAuthSetup, setShowOAuthSetup] = useState(false)
+  // #20823 — True when the backend reports it is running in-cluster. Combined
+  // with showOAuthSetup this offers the backend's passwordless dev-login
+  // ("Continue with cluster access") instead of forcing demo mode.
+  const [inClusterNoOAuth, setInClusterNoOAuth] = useState(false)
   const [oauthSetupExpanded, setOauthSetupExpanded] = useState(false)
   const [copiedStep, setCopiedStep] = useState<number | null>(null)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -265,9 +269,10 @@ export function Login() {
     // When the backend is up but OAuth is not configured, show the login page
     // with setup instructions rather than silently auto-logging in as a demo
     // user. Users can still choose "Continue in Demo Mode" from the page.
-    checkOAuthConfiguredWithRetry().then(({ backendUp, oauthConfigured }) => {
+    checkOAuthConfiguredWithRetry().then(({ backendUp, oauthConfigured, inCluster }) => {
       if (backendUp && !oauthConfigured) {
         setShowOAuthSetup(true)
+        setInClusterNoOAuth(!!inCluster)
       }
     }).catch(() => { /* checkOAuthConfiguredWithRetry always resolves — defensive catch */ })
   }, [isLoading, isAuthenticated, login, oauthError, manifestSuccess, branding.hostedDomain])
@@ -545,6 +550,22 @@ export function Login() {
             * the login redirect (issue #10931). We show a "sign in first" hint. */}
           {showOAuthSetup && (
             <div className="space-y-3">
+              {/* #20823 — In-cluster install without OAuth: offer the backend's
+                * passwordless dev-login (/auth/github → devModeLogin) as the
+                * primary action so users get live cluster data instead of
+                * being funneled into demo mode. */}
+              {inClusterNoOAuth && (
+                <Button
+                  data-testid="cluster-access-button"
+                  onClick={() => { emitLogin('dev-login'); window.location.href = '/auth/github' }}
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  icon={<KeyRound className="w-5 h-5" />}
+                >
+                  {t('login.continueWithClusterAccess')}
+                </Button>
+              )}
               <a
                 href="https://github.com"
                 target="_blank"
@@ -575,7 +596,7 @@ export function Login() {
               </Button>
               <Button
                 data-testid="demo-mode-button"
-                onClick={() => { emitLogin('demo-from-login'); login() }}
+                onClick={() => { emitLogin('demo-from-login'); login({ preferDemo: true }) }}
                 variant="secondary"
                 size="md"
                 fullWidth

@@ -982,6 +982,122 @@ describe('AuthProvider', () => {
     expect(mockEmitConversionStep).toHaveBeenCalledWith(2, 'login', { method: 'demo' })
   })
 
+  // ---------- #20823: in-cluster + no OAuth → passwordless dev-login ----------
+
+  /** Replace window.location with a stub exposing an assign() spy. Returns a restore fn. */
+  function stubWindowLocation(): { assignSpy: ReturnType<typeof vi.fn>; restore: () => void } {
+    const originalLocation = window.location
+    const assignSpy = vi.fn()
+    delete (window as unknown as { location?: Location }).location
+    ;(window as unknown as { location: Partial<Location> }).location = {
+      ...originalLocation,
+      href: '/',
+      hostname: 'localhost',
+      assign: assignSpy,
+    } as unknown as Location
+    return {
+      assignSpy,
+      restore: () => {
+        ;(window as unknown as { location: Location }).location = originalLocation
+      },
+    }
+  }
+
+  it('login() redirects to dev-login when in-cluster with no OAuth (#20823)', async () => {
+    mockCheckOAuth.mockResolvedValue({ backendUp: false, oauthConfigured: false, inCluster: false })
+
+    const { result } = await renderWithAuthProvider()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    vi.clearAllMocks()
+    mockCheckOAuth.mockResolvedValue({ backendUp: true, oauthConfigured: false, inCluster: true })
+
+    const { assignSpy, restore } = stubWindowLocation()
+    try {
+      await act(async () => {
+        await result.current.login()
+      })
+
+      expect(assignSpy).toHaveBeenCalledWith('/auth/github')
+      expect(mockEmitLogin).toHaveBeenCalledWith('dev-login')
+      // Must NOT fall into demo mode
+      expect(mockEmitLogin).not.toHaveBeenCalledWith('demo')
+    } finally {
+      restore()
+    }
+  })
+
+  it('login({ preferDemo: true }) skips the in-cluster dev-login redirect (#20823)', async () => {
+    mockCheckOAuth.mockResolvedValue({ backendUp: false, oauthConfigured: false, inCluster: false })
+
+    const { result } = await renderWithAuthProvider()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    vi.clearAllMocks()
+    mockCheckOAuth.mockResolvedValue({ backendUp: true, oauthConfigured: false, inCluster: true })
+
+    const { assignSpy, restore } = stubWindowLocation()
+    try {
+      await act(async () => {
+        await result.current.login({ preferDemo: true })
+      })
+
+      expect(assignSpy).not.toHaveBeenCalled()
+      expect(mockEmitLogin).toHaveBeenCalledWith('demo')
+      expect(result.current.token).toBe('demo-token')
+    } finally {
+      restore()
+    }
+  })
+
+  it('refreshUser() redirects to dev-login when in-cluster, no OAuth, no explicit demo (#20823)', async () => {
+    mockCheckOAuthWithRetry.mockResolvedValue({ backendUp: true, oauthConfigured: false, inCluster: true })
+
+    const { assignSpy, restore } = stubWindowLocation()
+    try {
+      const { result } = await renderWithAuthProvider()
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      expect(assignSpy).toHaveBeenCalledWith('/auth/github')
+      // Must NOT fall into demo mode while redirecting
+      expect(result.current.token).toBeNull()
+    } finally {
+      restore()
+    }
+  })
+
+  it('refreshUser() stays in demo mode when user explicitly enabled demo, even in-cluster (#20823)', async () => {
+    localStorage.setItem('kc-demo-mode', 'true')
+    mockCheckOAuthWithRetry.mockResolvedValue({ backendUp: true, oauthConfigured: false, inCluster: true })
+
+    const { assignSpy, restore } = stubWindowLocation()
+    try {
+      const { result } = await renderWithAuthProvider()
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      expect(assignSpy).not.toHaveBeenCalled()
+      expect(result.current.token).toBe('demo-token')
+      expect(result.current.user?.id).toBe('demo-user')
+    } finally {
+      restore()
+    }
+  })
+
+  it('refreshUser() enters demo mode when backend up, no OAuth, NOT in-cluster (existing behavior)', async () => {
+    mockCheckOAuthWithRetry.mockResolvedValue({ backendUp: true, oauthConfigured: false, inCluster: false })
+
+    const { assignSpy, restore } = stubWindowLocation()
+    try {
+      const { result } = await renderWithAuthProvider()
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      expect(assignSpy).not.toHaveBeenCalled()
+      expect(result.current.token).toBe('demo-token')
+    } finally {
+      restore()
+    }
+  })
+
   // ---------- storage event: null newValue clears local state (#6065) ----------
   // Behavior changed in #6065 — previously `null` was ignored; now the other
   // tab's logout is mirrored locally so both tabs end up logged out.
