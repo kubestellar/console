@@ -177,27 +177,27 @@ export function BenchmarkHero() {
   return (
     <div className="p-5 h-full flex flex-col gap-4">
       {/* Top row: Run info + time range filter */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 flex-shrink-0 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="p-2 rounded-xl"
+            className="p-2 rounded-xl shrink-0"
             style={{ background: `${CONFIG_COLORS[config]}20` }}
           >
             <Zap size={20} style={{ color: CONFIG_COLORS[config] }} />
           </motion.div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-white font-semibold text-lg">{model}</span>
-              <ArrowRight size={14} className="text-muted-foreground" />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-white font-semibold text-lg truncate">{model}</span>
+              <ArrowRight size={14} className="text-muted-foreground shrink-0" />
               <span className="text-foreground font-medium">{hw}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap"
                 style={{ background: `${CONFIG_COLORS[config]}20`, color: CONFIG_COLORS[config] }}>
                 {config}
               </span>
             </div>
-            <div className="text-xs text-muted-foreground mt-0.5">
+            <div className="text-xs text-muted-foreground mt-0.5 truncate">
               {engine?.standardized.tool} {engine?.standardized.tool_version?.split(':').pop()} &middot;{' '}
               {new Date(latest.run.time.start).toLocaleDateString()} &middot;{' '}
               {latest.run.time.duration.replace('PT', '').replace('S', 's')}
@@ -242,7 +242,7 @@ export function BenchmarkHero() {
       </div>
 
       {/* Hero metrics row */}
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-3 flex-1">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-3 flex-1 min-h-0">
         <HeroMetric
           label="Output Throughput"
           value={fmtNum(throughput)}
@@ -285,7 +285,7 @@ export function BenchmarkHero() {
       </div>
 
       {/* Bottom strip */}
-      <div className="flex items-center gap-6 px-1 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 px-1 text-xs text-muted-foreground flex-shrink-0">
         <div className="flex items-center gap-1.5">
           <span className="text-muted-foreground">Requests:</span>
           <span className="text-white font-mono">{agg.requests.total.toLocaleString()}</span>
