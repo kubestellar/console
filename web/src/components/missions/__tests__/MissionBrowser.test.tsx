@@ -11,17 +11,18 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MissionBrowser } from '../MissionBrowser'
 import type { TreeNode } from '../browser'
+import type { MissionExport } from '../../../lib/missions/types'
 
 const browserMockState = vi.hoisted(() => ({
   missionCache: {
-    installers: [] as any[],
-    fixes: [] as any[],
+    installers: [] as MissionExport[],
+    fixes: [] as MissionExport[],
     installersDone: true,
     fixesDone: true,
     fetchError: null as string | null,
     listeners: new Set<() => void>(),
   },
-  fetchMissionContent: vi.fn(async (mission: any) => ({ mission, raw: JSON.stringify(mission) })),
+  fetchMissionContent: vi.fn(async (mission: MissionExport) => ({ mission, raw: JSON.stringify(mission) })),
   fetchTreeChildren: vi.fn(async () => []),
 }))
 
@@ -44,7 +45,7 @@ vi.mock('react-i18next', () => ({
       }
       let value = map[key] ?? key
       for (const [name, replacement] of Object.entries(options ?? {})) {
-        value = value.replace(new RegExp(`\\{\\{\\s*${name}\\s*\\}\\}`, 'g'), String(replacement))
+        value = value.replace(new RegExp(`\{\{\s*${name}\s*\}\}`, 'g'), String(replacement))
       }
       return value
     },
