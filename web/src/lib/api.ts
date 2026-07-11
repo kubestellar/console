@@ -402,7 +402,7 @@ export async function checkOAuthConfigured(): Promise<OAuthProbeResult> {
       response,
       '[api] /health OAuth config parse failed',
     )
-    if (!data) return { backendUp: false, oauthConfigured: false, inCluster: false }
+    if (!data) return { backendUp: true, oauthConfigured: false, inCluster: false }
     return {
       // Any successful /health response means the backend is reachable.
       // A "degraded" status (e.g. all clusters unreachable) should NOT
@@ -512,6 +512,13 @@ export function isBackendUnavailable(): boolean {
   }
 
   return true // Known unavailable
+}
+
+export function resetApiClientStateForTests(): void {
+  backendLastCheckTime = 0
+  backendAvailable = null
+  backendCheckPromise = null
+  handling401 = false
 }
 
 class ApiClient {

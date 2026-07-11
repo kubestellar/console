@@ -45,11 +45,12 @@ describe('ConfirmMissionPromptDialog', () => {
     const { ConfirmMissionPromptDialog } = await import('./ConfirmMissionPromptDialog')
     const { container } = render(
       <ConfirmMissionPromptDialog
-        isOpen={true}
-        onClose={vi.fn()}
+        open={true}
+        missionTitle="Confirm"
+        missionDescription="Are you sure?"
+        initialPrompt=""
+        onCancel={vi.fn()}
         onConfirm={vi.fn()}
-        title="Confirm"
-        description="Are you sure?"
       />
     )
     expect(container).toBeTruthy()
@@ -63,8 +64,12 @@ describe('ImproveMissionDialog', () => {
       <ImproveMissionDialog
         isOpen={true}
         onClose={vi.fn()}
-        onSubmit={vi.fn()}
-        missionTitle="Test Mission"
+        mission={{
+          title: 'Test Mission',
+          version: '1.0.0',
+          type: 'install',
+          steps: [],
+        } as import('../../lib/missions/types').MissionExport}
       />
     )
     expect(container).toBeTruthy()

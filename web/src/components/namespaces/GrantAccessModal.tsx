@@ -57,13 +57,13 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
 
   // Filter out subjects that already have access
   const existingSubjectNames = new Set(
-    existingAccess
+    (Array.isArray(existingAccess) ? existingAccess : [])
       .filter(e => e.subjectKind === subjectKind)
       .map(e => e.subjectName)
   )
 
   const subjectSource = subjectKind === 'Team' 
-    ? teams.map(t => t.name) 
+    ? (Array.isArray(teams) ? teams.map(t => t.name) : [])
     : COMMON_SUBJECTS[subjectKind];
 
   const availableSubjects = (subjectSource || []).filter(

@@ -189,9 +189,9 @@ describe('calculateSignatureSimilarity', () => {
   it('returns 0 for signatures with no overlapping fields', () => {
     const a: IssueSignature = { type: '' }
     const b: IssueSignature = { type: '' }
-    // Both have empty types, but the type comparison still happens
-    // (empty === empty → matches), so score is 1
-    expect(calculateSignatureSimilarity(a, b)).toBe(1)
+    // Empty strings are falsy — the type comparison is skipped,
+    // so factors stays 0 and the function returns 0.
+    expect(calculateSignatureSimilarity(a, b)).toBe(0)
   })
 
   it('includes error pattern similarity', () => {

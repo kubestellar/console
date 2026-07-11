@@ -35,7 +35,7 @@ vi.mock('../../useDemoMode', async (importOriginal) => ({
   getDemoMode: vi.fn(() => false),
 }))
 
-vi.mock('../../lib/demoMode', () => ({
+vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => false,
 }))
 
@@ -47,12 +47,12 @@ vi.mock('../pollingManager', () => ({
   subscribePolling: (...args: unknown[]) => mockSubscribePolling(...args),
 }))
 
-vi.mock('../../lib/constants', async (importOriginal) => {
+vi.mock('../../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return { ...actual, STORAGE_KEY_TOKEN: 'test-token' }
 })
 
-vi.mock('../../lib/authToken', () => ({
+vi.mock('../../../lib/authToken', () => ({
   getStoredAuthToken: () => 'test-token',
 }))
 

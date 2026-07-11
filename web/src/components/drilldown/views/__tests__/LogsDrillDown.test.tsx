@@ -49,6 +49,7 @@ vi.mock('../../../../hooks/useDrillDown', () => ({
 }))
 
 async function loadLogsDrillDown() {
+  vi.resetModules()
   const module = await import('../LogsDrillDown')
   return module.LogsDrillDown
 }
