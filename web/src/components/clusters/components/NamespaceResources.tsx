@@ -5,6 +5,7 @@ import { useCachedPVCs } from '../../../hooks/useCachedData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import {
   LB_PROVISIONING_LABEL,
   LB_STATUS_PROVISIONING,
@@ -25,7 +26,7 @@ interface NamespaceResourcesProps {
 
 export function NamespaceResources({ clusterName, namespace, onClose }: NamespaceResourcesProps) {
   const { t } = useTranslation()
-  const { pods, isLoading: podsLoading } = usePods(clusterName, namespace, 'name', 100)
+  const { pods, isLoading: podsLoading, isRefreshing: podsRefreshing, lastRefresh: podsLastRefresh } = usePods(clusterName, namespace, 'name', 100)
   const { deployments, isLoading: deploymentsLoading } = useDeployments(clusterName, namespace)
   const { services, isLoading: servicesLoading } = useServices(clusterName, namespace)
   const { jobs, isLoading: jobsLoading } = useJobs(clusterName, namespace)
@@ -318,7 +319,13 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
             <span>{t('common.loadingMore')}</span>
           </div>
         )}
-        {!isPartiallyLoading && <div />}
+        {!isPartiallyLoading && (
+          <RefreshIndicator
+            isRefreshing={podsRefreshing ?? false}
+            lastUpdated={podsLastRefresh}
+            size="xs"
+          />
+        )}
         <div className="flex items-center gap-1 p-0.5 rounded bg-secondary/50">
           <button
             onClick={() => setViewMode('list')}

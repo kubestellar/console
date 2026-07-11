@@ -12,10 +12,22 @@ route:
     insecureEdgeTerminationPolicy: Redirect
 
 # OpenShift SCC requirements
+# OpenShift's restricted-v2 SCC assigns UIDs from the namespace's range
+# (e.g. 1001980000/10000) and rejects any pod that pins runAsUser/runAsGroup
+# outside that range. Setting these to null drops them from the merged values
+# so the SCC can inject a valid UID at admission. runAsNonRoot: true is kept
+# so PodSecurity "restricted" enforcement is still satisfied.
+# fsGroup: null is likewise required — the SCC rejects fsGroups outside the
+# namespace's supplemental-groups range, but assigns an in-range value itself.
 podSecurityContext:
+  fsGroup: null
   runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
 
 securityContext:
+  runAsUser: null
+  runAsGroup: null
   allowPrivilegeEscalation: false
   capabilities:
     drop:
