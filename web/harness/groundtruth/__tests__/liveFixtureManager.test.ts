@@ -9,22 +9,17 @@ const { mockExecFileSync, mockWriteFileSync, mockMkdirSync, mockMkdtempSync, moc
   mockRmSync: vi.fn(),
 }))
 
-vi.mock('node:child_process', async () => {
-  const actual = await vi.importActual<typeof import('node:child_process')>('node:child_process')
-  const mocked = { ...actual, execFileSync: mockExecFileSync }
-  return { ...mocked, default: mocked }
-})
+vi.mock('node:child_process', () => ({
+  execFileSync: mockExecFileSync,
+  default: { execFileSync: mockExecFileSync },
+}))
 
-vi.mock('node:fs', async () => {
-  const actual = await vi.importActual<typeof import('node:fs')>('node:fs')
-  return {
-    ...actual,
-    writeFileSync: mockWriteFileSync,
-    mkdirSync: mockMkdirSync,
-    mkdtempSync: mockMkdtempSync,
-    rmSync: mockRmSync,
-  }
-})
+vi.mock('node:fs', () => ({
+  writeFileSync: mockWriteFileSync,
+  mkdirSync: mockMkdirSync,
+  mkdtempSync: mockMkdtempSync,
+  rmSync: mockRmSync,
+}))
 
 describe('liveFixtureManager', () => {
   const originalEnv = process.env
