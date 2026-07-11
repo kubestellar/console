@@ -98,7 +98,7 @@ vi.mock('lucide-react', () => {
   }
 })
 
-import * as StatBlockFactoryModalModule from './StatBlockFactoryModal'
+import { StatBlockFactoryModal } from './StatBlockFactoryModal'
 
 describe('StatBlockFactoryModal Component', () => {
   beforeEach(() => {
@@ -110,14 +110,14 @@ describe('StatBlockFactoryModal Component', () => {
   })
 
   it('exports StatBlockFactoryModal component', () => {
-    expect(StatBlockFactoryModalModule.StatBlockFactoryModal).toBeDefined()
-    expect(typeof StatBlockFactoryModalModule.StatBlockFactoryModal).toBe('function')
+    expect(StatBlockFactoryModal).toBeDefined()
+    expect(typeof StatBlockFactoryModal).toBe('function')
   })
 
   it('keeps the preview card count stable when editing a stat block label', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    render(<StatBlockFactoryModalModule.StatBlockFactoryModal isOpen={true} onClose={vi.fn()} />)
+    render(<StatBlockFactoryModal isOpen={true} onClose={vi.fn()} />)
 
     expect(screen.getAllByText('42')).toHaveLength(3)
 
