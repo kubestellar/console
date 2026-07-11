@@ -74,7 +74,9 @@ var logInjectionReplacer = strings.NewReplacer(
 var ansiEscapeRe = regexp.MustCompile(`\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*\x07|[@-_])`)
 
 // logC0Re matches C0 control characters and DEL that are not already handled
-// by logInjectionReplacer (which covers \n, \r) or ansiEscapeRe (ESC 0x1b).
+// by logInjectionReplacer (which covers \n, \r, \x00) or ansiEscapeRe (ESC \x1b).
+// The range deliberately excludes \x00 (null, handled by replacer), \x09 (tab,
+// safe to pass through), \x0a (\n), \x0d (\r), and \x1b (ESC).
 // Stripping these prevents terminal-control injection via backspace, bell, etc.
 var logC0Re = regexp.MustCompile(`[\x01-\x08\x0b\x0c\x0e-\x1a\x1c-\x1f\x7f]`)
 
