@@ -82,12 +82,12 @@ vi.mock('../../../lib/constants/network', async () => {
 // ---------------------------------------------------------------------------
 import {
   // Constants
-  REFRESH_INTERVAL_MS,
-  CLUSTER_POLL_INTERVAL_MS,
-  GPU_POLL_INTERVAL_MS,
-  CACHE_TTL_MS,
-  MIN_REFRESH_INDICATOR_MS,
-  getLocalAgentURL,
+  REFRESH_INTERVAL_MS as _REFRESH_INTERVAL_MS,
+  CLUSTER_POLL_INTERVAL_MS as _CLUSTER_POLL_INTERVAL_MS,
+  GPU_POLL_INTERVAL_MS as _GPU_POLL_INTERVAL_MS,
+  CACHE_TTL_MS as _CACHE_TTL_MS,
+  MIN_REFRESH_INDICATOR_MS as _MIN_REFRESH_INDICATOR_MS,
+  getLocalAgentURL as _getLocalAgentURL,
   // Pure functions
   getEffectiveInterval,
   shareMetricsBetweenSameServerClusters,
@@ -95,7 +95,7 @@ import {
   shouldMarkOffline,
   recordClusterFailure,
   clearClusterFailure,
-  clusterDisplayName,
+  clusterDisplayName as _clusterDisplayName,
   fetchWithRetry,
   // Async functions
   fullFetchClusters,
@@ -105,11 +105,11 @@ import {
   // State management
   clusterCache,
   clusterSubscribers,
-  notifyClusterSubscribers,
-  notifyClusterSubscribersDebounced,
+  notifyClusterSubscribers as _notifyClusterSubscribers,
+  notifyClusterSubscribersDebounced as _notifyClusterSubscribersDebounced,
   updateClusterCache,
   updateSingleClusterInCache,
-  setInitialFetchStarted,
+  setInitialFetchStarted as _setInitialFetchStarted,
   setHealthCheckFailures,
   getHealthCheckFailures,
   initialFetchStarted,
@@ -118,7 +118,7 @@ import {
   sharedWebSocket,
   cleanupSharedWebSocket,
   // Cache ref
-  clusterCacheRef,
+  clusterCacheRef as _clusterCacheRef,
   subscribeClusterCache,
 } from '../shared'
 import { clearAgentToken, setAgentToken } from '../agentFetch'

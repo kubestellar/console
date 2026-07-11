@@ -115,4 +115,6 @@ export function useMissionContentContext(): MissionContentContextValue {
 }
 
 /** Alias for backward-compatibility and convenience. */
-export const useMissionContent = useMissionContentContext
+export function useMissionContent(): MissionContentContextValue {
+  return useMissionContentContext()
+}
