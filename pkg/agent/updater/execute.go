@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"time"
+
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // semverTagRE validates that a GitHub release tag is a well-formed semver
@@ -34,7 +36,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 
 	start := time.Now()
 	total := devUpdateTotalSteps
-	slog.Info("[AutoUpdate] starting update", "from", short(previousSHA), "to", short(newSHA))
+	slog.Info("[AutoUpdate] starting update", "from", sanitize.LogString(short(previousSHA)), "to", sanitize.LogString(short(newSHA)))
 
 	// Check for cancellation before step 1 (git pull has not yet run, no rollback needed)
 	if uc.checkCancelled("step1-git-pull", "", "", 0) {
@@ -303,7 +305,7 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 	// Validate the tag name before passing it to git to prevent git flag injection
 	// via a crafted tag_name in the GitHub Releases API response (CWE-20, #18488).
 	if err := validateTagName(release.TagName); err != nil {
-		slog.Error("[AutoUpdate] invalid release tag name", "tag", release.TagName, "error", err)
+		slog.Error("[AutoUpdate] invalid release tag name", "tag", sanitize.LogString(release.TagName), "error", err)
 		uc.recordError(fmt.Sprintf("invalid release tag: %v", err))
 		return
 	}
@@ -385,6 +387,6 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 	uc.lastUpdateError = ""
 	uc.mu.Unlock()
 
-	slog.Info("[AutoUpdate] build complete, restarting via startup-oauth.sh", "version", release.TagName)
+	slog.Info("[AutoUpdate] build complete, restarting via startup-oauth.sh", "version", sanitize.LogString(release.TagName))
 	uc.restartViaStartupScript(repoPath)
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/fileutil"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // FlushInterval is how often accumulated in-memory token usage is flushed
@@ -34,18 +35,18 @@ const lockSuffix = ".lock"
 // Tracker manages token usage accounting for the agent server.
 // It is safe for concurrent use.
 type Tracker struct {
-	mu            sync.RWMutex
-	fileMu        sync.Mutex  // serializes file I/O (#9441)
-	flushTimer    *time.Timer // debounced flush timer (#9483)
-	sessionStart  time.Time
-	sessionIn     int64
-	sessionOut    int64
-	todayIn       int64
-	todayOut      int64
-	todayDate     string // YYYY-MM-DD
-	lastSavedIn   int64  // for delta computation (#9730)
-	lastSavedOut  int64  // for delta computation (#9730)
-	sessionQuota  int64  // 0 = unlimited (#9438)
+	mu           sync.RWMutex
+	fileMu       sync.Mutex  // serializes file I/O (#9441)
+	flushTimer   *time.Timer // debounced flush timer (#9483)
+	sessionStart time.Time
+	sessionIn    int64
+	sessionOut   int64
+	todayIn      int64
+	todayOut     int64
+	todayDate    string // YYYY-MM-DD
+	lastSavedIn  int64  // for delta computation (#9730)
+	lastSavedOut int64  // for delta computation (#9730)
+	sessionQuota int64  // 0 = unlimited (#9438)
 }
 
 // New creates a Tracker with the given session quota (0 = unlimited).
@@ -210,7 +211,7 @@ func (t *Tracker) Save() {
 	var onDisk usageData
 	if diskData, err := os.ReadFile(path); err == nil {
 		if err := json.Unmarshal(diskData, &onDisk); err != nil {
-			slog.Warn("could not parse token usage file during save", "path", path, "error", err)
+			slog.Warn("could not parse token usage file during save", "path", sanitize.LogString(path), "error", err)
 		}
 	}
 

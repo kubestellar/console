@@ -9,6 +9,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 const (
@@ -394,7 +395,7 @@ func (t *DeviceTracker) checkForDrop(key, nodeName, cluster, deviceType string, 
 	}
 	t.alerts[alertKey] = alert
 
-	slog.Info("[DeviceTracker] ALERT: device count dropped", "device", deviceType, "cluster", cluster, "node", nodeName, "previous", maxCount, "current", currentCount)
+	slog.Info("[DeviceTracker] ALERT: device count dropped", "device", sanitize.LogString(deviceType), "cluster", sanitize.LogString(cluster), "node", sanitize.LogString(nodeName), "previous", maxCount, "current", currentCount)
 
 	return alert
 }
@@ -437,7 +438,7 @@ func (t *DeviceTracker) checkForBoolDrop(key, nodeName, cluster, deviceType stri
 	}
 	t.alerts[alertKey] = alert
 
-	slog.Info("[DeviceTracker] ALERT: capability no longer available", "device", deviceType, "cluster", cluster, "node", nodeName)
+	slog.Info("[DeviceTracker] ALERT: capability no longer available", "device", sanitize.LogString(deviceType), "cluster", sanitize.LogString(cluster), "node", sanitize.LogString(nodeName))
 
 	return alert
 }
