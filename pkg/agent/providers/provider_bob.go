@@ -1,9 +1,6 @@
 package providers
 
 import (
-	"github.com/kubestellar/console/pkg/agent/prompts"
-	"github.com/kubestellar/console/pkg/agent/procutil"
-	"github.com/kubestellar/console/pkg/ai"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -13,6 +10,11 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/agent/procutil"
+	"github.com/kubestellar/console/pkg/agent/prompts"
+	"github.com/kubestellar/console/pkg/ai"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // bobResponse represents the JSON stats output from bob CLI
@@ -87,7 +89,7 @@ func (b *BobProvider) detectCLI() {
 		for _, p := range commonPaths {
 			if _, statErr := os.Stat(p); statErr == nil {
 				path = p
-				slog.Info("found Bob CLI", "path", p)
+				slog.Info("found Bob CLI", "path", sanitize.LogString(p))
 				break
 			}
 		}
@@ -96,7 +98,7 @@ func (b *BobProvider) detectCLI() {
 			return
 		}
 	} else {
-		slog.Info("found Bob CLI in PATH", "path", path)
+		slog.Info("found Bob CLI in PATH", "path", sanitize.LogString(path))
 	}
 	b.cliPath = path
 
@@ -108,7 +110,7 @@ func (b *BobProvider) detectCLI() {
 	output, err := cmd.Output()
 	if err == nil {
 		b.version = strings.TrimSpace(string(output))
-		slog.Info("Bob CLI version detected", "version", b.version)
+		slog.Info("Bob CLI version detected", "version", sanitize.LogString(b.version))
 	} else {
 		slog.Info("could not get Bob CLI version", "error", err)
 	}

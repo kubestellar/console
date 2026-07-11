@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // maxClusterFanOut caps the number of concurrent goroutines spawned by
@@ -54,8 +55,8 @@ func fanOutClusters[T any](
 			items, err := fetchFn(clusterCtx, clusterName)
 			if err != nil {
 				retryIn := s.recordClusterResourceFailure(resourceName, clusterName)
-				slog.Warn("["+resourceName+"] failed to fetch for cluster",
-					"cluster", clusterName, "error", err, "retryIn", retryIn)
+				slog.Warn("cluster resource failed to fetch",
+					"resource", sanitize.LogString(resourceName), "cluster", sanitize.LogString(clusterName), "error", err, "retryIn", retryIn)
 				return
 			}
 			s.recordClusterResourceSuccess(resourceName, clusterName)

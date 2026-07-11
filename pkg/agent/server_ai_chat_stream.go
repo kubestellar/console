@@ -542,7 +542,7 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 			// Session exists but belongs to a different connection — reject.
 			s.activeChatCtxsMu.Unlock()
 			slog.Warn("[Chat] SECURITY: rejected cancel from non-owning connection",
-				"sessionID", sanitize.LogString(req.SessionID), "requester", conn.RemoteAddr())
+				"sessionID", sanitize.LogString(req.SessionID), "requester", sanitize.LogString(conn.RemoteAddr().String()))
 			writeMu.Lock()
 			if err := setWSWriteDeadline(conn, "[Chat] failed to set WebSocket write deadline",
 				"msgID", msg.ID, "type", protocol.TypeError); err == nil {
@@ -623,7 +623,7 @@ func (s *Server) cancelAllChatsForConn(conn *websocket.Conn) {
 
 	if len(toCancel) > 0 {
 		slog.Info("[Chat] cancelled orphaned sessions on disconnect",
-			"count", len(toCancel), "addr", conn.RemoteAddr())
+			"count", len(toCancel), "addr", sanitize.LogString(conn.RemoteAddr().String()))
 	}
 }
 

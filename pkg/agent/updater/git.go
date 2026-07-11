@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 func hasUncommittedChanges(repoPath string) bool {
@@ -90,6 +92,6 @@ func rollbackGit(repoPath, sha string) {
 	cmd := exec.CommandContext(ctx, "git", "reset", "--hard", sha)
 	cmd.Dir = repoPath
 	if err := cmd.Run(); err != nil {
-		slog.Error("[AutoUpdate] rollback failed", "sha", short(sha), "error", err)
+		slog.Error("[AutoUpdate] rollback failed", "sha", sanitize.LogString(short(sha)), "error", err)
 	}
 }

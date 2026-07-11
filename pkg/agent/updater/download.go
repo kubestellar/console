@@ -16,6 +16,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // sanitizeTagName strips path separators and parent-directory traversals from a
@@ -68,7 +70,7 @@ func verifyChecksumFromRelease(release *githubReleaseInfo, fileName, downloadedF
 	for scanner.Scan() {
 		hash, fname, err := parseChecksumLine(scanner.Text())
 		if err != nil {
-			slog.Warn("[AutoUpdate] skipping invalid checksum line", "line", scanner.Text())
+			slog.Warn("[AutoUpdate] skipping invalid checksum line", "line", sanitize.LogString(scanner.Text()))
 			continue
 		}
 		checksumMap[fname] = hash
@@ -96,7 +98,7 @@ func verifyChecksumFromRelease(release *githubReleaseInfo, fileName, downloadedF
 
 	// Compare hashes (case-insensitive)
 	if strings.EqualFold(actualHash, expectedHash) {
-		slog.Info("[AutoUpdate] checksum verified", "file", fileName, "hash", actualHash)
+		slog.Info("[AutoUpdate] checksum verified", "file", sanitize.LogString(fileName), "hash", sanitize.LogString(actualHash))
 		return expectedHash, nil
 	}
 
@@ -165,7 +167,7 @@ func renameOrCopy(src, dst string) error {
 		return err
 	}
 
-	slog.Info("[AutoUpdate] rename failed with EXDEV, falling back to copy", "src", src, "dst", dst)
+	slog.Info("[AutoUpdate] rename failed with EXDEV, falling back to copy", "src", sanitize.LogString(src), "dst", sanitize.LogString(dst))
 
 	in, openErr := os.Open(src)
 	if openErr != nil {
@@ -430,14 +432,13 @@ func (uc *UpdateChecker) executeBinaryUpdateFlow(release *githubReleaseInfo) {
 	uc.lastUpdateError = ""
 	uc.mu.Unlock()
 
-	slog.Info("[AutoUpdate] binary updated", "version", release.TagName)
+	slog.Info("[AutoUpdate] binary updated", "version", sanitize.LogString(release.TagName))
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "done",
 		Message:  fmt.Sprintf("Updated to %s", release.TagName),
 		Progress: 100,
 	})
 }
-
 
 // maxDownloadBytes is the upper bound for downloadFile to prevent disk exhaustion (#14379).
 const maxDownloadBytes = 512 * 1024 * 1024 // 512 MB
@@ -574,7 +575,7 @@ func safeTarExtract(ctx context.Context, archivePath, destDir string) error {
 			return fmt.Errorf("archive contains disallowed link entry: %s", header.Name)
 		default:
 			// Skip other types (block devices, char devices, etc.)
-			slog.Warn("[AutoUpdate] skipping unsupported tar entry type", "name", header.Name, "type", header.Typeflag)
+			slog.Warn("[AutoUpdate] skipping unsupported tar entry type", "name", sanitize.LogString(header.Name), "type", header.Typeflag)
 		}
 	}
 

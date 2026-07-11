@@ -1,9 +1,6 @@
 package providers
 
 import (
-	"github.com/kubestellar/console/pkg/agent/prompts"
-	"github.com/kubestellar/console/pkg/agent/procutil"
-	"github.com/kubestellar/console/pkg/ai"
 	"bufio"
 	"context"
 	"encoding/json"
@@ -16,7 +13,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/agent/procutil"
+	"github.com/kubestellar/console/pkg/agent/prompts"
+	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 // RequiredMissionTools lists the baseline CLI binaries missions usually rely
@@ -95,7 +96,7 @@ func warnMissingMissionTool(tool string, required bool) {
 	if _, alreadyWarned := warnedMissionTools.LoadOrStore(key, true); alreadyWarned {
 		return
 	}
-	slog.Warn("mission tool not found on PATH — continuing with advisory warning", "tool", tool, "required", required)
+	slog.Warn("mission tool not found on PATH — continuing with advisory warning", "tool", sanitize.LogString(tool), "required", required)
 }
 
 // CheckToolDependencies inspects mission tools and returns advisory status for
@@ -220,7 +221,7 @@ func (c *ClaudeCodeProvider) detectCLI() {
 		for _, p := range commonPaths {
 			if _, statErr := os.Stat(p); statErr == nil {
 				path = p
-				slog.Info("found Claude Code CLI", "path", p)
+				slog.Info("found Claude Code CLI", "path", sanitize.LogString(p))
 				break
 			}
 		}
@@ -229,7 +230,7 @@ func (c *ClaudeCodeProvider) detectCLI() {
 			return
 		}
 	} else {
-		slog.Info("found Claude Code CLI in PATH", "path", path)
+		slog.Info("found Claude Code CLI in PATH", "path", sanitize.LogString(path))
 	}
 	c.cliPath = path
 
@@ -242,7 +243,7 @@ func (c *ClaudeCodeProvider) detectCLI() {
 	output, err := cmd.Output()
 	if err == nil {
 		c.version = strings.TrimSpace(string(output))
-		slog.Info("Claude Code CLI version detected", "version", c.version)
+		slog.Info("Claude Code CLI version detected", "version", sanitize.LogString(c.version))
 	} else {
 		slog.Info("could not get Claude Code CLI version", "error", err)
 	}
@@ -515,7 +516,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *ai
 
 		var event claudeCodeStreamEvent
 		if err := json.Unmarshal([]byte(line), &event); err != nil {
-			slog.Error("failed to parse stream event", "error", err, "line", TruncateString(line, 100))
+			slog.Error("failed to parse stream event", "error", err, "line", sanitize.LogString(TruncateString(line, 100)))
 			continue
 		}
 
@@ -528,7 +529,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *ai
 			// Tool is being called
 			toolsExecuted = true // #13728 — Track that at least one tool was executed
 			lastToolName = event.Tool
-			slog.Info("[Claude Code] tool use", "tool", event.Tool)
+			slog.Info("[Claude Code] tool use", "tool", sanitize.LogString(event.Tool))
 			if onProgress != nil {
 				onProgress(ai.StreamEvent{
 					Type:  "tool_use",
@@ -544,7 +545,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *ai
 			if event.Tool != "" && lastToolName == "" {
 				lastToolName = event.Tool
 			}
-			slog.Info("[Claude Code] tool result", "tool", event.Tool, "bytes", len(event.Output))
+			slog.Info("[Claude Code] tool result", "tool", sanitize.LogString(event.Tool), "bytes", len(event.Output))
 			if onProgress != nil {
 				onProgress(ai.StreamEvent{
 					Type:   "tool_result",

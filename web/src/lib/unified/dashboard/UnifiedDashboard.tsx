@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Activity, RefreshCw, Plus, ExternalLink } from 'lucide-react'
+import { cn } from '@/lib/cn'
 import { Button } from '../../../components/ui/Button'
 import { AgentIcon } from '../../../components/agent/AgentIcon'
 import type {
@@ -468,7 +469,7 @@ export function UnifiedDashboard({
               className="p-2"
               title="Refresh"
               icon={<RefreshCw
-                className={`w-4 h-4 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`}
+                className={cn('w-4 h-4 text-muted-foreground', isLoading && 'animate-spin')}
               />}
             />
           )}
