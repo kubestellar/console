@@ -22,7 +22,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: db-backup
-              image: ghcr.io/kubestellar/console:0.3.29
+              image: ghcr.io/kubestellar/console:latest
               securityContext:
                 allowPrivilegeEscalation: false
                 capabilities:

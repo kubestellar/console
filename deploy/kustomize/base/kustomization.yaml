@@ -25,8 +25,11 @@ resources:
   - deployment.yaml
   - cronjob-db-backup.yaml
 
-# Single place to bump the console version — keep in sync with
-# deploy/helm/kubestellar-console/Chart.yaml appVersion.
+# Release channel. Every nightly/weekly release pushes the moving tags
+# `latest`, `nightly`, and `weekly` plus an immutable version tag
+# (see .github/workflows/release.yml docker-manifest job), so `latest`
+# stays current without any manifest changes here. Pin an immutable
+# vX.Y.Z[-nightly.DATE] tag in your own overlay for reproducible installs.
 images:
   - name: ghcr.io/kubestellar/console
-    newTag: 0.3.29
+    newTag: latest

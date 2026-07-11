@@ -23,7 +23,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: db-restore
-          image: ghcr.io/kubestellar/console:0.3.29
+          image: ghcr.io/kubestellar/console:latest
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -92,8 +92,8 @@ spec:
               readOnly: true
       containers:
         - name: kubestellar-console
-          image: ghcr.io/kubestellar/console:0.3.29
-          imagePullPolicy: IfNotPresent
+          image: ghcr.io/kubestellar/console:latest
+          imagePullPolicy: Always
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

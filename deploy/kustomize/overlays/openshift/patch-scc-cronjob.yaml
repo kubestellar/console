@@ -1,0 +1,15 @@
+# See patch-scc-deployment.yaml — same SCC UID-range constraint.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kubestellar-console-db-backup
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: db-backup
+              securityContext:
+                runAsUser: null
+                runAsGroup: null

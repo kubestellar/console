@@ -68,15 +68,36 @@ Useful environment variables:
 | `APP_NAME`, `LOGO_URL`, `THEME_COLOR` | Rebrand the console for your distribution |
 | `CLAUDE_API_KEY` | Enable AI features |
 
-## Version pinning
+## Exposing on a real hostname
 
-The image tag is pinned in `base/kustomization.yaml` (`images:` block) and
-tracks the Helm chart `appVersion`. Override in your overlay:
+The default (`localhost:8080` via port-forward) needs no configuration.
+When you expose the console on a Route or Ingress hostname, set
+`FRONTEND_URL` so auth redirects return to the right place:
+
+```bash
+kubectl -n kubestellar-console set env deployment/kubestellar-console \
+  FRONTEND_URL=https://console.example.com
+```
+
+(Or patch the env var in your overlay next to `ENABLED_DASHBOARDS`.)
+
+## Staying current / version pinning
+
+The base tracks the **`latest`** release channel. Every nightly and weekly
+release pushes the moving image tags `latest`, `nightly`, and `weekly` plus
+an immutable `vX.Y.Z[-nightly.DATE]` tag, so a fresh install (or pod
+restart — `:latest` implies `imagePullPolicy: Always`) always gets the
+newest console with no manifest changes. The in-app self-upgrade
+(`SELF_UPGRADE_ENABLED=true`) can also roll the deployment forward from
+the UI.
+
+To follow a different channel or pin an exact version for reproducible
+installs, override the tag in your overlay:
 
 ```yaml
 images:
   - name: ghcr.io/kubestellar/console
-    newTag: 0.3.29
+    newTag: weekly   # or nightly, or an immutable tag like v0.3.34-nightly.20260709
 ```
 
 ## Uninstall

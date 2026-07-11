@@ -1,0 +1,21 @@
+# OpenShift's restricted-v2 SCC requires pod UIDs from the namespace's
+# assigned range (e.g. 1001980000/10000) and rejects the chart-default
+# runAsUser/runAsGroup 1001. Dropping them lets the SCC inject a valid
+# UID at admission (runAsNonRoot still enforced).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubestellar-console
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: db-restore
+          securityContext:
+            runAsUser: null
+            runAsGroup: null
+      containers:
+        - name: kubestellar-console
+          securityContext:
+            runAsUser: null
+            runAsGroup: null
