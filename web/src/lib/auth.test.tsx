@@ -241,7 +241,7 @@ describe('auth.tsx — OAuth session management', () => {
   describe('Session validation', () => {
     it('immediately clears expired JWT without calling /api/me', async () => {
       const expiredToken = encodeJWT(EXPIRED_JWT_PAYLOAD)
-      localStorageMock.set('kc-token', expiredToken)
+      localStorageMock.set('kc_token', expiredToken)
       localStorageMock.set(STORAGE_KEY_HAS_SESSION, 'true')
       
       // Mock refresh flow for expired token
@@ -284,7 +284,7 @@ describe('auth.tsx — OAuth session management', () => {
         onboarded: true,
       }
       
-      localStorageMock.set('kc-token', validToken)
+      localStorageMock.set('kc_token', validToken)
       localStorageMock.set(STORAGE_KEY_USER_CACHE, JSON.stringify(cachedUser))
       
       fetchMock.mockResolvedValueOnce({
@@ -316,7 +316,7 @@ describe('auth.tsx — OAuth session management', () => {
       const CACHE_STALE_MS = 6 * 60 * 1_000 // 6 minutes ago
       const staleTimestamp = Date.now() - CACHE_STALE_MS
       
-      localStorageMock.set('kc-token', validToken)
+      localStorageMock.set('kc_token', validToken)
       localStorageMock.set(STORAGE_KEY_USER_CACHE, JSON.stringify(cachedUser))
       localStorageMock.set('kc-user-cache-validated', String(staleTimestamp))
       
@@ -346,7 +346,7 @@ describe('auth.tsx — OAuth session management', () => {
       
       const freshTimestamp = Date.now() - 60_000 // 1 minute ago
       
-      localStorageMock.set('kc-token', validToken)
+      localStorageMock.set('kc_token', validToken)
       localStorageMock.set(STORAGE_KEY_USER_CACHE, JSON.stringify(cachedUser))
       localStorageMock.set('kc-user-cache-validated', String(freshTimestamp))
       
@@ -375,7 +375,7 @@ describe('auth.tsx — OAuth session management', () => {
         onboarded: true,
       }
       
-      localStorageMock.set('kc-token', validToken)
+      localStorageMock.set('kc_token', validToken)
       localStorageMock.set(STORAGE_KEY_USER_CACHE, JSON.stringify(user))
       localStorageMock.set(STORAGE_KEY_HAS_SESSION, 'true')
       sessionStorageMock.set('kc-session-id', 'session-abc')
@@ -409,7 +409,7 @@ describe('auth.tsx — OAuth session management', () => {
     it('logout() sends POST to /auth/logout with bearer token', async () => {
       const validToken = encodeJWT(VALID_JWT_PAYLOAD)
       
-      localStorageMock.set('kc-token', validToken)
+      localStorageMock.set('kc_token', validToken)
       
       fetchMock.mockResolvedValueOnce({ ok: true })
 
@@ -437,7 +437,7 @@ describe('auth.tsx — OAuth session management', () => {
     })
 
     it('logout() does not send /auth/logout for demo token', async () => {
-      localStorageMock.set('kc-token', DEMO_TOKEN_VALUE)
+      localStorageMock.set('kc_token', DEMO_TOKEN_VALUE)
       
       const wrapper = ({ children }: { children: ReactNode }) => (
         <AuthProvider>{children}</AuthProvider>
@@ -456,7 +456,7 @@ describe('auth.tsx — OAuth session management', () => {
     })
 
     it('logout() clears demo mode when STORAGE_KEY_DEMO_MODE is set', async () => {
-      localStorageMock.set('kc-token', DEMO_TOKEN_VALUE)
+      localStorageMock.set('kc_token', DEMO_TOKEN_VALUE)
       localStorageMock.set('kc-demo-mode', 'true')
       
       const wrapper = ({ children }: { children: ReactNode }) => (

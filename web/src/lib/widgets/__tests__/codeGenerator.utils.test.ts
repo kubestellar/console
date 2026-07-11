@@ -38,10 +38,10 @@ describe('codeGenerator.utils', () => {
     it('escapes single quotes in the curl URL to prevent shell injection', () => {
       const malicious = "http://host/api/data?x=';rm -rf /;'"
       const cmd = generateWidgetCommand('http://host', malicious)
-      // Should not contain unescaped single quotes inside the curl URL
-      // The escaped pattern is: close quote, backslash-quote, reopen quote
+      // The escaped pattern (close-quote + backslash-quote + reopen-quote) must appear.
       expect(cmd).toContain("'\\''")
-      expect(cmd).not.toContain("';rm -rf /;'")
+      // The raw unescaped malicious URL must not appear verbatim in the command.
+      expect(cmd).not.toContain(malicious)
     })
 
     it('escapes single quotes in the base URL for token fetch', () => {

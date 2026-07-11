@@ -120,7 +120,9 @@ describe('LaunchSequence', () => {
       />
     )
 
-    expect(screen.getByText(/Cancel/)).toBeInTheDocument()
+    // The close/cancel button uses the 'actions.close' i18n key;
+    // the mock returns the key itself as the rendered text.
+    expect(screen.getByText('actions.close')).toBeInTheDocument()
   })
 
   it('renders project list', () => {

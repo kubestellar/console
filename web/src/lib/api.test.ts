@@ -1,4 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
+// Use the real api module (opt out of the global setup.ts mock so
+// checkBackendAvailability / ApiClient call global.fetch and can be
+// verified by fetchMock assertions).
+vi.unmock('./api')
+
 import {
   api,
   checkBackendAvailability,

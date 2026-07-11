@@ -7,7 +7,6 @@ import type { MissionControlState } from './types'
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key }),
-  initReactI18next: { type: '3rdParty', init: () => {} },
 }))
 
 vi.mock('react-router-dom', () => ({
@@ -24,6 +23,14 @@ vi.mock('../ui/Toast', () => ({
 }))
 
 const mockState: MissionControlState = {
+  phase: 'blueprint',
+  title: 'Test Plan',
+  description: 'Test deployment',
+  overlay: 'architecture',
+  deployMode: 'phased',
+  targetClusters: [],
+  aiStreaming: false,
+  launchProgress: [],
   projects: [
     {
       name: 'prometheus',
@@ -38,12 +45,14 @@ const mockState: MissionControlState = {
   assignments: [
     {
       clusterName: 'cluster-1',
+      clusterContext: 'cluster-1-ctx',
+      provider: 'kind',
       projectNames: ['prometheus'],
       warnings: [],
+      readiness: { cpuHeadroomPercent: 80, memHeadroomPercent: 70, storageHeadroomPercent: 90, overallScore: 80 },
     },
   ],
   phases: [],
-  description: 'Test deployment',
 }
 
 describe('RequestApprovalModal', () => {

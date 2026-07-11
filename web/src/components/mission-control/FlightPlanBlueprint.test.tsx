@@ -24,6 +24,7 @@ vi.mock('framer-motion', () => ({
     g: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => <g {...props}>{children}</g>,
     circle: (props: Record<string, unknown>) => <circle {...props} />,
     rect: (props: Record<string, unknown>) => <rect {...props} />,
+    path: (props: Record<string, unknown>) => <path {...props} />,
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))

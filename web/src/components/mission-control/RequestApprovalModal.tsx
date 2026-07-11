@@ -165,6 +165,9 @@ export function RequestApprovalModal({
         <div className="space-y-4">
           {!issueUrl ? (
             <>
+              {state.description && (
+                <p className="text-sm text-muted-foreground">{state.description}</p>
+              )}
               <div>
                 <label htmlFor="approval-repo" className="block text-sm font-medium text-foreground mb-1.5">
                   Target Repository

@@ -84,6 +84,16 @@ vi.mock('../scope', () => ({
       enumerable: false,
       configurable: true,
     })
+    // globalThis must be non-enumerable so it is not destructured via
+    // `const { globalThis } = __scope` in the moduleSource template.
+    // That destructuring would create a TDZ binding that shadows the real
+    // globalThis at the top of the function body, causing a ReferenceError
+    // when compiler.ts tries `typeof globalThis` before the const initialises.
+    Object.defineProperty(scope, 'globalThis', {
+      value: undefined,
+      enumerable: false,
+      configurable: true,
+    })
     return scope
   },
 }))
