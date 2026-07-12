@@ -1,4 +1,5 @@
 import { lazy, type ComponentType } from 'react'
+import { logger } from '@/lib/logger'
 
 type LazyComponentModule = Record<string, unknown>
 type LazyLoadedComponent = ComponentType<Record<string, unknown>>
@@ -94,7 +95,7 @@ export function safeLazy<TModule extends LazyComponentModule>(
         .catch((err: Error) => {
           if (retriesLeft > 0) {
             const delay = LAZY_IMPORT_RETRY_BASE_MS * Math.pow(2, LAZY_IMPORT_MAX_RETRIES - retriesLeft)
-            console.warn(
+            logger.warn(
               `[safeLazy] Import failed for "${exportName}" (${retriesLeft} retries left), ` +
               `retrying in ${delay}ms: ${err.message}`,
             )
