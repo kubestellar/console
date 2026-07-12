@@ -43,6 +43,7 @@ describe('AISuggestionsSection', () => {
   })
 
   afterEach(() => {
+    vi.clearAllTimers()
     vi.useRealTimers()
     vi.clearAllMocks()
   })
