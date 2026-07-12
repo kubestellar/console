@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/store"
@@ -64,6 +65,16 @@ func newAgentTokenTestServer(t *testing.T, agentToken string) *Server {
 	mockStore.On("ListClusterGroups").Return(map[string][]byte{}, nil).Maybe()
 	mockStore.On("SaveClusterGroup", mock.Anything, mock.Anything).Return(nil).Maybe()
 	mockStore.On("DeleteClusterGroup", mock.Anything).Return(nil).Maybe()
+	
+	// Reset token revocation state from any previous tests that called
+	// NewServer() → InitTokenRevocation, then t.Cleanup → ShutdownTokenRevocation.
+	// Without this, the middleware's initOnce prevents re-initialization with
+	// a fresh store, causing JWTAuth to fail closed when it sees store==nil (#20857).
+	middleware.ResetTokenRevocationForTest()
+	t.Cleanup(middleware.ResetTokenRevocationForTest)
+	middleware.InitTokenRevocation(mockStore)
+	middleware.InitUserValidation(mockStore)
+	
 	server := &Server{
 		app:   fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
 		store: mockStore,

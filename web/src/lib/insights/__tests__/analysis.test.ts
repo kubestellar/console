@@ -19,6 +19,7 @@ import {
   getTopInsights,
 } from '../analysis'
 import type { ClusterEvent, ClusterInfo, Deployment, PodIssue } from '../../../hooks/mcp/types'
+import type { MultiClusterInsight } from '../../../types/insights'
 
 // Stable timestamp for deterministic tests
 const BASE_TS = '2025-06-01T12:00:00Z'
@@ -87,7 +88,7 @@ describe('detectClusterDeltas', () => {
     const deps: Deployment[] = [
       { name: 'app', namespace: 'ns', cluster: 'a', image: 'img:v1', replicas: 2, readyReplicas: 2, status: 'running' },
     ]
-    expect(detectClusterDeltas(deps, [{ name: 'a' }] as any)).toEqual([])
+    expect(detectClusterDeltas(deps, [{ name: 'a' }] as ClusterInfo[])).toEqual([])
   })
 
   it('detects image version delta across clusters', () => {
@@ -204,14 +205,14 @@ describe('detectConfigDrift', () => {
 describe('detectResourceImbalance', () => {
   it('returns empty for fewer than 2 healthy clusters', () => {
     expect(detectResourceImbalance([])).toEqual([])
-    expect(detectResourceImbalance([{ name: 'a', cpuCores: 8, cpuUsageCores: 4, healthy: true }] as any)).toEqual([])
+    expect(detectResourceImbalance([{ name: 'a', cpuCores: 8, cpuUsageCores: 4, healthy: true }] as ClusterInfo[])).toEqual([])
   })
 
   it('returns empty when clusters are balanced', () => {
     const clusters: ClusterInfo[] = [
       { name: 'a', cpuCores: 8, cpuUsageCores: 4, healthy: true },
       { name: 'b', cpuCores: 8, cpuUsageCores: 4, healthy: true },
-    ] as any
+    ] as ClusterInfo[]
     expect(detectResourceImbalance(clusters)).toEqual([])
   })
 
@@ -219,7 +220,7 @@ describe('detectResourceImbalance', () => {
     const clusters: ClusterInfo[] = [
       { name: 'hot', cpuCores: 8, cpuUsageCores: 7.5, healthy: true },
       { name: 'cold', cpuCores: 8, cpuUsageCores: 1, healthy: true },
-    ] as any
+    ] as ClusterInfo[]
     const insights = detectResourceImbalance(clusters)
     expect(insights.length).toBeGreaterThan(0)
     expect(insights[0].category).toBe('resource-imbalance')
@@ -230,7 +231,7 @@ describe('detectResourceImbalance', () => {
     const clusters: ClusterInfo[] = [
       { name: 'overloaded', cpuCores: 8, cpuUsageCores: 7.2, healthy: true }, // 90%
       { name: 'idle', cpuCores: 8, cpuUsageCores: 0.5, healthy: true }, // 6%
-    ] as any
+    ] as ClusterInfo[]
     const insights = detectResourceImbalance(clusters)
     expect(insights[0].severity).toBe('critical')
   })
@@ -239,7 +240,7 @@ describe('detectResourceImbalance', () => {
     const clusters: ClusterInfo[] = [
       { name: 'bad', cpuCores: 8, cpuUsageCores: 7.5, healthy: false },
       { name: 'good', cpuCores: 8, cpuUsageCores: 2, healthy: true },
-    ] as any
+    ] as ClusterInfo[]
     // Only 1 healthy cluster → returns empty
     expect(detectResourceImbalance(clusters)).toEqual([])
   })
@@ -253,7 +254,7 @@ describe('detectRestartCorrelation', () => {
   it('returns empty when no pods exceed restart threshold', () => {
     const issues: PodIssue[] = [
       { name: 'app-abc-xyz', namespace: 'ns', cluster: 'a', restarts: 1, status: 'CrashLoopBackOff' },
-    ] as any
+    ] as PodIssue[]
     expect(detectRestartCorrelation(issues)).toEqual([])
   })
 
@@ -261,7 +262,7 @@ describe('detectRestartCorrelation', () => {
     const issues: PodIssue[] = [
       { name: 'web-abc-xyz', namespace: 'ns', cluster: 'east', restarts: 5, status: 'CrashLoopBackOff' },
       { name: 'web-def-uvw', namespace: 'ns', cluster: 'west', restarts: 4, status: 'CrashLoopBackOff' },
-    ] as any
+    ] as PodIssue[]
     const insights = detectRestartCorrelation(issues)
     const appBug = insights.find(i => i.title.includes('likely app bug'))
     expect(appBug).toBeDefined()
@@ -274,7 +275,7 @@ describe('detectRestartCorrelation', () => {
       { name: 'app1-abc-xyz', namespace: 'ns', cluster: 'broken', restarts: 5, status: 'CrashLoopBackOff' },
       { name: 'app2-abc-xyz', namespace: 'ns', cluster: 'broken', restarts: 4, status: 'CrashLoopBackOff' },
       { name: 'app3-abc-xyz', namespace: 'ns', cluster: 'broken', restarts: 6, status: 'CrashLoopBackOff' },
-    ] as any
+    ] as PodIssue[]
     const insights = detectRestartCorrelation(issues)
     const infra = insights.find(i => i.title.includes('likely infra issue'))
     expect(infra).toBeDefined()
@@ -375,7 +376,7 @@ describe('groupInsightsByCategory', () => {
       { id: '1', category: 'event-correlation', severity: 'warning', title: 'A', description: '', affectedClusters: [], source: 'heuristic', detectedAt: '' },
       { id: '2', category: 'cluster-delta', severity: 'info', title: 'B', description: '', affectedClusters: [], source: 'heuristic', detectedAt: '' },
       { id: '3', category: 'event-correlation', severity: 'critical', title: 'C', description: '', affectedClusters: [], source: 'heuristic', detectedAt: '' },
-    ] as any
+    ] as MultiClusterInsight[]
     const result = groupInsightsByCategory(insights)
     expect(result['event-correlation']).toHaveLength(2)
     expect(result['cluster-delta']).toHaveLength(1)
@@ -396,7 +397,7 @@ describe('getTopInsights', () => {
       id: String(i), category: 'event-correlation', severity: 'warning',
       title: `Insight ${i}`, description: '', affectedClusters: [],
       source: 'heuristic', detectedAt: '',
-    })) as any
+    })) as MultiClusterInsight[]
     expect(getTopInsights(insights)).toHaveLength(5)
   })
 })

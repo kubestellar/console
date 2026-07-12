@@ -9,6 +9,7 @@
 import { ROUTES } from '../config/routes'
 import { DASHBOARD_CHUNKS } from './dashboardChunks'
 import { RETRY_DELAY_MS } from './constants/network'
+import { logger } from './logger'
 
 const VISIT_COUNTS_KEY = 'kubestellar-dashboard-visits'
 export const DEFAULT_TOP_N = 5
@@ -80,7 +81,9 @@ export function prefetchTopDashboards(currentPath?: string, n: number = DEFAULT_
       const chunkId = pathToChunkId(path)
       const loader = DASHBOARD_CHUNKS[chunkId]
       if (loader) {
-        loader().catch(() => {}) // Fire and forget
+        loader().catch((err) => {
+          logger.warn(`Failed to prefetch dashboard chunk for ${path}:`, err)
+        })
       }
     }
   }

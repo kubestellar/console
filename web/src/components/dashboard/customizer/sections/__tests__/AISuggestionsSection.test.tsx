@@ -14,7 +14,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../../shared/cardCatalog', () => ({
-  visualizationIcons: { chart: '📊', table: '📋' },
+  visualizationIcons: { chart: '👊', table: '👋' },
   wrapAbbreviations: (text: string) => text,
   generateCardSuggestions: (...args: unknown[]) => mockGenerateCardSuggestions(...args),
 }))
