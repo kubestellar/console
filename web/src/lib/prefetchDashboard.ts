@@ -11,6 +11,7 @@ import { prefetchCache } from './cache'
 import { coreFetchers } from '../hooks/useCachedData'
 import { isDemoMode } from './demoMode'
 import { ROUTES } from '../config/routes'
+import { logger } from './logger'
 
 /** Map sidebar href to DASHBOARD_CHUNKS key */
 function hrefToChunkId(href: string): string {
