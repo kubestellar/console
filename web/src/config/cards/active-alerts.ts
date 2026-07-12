@@ -19,6 +19,8 @@ export const activeAlertsConfig: UnifiedCardConfig = {
   isDemoData: true, // Uses demo data hook in registerHooks.ts
   isLive: false,
 
+  loadingState: { type: 'list', rows: 5 },
+
   dataSource: {
     type: 'hook',
     hook: 'useActiveAlerts',

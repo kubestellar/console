@@ -310,7 +310,10 @@ describe('fullFetchClusters — agent success path', () => {
     await fullFetchClusters()
 
     expect(clusterCache.clusters).toEqual([])
-    expect(clusterCache.error).toBeNull()
+    // Both tiers failed and there is no cached data to fall back to, so the
+    // orchestrator surfaces the 'Cluster data unavailable' banner and bumps
+    // the consecutive-failure counter (see sharedImpl.orchestration.ts).
+    expect(clusterCache.error).toBe('Cluster data unavailable')
     expect(clusterCache.consecutiveFailures).toBe(1)
   })
 

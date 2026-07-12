@@ -3,8 +3,12 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockGetDemoMode = vi.fn(() => false)
-const mockExec = vi.fn()
+// vi.hoisted keeps these declarations available inside vi.mock factories,
+// which are themselves hoisted to the top of the module by vitest.
+const { mockGetDemoMode, mockExec } = vi.hoisted(() => ({
+  mockGetDemoMode: vi.fn(() => false),
+  mockExec: vi.fn(),
+}))
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),

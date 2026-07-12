@@ -9,7 +9,7 @@ export const kubescapeScanConfig: UnifiedCardConfig = {
   category: 'security',
   description: 'Kubernetes security posture scan',
   icon: 'ShieldAlert',
-  iconColor: 'text-purple-400',
+  iconColor: 'text-orange-400',
   defaultWidth: 4,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useKubescapeScan' },

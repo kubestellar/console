@@ -460,6 +460,15 @@ function createErrorWithCause(message: string, cause: unknown): Error {
   return error
 }
 
+/**
+ * Detect AbortError across environments. jsdom's DOMException does not
+ * extend Error, so a plain `err instanceof Error` check fails to recognize
+ * an AbortError DOMException in tests. Check `.name` directly instead.
+ */
+function isAbortError(err: unknown): boolean {
+  return !!err && typeof err === 'object' && (err as { name?: unknown }).name === 'AbortError'
+}
+
 async function safeReadTextOrEmpty(response: Response, context: string): Promise<string> {
   try {
     return await response.text()
@@ -686,7 +695,7 @@ class ApiClient {
       return { data: data ?? ({} as T) }
     } catch (err: unknown) {
       clearTimeout(timeoutId)
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (isAbortError(err)) {
         emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw createErrorWithCause(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`, err)
       }
@@ -741,7 +750,7 @@ class ApiClient {
       return { data: data ?? ({} as T) }
     } catch (err: unknown) {
       clearTimeout(timeoutId)
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (isAbortError(err)) {
         emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw createErrorWithCause(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`, err)
       }
@@ -792,7 +801,7 @@ class ApiClient {
       return { data: data ?? ({} as T) }
     } catch (err: unknown) {
       clearTimeout(timeoutId)
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (isAbortError(err)) {
         emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw createErrorWithCause(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`, err)
       }
@@ -847,7 +856,7 @@ class ApiClient {
       return { data: data ?? ({} as T) }
     } catch (err: unknown) {
       clearTimeout(timeoutId)
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (isAbortError(err)) {
         emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw createErrorWithCause(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`, err)
       }
@@ -899,7 +908,7 @@ class ApiClient {
       this.checkTokenRefresh(response)
     } catch (err: unknown) {
       clearTimeout(timeoutId)
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (isAbortError(err)) {
         emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw createErrorWithCause(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`, err)
       }

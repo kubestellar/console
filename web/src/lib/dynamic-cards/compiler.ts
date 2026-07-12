@@ -243,30 +243,32 @@ export async function createCardComponent(compiledCode: string): Promise<Dynamic
 
     // Create a module source that:
     // 1. Retrieves the frozen scope from globalThis
-    // 2. Destructures scope variables into the module context
-    // 3. Executes the compiled card code
-    // 4. Stores the resulting component in globalThis for the caller to read
+    // 2. Executes the compiled card code inside an inner strict-mode IIFE
+    //    where scope variables (including sandbox-blocked names like
+    //    `globalThis`) are const-destructured to shadow the real globals.
+    //    Keeping the destructuring inside the IIFE prevents the outer
+    //    wrapper's `typeof globalThis` check from tripping TDZ when
+    //    scopeKeys includes `globalThis` (BLOCKED_GLOBALS bypass safety).
+    // 3. Stores the resulting component in globalThis for the caller to read.
     //
     // Note: no ES module `export` syntax — the module communicates its result
     // back via a globalThis side-effect. This lets the same source string work
     // with both blob URL import() (production) and new Function() eval (tests).
-    //
-    // The globalThis reference is captured before entering strict mode to prevent
-    // "Cannot access 'globalThis' before initialization" errors in test environments
-    // where new Function() creates an isolated scope without automatic globalThis binding.
     const moduleSource = `
-      const __globalThis = (typeof globalThis !== 'undefined' ? globalThis : (typeof global !== 'undefined' ? global : this));
-      "use strict";
-      const __scope = __globalThis['${scopeId}'];
+      var __globalThis = (typeof globalThis !== 'undefined' ? globalThis : (typeof global !== 'undefined' ? global : this));
+      var __scope = __globalThis['${scopeId}'];
       if (__scope) delete __globalThis['${scopeId}'];
-      const { ${scopeKeys.join(', ')} } = __scope || {};
+      __globalThis['${scopeId}__result'] = (function () {
+        "use strict";
+        var { ${scopeKeys.join(', ')} } = __scope || {};
 
-      var exports = {};
-      var module = { exports: exports };
+        var exports = {};
+        var module = { exports: exports };
 
-      ${compiledCode}
+        ${compiledCode}
 
-      __globalThis['${scopeId}__result'] = module.exports.default || module.exports;
+        return module.exports.default || module.exports;
+      })();
     `
 
     try {

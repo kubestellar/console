@@ -163,14 +163,14 @@ describe('TeamMemberManager', () => {
     const userIdInput = screen.getByPlaceholderText('GitHub login or user ID')
     fireEvent.change(userIdInput, { target: { value: 'new-user' } })
 
-    // Target the role select in the modal (it has only 'member'/'admin' options)
+    // The modal role select is the last combobox in the DOM (rendered inside
+     // the BaseModal that opens after clicking addMember). Existing member row
+     // selects have identical member/admin options, so filter-by-options can
+     // match the wrong one; picking the last combobox reliably targets the
+     // modal's select.
     const roleSelects = screen.getAllByRole('combobox')
-    const addRoleSelect = roleSelects.find(sel => {
-      const opts = (sel as HTMLSelectElement).options
-      return opts.length === 2 && opts[0].value === 'member' && opts[1].value === 'admin'
-    })
-    expect(addRoleSelect).toBeDefined()
-    fireEvent.change(addRoleSelect!, { target: { value: 'admin' } })
+    const addRoleSelect = roleSelects[roleSelects.length - 1]
+    fireEvent.change(addRoleSelect, { target: { value: 'admin' } })
 
     // The submit button is the last button with text 'teams.addMember'
     const allAddButtons = screen.getAllByRole('button', { name: 'teams.addMember' })

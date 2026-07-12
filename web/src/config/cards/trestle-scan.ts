@@ -9,7 +9,7 @@ export const trestleScanConfig: UnifiedCardConfig = {
   category: 'security',
   description: 'OSCAL compliance assessment via Compliance Trestle (CNCF Sandbox)',
   icon: 'Shield',
-  iconColor: 'text-teal-400',
+  iconColor: 'text-amber-400',
   defaultWidth: 6,
   defaultHeight: 3,
   dataSource: { type: 'hook', hook: 'useTrestle' },
