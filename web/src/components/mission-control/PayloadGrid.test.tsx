@@ -89,7 +89,7 @@ describe('PayloadGrid', () => {
       />
     )
 
-    expect(screen.getByText('Observability')).toBeInTheDocument()
+    expect(screen.getAllByText('Observability')).toHaveLength(2)
   })
 
   it('renders project count', () => {

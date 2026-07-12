@@ -56,6 +56,8 @@ describe('cache behaviour', () => {
         localStorage.clear()
         vi.clearAllMocks()
         vi.stubGlobal('fetch', vi.fn())
+        // Capture the hook's internal setInterval so afterEach can clear it.
+        vi.useFakeTimers({ shouldAdvanceTime: true })
     })
 
     afterEach(() => {
@@ -161,6 +163,8 @@ describe('VersionCheckProvider', () => {
         localStorage.clear()
         vi.clearAllMocks()
         vi.stubGlobal('fetch', vi.fn())
+        // Capture the hook's internal setInterval so afterEach can clear it.
+        vi.useFakeTimers({ shouldAdvanceTime: true })
     })
 
     afterEach(() => {

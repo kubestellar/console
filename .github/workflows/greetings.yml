@@ -13,11 +13,5 @@ permissions:
 
 jobs:
   greet:
-    # Pwn-request guard: for pull_request_target events only run for PRs from
-    # the kubestellar org (fixes #20491). Issue events always proceed.
-    if: |
-      github.event_name == 'issues' ||
-      github.event.pull_request.head.repo.owner.login == 'kubestellar'
-    # Pinned to commit SHA to prevent supply-chain drift from mutable @main (fixes #20493)
-    uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@4b7ec96317816e85859c8e4ea5d730bcfeeaaa00 # main pinned 2026-07-08
+    uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@main
     secrets: inherit

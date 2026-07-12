@@ -23,7 +23,7 @@ export const MS_PER_SECOND = 1_000
  * On Netlify, agent URLs are disabled — there is no local kc-agent.
  * Duplicated from demoMode.ts to avoid circular imports (demoMode → constants → network).
  */
-function isTestEnvironment(): boolean {
+export function isTestEnvironment(): boolean {
   return typeof process !== 'undefined' && process.env.NODE_ENV === 'test'
 }
 
@@ -109,7 +109,7 @@ function stripTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '')
 }
 
-function getLocalAgentURLs(agentBaseURL?: string): { httpURL: string; wsURL: string } {
+export function getLocalAgentURLs(agentBaseURL?: string): { httpURL: string; wsURL: string } {
   const configuredBaseURL = stripTrailingSlash((agentBaseURL || '').trim())
   if (!configuredBaseURL) {
     return {

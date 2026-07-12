@@ -3,6 +3,8 @@ import { GitPullRequestArrow, ExternalLink, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../lib/modals'
 import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
+import { TextArea } from '../ui/TextArea'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../ui/Toast'
 import type { MissionControlState } from './types'
@@ -165,17 +167,20 @@ export function RequestApprovalModal({
         <div className="space-y-4">
           {!issueUrl ? (
             <>
+              {state.description && (
+                <p className="text-sm text-muted-foreground">{state.description}</p>
+              )}
               <div>
                 <label htmlFor="approval-repo" className="block text-sm font-medium text-foreground mb-1.5">
                   Target Repository
                 </label>
-                <input
+                <Input
                   id="approval-repo"
                   type="text"
                   value={repo}
                   onChange={(e) => setRepo(e.target.value)}
                   placeholder="org/repo"
-                  className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/50"
+                  className="w-full"
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && isValidRepo && !submitting && !checkingGitHubToken && hasGitHubToken) handleSubmit()
@@ -190,13 +195,12 @@ export function RequestApprovalModal({
                 <label htmlFor="approval-notes" className="block text-sm font-medium text-foreground mb-1.5">
                   Notes for Reviewers <span className="text-muted-foreground font-normal">(optional)</span>
                 </label>
-                <textarea
+                <TextArea
                   id="approval-notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="e.g. Skip Phase 2 if cert-manager is already running. Need SRE sign-off before Phase 3."
                   rows={3}
-                  className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/50 resize-none"
                 />
               </div>
 

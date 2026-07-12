@@ -4,7 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import NotFound from './NotFound'
 import { ROUTES } from '../config/routes'
-import * as demoMode from '../lib/demoMode'
+import { activatePublicDemoMode } from '../lib/demoMode'
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -116,7 +116,7 @@ describe('NotFound', () => {
     const dashboardButton = screen.getByRole('button', { name: /Dashboard/i })
     fireEvent.click(dashboardButton)
 
-    expect(demoMode.activatePublicDemoMode).toHaveBeenCalledTimes(1)
+    expect(activatePublicDemoMode).toHaveBeenCalledTimes(1)
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.HOME)
   })
 
@@ -130,7 +130,7 @@ describe('NotFound', () => {
     const homeButton = screen.getByRole('button', { name: /Home/i })
     fireEvent.click(homeButton)
 
-    expect(demoMode.activatePublicDemoMode).toHaveBeenCalledTimes(1)
+    expect(activatePublicDemoMode).toHaveBeenCalledTimes(1)
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.HOME)
   })
 
@@ -152,7 +152,7 @@ describe('NotFound', () => {
     render(<BrowserRouter><NotFound /></BrowserRouter>)
     const dashboardButton = screen.getByRole('button', { name: /Dashboard/ })
     fireEvent.click(dashboardButton)
-    expect(demoMode.activatePublicDemoMode).toHaveBeenCalled()
+    expect(activatePublicDemoMode).toHaveBeenCalled()
   })
 
   it('displays KubeStellar pitch messaging', () => {

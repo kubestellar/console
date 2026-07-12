@@ -24,6 +24,7 @@ vi.mock('framer-motion', () => ({
     g: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => <g {...props}>{children}</g>,
     circle: (props: Record<string, unknown>) => <circle {...props} />,
     rect: (props: Record<string, unknown>) => <rect {...props} />,
+    path: (props: Record<string, unknown>) => <path {...props} />,
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
@@ -103,7 +104,7 @@ describe('FlightPlanBlueprint', () => {
       />
     )
 
-    expect(screen.getByText(/prometheus/i)).toBeInTheDocument()
+    expect(screen.getByTestId('mission-control-project-prometheus')).toBeInTheDocument()
   })
 
   it('handles empty state', () => {

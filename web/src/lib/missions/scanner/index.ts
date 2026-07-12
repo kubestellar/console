@@ -19,9 +19,9 @@ export function fullScan(mission: MissionExport): FileScanResult {
 
   // Metadata extraction
   const metadata: ScanMetadata = {
-    title: mission.title || null,
-    type: mission.type || null,
-    version: mission.version || null,
+    title: mission.title ?? null,
+    type: mission.type ?? null,
+    version: mission.version ?? null,
     stepCount: mission.steps?.length ?? 0,
     tagCount: mission.tags?.length ?? 0,
   }

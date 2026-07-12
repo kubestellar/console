@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import * as CardRecommendationsModule from './CardRecommendations'
+import { CardRecommendations } from './CardRecommendations'
 
 // Spy on global timers to verify cleanup behavior (#4661)
 const addEventSpy = vi.spyOn(document, 'addEventListener')
@@ -13,8 +13,8 @@ afterEach(() => {
 
 describe('CardRecommendations Component', () => {
   it('exports CardRecommendations component', () => {
-    expect(CardRecommendationsModule.CardRecommendations).toBeDefined()
-    expect(typeof CardRecommendationsModule.CardRecommendations).toBe('function')
+    expect(CardRecommendations).toBeDefined()
+    expect(typeof CardRecommendations).toBe('function')
   })
 
   it('setTimeout used for deferred listeners should be clearable', () => {

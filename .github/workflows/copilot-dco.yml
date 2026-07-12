@@ -4,13 +4,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-# Least-privilege permissions for DCO checking. See Scorecard TokenPermissionsID alert #1328.
-permissions:
-  contents: read
-  pull-requests: read
-  statuses: write
-
 jobs:
   copilot-dco:
-    # Pinned to commit SHA to prevent supply-chain drift from mutable @main (fixes #20493, #20494)
-    uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@18213effcf16b25f46e956d6f4969b491d03b805 # main pinned 2026-07-08
+    uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@main

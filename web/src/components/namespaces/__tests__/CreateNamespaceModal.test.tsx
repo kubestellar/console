@@ -13,7 +13,6 @@ import userEvent from '@testing-library/user-event'
 import { CreateNamespaceModal } from '../CreateNamespaceModal'
 
 const DISCARD_CONFIRM_TIMEOUT_MS = 2000
-const MOCK_LATENCY_MS = 200
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -244,9 +243,9 @@ describe('CreateNamespaceModal', () => {
 
   it('disables create button while creation is in progress', async () => {
     const user = userEvent.setup()
-    mockAgentFetch.mockImplementationOnce(
-      () => new Promise(resolve => setTimeout(() => resolve(new Response(JSON.stringify({}), { status: 200 })), MOCK_LATENCY_MS))
-    )
+    // Never-resolving promise keeps the button disabled for the duration of the
+    // assertion without creating a dangling real timer.
+    mockAgentFetch.mockImplementationOnce(() => new Promise(() => {}))
 
     render(
       <CreateNamespaceModal
