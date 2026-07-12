@@ -17,6 +17,7 @@ export const activeAlertsConfig: UnifiedCardConfig = {
   defaultHeight: 3,
 
   isDemoData: true, // Uses demo data hook in registerHooks.ts
+  isLive: false,
 
   dataSource: {
     type: 'hook',

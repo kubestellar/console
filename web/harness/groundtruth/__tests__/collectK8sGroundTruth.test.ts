@@ -134,9 +134,11 @@ describe('collectK8sGroundTruth', () => {
       const { collectK8sGroundTruth } = await loadModule()
       const result = collectK8sGroundTruth('test')
       expect(result.contexts.configured).toBe(2)
-      expect(result.contexts.names).toContain('ctx-a')
-      expect(result.contexts.names).toContain('ctx-c')
-      expect(result.contexts.names).not.toContain('ctx-b')
+      // Context names are redacted: 'ctx-a' → 'context-1-ctxa', 'ctx-c' → 'context-2-ctxc'
+      expect(result.contexts.names).toHaveLength(2)
+      expect(result.contexts.names[0]).toMatch(/^context-1-ctxa$/)
+      expect(result.contexts.names[1]).toMatch(/^context-2-ctxc$/)
+      expect(result.contexts.names.join(',')).not.toMatch(/ctxb/)
     })
 
     it('marks unreachable contexts correctly', async () => {

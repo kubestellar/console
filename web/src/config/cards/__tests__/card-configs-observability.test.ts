@@ -106,7 +106,7 @@ describe('Observability card configs', () => {
 
   describe('Content type validation', () => {
     it.each(observabilityCards)('$name has valid content type', ({ config }) => {
-      expect(config.content.type).toMatch(/^(list|stats-grid|custom|chart|table|text)$/)
+      expect(config.content.type).toMatch(/^(list|stats-grid|status-grid|custom|chart|table|text)$/)
     })
   })
 

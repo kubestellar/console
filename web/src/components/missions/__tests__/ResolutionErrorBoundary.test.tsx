@@ -98,15 +98,16 @@ describe('ResolutionErrorBoundary', () => {
 
     expect(screen.getByText('Failed to apply resolution')).toBeInTheDocument()
 
-    const tryAgainButton = screen.getByRole('button', { name: /try again/i })
-    await user.click(tryAgainButton)
-
-    // After recovery, re-render with non-throwing component
+    // Update props so children won't throw once the boundary recovers
     rerender(
       <ResolutionErrorBoundary>
         <ThrowError shouldThrow={false} />
       </ResolutionErrorBoundary>
     )
+
+    // Click Try again — hasError becomes false; children now render without throwing
+    const tryAgainButton = screen.getByRole('button', { name: /try again/i })
+    await user.click(tryAgainButton)
 
     expect(screen.getByText('No error')).toBeInTheDocument()
     expect(screen.queryByText('Failed to apply resolution')).not.toBeInTheDocument()

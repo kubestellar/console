@@ -140,7 +140,7 @@ export function findBestDeepLinkMatch(
   let bestScore = MIN_WORD_OVERLAP_RATIO
   for (const m of list) {
     const score = scoreMission(m, slug, slugWordSet, isInstaller)
-    if (score >= bestScore) {
+    if (score > bestScore) {
       best = m
       bestScore = score
     }

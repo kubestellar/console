@@ -114,20 +114,31 @@ describe('TeamAccessGrants', () => {
 
     fireEvent.click(screen.getByText('teams.grantAccess'))
 
-    const scopeSelect = screen.getByDisplayValue('teams.namespaceScoped')
-    fireEvent.change(scopeSelect, { target: { value: 'namespace' } })
+    // Select a cluster (required before grant button works)
+    const clusterSelect = screen.getByRole('combobox', { name: /teams.cluster/i })
+    fireEvent.change(clusterSelect, { target: { value: 'cluster1' } })
+
+    // Select a namespace (required for namespace scope)
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /teams.namespace/i })).toBeInTheDocument()
+    })
+    const namespaceSelect = screen.getByRole('combobox', { name: /teams.namespace/i })
+    fireEvent.change(namespaceSelect, { target: { value: 'default' } })
+
+    const grantButton = screen.getAllByText('teams.grantAccess')[1]
+    fireEvent.click(grantButton)
 
     await waitFor(() => {
-      const grantButton = screen.getAllByText('teams.grantAccess')[1]
-      fireEvent.click(grantButton)
+      expect(mockAuthFetch).toHaveBeenCalled()
     })
-
-    expect(mockAuthFetch).toHaveBeenCalled()
   })
 
   it('handles grant error and displays error message', async () => {
     mockUseClusters.mockReturnValue({
       deduplicatedClusters: [{ name: 'cluster1' }],
+    })
+    mockUseCachedNamespaces.mockReturnValue({
+      namespaces: ['default'],
     })
     mockAuthFetch.mockResolvedValue({
       ok: false,
@@ -138,10 +149,18 @@ describe('TeamAccessGrants', () => {
 
     fireEvent.click(screen.getByText('teams.grantAccess'))
 
+    // Select cluster and namespace so the guard conditions pass
+    const clusterSelect = screen.getByRole('combobox', { name: /teams.cluster/i })
+    fireEvent.change(clusterSelect, { target: { value: 'cluster1' } })
+
     await waitFor(() => {
-      const grantButton = screen.getAllByText('teams.grantAccess')[1]
-      fireEvent.click(grantButton)
+      expect(screen.getByRole('combobox', { name: /teams.namespace/i })).toBeInTheDocument()
     })
+    const namespaceSelect = screen.getByRole('combobox', { name: /teams.namespace/i })
+    fireEvent.change(namespaceSelect, { target: { value: 'default' } })
+
+    const grantButton = screen.getAllByText('teams.grantAccess')[1]
+    fireEvent.click(grantButton)
 
     await waitFor(() => {
       expect(screen.getByText('Permission denied')).toBeInTheDocument()
@@ -152,11 +171,24 @@ describe('TeamAccessGrants', () => {
     mockUseClusters.mockReturnValue({
       deduplicatedClusters: [{ name: 'cluster1' }],
     })
+    mockUseCachedNamespaces.mockReturnValue({
+      namespaces: ['default'],
+    })
     mockAuthFetch.mockImplementation(() => new Promise(() => {}))
 
     render(<TeamAccessGrants teamName="test-team" grants={[]} onGrantChanged={mockOnGrantChanged} />)
 
     fireEvent.click(screen.getByText('teams.grantAccess'))
+
+    // Select cluster and namespace so handleGrant proceeds
+    const clusterSelect = screen.getByRole('combobox', { name: /teams.cluster/i })
+    fireEvent.change(clusterSelect, { target: { value: 'cluster1' } })
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /teams.namespace/i })).toBeInTheDocument()
+    })
+    const namespaceSelect = screen.getByRole('combobox', { name: /teams.namespace/i })
+    fireEvent.change(namespaceSelect, { target: { value: 'default' } })
 
     const grantButton = screen.getAllByText('teams.grantAccess')[1]
     fireEvent.click(grantButton)
@@ -170,11 +202,24 @@ describe('TeamAccessGrants', () => {
     mockUseClusters.mockReturnValue({
       deduplicatedClusters: [{ name: 'cluster1' }],
     })
+    mockUseCachedNamespaces.mockReturnValue({
+      namespaces: ['default'],
+    })
     mockAuthFetch.mockResolvedValue({ ok: true })
 
     render(<TeamAccessGrants teamName="test-team" grants={[]} onGrantChanged={mockOnGrantChanged} />)
 
     fireEvent.click(screen.getByText('teams.grantAccess'))
+
+    // Select cluster and namespace so handleGrant proceeds
+    const clusterSelect = screen.getByRole('combobox', { name: /teams.cluster/i })
+    fireEvent.change(clusterSelect, { target: { value: 'cluster1' } })
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /teams.namespace/i })).toBeInTheDocument()
+    })
+    const namespaceSelect = screen.getByRole('combobox', { name: /teams.namespace/i })
+    fireEvent.change(namespaceSelect, { target: { value: 'default' } })
 
     const grantButton = screen.getAllByText('teams.grantAccess')[1]
     fireEvent.click(grantButton)
