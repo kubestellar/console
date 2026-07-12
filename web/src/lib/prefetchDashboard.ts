@@ -11,6 +11,7 @@ import { prefetchCache } from './cache'
 import { coreFetchers } from '../hooks/useCachedData'
 import { isDemoMode } from './demoMode'
 import { ROUTES } from '../config/routes'
+import { logger } from './logger'
 
 /** Map sidebar href to DASHBOARD_CHUNKS key */
 function hrefToChunkId(href: string): string {
@@ -89,7 +90,9 @@ export function prefetchDashboard(href?: string | null): void {
 
   // Layer 1: Route chunk
   const chunkId = hrefToChunkId(href)
-  DASHBOARD_CHUNKS[chunkId]?.()?.catch(() => {})
+  DASHBOARD_CHUNKS[chunkId]?.()?.catch((err) => {
+    logger.warn(`Failed to prefetch route chunk for ${href}:`, err)
+  })
 
   // Layer 2: Card component chunks
   const configId = HREF_TO_CONFIG_ID[href]
@@ -100,7 +103,9 @@ export function prefetchDashboard(href?: string | null): void {
     // Dynamic import keeps the 195KB card registry out of the sidebar chunk
     import('../components/cards/cardRegistry').then(m => {
       m.prefetchCardChunks(cardTypes)
-    }).catch(() => {})
+    }).catch((err) => {
+      logger.warn(`Failed to prefetch card registry for ${href}:`, err)
+    })
 
     // Layer 3: Data for cards with known fetchers
     const seen = new Set<string>()
@@ -110,7 +115,9 @@ export function prefetchDashboard(href?: string | null): void {
       for (const entry of entries) {
         if (seen.has(entry.key)) continue
         seen.add(entry.key)
-        prefetchCache(entry.key, entry.fetcher, []).catch(() => {})
+        prefetchCache(entry.key, entry.fetcher, []).catch((err) => {
+          logger.warn(`Failed to prefetch data for ${entry.key}:`, err)
+        })
       }
     }
   }

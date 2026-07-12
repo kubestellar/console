@@ -68,7 +68,7 @@ describe('RequestApprovalModal', () => {
       />
     )
 
-    expect(screen.getByText(/Request Approval/i)).toBeInTheDocument()
+    expect(screen.getByText(/Request Deployment Approval/i)).toBeInTheDocument()
   })
 
   it('calls onClose when cancel clicked', () => {

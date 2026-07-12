@@ -43,7 +43,14 @@ import { ClusterSelectionDialog } from '../ClusterSelectionDialog'
 
 describe('ClusterSelectionDialog', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ClusterSelectionDialog {...({} as Record<string, unknown>)} />)
+    const { container } = render(
+      <ClusterSelectionDialog
+        open={true}
+        missionTitle="Test Mission"
+        onSelect={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
     expect(container).toBeTruthy()
   })
 })

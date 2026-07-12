@@ -23,12 +23,25 @@ vi.mock('../ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }))
 
+vi.mock('../../hooks/mcp/clusters', () => ({
+  useClusters: () => ({
+    deduplicatedClusters: [
+      { name: 'cluster-1', context: 'cluster-1', reachable: true, healthy: true },
+      { name: 'cluster-2', context: 'cluster-2', reachable: true, healthy: true },
+    ],
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}))
+
 describe('ClusterSelectionDialog', () => {
   it('does not render when isOpen is false', () => {
     const { container } = render(
       <ClusterSelectionDialog
-        isOpen={false}
-        onClose={vi.fn()}
+        open={false}
+        missionTitle="Test Mission"
+        onCancel={vi.fn()}
         onSelect={vi.fn()}
       />
     )
@@ -38,8 +51,9 @@ describe('ClusterSelectionDialog', () => {
   it('renders dialog when isOpen is true', () => {
     render(
       <ClusterSelectionDialog
-        isOpen={true}
-        onClose={vi.fn()}
+        open={true}
+        missionTitle="Test Mission"
+        onCancel={vi.fn()}
         onSelect={vi.fn()}
       />
     )
@@ -50,28 +64,26 @@ describe('ClusterSelectionDialog', () => {
     const onSelect = vi.fn()
     render(
       <ClusterSelectionDialog
-        isOpen={true}
-        onClose={vi.fn()}
+        open={true}
+        missionTitle="Test Mission"
+        onCancel={vi.fn()}
         onSelect={onSelect}
       />
     )
     expect(onSelect).not.toHaveBeenCalled()
   })
 
-  it('calls onClose when dialog is closed', () => {
+  it('calls onCancel when dialog is closed', () => {
     const onClose = vi.fn()
     render(
       <ClusterSelectionDialog
-        isOpen={true}
-        onClose={onClose}
+        open={true}
+        missionTitle="Test Mission"
+        onCancel={onClose}
         onSelect={vi.fn()}
       />
     )
-    const closeButtons = screen.getAllByRole('button')
-    const closeButton = closeButtons.find(btn => 
-      btn.querySelector('svg') || btn.getAttribute('aria-label')?.includes('close')
-    )
-    closeButton?.click()
+    screen.getByRole('button', { name: /close modal/i }).click()
     expect(onClose).toHaveBeenCalled()
   })
 })

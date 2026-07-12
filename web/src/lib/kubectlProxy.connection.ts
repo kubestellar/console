@@ -21,6 +21,7 @@ import type {
   PendingRequest,
   QueuedRequest,
 } from './kubectlProxy.types'
+import { logger } from '@/lib/logger'
 
 export class KubectlProxyConnection {
   private ws: WebSocket | null = null
@@ -164,7 +165,7 @@ export class KubectlProxyConnection {
                   }
                 }
               } catch (e: unknown) {
-                console.error('[KubectlProxy] Failed to parse message:', e)
+                logger.error('[KubectlProxy] Failed to parse message:', e)
                 // Dispatch event for connection error monitoring
                 if (typeof window !== 'undefined') {
                   window.dispatchEvent(new CustomEvent('kubectl-proxy-error', {

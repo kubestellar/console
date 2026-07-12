@@ -11,6 +11,7 @@ import type { Alert } from '../types/alerts'
 import { safeGet, safeSet, safeRemove, safeGetJSON } from '../lib/safeLocalStorage'
 import { STORAGE_KEY_NOTIFIED_ALERT_KEYS } from '../lib/constants'
 import { DAYS_PER_MONTH, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../lib/constants/time'
+import { logger } from '@/lib/logger'
 
 /** Storage key for alerts */
 export const ALERTS_KEY = 'kc_alerts'
@@ -118,7 +119,7 @@ export function saveToStorage<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (e: unknown) {
-    console.error(`Failed to save ${key} to localStorage:`, e)
+    logger.error(`Failed to save ${key} to localStorage:`, e)
     // Dispatch custom event for monitoring/observability
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('storage-error', {
@@ -168,7 +169,7 @@ export function saveAlerts(alerts: Alert[]): void {
       try {
         localStorage.setItem(ALERTS_KEY, JSON.stringify(pruned))
       } catch (retryError: unknown) {
-        console.error('[Alerts] localStorage still full after pruning, clearing alerts', retryError)
+        logger.error('[Alerts] localStorage still full after pruning, clearing alerts', retryError)
         // Dispatch event for monitoring
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('storage-error', {

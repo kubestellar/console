@@ -1,5 +1,7 @@
 import { memo, type CSSProperties, type RefObject } from 'react'
 
+// Pure UI component — renders OPA policy table based on props; no data fetching.
+// Demo data support provided by OPAPolicies card via useCachedOPAPolicies.
 // Split helper component; parent card owns useCardLoadingState.
 import {
   AlertTriangle, CheckCircle, ExternalLink, XCircle, Info,

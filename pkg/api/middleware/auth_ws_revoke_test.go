@@ -167,8 +167,8 @@ func TestIsWSOriginAllowed_HTTPSFromXForwardedProto(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestRevoke_EvictsExpiredEntries(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	// Fill the cache past max size with expired entries.
 	now := time.Now()
@@ -187,8 +187,8 @@ func TestRevoke_EvictsExpiredEntries(t *testing.T) {
 }
 
 func TestRevoke_EvictsZeroTimeEntries(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	// Fill with zero-time (backfilled) entries that won't expire naturally.
 	for i := 0; i < revokedTokenCacheMaxSize+10; i++ {
@@ -213,8 +213,8 @@ func TestRevoke_EvictsZeroTimeEntries(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCleanup_EvictsZeroTimeAtHalfMax(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	halfMax := revokedTokenCacheMaxSize / 2
 
@@ -243,8 +243,8 @@ func TestCleanup_EvictsZeroTimeAtHalfMax(t *testing.T) {
 }
 
 func TestCleanup_KeepsZeroTimeBelowHalfMax(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	// Add a small number of zero-time entries (well below half-max).
 	for i := 0; i < 10; i++ {
@@ -265,8 +265,8 @@ func TestCleanup_KeepsZeroTimeBelowHalfMax(t *testing.T) {
 }
 
 func TestCleanup_RemovesExpiredKeepsFresh(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	now := time.Now()
 	// 3 expired, 2 fresh

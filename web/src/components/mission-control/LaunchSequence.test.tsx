@@ -43,7 +43,13 @@ const mockState: MissionControlState = {
   deployMode: 'phased',
   targetClusters: [],
   aiStreaming: false,
-  launchProgress: [],
+  launchProgress: [
+    {
+      phase: 1,
+      status: 'pending',
+      projects: [{ name: 'prometheus', status: 'pending' }],
+    },
+  ],
   projects: [
     {
       name: 'prometheus',
@@ -76,7 +82,7 @@ const mockState: MissionControlState = {
 }
 
 describe('LaunchSequence', () => {
-  it('renders mission description', () => {
+  it('renders launch progress summary', () => {
     const onUpdateProgress = vi.fn()
     const onComplete = vi.fn()
 
@@ -88,7 +94,7 @@ describe('LaunchSequence', () => {
       />
     )
 
-    expect(screen.getByText(/Test deployment/)).toBeInTheDocument()
+    expect(screen.getByText('missionControl.launchSequence.deployingProjects_one')).toBeInTheDocument()
   })
 
   it('displays phase information', () => {
@@ -106,23 +112,21 @@ describe('LaunchSequence', () => {
     expect(screen.getByText(/Deploy Core/)).toBeInTheDocument()
   })
 
-  it('shows cancel button', () => {
+  it('shows close button when there is nothing to deploy', () => {
     const onUpdateProgress = vi.fn()
     const onComplete = vi.fn()
     const onClose = vi.fn()
 
     render(
       <LaunchSequence
-        state={mockState}
+        state={{ ...mockState, projects: [], assignments: [], phases: [] }}
         onUpdateProgress={onUpdateProgress}
         onComplete={onComplete}
         onClose={onClose}
       />
     )
 
-    // The close/cancel button uses the 'actions.close' i18n key;
-    // the mock returns the key itself as the rendered text.
-    expect(screen.getByText('actions.close')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'actions.close' })).toBeInTheDocument()
   })
 
   it('renders project list', () => {
@@ -137,6 +141,6 @@ describe('LaunchSequence', () => {
       />
     )
 
-    expect(screen.getByText(/prometheus/)).toBeInTheDocument()
+    expect(screen.getByText('Prometheus')).toBeInTheDocument()
   })
 })

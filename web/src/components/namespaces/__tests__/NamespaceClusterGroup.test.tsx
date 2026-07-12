@@ -38,7 +38,10 @@ vi.mock('../NamespaceCard', () => ({
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue || key,
+    t: (key: string, options?: string | { defaultValue?: string }) => {
+      if (typeof options === 'string') return options
+      return options?.defaultValue || key
+    },
   }),
 }))
 
@@ -348,7 +351,9 @@ describe('NamespaceClusterGroup', () => {
     const deleteButtons = screen.getAllByRole('button', { name: 'Delete' })
     await userEvent.click(deleteButtons[0])
 
-    expect(mockOnDelete).toHaveBeenCalledWith(mockNamespaces[0])
+    // mockNamespaces[0] ('default') and [1] ('kube-system') are system namespaces
+    // and don't render Delete buttons; the first Delete belongs to mockNamespaces[2].
+    expect(mockOnDelete).toHaveBeenCalledWith(mockNamespaces[2])
   })
 
   it('does not show skeletons when loading with existing data', () => {

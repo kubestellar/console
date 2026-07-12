@@ -5,7 +5,7 @@ import React from 'react'
  * Covers: empty state, personal/shared resolutions, expand/collapse, and action callbacks.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ResolutionKnowledgePanel } from '../ResolutionKnowledgePanel'
@@ -48,6 +48,10 @@ const mockSharedResolution: SimilarResolution = {
 }
 
 describe('ResolutionKnowledgePanel', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('renders empty state when no resolutions provided', () => {
     const onApplyResolution = vi.fn()
     const onSaveNewResolution = vi.fn()

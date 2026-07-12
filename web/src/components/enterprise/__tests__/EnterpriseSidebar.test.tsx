@@ -16,7 +16,7 @@ vi.mock('../../layout/SidebarShell', () => ({
   SidebarShell: ({ navSections, branding, onAddCard, onAddMore }: MockSidebarShellProps) => (
     <div>
       <h1>{branding.title}</h1>
-      <p>{branding.subtitle}</p>
+      <div>{branding.subtitle}</div>
       {navSections.flatMap((section) => section.items).map((item) => (
         <a key={item.id} href={item.href}>{item.label}</a>
       ))}

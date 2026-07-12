@@ -128,49 +128,47 @@ func TestLogStrings_SingleElement(t *testing.T) {
 	}
 }
 
-// --- Security edge-case tests below (addresses #20808) ---
+// --- Security hardening tests (addresses advisory bead 46bb0e2d-78b / #20633) ---
 
-// LogString currently only replaces ASCII \n and \r. The tests below assert
-// the current (documented) behavior for those characters. Broader
-// neutralization (U+2028/U+2029, ANSI escapes, null bytes, extra C0/DEL) is
-// tracked as a follow-up hardening item (advisory bead 46bb0e2d-78b, filed
-// alongside issue #20808). When LogString is extended, flip the assertions
-// below to require neutralization.
-
-func TestLogString_DocumentsUnicodeLineSeparatorPassthrough(t *testing.T) {
-	// U+2028 (LINE SEPARATOR) and U+2029 (PARAGRAPH SEPARATOR) are treated
-	// as line breaks by many log aggregators and terminals. LogString does
-	// NOT currently strip them; this test pins that behavior so any future
-	// change (intentional or not) surfaces in review.
+func TestLogString_NeutralizesUnicodeLineSeparators(t *testing.T) {
+	// U+2028 (LINE SEPARATOR) and U+2029 (PARAGRAPH SEPARATOR) are treated as
+	// line breaks by many log aggregators and JavaScript engines. LogString
+	// must replace them with the visible placeholder ⏎.
 	cases := []struct {
-		name  string
-		input string
+		name     string
+		input    string
+		wantSub  string // expected replacement visible in output
+		badRune  rune
 	}{
-		{"U+2028 LINE SEPARATOR", "before\u2028after"},
-		{"U+2029 PARAGRAPH SEPARATOR", "before\u2029after"},
+		{"U+2028 LINE SEPARATOR", "before\u2028after", "⏎", '\u2028'},
+		{"U+2029 PARAGRAPH SEPARATOR", "before\u2029after", "⏎", '\u2029'},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := LogString(tc.input)
-			// ASCII newlines/CRs are always removed.
-			if strings.Contains(got, "\n") || strings.Contains(got, "\r") {
-				t.Errorf("LogString(%q) unexpectedly contains ASCII newlines: %q", tc.input, got)
+			if strings.ContainsRune(got, tc.badRune) {
+				t.Errorf("LogString(%q) still contains Unicode separator U+%04X: %q", tc.input, tc.badRune, got)
 			}
-			// Current behavior: Unicode line separators pass through unchanged.
-			// Content is preserved on either side.
+			if !strings.Contains(got, tc.wantSub) {
+				t.Errorf("LogString(%q) missing placeholder ⏎: %q", tc.input, got)
+			}
 			if !strings.Contains(got, "before") || !strings.Contains(got, "after") {
-				t.Errorf("LogString(%q) truncated content: %q", tc.input, got)
+				t.Errorf("LogString(%q) dropped surrounding content: %q", tc.input, got)
 			}
 		})
 	}
 }
 
 func TestLogString_MixedASCIIAndUnicodeSeparators(t *testing.T) {
-	// ASCII CR/LF are still replaced even when Unicode separators are present.
+	// All line-ending variants (ASCII CR/LF and Unicode U+2028/U+2029) must
+	// be replaced; surrounding content must be preserved.
 	input := "line1\nline2\u2028line3\u2029line4\rline5"
 	got := LogString(input)
 	if strings.Contains(got, "\n") || strings.Contains(got, "\r") {
 		t.Errorf("LogString(%q) still contains ASCII newlines: %q", input, got)
+	}
+	if strings.ContainsRune(got, '\u2028') || strings.ContainsRune(got, '\u2029') {
+		t.Errorf("LogString(%q) still contains Unicode line separators: %q", input, got)
 	}
 	for _, part := range []string{"line1", "line2", "line3", "line4", "line5"} {
 		if !strings.Contains(got, part) {
@@ -179,50 +177,47 @@ func TestLogString_MixedASCIIAndUnicodeSeparators(t *testing.T) {
 	}
 }
 
-func TestLogString_PreservesANSIEscapeSequences(t *testing.T) {
-	// Documents current behavior: ANSI escapes (0x1b) are NOT stripped by
-	// LogString. See advisory bead 46bb0e2d-78b for the hardening follow-up.
+func TestLogString_StripsANSIEscapeSequences(t *testing.T) {
+	// ANSI/VT100 escape sequences can forge log lines or manipulate terminals.
+	// LogString must remove them entirely while preserving surrounding text.
 	cases := []struct {
-		name  string
-		input string
+		name    string
+		input   string
+		want    string
 	}{
-		{"CSI clear screen", "normal\x1b[2Jtext"},
-		{"CSI color change", "normal\x1b[31mred text\x1b[0m"},
-		{"OSC title change", "normal\x1b]0;pwned\x07rest"},
-		{"cursor movement", "data\x1b[5Aoverwrite"},
+		{"CSI clear screen", "normal\x1b[2Jtext", "normaltext"},
+		{"CSI color change", "normal\x1b[31mred text\x1b[0m", "normalred text"},
+		{"OSC title change", "normal\x1b]0;pwned\x07rest", "normalrest"},
+		{"cursor movement", "data\x1b[5Aoverwrite", "dataoverwrite"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := LogString(tc.input)
-			// Content preserved (no truncation, no panic).
-			if got == "" {
-				t.Fatalf("LogString(%q) returned empty", tc.input)
+			if strings.ContainsRune(got, '\x1b') {
+				t.Errorf("LogString(%q) still contains ESC byte: %q", tc.input, got)
 			}
-			// ASCII newlines/CRs still normalized to ⏎ (there are none in these
-			// inputs, but a stray CR would still be replaced).
-			if strings.Contains(got, "\n") || strings.Contains(got, "\r") {
-				t.Errorf("LogString(%q) leaked ASCII newlines: %q", tc.input, got)
+			if got != tc.want {
+				t.Errorf("LogString(%q) = %q, want %q", tc.input, got, tc.want)
 			}
 		})
 	}
 }
 
-func TestLogString_PreservesNullByte(t *testing.T) {
-	// Documents current behavior: null bytes pass through LogString.
-	// See advisory bead 46bb0e2d-78b for the hardening follow-up.
+func TestLogString_StripsNullByte(t *testing.T) {
+	// Null bytes can truncate log entries in C-based log aggregators.
 	input := "before\x00after"
 	got := LogString(input)
-	if !strings.Contains(got, "before") || !strings.Contains(got, "after") {
-		t.Errorf("LogString(%q) truncated content: %q", input, got)
+	if strings.ContainsRune(got, '\x00') {
+		t.Errorf("LogString(%q) still contains null byte: %q", input, got)
 	}
-	if strings.Contains(got, "\n") || strings.Contains(got, "\r") {
-		t.Errorf("LogString(%q) leaked ASCII newlines: %q", input, got)
+	if !strings.Contains(got, "before") || !strings.Contains(got, "after") {
+		t.Errorf("LogString(%q) dropped surrounding content: %q", input, got)
 	}
 }
 
-func TestLogString_PreservesAdditionalControlChars(t *testing.T) {
-	// Documents current behavior: C0 control chars beyond CR/LF (and DEL)
-	// are not stripped by LogString. See advisory bead 46bb0e2d-78b.
+func TestLogString_StripsAdditionalControlChars(t *testing.T) {
+	// C0 control chars beyond CR/LF and DEL must be stripped to prevent
+	// terminal manipulation via backspace, bell, vertical-tab, etc.
 	cases := []struct {
 		name  string
 		input string
@@ -236,11 +231,8 @@ func TestLogString_PreservesAdditionalControlChars(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := LogString(tc.input)
-			if !strings.Contains(got, "a") || !strings.Contains(got, "b") {
-				t.Errorf("LogString(%q) dropped surrounding content: %q", tc.input, got)
-			}
-			if strings.Contains(got, "\n") || strings.Contains(got, "\r") {
-				t.Errorf("LogString(%q) leaked ASCII newlines: %q", tc.input, got)
+			if got != "ab" {
+				t.Errorf("LogString(%q) = %q, want %q", tc.input, got, "ab")
 			}
 		})
 	}

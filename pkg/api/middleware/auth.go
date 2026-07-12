@@ -151,21 +151,24 @@ func InitTokenRevocation(store TokenRevoker) {
 }
 
 // ShutdownTokenRevocation stops the background cleanup goroutine started by
-// InitTokenRevocation (#6578). Safe to call multiple times. Intended for use
-// by server shutdown paths and tests that want to release the goroutine.
+// InitTokenRevocation (#6578) and nils the persistent store reference so that
+// a closed DB cannot be used by subsequent code (e.g. during test teardown).
+// Safe to call multiple times. Intended for use by server shutdown paths and
+// tests that want to release the goroutine.
 func ShutdownTokenRevocation() {
 	revokedTokens.Lock()
 	cancel := revokedTokens.cleanupCancel
 	revokedTokens.cleanupCancel = nil
+	revokedTokens.store = nil // prevent stale reads on a closed DB after shutdown
 	revokedTokens.Unlock()
 	if cancel != nil {
 		cancel()
 	}
 }
 
-// resetTokenRevocationForTest clears internal state so tests can re-initialize
+// ResetTokenRevocationForTest clears internal state so tests can re-initialize
 // the revocation layer. NOT for production use.
-func resetTokenRevocationForTest() {
+func ResetTokenRevocationForTest() {
 	ShutdownTokenRevocation()
 	revokedTokens.Lock()
 	revokedTokens.tokens = make(map[string]time.Time)
@@ -190,11 +193,18 @@ func getUserValidationStore() userActiveLookupStore {
 	return userValidationStore
 }
 
-func resetUserValidationForTest() {
+// ShutdownUserValidation nils the user validation store reference so that a
+// closed DB cannot be queried by subsequent code (e.g. during test teardown or
+// server restart). Safe to call multiple times.
+func ShutdownUserValidation() {
 	userValidationStoreMu.Lock()
 	userValidationStore = nil
 	userValidationCache = sync.Map{}
 	userValidationStoreMu.Unlock()
+}
+
+func resetUserValidationForTest() {
+	ShutdownUserValidation()
 }
 
 func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {

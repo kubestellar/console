@@ -1,6 +1,9 @@
 /**
  * AIAnalysisPanel — Action button + status summary for triggering AI analysis.
  * Displays current issue/prediction counts and launches the analysis mission.
+ *
+ * Pure UI component — renders analysis panel based on props; no data fetching.
+ * Demo data support provided by parent mission cards.
  */
 import { AlertCircle, CheckCircle, Clock, TrendingUp, Sparkles } from 'lucide-react'
 import { cn } from '../../../lib/cn'
