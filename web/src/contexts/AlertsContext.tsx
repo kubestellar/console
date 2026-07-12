@@ -28,6 +28,7 @@ import {
 } from './alertStorage'
 import { STORAGE_KEY_AUTH_TOKEN } from '../lib/constants/storage'
 import { FETCH_DEFAULT_TIMEOUT_MS, areOptionalPollersSuppressed } from '../lib/constants/network'
+import { logger } from '@/lib/logger'
 import {
   shouldDispatchBrowserNotification,
   type BrowserNotificationParams,
@@ -413,7 +414,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           if (enabledChannels.length > 0) {
             const resolvedAlert: Alert = { ...alertToResolve, status: 'resolved', resolvedAt }
             localSendNotifications(resolvedAlert, enabledChannels).catch((error) => {
-              console.error('[AlertsContext] resolved notification send failed:', error)
+              logger.error('[AlertsContext] resolved notification send failed:', error)
               if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('alert-notification-error', {
                   detail: { 

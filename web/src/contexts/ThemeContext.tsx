@@ -4,6 +4,7 @@ import { emitThemeChanged } from '../lib/analytics'
 import { GOOGLE_FONTS_API_URL } from '../config/externalApis'
 import { createStateContext } from './createStateContext'
 import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
+import { logger } from '@/lib/logger'
 
 /**
  * Theme Context
@@ -162,7 +163,7 @@ function applyTheme(theme: Theme) {
       root.classList.remove('theme-gradient-accents')
     }
   } catch (error: unknown) {
-    console.error('Error applying theme:', error)
+    logger.error('Error applying theme:', error)
     // Dispatch event for monitoring (theme errors shouldn't break the app)
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('theme-error', {
