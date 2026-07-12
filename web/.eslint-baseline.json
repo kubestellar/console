@@ -7301,6 +7301,13 @@
     "message": "'TeamRole' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
+    "file": "src/components/teams/__tests__/TeamMemberManager.test.tsx",
+    "rule": "null",
+    "line": 297,
+    "column": 0,
+    "message": "Parsing error: Declaration or statement expected."
+  },
+  {
     "file": "src/components/terminal/__tests__/PodExecTerminal.test.tsx",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 1,
