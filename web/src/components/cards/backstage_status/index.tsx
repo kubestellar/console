@@ -83,9 +83,9 @@ function formatRelative(isoString: string, t: TFunction<'cards'>): string {
 function pluginStatusClass(status: BackstagePluginStatus): string {
   switch (status) {
     case 'enabled':
-      return 'bg-green-500/20 text-green-400'
+      return 'bg-green-500/20 text-status-success'
     case 'error':
-      return 'bg-red-500/20 text-red-400'
+      return 'bg-red-500/20 text-status-error'
     case 'disabled':
       return 'bg-secondary/40 text-muted-foreground'
     default:
@@ -236,8 +236,8 @@ export function BackstageStatus() {
           className={cn(
             'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium',
             isHealthy
-              ? 'bg-green-500/15 text-green-400'
-              : 'bg-yellow-500/15 text-yellow-400',
+              ? 'bg-green-500/15 text-status-success'
+              : 'bg-yellow-500/15 text-status-warning',
           )}
         >
           {isHealthy ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
@@ -262,7 +262,7 @@ export function BackstageStatus() {
           value={`${data.replicas}/${data.desiredReplicas}`}
           colorClass={
             data.desiredReplicas > 0 && data.replicas < data.desiredReplicas
-              ? 'text-yellow-400'
+              ? 'text-status-warning'
               : 'text-cyan-400'
           }
           icon={<Server className="w-4 h-4 text-cyan-400" />}
@@ -277,9 +277,9 @@ export function BackstageStatus() {
           label={t('backstageStatus.pluginsEnabled', 'Plugins')}
           value={data.summary.enabledPlugins}
           colorClass={
-            data.summary.pluginErrors > 0 ? 'text-yellow-400' : 'text-green-400'
+            data.summary.pluginErrors > 0 ? 'text-status-warning' : 'text-status-success'
           }
-          icon={<Puzzle className="w-4 h-4 text-green-400" />}
+          icon={<Puzzle className="w-4 h-4 text-status-success" />}
         />
         <MetricTile
           label={t('backstageStatus.templates', 'Templates')}
@@ -323,7 +323,7 @@ export function BackstageStatus() {
         {/* Plugins */}
         <section className="space-y-2">
           <div className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-green-400" />
+            <Cpu className="w-4 h-4 text-status-success" />
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('backstageStatus.sectionPlugins', 'Plugins')}
             </h3>

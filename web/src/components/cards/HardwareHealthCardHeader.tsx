@@ -118,7 +118,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
   return (
     <>
       {(fetchError || retryError) && (
-        <div className="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+        <div className="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-status-error text-xs">
           <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -144,11 +144,11 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-1.5 @md:gap-2 mb-4">
         <div className={cn('p-2 rounded-lg border', criticalCount > 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20')}>
           <div className="text-xl font-bold text-foreground">{criticalCount}</div>
-          <div className={cn('text-2xs', criticalCount > 0 ? 'text-red-400' : 'text-green-400')}>{t('common:common.critical', 'Critical')}</div>
+          <div className={cn('text-2xs', criticalCount > 0 ? 'text-status-error' : 'text-status-success')}>{t('common:common.critical', 'Critical')}</div>
         </div>
         <div className={cn('p-2 rounded-lg border', warningCount > 0 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-green-500/10 border-green-500/20')}>
           <div className="text-xl font-bold text-foreground">{warningCount}</div>
-          <div className={cn('text-2xs', warningCount > 0 ? 'text-yellow-400' : 'text-green-400')}>{t('common:common.warning', 'Warning')}</div>
+          <div className={cn('text-2xs', warningCount > 0 ? 'text-status-warning' : 'text-status-success')}>{t('common:common.warning', 'Warning')}</div>
         </div>
         <button
           onClick={() => onViewModeChange('inventory')}
@@ -181,7 +181,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
             <AlertCircle className="w-3.5 h-3.5" />
             {t('cards:hardwareHealth.alerts', 'Alerts')}
             {activeAlertCount > 0 && (
-              <span className={cn('ml-1 px-1.5 py-0.5 text-2xs font-semibold rounded-full', criticalCount > 0 ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400')}>{activeAlertCount}</span>
+              <span className={cn('ml-1 px-1.5 py-0.5 text-2xs font-semibold rounded-full', criticalCount > 0 ? 'bg-red-500/20 text-status-error' : 'bg-yellow-500/20 text-status-warning')}>{activeAlertCount}</span>
             )}
           </button>
         </div>
@@ -191,7 +191,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
             {snoozedAlertCount > 0 && (
               <button
                 onClick={onToggleShowSnoozed}
-                className={cn('flex items-center gap-1 px-2 py-1.5 text-xs rounded-md transition-colors', showSnoozed ? 'bg-yellow-500/20 text-yellow-400' : 'bg-muted/30 text-muted-foreground hover:text-foreground')}
+                className={cn('flex items-center gap-1 px-2 py-1.5 text-xs rounded-md transition-colors', showSnoozed ? 'bg-yellow-500/20 text-status-warning' : 'bg-muted/30 text-muted-foreground hover:text-foreground')}
                 title={showSnoozed ? t('cards:hardwareHealth.hideSnoozedAlerts') : t('cards:hardwareHealth.showSnoozedAlerts')}
                 aria-label={showSnoozed ? t('cards:hardwareHealth.hideSnoozedAlerts') : t('cards:hardwareHealth.showSnoozedAlerts')}
                 aria-pressed={showSnoozed}
@@ -241,7 +241,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
                         <button
                           role="menuitem"
                           onClick={onClearAllSnoozed}
-                          className="w-full px-3 py-1.5 text-xs text-left text-yellow-400 hover:bg-muted/50 transition-colors"
+                          className="w-full px-3 py-1.5 text-xs text-left text-status-warning hover:bg-muted/50 transition-colors"
                           aria-label={t('cards:hardwareHealth.clearAllSnoozesAria')}
                         >
                           {t('cards:hardwareHealth.clearAllSnoozes', 'Clear all snoozes')}

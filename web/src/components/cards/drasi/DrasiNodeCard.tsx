@@ -49,7 +49,7 @@ export function NodeControls({
         className={`w-5 h-5 flex items-center justify-center rounded border transition-colors ${
           isStopped
             ? 'bg-slate-700/60 border-slate-500/50 text-muted-foreground'
-            : 'bg-red-500/20 hover:bg-red-500/40 border-red-500/40 text-red-400'
+            : 'bg-red-500/20 hover:bg-red-500/40 border-red-500/40 text-status-error'
         }`}
         aria-label={isStopped ? 'Start' : 'Stop'}
         title={isStopped ? 'Start' : 'Stop'}
