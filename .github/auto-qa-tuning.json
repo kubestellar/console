@@ -65,13 +65,14 @@
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #20303: ## Scanner Pass Summary — 2026-07-04 5:59 PM ET",
-      "### CI Repair",
-      "- PR #20211: Closing — superseded by #20216 which covers all 77 E2E test spec files (including the 6 files fixed here).",
-      "- PR #20185: 👋 Hey @clubanderson — thanks for opening this PR!"
+      "- PR #20875: Superseded by #20876, which merged the same fix pattern for `liveFixtureManager.test.ts`. Closing.",
+      "- PR #20858: Superseded by #20876 (also Fixes #20853), which merged the fix. Closing.",
+      "- PR #20833: Superseded by #20841, which was merged.",
+      "- PR #20828: Superseded by #20840, which was merged.",
+      "- PR #20713: Closing — branch was rebased but PR ref is stale. Reopening as a new PR from the rebased `sec-check/fix-20712` branch."
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-07-05"
+    "last_report_date": "2026-07-12"
   },
   "cncf_insights": {
     "last_scan_date": "2026-07-08",
