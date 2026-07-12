@@ -36,7 +36,7 @@ test.describe('Error Recovery', () => {
 
     const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
     expect(bodyText.length, 'Page should not be blank on unknown route').toBeGreaterThan(0)
-    await expect(page.getByText(/doesn.t exist yet|404/i)).toBeVisible()
+    await expect(page.getByText(/doesn.t exist yet/i)).toBeVisible()
   })
 
   test('console errors in demo mode are expected (filtered)', async ({ page }) => {
