@@ -70,14 +70,14 @@ export function CompetitorLandingPage({
             </span>
           </h1>
 
-          <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-6 leading-relaxed">
+          <div className="text-xl text-slate-400 max-w-2xl mx-auto mb-6 leading-relaxed">
             {heroLeadText}{' '}
             <span className="text-white font-medium">{heroLeadEmphasis}</span>
-          </p>
+          </div>
 
-          <p className="text-sm text-slate-400 max-w-xl mx-auto mb-10">
+          <div className="text-sm text-slate-400 max-w-xl mx-auto mb-10">
             {heroSupportText}
-          </p>
+          </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -109,9 +109,9 @@ export function CompetitorLandingPage({
         <div className={`rounded-xl border ${accent.borderLight} ${accent.bgLightest} p-8 text-center`}>
           <div className="mx-auto mb-4 w-fit">{appreciationIcon}</div>
           <h3 className="text-lg font-semibold mb-3">{appreciationTitle}</h3>
-          <p className="text-slate-400 max-w-2xl mx-auto text-sm leading-relaxed">
+          <div className="text-slate-400 max-w-2xl mx-auto text-sm leading-relaxed">
             {appreciationDescription}
-          </p>
+          </div>
           <a
             href={appreciationLinkHref}
             target="_blank"
@@ -156,7 +156,7 @@ export function CompetitorLandingPage({
       <section className="border-t border-slate-700/50 bg-linear-to-b from-slate-900/50 to-slate-950">
         <div className="max-w-5xl mx-auto px-6 py-20 text-center">
           <h2 className="text-4xl font-bold mb-4">Ready to explore?</h2>
-          <p className="text-slate-400 mb-10 text-lg">{footerDescription}</p>
+          <div className="text-slate-400 mb-10 text-lg">{footerDescription}</div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
