@@ -5,6 +5,11 @@ import userEvent from '@testing-library/user-event'
 
 import { CustomQASMModal } from '../CustomQASMModal'
 
+const mockShowToast = vi.fn()
+vi.mock('../../../ui/Toast', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}))
+
 const VALID_QASM = `OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[2];
@@ -235,5 +240,7 @@ describe('CustomQASMModal', () => {
     expect(onSubmit).toHaveBeenCalledWith(VALID_QASM)
     // After submit, content is cleared
     expect(textarea).toHaveValue('')
+    // Success toast should be shown
+    expect(mockShowToast).toHaveBeenCalledWith('QASM circuit submitted successfully', 'success')
   })
 })
