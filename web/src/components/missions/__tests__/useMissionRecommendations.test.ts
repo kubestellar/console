@@ -31,6 +31,7 @@ vi.mock('../../../lib/missions/matcher', () => ({
 }))
 
 import { useMissionRecommendations } from '../useMissionRecommendations'
+import type { ClusterContext } from '../../../lib/missions/clusterContext'
 
 const FIXER: MissionExport = {
   id: 'fix-1',
@@ -160,7 +161,7 @@ describe('useMissionRecommendations', () => {
   it('passes clusterContext to matchMissionsToCluster', () => {
     mockMissionCache.fixes = [FIXER]
     mockGetCachedRecommendations.mockReturnValue(null)
-    const cluster = { name: 'prod-cluster' } as any
+    const cluster = { name: 'prod-cluster', resources: [], issues: [], labels: {} } as ClusterContext
     renderHook(() => useMissionRecommendations(true, cluster))
     expect(mockMatchMissionsToCluster).toHaveBeenCalledWith([FIXER], cluster)
   })
@@ -177,7 +178,7 @@ describe('useMissionRecommendations', () => {
   it('hasCluster=true when clusterContext is provided', () => {
     mockMissionCache.fixes = [FIXER]
     mockMatchMissionsToCluster.mockReturnValue([MATCH])
-    const cluster = { name: 'test-cluster' } as any
+    const cluster = { name: 'test-cluster', resources: [], issues: [], labels: {} } as ClusterContext
     const { result } = renderHook(() => useMissionRecommendations(true, cluster))
     expect(result.current.hasCluster).toBe(true)
   })

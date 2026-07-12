@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { Sidebar } from '../Sidebar'
+import type { SidebarShellProps } from '../SidebarShell'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -45,7 +46,7 @@ vi.mock('../../../hooks/useDashboardContext', () => ({
 }))
 
 vi.mock('../SidebarShell', () => ({
-  SidebarShell: ({ navSections, features, onAddCard }: any) => (
+  SidebarShell: ({ navSections, features, onAddCard }: SidebarShellProps) => (
     <div data-testid="sidebar-shell">
       <div data-testid="nav-sections">{JSON.stringify(navSections)}</div>
       <div data-testid="features">{JSON.stringify(features)}</div>
