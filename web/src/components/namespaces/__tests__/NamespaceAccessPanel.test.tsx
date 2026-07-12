@@ -205,7 +205,7 @@ describe('NamespaceAccessPanel', () => {
     )
 
     const grantButton = await screen.findByRole('button', { name: /Grant Access/i })
-    await userEvent.clich(grantButton)
+    await userEvent.click(grantButton)
 
     expect(mockOnGrantAccess).toHaveBeenCalledTimes(1)
   })

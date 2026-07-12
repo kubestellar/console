@@ -28,7 +28,7 @@ vi.mock('../../../../../lib/constants/network', async (importOriginal) => {
   }
 })
 
-import { AIsuggestionsSection } from '../AISuggestionsSection'
+import { AISuggestionsSection } from '../AISuggestionsSection'
 
 describe('AISuggestionsSection', () => {
   const defaultProps = {
