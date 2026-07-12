@@ -1,6 +1,9 @@
 /**
  * RootCauseAnalyzer — Grouped view that shows items organized by root cause,
  * highlighting which single fixes can resolve multiple issues at once.
+ *
+ * Pure UI component — renders root cause groups based on props; no data fetching.
+ * Demo data support provided by parent mission cards.
  */
 import { ChevronRight, CheckCircle } from 'lucide-react'
 import { cn } from '../../../lib/cn'

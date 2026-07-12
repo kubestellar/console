@@ -31,8 +31,8 @@ const mockMission: MissionExport = {
   category: 'Monitoring',
   tags: ['prometheus', 'monitoring'],
   steps: [
-    { type: 'command', command: 'helm repo add prometheus-community https://prometheus-community.github.io/helm-charts' },
-    { type: 'command', command: 'helm install prometheus prometheus-community/prometheus' },
+    { title: 'Add Helm repo', description: 'Add the Prometheus community Helm repository', command: 'helm repo add prometheus-community https://prometheus-community.github.io/helm-charts' },
+    { title: 'Install Prometheus', description: 'Install Prometheus using Helm', command: 'helm install prometheus prometheus-community/prometheus' },
   ],
   version: '1.0.0',
 }

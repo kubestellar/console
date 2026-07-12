@@ -1,4 +1,5 @@
-import { Folder, Trash2, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { Folder, Trash2, ChevronRight, Loader2 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import type { NamespaceDetails } from './types'
 
@@ -6,12 +7,24 @@ interface NamespaceCardProps {
   namespace: NamespaceDetails
   isSelected: boolean
   onSelect: () => void
-  onDelete?: () => void
+  onDelete?: () => void | Promise<void>
   isSystem?: boolean
   showCluster?: boolean
 }
 
 export function NamespaceCard({ namespace, isSelected, onSelect, onDelete, isSystem, showCluster = true }: NamespaceCardProps) {
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsDeleting(true)
+    try {
+      await onDelete?.()
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   return (
     <div
       onClick={onSelect}
@@ -44,14 +57,14 @@ export function NamespaceCard({ namespace, isSelected, onSelect, onDelete, isSys
       {showCluster && <ClusterBadge cluster={namespace.cluster} size="sm" />}
       {!isSystem && onDelete && (
         <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete()
-          }}
-          className="p-2 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+          onClick={handleDelete}
+          disabled={isDeleting}
+          className="p-2 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Delete namespace"
         >
-          <Trash2 className="w-4 h-4" />
+          {isDeleting
+            ? <Loader2 className="w-4 h-4 animate-spin" />
+            : <Trash2 className="w-4 h-4" />}
         </button>
       )}
       <ChevronRight className="w-4 h-4 text-muted-foreground" />

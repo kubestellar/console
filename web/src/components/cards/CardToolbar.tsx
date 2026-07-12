@@ -4,6 +4,8 @@ import { cn } from '@/lib/cn'
 import { CardActionMenu, type CardActionMenuProps } from './card-wrapper/CardActionMenu'
 import { Button } from '../ui/Button'
 
+// Pure UI component — renders card toolbar controls based on props; no data fetching.
+// Demo data support provided by individual card implementations via useCardLoadingState.
 // CardWrapper owns useCardLoadingState and passes the derived state into this presentational helper.
 
 export interface CardToolbarProps extends CardActionMenuProps {

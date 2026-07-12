@@ -16,6 +16,7 @@ import {
   NOTIFICATION_COOLDOWN_BY_SEVERITY,
   DEFAULT_NOTIFICATION_COOLDOWN_MS,
 } from './alertStorage'
+import { logger } from '@/lib/logger'
 
 /** Condition types that represent persistent cluster-level errors.
  *  These fire only once and suppress until the cluster recovers —
@@ -144,7 +145,7 @@ async function sendSingleNotification(
     }
   } catch (error: unknown) {
     if (logUnexpectedErrors && error instanceof Error && !error.message.includes('fetch')) {
-      console.error('Notification send failed:', error.message)
+      logger.error('Notification send failed:', error.message)
     }
   }
 }

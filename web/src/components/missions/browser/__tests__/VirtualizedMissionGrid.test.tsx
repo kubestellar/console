@@ -9,6 +9,27 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { VirtualizedMissionGrid } from '../VirtualizedMissionGrid'
 
+// Mock @tanstack/react-virtual so tests aren't dependent on DOM layout.
+// The real virtualizer renders nothing in jsdom (clientHeight=0).
+// This stub renders the first N rows regardless of container size.
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: ({ count, estimateSize, overscan = 5 }: { count: number; estimateSize: () => number; overscan?: number }) => {
+    const itemHeight = estimateSize()
+    const visibleCount = Math.min(count, overscan * 2 + 1)
+    const items = Array.from({ length: visibleCount }, (_, i) => ({
+      key: i,
+      index: i,
+      start: i * itemHeight,
+      size: itemHeight,
+    }))
+    return {
+      getVirtualItems: () => items,
+      getTotalSize: () => count * itemHeight,
+      measureElement: () => {},
+    }
+  },
+}))
+
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({

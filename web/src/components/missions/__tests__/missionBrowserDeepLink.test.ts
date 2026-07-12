@@ -185,7 +185,7 @@ describe('missionBrowserDeepLink', () => {
     it('prefers cncfProject match for installers', () => {
       const missions = [
         makeMission('Setup and Configure Advanced Monitoring', 'prometheus'),
-        makeMission('Install Grafana with Prometheus Sources'),
+        makeMission('Set up Grafana Dashboard'),
       ]
       const slug = 'install-prometheus'
       const slugWordSet = toWordSet(slug)

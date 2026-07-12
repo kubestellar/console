@@ -475,7 +475,6 @@ test.describe('ClusterResourceTree', () => {
       } catch (error) {
         console.error('Issues button not visible:', error)
       }
-      }
     })
   })
 

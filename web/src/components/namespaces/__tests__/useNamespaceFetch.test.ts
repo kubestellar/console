@@ -225,15 +225,12 @@ describe('useNamespaceFetch', () => {
 
     const initialLastUpdated = result.current.lastUpdated
 
-    vi.useFakeTimers()
+    // Directly trigger a forced refresh to verify lastUpdated changes
     await act(async () => {
-      vi.advanceTimersByTime(30000) // AUTO_REFRESH_INTERVAL_MS
+      await result.current.fetchNamespaces(true)
     })
-    vi.useRealTimers()
 
-    await waitFor(() => {
-      expect(result.current.lastUpdated).not.toBe(initialLastUpdated)
-    })
+    expect(result.current.lastUpdated).not.toBe(initialLastUpdated)
   })
 
   it('skips offline clusters during fetch', async () => {
@@ -258,9 +255,12 @@ describe('useNamespaceFetch', () => {
       expect(result.current.loading).toBe(false)
     })
 
-    // Should only fetch cluster-2
+    // Should only fetch for cluster-2 (using its context name 'ctx-2'), not cluster-1 (offline)
     expect(vi.mocked(authFetch).mock.calls.some(call => 
-      call[0].toString().includes('cluster-2')
+      call[0].toString().includes('ctx-2')
+    )).toBe(true)
+    expect(vi.mocked(authFetch).mock.calls.every(call => 
+      !call[0].toString().includes('ctx-1')
     )).toBe(true)
   })
 

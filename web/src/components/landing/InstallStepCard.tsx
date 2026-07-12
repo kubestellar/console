@@ -63,7 +63,7 @@ export const InstallStepCard = memo(function InstallStepCard({
             {step.note}
           </div>
         )}
-        <p className="text-sm text-slate-400">{step.description}</p>
+        <div className="text-sm text-slate-400">{step.description}</div>
       </div>
     )
   }

@@ -8,6 +8,7 @@ import type { AlertMutation, AlertNotificationBatch, MutationAccumulator } from 
 import { DEFAULT_TEMPERATURE_THRESHOLD_F, DEFAULT_WIND_SPEED_THRESHOLD_MPH, MAX_ALERTS } from './alertStorage'
 import { isClusterUnreachable } from './notifications'
 import { alertDedupKey } from './alerts/deduplication'
+import { logger } from '@/lib/logger'
 
 const LOCAL_DEV_DISTRIBUTIONS = ['k3d', 'k3s', 'kind', 'minikube']
 const DEMO_TRIGGER_PROBABILITY = 0.1
@@ -257,7 +258,7 @@ export function createAlertRulesEngine({
       const enabledChannels = getEnabledChannels(rule)
       if (enabledChannels.length > 0) {
         localSendNotifications(newAlert, enabledChannels).catch(error => {
-          console.error('[AlertsContext] firing notification send failed:', error)
+          logger.error('[AlertsContext] firing notification send failed:', error)
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('alert-notification-error', {
               detail: { 

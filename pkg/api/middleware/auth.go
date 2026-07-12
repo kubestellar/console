@@ -166,9 +166,9 @@ func ShutdownTokenRevocation() {
 	}
 }
 
-// resetTokenRevocationForTest clears internal state so tests can re-initialize
+// ResetTokenRevocationForTest clears internal state so tests can re-initialize
 // the revocation layer. NOT for production use.
-func resetTokenRevocationForTest() {
+func ResetTokenRevocationForTest() {
 	ShutdownTokenRevocation()
 	revokedTokens.Lock()
 	revokedTokens.tokens = make(map[string]time.Time)

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { useGPUNodes } from '../../../hooks/useMCP'
+import type { GPUNode } from '../../../hooks/mcp/types'
 
 // Use fake timers to prevent real intervals/timeouts from hanging the worker
 vi.useFakeTimers()
@@ -238,9 +239,9 @@ describe('GPUReservations Component', () => {
         nodes: [
           { name: 'node-1', cluster: 'cluster-a', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' },
           { name: 'node-2', cluster: 'cluster-b', gpuType: 'Google TPU v4', gpuCount: 4, gpuAllocated: 0, acceleratorType: 'TPU' },
-        ],
+        ] as GPUNode[],
         isLoading: false, refetch: vi.fn(),
-      } as any)
+      })
 
       renderGPU()
       // Switch to inventory tab
@@ -259,9 +260,9 @@ describe('GPUReservations Component', () => {
       vi.mocked(useGPUNodes).mockReturnValue({
         nodes: [
           { name: 'node-1', cluster: 'cluster-a', gpuType: 'NVIDIA A100', gpuCount: 10, gpuAllocated: 7, acceleratorType: 'GPU' },
-        ],
+        ] as GPUNode[],
         isLoading: false, refetch: vi.fn(),
-      } as any)
+      })
 
       renderGPU()
       await act(async () => { fireEvent.click(screen.getByRole('tab', { name: /inventory/i })) })
@@ -275,9 +276,9 @@ describe('GPUReservations Component', () => {
         nodes: [
           { name: 'node-safe', cluster: 'c1', gpuType: 'A100', gpuCount: 4, gpuAllocated: 0, acceleratorType: 'GPU', taints: [] },
           { name: 'node-tainted', cluster: 'c1', gpuType: 'A100', gpuCount: 4, gpuAllocated: 0, acceleratorType: 'GPU', taints: [{ key: 'dedicated', value: 'user1', effect: 'NoSchedule' }] },
-        ],
+        ] as GPUNode[],
         isLoading: false, refetch: vi.fn(),
-      } as any)
+      })
 
       renderGPU()
       await act(async () => { fireEvent.click(screen.getByRole('tab', { name: /inventory/i })) })

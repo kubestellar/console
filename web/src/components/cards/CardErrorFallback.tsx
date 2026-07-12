@@ -3,6 +3,8 @@ import { AlertTriangle, ChevronDown, ChevronUp, FileText, RefreshCw, Trash2 } fr
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+
+// Pure error boundary component — no data fetching; demo data not applicable
 import { shouldShowFailureBanner } from './card-wrapper/badgeVisibility'
 
 // Pure error boundary component — no data fetching or cache subscription, so

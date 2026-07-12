@@ -11,17 +11,19 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MissionBrowser } from '../MissionBrowser'
 import type { TreeNode } from '../browser'
+import type { MissionExport, MissionMatch } from '../../../lib/missions/types'
+import { Input } from '../../ui/Input'
 
 const browserMockState = vi.hoisted(() => ({
   missionCache: {
-    installers: [] as any[],
-    fixes: [] as any[],
+    installers: [] as MissionExport[],
+    fixes: [] as MissionExport[],
     installersDone: true,
     fixesDone: true,
     fetchError: null as string | null,
     listeners: new Set<() => void>(),
   },
-  fetchMissionContent: vi.fn(async (mission: any) => ({ mission, raw: JSON.stringify(mission) })),
+  fetchMissionContent: vi.fn(async (mission: MissionExport) => ({ mission, raw: JSON.stringify(mission) })),
   fetchTreeChildren: vi.fn(async () => []),
 }))
 
@@ -87,7 +89,7 @@ vi.mock('../../../lib/analytics', async (importOriginal) => ({
 ))
 
 vi.mock('../../../lib/missions/matcher', () => ({
-  matchMissionsToCluster: vi.fn((missions: any[]) => missions.map((mission) => ({
+  matchMissionsToCluster: vi.fn((missions: MissionExport[]) => missions.map((mission) => ({
     mission,
     score: 2,
     matchPercent: 85,
@@ -123,7 +125,7 @@ vi.mock('../../ui/CollapsibleSection', () => ({
 vi.mock('../browser', () => ({
   TreeNodeItem: () => null,
   DirectoryListing: () => null,
-  RecommendationCard: ({ match, onSelect, onImport, compact }: { match: any; onSelect: () => void; onImport?: () => void; compact?: boolean }) => (
+  RecommendationCard: ({ match, onSelect, onImport, compact }: { match: MissionMatch; onSelect: () => void; onImport?: () => void; compact?: boolean }) => (
     <div>
       <button type="button" onClick={onSelect} data-testid="recommendation-card" data-compact={compact ? 'true' : 'false'}>
         {match.mission.title}
@@ -140,16 +142,16 @@ vi.mock('../browser', () => ({
   getMissionSlug: (m: { title?: string }) => (m.title || '').toLowerCase().replace(/\s+/g, '-'),
   getMissionShareUrl: () => 'https://example.com/missions/test',
   getKubaraConfig: vi.fn().mockResolvedValue({ repoOwner: 'kubara-io', repoName: 'kubara', catalogPath: 'go-binary/templates/embedded/managed-service-catalog/helm' }),
-  updateNodeInTree: vi.fn((nodes: any[], nodeId: string, updates: any) => {
-    const apply = (items: any[]): any[] => items.map((node) => {
+  updateNodeInTree: vi.fn((nodes: TreeNode[], nodeId: string, updates: Partial<TreeNode>) => {
+    const apply = (items: TreeNode[]): TreeNode[] => items.map((node) => {
       if (node.id === nodeId) return { ...node, ...updates }
       if (node.children) return { ...node, children: apply(node.children) }
       return node
     })
     return apply(nodes)
   }),
-  removeNodeFromTree: vi.fn((nodes: any[], nodeId: string) => {
-    const prune = (items: any[]): any[] => items
+  removeNodeFromTree: vi.fn((nodes: TreeNode[], nodeId: string) => {
+    const prune = (items: TreeNode[]): TreeNode[] => items
       .filter((node) => node.id !== nodeId)
       .map((node) => node.children ? { ...node, children: prune(node.children) } : node)
     return prune(nodes)
@@ -166,7 +168,7 @@ vi.mock('../browser', () => ({
     { id: 'installers', label: 'Installers', icon: '📦' },
     { id: 'fixes', label: 'Fixes', icon: '🔧' },
   ],
-  VirtualizedMissionGrid: ({ items, renderItem, viewMode }: { items: any[]; renderItem: (item: any) => React.ReactNode; viewMode?: 'grid' | 'list' }) => (
+  VirtualizedMissionGrid: ({ items, renderItem, viewMode }: { items: MissionMatch[]; renderItem: (item: MissionMatch) => React.ReactNode; viewMode?: 'grid' | 'list' }) => (
     <div data-testid="virtualized-mission-grid" data-view-mode={viewMode ?? 'grid'}>
       {items.map((item, index) => <div key={item.mission?.title ?? index}>{renderItem(item)}</div>)}
     </div>
@@ -204,7 +206,7 @@ vi.mock('../MissionBrowserSidebar', () => ({
         data-selected-path={selectedPath ?? ''}
         data-expanded={Array.from(expandedNodes).sort().join('|')}
       >
-        <input data-testid="mission-file-input" type="file" onChange={onFileSelect} />
+        <Input data-testid="mission-file-input" type="file" onChange={onFileSelect} />
         {renderNodes(treeNodes)}
       </div>
     )
@@ -285,7 +287,7 @@ describe('MissionBrowser', () => {
     browserMockState.missionCache.fixesDone = true
     browserMockState.missionCache.fetchError = null
     browserMockState.missionCache.listeners.clear()
-    browserMockState.fetchMissionContent.mockImplementation(async (mission: any) => ({ mission, raw: JSON.stringify(mission) }))
+    browserMockState.fetchMissionContent.mockImplementation(async (mission: MissionExport) => ({ mission, raw: JSON.stringify(mission) }))
     browserMockState.fetchTreeChildren.mockImplementation(async () => [])
   })
 

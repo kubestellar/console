@@ -1,6 +1,9 @@
 /**
  * UnifiedItemsList — Paginated flat-list view for offline detection card items.
  * Renders offline nodes, GPU issues, and predictions as individual rows.
+ *
+ * Pure UI component — renders mission items based on props; no data fetching.
+ * Demo data support provided by parent mission cards.
  */
 import { ChevronRight, RefreshCw, Cpu, HardDrive, Sparkles, Zap, ThumbsUp, ThumbsDown, CheckCircle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
