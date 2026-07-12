@@ -27,6 +27,7 @@ import { prefetchCardChunks } from '../../../components/cards/cardRegistry'
 import { SHORT_DELAY_MS } from '../../constants/network'
 import { ConfirmDialog, useModalState } from '../../modals'
 import { useTranslation } from 'react-i18next'
+import { useToast } from '../../../components/ui/Toast'
 
 /** Card suggestion type from AddCardModal */
 interface CardSuggestion {
@@ -53,6 +54,7 @@ export function UnifiedDashboard({
   statsData,
   className = '' }: UnifiedDashboardProps) {
   const { t } = useTranslation('common')
+  const { showToast } = useToast()
   // Tab state (for dashboards with tabs) — needed by the cards initializer
   // to route persistence differently in tab-mode dashboards.
   const hasTabs = (config.tabs?.length ?? 0) > 0
@@ -346,6 +348,7 @@ export function UnifiedDashboard({
           setTabCards(seeded)
         }
         setDashboardError(null)
+        showToast(t('dashboard.resetSuccess', 'Dashboard layout reset to defaults'), 'success')
       } catch (error) {
         console.warn('Failed to reset unified dashboard layout', error)
         setDashboardError(t('errors.storagePersistFailed'))

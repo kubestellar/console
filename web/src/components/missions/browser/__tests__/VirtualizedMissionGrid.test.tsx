@@ -5,7 +5,7 @@ import React from 'react'
  * Covers: grid/list rendering, virtualization setup, and responsive column calculation.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { VirtualizedMissionGrid } from '../VirtualizedMissionGrid'
 
@@ -40,6 +40,9 @@ const mockItems: TestItem[] = Array.from({ length: 50 }, (_, i) => ({
 }))
 
 describe('VirtualizedMissionGrid', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
   it('renders in grid view mode', () => {
     const renderItem = (item: TestItem) => (
       <div key={item.id} data-testid={`item-${item.id}`}>

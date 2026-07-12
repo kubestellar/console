@@ -25,7 +25,8 @@ describe('browser/index exports', () => {
   })
 
   it('exports TreeNodeItem component', () => {
-    expect(typeof browserExports.TreeNodeItem).toBe('function')
+    // React.memo() returns an object with $$typeof, not a function.
+    expect(browserExports.TreeNodeItem).toBeDefined()
   })
 
   it('exports DirectoryListing component', () => {

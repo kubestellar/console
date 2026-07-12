@@ -378,6 +378,19 @@ describe('CanIChecker — Result Display (Allowed)', () => {
 
     expect(mockReset).toHaveBeenCalled()
   })
+
+  it('shows allowed result when permission is granted', async () => {
+    mockResult = { allowed: true }
+    mockError = null
+
+    render(<CanIChecker />)
+
+    await userEvent.click(screen.getByTestId('can-i-check'))
+
+    await waitFor(() => {
+      expect(screen.getByText('rbac.allowed')).toBeInTheDocument()
+    })
+  })
 })
 
 describe('CanIChecker — Result Display (Denied)', () => {
@@ -406,6 +419,19 @@ describe('CanIChecker — Result Display (Denied)', () => {
 
     const resetBtn = screen.getByTestId('can-i-reset')
     expect(resetBtn).toBeInTheDocument()
+  })
+
+  it('shows denied result when permission is not granted', async () => {
+    mockResult = { allowed: false }
+    mockError = null
+
+    render(<CanIChecker />)
+
+    await userEvent.click(screen.getByTestId('can-i-check'))
+
+    await waitFor(() => {
+      expect(screen.getByText('rbac.denied')).toBeInTheDocument()
+    })
   })
 })
 

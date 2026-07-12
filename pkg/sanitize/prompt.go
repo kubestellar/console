@@ -61,12 +61,31 @@ func PromptStrings(values []string) []string {
 var logInjectionReplacer = strings.NewReplacer(
 	"\n", "⏎",
 	"\r", "⏎",
+	"\u2028", "⏎", // Unicode LINE SEPARATOR
+	"\u2029", "⏎", // Unicode PARAGRAPH SEPARATOR
+	"\x00", "",    // null byte — stripped rather than replaced
 )
 
+// ansiEscapeRe matches ANSI/VT100 terminal escape sequences that can forge
+// log entries or manipulate terminal display. Covers:
+//   - CSI sequences:  ESC [ <params> <final-byte>
+//   - OSC sequences:  ESC ] <text> BEL
+//   - Two-char Fe/Fs: ESC <byte in 0x40–0x5F>
+var ansiEscapeRe = regexp.MustCompile(`\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*\x07|[@-_])`)
+
+// logC0Re matches C0 control characters and DEL that are not already handled
+// by logInjectionReplacer (which covers \n, \r, \x00) or ansiEscapeRe (ESC \x1b).
+// The range deliberately excludes \x00 (null, handled by replacer), \x09 (tab,
+// safe to pass through), \x0a (\n), \x0d (\r), and \x1b (ESC).
+// Stripping these prevents terminal-control injection via backspace, bell, etc.
+var logC0Re = regexp.MustCompile(`[\x01-\x08\x0b\x0c\x0e-\x1a\x1c-\x1f\x7f]`)
+
 // LogString sanitizes user-controlled input before logging to prevent
-// log injection attacks (CWE-117). It replaces newline and carriage-return
-// characters with a visible placeholder (⏎) so attackers cannot forge
-// additional log entries or corrupt log aggregation pipelines.
+// log injection attacks (CWE-117). It:
+//   - Strips ANSI/VT100 terminal escape sequences (cursor movement, color, OSC)
+//   - Strips C0 control characters and DEL (null, backspace, bell, etc.)
+//   - Replaces ASCII newlines, carriage-returns, and Unicode line/paragraph
+//     separators (U+2028/U+2029) with a visible placeholder (⏎)
 //
 // Use this for any user-controlled value passed to log.Printf, slog.Info,
 // zerolog, or other structured logging calls.
@@ -74,7 +93,9 @@ func LogString(input string) string {
 	if input == "" {
 		return ""
 	}
-	return logInjectionReplacer.Replace(input)
+	s := ansiEscapeRe.ReplaceAllString(input, "")
+	s = logC0Re.ReplaceAllString(s, "")
+	return logInjectionReplacer.Replace(s)
 }
 
 // LogStrings sanitizes a slice of user-controlled strings for logging.
