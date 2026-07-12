@@ -104,7 +104,7 @@ describe('FlightPlanBlueprint', () => {
       />
     )
 
-    expect(screen.getByText(/prometheus/i)).toBeInTheDocument()
+    expect(screen.getByTestId('mission-control-project-prometheus')).toBeInTheDocument()
   })
 
   it('handles empty state', () => {

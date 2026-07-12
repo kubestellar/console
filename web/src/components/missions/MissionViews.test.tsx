@@ -15,6 +15,16 @@ vi.mock('react-i18next', () => ({
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
   useLocation: () => ({ pathname: '/' }),
+  useParams: () => ({ missionId: 'test-mission-id' }),
+}))
+
+vi.mock('../../lib/analytics', () => ({
+  emitMissionError: vi.fn(),
+  emitPageView: vi.fn(),
+  emitNavigate: vi.fn(),
+  emitLogin: vi.fn(),
+  emitEvent: vi.fn(),
+  analyticsReady: Promise.resolve(),
 }))
 
 vi.mock('../../lib/api', () => ({
@@ -187,8 +197,11 @@ describe('MissionDetailView', () => {
     const { container } = render(
       <MissionDetailView
         mission={mockMission}
-        onClose={vi.fn()}
+        rawContent={null}
+        showRaw={false}
+        onToggleRaw={vi.fn()}
         onImport={vi.fn()}
+        onBack={vi.fn()}
       />
     )
     expect(container).toBeTruthy()

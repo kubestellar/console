@@ -78,7 +78,7 @@ describe('OperatorDrillDown Component', () => {
 
   it('renders operator name in the header', () => {
     render(<OperatorDrillDown data={OPERATOR_DATA} />)
-    expect(screen.getByText('cert-manager')).toBeInTheDocument()
+    expect(screen.getAllByText('cert-manager').length).toBeGreaterThan(0)
   })
 
   it('shows back button when drill-down stack has multiple entries', () => {

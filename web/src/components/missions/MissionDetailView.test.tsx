@@ -78,7 +78,7 @@ describe('MissionDetailView', () => {
         loading={true}
       />
     )
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument()
+    expect(container.querySelector('.animate-shimmer')).toBeInTheDocument()
   })
 
   it('renders error message when error prop is provided', () => {
@@ -135,7 +135,7 @@ describe('MissionDetailView', () => {
         onToggleRaw={vi.fn()}
         onImport={vi.fn()}
         onBack={vi.fn()}
-        matchScore={0.85}
+        matchScore={85}
       />
     )
     expect(screen.getByText(/85%/)).toBeInTheDocument()

@@ -25,15 +25,58 @@ vi.mock('../ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }))
 
+vi.mock('../../hooks/mcp/clusters', () => ({
+  useClusters: () => ({ deduplicatedClusters: [], isLoading: false, error: null, refetch: vi.fn() }),
+}))
+
+vi.mock('../../hooks/useResolutions', () => ({
+  useResolutions: () => ({ saveResolution: vi.fn() }),
+  detectIssueSignature: () => ({ type: 'Troubleshooting', resourceKind: 'Pod' }),
+}))
+
+vi.mock('../../lib/utils/wsAuth', () => ({
+  getWsAuthParams: vi.fn().mockRejectedValue(new Error('AI unavailable')),
+}))
+
+vi.mock('../../lib/missions/scanner/index', () => ({
+  fullScan: vi.fn(() => ({ findings: [], filesScanned: 1, errors: [] })),
+}))
+
+const mockMission = {
+  id: 'mission-1',
+  title: 'Test Mission',
+  description: 'Test',
+  type: 'troubleshoot' as const,
+  status: 'completed' as const,
+  cluster: 'cluster-1',
+  messages: [],
+  createdAt: new Date('2026-01-01T00:00:00Z'),
+  updatedAt: new Date('2026-01-01T00:00:00Z'),
+}
+
+const mockResolution = {
+  id: 'resolution-1',
+  missionId: 'mission-1',
+  userId: 'user-1',
+  title: 'Test Mission',
+  issueSignature: { type: 'Troubleshooting', resourceKind: 'Pod' },
+  resolution: { summary: 'Test', steps: ['Do the thing'] },
+  context: { cluster: 'cluster-1', operators: [] },
+  effectiveness: { timesUsed: 0, timesSuccessful: 0 },
+  visibility: 'private' as const,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+}
+
 describe('ClusterSelectionDialog', () => {
   it('renders without errors', async () => {
     const { ClusterSelectionDialog } = await import('./ClusterSelectionDialog')
     const { container } = render(
       <ClusterSelectionDialog
-        isOpen={true}
-        onClose={vi.fn()}
+        open={true}
+        missionTitle="Test Mission"
         onSelect={vi.fn()}
-        availableClusters={[]}
+        onCancel={vi.fn()}
       />
     )
     expect(container).toBeTruthy()
@@ -83,8 +126,7 @@ describe('SaveResolutionDialog', () => {
       <SaveResolutionDialog
         isOpen={true}
         onClose={vi.fn()}
-        onSave={vi.fn()}
-        initialTitle=""
+        mission={mockMission}
       />
     )
     expect(container).toBeTruthy()
@@ -94,18 +136,11 @@ describe('SaveResolutionDialog', () => {
 describe('ShareMissionDialog', () => {
   it('renders without errors', async () => {
     const { ShareMissionDialog } = await import('./ShareMissionDialog')
-    const mockMission = {
-      title: 'Test Mission',
-      description: 'Test',
-      type: 'custom' as const,
-      steps: [],
-      version: '1.0.0',
-    }
     const { container } = render(
       <ShareMissionDialog
         isOpen={true}
         onClose={vi.fn()}
-        mission={mockMission}
+        resolution={mockResolution}
       />
     )
     expect(container).toBeTruthy()
@@ -129,18 +164,11 @@ describe('StandaloneOrbitDialog', () => {
 describe('SubmitToKBDialog', () => {
   it('renders without errors', async () => {
     const { SubmitToKBDialog } = await import('./SubmitToKBDialog')
-    const mockMission = {
-      title: 'Test Mission',
-      description: 'Test',
-      type: 'custom' as const,
-      steps: [],
-      version: '1.0.0',
-    }
     const { container } = render(
       <SubmitToKBDialog
         isOpen={true}
         onClose={vi.fn()}
-        mission={mockMission}
+        resolution={mockResolution}
       />
     )
     expect(container).toBeTruthy()
