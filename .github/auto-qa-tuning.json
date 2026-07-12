@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-07-11T04:01:37Z",
+  "last_updated": "2026-07-12T04:11:04Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -25,32 +25,32 @@
       "last_evaluated": "2026-07-11T04:01:37Z"
     },
     "operator": {
-      "merged": 613,
-      "closed": 265,
+      "merged": 622,
+      "closed": 266,
       "acceptance_rate": 0.7,
       "status": "normal",
-      "last_evaluated": "2026-07-11T04:01:37Z"
+      "last_evaluated": "2026-07-12T04:11:04Z"
     },
     "sre": {
-      "merged": 358,
-      "closed": 90,
+      "merged": 370,
+      "closed": 92,
       "acceptance_rate": 0.8,
       "status": "normal",
-      "last_evaluated": "2026-07-11T04:01:37Z"
+      "last_evaluated": "2026-07-12T04:11:04Z"
     },
     "features": {
-      "merged": 23,
-      "closed": 9,
-      "acceptance_rate": 0.72,
+      "merged": 24,
+      "closed": 10,
+      "acceptance_rate": 0.71,
       "status": "normal",
-      "last_evaluated": "2026-07-04T04:14:42Z"
+      "last_evaluated": "2026-07-12T04:11:04Z"
     },
     "resilience": {
-      "merged": 77,
+      "merged": 78,
       "closed": 66,
       "acceptance_rate": 0.54,
       "status": "normal",
-      "last_evaluated": "2026-07-11T04:01:37Z"
+      "last_evaluated": "2026-07-12T04:11:04Z"
     },
     "consistency": {
       "merged": 30,
@@ -91,13 +91,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-05-24",
-      "total_merged": 331,
-      "total_closed": 349,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-05-25",
       "total_merged": 370,
@@ -300,6 +293,13 @@
       "total_closed": 560,
       "categories_blocked": [],
       "categories_boosted": []
+    },
+    {
+      "date": "2026-07-12",
+      "total_merged": 1290,
+      "total_closed": 564,
+      "categories_blocked": [],
+      "categories_boosted": []
     }
   ],
   "rotation_weights": {
@@ -308,7 +308,7 @@
     "a11y": 1.02,
     "operator": 1.05,
     "sre": 1.2,
-    "features": 1.08,
+    "features": 1.07,
     "resilience": 0.81,
     "consistency": 0.89
   },
