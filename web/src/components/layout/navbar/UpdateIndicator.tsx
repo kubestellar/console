@@ -70,10 +70,10 @@ export function UpdateIndicator({ showLabel = false }: UpdateIndicatorProps) {
   /** Resolve the button style based on upgrade phase */
   const buttonClassName = cn(
     'flex items-center gap-2 px-2 py-1.5 h-9 rounded-lg transition-colors',
-    isUpgradeError && 'bg-red-500/10 text-red-400 hover:bg-red-500/20',
-    isUpgradeComplete && 'bg-green-500/10 text-green-400 hover:bg-green-500/20',
+    isUpgradeError && 'bg-red-500/10 text-status-error hover:bg-red-500/20',
+    isUpgradeComplete && 'bg-green-500/10 text-status-success hover:bg-green-500/20',
     isUpgrading && 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20',
-    !isUpgrading && !isUpgradeComplete && !isUpgradeError && 'bg-green-500/10 text-green-400 hover:bg-green-500/20',
+    !isUpgrading && !isUpgradeComplete && !isUpgradeError && 'bg-green-500/10 text-status-success hover:bg-green-500/20',
   )
 
   /** Resolve the tooltip title based on upgrade phase */

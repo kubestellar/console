@@ -100,10 +100,10 @@ function EPPHealthInternal() {
   const errorPct = (metrics.errorRate * 100).toFixed(2)
   const healthColor =
     summary.health === 'healthy'
-      ? 'text-green-400'
+      ? 'text-status-success'
       : summary.health === 'degraded'
-        ? 'text-yellow-400'
-        : 'text-red-400'
+        ? 'text-status-warning'
+        : 'text-status-error'
 
   return (
     <div className="space-y-3 p-1">
@@ -161,7 +161,7 @@ function EPPHealthInternal() {
           <span className="text-xs text-muted-foreground">Error rate</span>
           <span
             className={`text-sm font-semibold ${
-              metrics.errorRate > 0.05 ? 'text-red-400' : metrics.errorRate > 0.01 ? 'text-yellow-400' : 'text-green-400'
+              metrics.errorRate > 0.05 ? 'text-status-error' : metrics.errorRate > 0.01 ? 'text-status-warning' : 'text-status-success'
             }`}
           >
             {errorPct}%

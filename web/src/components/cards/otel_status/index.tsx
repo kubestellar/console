@@ -151,18 +151,18 @@ export function OtelStatus() {
         <MetricTile
           label={t('otelStatus.running', 'Running')}
           value={data.summary.runningCollectors}
-          colorClass="text-green-400"
-          icon={<CheckCircle className="w-4 h-4 text-green-400" />}
+          colorClass="text-status-success"
+          icon={<CheckCircle className="w-4 h-4 text-status-success" />}
         />
         <MetricTile
           label={t('otelStatus.degradedCount', 'Degraded')}
           value={data.summary.degradedCollectors}
-          colorClass={data.summary.degradedCollectors > 0 ? 'text-yellow-400' : 'text-green-400'}
+          colorClass={data.summary.degradedCollectors > 0 ? 'text-status-warning' : 'text-status-success'}
           icon={
             data.summary.degradedCollectors > 0 ? (
-              <AlertTriangle className="w-4 h-4 text-yellow-400" />
+              <AlertTriangle className="w-4 h-4 text-status-warning" />
             ) : (
-              <CheckCircle className="w-4 h-4 text-green-400" />
+              <CheckCircle className="w-4 h-4 text-status-success" />
             )
           }
         />
@@ -175,12 +175,12 @@ export function OtelStatus() {
         <MetricTile
           label={t('otelStatus.dropped', 'Dropped')}
           value={formatCount(droppedTotal)}
-          colorClass={droppedTotal > 0 ? 'text-red-400' : 'text-green-400'}
+          colorClass={droppedTotal > 0 ? 'text-status-error' : 'text-status-success'}
           icon={
             droppedTotal > 0 ? (
-              <AlertTriangle className="w-4 h-4 text-red-400" />
+              <AlertTriangle className="w-4 h-4 text-status-error" />
             ) : (
-              <CheckCircle className="w-4 h-4 text-green-400" />
+              <CheckCircle className="w-4 h-4 text-status-success" />
             )
           }
         />
@@ -259,9 +259,9 @@ export function OtelStatus() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0 flex items-center gap-1.5">
                     {healthy ? (
-                      <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                      <CheckCircle className="w-3.5 h-3.5 text-status-success shrink-0" />
                     ) : (
-                      <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+                      <AlertTriangle className="w-3.5 h-3.5 text-status-warning shrink-0" />
                     )}
                     <span className="text-xs font-medium truncate font-mono">
                       {collector.name}
@@ -276,8 +276,8 @@ export function OtelStatus() {
                     className={cn(
                       'text-xs px-1.5 py-0.5 rounded-full shrink-0',
                       healthy
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-yellow-500/20 text-yellow-400',
+                        ? 'bg-green-500/20 text-status-success'
+                        : 'bg-yellow-500/20 text-status-warning',
                     )}
                   >
                     {collector.state}
@@ -313,7 +313,7 @@ export function OtelStatus() {
                   <span
                     className={cn(
                       'shrink-0',
-                      collector.exportErrors > 0 ? 'text-red-400' : 'text-green-400',
+                      collector.exportErrors > 0 ? 'text-status-error' : 'text-status-success',
                     )}
                   >
                     {t('otelStatus.exportErrors', {
