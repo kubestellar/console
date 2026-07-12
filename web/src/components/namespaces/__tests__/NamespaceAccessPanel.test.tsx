@@ -27,9 +27,10 @@ vi.mock('../../ui/ClusterBadge', () => ({
   ClusterBadge: ({ cluster }: { cluster: string }) => <div data-testid="cluster-badge">{cluster}</div>,
 }))
 
+const mockShowToast = vi.fn()
 vi.mock('../../ui/Toast', () => ({
   useToast: () => ({
-    showToast: vi.fn(),
+    showToast: mockShowToast,
   }),
 }))
 
@@ -152,10 +153,10 @@ describe('NamespaceAccessPanel', () => {
       />
     )
 
-    expect(screen.getByRole('generic', { name: /spinner/i }) || document.querySelector('.spinner')).toBeTruthy()
+    expect(document.querySelector('.spinner')).toBeTruthy()
 
     await waitFor(() => {
-      expect(screen.queryByRole('generic', { name: /spinner/i })).not.toBeInTheDocument()
+      expect(document.querySelector('.spinner')).toBeNull()
     })
   })
 
@@ -303,7 +304,9 @@ describe('NamespaceAccessPanel', () => {
     )
 
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledTimes(2)
+      expect(api.get).toHaveBeenCalledWith(
+        expect.stringContaining('another-namespace')
+      )
     })
   })
 })
