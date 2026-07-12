@@ -569,8 +569,8 @@ func (assertErr) Error() string { return "revocation store unavailable" }
 // IsRevoked returned false, silently disabling server-side logout whenever
 // the DB hiccuped.
 func TestRevocationFailClosed(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	InitTokenRevocation(failingRevoker{})
 
@@ -606,8 +606,8 @@ func TestRevocationFailClosed(t *testing.T) {
 // TestValidateJWTFailClosedOnRevocationError covers the same fail-closed
 // property on the WebSocket/SSE validation path (ValidateJWT).
 func TestValidateJWTFailClosedOnRevocationError(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	InitTokenRevocation(failingRevoker{})
 
@@ -653,8 +653,8 @@ func (s *userValidationTestStore) GetUser(_ context.Context, id uuid.UUID) (*mod
 // indirectly by ensuring the cancel func is still set after a second call
 // and that ShutdownTokenRevocation does not panic on double-call.
 func TestInitTokenRevocationIdempotent(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	InitTokenRevocation(noopRevoker{})
 	// Second call must be a no-op: sync.Once guarantees the inner body
@@ -671,8 +671,8 @@ func TestInitTokenRevocationIdempotent(t *testing.T) {
 // query-param fallback must be rejected on paths that are not in the
 // explicit allow-list, even if they end in /stream.
 func TestRevocationQueryTokenRejectedOnUnknownPath(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	secret := "test-secret"
 	app := fiber.New()
@@ -714,8 +714,8 @@ func TestWebSocketUpgrade(t *testing.T) {
 }
 
 func TestRevocationHelpers(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	jti := "help-jti"
 	RevokeToken(jti, time.Now().Add(time.Hour))
@@ -745,8 +745,8 @@ func TestValidateJWT_NoID(t *testing.T) {
 }
 
 func TestRevocation_Cleanup(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	// Add an expired token and a fresh one
 	now := time.Now()
@@ -777,8 +777,8 @@ func TestGetContextHelpers_Empty(t *testing.T) {
 }
 
 func TestValidateJWT_Revoked(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	secret := "test-secret"
 	jti := "revoked-jti"
@@ -867,8 +867,8 @@ func TestParseJWT_EdgeCases(t *testing.T) {
 // TestValidateJWT_EdgeCases covers additional edge cases in ValidateJWT
 // for improved coverage (#17774).
 func TestValidateJWT_EdgeCases(t *testing.T) {
-	resetTokenRevocationForTest()
-	t.Cleanup(resetTokenRevocationForTest)
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
 
 	secret := "test-secret"
 

@@ -69,8 +69,8 @@ func newAgentTokenTestServer(t *testing.T, agentToken string) *Server {
 	// NewServer() → InitTokenRevocation, then t.Cleanup → ShutdownTokenRevocation.
 	// Without this, the middleware's initOnce prevents re-initialization with
 	// a fresh store, causing JWTAuth to fail closed when it sees store==nil (#20857).
-	middleware.resetTokenRevocationForTest()
-	t.Cleanup(middleware.resetTokenRevocationForTest)
+	middleware.ResetTokenRevocationForTest()
+	t.Cleanup(middleware.ResetTokenRevocationForTest)
 	middleware.InitTokenRevocation(mockStore)
 	middleware.InitUserValidation(mockStore)
 	
