@@ -13,18 +13,13 @@ on:
     types: [opened]
 
 permissions:
-  contents: read
+  contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   ai-fix:
-    # Restrict pull_request_target to same-repo branches only to prevent
-    # write-capable automation from triggering on external fork PRs (#20622).
-    if: github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-    uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@1a04a3fd17771e78e5cf6d42a3fda84e3ba478f3 # main pinned 2026-07-08
+    uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@main
     with:
       issue_number: ${{ github.event.inputs.issue_number || '' }}
     secrets:
