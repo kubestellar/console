@@ -30,10 +30,10 @@ import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 // ---------------------------------------------------------------------------
 
 export const STATUS_COLORS: Record<string, string> = {
-  pending: 'text-slate-400',
-  running: 'text-amber-400',
-  completed: 'text-green-400',
-  failed: 'text-red-400',
+  pending: 'text-slate-500 dark:text-slate-400',
+  running: 'text-amber-600 dark:text-amber-400',
+  completed: 'text-green-600 dark:text-green-400',
+  failed: 'text-red-600 dark:text-red-400',
 }
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -63,7 +63,7 @@ export function GaugeRow({ label, value, max, unit }: {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-slate-400 font-medium">{label}</span>
+        <span className="text-slate-500 dark:text-slate-400 font-medium">{label}</span>
         <span className="text-foreground tabular-nums">{display}{pctVal != null ? ` (${pctVal}%)` : ''}</span>
       </div>
       <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
@@ -232,7 +232,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
       <div>
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-foreground pr-2">{info.displayName}</h3>
-          <div className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap', info.installed ? 'text-green-400 bg-green-500/10' : (STATUS_COLORS[info.status] ?? 'text-slate-400'))}>
+          <div className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap', info.installed ? 'text-green-600 dark:text-green-400 bg-green-500/10' : (STATUS_COLORS[info.status] ?? 'text-slate-500 dark:text-slate-400'))}>
             {info.installed ? 'INSTALLED' : (STATUS_LABELS[info.status] ?? info.status.toUpperCase())}
           </div>
         </div>
@@ -241,16 +241,16 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
             {info.category}
           </span>
           {info.maturity && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-medium">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
               {info.maturity}
             </span>
           )}
           {info.priority && (
             <span className={cn(
               'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
-              info.priority === 'required' ? 'bg-red-500/10 text-red-400' :
-              info.priority === 'recommended' ? 'bg-blue-500/10 text-blue-400' :
-              'bg-gray-500/10 text-gray-400 dark:text-gray-500'
+              info.priority === 'required' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
+              info.priority === 'recommended' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+              'bg-gray-500/10 text-gray-500 dark:text-gray-400'
             )}>
               {info.priority}
             </span>
@@ -270,7 +270,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
         {info.dependencies.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {info.dependencies.map((dep) => (
-              <span key={dep} className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              <span key={dep} className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
                 {dep}
               </span>
             ))}
@@ -316,7 +316,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
             Loading...
           </div>
         ) : stepsError ? (
-          <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-2 text-[10px] text-red-300">
+          <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-2 text-[10px] text-red-700 dark:text-red-300">
             <div className="flex items-start gap-1.5">
               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
               <div className="space-y-2">
@@ -324,7 +324,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
                 <button
                   type="button"
                   onClick={() => setStepsRetryNonce((prev) => prev + 1)}
-                  className="font-medium text-red-200 underline underline-offset-2 hover:text-white"
+                  className="font-medium text-red-700 dark:text-red-200 underline underline-offset-2 hover:text-red-900 dark:hover:text-white"
                 >
                   Retry
                 </button>
@@ -339,7 +339,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-foreground">{step.title || step.description?.slice(0, 60)}</p>
                   {step.command && (
-                    <pre className="text-[10px] text-emerald-400 font-mono mt-0.5 bg-slate-800 rounded px-1.5 py-0.5 overflow-x-auto whitespace-pre-wrap break-all">
+                    <pre className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5 overflow-x-auto whitespace-pre-wrap break-all">
                       {step.command}
                     </pre>
                   )}
@@ -392,19 +392,19 @@ export function ClusterInfoPanel({ info }: { info: ClusterHoverInfo }) {
         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Capacity</h4>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
           <div className="flex justify-between">
-            <span className="text-slate-400"><TechnicalAcronym term="CPU">CPU</TechnicalAcronym></span>
+            <span className="text-slate-500 dark:text-slate-400"><TechnicalAcronym term="CPU">CPU</TechnicalAcronym></span>
             <span className="text-foreground tabular-nums">{fmtNum(info.cpuCores)} cores</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-400">Memory</span>
+            <span className="text-slate-500 dark:text-slate-400">Memory</span>
             <span className="text-foreground tabular-nums">{fmtNum(info.memGB)} GB</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-400">Storage</span>
+            <span className="text-slate-500 dark:text-slate-400">Storage</span>
             <span className="text-foreground tabular-nums">{fmtNum(info.storageGB)} GB</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-400"><TechnicalAcronym term="PVC">PVC</TechnicalAcronym></span>
+            <span className="text-slate-500 dark:text-slate-400"><TechnicalAcronym term="PVC">PVC</TechnicalAcronym></span>
             <span className="text-foreground tabular-nums">{info.pvcBoundCount ?? '?'}/{info.pvcCount ?? '?'}</span>
           </div>
         </div>
@@ -663,20 +663,20 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
                             )}
                           </div>
                           {installedProjects.has(proj.name) && (
-                            <span className="text-[9px] ml-1 px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400">
+                            <span className="text-[9px] ml-1 px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                               installed
                             </span>
                           )}
                           {!installedProjects.has(proj.name) && (
-                            <span className="text-[9px] ml-1 px-1 py-0.5 rounded bg-slate-500/10 text-slate-400">
+                            <span className="text-[9px] ml-1 px-1 py-0.5 rounded bg-slate-500/10 text-slate-500 dark:text-slate-400">
                               deploy
                             </span>
                           )}
                           <span className={cn(
                             'text-[9px] ml-1.5 px-1 py-0.5 rounded',
-                            proj.priority === 'required' ? 'bg-red-500/10 text-red-400' :
-                            proj.priority === 'recommended' ? 'bg-blue-500/10 text-blue-400' :
-                            'bg-gray-500/10 text-gray-400 dark:text-gray-500'
+                            proj.priority === 'required' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
+                            proj.priority === 'recommended' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                            'bg-gray-500/10 text-gray-500 dark:text-gray-400'
                           )}>
                             {proj.priority}
                           </span>
@@ -710,15 +710,15 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
                 <span key={proj.name} className={cn(
                   'text-[10px] px-2 py-1 rounded-md border',
                   installedProjects.has(proj.name)
-                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                    : 'bg-purple-500/10 text-purple-300 border-purple-500/20'
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/20'
+                    : 'bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/20'
                 )}>
                   {proj.displayName}
                   {installedProjects.has(proj.name) && <span className="ml-1 opacity-60">✓</span>}
                 </span>
               ))}
             </div>
-            <p className="text-[10px] text-purple-400/60 mt-2 italic">
+            <p className="text-[10px] text-purple-600 dark:text-purple-400 opacity-60 mt-2 italic">
               No ordering — all {projects.length} projects deploy at once
             </p>
           </div>
@@ -775,7 +775,7 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
         const rollbackPhases = [...effectivePhases2].reverse()
         return (
           <div className="pt-2 border-t border-border">
-            <h4 className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider mb-1.5">
+            <h4 className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1.5">
               Rollback Plan
             </h4>
             <p className="text-[10px] text-muted-foreground mb-2">
@@ -784,13 +784,12 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
 
             {toKeep.length > 0 && (
               <div className="mb-2">
-                <p className="text-[9px] font-semibold text-emerald-400 uppercase tracking-wider mb-1">
+                <p className="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">
                   Protected (will not be removed)
                 </p>
                 <div className="flex flex-wrap gap-1">
                   {toKeep.map(p => (
-                    <span key={p.name} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      {p.displayName}
+                    <span key={p.name} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                     </span>
                   ))}
                 </div>
@@ -799,7 +798,7 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
 
             {toRemove.length > 0 && (
               <div>
-                <p className="text-[9px] font-semibold text-amber-400 uppercase tracking-wider mb-1">
+                <p className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">
                   {mode === 'phased' ? 'Removal Order (reverse phases)' : 'Will Be Removed'}
                 </p>
                 {mode === 'phased' ? (
@@ -810,12 +809,12 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
                       return (
                         <div key={phase.phase} className="rounded border border-amber-500/20 bg-amber-500/5 p-2">
                           <div className="flex items-center gap-1.5 mb-1">
-                            <span className="text-[9px] font-bold text-amber-400">Step {i + 1}</span>
+                            <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400">Step {i + 1}</span>
                             <span className="text-[10px] text-muted-foreground">Remove {phase.name}</span>
                           </div>
                           <div className="flex flex-wrap gap-1">
                             {removable.map(n => (
-                              <span key={n} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                              <span key={n} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
                                 helm uninstall {n}
                               </span>
                             ))}
@@ -827,7 +826,7 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
                 ) : (
                   <div className="flex flex-wrap gap-1">
                     {toRemove.map(p => (
-                      <span key={p.name} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                      <span key={p.name} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
                         helm uninstall {p.name}
                       </span>
                     ))}
@@ -837,7 +836,7 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
             )}
 
             {toRemove.length === 0 && (
-              <p className="text-[10px] text-emerald-400 italic">
+              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 italic">
                 All projects are already installed — nothing to roll back.
               </p>
             )}

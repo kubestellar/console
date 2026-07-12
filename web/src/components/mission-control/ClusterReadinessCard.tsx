@@ -131,9 +131,9 @@ export function ClusterReadinessCard({
           <div
             className={cn(
               'flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold',
-              readiness.overallScore >= 70 ? 'bg-green-500/15 text-green-400' :
-              readiness.overallScore >= 40 ? 'bg-yellow-500/15 text-yellow-400' :
-              'bg-red-500/15 text-red-400'
+              readiness.overallScore >= 70 ? 'bg-green-500/15 text-green-600 dark:text-green-400' :
+              readiness.overallScore >= 40 ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' :
+              'bg-red-500/15 text-red-600 dark:text-red-400'
             )}
             title={`Readiness score: ${readiness.overallScore}%`}
           >
@@ -172,7 +172,7 @@ export function ClusterReadinessCard({
             const isPositive = /already running|already deployed|already installed|skip install|healthy/.test(lower)
             const isError = /not installed|missing|must install|conflict|error|fail/.test(lower)
             // positive = green (already running), error/action needed = amber, neutral = slate
-            const color = isPositive ? 'text-emerald-400' : isError ? 'text-amber-400' : 'text-slate-400'
+            const color = isPositive ? 'text-emerald-600 dark:text-emerald-400' : isError ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'
             const icon = isPositive ? '✓' : isError ? '⚠' : '•'
             return (
               <p key={i} className={cn('text-[10px] flex items-start gap-1', color)}>
@@ -223,7 +223,7 @@ export function ClusterReadinessCard({
                 </span>
                 {isKubara && (
                   <span
-                    className="inline-flex items-center gap-0.5 px-1 py-px rounded text-[8px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    className="inline-flex items-center gap-0.5 px-1 py-px rounded text-[8px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                     title={t('layout.missionSidebar.kubaraBadgeTooltip')}
                   >
                     <CheckCircle className="w-2 h-2" />
@@ -231,7 +231,7 @@ export function ClusterReadinessCard({
                   </span>
                 )}
                 {isInstalled && (
-                  <span className="text-[9px] text-emerald-400 font-medium ml-auto">installed</span>
+                  <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium ml-auto">installed</span>
                 )}
               </label>
             )

@@ -18,8 +18,8 @@ const TYPE_LABELS: Record<MarketplaceItemType, { label: string; icon: typeof Lay
   theme: { label: 'Themes', icon: Palette } }
 
 const MATURITY_CONFIG = {
-  graduated: { label: 'Graduated', color: 'text-green-400 bg-green-950 border-green-800' },
-  incubating: { label: 'Incubating', color: 'text-blue-400 bg-blue-950 border-blue-800' } } as const
+  graduated: { label: 'Graduated', color: 'text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-950 border-green-300 dark:border-green-800' },
+  incubating: { label: 'Incubating', color: 'text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-950 border-blue-300 dark:border-blue-800' } } as const
 
 export function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
   item: MarketplaceItem
@@ -170,21 +170,21 @@ export function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
               href={validateExternalUrl(item.issueUrl) || ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded-md transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 rounded-md transition-colors"
             >
               <Sparkles className="w-3 h-3" />
               Contribute
             </a>
           ) : isInstalled ? (
             <div className="flex items-center gap-1.5">
-              <span className="flex items-center gap-1 px-2 py-1 text-2xs font-medium text-green-400 bg-green-950 rounded">
+              <span className="flex items-center gap-1 px-2 py-1 text-2xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-950 rounded">
                 <Check className="w-3 h-3" />
                 Installed
               </span>
               <button
                 onClick={handleRemove}
                 disabled={removing}
-                className="flex items-center gap-1 px-2 py-1 text-2xs text-red-400 hover:bg-red-950 rounded transition-colors disabled:opacity-50"
+                className="flex items-center gap-1 px-2 py-1 text-2xs text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950 rounded transition-colors disabled:opacity-50"
                 title={t('common.remove')}
               >
                 {removing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
