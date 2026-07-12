@@ -46,6 +46,8 @@ export function AuthorBadge({ author, github, compact }: { author: string; githu
       className="text-primary/80 hover:text-primary transition-colors hover:underline"
       onMouseEnter={handleEnter}
       onMouseLeave={() => setHovered(false)}
+      onFocus={handleEnter}
+      onBlur={() => setHovered(false)}
       onClick={(e) => e.stopPropagation()}
     >
       @{github}
