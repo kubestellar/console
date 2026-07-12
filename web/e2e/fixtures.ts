@@ -276,7 +276,7 @@ export async function login(page: ReturnType<typeof base.extend>['page']) {
   await page.waitForLoadState('domcontentloaded')
 
   const devLoginButton = page.getByRole('button', { name: /dev.*login|continue.*demo/i }).first()
-  const hasDevLogin = await devLoginButton.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+  const hasDevLogin = await devLoginButton.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
   if (!hasDevLogin) {
     throw new Error(
@@ -305,7 +305,7 @@ export async function openCardMenu(page: ReturnType<typeof base.extend>['page'],
 
 export async function closeModal(page: ReturnType<typeof base.extend>['page']) {
   const closeButton = page.locator('button[aria-label*="close"], [data-testid="close-modal"]').first()
-  const hasClose = await closeButton.isVisible().catch((error) => { console.error(\'Promise error:\', error); return false })
+  const hasClose = await closeButton.isVisible().catch((error) => { console.error('Promise error:', error); return false })
 
   if (hasClose) {
     await closeButton.click()

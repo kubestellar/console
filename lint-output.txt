@@ -1,0 +1,796 @@
+
+> kubestellar-console@0.1.0 lint
+> eslint .
+
+
+/data/agents/scanner/web/e2e-pipeline-test.ts
+  102:88  error  Parsing error: Invalid character
+
+/data/agents/scanner/web/e2e/ClusterResourceTree.spec.ts
+  479:4  error  Parsing error: ',' expected
+
+/data/agents/scanner/web/e2e/GPUOverview.spec.ts
+  57:16  warning  'skipIfGpuCardMissing' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/ai-agents-deep.spec.ts
+   9:3  warning  'PAGE_LOAD_TIMEOUT_MS' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  10:3  warning  'MODAL_TIMEOUT_MS' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  24:7  warning  'EXPECTED_TAB_COUNT' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/cicd-card-interactions.spec.ts
+  354:13  warning  'initialFirst' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  417:15  warning  'allSame' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  451:13  warning  'page1First' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  525:13  warning  'count' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/clusters-advanced.spec.ts
+  129:11  warning  'initialFirstRow' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/compliance/card-loading-compliance.spec.ts
+   931:52  warning  Unexpected empty object pattern                                                              no-empty-pattern
+   968:49  warning  Unexpected empty object pattern                                                              no-empty-pattern
+   981:63  warning  Unexpected empty object pattern                                                              no-empty-pattern
+   990:49  warning  Unexpected empty object pattern                                                              no-empty-pattern
+  1007:60  warning  Unexpected empty object pattern                                                              no-empty-pattern
+  1073:11  warning  'KNOWN_EXCEPTIONS' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/compute-deep.spec.ts
+   6:3  warning  'NETWORK_IDLE_TIMEOUT_MS' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+   8:3  warning  'MODAL_TIMEOUT_MS' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+  21:7  warning  'CARD_GRID_TIMEOUT_MS' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/cost-deep.spec.ts
+   6:3  warning  'NETWORK_IDLE_TIMEOUT_MS' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+  30:7  warning  'STAT_MEMORY_SUBLABEL_PATTERN' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  33:7  warning  'STAT_NETWORK_SUBLABEL' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  39:7  warning  'ERROR_DISPLAY_TEXT' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/deep-links-and-data-flow.spec.ts
+  5:3  warning  'setupErrorCollector' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/deploy/deploy-dashboard.spec.ts
+  26:7  warning  'CI_TIMEOUT_MULTIPLIER' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/fixtures.ts
+  279:88  error  Parsing error: Invalid character
+
+/data/agents/scanner/web/e2e/helpers/api-mocks.ts
+  249:7  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+
+/data/agents/scanner/web/e2e/kagenti-error-handling.spec.ts
+    3:3   warning  'setupDemoAndNavigate' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    6:3   warning  'waitForSubRoute' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  148:13  warning  'errors' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  167:13  warning  'errors' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  202:13  warning  'errors' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  227:13  warning  'errors' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  293:13  warning  'errors' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  359:13  warning  'errors' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/keyboard-and-card-ops.spec.ts
+  4:3  warning  'setupDemoMode' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  9:3  warning  'NETWORK_IDLE_TIMEOUT_MS' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/mission-control-stress.spec.ts
+  410:5  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+
+/data/agents/scanner/web/e2e/mission-journey.spec.ts
+   46:7   warning  'ACTIVE_MISSION_KEY' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   52:7   warning  'STREAM_CHUNK_COUNT' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  389:16  warning  'getMissionStatus' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  413:16  warning  'getActiveMissions' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/nightly/mission-deeplink.spec.ts
+  74:13  warning  'stepElements' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/nightly/rce-vector-scan.spec.ts
+   58:7   warning  'ELEMENT_TIMEOUT_MS' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  288:13  warning  'result' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  476:9   warning  'sandboxCheck' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  493:9   warning  'compilerExists' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/route-coverage.spec.ts
+   84:13  warning  'cards' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+   96:13  warning  'hasSearchOrFilter' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  170:13  warning  'hasContent' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  205:13  warning  'hasCta' is assigned a value but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  240:13  warning  'contentOrEmpty' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  380:13  warning  'hasControls' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  415:13  warning  'visualElements' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/sse-reconnection.spec.ts
+  101:11  warning  'initialContent' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  120:76  warning  'context' is defined but never used. Allowed unused args must match /^_/u                  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/storage-deep.spec.ts
+  4:3  warning  'setupDemoMode' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  7:3  warning  'NETWORK_IDLE_TIMEOUT_MS' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/user-flows/a11y-audit.spec.ts
+  70:9  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+
+/data/agents/scanner/web/e2e/user-flows/keyboard-navigation.spec.ts
+   68:11  warning  'urlBefore' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  188:11  warning  'forwardElement' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/user-flows/onboarding-tour.spec.ts
+  3:3  warning  'setupDemoMode' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/user-flows/settings-configuration.spec.ts
+  3:34  warning  'collectConsoleErrors' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/user-flows/sidebar-workflow.spec.ts
+  3:34  warning  'collectConsoleErrors' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/visual/app-visual.config.ts
+  22:7  warning  'WEB_DIR' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/e2e/welcome-deep.spec.ts
+  21:7   warning  'EXPECTED_DIFFERENTIATOR_COUNT' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  80:11  warning  'paywallStat' is assigned a value but never used. Allowed unused vars must match /^_/u                    @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/netlify/functions/__tests__/acmm-badge.test.ts
+  65:10  warning  'staleBlobEntry' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/netlify/functions/__tests__/cors.test.ts
+  9:55  warning  'vi' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/netlify/functions/__tests__/github-pipelines-helpers.test.ts
+  7:32  warning  'vi' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/netlify/functions/__tests__/jwt-validation.test.ts
+  2:32  warning  'vi' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  2:36  warning  'beforeEach' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/netlify/functions/__tests__/presence.test.ts
+  20:7  warning  'HTTP_STATUS_BAD_REQUEST' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  24:7  warning  'HTTP_STATUS_INTERNAL_SERVER_ERROR' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/netlify/functions/_shared/__tests__/jwt-validation.test.ts
+  2:32  warning  'vi' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  2:36  warning  'beforeEach' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/netlify/functions/analytics-accm/fetchers.ts
+  11:3  warning  'CI_WORKFLOWS' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/public/mockServiceWorker.js
+  1:1  warning  Unused eslint-disable directive (no problems were reported)
+
+/data/agents/scanner/web/src/components/acmm/ACMMIntroModal.tsx
+   57:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  236:13  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>                                                                 no-restricted-syntax
+
+/data/agents/scanner/web/src/components/acmm/ACMMProvider.tsx
+   32:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  119:6   warning  React Hook useEffect has a missing dependency: 'scan'. Either include it or remove the dependency array                         react-hooks/exhaustive-deps
+  215:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/data/agents/scanner/web/src/components/acmm/__tests__/ACMMIntroModal.test.tsx
+  3:26  warning  'fireEvent' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/agent/APIKeySettings.tsx
+   24:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  521:25  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>                                                                 no-restricted-syntax
+  621:27  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>                                                                 no-restricted-syntax
+
+/data/agents/scanner/web/src/components/agent/AgentApprovalDialog.tsx
+  15:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  20:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  26:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/data/agents/scanner/web/src/components/agent/AgentSelector.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/agent/AgentSelector.tsx
+  1:1  warning  Unused eslint-disable directive (no problems were reported from 'max-lines')
+
+/data/agents/scanner/web/src/components/agent/AgentSetupDialog.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/agent/AgentStatus.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/agent/__tests__/AgentApprovalDialog.test.tsx
+   3:26  warning  'fireEvent' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  31:5   warning  'onClose' is defined but never used. Allowed unused args must match /^_/u    @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/aiml/AIML.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/alerts/AlertRuleEditor.tsx
+    1:1   warning  Unused eslint-disable directive (no problems were reported from 'max-lines')
+  269:15  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+  289:15  warning  Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>      no-restricted-syntax
+  378:19  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+  404:19  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+  428:19  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>            no-restricted-syntax
+  449:23  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+  475:23  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+  517:17  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+  662:23  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+  678:23  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+  699:23  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+  720:23  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+  741:23  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+
+/data/agents/scanner/web/src/components/animations/SimpleGlobe.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/animations/globe/Cluster.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/animations/globe/DataPacket.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/animations/globe/GlobeAnimation.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/animations/globe/LogoElement.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/animations/globe/NetworkGlobe.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/arcade/Arcade.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/arcade/Arcade.tsx
+  47:11  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/auth/__tests__/AuthCallback.contract.test.tsx
+  17:15  warning  'ReactNode' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/ACMMRecommendations.tsx
+  113:9  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/ActiveAlerts.test.tsx
+  122:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/ActiveAlerts.tsx
+  214:6  warning  React Hook useEffect has a missing dependency: 'goToPage'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/AlertRules.test.tsx
+  78:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/AppStatus.test.tsx
+  60:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/AppStatus.tsx
+  52:9  warning  The 'safeDeployments' logical expression could make the dependencies of useMemo Hook (at line 101) change on every render. To fix this, wrap the initialization of 'safeDeployments' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/ArgoCDApplications.test.tsx
+  111:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/CRDHealth.tsx
+  206:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/CardWrapper.tsx
+    1:1   warning  Unused eslint-disable directive (no problems were reported from 'max-lines')
+  100:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  110:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/data/agents/scanner/web/src/components/cards/Checkers.tsx
+    1:1   warning  Unused eslint-disable directive (no problems were reported from 'max-lines')
+  718:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>            no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/ClusterCosts.test.tsx
+  55:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/ClusterCosts.tsx
+  1:1  warning  Unused eslint-disable directive (no problems were reported from 'max-lines')
+
+/data/agents/scanner/web/src/components/cards/ClusterFocus.tsx
+  114:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  161:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/ClusterGroupsForms.tsx
+  164:7   warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+  417:9   warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+  448:17  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>        no-restricted-syntax
+  469:19  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>        no-restricted-syntax
+  480:21  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>        no-restricted-syntax
+  490:21  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+  501:21  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>        no-restricted-syntax
+  511:21  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+  563:7   warning  Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/ClusterLocations.tsx
+  447:13  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/ClusterMetrics.tsx
+   92:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  167:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  464:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>                                                              no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/ClusterNetwork.tsx
+  103:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  133:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/ContainerTetris.tsx
+  141:6  warning  React Hook useCallback has a missing dependency: 'score'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/DynamicCard.tsx
+  325:11  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/EnterpriseComplianceCards.tsx
+  105:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  144:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  187:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/EventSummary.tsx
+  62:9  warning  The 'allEvents' logical expression could make the dependencies of useMemo Hook (at line 90) change on every render. To fix this, wrap the initialization of 'allEvents' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/EventsTimeline.tsx
+  141:9   warning  The 'clusters' conditional could make the dependencies of useMemo Hook (at line 178) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'clusters' in its own useMemo() Hook                     react-hooks/exhaustive-deps
+  157:9   warning  The 'selectedClusters' conditional could make the dependencies of useMemo Hook (at line 185) change on every render. To fix this, wrap the initialization of 'selectedClusters' in its own useMemo() Hook                                            react-hooks/exhaustive-deps
+  157:9   warning  The 'selectedClusters' conditional could make the dependencies of useMemo Hook (at line 223) change on every render. To fix this, wrap the initialization of 'selectedClusters' in its own useMemo() Hook                                            react-hooks/exhaustive-deps
+  158:9   warning  The 'clusterInfoMap' logical expression could make the dependencies of useMemo Hook (at line 223) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'clusterInfoMap' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  230:9   warning  The 'chartTimePoints' logical expression could make the dependencies of useMemo Hook (at line 231) change on every render. To fix this, wrap the initialization of 'chartTimePoints' in its own useMemo() Hook                                       react-hooks/exhaustive-deps
+  230:9   warning  The 'chartTimePoints' logical expression could make the dependencies of useMemo Hook (at line 232) change on every render. To fix this, wrap the initialization of 'chartTimePoints' in its own useMemo() Hook                                       react-hooks/exhaustive-deps
+  230:9   warning  The 'chartTimePoints' logical expression could make the dependencies of useMemo Hook (at line 233) change on every render. To fix this, wrap the initialization of 'chartTimePoints' in its own useMemo() Hook                                       react-hooks/exhaustive-deps
+  230:9   warning  The 'chartTimePoints' logical expression could make the dependencies of useMemo Hook (at line 234) change on every render. To fix this, wrap the initialization of 'chartTimePoints' in its own useMemo() Hook                                       react-hooks/exhaustive-deps
+  230:9   warning  The 'chartTimePoints' logical expression could make the dependencies of useMemo Hook (at line 333) change on every render. To fix this, wrap the initialization of 'chartTimePoints' in its own useMemo() Hook                                       react-hooks/exhaustive-deps
+  381:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>                                                                                                                                                                                   no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/GPUInventoryHistory.parts.tsx
+  330:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  330:21  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  330:44  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  330:60  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/data/agents/scanner/web/src/components/cards/GPUInventoryHistory.tsx
+  1:1  warning  Unused eslint-disable directive (no problems were reported from 'max-lines')
+
+/data/agents/scanner/web/src/components/cards/GPUOverview.tsx
+  246:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/GPUStatus.tsx
+  219:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/GPUTaintFilter.tsx
+   53:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   62:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   78:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  108:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  284:19  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>                                                                 no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/GPUUsageTrend.tsx
+  441:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/GPUUtilization.tsx
+  271:15  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  332:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/GitHubActivity.tsx
+  438:15  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+  582:13  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/HelmHistory.tsx
+  299:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  312:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/HelmReleaseStatus.tsx
+  247:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/HelmValuesDiff.tsx
+  297:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  310:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/IframeEmbed.tsx
+  278:17  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+  289:17  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+  301:19  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+  313:19  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/KagentStatusCard.tsx
+  67:9  warning  The 'agentItems' logical expression could make the dependencies of useMemo Hook (at line 113) change on every render. To fix this, wrap the initialization of 'agentItems' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  68:9  warning  The 'toolItems' logical expression could make the dependencies of useMemo Hook (at line 113) change on every render. To fix this, wrap the initialization of 'toolItems' in its own useMemo() Hook    react-hooks/exhaustive-deps
+  69:9  warning  The 'modelItems' logical expression could make the dependencies of useMemo Hook (at line 113) change on every render. To fix this, wrap the initialization of 'modelItems' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/KagentiStatusCard.tsx
+  76:9  warning  The 'agentItems' logical expression could make the dependencies of useMemo Hook (at line 117) change on every render. To fix this, wrap the initialization of 'agentItems' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  77:9  warning  The 'buildItems' logical expression could make the dependencies of useMemo Hook (at line 117) change on every render. To fix this, wrap the initialization of 'buildItems' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  77:9  warning  The 'buildItems' logical expression could make the dependencies of useMemo Hook (at line 124) change on every render. To fix this, wrap the initialization of 'buildItems' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  78:9  warning  The 'toolItems' logical expression could make the dependencies of useMemo Hook (at line 117) change on every render. To fix this, wrap the initialization of 'toolItems' in its own useMemo() Hook    react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/KubeDoom.tsx
+  300:6  warning  React Hook useCallback has an unnecessary dependency: 'shoot'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/KubeGalaga.tsx
+   95:9  warning  The 'initStars' function makes the dependencies of useCallback Hook (at line 136) change on every render. Move it inside the useCallback callback. Alternatively, wrap the definition of 'initStars' in its own useCallback() Hook  react-hooks/exhaustive-deps
+  104:9  warning  The 'initEnemies' function makes the dependencies of useCallback Hook (at line 136) change on every render. To fix this, wrap the definition of 'initEnemies' in its own useCallback() Hook                                         react-hooks/exhaustive-deps
+  364:6  warning  React Hook useCallback has a missing dependency: 'level'. Either include it or remove the dependency array                                                                                                                          react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/KubeKong.tsx
+  1:1  warning  Unused eslint-disable directive (no problems were reported from 'max-lines')
+
+/data/agents/scanner/web/src/components/cards/KubePong.tsx
+  238:6  warning  React Hook useCallback has a missing dependency: 'aiSettings'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/KubeSnake.tsx
+  75:9  warning  The 'generateFood' function makes the dependencies of useCallback Hook (at line 98) change on every render. To fix this, wrap the definition of 'generateFood' in its own useCallback() Hook   react-hooks/exhaustive-deps
+  75:9  warning  The 'generateFood' function makes the dependencies of useCallback Hook (at line 161) change on every render. To fix this, wrap the definition of 'generateFood' in its own useCallback() Hook  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/Kubectl.tsx
+  380:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  520:11  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/KubectlAIPanel.tsx
+  27:7  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/KubectlHistoryPanel.tsx
+  32:9  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/KubectlYAMLEditorPanel.tsx
+  104:7  warning  Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/KustomizationStatus.tsx
+  273:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  286:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/MaintenanceWindows.tsx
+   69:41  warning  React Hook useMemo has an unnecessary dependency: 'tick'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+  166:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>                                          no-restricted-syntax
+  177:13  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>                                             no-restricted-syntax
+  185:11  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>                                             no-restricted-syntax
+  193:13  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>                                             no-restricted-syntax
+  199:13  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>                                             no-restricted-syntax
+  210:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>                                          no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/Missions.tsx
+  1:1  warning  Unused eslint-disable directive (no problems were reported from 'max-lines')
+
+/data/agents/scanner/web/src/components/cards/MobileBrowser.tsx
+  281:17  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/NamespaceEvents.tsx
+  221:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  231:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/NamespaceOverview.tsx
+   30:9  warning  The 'safeAllClusters' logical expression could make the dependencies of useMemo Hook (at line 63) change on every render. To fix this, wrap the initialization of 'safeAllClusters' in its own useMemo() Hook  react-hooks/exhaustive-deps
+   87:9  warning  The 'safeNamespaces' logical expression could make the dependencies of useEffect Hook (at line 96) change on every render. To fix this, wrap the initialization of 'safeNamespaces' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  213:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>                                                                                                                                             no-restricted-syntax
+  227:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>                                                                                                                                             no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/NamespaceQuotas.tsx
+  320:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  331:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/NamespaceQuotasModal.tsx
+  119:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  135:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  151:13  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+  204:19  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  216:21  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+  223:19  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/NamespaceRBAC.tsx
+   64:9  warning  The 'safeNamespaces' logical expression could make the dependencies of useEffect Hook (at line 102) change on every render. To fix this, wrap the initialization of 'safeNamespaces' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  255:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>                                                                                                                                              no-restricted-syntax
+  268:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>                                                                                                                                              no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/NetworkUtils.tsx
+  401:15  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+  442:15  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  551:15  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+  558:15  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/NodeConditions.test.tsx
+  13:26  warning  'fireEvent' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/NodeDebug.tsx
+  198:9   warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  206:9   warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  269:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  303:13  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/OPAPoliciesTable.test.tsx
+  6:15  warning  'Policy' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/OverlayComparison.tsx
+  150:7   warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  180:15  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  193:15  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/PodCrosser.tsx
+  485:6  warning  React Hook useEffect has a missing dependency: 'time'. Either include it or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setScore' needs the current value of 'time'  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/PodHealthTrend.tsx
+  375:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/PodIssues.test.tsx
+  68:11  warning  'Icon' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  89:5   warning  Use <Input> from components/ui/Input.tsx instead of raw <input>         no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/PodPitfall.tsx
+  511:6  warning  React Hook useEffect has a missing dependency: 'time'. Either include it or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setScore' needs the current value of 'time'  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/PodSweeper.tsx
+  320:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/ProactiveGPUNodeHealthMonitor.tsx
+  269:15  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+  278:15  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+  289:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  335:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  622:9   warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/RecentEvents.tsx
+  158:89  warning  React Hook useCallback has a missing dependency: 'sorting'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/ResourceMarshall.tsx
+   68:9   warning  The 'availableNamespaces' logical expression could make the dependencies of useEffect Hook (at line 106) change on every render. To fix this, wrap the initialization of 'availableNamespaces' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  179:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>                                                                                                                                                        no-restricted-syntax
+  204:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>                                                                                                                                                        no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/ResourceTrend.tsx
+  290:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/StockMarketTicker.tsx
+    1:1   warning  Unused eslint-disable directive (no problems were reported from 'max-lines')
+  765:13  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>               no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/SudokuGame.tsx
+  279:6  warning  React Hook useEffect has a missing dependency: 'gameState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/data/agents/scanner/web/src/components/cards/UserManagementList.tsx
+  218:9   warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  310:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  328:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/WorkloadDeployment.tsx
+  259:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  270:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/WorkloadDeploymentItem.tsx
+  393:21  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/WorkloadImportDialog.test.tsx
+  3:37  warning  'waitFor' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/WorkloadImportDialog.tsx
+  435:11  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+  438:7   warning  Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>  no-restricted-syntax
+  483:11  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+  492:11  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+  501:11  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+  510:11  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+  520:9   warning  Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>  no-restricted-syntax
+  560:9   warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+  569:9   warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+  609:9   warning  Use <Input> from components/ui/Input.tsx instead of raw <input>           no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/ActiveAlerts.test.tsx
+  93:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/AppStatus.multicluster.test.tsx
+  32:20  warning  'a' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  32:32  warning  'b' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  44:26  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>      no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/AppStatus.test.tsx
+  90:26  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/ArgoCDApplicationSets.test.tsx
+  79:26  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/CardChat.test.tsx
+  256:13  warning  'sendBtn' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  259:13  warning  'sendButton' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/ClusterHealth.test.tsx
+    3:26  warning  'waitFor' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  144:7   warning  Use <Input> from components/ui/Input.tsx instead of raw <input>            no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/ContainerTetris.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/ContainerTetrisComponent.test.tsx
+  15:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  80:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  91:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  91:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  91:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  91:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/data/agents/scanner/web/src/components/cards/__tests__/DataComplianceCards.test.tsx
+  2:48  warning  'afterEach' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/DeploymentStatus.test.tsx
+  109:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/DynamicCard.test.tsx
+  15:17  warning  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/data/agents/scanner/web/src/components/cards/__tests__/EnterpriseComplianceCards.test.tsx
+   19:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   53:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   70:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   71:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   96:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  130:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  142:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  158:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/data/agents/scanner/web/src/components/cards/__tests__/EventStream.test.tsx
+  89:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/GPUInventory.test.tsx
+  87:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/GPUOverview.test.tsx
+  101:26  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/GPUStatus.test.tsx
+  96:26  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/GPUTaintFilter.test.tsx
+  1:8  warning  'React' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/GitOpsDrift.test.tsx
+  90:26  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/HelmReleaseStatus.test.tsx
+  91:26  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/KustomizationStatus.test.tsx
+  86:26  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/KyvernoPolicies.test.tsx
+  82:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/Missions.test.tsx
+  83:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/OPAPolicies.test.tsx
+  154:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/OperatorStatus.test.tsx
+  147:26  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/OperatorSubscriptions.test.tsx
+  74:26  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/PodIssues.test.tsx
+  93:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/RecentEvents.test.tsx
+  128:26  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/ResourceMarshall.namespaces.test.tsx
+   40:41  warning  'value' is defined but never used. Allowed unused args must match /^_/u               @typescript-eslint/no-unused-vars
+  184:13  warning  'container' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/ServiceStatus.test.tsx
+  82:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/UserManagement.test.tsx
+  207:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/__tests__/cardMetadata.test.ts
+  14:17  warning  'id' is assigned a value but never used. Allowed unused elements of array destructuring must match /^_/u  @typescript-eslint/no-unused-vars
+  46:17  warning  'id' is assigned a value but never used. Allowed unused elements of array destructuring must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/cardRegistry.test.ts
+   4:32  warning  'beforeEach' is defined but never used. Allowed unused vars must match /^_/u                               @typescript-eslint/no-unused-vars
+  24:17  warning  'key' is assigned a value but never used. Allowed unused elements of array destructuring must match /^_/u  @typescript-eslint/no-unused-vars
+  46:17  warning  'key' is assigned a value but never used. Allowed unused elements of array destructuring must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/envoy_status.test.ts
+  6:8  warning  'EnvoyClusterHealth' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/failover_timeline.test.ts
+  4:8  warning  'FailoverTimelineData' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/flux_status.test.ts
+  6:8  warning  'FluxResourceStatus' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  7:8  warning  'FluxResourceSummary' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/harbor_status.test.ts
+  4:8  warning  'HarborProjectStatus' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/k3s_status.test.ts
+  2:30  warning  'K3sStatusDemoData' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/karmada_status.test.ts
+  6:8  warning  'KarmadaBindingStatus' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/kubeflex_status.test.ts
+  4:8  warning  'KubeFlexStatusDemoData' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/kubevirt_status.test.ts
+  4:8  warning  'KubevirtStatusDemoData' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  5:8  warning  'VmInfo' is defined but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/openkruise_status.test.ts
+  4:8  warning  'OpenKruiseDemoCloneSet' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  5:8  warning  'OpenKruiseDemoAdvancedStatefulSet' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/ovn_status.test.ts
+  2:30  warning  'OvnStatusDemoData' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/slo_compliance.test.ts
+  2:41  warning  'SLOComplianceData' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/trino_gateway.test.ts
+  4:8  warning  'TrinoGatewayData' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/__tests__/weather.test.ts
+  4:3  warning  'WeatherCondition' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/buildpacks-status/BuildpacksStatus.tsx
+  209:9  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/card-wrapper/CardActionMenu.test.tsx
+  408:13  warning  'configureItem' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/change_timeline/ChangeTimeline.test.tsx
+  38:10  warning  'setup' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/chaos_mesh_status/chaos_mesh_status.test.tsx
+  10:20  warning  'ns' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/cloud_custodian_status/cloud_custodian_status.test.tsx
+  31:10  warning  'setup' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/data/agents/scanner/web/src/components/cards/compliance/ComplianceScoreBreakdownModal.tsx
+  65:3  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+
+/data/agents/scanner/web/src/components/cards/console-missions/ConsoleOfflineDetectionCard.tsx
+  1:1  warning  Unused eslint-disable directive (no problems were reported from 'max-lines')
+
+/data/agents/scanner/web/src/components/cards/console-missions/__tests__/ConsoleOfflineDetectionCard.test.tsx
+  152:5  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>  no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/console-missions/shared.tsx
+  31:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/data/agents/scanner/web/src/components/cards/drasi/DrasiFlowLine.tsx
+  25:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  44:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  61:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/data/agents/scanner/web/src/components/cards/drasi/DrasiModals.tsx
+  227:11  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+  236:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  329:11  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+  338:11  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  529:13  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+  539:13  warning  Use <Select> from components/ui/Select.tsx instead of raw <select>  no-restricted-syntax
+  551:15  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+  562:15  warning  Use <Input> from components/ui/Input.tsx instead of raw <input>     no-restricted-syntax
+
+/data/agents/scanner/web/src/components/cards/drasi/DrasiReactiveGraph.tsx
+  105:49   error  React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                            react-hooks/rules-of-hooks
+  106:45   error  React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                            react-hooks/rules-of-hooks
+  107:47   error  React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                            react-hooks/rules-of-hooks
+  108:45   error  React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                            react-hooks/rules-of-hooks
+  109:43   error  React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                            react-hooks/rules-of-hooks
+  110:53   error  React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                            react-hooks/rules-of-hooks
+  111:51   error  React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                            react-hooks/rules-of-hooks
+  112:41   error  React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                            react-hooks/rules-of-hooks
+  120:7    error  React Hook "useDrasiConnections" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                 react-hooks/rules-of-hooks
+  122:23   error  React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                             react-hooks/rules-of-hooks
+  126:51   error  React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                            react-hooks/rules-of-hooks
+  128:3    error  React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                           react-hooks/rules-of-hooks
+  145:3    error  React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                           react-hooks/rules-of-hooks
+  158:102  error  React Hook "useModalState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?        react-hooks/rules-of-hooks
+  159:93   error  React Hook "useModalState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?        react-hooks/rules-of-hooks
+  160:47   error  React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?             react-hooks/rules-of-hooks
+  165:47   error  React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?             react-hooks/rules-of-hooks
+  167:30   error  React Hook "useDrasiQueryStream" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  175:27   error  React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?              react-hooks/rules-of-hooks
+  185:17   error  React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?              react-hooks/rules-of-hooks
+  190:24   error  React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?              react-hooks/rules-of-hooks
+  204:3    error  React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?            react-hooks/rules-of-hooks
+  215:3    error  React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?            react-hooks/rules-of-hooks
+  229:28   error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  234:25   error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  243:21   error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  248:28   error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  249:29   error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  254:28   error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  289:27   error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  334:33   error  React Hook "useCallback" 
