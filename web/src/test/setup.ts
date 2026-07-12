@@ -228,7 +228,13 @@ afterEach(() => {
     window.sessionStorage?.clear()
   }
   vi.unstubAllEnvs()
-  vi.clearAllMocks()
+  // Restore any vi.spyOn() overrides to their original implementations and clear
+  // all mock call history. This is a superset of clearAllMocks() — it also undoes
+  // spy wrappers so leaked spy state cannot affect subsequent tests. (#20895)
+  vi.restoreAllMocks()
+  // Release any pending fake timers so they cannot fire during the next test.
+  // Prevents vi.useFakeTimers() leaking across test boundaries. (#20895)
+  vi.useRealTimers()
 })
 
 // Clear global stubs after every test file.
