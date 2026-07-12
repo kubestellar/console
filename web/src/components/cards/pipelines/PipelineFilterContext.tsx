@@ -2,6 +2,9 @@
  * PipelineFilterContext — dashboard-level shared filter + repo CRUD for
  * the GitHub Pipelines cards.
  *
+ * Context provider — manages filter state; no data fetching.
+ * Demo data support provided by individual pipeline card implementations.
+ *
  * Repo list = server defaults (from PIPELINE_REPOS env var, returned in
  * every API response) + user-added repos (persisted in localStorage).
  * Users can add custom repos, hide server-default repos, and the merged

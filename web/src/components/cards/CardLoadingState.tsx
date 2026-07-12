@@ -7,6 +7,8 @@ import { CardErrorFallback } from './CardErrorFallback'
 import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
 import { CardSkeleton, type CardSkeletonProps } from '@/lib/cards/CardComponents'
 
+// Pure presentation component — renders loading/error states based on props; no data fetching.
+// Demo data support provided by individual card implementations via useCardLoadingState.
 // CardWrapper owns useCardLoadingState and passes the derived state into this presentational helper.
 
 export interface CardLoadingStateProps {

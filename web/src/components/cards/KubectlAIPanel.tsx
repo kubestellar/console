@@ -1,4 +1,6 @@
 // ai-quality-ignore — sub-component of Kubectl card, not a standalone card
+// Pure UI component — renders AI assistant interface; no data fetching.
+// Demo data support provided by Kubectl card.
 import { useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import { Button } from '../ui/Button'

@@ -1,4 +1,6 @@
 // ai-quality-ignore — sub-component of Kubectl card, not a standalone card
+// Pure UI component — renders props provided by parent; no data fetching.
+// Demo data support provided by Kubectl card.
 import { useMemo } from 'react'
 import { History, Search, CheckCircle, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'

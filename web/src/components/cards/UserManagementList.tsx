@@ -1,5 +1,7 @@
 import { memo, useState } from 'react'
 
+// Pure UI component — renders user lists based on props; no data fetching.
+// Demo data support provided by UserManagement card via useCachedUsers.
 // Split helper component; parent card owns useCardLoadingState.
 import { Users, Key, Trash2, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'

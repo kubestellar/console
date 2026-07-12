@@ -10,6 +10,9 @@ import { copyToClipboard } from '../../../lib/clipboard'
 import { useDashboardContextOptional } from '../../../hooks/useDashboardContext'
 import { useModalState } from '../../../lib/modals'
 
+// Pure UI component — renders dropdown menu for card actions; no data fetching.
+// Demo data not applicable (UI controls only).
+
 // Card width options (in grid columns out of 12)
 const WIDTH_OPTIONS = [
   { value: 3, labelKey: 'cardWrapper.resizeSmall' as const, descKey: 'cardWrapper.resizeSmallDesc' as const },

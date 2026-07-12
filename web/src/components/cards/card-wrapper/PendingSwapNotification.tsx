@@ -2,6 +2,9 @@ import { Clock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../ui/Button'
 
+// Pure UI component — renders pending swap notification banner; no data fetching.
+// Demo data not applicable (displays card swap actions).
+
 interface PendingSwap {
   newType: string
   newTitle?: string
