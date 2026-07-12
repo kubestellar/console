@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   FILLER_WORDS,
   MIN_WORD_OVERLAP_RATIO,
@@ -15,9 +15,10 @@ vi.mock('../browser', () => ({
     (m.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
 }))
 
-import { vi } from 'vitest'
-
 describe('missionBrowserDeepLink', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
   describe('constants', () => {
     it('FILLER_WORDS contains common stopwords', () => {
       expect(FILLER_WORDS.has('and')).toBe(true)

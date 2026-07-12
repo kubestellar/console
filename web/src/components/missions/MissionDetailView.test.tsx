@@ -1,5 +1,5 @@
 import React from 'react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MissionDetailView } from './MissionDetailView'
 import type { MissionExport } from '../../lib/missions/types'
@@ -38,6 +38,9 @@ const mockMission: MissionExport = {
 }
 
 describe('MissionDetailView', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
   it('renders mission title', () => {
     render(
       <MissionDetailView
