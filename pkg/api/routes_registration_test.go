@@ -31,6 +31,15 @@ func newRouteRegistrationServer(t *testing.T) (*Server, *teststore.MockStore) {
 	mockStore.On("ListClusterGroups").Return(map[string][]byte{}, nil).Maybe()
 	mockStore.On("SaveClusterGroup", mock.Anything, mock.Anything).Return(nil).Maybe()
 	mockStore.On("DeleteClusterGroup", mock.Anything).Return(nil).Maybe()
+
+	// Reset global middleware state so this test's mockStore is used for
+	// token revocation and user validation, regardless of what previous tests
+	// left behind (mirrors the pattern in newAgentTokenTestServer).
+	middleware.ResetTokenRevocationForTest()
+	t.Cleanup(middleware.ResetTokenRevocationForTest)
+	middleware.InitTokenRevocation(mockStore)
+	middleware.InitUserValidation(mockStore)
+
 	server := &Server{
 		app: fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
 		store: mockStore,
