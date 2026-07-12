@@ -106,7 +106,7 @@ describe('AISuggestionsSection', () => {
     mockGenerateCardSuggestions.mockReturnValue(suggestions)
 
     const onAddCards = vi.fn()
-    render(<AISuggestionsSection {...defaultProps} onAddCarJ=o{onAddCards} />)
+    render(<AISuggestionsSection {...defaultProps} onAddCards={onAddCards} />)
 
     fireEvent.click(screen.getByText('dashboard.addCard.exampleGpuUtil'))
 
