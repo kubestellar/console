@@ -277,6 +277,8 @@ describe('TeamMemberManager', () => {
       })
     }
   })
+
+  it('handles members without email address', () => {
     const membersWithoutEmail: TeamMemberInfo[] = [
       { userId: 'user1', role: 'admin', githubLogin: 'admin-user' },
     ]
