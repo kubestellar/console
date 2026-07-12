@@ -405,9 +405,12 @@ describe('useNamespaces', () => {
     globalThis.fetch = vi.fn().mockImplementation(() => {
       callCount++
       if (callCount === 1) {
-        return Promise.resolve(new Response(JSON.stringify({ pods: [{ name: 'p', namespace: 'old-ns', status: 'Running', ready: '1/1', restarts: 0, age: '1d' }] }), { status: 200 }))
+        // First call: backend API /api/namespaces returns an array of
+        // { name } entries so useNamespaces resolves the initial fetch and
+        // isLoading flips to false before we rerender with the new cluster.
+        return Promise.resolve(new Response(JSON.stringify([{ name: 'old-ns' }]), { status: 200 }))
       }
-      return new Promise(() => {}) // second call never resolves
+      return new Promise(() => {}) // subsequent calls never resolve
     })
 
     const { result, rerender } = renderHook(

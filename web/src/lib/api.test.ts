@@ -355,7 +355,9 @@ describe('api.ts - HTTP client layer', () => {
     })
 
     it('handles network errors (fetch failure)', async () => {
-      // Backend check succeeds first
+      // Reset backend availability cache so checkBackendAvailability() actually
+      // re-probes fetch instead of returning the cached 'available' from beforeEach.
+      resetApiClientStateForTests()
       fetchMock.mockResolvedValueOnce(new Response('{}', { status: 200 }))
       await checkBackendAvailability()
       fetchMock.mockClear()
@@ -436,6 +438,9 @@ describe('api.ts - HTTP client layer', () => {
     })
 
     it('throws BackendUnavailableError when backend is down', async () => {
+      // Reset cached 'available' state from beforeEach so the failing probe below
+      // actually flips the cache to unavailable.
+      resetApiClientStateForTests()
       // Mark backend as unavailable
       fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
       await checkBackendAvailability()

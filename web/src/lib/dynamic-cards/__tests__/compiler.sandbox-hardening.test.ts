@@ -131,8 +131,11 @@ describe('createCardComponent — sandbox hardening (#19866)', () => {
     })
 
     it('blocks getOwnPropertyDescriptor for descriptor-based escapes', async () => {
+      // Use a benign target (not Function.prototype / .constructor) so the
+      // static analyzer trips on the getOwnPropertyDescriptor pattern itself
+      // rather than the earlier-listed 'prototype' / '.constructor' patterns.
       const code = `
-        var desc = Object.getOwnPropertyDescriptor(Function.prototype, 'constructor');
+        var desc = Object.getOwnPropertyDescriptor({}, 'foo');
         module.exports.default = function() { return null; };
       `
       const result = await createCardComponent(code)

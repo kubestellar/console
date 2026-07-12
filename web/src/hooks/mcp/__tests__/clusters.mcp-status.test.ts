@@ -183,20 +183,12 @@ describe('clusters hooks - useMCPStatus', () => {
       }
     })
 
-    const { result, rerender } = renderHook(() => useMCPStatus())
+    const { result } = renderHook(() => useMCPStatus())
 
-    // First call fails
-    await waitFor(() => expect(result.current.error).toBe('MCP bridge not available'))
-
-    // Second call succeeds (simulated by re-fetching)
-    callCount = 0 // Reset for second attempt
-    mockAgentFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ connected: true, clusters: 2 }),
-    })
-
-    rerender()
-
+    // useMCPStatus re-runs its effect when consecutiveFailures increments,
+    // so after the first failure it auto-retries and the second call
+    // succeeds. We just need to observe the eventual success state:
+    // error must be cleared and status populated.
     await waitFor(() => expect(result.current.status).not.toBeNull())
     expect(result.current.error).toBeNull()
   })

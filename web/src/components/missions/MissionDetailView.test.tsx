@@ -52,7 +52,7 @@ describe('MissionDetailView', () => {
         onBack={vi.fn()}
       />
     )
-    expect(screen.getByText('Install Prometheus')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Install Prometheus', level: 2 })).toBeInTheDocument()
   })
 
   it('renders mission description', () => {

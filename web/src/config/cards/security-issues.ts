@@ -19,6 +19,8 @@ export const securityIssuesConfig: UnifiedCardConfig = {
   isDemoData: false,
   isLive: true,
 
+  loadingState: { type: 'list', rows: 5 },
+
   dataSource: {
     type: 'hook',
     hook: 'useSecurityIssues',

@@ -62,6 +62,8 @@ export const chaosMeshStatusConfig: UnifiedCardConfig = {
 
   isDemoData: true,
   isLive: true,
+
+  loadingState: { type: 'stats', rows: 4 },
 }
 
 export default chaosMeshStatusConfig

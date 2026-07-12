@@ -72,7 +72,7 @@ export function OpsGenieNotificationSettings({
           className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary"
         />
         {hasStoredApiKey && (
-          <p className="mt-1 text-xs text-green-400">
+          <p className="mt-1 text-xs text-status-success">
             {t('settings.notifications.secretConfigured')}
           </p>
         )}
@@ -96,11 +96,11 @@ export function OpsGenieNotificationSettings({
           }`}
         >
           {testResult.success ? (
-            <Check className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
+            <Check className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
           ) : (
-            <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+            <X className="w-4 h-4 text-status-error shrink-0 mt-0.5" />
           )}
-          <p className={cn('text-sm', testResult.success ? 'text-green-400' : 'text-red-400')}>
+          <p className={cn('text-sm', testResult.success ? 'text-status-success' : 'text-status-error')}>
             {testResult.message}
           </p>
         </div>

@@ -9,14 +9,14 @@ import { getHealthBadgeClasses } from '../../../lib/cards/statusColors'
 
 const STATUS_STYLE: Record<CloudEventResourceState, { badge: string; icon: React.ReactNode }> = {
   ready: {
-    badge: 'bg-green-500/20 text-green-400',
-    icon: <CheckCircle className="w-3.5 h-3.5 text-green-400" /> },
+    badge: 'bg-green-500/20 text-status-success',
+    icon: <CheckCircle className="w-3.5 h-3.5 text-status-success" /> },
   degraded: {
-    badge: 'bg-yellow-500/20 text-yellow-400',
-    icon: <CircleDashed className="w-3.5 h-3.5 text-yellow-400" /> },
+    badge: 'bg-yellow-500/20 text-status-warning',
+    icon: <CircleDashed className="w-3.5 h-3.5 text-status-warning" /> },
   error: {
-    badge: 'bg-red-500/20 text-red-400',
-    icon: <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> } }
+    badge: 'bg-red-500/20 text-status-error',
+    icon: <AlertTriangle className="w-3.5 h-3.5 text-status-error" /> } }
 
 const STATUS_LABEL_KEY: Record<CloudEventResourceState, 'cloudevents.status_ready' | 'cloudevents.status_degraded' | 'cloudevents.status_error'> = {
   ready: 'cloudevents.status_ready',
@@ -63,8 +63,8 @@ export function CloudEventsStatus() {
   if (error && showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
-        <AlertTriangle className="w-6 h-6 text-red-400" />
-        <p className="text-sm text-red-400">{t('cloudevents.fetchError')}</p>
+        <AlertTriangle className="w-6 h-6 text-status-error" />
+        <p className="text-sm text-status-error">{t('cloudevents.fetchError')}</p>
       </div>
     )
   }
@@ -112,8 +112,8 @@ export function CloudEventsStatus() {
         <MetricTile
           label={t('cloudevents.deliveryFailures')}
           value={data.deliveries.failed}
-          colorClass={data.deliveries.failed > 0 ? 'text-red-400' : 'text-green-400'}
-          icon={<AlertTriangle className={`w-4 h-4 ${data.deliveries.failed > 0 ? 'text-red-400' : 'text-green-400'}`} />}
+          colorClass={data.deliveries.failed > 0 ? 'text-status-error' : 'text-status-success'}
+          icon={<AlertTriangle className={`w-4 h-4 ${data.deliveries.failed > 0 ? 'text-status-error' : 'text-status-success'}`} />}
         />
       </div>
 

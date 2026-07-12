@@ -180,7 +180,7 @@ describe('VirtualizedMissionGrid', () => {
 
   it('renders with different maxColumns settings', () => {
     const renderItem = (item: TestItem) => (
-      <div key={item.id}>{item.title}</div>
+      <div key={item.id} data-testid={`item-${item.id}`}>{item.title}</div>
     )
 
     const { rerender } = render(
