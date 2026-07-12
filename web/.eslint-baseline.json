@@ -1486,14 +1486,14 @@
   {
     "file": "src/components/cards/KubectlAIPanel.tsx",
     "rule": "no-restricted-syntax",
-    "line": 27,
+    "line": 29,
     "column": 7,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/cards/KubectlHistoryPanel.tsx",
     "rule": "no-restricted-syntax",
-    "line": 32,
+    "line": 34,
     "column": 9,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
@@ -1927,21 +1927,21 @@
   {
     "file": "src/components/cards/UserManagementList.tsx",
     "rule": "no-restricted-syntax",
-    "line": 218,
+    "line": 220,
     "column": 9,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
   {
     "file": "src/components/cards/UserManagementList.tsx",
     "rule": "no-restricted-syntax",
-    "line": 310,
+    "line": 312,
     "column": 11,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
   {
     "file": "src/components/cards/UserManagementList.tsx",
     "rule": "no-restricted-syntax",
-    "line": 328,
+    "line": 330,
     "column": 11,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
@@ -2585,7 +2585,7 @@
   {
     "file": "src/components/cards/console-missions/shared.tsx",
     "rule": "react-refresh/only-export-components",
-    "line": 31,
+    "line": 33,
     "column": 17,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
@@ -3544,7 +3544,7 @@
   {
     "file": "src/components/cards/pipelines/PipelineFilterContext.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 176,
+    "line": 179,
     "column": 6,
     "message": "React Hook useCallback has a missing dependency: 'setSelectedRepos'. Either include it or remove the dependency array."
   },
