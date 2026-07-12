@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
@@ -197,11 +197,13 @@ beforeEach(() => {
   // after 3 s. Tests complete before that fires, but mocking fetch avoids
   // unhandled-rejection warnings from the HTTP fallback path.
   globalThis.fetch = vi.fn().mockResolvedValue({ ok: true })
+  vi.useFakeTimers()
 })
 
 afterEach(() => {
   vi.clearAllTimers()
   vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 describe('agent selection: persisted "none" auto-selects available agent', () => {
@@ -285,9 +287,9 @@ describe('mission reconnection edge cases', () => {
     act(() => { result.current.connectToAgent() })
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
-    // Wait for reconnect delay
+    // Advance fake timers past the reconnect delay
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 600))
+      await vi.advanceTimersByTimeAsync(600)
     })
 
     const chatCalls = (MockWebSocket.lastInstance?.send.mock.calls ?? []).filter(
@@ -324,8 +326,9 @@ describe('mission reconnection edge cases', () => {
     act(() => { result.current.connectToAgent() })
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
+    // Advance fake timers past the reconnect delay
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 600))
+      await vi.advanceTimersByTimeAsync(600)
     })
 
     const chatCalls = (MockWebSocket.lastInstance?.send.mock.calls ?? []).filter(

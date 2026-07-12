@@ -40,8 +40,8 @@ vi.mock('../../../lib/modals', () => ({
   },
 }))
 
-import * as modals from '../../../lib/modals'
-;(modals.BaseModal as unknown as Record<string, unknown>).Header = ({
+import { BaseModal } from '../../../lib/modals'
+;(BaseModal as unknown as Record<string, unknown>).Header = ({
   title,
   onClose,
 }: {
@@ -54,12 +54,12 @@ import * as modals from '../../../lib/modals'
     <button aria-label="Close" onClick={onClose}>×</button>
   </div>
 )
-;(modals.BaseModal as unknown as Record<string, unknown>).Content = ({
+;(BaseModal as unknown as Record<string, unknown>).Content = ({
   children,
 }: {
   children: React.ReactNode
 }) => <div data-testid="modal-content">{children}</div>
-;(modals.BaseModal as unknown as Record<string, unknown>).Footer = ({
+;(BaseModal as unknown as Record<string, unknown>).Footer = ({
   children,
 }: {
   children: React.ReactNode

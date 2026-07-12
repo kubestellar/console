@@ -4,10 +4,10 @@ import { renderHook, act } from '@testing-library/react'
 import { useMissionControl } from '../useMissionControl'
 import { loadHistoryEntry } from '../useMissionControl.state'
 import type { MissionControlState, PayloadProject } from '../types'
-import * as useMissionsModule from '../../../hooks/useMissions'
-import * as useClustersModule from '../../../hooks/mcp/clusters'
-import * as useHelmReleasesModule from '../../../hooks/mcp/helm'
-import * as toastModule from '../../ui/Toast'
+import { useMissions } from '../../../hooks/useMissions'
+import { useClusters } from '../../../hooks/mcp/clusters'
+import { useHelmReleases } from '../../../hooks/mcp/helm'
+import { useToast } from '../../ui/Toast'
 
 // Mock dependencies
 vi.mock('../../../hooks/useMissions')
@@ -16,9 +16,9 @@ vi.mock('../../../hooks/mcp/helm')
 vi.mock('../../ui/Toast')
 vi.mock('../../../lib/kubara')
 
-type UseMissionsResult = ReturnType<typeof useMissionsModule.useMissions>
-type UseClustersResult = ReturnType<typeof useClustersModule.useClusters>
-type UseHelmReleasesResult = ReturnType<typeof useHelmReleasesModule.useHelmReleases>
+type UseMissionsResult = ReturnType<typeof useMissions>
+type UseClustersResult = ReturnType<typeof useClusters>
+type UseHelmReleasesResult = ReturnType<typeof useHelmReleases>
 
 describe('useMissionControl hook', () => {
   const mockShowToast = vi.fn()
@@ -30,19 +30,19 @@ describe('useMissionControl hook', () => {
     vi.clearAllMocks()
     
     // Mock implementations
-    vi.spyOn(toastModule, 'useToast').mockReturnValue({ showToast: mockShowToast })
-    vi.spyOn(useMissionsModule, 'useMissions').mockReturnValue({
+    vi.mocked(useToast).mockReturnValue({ showToast: mockShowToast })
+    vi.mocked(useMissions).mockReturnValue({
       startMission: mockStartMission,
       sendMessage: mockSendMessage,
       dismissMission: mockDismissMission,
       missions: [],
     } as unknown as UseMissionsResult)
-    vi.spyOn(useClustersModule, 'useClusters').mockReturnValue({
+    vi.mocked(useClusters).mockReturnValue({
       clusters: [], deduplicatedClusters: [],
       isLoading: false,
       lastUpdated: new Date(),
     } as unknown as UseClustersResult)
-    vi.spyOn(useHelmReleasesModule, 'useHelmReleases').mockReturnValue({
+    vi.mocked(useHelmReleases).mockReturnValue({
       releases: [],
       isLoading: false,
     } as unknown as UseHelmReleasesResult)
@@ -193,7 +193,7 @@ describe('useMissionControl hook', () => {
   it('does not auto-timeout while a planning mission exists', async () => {
     vi.useFakeTimers()
     mockStartMission.mockReturnValue('mission-123')
-    vi.spyOn(useMissionsModule, 'useMissions').mockReturnValue({
+    vi.mocked(useMissions).mockReturnValue({
       startMission: mockStartMission,
       sendMessage: mockSendMessage,
       dismissMission: mockDismissMission,
@@ -246,7 +246,7 @@ describe('useMissionControl hook', () => {
   })
 
   it('identifies installed projects from helm releases', () => {
-    vi.spyOn(useHelmReleasesModule, 'useHelmReleases').mockReturnValue({
+    vi.mocked(useHelmReleases).mockReturnValue({
       releases: [
         { name: 'prometheus-release', chart: 'prometheus', namespace: 'monitoring', cluster: 'cluster-1' }
       ],
@@ -286,7 +286,7 @@ describe('useMissionControl hook', () => {
     }))
 
     // Live clusters list doesn't have 'stale-cluster'
-    vi.spyOn(useClustersModule, 'useClusters').mockReturnValue({
+    vi.mocked(useClusters).mockReturnValue({
       clusters: [{ name: 'active-cluster', context: 'active-cluster' }],
       deduplicatedClusters: [{ name: 'active-cluster', context: 'active-cluster' }],
       isLoading: false,
