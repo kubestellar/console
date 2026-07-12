@@ -289,6 +289,9 @@ func (s *Server) Shutdown() error {
 		// #6578 — stop the token revocation cleanup goroutine so tests
 		// and embedded usage don't leak it across Server lifecycles.
 		middleware.ShutdownTokenRevocation()
+		// Nil the user-validation store reference before store.Close() so that
+		// concurrent or subsequent requests do not query a closed DB (#20857).
+		middleware.ShutdownUserValidation()
 		if s.k8sClient != nil {
 			s.k8sClient.StopWatching()
 		}

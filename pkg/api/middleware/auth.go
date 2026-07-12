@@ -193,11 +193,18 @@ func getUserValidationStore() userActiveLookupStore {
 	return userValidationStore
 }
 
-func resetUserValidationForTest() {
+// ShutdownUserValidation nils the user validation store reference so that a
+// closed DB cannot be queried by subsequent code (e.g. during test teardown or
+// server restart). Safe to call multiple times.
+func ShutdownUserValidation() {
 	userValidationStoreMu.Lock()
 	userValidationStore = nil
 	userValidationCache = sync.Map{}
 	userValidationStoreMu.Unlock()
+}
+
+func resetUserValidationForTest() {
+	ShutdownUserValidation()
 }
 
 func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {
