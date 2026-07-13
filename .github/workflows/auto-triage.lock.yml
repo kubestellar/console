@@ -52,7 +52,8 @@ on:
     types:
     - assigned
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read  # default read; writes scoped to job below
 concurrency:
   group: "gh-aw-${{ github.workflow }}-${{ github.event.issue.number || github.run_id }}"
 

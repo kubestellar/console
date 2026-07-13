@@ -9,7 +9,8 @@ on:
       - 'web/src/hooks/**/*.ts'
       - 'web/src/hooks/**/*.tsx'
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read  # default read; writes scoped to job below
 jobs:
   detect-untested:
     permissions:
