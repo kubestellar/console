@@ -113,7 +113,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 	// 2. Resolve dependencies (ConfigMaps, Secrets, SA, RBAC, PVCs, Services, Ingress, NetworkPolicy, HPA, PDB)
 	bundle, err := m.ResolveDependencies(ctx, sourceCluster, namespace, sourceObj, opts)
 	if err != nil {
-		slog.Warn("[deploy] dependency resolution failed", "cluster", sanitize.LogString(sourceCluster), "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
+		slog.Warn("[deploy] dependency resolution failed", "cluster", sanitize.LogString(sourceCluster), "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 		bundle = &DependencyBundle{Workload: sourceObj}
 	}
 	if len(bundle.Warnings) > 0 {
@@ -163,7 +163,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 			// 4a. Ensure namespace exists on target
 			nsErr := m.ensureNamespace(clusterCtx, targetClient, namespace, opts)
 			if nsErr != nil {
-				slog.Warn("[deploy] namespace ensure failed", "cluster", sanitize.LogString(targetCluster), "error", nsErr)
+				slog.Warn("[deploy] namespace ensure failed", "cluster", sanitize.LogString(targetCluster), "error", sanitize.LogString(nsErr.Error()))
 			}
 
 			// 4b. Apply dependencies in order before the workload

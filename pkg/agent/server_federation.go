@@ -178,7 +178,7 @@ func (s *Server) handleFederationRead(
 
 	contexts, err := s.resolveFederationContexts(ctx, r)
 	if err != nil {
-		slog.Error("failed to resolve federation contexts", "itemsKey", sanitize.LogString(itemsKey), "error", err)
+		slog.Error("failed to resolve federation contexts", "itemsKey", sanitize.LogString(itemsKey), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("resolve federation contexts", err))
 		return
 	}
@@ -553,7 +553,7 @@ func (s *Server) handleFederationAction(w http.ResponseWriter, r *http.Request) 
 	// Resolve the user's rest.Config for the specified hub context.
 	cfg, err := s.k8sClient.GetRestConfig(req.HubContext)
 	if err != nil {
-		slog.Error("failed to resolve federation action config", "hubContext", sanitize.LogString(req.HubContext), "error", err)
+		slog.Error("failed to resolve federation action config", "hubContext", sanitize.LogString(req.HubContext), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("resolve federation action config", err))
 		return
 	}
@@ -563,7 +563,7 @@ func (s *Server) handleFederationAction(w http.ResponseWriter, r *http.Request) 
 
 	result, err := ap.Execute(ctx, cfg, req)
 	if err != nil {
-		slog.Error("federation action execution failed", "provider", sanitize.LogString(string(req.Provider)), "actionID", sanitize.LogString(req.ActionID), "hubContext", sanitize.LogString(req.HubContext), "error", err)
+		slog.Error("federation action execution failed", "provider", sanitize.LogString(string(req.Provider)), "actionID", sanitize.LogString(req.ActionID), "hubContext", sanitize.LogString(req.HubContext), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("execute federation action", err))
 		return
 	}

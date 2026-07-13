@@ -432,7 +432,7 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 	// Validate K8s name params before passing to kubectl CLI.
 	for field, val := range map[string]string{"cluster": req.Cluster, "namespace": req.Namespace} {
 		if err := validateHelmK8sName(val, field); err != nil {
-			slog.Error("invalid GitOps detect-drift input", "field", sanitize.LogString(field), "value", sanitize.LogString(val), "error", err)
+			slog.Error("invalid GitOps detect-drift input", "field", sanitize.LogString(field), "value", sanitize.LogString(val), "error", sanitize.LogString(err.Error()))
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 			return
@@ -441,7 +441,7 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 
 	// Validate path parameter to prevent path traversal attacks.
 	if err := validateGitopsPath(req.Path); err != nil {
-		slog.Error("invalid GitOps detect-drift path", "path", sanitize.LogString(req.Path), "error", err)
+		slog.Error("invalid GitOps detect-drift path", "path", sanitize.LogString(req.Path), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 		return
@@ -555,7 +555,7 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 	}
 	for field, val := range map[string]string{"cluster": req.Cluster, "namespace": req.Namespace} {
 		if err := validateHelmK8sName(val, field); err != nil {
-			slog.Error("invalid GitOps sync input", "field", sanitize.LogString(field), "value", sanitize.LogString(val), "error", err)
+			slog.Error("invalid GitOps sync input", "field", sanitize.LogString(field), "value", sanitize.LogString(val), "error", sanitize.LogString(err.Error()))
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 			return
@@ -564,7 +564,7 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 
 	// Validate path parameter to prevent path traversal attacks.
 	if err := validateGitopsPath(req.Path); err != nil {
-		slog.Error("invalid GitOps sync path", "path", sanitize.LogString(req.Path), "error", err)
+		slog.Error("invalid GitOps sync path", "path", sanitize.LogString(req.Path), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 		return

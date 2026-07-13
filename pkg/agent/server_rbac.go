@@ -79,7 +79,7 @@ func (s *Server) handleCanIHTTP(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.k8sClient.CheckCanI(ctx, req.Cluster, req)
 	if err != nil {
-		slog.Error("failed to check permissions", "cluster", sanitize.LogString(req.Cluster), "verb", sanitize.LogString(req.Verb), "resource", sanitize.LogString(req.Resource), "error", err)
+		slog.Error("failed to check permissions", "cluster", sanitize.LogString(req.Cluster), "verb", sanitize.LogString(req.Verb), "resource", sanitize.LogString(req.Resource), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("check permissions", err))
 		return
 	}

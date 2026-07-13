@@ -81,7 +81,7 @@ func (s *Server) handleEventsStreamSSE(w http.ResponseWriter, r *http.Request) {
 
 	client, err := s.k8sClient.GetClient(cluster)
 	if err != nil {
-		slog.Error("failed to get event stream client", "cluster", sanitize.LogString(cluster), "error", err)
+		slog.Error("failed to get event stream client", "cluster", sanitize.LogString(cluster), "error", sanitize.LogString(err.Error()))
 		sseWriteError(w, flusher, sanitizeAgentError("get cluster client", err))
 		return
 	}

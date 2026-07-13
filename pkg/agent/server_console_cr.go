@@ -60,7 +60,7 @@ func (s *Server) resolveConsoleCRTarget(w http.ResponseWriter, r *http.Request) 
 	}
 	dyn, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Error("failed to resolve console CR target", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Error("failed to resolve console CR target", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, sanitizeAgentError("resolve console CR target", err))
 		return nil, "", false
 	}
@@ -144,7 +144,7 @@ func (s *Server) handleConsoleCRManagedWorkloads(w http.ResponseWriter, r *http.
 			return
 		}
 		if err := persistence.DeleteManagedWorkload(ctx, namespace, name); err != nil {
-			slog.Error("failed to delete managed workload", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
+			slog.Error("failed to delete managed workload", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("delete managed workload", err))
 			return
 		}
@@ -230,7 +230,7 @@ func (s *Server) handleConsoleCRClusterGroups(w http.ResponseWriter, r *http.Req
 			return
 		}
 		if err := persistence.DeleteClusterGroup(ctx, namespace, name); err != nil {
-			slog.Error("failed to delete cluster group", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
+			slog.Error("failed to delete cluster group", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("delete cluster group", err))
 			return
 		}
@@ -298,7 +298,7 @@ func (s *Server) handleConsoleCRWorkloadDeployments(w http.ResponseWriter, r *ht
 			return
 		}
 		if err := persistence.DeleteWorkloadDeployment(ctx, namespace, name); err != nil {
-			slog.Error("failed to delete workload deployment", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
+			slog.Error("failed to delete workload deployment", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("delete workload deployment", err))
 			return
 		}
@@ -347,7 +347,7 @@ func (s *Server) handleConsoleCRWorkloadDeploymentStatus(w http.ResponseWriter, 
 	// just a WorkloadDeploymentStatus, not the whole WD.
 	current, err := persistence.GetWorkloadDeployment(ctx, namespace, name)
 	if err != nil {
-		slog.Error("failed to get workload deployment", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
+		slog.Error("failed to get workload deployment", "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusNotFound, sanitizeAgentError("get workload deployment", err))
 		return
 	}
