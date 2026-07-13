@@ -363,7 +363,7 @@ func (s *Server) handleIngressesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	ingresses, err := s.k8sClient.GetIngresses(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching ingresses", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching ingresses", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -397,7 +397,7 @@ func (s *Server) handleNetworkPoliciesHTTP(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 	policies, err := s.k8sClient.GetNetworkPolicies(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching networkpolicies", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching networkpolicies", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -431,7 +431,7 @@ func (s *Server) handleServicesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	services, err := s.k8sClient.GetServices(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching services", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching services", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
