@@ -249,24 +249,7 @@ async function generateAISummary(mission: Mission): Promise<AISummary> {
         // surface a misleading "Could not reach the local agent" error.
         const conversation = buildConversationSnippet(mission.messages)
 
-        const prompt = `You are helping save a resolution for future reuse. Analyze this mission conversation and create a structured summary.
-
-MISSION: ${mission.title}
-DESCRIPTION: ${mission.description}
-
-CONVERSATION:
-${conversation}
-
-Create a JSON summary with these fields:
-- title: Short descriptive title for this resolution (max 60 chars)
-- issueType: Category like "CrashLoopBackOff", "OOMKilled", "ImagePullBackOff", "DeploymentFailed", etc.
-- resourceKind: Kubernetes resource type if applicable (Pod, Deployment, Service, etc.)
-- problem: 1-2 sentence description of what went wrong
-- solution: 1-2 sentence description of how it was fixed
-- steps: Array of specific actionable steps that fixed the issue (commands, config changes, etc.)
-- yaml: Any YAML manifests or config snippets that were part of the fix (optional)
-
-Return ONLY valid JSON, no markdown code blocks or explanation.`
+        const prompt = `You are helping save a resolution for future reuse. Analyze this mission conversation and create a structured summary.\n\nMISSION: ${mission.title}\nDESCRIPTION: ${mission.description}\n\nCONVERSATION:\n${conversation}\n\nCreate a JSON summary with these fields:\n- title: Short descriptive title for this resolution (max 60 chars)\n- issueType: Category like "CrashLoopBackOff", "OOMKilled", "ImagePullBackOff", "DeploymentFailed", etc.\n- resourceKind: Kubernetes resource type if applicable (Pod, Deployment, Service, etc.)\n- problem: 1-2 sentence description of what went wrong\n- solution: 1-2 sentence description of how it was fixed\n- steps: Array of specific actionable steps that fixed the issue (commands, config changes, etc.)\n- yaml: Any YAML manifests or config snippets that were part of the fix (optional)\n\nReturn ONLY valid JSON, no markdown code blocks or explanation.`
 
         ws.send(JSON.stringify({
           type: 'chat',
@@ -564,7 +547,7 @@ export function SaveResolutionDialog({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={!isBusy} closeOnEscape={!isBusy}>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false} closeOnEscape={!isBusy}>
       <BaseModal.Header title={t('dashboard.missions.saveResolution')} icon={Save} onClose={isBusy ? undefined : onClose} />
 
       <BaseModal.Content noPadding>
