@@ -58,6 +58,29 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
   <AlertsProvider>{children}</AlertsProvider>
 )
 
+/**
+ * Safely seed localStorage in tests. Wraps setItem in try/catch so a
+ * throwing storage backend (private browsing, quota, spies that reject)
+ * never masks the real assertion failure with a setup crash.
+ */
+function safeSetItem(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value)
+  } catch (err) {
+    console.error(`[test] safeSetItem failed for key "${key}":`, err)
+  }
+}
+
+/** Safely read localStorage in tests, returning null on any error. */
+function safeGetItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key)
+  } catch (err) {
+    console.error(`[test] safeGetItem failed for key "${key}":`, err)
+    return null
+  }
+}
+
 /** Build a minimal Alert object for seeding localStorage. */
 function makeAlert(overrides: Partial<Alert> = {}): Alert {
   return {
@@ -116,7 +139,7 @@ describe('deep coverage: saveAlerts quota handling', () => {
         resolvedAt: i >= 5 ? '2024-02-01T00:00:00Z' : undefined,
       })
     )
-    localStorage.setItem('kc_alerts', JSON.stringify(alerts))
+    safeSetItem('kc_alerts', JSON.stringify(alerts))
 
     const originalSetItem = localStorage.setItem.bind(localStorage)
     vi.spyOn(localStorage, 'setItem').mockImplementation((key: string, value: string) => {
@@ -133,12 +156,12 @@ describe('deep coverage: saveAlerts quota handling', () => {
     })
 
     // After double quota failure, alerts key should be removed entirely
-    expect(localStorage.getItem('kc_alerts')).toBeNull()
+    expect(safeGetItem('kc_alerts')).toBeNull()
   })
 
   it('saveAlerts logs non-quota localStorage errors without pruning', () => {
     const alerts = [makeAlert({ id: 'nq-1' })]
-    localStorage.setItem('kc_alerts', JSON.stringify(alerts))
+    safeSetItem('kc_alerts', JSON.stringify(alerts))
 
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const originalSetItem = localStorage.setItem.bind(localStorage)
@@ -171,7 +194,7 @@ describe('deep coverage: notification dedup pruning', () => {
       ['stale-key::cluster1', staleTimestamp],
       ['fresh-key::cluster2', freshTimestamp],
     ]
-    localStorage.setItem('kc-notified-alert-keys', JSON.stringify(dedupMap))
+    safeSetItem('kc-notified-alert-keys', JSON.stringify(dedupMap))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -179,7 +202,7 @@ describe('deep coverage: notification dedup pruning', () => {
       result.current.evaluateConditions()
     })
 
-    const stored = localStorage.getItem('kc-notified-alert-keys')
+    const stored = safeGetItem('kc-notified-alert-keys')
     expect(stored).toBeDefined()
     if (stored) {
       const parsed = JSON.parse(stored) as [string, number][]
@@ -193,7 +216,7 @@ describe('deep coverage: notification dedup pruning', () => {
       ['rule1::cluster1', Date.now()],
       ['rule2::cluster2', Date.now() - 60000],
     ]
-    localStorage.setItem('kc-notified-alert-keys', JSON.stringify(entries))
+    safeSetItem('kc-notified-alert-keys', JSON.stringify(entries))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
     expect(result.current).toBeDefined()
@@ -226,8 +249,8 @@ describe('deep coverage: createAlert dedup paths', () => {
       resourceKind: 'Resource',
       firedAt: '2024-01-01T00:00:00Z',
     })
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([existingAlert]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([existingAlert]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -260,8 +283,8 @@ describe('deep coverage: createAlert dedup paths', () => {
       cluster: 'prod',
       firedAt: '2024-01-01T00:00:00Z',
     })
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([existingAlert]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([existingAlert]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -290,8 +313,8 @@ describe('deep coverage: weather alert condition types', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -324,8 +347,8 @@ describe('deep coverage: weather alert condition types', () => {
       ruleId: 'wx-resolve',
       firedAt: '2024-01-01T00:00:00Z',
     })
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([firingAlert]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([firingAlert]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -351,8 +374,8 @@ describe('deep coverage: weather alert condition types', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -381,8 +404,8 @@ describe('deep coverage: weather alert condition types', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -411,8 +434,8 @@ describe('deep coverage: weather alert condition types', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -440,8 +463,8 @@ describe('deep coverage: weather alert condition types', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -470,8 +493,8 @@ describe('deep coverage: weather alert condition types', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -502,8 +525,8 @@ describe('deep coverage: weather alert condition types', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -529,8 +552,8 @@ describe('deep coverage: pod_crash filtering', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     // Cannot test evaluation without MCP data injection in this mock setup
     // but we can verify rule creation with cluster filter
@@ -554,8 +577,8 @@ describe('deep coverage: pod_crash filtering', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -608,8 +631,8 @@ describe('deep coverage: deduplicateAlerts keeps most recent', () => {
         firedAt: '2024-12-01T00:00:00Z',
       }),
     ]
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify(alerts))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify(alerts))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -630,7 +653,7 @@ describe('deep coverage: MAX_ALERTS in-memory cap during creation', () => {
         firedAt: `2024-01-${String((i % 28) + 1).padStart(2, '0')}T00:00:00Z`,
       })
     )
-    localStorage.setItem('kc_alerts', JSON.stringify(alerts))
+    safeSetItem('kc_alerts', JSON.stringify(alerts))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -665,8 +688,8 @@ describe('deep coverage: DNS failure with OpenShift dns-default pods', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -693,8 +716,8 @@ describe('deep coverage: certificate error persistent suppression', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -721,8 +744,8 @@ describe('deep coverage: cluster_unreachable error type mapping', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify([]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -753,7 +776,7 @@ describe('deep coverage: resolveAlert with notification channels', () => {
       status: 'resolved',
       resolvedAt: '2024-01-01T00:00:00Z',
     })
-    localStorage.setItem('kc_alerts', JSON.stringify([resolvedAlert]))
+    safeSetItem('kc_alerts', JSON.stringify([resolvedAlert]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
@@ -798,8 +821,8 @@ describe('deep coverage: acknowledgedAlerts dedup', () => {
         firedAt: '2024-06-01T00:00:00Z',
       }),
     ]
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify(alerts))
+    safeSetItem('kc_alert_rules', JSON.stringify([rule]))
+    safeSetItem('kc_alerts', JSON.stringify(alerts))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
