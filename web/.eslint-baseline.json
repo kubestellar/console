@@ -1,19 +1,5 @@
 [
   {
-    "file": "e2e-pipeline-test.ts",
-    "rule": "null",
-    "line": 102,
-    "column": 88,
-    "message": "Parsing error: Invalid character."
-  },
-  {
-    "file": "e2e/ClusterResourceTree.spec.ts",
-    "rule": "null",
-    "line": 479,
-    "column": 4,
-    "message": "Parsing error: ',' expected."
-  },
-  {
     "file": "e2e/GPUOverview.spec.ts",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 57,
@@ -180,13 +166,6 @@
     "line": 26,
     "column": 7,
     "message": "'CI_TIMEOUT_MULTIPLIER' is assigned a value but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "e2e/fixtures.ts",
-    "rule": "null",
-    "line": 279,
-    "column": 88,
-    "message": "Parsing error: Invalid character."
   },
   {
     "file": "e2e/helpers/api-mocks.ts",
@@ -4599,13 +4578,6 @@
     "message": "'React' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
-    "file": "src/components/drilldown/RemediationConsole.test.tsx",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1,
-    "column": 8,
-    "message": "'React' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
     "file": "src/components/drilldown/RemediationConsole.tsx",
     "rule": "no-restricted-syntax",
     "line": 662,
@@ -4849,13 +4821,6 @@
     "line": 290,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/drilldown/views/OperatorDrillDown.test.tsx",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1,
-    "column": 8,
-    "message": "'React' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/components/drilldown/views/OperatorDrillDown.tsx",
@@ -5488,27 +5453,6 @@
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
   {
-    "file": "src/components/gpu/__tests__/GPUReservations.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 243,
-    "column": 12,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/gpu/__tests__/GPUReservations.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 264,
-    "column": 12,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/gpu/__tests__/GPUReservations.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 280,
-    "column": 12,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
     "file": "src/components/insights/Insights.test.tsx",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 1,
@@ -5549,20 +5493,6 @@
     "line": 1,
     "column": 8,
     "message": "'React' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/components/layout/__tests__/NavigationShell.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 29,
-    "column": 52,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/layout/__tests__/Sidebar.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 48,
-    "column": 56,
-    "message": "Unexpected any. Specify a different type."
   },
   {
     "file": "src/components/layout/__tests__/SidebarCustomizer.test.tsx",
@@ -5829,20 +5759,6 @@
     "line": 57,
     "column": 11,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/mission-control/RequestApprovalModal.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 172,
-    "column": 17,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/mission-control/RequestApprovalModal.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 193,
-    "column": 17,
-    "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
   },
   {
     "file": "src/components/mission-control/__tests__/blueprint-info-panels.test.tsx",
@@ -6246,42 +6162,42 @@
   {
     "file": "src/components/missions/SaveResolutionDialog.tsx",
     "rule": "no-restricted-syntax",
-    "line": 614,
+    "line": 597,
     "column": 13,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/missions/SaveResolutionDialog.tsx",
     "rule": "no-restricted-syntax",
-    "line": 631,
+    "line": 614,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/missions/SaveResolutionDialog.tsx",
     "rule": "no-restricted-syntax",
-    "line": 644,
+    "line": 627,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/missions/SaveResolutionDialog.tsx",
     "rule": "no-restricted-syntax",
-    "line": 660,
+    "line": 643,
     "column": 13,
     "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
   },
   {
     "file": "src/components/missions/SaveResolutionDialog.tsx",
     "rule": "no-restricted-syntax",
-    "line": 680,
+    "line": 663,
     "column": 19,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/missions/SaveResolutionDialog.tsx",
     "rule": "no-restricted-syntax",
-    "line": 715,
+    "line": 698,
     "column": 13,
     "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
   },
@@ -6356,118 +6272,6 @@
     "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
   },
   {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 17,
-    "column": 23,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 18,
-    "column": 18,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 24,
-    "column": 46,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 90,
-    "column": 44,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 126,
-    "column": 73,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 143,
-    "column": 35,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 143,
-    "column": 67,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 144,
-    "column": 27,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 144,
-    "column": 35,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 151,
-    "column": 37,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 152,
-    "column": 27,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 152,
-    "column": 35,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 169,
-    "column": 70,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 169,
-    "column": 96,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 207,
-    "column": 9,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/missions/__tests__/MissionBrowser.test.tsx",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 288,
-    "column": 77,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
     "file": "src/components/missions/__tests__/MissionBrowserTopBar.test.tsx",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 3,
@@ -6487,20 +6291,6 @@
     "line": 2,
     "column": 27,
     "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/components/missions/__tests__/useMissionRecommendations.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 163,
-    "column": 49,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/components/missions/__tests__/useMissionRecommendations.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 180,
-    "column": 49,
-    "message": "Unexpected any. Specify a different type."
   },
   {
     "file": "src/components/modals/sections/AIActionBar.test.tsx",
@@ -6704,13 +6494,6 @@
     "line": 456,
     "column": 13,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/rbac/__tests__/CanIChecker.test.tsx",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 3,
-    "column": 37,
-    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/components/rewards/GitHubInvite.tsx",
@@ -7299,13 +7082,6 @@
     "line": 6,
     "column": 31,
     "message": "'TeamRole' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/components/teams/__tests__/TeamMemberManager.test.tsx",
-    "rule": "null",
-    "line": 297,
-    "column": 0,
-    "message": "Parsing error: Declaration or statement expected."
   },
   {
     "file": "src/components/terminal/__tests__/PodExecTerminal.test.tsx",
@@ -9121,13 +8897,6 @@
     "message": "'mockUseDemoMode' is assigned a value but never used. Allowed unused vars must match /^_/u."
   },
   {
-    "file": "src/hooks/mcp/__tests__/clusters.mcp-status.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 272,
-    "column": 13,
-    "message": "'rerender' is assigned a value but never used. Allowed unused vars must match /^_/u."
-  },
-  {
     "file": "src/hooks/mcp/__tests__/compute.gpu.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 1082,
@@ -9567,13 +9336,6 @@
     "line": 292,
     "column": 9,
     "message": "Unexpected aliasing of 'this' to local variable."
-  },
-  {
-    "file": "src/hooks/mcp/__tests__/storage.hooks.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 285,
-    "column": 21,
-    "message": "'rerender' is assigned a value but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/workloadQueries.test.ts",
@@ -17029,83 +16791,6 @@
     "line": 130,
     "column": 1,
     "message": "Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-unnecessary-condition')."
-  },
-  {
-    "file": "src/lib/insights/__tests__/analysis.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 90,
-    "column": 57,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/lib/insights/__tests__/analysis.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 207,
-    "column": 101,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/lib/insights/__tests__/analysis.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 214,
-    "column": 10,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/lib/insights/__tests__/analysis.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 222,
-    "column": 10,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/lib/insights/__tests__/analysis.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 233,
-    "column": 10,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/lib/insights/__tests__/analysis.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 242,
-    "column": 10,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/lib/insights/__tests__/analysis.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 256,
-    "column": 10,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/lib/insights/__tests__/analysis.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 264,
-    "column": 10,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/lib/insights/__tests__/analysis.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 277,
-    "column": 10,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/lib/insights/__tests__/analysis.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 378,
-    "column": 10,
-    "message": "Unexpected any. Specify a different type."
-  },
-  {
-    "file": "src/lib/insights/__tests__/analysis.test.ts",
-    "rule": "@typescript-eslint/no-explicit-any",
-    "line": 399,
-    "column": 12,
-    "message": "Unexpected any. Specify a different type."
   },
   {
     "file": "src/lib/llmd/__tests__/nightlyE2EDemoData.test.ts",
