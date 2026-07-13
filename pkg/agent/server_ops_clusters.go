@@ -143,7 +143,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		// SECURITY: Validate cluster name against DNS-1123 to prevent command
 		// injection via crafted names that flow into exec.Command args (#7171).
 		if err := kube.ValidateDNS1123Label("cluster name", req.Name); err != nil {
-			slog.Warn("[LocalClusters] invalid cluster name", "name", sanitize.LogString(req.Name), "error", err)
+			slog.Warn("[LocalClusters] invalid cluster name", "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 			http.Error(w, "invalid cluster name", http.StatusBadRequest)
 			return
 		}
@@ -153,7 +153,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		safego.GoWith("local-cluster-create", func() {
 			defer s.clusterOpsWG.Done()
 			if err := s.localClusters.CreateCluster(req.Tool, req.Name); err != nil {
-				slog.Error("[LocalClusters] failed to create cluster", "cluster", sanitize.LogString(req.Name), "tool", sanitize.LogString(req.Tool), "error", err)
+				slog.Error("[LocalClusters] failed to create cluster", "cluster", sanitize.LogString(req.Name), "tool", sanitize.LogString(req.Tool), "error", sanitize.LogString(err.Error()))
 				errMsg := sanitizeClusterError(err)
 				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 					"tool":     req.Tool,
@@ -204,7 +204,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 
 		// SECURITY: Validate cluster name against DNS-1123 (#7171).
 		if err := kube.ValidateDNS1123Label("cluster name", name); err != nil {
-			slog.Warn("[LocalClusters] invalid cluster name", "name", sanitize.LogString(name), "error", err)
+			slog.Warn("[LocalClusters] invalid cluster name", "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 			http.Error(w, "invalid cluster name", http.StatusBadRequest)
 			return
 		}
@@ -214,7 +214,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		safego.GoWith("local-cluster-delete", func() {
 			defer s.clusterOpsWG.Done()
 			if err := s.localClusters.DeleteCluster(tool, name); err != nil {
-				slog.Error("[LocalClusters] failed to delete cluster", "cluster", sanitize.LogString(name), "error", err)
+				slog.Error("[LocalClusters] failed to delete cluster", "cluster", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 				errMsg := sanitizeClusterError(err)
 				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 					"tool":     tool,
@@ -295,7 +295,7 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 	}
 	// SECURITY: Validate cluster name against DNS-1123 (#7171).
 	if err := kube.ValidateDNS1123Label("cluster name", req.Name); err != nil {
-		slog.Warn("[LocalClusters] invalid cluster name", "name", sanitize.LogString(req.Name), "error", err)
+		slog.Warn("[LocalClusters] invalid cluster name", "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		http.Error(w, "invalid cluster name", http.StatusBadRequest)
 		return
 	}
@@ -322,7 +322,7 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 		}
 
 		if err != nil {
-			slog.Error("[LocalClusters] lifecycle action failed", "action", sanitize.LogString(req.Action), "cluster", sanitize.LogString(req.Name), "error", err)
+			slog.Error("[LocalClusters] lifecycle action failed", "action", sanitize.LogString(req.Action), "cluster", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 			errMsg := sanitizeClusterError(err)
 			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 				"tool":     req.Tool,
@@ -414,7 +414,7 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
 	if err := kube.ValidateDNS1123Label("vcluster name", req.Name); err != nil {
-		slog.Warn("[vCluster] invalid vcluster name", "name", sanitize.LogString(req.Name), "error", err)
+		slog.Warn("[vCluster] invalid vcluster name", "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}
@@ -492,7 +492,7 @@ func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
 	}
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
 	if err := kube.ValidateDNS1123Label("vcluster name", req.Name); err != nil {
-		slog.Warn("[vCluster] invalid vcluster name", "name", sanitize.LogString(req.Name), "error", err)
+		slog.Warn("[vCluster] invalid vcluster name", "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}
@@ -566,7 +566,7 @@ func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request
 	}
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
 	if err := kube.ValidateDNS1123Label("vcluster name", req.Name); err != nil {
-		slog.Warn("[vCluster] invalid vcluster name", "name", sanitize.LogString(req.Name), "error", err)
+		slog.Warn("[vCluster] invalid vcluster name", "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}
@@ -577,7 +577,7 @@ func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := s.localClusters.DisconnectVCluster(req.Name, req.Namespace); err != nil {
-		slog.Error("[vCluster] failed to disconnect from vcluster", "name", sanitize.LogString(req.Name), "error", err)
+		slog.Error("[vCluster] failed to disconnect from vcluster", "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 			"tool":     "vcluster",
 			"name":     req.Name,
@@ -640,7 +640,7 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
 	if err := kube.ValidateDNS1123Label("vcluster name", req.Name); err != nil {
-		slog.Warn("[vCluster] invalid vcluster name", "name", sanitize.LogString(req.Name), "error", err)
+		slog.Warn("[vCluster] invalid vcluster name", "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}

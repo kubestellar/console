@@ -120,20 +120,20 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := kube.ValidateDNS1123Label("namespace", namespace); err != nil {
-		slog.Error("invalid namespace for scale request", "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Error("invalid namespace for scale request", "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("workloadName", name); err != nil {
-		slog.Error("invalid workload name for scale request", "workloadName", sanitize.LogString(name), "error", err)
+		slog.Error("invalid workload name for scale request", "workloadName", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	for _, tc := range targetClusters {
 		if err := kube.ValidateKubeContext(tc); err != nil {
-			slog.Error("invalid target cluster for scale request", "targetCluster", sanitize.LogString(tc), "error", err)
+			slog.Error("invalid target cluster for scale request", "targetCluster", sanitize.LogString(tc), "error", sanitize.LogString(err.Error()))
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 			return
@@ -259,26 +259,26 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := kube.ValidateDNS1123Label("workloadName", req.WorkloadName); err != nil {
-		slog.Error("invalid workload name for deploy request", "workloadName", sanitize.LogString(req.WorkloadName), "error", err)
+		slog.Error("invalid workload name for deploy request", "workloadName", sanitize.LogString(req.WorkloadName), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
-		slog.Error("invalid namespace for deploy request", "namespace", sanitize.LogString(req.Namespace), "error", err)
+		slog.Error("invalid namespace for deploy request", "namespace", sanitize.LogString(req.Namespace), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateKubeContext(req.SourceCluster); err != nil {
-		slog.Error("invalid source cluster for deploy request", "sourceCluster", sanitize.LogString(req.SourceCluster), "error", err)
+		slog.Error("invalid source cluster for deploy request", "sourceCluster", sanitize.LogString(req.SourceCluster), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	for _, tc := range req.TargetClusters {
 		if err := kube.ValidateKubeContext(tc); err != nil {
-			slog.Error("invalid target cluster for deploy request", "targetCluster", sanitize.LogString(tc), "error", err)
+			slog.Error("invalid target cluster for deploy request", "targetCluster", sanitize.LogString(tc), "error", sanitize.LogString(err.Error()))
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 			return
@@ -307,7 +307,7 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 
 	result, err := s.k8sClient.DeployWorkload(ctx, req.SourceCluster, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas, opts)
 	if err != nil {
-		slog.Warn("error deploying workload", "namespace", sanitize.LogString(req.Namespace), "name", sanitize.LogString(req.WorkloadName), "sourceCluster", sanitize.LogString(req.SourceCluster), "targetClusters", sanitize.LogStrings(req.TargetClusters), "error", err)
+		slog.Warn("error deploying workload", "namespace", sanitize.LogString(req.Namespace), "name", sanitize.LogString(req.WorkloadName), "sourceCluster", sanitize.LogString(req.SourceCluster), "targetClusters", sanitize.LogStrings(req.TargetClusters), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{
 			"success": false,
@@ -390,19 +390,19 @@ func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := kube.ValidateKubeContext(req.Cluster); err != nil {
-		slog.Error("invalid cluster for delete workload request", "cluster", sanitize.LogString(req.Cluster), "error", err)
+		slog.Error("invalid cluster for delete workload request", "cluster", sanitize.LogString(req.Cluster), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
-		slog.Error("invalid namespace for delete workload request", "namespace", sanitize.LogString(req.Namespace), "error", err)
+		slog.Error("invalid namespace for delete workload request", "namespace", sanitize.LogString(req.Namespace), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("name", req.Name); err != nil {
-		slog.Error("invalid workload name for delete request", "name", sanitize.LogString(req.Name), "error", err)
+		slog.Error("invalid workload name for delete request", "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
@@ -421,7 +421,7 @@ func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request
 	defer cancel()
 
 	if err := s.k8sClient.DeleteWorkload(ctx, req.Cluster, req.Namespace, req.Name); err != nil {
-		slog.Warn("error deleting workload", "cluster", sanitize.LogString(req.Cluster), "namespace", sanitize.LogString(req.Namespace), "name", sanitize.LogString(req.Name), "error", err)
+		slog.Warn("error deleting workload", "cluster", sanitize.LogString(req.Cluster), "namespace", sanitize.LogString(req.Namespace), "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{
 			"success": false,
@@ -473,7 +473,7 @@ func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	pods, err := s.k8sClient.GetPods(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching pods", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching pods", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}

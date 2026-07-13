@@ -92,6 +92,7 @@ func TestRequireAdmin(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			require.Equal(t, tt.wantStatus, resp.StatusCode)
@@ -172,6 +173,7 @@ func TestRequireEditorOrAdmin(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			require.Equal(t, tt.wantStatus, resp.StatusCode)
@@ -259,6 +261,7 @@ func TestRequireViewerOrAbove(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			require.Equal(t, tt.wantStatus, resp.StatusCode)
@@ -340,6 +343,7 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 			})
 
 			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			require.Equal(t, tt.wantStatus, resp.StatusCode)

@@ -193,3 +193,58 @@ func TestSanitizeAgentError_CaseInsensitive(t *testing.T) {
 		t.Errorf("uppercase FORBIDDEN: got %q, want %q", got, agentPermissionMessage)
 	}
 }
+
+// TestSanitizeAgentError_Exported covers the exported SanitizeAgentError
+// wrapper so agent subpackages that depend on the public API are exercised.
+// The wrapper delegates to sanitizeAgentError, so a few representative inputs
+// are sufficient to lock in behavioural parity.
+func TestSanitizeAgentError_Exported(t *testing.T) {
+	tests := []struct {
+		name      string
+		operation string
+		err       error
+		want      string
+	}{
+		{"nil err with operation", "scale deployment", nil, "failed to scale deployment"},
+		{"nil err without operation", "", nil, agentFallbackMessage},
+		{"forbidden k8s error", "list pods", k8serrors.NewForbidden(testGR, "obj", nil), agentPermissionMessage},
+		{"not found k8s error", "get svc", k8serrors.NewNotFound(testGR, "obj"), agentNotFoundMessage},
+		{"context deadline", "watch", context.DeadlineExceeded, agentUnavailableMessage},
+		{"unknown falls back", "list pods", errors.New("mystery failure 0xdeadbeef"), "failed to list pods"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SanitizeAgentError(tt.operation, tt.err)
+			want := sanitizeAgentError(tt.operation, tt.err)
+			if got != want {
+				t.Errorf("SanitizeAgentError diverges from sanitizeAgentError: got %q, want %q", got, want)
+			}
+			if got != tt.want {
+				t.Errorf("SanitizeAgentError(%q, %v) = %q, want %q", tt.operation, tt.err, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestSanitizeAgentError_ClassifyErrorBranch covers the k8s.ClassifyError
+// switch (certificate/tls/x509 classifications) which is otherwise unreached
+// by k8s-typed errors and the plain-string fallback switch.
+func TestSanitizeAgentError_ClassifyErrorBranch(t *testing.T) {
+	tests := []struct {
+		name string
+		msg  string
+		want string
+	}{
+		{"x509 unknown authority → unavailable", "x509: certificate signed by unknown authority", agentUnavailableMessage},
+		{"tls verification → unavailable", "tls: bad certificate", agentUnavailableMessage},
+		{"ssl error → unavailable", "ssl handshake failure", agentUnavailableMessage},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sanitizeAgentError("op", errors.New(tt.msg))
+			if got != tt.want {
+				t.Errorf("msg=%q: got %q, want %q", tt.msg, got, tt.want)
+			}
+		})
+	}
+}

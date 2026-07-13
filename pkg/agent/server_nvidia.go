@@ -91,7 +91,7 @@ func (s *Server) handleNvidiaOperatorsHTTP(w http.ResponseWriter, r *http.Reques
 	if cluster != "" {
 		client, err := s.k8sClient.GetClient(cluster)
 		if err != nil {
-			slog.Warn("[NvidiaOperators] failed to get client", "cluster", sanitize.LogString(cluster), "error", err)
+			slog.Warn("[NvidiaOperators] failed to get client", "cluster", sanitize.LogString(cluster), "error", sanitize.LogString(err.Error()))
 			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}

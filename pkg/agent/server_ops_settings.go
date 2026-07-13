@@ -343,7 +343,7 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 		if !valid {
 			w.WriteHeader(http.StatusBadRequest)
 			if validationErr != nil {
-				slog.Error("API key validation error", "provider", sanitize.LogString(req.Provider), "error", validationErr)
+				slog.Error("API key validation error", "provider", sanitize.LogString(req.Provider), "error", sanitize.LogString(validationErr.Error()))
 			}
 			writeJSON(w, protocol.ErrorPayload{Code: "invalid_key", Message: "Invalid API key"})
 			return
