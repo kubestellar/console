@@ -28,6 +28,10 @@ updates:
 - commit-message:
     prefix: chore(deps)
   directory: /
+  groups:
+    codeql-action:
+      patterns:
+      - github/codeql-action/*
   ignore:
   - dependency-name: "github/gh-aw-actions/**"
   - dependency-name: "github/gh-aw-actions" # Managed by gh aw compile. Version-locked to the gh-aw compiler; do not bump.
