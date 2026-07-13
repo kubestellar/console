@@ -368,13 +368,23 @@ describe('api.ts - HTTP client layer', () => {
     })
 
     it('handles timeout with AbortError', async () => {
-      fetchMock.mockImplementationOnce(() => 
-        new Promise((_, reject) => 
+      // Use fake timers so the test doesn't spend 100ms of real wall-clock time
+      // and to guarantee deterministic ordering of the two timers:
+      //   1. api.get's internal AbortController fires at 50ms (fake)
+      //   2. mock fetch rejects with DOMException at 100ms (fake)
+      // isAbortError() name-checks DOMException.name because jsdom's DOMException
+      // does not extend Error, so `instanceof Error` alone would miss it.
+      vi.useFakeTimers()
+      fetchMock.mockImplementationOnce(
+        () => new Promise((_, reject) =>
           setTimeout(() => reject(new DOMException('Aborted', 'AbortError')), 100)
         )
       )
-      
-      await expect(api.get('/api/test', { timeout: 50 })).rejects.toThrow(/timeout/)
+
+      const pending = api.get('/api/test', { timeout: 50 })
+      // Advance past both the 50ms abort timeout and the 100ms mock rejection.
+      await vi.advanceTimersByTimeAsync(110)
+      await expect(pending).rejects.toThrow(/timeout/)
     })
 
     it('parses JSON response body', async () => {
