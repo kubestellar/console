@@ -70,7 +70,7 @@ func TestCloseRequest_InvalidID(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
-func TestCloseRequest_NotFound(t *testing.T) {
+func TestCloseRequest_NotFound_Sync(t *testing.T) {
 	userID := uuid.New()
 	requestID := uuid.New()
 	mockStore := new(test.MockStore)
@@ -110,7 +110,7 @@ func TestCloseRequest_Forbidden(t *testing.T) {
 	mockStore.AssertExpectations(t)
 }
 
-func TestCloseRequest_StoreError(t *testing.T) {
+func TestCloseRequest_StoreError_Sync(t *testing.T) {
 	userID := uuid.New()
 	requestID := uuid.New()
 	mockStore := new(test.MockStore)
