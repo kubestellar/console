@@ -47,6 +47,25 @@ const LLM_ENDPOINT = process.env.LLM_ENDPOINT || 'https://models.inference.ai.az
 const LLM_MODEL = process.env.LLM_MODEL || 'gpt-4o-mini'
 const LLM_TIMEOUT_MS = parseInt(process.env.LLM_TIMEOUT_MS || '90000', 10)
 
+const ALLOWED_ENDPOINT_PREFIXES = [
+  'https://models.inference.ai.azure.com/',
+  'https://api.openai.com/',
+  'https://api.githubcopilot.com/',
+]
+
+/**
+ * Asserts that an LLM endpoint URL starts with an approved prefix (CWE-441: prevent SSRF).
+ * Throws if the endpoint is not trusted.
+ */
+function assertTrustedEndpoint(endpoint, allowedPrefixes = ALLOWED_ENDPOINT_PREFIXES) {
+  if (!allowedPrefixes.some(prefix => endpoint.startsWith(prefix))) {
+    throw new Error(`Untrusted LLM_ENDPOINT: ${endpoint}. Must start with one of: ${allowedPrefixes.join(', ')}`)
+  }
+}
+
+// Validate LLM_ENDPOINT at module load time (CWE-441: prevent SSRF)
+assertTrustedEndpoint(LLM_ENDPOINT)
+
 let rateLimitRemaining = 5000
 let rateLimitReset = 0
 
@@ -61,213 +80,201 @@ async function waitForRateLimit() {
   }
 }
 
-async function githubApi(url, options = {}) {
+async function githubFetch(url, options = {}) {
   await waitForRateLimit()
   const headers = {
-    Accept: 'application/vnd.github.v3+json',
-    'User-Agent': 'platform-install-gen/1.0',
+    Authorization: `Bearer ${GITHUB_TOKEN}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
   }
-  if (GITHUB_TOKEN) headers.Authorization = `Bearer ${GITHUB_TOKEN}`
+  const response = await fetch(url, { ...options, headers: { ...headers, ...options.headers } })
+  rateLimitRemaining = parseInt(response.headers.get('x-ratelimit-remaining') || '5000', 10)
+  rateLimitReset = parseInt(response.headers.get('x-ratelimit-reset') || '0', 10)
+  return response
+}
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const response = await fetch(url, { ...options, headers: { ...headers, ...options.headers } })
-    const rem = response.headers.get('x-ratelimit-remaining')
-    const rst = response.headers.get('x-ratelimit-reset')
-    if (rem != null) rateLimitRemaining = parseInt(rem, 10)
-    if (rst != null) rateLimitReset = parseInt(rst, 10)
+async function fetchRepoMeta(owner, repo) {
+  const res = await githubFetch(`https://api.github.com/repos/${owner}/${repo}`)
+  if (!res.ok) return null
+  return res.json()
+}
 
-    if (response.status === 403 && rateLimitRemaining < 5) {
-      await sleep(60_000)
-      continue
+async function fetchReleases(owner, repo) {
+  const res = await githubFetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`)
+  if (!res.ok) return []
+  return res.json()
+}
+
+async function fetchReadme(owner, repo) {
+  const res = await githubFetch(`https://api.github.com/repos/${owner}/${repo}/readme`)
+  if (!res.ok) return null
+  const data = await res.json()
+  return Buffer.from(data.content, 'base64').toString('utf-8').slice(0, 8000)
+}
+
+async function fetchHelmChart(owner, repo) {
+  const paths = ['charts/', 'chart/', 'helm/', '']
+  for (const p of paths) {
+    const res = await githubFetch(`https://api.github.com/repos/${owner}/${repo}/contents/${p}Chart.yaml`)
+    if (res.ok) {
+      const data = await res.json()
+      return Buffer.from(data.content, 'base64').toString('utf-8').slice(0, 4000)
     }
-    if (response.status === 404) return null
-    if (!response.ok) {
-      console.warn(`  GitHub API ${response.status}: ${url}`)
-      return null
-    }
-    return response.json()
   }
   return null
 }
 
-// ─── Knowledge Source Crawling ────────────────────────────────────────
-async function crawlPlatformKnowledge(platform) {
-  const ctx = { repoMeta: null, readme: '', release: null, helm: '', configs: [] }
-
-  // 1. Repo metadata
-  if (platform.repo) {
-    ctx.repoMeta = await githubApi(`https://api.github.com/repos/${platform.repo}`)
-  }
-
-  // 2. README
-  if (platform.repo) {
-    const readmeData = await githubApi(`https://api.github.com/repos/${platform.repo}/readme`)
-    if (readmeData?.content) {
-      try {
-        ctx.readme = Buffer.from(readmeData.content, 'base64').toString('utf-8').slice(0, 4000)
-      } catch { /* ignore */ }
+async function fetchHelmValues(owner, repo) {
+  const paths = ['charts/', 'chart/', 'helm/', '']
+  for (const p of paths) {
+    const res = await githubFetch(`https://api.github.com/repos/${owner}/${repo}/contents/${p}values.yaml`)
+    if (res.ok) {
+      const data = await res.json()
+      return Buffer.from(data.content, 'base64').toString('utf-8').slice(0, 4000)
     }
   }
-
-  // 3. Latest release
-  if (platform.repo) {
-    ctx.release = await githubApi(`https://api.github.com/repos/${platform.repo}/releases/latest`)
-  }
-
-  // 4. Helm chart if it exists
-  if (platform.repo) {
-    for (const path of ['charts', 'deploy/helm', 'helm', 'chart']) {
-      const contents = await githubApi(`https://api.github.com/repos/${platform.repo}/contents/${path}`)
-      if (Array.isArray(contents) && contents.length > 0) {
-        // Try to find Chart.yaml
-        const chartYaml = contents.find(f => f.name === 'Chart.yaml')
-        if (chartYaml) {
-          const raw = await githubApi(chartYaml.url)
-          if (raw?.content) {
-            try { ctx.helm = Buffer.from(raw.content, 'base64').toString('utf-8').slice(0, 1500) } catch { /* */ }
-          }
-        }
-        break
-      }
-    }
-  }
-
-  // 5. Configs / manifests
-  if (platform.repo) {
-    for (const path of ['deploy', 'install', 'config', 'manifests', 'examples']) {
-      const contents = await githubApi(`https://api.github.com/repos/${platform.repo}/contents/${path}`)
-      if (Array.isArray(contents)) {
-        const yamls = contents.filter(f => /\.(ya?ml|json)$/i.test(f.name)).slice(0, 3)
-        for (const file of yamls) {
-          const raw = await githubApi(file.url)
-          if (raw?.content) {
-            try {
-              ctx.configs.push({
-                name: file.name,
-                content: Buffer.from(raw.content, 'base64').toString('utf-8').slice(0, 2000)
-              })
-            } catch { /* */ }
-          }
-        }
-        break
-      }
-    }
-  }
-
-  return ctx
+  return null
 }
 
-// ─── LLM Prompt ──────────────────────────────────────────────────────
-const PLATFORM_SYSTEM_PROMPT = `You are a senior Kubernetes platform engineer writing PRODUCTION-GRADE, copy-paste-ready installation missions.
-
-The goal: a user reads your mission and completes the install WITHOUT searching the web. Every command must work. Every step must be specific. Save the user's time.
-
-OUTPUT FORMAT — a single JSON object:
-{
-  "description": "2-3 sentences: what this is, when to use it, key trade-offs.",
-  "platformType": "managed|distribution|local|operator",
-  "supportedVersions": ["v1.30","v1.31"],
-  "supportedK8sVersions": ["1.29","1.30","1.31"],
-  "steps": [
-    {
-      "title": "Imperative title (e.g. 'Install the CLI')",
-      "description": "Plain text explanation of what this step does and why.",
-      "commands": [
-        { "cmd": "exact shell command", "note": "optional: when/why to use this variant" }
-      ]
+async function fetchKustomize(owner, repo) {
+  for (const p of ['config/default/', 'deploy/', 'manifests/', '']) {
+    const res = await githubFetch(`https://api.github.com/repos/${owner}/${repo}/contents/${p}kustomization.yaml`)
+    if (res.ok) {
+      const data = await res.json()
+      return Buffer.from(data.content, 'base64').toString('utf-8').slice(0, 3000)
     }
-  ],
-  "uninstall": [
-    {
-      "title": "Imperative title",
-      "description": "What gets removed and any data-loss warnings.",
-      "commands": [{ "cmd": "exact command" }]
-    }
-  ],
-  "upgrade": [
-    {
-      "title": "Imperative title",
-      "description": "Pre-upgrade checklist, backup, the upgrade, post-upgrade verification, rollback.",
-      "commands": [{ "cmd": "exact command", "note": "optional note" }]
-    }
-  ],
-  "troubleshooting": [
-    {
-      "symptom": "Exact error message or observable symptom",
-      "cause": "Root cause in 1-2 sentences",
-      "fix": "Exact commands or config change to resolve it",
-      "versions": "Which versions are affected (e.g. '<= 1.29' or 'all')"
-    }
-  ],
-  "versionNotes": [
-    {
-      "version": "v1.31",
-      "changes": "Specific features: e.g. 'Added gateway API v1 support, new --enable-feature flag'",
-      "deprecations": "Specific deprecations: e.g. 'Removed --legacy-mode flag, PodSecurityPolicy no longer supported'",
-      "migrationSteps": "If upgrading from prior version requires action, list exact steps"
-    }
-  ],
-  "resolution": "What the user should see when everything is working (exact kubectl output patterns).",
-  "difficulty": "beginner|intermediate|advanced",
-  "estimatedMinutes": 15,
-  "installMethods": ["cli","helm","kubectl"],
-  "prerequisites": {
-    "kubernetes": ">=1.25",
-    "tools": ["kubectl","helm 3.x"],
-    "cloudCLI": "gcloud >= 450.0",
-    "resources": "Minimum 2 vCPU, 4GB RAM per node",
-    "description": "Prerequisites sentence"
-  },
-  "containerImages": ["registry/image:tag"],
-  "skip": false
+  }
+  return null
 }
 
-STRICT RULES:
-1. STEPS: Minimum 4 steps for managed/distribution, 3 for operators/local. Each step MUST have a "commands" array with real commands — NEVER "see docs" or "visit website".
-2. COMMANDS: Pin every version. Use specific Helm chart versions (e.g. --version 4.10.1), not controller versions. Use release URLs with version tags, never /master/ or /main/ branch refs.
-3. MANAGED K8S: Must include (a) CLI install, (b) cluster create with version + node count + region, (c) kubeconfig setup, (d) verify nodes, (e) post-install (autoscaling/monitoring/RBAC), (f) costs warning.
-4. DISTRIBUTIONS: Must include (a) binary install, (b) init/bootstrap, (c) kubeconfig, (d) join worker nodes, (e) verify, (f) HA setup notes.
-5. OPERATORS: Must include (a) add Helm repo with CORRECT URL, (b) install CRDs if separate, (c) helm install with namespace + version, (d) create example CR, (e) verify the CR is ready.
-6. UNINSTALL: Must warn about data loss. For cloud: mention orphaned resources (load balancers, PVCs, DNS records). Minimum 2 steps.
-7. UPGRADE: Must include backup step, drain/cordon if needed, the upgrade command, post-upgrade verify. Minimum 3 steps.
-8. TROUBLESHOOTING: Minimum 4 real-world issues with exact error messages, not vague "check logs". Include version-specific bugs.
-9. VERSION NOTES: Be SPECIFIC — name the actual features/flags/APIs that changed. Never say "improved performance" without specifics.
-10. CLOUD CLI: For managed services, specify exact CLI + minimum version (e.g. "gcloud >= 450.0", "aws-cli >= 2.x + eksctl >= 0.170"). For operators that don't need one, set to "none".
-11. CONTAINER IMAGES: List the actual images deployed (e.g. "registry.k8s.io/ingress-nginx/controller:v1.10.1").
-12. ONLY use URLs and image names from the provided context or well-known registries (registry.k8s.io, ghcr.io, docker.io, quay.io). Do not guess.`
+async function checkHelmRepoUrl(helmRepoUrl) {
+  if (!helmRepoUrl) return false
+  try {
+    const res = await fetch(`${helmRepoUrl}/index.yaml`, { signal: AbortSignal.timeout(10000) })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+// ─── Platform Context Builder ────────────────────────────────────────
+
+async function gatherPlatformContext(platform) {
+  const context = {
+    readme: null,
+    helmChart: null,
+    helmValues: null,
+    kustomize: null,
+    releases: [],
+    repoMeta: null,
+  }
+
+  const [owner, repo] = (platform.repo || '').split('/')
+  if (!owner || !repo) return context
+
+  const [repoMeta, releases, readme, helmChart, helmValues, kustomize] = await Promise.all([
+    fetchRepoMeta(owner, repo),
+    fetchReleases(owner, repo),
+    fetchReadme(owner, repo),
+    fetchHelmChart(owner, repo),
+    fetchHelmValues(owner, repo),
+    fetchKustomize(owner, repo),
+  ])
+
+  return { repoMeta, releases: releases.slice(0, 5), readme, helmChart, helmValues, kustomize }
+}
+
+// ─── Prompt Builder ──────────────────────────────────────────────────
+
+const PLATFORM_SYSTEM_PROMPT = `You are an expert Kubernetes platform engineer. Your task is to generate a comprehensive, accurate, and practical install mission JSON for a specific Kubernetes platform or managed service.
+
+Rules:
+- Generate REAL install steps with actual CLI commands, not placeholders
+- Use the latest stable version from the releases provided
+- Include version-specific flags and options
+- Steps must be actionable — no "see documentation" or vague instructions
+- Include verification steps with kubectl commands
+- Follow the exact JSON schema provided
+- For cloud providers: include cloud-specific CLI commands (aws, gcloud, az)
+- For helm: include proper repo add, update, install commands with specific chart versions
+- For kubectl: include apply commands with specific manifest URLs or inline YAML
+- Include prerequisites: specific tool versions required
+- The "description" of each step must include the actual command in a code block
+
+IMPORTANT: Return ONLY the JSON object, no markdown fences.`
 
 function buildPlatformPrompt(platform, context) {
-  const sections = [`# Platform install mission for: ${platform.displayName}`]
-  sections.push(`Type: ${platform.type} | Category: ${platform.category} | Provider: ${platform.provider}`)
-  sections.push(`Docs: ${platform.docs}`)
-  sections.push(`Supported versions: ${platform.versions.join(', ')}`)
-  sections.push(`Kubernetes versions: ${platform.k8sVersions.join(', ')}`)
+  const sections = []
 
-  if (platform.repo) sections.push(`Repo: github.com/${platform.repo}`)
+  sections.push(`## Platform: ${platform.name}`)
+  sections.push(`Category: ${platform.category || 'Kubernetes platform'}`)
+  sections.push(`Description: ${platform.description || ''}`)
+  if (platform.version) sections.push(`Latest Version: ${platform.version}`)
+  if (platform.provider) sections.push(`Provider: ${platform.provider}`)
 
-  if (context.repoMeta) {
-    sections.push(`\n## Project Info\n- Stars: ${context.repoMeta.stargazers_count}\n- Language: ${context.repoMeta.language}\n- Description: ${context.repoMeta.description || 'N/A'}`)
-    if (context.repoMeta.homepage) sections.push(`- Homepage: ${context.repoMeta.homepage}`)
+  if (context.releases?.length > 0) {
+    const latest = context.releases[0]
+    sections.push(`\nLatest Release: ${latest.tag_name} (${latest.published_at?.slice(0, 10) || 'unknown'})`)
   }
 
-  if (context.release) {
-    sections.push(`\n## Latest Release\n- Tag: ${context.release.tag_name}\n- Published: ${context.release.published_at}`)
+  if (context.repoMeta) {
+    sections.push(`\nRepository: ${context.repoMeta.full_name}`)
+    sections.push(`Stars: ${context.repoMeta.stargazers_count} | Language: ${context.repoMeta.language}`)
   }
 
   if (context.readme) {
     sections.push(`\n## README (excerpt)\n${context.readme.slice(0, 3000)}`)
   }
 
-  if (context.helm) {
-    sections.push(`\n## Helm Chart\n\`\`\`yaml\n${context.helm}\n\`\`\``)
+  if (context.helmChart) {
+    sections.push(`\n## Chart.yaml\n\`\`\`yaml\n${context.helmChart}\n\`\`\``)
   }
 
-  if (context.configs.length > 0) {
-    sections.push('\n## Configuration Examples')
-    for (const cfg of context.configs) {
-      sections.push(`### ${cfg.name}\n\`\`\`yaml\n${cfg.content}\n\`\`\``)
-    }
+  if (context.helmValues) {
+    sections.push(`\n## values.yaml (excerpt)\n\`\`\`yaml\n${context.helmValues.slice(0, 2000)}\n\`\`\``)
   }
+
+  if (context.kustomize) {
+    sections.push(`\n## kustomization.yaml\n\`\`\`yaml\n${context.kustomize}\n\`\`\``)
+  }
+
+  const slug = slugify(platform.name)
+  const installMethods = platform.installMethods || ['kubectl']
+
+  sections.push(`\n## Required Output Schema\n\`\`\`json\n${JSON.stringify({
+    version: 'kc-mission-v1',
+    name: `platform-${slug}`,
+    missionClass: 'installer',
+    author: 'KubeStellar Bot',
+    authorGithub: 'kubestellar',
+    mission: {
+      title: `${platform.name}: Complete Install Guide`,
+      description: `Step-by-step installation guide for ${platform.name}.`,
+      type: 'configuration',
+      status: 'completed',
+      steps: [
+        { title: 'Step title', description: 'Step with actual commands' },
+      ],
+      resolution: {
+        summary: 'Summary of what was installed and how to verify.',
+        codeSnippets: ['key command or config snippet'],
+      },
+    },
+    metadata: {
+      category: platform.category || 'platform',
+      installMethods,
+      cncfProjects: platform.cncfProjects || [],
+      qualityScore: 0,
+    },
+    prerequisites: {
+      tools: platform.prerequisites?.tools || ['kubectl'],
+      permissions: ['cluster-admin'],
+    },
+    security: {
+      rbacRequired: true,
+      networkPolicies: false,
+    },
+  }, null, 2)}\n\`\`\``)
 
   return sections.join('\n')
 }
@@ -305,7 +312,20 @@ async function synthesizePlatformMission(platform, context) {
       return null
     }
 
-    const data = await response.json()
+    // Validate Content-Type and enforce a response size ceiling before parsing
+    // HTTP-derived bytes into the mission object that will be written to disk (CWE-434).
+    const contentType = response.headers.get('content-type') || ''
+    if (!contentType.includes('application/json')) {
+      console.error(`  LLM response has unexpected Content-Type: ${contentType.slice(0, 100)}`)
+      return null
+    }
+    const MAX_LLM_RESPONSE_BYTES = 1_000_000
+    const rawText = await response.text()
+    if (rawText.length > MAX_LLM_RESPONSE_BYTES) {
+      console.error(`  LLM response too large (${rawText.length} bytes), rejecting`)
+      return null
+    }
+    const data = JSON.parse(rawText)
     const content = data.choices?.[0]?.message?.content
     if (!content) return null
     return JSON.parse(content)
@@ -328,574 +348,275 @@ function sanitizeInfraDetails(text) {
   // Replace AWS EC2 internal hostnames
   sanitized = sanitized.replace(
     /\bip-\d+-\d+-\d+-\d+\.\w+-\w+-\d+\.compute\.internal\b/g,
-    'ip-10-0-1-100.us-east-1.compute.internal'
+    'ip-10-0-0-1.us-east-1.compute.internal'
   )
-  // Replace AWS EC2 public hostnames
+  // Replace GKE node names
   sanitized = sanitized.replace(
-    /\bec2-\d+-\d+-\d+-\d+\.\w+\.compute\.amazonaws\.com\b/g,
-    'ec2-192-0-2-1.us-east-1.compute.amazonaws.com'
+    /\bgke-[a-z0-9-]+-[a-z0-9]+-[a-z0-9]+\b/g,
+    'gke-cluster-default-pool-node'
   )
-  // Replace GCP instance hostnames
-  sanitized = sanitized.replace(
-    /\b[\w-]+\.[\w-]+\.c\.[\w-]+\.internal\b/g,
-    'instance-1.us-central1-a.c.project-id.internal'
-  )
+  // Redact cloud account IDs
+  sanitized = sanitized.replace(/\b\d{12}\b/g, '123456789012')
   return sanitized
 }
 
-/** Detect and redact potential credentials in scraped content */
-function redactCredentials(text) {
-  // Redact password values in YAML/JSON-like content
-  return text
-    .replace(/(password|passwd|secret|token|apiKey|api_key|admin_password)["']?\s*[:=]\s*["']?(?!<[A-Z_]+>|changeme|CHANGE_ME|your-|YOUR_|xxx|placeholder|\$\{)([^\s"'}{,]{4,})/gi,
-      '$1: <REDACTED>')
-}
+// ─── Quality Gate ─────────────────────────────────────────────────────
 
-/** Check if a Helm chart version is reasonably fresh by querying the repo */
-async function checkVersionFreshness(helmRepoUrl, chartName, currentVersion) {
-  if (!helmRepoUrl || !chartName || !currentVersion) return true
-  try {
-    const res = await fetch(`${helmRepoUrl}/index.yaml`, { signal: AbortSignal.timeout(10000) })
-    if (!res.ok) return true // Can't check, assume OK
-    const text = await res.text()
-    // Extract versions for this chart from index.yaml
-    const chartSection = text.split(new RegExp(`^\\s*${chartName}:`, 'm'))[1]
-    if (!chartSection) return true
-    const versions = [...chartSection.matchAll(/version:\s*(\S+)/g)].map(m => m[1]).slice(0, 5)
-    if (versions.length === 0) return true
-    // If currentVersion is not in the top 5 most recent, flag as stale
-    if (!versions.includes(currentVersion)) {
-      console.log(`  ⚠ Version ${currentVersion} not in latest 5 releases: ${versions.join(', ')}`)
-      return false
-    }
-    return true
-  } catch {
-    return true // Network error, can't check
-  }
-}
-
-// ─── Slug / Title helpers ────────────────────────────────────────────
-export function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') }
-function titleCase(s) { return s.replace(/(^|[\s-])(\w)/g, (_, p, c) => p + c.toUpperCase()) }
-
-/**
- * Asserts that a slug is safe for use in file-path construction (CWE-20).
- * Throws if the slug contains path separators, dots, or starts with a dash.
- */
-export function assertSafeSlug(slug, source = 'unknown') {
-  if (!slug || slug.includes('/') || slug.includes('\\') || slug.includes('.') || slug.startsWith('-')) {
-    throw new Error(`Unsafe slug generated from ${source}: ${slug}`)
-  }
-}
-
-/**
- * Asserts that a resolved file path stays within the allowed directory (CWE-22).
- * Throws if the path escapes the allowed directory root.
- */
-export function assertSafePath(resolvedTarget, resolvedAllowedDir) {
-  if (!resolvedTarget.startsWith(resolvedAllowedDir + '/') && resolvedTarget !== resolvedAllowedDir) {
-    throw new Error(`Path traversal detected: ${resolvedTarget}`)
-  }
-}
-
-// ─── Quality Gate ────────────────────────────────────────────────────
-const SAFE_CLI_COMMANDS = /\b(kubectl|helm|gcloud|eksctl|az|oci|aws|doctl|linode-cli|vkectl|oc|k3s|k0s|microk8s|snap|curl|wget|apt|yum|dnf|brew)\b/
+const INSTALL_CMD_RE = /helm install|helm upgrade|kubectl apply|kubectl create|docker run|operator-sdk|kustomize build|kubectl kustomize/i
+const VERIFY_CMD_RE = /kubectl get|kubectl describe|kubectl logs|curl.*health|curl.*ready|kubectl port-forward|kubectl rollout status/i
 
 function applyQualityGate(mission) {
   const issues = []
-  let score = 0
-
-  // 1. Schema validation
-  const schemaResult = validateMissionExport(mission)
-  if (!schemaResult.valid) {
-    return { pass: false, verdict: 'rejected', score: 0, issues: [`Schema invalid: ${schemaResult.errors.join(', ')}`] }
-  }
-
-  // 2. Security scan
-  const jsonStr = JSON.stringify(mission)
-  const sensitiveResult = scanForSensitiveData(jsonStr)
-  if (sensitiveResult.found) {
-    return { pass: false, verdict: 'rejected', score: 0, issues: [`Security: sensitive data found — ${sensitiveResult.matches.join(', ')}`] }
-  }
-  const maliciousResult = scanForMaliciousContent(jsonStr)
-  if (maliciousResult.found) {
-    return { pass: false, verdict: 'rejected', score: 0, issues: [`Security: malicious content — ${maliciousResult.matches.join(', ')}`] }
-  }
-
-  // 3. Base score from shared quality scorer
-  try {
-    const scoreResult = scoreMission(mission)
-    score = scoreResult.score || 0
-  } catch {
-    score = 40
-  }
-
   const steps = mission.mission?.steps || []
-  const uninstall = mission.mission?.uninstall || []
-  const upgrade = mission.mission?.upgrade || []
-  const troubleshooting = mission.mission?.troubleshooting || []
-  const versionNotes = mission.mission?.versionNotes || []
-  const platformType = mission.metadata?.platformType || 'operator'
-  const allText = JSON.stringify(mission.mission)
 
-  // ── Bonuses (up to +40) ──
+  // Must have at least 3 steps
+  if (steps.length < 3) issues.push(`Only ${steps.length} steps (min 3)`)
 
-  // Commands actually present in steps
-  const totalCmds = steps.reduce((n, s) => n + (s.commands?.length || 0), 0)
-  if (totalCmds >= 6) score += 10
-  else if (totalCmds >= 3) score += 5
-
-  // Version-pinned commands (helm --version, image:tag, release/vX.Y)
-  const versionPinned = (allText.match(/--version\s+[\w.]+|:v?\d+\.\d+\.\d+|releases\/(?:download\/)?v?\d+\.\d+/g) || []).length
-  if (versionPinned >= 3) score += 10
-  else if (versionPinned >= 1) score += 5
-
-  // Verification step (kubectl get, status check)
-  if (/kubectl get (nodes|pods|deploy|all|crd)|kubectl cluster-info|kubectl wait/i.test(allText)) score += 5
-
-  // Complete sections
-  if (uninstall.length >= 2) score += 5
-  if (upgrade.length >= 3) score += 5
-  if (troubleshooting.length >= 4) score += 5
-
-  // Specific versionNotes (not vague)
-  const specificNotes = versionNotes.filter(v =>
-    v.changes && !/improved (performance|stability)|various (improvements|fixes)/i.test(v.changes)
+  // Must have install command
+  const hasInstallCmd = steps.some(s =>
+    INSTALL_CMD_RE.test(s.description || '') || INSTALL_CMD_RE.test(s.title || '')
   )
-  if (specificNotes.length >= 2) score += 5
+  if (!hasInstallCmd) issues.push('No install command found (helm/kubectl/docker)')
 
-  // ── Penalties (up to -50) ──
-
-  // Too few steps
-  const minSteps = platformType === 'operator' || platformType === 'local' ? 3 : 4
-  if (steps.length < minSteps) {
-    score -= 15
-    issues.push(`Only ${steps.length} steps (min ${minSteps} for ${platformType})`)
-  }
-
-  // No commands at all
-  if (totalCmds === 0) {
-    score -= 20
-    issues.push('No executable commands in steps')
-  }
-
-  // Vague content
-  if (/see the documentation|refer to docs|check the website|visit the official/i.test(allText)) {
-    score -= 10
-    issues.push('Contains "see docs" instead of actual instructions')
-  }
-
-  // /master/ or /main/ branch URLs (fragile)
-  if (/^https?:\/\/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/(master|main)\//mi.test(allText)) {
-    score -= 5
-    issues.push('Uses /master/ or /main/ branch URL (should pin to release tag)')
-  }
-
-  // :latest image tag
-  if (/:latest\b/.test(allText)) {
-    score -= 5
-    issues.push('Uses :latest image tag')
-  }
-
-  // Missing uninstall
-  if (uninstall.length === 0) {
-    score -= 10
-    issues.push('No uninstall section')
-  }
-
-  // Missing upgrade
-  if (upgrade.length === 0) {
-    score -= 10
-    issues.push('No upgrade section')
-  }
-
-  // Vague versionNotes
-  const vagueNotes = versionNotes.filter(v =>
-    v.changes && /^improved (performance|stability|security)/i.test(v.changes) && v.changes.length < 60
+  // Must have verification step
+  const hasVerify = steps.some(s =>
+    VERIFY_CMD_RE.test(s.description || '') || VERIFY_CMD_RE.test(s.title || '')
   )
-  if (vagueNotes.length > 0) {
-    score -= 5
-    issues.push(`${vagueNotes.length} vague versionNotes (no specifics)`)
+  if (!hasVerify) issues.push('No verification step found')
+
+  // Resolution summary required
+  if (!mission.mission?.resolution?.summary) issues.push('No resolution summary')
+
+  // Security scan
+  const sensitiveFindings = scanForSensitiveData(mission)
+  if (sensitiveFindings.findings.length > 0) {
+    issues.push(`Sensitive data detected: ${sensitiveFindings.findings.map(f => f.type).join(', ')}`)
   }
 
-  // Generic cloudCLI for managed services
-  if (['managed'].includes(platformType) && (!mission.prerequisites?.cloudCLI || /optional/i.test(mission.prerequisites.cloudCLI))) {
-    score -= 5
-    issues.push('Managed service missing specific cloudCLI requirement')
+  const maliciousFindings = scanForMaliciousContent(mission)
+  if (maliciousFindings.findings.length > 0) {
+    issues.push(`Malicious content detected: ${maliciousFindings.findings.map(f => f.type).join(', ')}`)
   }
 
-  score = Math.max(0, Math.min(100, score))
+  const score = scoreMission(mission)
+  const pass = issues.length === 0 && score >= QUALITY_THRESHOLD
+  const verdict = !pass
+    ? (score >= DRAFT_THRESHOLD ? 'draft' : 'rejected')
+    : 'pass'
 
-  if (score >= QUALITY_THRESHOLD) {
-    return { pass: true, verdict: 'publish', score, issues }
-  } else if (score >= DRAFT_THRESHOLD) {
-    return { pass: true, verdict: 'draft', score, issues: [...issues, `Score ${score} below publish threshold ${QUALITY_THRESHOLD}`] }
-  } else {
-    return { pass: false, verdict: 'rejected', score, issues: [...issues, `Score ${score} below minimum ${DRAFT_THRESHOLD}`] }
+  return { pass, score, verdict, issues }
+}
+
+// ─── Path helpers ─────────────────────────────────────────────────────
+
+function slugify(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+export function assertSafeSlug(slug, source = 'unknown') {
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(slug)) {
+    throw new Error(`Unsafe slug derived from ${source}: ${JSON.stringify(slug)}`)
   }
 }
 
-// ─── Build Mission JSON ──────────────────────────────────────────────
-
-/** Extract commands from a step — handles both new {cmd,note} format and legacy markdown */
-function extractCommands(step) {
-  // New format: commands array
-  if (Array.isArray(step.commands) && step.commands.length > 0) {
-    return step.commands.map(c => typeof c === 'string' ? c : c.cmd).filter(Boolean)
+export function assertSafePath(resolvedTarget, resolvedAllowedDir) {
+  if (!resolvedTarget.startsWith(resolvedAllowedDir + '/') && resolvedTarget !== resolvedAllowedDir) {
+    throw new Error(`Path traversal detected: ${resolvedTarget} is outside ${resolvedAllowedDir}`)
   }
-  // Legacy: extract from markdown code blocks in description
-  const desc = step.description || ''
-  const matches = desc.match(/```(?:bash|console|shell|sh|yaml)?\n([\s\S]*?)```/g)
-  if (matches) {
-    return matches
-      .map(m => m.replace(/```(?:bash|console|shell|sh|yaml)?\n?/g, '').replace(/```$/g, '').trim())
-      .filter(Boolean)
-  }
-  return []
 }
 
-/** Build a rich description from step fields */
-function buildStepDescription(step) {
-  const parts = []
-  if (step.description) parts.push(step.description.replace(/```[\s\S]*?```/g, '').trim())
+// ─── Helm validation ─────────────────────────────────────────────────
 
-  const cmds = extractCommands(step)
-  if (cmds.length > 0) {
-    parts.push('```bash')
-    for (const c of cmds) {
-      parts.push(c)
-    }
-    parts.push('```')
+const HELM_VALIDATE_TIMEOUT_MS = 10000
+
+async function checkVersionFreshness(helmRepoUrl, chartName, version) {
+  try {
+    const res = await fetch(`${helmRepoUrl}/index.yaml`, { signal: AbortSignal.timeout(HELM_VALIDATE_TIMEOUT_MS) })
+    if (!res.ok) return true
+    const text = await res.text()
+    const versionRe = new RegExp(`version:\\s+${version.replace(/\./g, '\\.')}`, 'm')
+    return versionRe.test(text)
+  } catch {
+    return true
   }
-
-  // Add command notes
-  if (Array.isArray(step.commands)) {
-    const notes = step.commands.filter(c => c.note).map(c => `> ${c.note}`)
-    if (notes.length) parts.push(notes.join('\n'))
-  }
-
-  return parts.filter(Boolean).join('\n\n')
 }
 
-/** Map troubleshooting to consistent format */
-function mapTroubleshooting(items) {
-  return (items || []).map(t => {
-    // New format has symptom/cause/fix; legacy has title/description
-    const title = t.symptom || t.title || 'Issue'
-    const parts = []
-    if (t.cause) parts.push(`**Cause:** ${t.cause}`)
-    if (t.fix) parts.push(`**Fix:**\n${t.fix}`)
-    if (t.versions && t.versions !== 'all') parts.push(`**Affected versions:** ${t.versions}`)
-    if (t.description) parts.push(t.description)
-    return {
-      title: String(title).slice(0, 200),
-      description: parts.length ? parts.join('\n\n') : String(t.description || t.fix || '').slice(0, 3000),
-    }
-  })
+// ─── Staleness check ─────────────────────────────────────────────────
+
+function isMissionStale(filePath) {
+  if (FORCE_REGENERATE) return true
+  try {
+    const mission = JSON.parse(readFileSync(filePath, 'utf-8'))
+    const generatedAt = mission.metadata?.generatedAt
+    if (!generatedAt) return true
+    const age = (Date.now() - new Date(generatedAt).getTime()) / (1000 * 60 * 60 * 24)
+    return age > STALENESS_THRESHOLD_DAYS
+  } catch {
+    return true
+  }
 }
 
-function buildMissionJson(platform, llmResult, context) {
-  const slug = slugify(platform.name)
+// ─── Report ───────────────────────────────────────────────────────────
 
-  // Collect all commands for the resolution codeSnippets
-  const allCommands = (llmResult.steps || []).flatMap(s => extractCommands(s)).slice(0, 8)
-
-  // Determine cloudCLI — normalize "none" and generic fallbacks
-  let cloudCLI = llmResult.prerequisites?.cloudCLI
-  if (!cloudCLI || cloudCLI === 'none' || /optional/i.test(cloudCLI)) {
-    // Use platform catalog's known CLI
-    const cliMap = {
-      gke: 'gcloud >= 450.0', eks: 'aws-cli >= 2.x, eksctl >= 0.170',
-      aks: 'az >= 2.50', oke: 'oci >= 3.x', doks: 'doctl >= 1.100',
-      lke: 'linode-cli', iks: 'ibmcloud >= 2.x', vke: 'vultr-cli',
-      openshift: 'oc >= 4.14',
-    }
-    cloudCLI = cliMap[platform.name] || (platform.type === 'operator' ? undefined : cloudCLI)
-  }
-
-  const mission = {
-    version: 'kc-mission-v1',
-    name: `platform-${slug}`,
-    missionClass: 'install',
-    author: 'KubeStellar Bot',
-    authorGithub: 'kubestellar',
-    mission: {
-      title: `Install and Configure ${platform.displayName}`,
-      description: llmResult.description || `Setup guide for ${platform.displayName}.`,
-      type: 'deploy',
-      status: 'completed',
-      estimatedMinutes: llmResult.estimatedMinutes || (platform.type === 'managed' ? 20 : platform.type === 'operator' ? 10 : 15),
-      steps: (llmResult.steps || []).map(s => ({
-        title: String(s.title || '').slice(0, 200),
-        description: buildStepDescription(s),
-        commands: extractCommands(s),
-      })),
-      uninstall: (llmResult.uninstall || []).map(s => ({
-        title: String(s.title || '').slice(0, 200),
-        description: buildStepDescription(s),
-        commands: extractCommands(s),
-      })),
-      upgrade: (llmResult.upgrade || []).map(s => ({
-        title: String(s.title || '').slice(0, 200),
-        description: buildStepDescription(s),
-        commands: extractCommands(s),
-      })),
-      troubleshooting: mapTroubleshooting(llmResult.troubleshooting),
-      versionNotes: (llmResult.versionNotes || []).map(v => ({
-        version: String(v.version || ''),
-        changes: String(v.changes || ''),
-        deprecations: String(v.deprecations || ''),
-        migrationSteps: v.migrationSteps ? String(v.migrationSteps) : undefined,
-      })),
-      resolution: {
-        summary: typeof llmResult.resolution === 'string'
-          ? llmResult.resolution
-          : llmResult.resolution?.summary || `${platform.displayName} is installed and running.`,
-        codeSnippets: allCommands,
-      },
-    },
-    metadata: {
-      tags: [
-        'installation',
-        'configuration',
-        platform.type,
-        platform.category,
-        platform.provider.toLowerCase().replace(/\s+/g, '-'),
-      ],
-      platform: platform.name,
-      platformType: platform.type,
-      platformProvider: platform.provider,
-      platformVersions: llmResult.supportedVersions || platform.versions,
-      supportedK8sVersions: llmResult.supportedK8sVersions || platform.k8sVersions,
-      cncfProjects: [],
-      targetResourceKinds: ['Namespace', 'Deployment', 'Service'],
-      difficulty: llmResult.difficulty || 'intermediate',
-      issueTypes: ['installation', 'configuration'],
-      installMethods: llmResult.installMethods || ['cli'],
-      containerImages: llmResult.containerImages || [],
-      sourceUrls: {
-        docs: platform.docs,
-        repo: platform.repo ? `https://github.com/${platform.repo}` : undefined,
-      },
-      qualityScore: 0,
-    },
-    prerequisites: {
-      kubernetes: llmResult.prerequisites?.kubernetes || '>=1.25',
-      tools: llmResult.prerequisites?.tools || ['kubectl'],
-      cloudCLI,
-      resources: llmResult.prerequisites?.resources || undefined,
-      description: llmResult.prerequisites?.description || `Ensure you have the required CLI tools installed.`,
-    },
-    security: {
-      scannedAt: new Date().toISOString(),
-      scannerVersion: 'platform-install-gen-2.0.0',
-      sanitized: true,
-      findings: [],
-    },
-  }
-
-  return mission
-}
-
-// ─── Report Generation ───────────────────────────────────────────────
 function formatReport(results) {
-  const lines = ['# Platform Install Mission Generation Report', '', `Generated: ${new Date().toISOString()}`, '']
-
+  const lines = ['# Platform Mission Generation Report', `Generated: ${new Date().toISOString()}`, '']
   const published = results.filter(r => r.verdict === 'publish')
   const drafted = results.filter(r => r.verdict === 'draft')
   const rejected = results.filter(r => r.verdict === 'rejected')
   const skipped = results.filter(r => r.verdict === 'skipped')
+  const failed = results.filter(r => r.verdict === 'failed')
 
-  lines.push(`| Status | Count |`, `|--------|-------|`)
-  lines.push(`| ✅ Published | ${published.length} |`)
-  lines.push(`| 📝 Draft | ${drafted.length} |`)
-  lines.push(`| ❌ Rejected | ${rejected.length} |`)
-  lines.push(`| ⏭️ Skipped | ${skipped.length} |`)
+  lines.push(`## Summary`)
+  lines.push(`- Published: ${published.length}`)
+  lines.push(`- Drafted: ${drafted.length}`)
+  lines.push(`- Rejected: ${rejected.length}`)
+  lines.push(`- Skipped: ${skipped.length}`)
+  lines.push(`- Failed: ${failed.length}`)
   lines.push('')
 
-  for (const r of results) {
-    const icon = r.verdict === 'publish' ? '✅' : r.verdict === 'draft' ? '📝' : r.verdict === 'skipped' ? '⏭️' : '❌'
-    lines.push(`## ${icon} ${r.platform} (score: ${r.score})`)
-    if (r.issues.length) lines.push(`Issues: ${r.issues.join('; ')}`)
+  if (published.length > 0) {
+    lines.push('## Published')
+    for (const r of published) lines.push(`- **${r.platform}** (score: ${r.score})`)
+    lines.push('')
+  }
+
+  if (drafted.length > 0) {
+    lines.push('## Drafted (needs review)')
+    for (const r of drafted) {
+      lines.push(`- **${r.platform}** (score: ${r.score})`)
+      if (r.issues?.length) lines.push(`  Issues: ${r.issues.join('; ')}`)
+    }
+    lines.push('')
+  }
+
+  if (rejected.length > 0) {
+    lines.push('## Rejected')
+    for (const r of rejected) {
+      lines.push(`- **${r.platform}** (score: ${r.score})`)
+      if (r.issues?.length) lines.push(`  Issues: ${r.issues.join('; ')}`)
+    }
     lines.push('')
   }
 
   return lines.join('\n')
 }
 
-// ─── Main ────────────────────────────────────────────────────────────
-async function main() {
-  console.log('=== Platform Install Mission Generator ===')
-  const ALL_PROJECTS = [...K8S_PLATFORMS, ...OTHER_PROJECTS]
-  console.log(`Projects in catalog: ${ALL_PROJECTS.length} (${K8S_PLATFORMS.length} platforms + ${OTHER_PROJECTS.length} other)`)
+// ─── Main ─────────────────────────────────────────────────────────────
 
-  // Determine which platforms to process
-  let platforms = [...ALL_PROJECTS]
-  if (TARGET_PLATFORMS && TARGET_PLATFORMS.length > 0) {
-    platforms = TARGET_PLATFORMS
-      .map(name => getPlatformByName(name) || OTHER_PROJECTS.find(p => p.name === name))
-      .filter(Boolean)
-    console.log(`Targeting ${platforms.length} platform(s): ${platforms.map(p => p.name).join(', ')}`)
+async function main() {
+  console.log('=== Platform Mission Generator ===')
+  if (!LLM_TOKEN) {
+    console.error('LLM_TOKEN or GITHUB_TOKEN required')
+    process.exit(1)
   }
 
-  // Apply batch index
+  mkdirSync(SOLUTIONS_DIR, { recursive: true })
+
+  // Collect platforms
+  let platforms = [...K8S_PLATFORMS, ...OTHER_PROJECTS]
+  if (TARGET_PLATFORMS?.length) {
+    platforms = platforms.filter(p =>
+      TARGET_PLATFORMS.some(t => p.name.toLowerCase().includes(t.toLowerCase()))
+    )
+    console.log(`Filtered to ${platforms.length} platforms matching: ${TARGET_PLATFORMS.join(', ')}`)
+  }
+
+  // Batch slicing
   if (BATCH_INDEX != null) {
     const start = BATCH_INDEX * BATCH_SIZE
     const end = start + BATCH_SIZE
+    console.log(`Batch ${BATCH_INDEX}: platforms ${start}–${Math.min(end, platforms.length) - 1} of ${platforms.length}`)
     platforms = platforms.slice(start, end)
-    console.log(`Batch ${BATCH_INDEX}: platforms ${start}-${end - 1} (${platforms.length} items)`)
   }
 
-  // Filter already-generated unless force — with staleness detection
-  if (!FORCE_REGENERATE) {
-    const existing = existsSync(SOLUTIONS_DIR)
-      ? readdirSync(SOLUTIONS_DIR).filter(f => f.endsWith('.json'))
-      : []
-    const existingNames = new Set(existing.map(f => f.replace(/\.json$/, '')))
-    const before = platforms.length
-    const staleNames = []
-
-    platforms = platforms.filter(p => {
-      const filename = `platform-${slugify(p.name)}`
-      if (!existingNames.has(filename)) return true // new — needs generation
-
-      // Check staleness: if the repo was updated after the mission was generated
-      const missionPath = join(SOLUTIONS_DIR, `${filename}.json`)
-      try {
-        const mission = JSON.parse(readFileSync(missionPath, 'utf-8'))
-        const scannedAt = mission.security?.scannedAt
-        if (!scannedAt) return true // no timestamp — regenerate
-
-        const scannedDate = new Date(scannedAt)
-        const ageMs = Date.now() - scannedDate.getTime()
-        const MS_PER_DAY = 86_400_000
-        const ageDays = ageMs / MS_PER_DAY
-
-        if (ageDays > STALENESS_THRESHOLD_DAYS) {
-          staleNames.push(p.name)
-          return true // too old — regenerate
-        }
-      } catch {
-        return true // unreadable — regenerate
-      }
-
-      return false // fresh — skip
-    })
-
-    const skipped = before - platforms.length
-    if (skipped > 0) {
-      console.log(`Skipping ${skipped} fresh platforms (generated within ${STALENESS_THRESHOLD_DAYS} days)`)
-    }
-    if (staleNames.length > 0) {
-      console.log(`Regenerating ${staleNames.length} stale platform(s): ${staleNames.join(', ')}`)
-    }
-  }
-
-  if (platforms.length === 0) {
-    console.log('No platforms to process.')
-    return
-  }
-
-  console.log(`Processing ${platforms.length} platform(s)...`)
-  mkdirSync(SOLUTIONS_DIR, { recursive: true })
+  console.log(`Processing ${platforms.length} platforms\n`)
 
   const results = []
 
   for (const platform of platforms) {
-    console.log(`\n── ${platform.displayName} (${platform.type}) ──`)
+    const slug = slugify(platform.name)
+    assertSafeSlug(slug, 'platform.name')
+    const outFilename = basename(`platform-${slug}.json`)
+    if (!/^platform-[a-z0-9-]+\.json$/.test(outFilename)) {
+      throw new Error(`Unexpected output filename: ${outFilename}`)
+    }
+    const outPath = join(SOLUTIONS_DIR, outFilename)
 
-    // 1. Crawl knowledge sources
-    console.log('  Crawling knowledge sources...')
-    const context = await crawlPlatformKnowledge(platform)
+    // Check if exists and is fresh
+    if (existsSync(outPath) && !isMissionStale(outPath)) {
+      console.log(`  Skipping ${platform.name} — mission exists and is fresh`)
+      results.push({ platform: platform.name, verdict: 'skipped', score: 0, issues: [] })
+      continue
+    }
 
-    // 2. Synthesize via LLM
-    console.log('  Synthesizing via LLM...')
-    const llmResult = await synthesizePlatformMission(platform, context)
+    console.log(`Processing: ${platform.name}`)
+
+    // Gather context from GitHub
+    const context = await gatherPlatformContext(platform)
+
+    // Synthesize mission via LLM
+    let llmResult = await synthesizePlatformMission(platform, context)
     if (!llmResult) {
-      results.push({ platform: platform.name, verdict: 'rejected', score: 0, issues: ['LLM returned no result'] })
+      console.log(`  LLM returned null — skipping`)
+      results.push({ platform: platform.name, verdict: 'failed', score: 0, issues: ['LLM returned null'] })
       continue
     }
 
-    if (llmResult.skip) {
-      results.push({ platform: platform.name, verdict: 'skipped', score: 0, issues: ['Platform marked as skip by LLM'] })
-      continue
+    // Build mission object
+    const mission = {
+      version: 'kc-mission-v1',
+      name: `platform-${slug}`,
+      missionClass: llmResult.missionClass || 'installer',
+      author: 'KubeStellar Bot',
+      authorGithub: 'kubestellar',
+      mission: {
+        title: llmResult.mission?.title || `${platform.name}: Install Guide`,
+        description: llmResult.mission?.description || '',
+        type: llmResult.mission?.type || 'configuration',
+        status: 'completed',
+        steps: (llmResult.mission?.steps || []).map(s => ({
+          title: String(s.title || '').slice(0, 200),
+          description: String(s.description || '').slice(0, 5000),
+        })),
+        resolution: {
+          summary: String(llmResult.mission?.resolution?.summary || '').slice(0, 1000),
+          codeSnippets: (llmResult.mission?.resolution?.codeSnippets || []).slice(0, 10).map(c => String(c).slice(0, 2000)),
+        },
+      },
+      metadata: {
+        category: platform.category || 'platform',
+        installMethods: platform.installMethods || ['kubectl'],
+        cncfProjects: platform.cncfProjects || [],
+        qualityScore: 0,
+        generatedAt: new Date().toISOString(),
+      },
+      prerequisites: {
+        tools: platform.prerequisites?.tools || ['kubectl'],
+        permissions: ['cluster-admin'],
+      },
+      security: {
+        rbacRequired: true,
+        networkPolicies: false,
+      },
     }
 
-    // 3. Build mission JSON
-    const mission = buildMissionJson(platform, llmResult, context)
-
-    // 3.1. Post-generation validation — reject fabricated content
-    const allMissionText = JSON.stringify(mission.mission)
-
-    // Reject nonexistent Kubernetes versions (>v1.33)
-    const NONEXISTENT_K8S_VERSION_RE = /v1\.(3[4-9]|[4-9][0-9])/
-    if (NONEXISTENT_K8S_VERSION_RE.test(allMissionText)) {
-      console.log('  Rejected: references nonexistent Kubernetes version (>v1.33)')
-      results.push({ platform: platform.name, verdict: 'rejected', score: 0, issues: ['References nonexistent K8s version'] })
-      continue
+    // 1. Sanitize any real infra details that crept in via context
+    const stepsText = JSON.stringify(mission.mission.steps)
+    if (/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/.test(stepsText)) {
+      mission.mission.steps = JSON.parse(sanitizeInfraDetails(stepsText))
     }
 
-    // Reject pip install kubectl/helm (wrong install method)
-    const PIP_INSTALL_WRONG_TOOL_RE = /pip install (kubectl|helm)\b/
-    if (PIP_INSTALL_WRONG_TOOL_RE.test(allMissionText)) {
-      console.log('  Rejected: uses pip install kubectl/helm — these are not the real tools')
-      results.push({ platform: platform.name, verdict: 'rejected', score: 0, issues: ['Uses pip install kubectl/helm'] })
-      continue
-    }
-
-    // Reject placeholder container image patterns
-    const PLACEHOLDER_IMAGE_RE = /registry\/[a-z]+\/[a-z]+:tag|registry\/org\/image/
-    if (PLACEHOLDER_IMAGE_RE.test(allMissionText)) {
-      console.log('  Rejected: contains placeholder container image pattern')
-      results.push({ platform: platform.name, verdict: 'rejected', score: 0, issues: ['Placeholder container image not replaced'] })
-      continue
-    }
-
-    // 3.2. Sanitize infrastructure details and redact credentials from mission content
-    const sanitizeMissionText = (obj) => {
-      if (typeof obj === 'string') return redactCredentials(sanitizeInfraDetails(obj))
-      if (Array.isArray(obj)) return obj.map(sanitizeMissionText)
-      if (obj && typeof obj === 'object') {
-        const result = {}
-        for (const [k, v] of Object.entries(obj)) result[k] = sanitizeMissionText(v)
-        return result
-      }
-      return obj
-    }
-    mission.mission = sanitizeMissionText(mission.mission)
-
-    // 3.5. Validate Helm repo URL if install method is helm
+    // 2. Validate Helm repo URL if install method is helm
     if (llmResult.installMethods?.includes('helm') && llmResult.helmRepoUrl) {
-      try {
-        const HELM_VALIDATE_TIMEOUT_MS = 10000
-        const indexRes = await fetch(`${llmResult.helmRepoUrl}/index.yaml`, { signal: AbortSignal.timeout(HELM_VALIDATE_TIMEOUT_MS) })
-        if (!indexRes.ok) {
-          console.log(`  Helm repo URL ${llmResult.helmRepoUrl} returned ${indexRes.status} — flagging for review`)
-          const HELM_URL_PENALTY = 30
-          mission.metadata.qualityScore = Math.max(0, (mission.metadata.qualityScore || 100) - HELM_URL_PENALTY)
-        }
-      } catch {
+      const isValidHelmRepo = await checkHelmRepoUrl(llmResult.helmRepoUrl)
+      if (!isValidHelmRepo) {
         console.log(`  Helm repo URL ${llmResult.helmRepoUrl} unreachable — flagging for review`)
         const HELM_URL_PENALTY = 30
         mission.metadata.qualityScore = Math.max(0, (mission.metadata.qualityScore || 100) - HELM_URL_PENALTY)
       }
     }
 
-    // 3.6. Check version freshness against Helm repo index
-    if (llmResult.installMethods?.includes('helm') && llmResult.helmRepoUrl && llmResult.helmChart) {
-      // Extract chart version from the generated steps
-      const stepsText = JSON.stringify(mission.mission.steps || [])
-      const chartVersionMatch = stepsText.match(/--version\s+([\w.]+)/)
-      if (chartVersionMatch) {
-        const VERSION_STALENESS_PENALTY = 15
-        const isFresh = await checkVersionFreshness(llmResult.helmRepoUrl, llmResult.helmChart, chartVersionMatch[1])
-        if (!isFresh) {
-          mission.metadata.qualityScore = Math.max(0, (mission.metadata.qualityScore || 100) - VERSION_STALENESS_PENALTY)
-        }
-      }
-    }
-
-    // 4. Apply quality gate
+    // 3. Apply quality gate
     const gateResult = applyQualityGate(mission)
     mission.metadata.qualityScore = gateResult.score
 
@@ -913,9 +634,22 @@ async function main() {
 
     if (!gateResult.pass) continue
 
+    // 4. Sanitize the mission text after LLM synthesis
+    const sanitizeMissionText = (obj) => {
+      if (typeof obj === 'string') return sanitizeInfraDetails(obj)
+      if (Array.isArray(obj)) return obj.map(sanitizeMissionText)
+      if (obj && typeof obj === 'object') {
+        const result = {}
+        for (const [k, v] of Object.entries(obj)) result[k] = sanitizeMissionText(v)
+        return result
+      }
+      return obj
+    }
+    mission.mission = sanitizeMissionText(mission.mission)
+
     // 5. Write mission file
-    const slug = slugify(platform.name)
-    assertSafeSlug(slug, 'platform.name')
+    const platformSlug = slugify(platform.name)
+    assertSafeSlug(platformSlug, 'platform.name')
     // Sanitize HTTP-derived verdict before using it to construct the file path (CWE-73).
     // The verdict is computed from LLM output; use an explicit allowlist to prevent
     // tainted data from influencing the filename beyond the '.draft.' infix.
@@ -924,22 +658,22 @@ async function main() {
     const verdictSuffix = Object.prototype.hasOwnProperty.call(VERDICT_SUFFIX_MAP, gateResult.verdict)
       ? VERDICT_SUFFIX_MAP[gateResult.verdict]
       : ''
-    const outFilename = basename(`platform-${slug}${verdictSuffix}.json`)
-    if (!/^platform-[a-z0-9-]+(?:\.draft)?\.json$/.test(outFilename)) {
-      throw new Error(`Unexpected output filename derived from HTTP-sourced verdict: ${outFilename}`)
+    const finalFilename = basename(`platform-${platformSlug}${verdictSuffix}.json`)
+    if (!/^platform-[a-z0-9-]+(?:\.draft)?\.json$/.test(finalFilename)) {
+      throw new Error(`Unexpected output filename derived from HTTP-sourced verdict: ${finalFilename}`)
     }
-    const outPath = join(SOLUTIONS_DIR, outFilename)
+    const finalPath = join(SOLUTIONS_DIR, finalFilename)
 
     // Path traversal guard (CWE-22)
-    const resolvedPath = join(process.cwd(), outPath)
+    const resolvedPath = join(process.cwd(), finalPath)
     const resolvedSolutionsDir = join(process.cwd(), SOLUTIONS_DIR)
     assertSafePath(resolvedPath, resolvedSolutionsDir)
 
     if (!DRY_RUN) {
-      writeFileSync(outPath, JSON.stringify(mission, null, 2))
-      console.log(`  Wrote: ${outPath}`)
+      writeFileSync(finalPath, JSON.stringify(mission, null, 2))
+      console.log(`  Wrote: ${finalPath}`)
     } else {
-      console.log(`  [DRY RUN] Would write: ${outPath}`)
+      console.log(`  [DRY RUN] Would write: ${finalPath}`)
     }
 
     // Rate-limit between platforms
@@ -958,9 +692,10 @@ async function main() {
   const published = results.filter(r => r.verdict === 'publish').length
   const drafted = results.filter(r => r.verdict === 'draft').length
   const rejected = results.filter(r => r.verdict === 'rejected').length
-  console.log(`\n=== Summary: ${published} published, ${drafted} draft, ${rejected} rejected ===`)
-
-  if (rejected > 0) process.exitCode = 0 // Don't fail workflow for quality rejections
+  const skipped = results.filter(r => r.verdict === 'skipped').length
+  const failed = results.filter(r => r.verdict === 'failed').length
+  console.log(`\n=== Summary ===`)
+  console.log(`Published: ${published} | Drafted: ${drafted} | Rejected: ${rejected} | Skipped: ${skipped} | Failed: ${failed}`)
 }
 
 main().catch(err => {

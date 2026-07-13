@@ -178,7 +178,20 @@ async function callLLM(mission) {
         return null
       }
 
-      const data = await response.json()
+      // Validate Content-Type and enforce a response size ceiling before using HTTP-derived
+      // bytes that will be merged into file-backed mission data (CWE-434 / http-to-file).
+      const contentType = response.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        console.warn(`  [LLM] Unexpected Content-Type: ${contentType.slice(0, 100)}`)
+        return null
+      }
+      const MAX_LLM_RESPONSE_BYTES = 500_000
+      const rawText = await response.text()
+      if (rawText.length > MAX_LLM_RESPONSE_BYTES) {
+        console.warn(`  [LLM] Response too large (${rawText.length} bytes), rejecting`)
+        return null
+      }
+      const data = JSON.parse(rawText)
       const content = data.choices?.[0]?.message?.content
       if (!content) return null
 
