@@ -261,7 +261,7 @@ describe('clusters hooks - useMCPStatus', () => {
   it('increases polling interval with exponential backoff', async () => {
     mockAgentFetch.mockRejectedValue(new Error('Network error'))
 
-    const { rerender } = renderHook(() => useMCPStatus())
+    const { rerender: _rerender } = renderHook(() => useMCPStatus())
 
     // Initial call with 0 failures
     await waitFor(() => expect(mockSubscribePolling).toHaveBeenCalled())
