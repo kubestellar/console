@@ -121,7 +121,7 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 
 	config, err := s.k8sClient.GetRestConfig(cluster)
 	if err != nil {
-		slog.Error("[Prometheus] failed to get cluster config", "cluster", sanitize.LogString(cluster), "error", err)
+		slog.Error("[Prometheus] failed to get cluster config", "cluster", sanitize.LogString(cluster), "error", sanitize.LogString(err.Error()))
 		writePrometheusError(w, http.StatusBadGateway, "failed to get cluster configuration")
 		return
 	}

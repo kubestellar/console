@@ -52,6 +52,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -330,7 +331,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("[AgentExec] exec session",
 		"cluster", sanitize.LogString(init.Cluster), "namespace", sanitize.LogString(init.Namespace), "pod", sanitize.LogString(init.Pod), "container", sanitize.LogString(init.Container), "command_binary", sanitize.LogString(cmdBinary), "command_argc", len(init.Command),
-		"tty", init.TTY,
+		"tty", sanitize.LogString(fmt.Sprint(init.TTY)),
 	)
 	slog.Debug("[AgentExec] full exec command", "command", sanitize.LogStrings(init.Command))
 
@@ -341,13 +342,13 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	// applies to the backend handler does NOT apply here.
 	clientset, err := s.k8sClient.GetClient(init.Cluster)
 	if err != nil {
-		slog.Error("[Exec] failed to get client", "cluster", sanitize.LogString(init.Cluster), "error", err)
+		slog.Error("[Exec] failed to get client", "cluster", sanitize.LogString(init.Cluster), "error", sanitize.LogString(err.Error()))
 		agentExecWriteError(conn, "Failed to get cluster client")
 		return
 	}
 	restConfig, err := s.k8sClient.GetRestConfig(init.Cluster)
 	if err != nil {
-		slog.Error("[Exec] failed to get REST config", "cluster", sanitize.LogString(init.Cluster), "error", err)
+		slog.Error("[Exec] failed to get REST config", "cluster", sanitize.LogString(init.Cluster), "error", sanitize.LogString(err.Error()))
 		agentExecWriteError(conn, "Failed to get cluster configuration")
 		return
 	}

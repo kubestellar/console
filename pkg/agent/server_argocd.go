@@ -95,13 +95,13 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validateHelmK8sName(req.AppName, "appName"); err != nil {
-		slog.Error("invalid ArgoCD app name", "appName", sanitize.LogString(req.AppName), "error", err)
+		slog.Error("invalid ArgoCD app name", "appName", sanitize.LogString(req.AppName), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("", err), "success": false})
 		return
 	}
 	if err := validateHelmK8sName(req.Cluster, "cluster"); err != nil {
-		slog.Error("invalid ArgoCD cluster", "cluster", sanitize.LogString(req.Cluster), "error", err)
+		slog.Error("invalid ArgoCD cluster", "cluster", sanitize.LogString(req.Cluster), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("", err), "success": false})
 		return
@@ -119,7 +119,7 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	if namespace == "" {
 		namespace = defaultArgoNamespace
 	} else if err := validateHelmK8sName(namespace, "namespace"); err != nil {
-		slog.Error("invalid ArgoCD namespace", "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Error("invalid ArgoCD namespace", "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("", err), "success": false})
 		return
@@ -169,7 +169,7 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	// Strategy 3: Annotate the Application to trigger a refresh + sync.
 	dynamicClient, err := s.k8sClient.GetDynamicClient(req.Cluster)
 	if err != nil {
-		slog.Error("failed to get ArgoCD dynamic client", "cluster", sanitize.LogString(req.Cluster), "error", err)
+		slog.Error("failed to get ArgoCD dynamic client", "cluster", sanitize.LogString(req.Cluster), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("get cluster client", err), "success": false})
 		return
@@ -289,7 +289,7 @@ func (s *Server) discoverArgoServerURL(ctx context.Context, cluster string) stri
 
 	clientset, err := s.k8sClient.GetClient(cluster)
 	if err != nil {
-		slog.Warn("[agent ArgoCD] server discovery failed: cannot get client", "cluster", sanitize.LogString(cluster), "error", err)
+		slog.Warn("[agent ArgoCD] server discovery failed: cannot get client", "cluster", sanitize.LogString(cluster), "error", sanitize.LogString(err.Error()))
 		return ""
 	}
 

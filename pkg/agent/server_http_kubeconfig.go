@@ -222,7 +222,7 @@ func (s *Server) handleKubeconfigRemoveHTTP(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := s.k8sClient.RemoveContext(req.Context); err != nil {
-		slog.Error("[kubeconfig] failed to remove context", "context", sanitize.LogString(req.Context), "error", err)
+		slog.Error("[kubeconfig] failed to remove context", "context", sanitize.LogString(req.Context), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]string{"error": sanitizeAgentError("remove cluster context", err)})
 		return

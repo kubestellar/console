@@ -129,7 +129,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		nodes, err := s.k8sClient.GetGPUNodes(ctx, cluster)
 		if err != nil {
 			retryIn := s.recordClusterResourceFailure(resourceName, cluster)
-			slog.Warn("error fetching nodes", "cluster", sanitize.LogString(cluster), "error", err, "retryIn", retryIn)
+			slog.Warn("error fetching nodes", "cluster", sanitize.LogString(cluster), "error", sanitize.LogString(err.Error()), "retryIn", retryIn)
 			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}
@@ -188,7 +188,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		nodes, err := s.k8sClient.GetNodes(ctx, cluster)
 		if err != nil {
 			retryIn := s.recordClusterResourceFailure(resourceName, cluster)
-			slog.Warn("error fetching nodes", "cluster", sanitize.LogString(cluster), "error", err, "retryIn", retryIn)
+			slog.Warn("error fetching nodes", "cluster", sanitize.LogString(cluster), "error", sanitize.LogString(err.Error()), "retryIn", retryIn)
 			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}

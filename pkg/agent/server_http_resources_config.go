@@ -151,19 +151,19 @@ func (s *Server) createServiceAccountHTTP(w http.ResponseWriter, r *http.Request
 	// #8034 followup: validate inputs at the HTTP boundary before calling the
 	// Kubernetes client, matching the pattern in createNamespaceHTTP.
 	if err := kube.ValidateKubeContext(req.Cluster); err != nil {
-		slog.Error("invalid cluster for create service account request", "cluster", sanitize.LogString(req.Cluster), "error", err)
+		slog.Error("invalid cluster for create service account request", "cluster", sanitize.LogString(req.Cluster), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
-		slog.Error("invalid namespace for create service account request", "namespace", sanitize.LogString(req.Namespace), "error", err)
+		slog.Error("invalid namespace for create service account request", "namespace", sanitize.LogString(req.Namespace), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("name", req.Name); err != nil {
-		slog.Error("invalid name for create service account request", "name", sanitize.LogString(req.Name), "error", err)
+		slog.Error("invalid name for create service account request", "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
@@ -174,7 +174,7 @@ func (s *Server) createServiceAccountHTTP(w http.ResponseWriter, r *http.Request
 
 	sa, err := s.k8sClient.CreateServiceAccount(ctx, req.Cluster, req.Namespace, req.Name)
 	if err != nil {
-		slog.Warn("error creating service account", "cluster", sanitize.LogString(req.Cluster), "namespace", sanitize.LogString(req.Namespace), "name", sanitize.LogString(req.Name), "error", err)
+		slog.Warn("error creating service account", "cluster", sanitize.LogString(req.Cluster), "namespace", sanitize.LogString(req.Namespace), "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("create service account", err), "source": "agent"})
 		return
@@ -197,19 +197,19 @@ func (s *Server) deleteServiceAccountHTTP(w http.ResponseWriter, r *http.Request
 	// #8034 followup: validate inputs at the HTTP boundary before calling the
 	// Kubernetes client, matching the pattern in createNamespaceHTTP.
 	if err := kube.ValidateKubeContext(cluster); err != nil {
-		slog.Error("invalid cluster for delete service account request", "cluster", sanitize.LogString(cluster), "error", err)
+		slog.Error("invalid cluster for delete service account request", "cluster", sanitize.LogString(cluster), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("namespace", namespace); err != nil {
-		slog.Error("invalid namespace for delete service account request", "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Error("invalid namespace for delete service account request", "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("name", name); err != nil {
-		slog.Error("invalid name for delete service account request", "name", sanitize.LogString(name), "error", err)
+		slog.Error("invalid name for delete service account request", "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
@@ -219,7 +219,7 @@ func (s *Server) deleteServiceAccountHTTP(w http.ResponseWriter, r *http.Request
 	defer cancel()
 
 	if err := s.k8sClient.DeleteServiceAccount(ctx, cluster, namespace, name); err != nil {
-		slog.Warn("error deleting service account", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
+		slog.Warn("error deleting service account", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("delete service account", err), "source": "agent"})
 		return
@@ -284,19 +284,19 @@ func (s *Server) createServiceExportHTTP(w http.ResponseWriter, r *http.Request)
 	// #8034 followup: validate inputs at the HTTP boundary before calling the
 	// Kubernetes client, matching the pattern in createNamespaceHTTP.
 	if err := kube.ValidateKubeContext(req.Cluster); err != nil {
-		slog.Error("invalid cluster for create service export request", "cluster", sanitize.LogString(req.Cluster), "error", err)
+		slog.Error("invalid cluster for create service export request", "cluster", sanitize.LogString(req.Cluster), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
-		slog.Error("invalid namespace for create service export request", "namespace", sanitize.LogString(req.Namespace), "error", err)
+		slog.Error("invalid namespace for create service export request", "namespace", sanitize.LogString(req.Namespace), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("serviceName", req.ServiceName); err != nil {
-		slog.Error("invalid serviceName for create service export request", "serviceName", sanitize.LogString(req.ServiceName), "error", err)
+		slog.Error("invalid serviceName for create service export request", "serviceName", sanitize.LogString(req.ServiceName), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
@@ -306,7 +306,7 @@ func (s *Server) createServiceExportHTTP(w http.ResponseWriter, r *http.Request)
 	defer cancel()
 
 	if err := s.k8sClient.CreateServiceExport(ctx, req.Cluster, req.Namespace, req.ServiceName); err != nil {
-		slog.Warn("error creating service export", "cluster", sanitize.LogString(req.Cluster), "namespace", sanitize.LogString(req.Namespace), "serviceName", sanitize.LogString(req.ServiceName), "error", err)
+		slog.Warn("error creating service export", "cluster", sanitize.LogString(req.Cluster), "namespace", sanitize.LogString(req.Namespace), "serviceName", sanitize.LogString(req.ServiceName), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("create service export", err), "source": "agent"})
 		return
@@ -336,19 +336,19 @@ func (s *Server) deleteServiceExportHTTP(w http.ResponseWriter, r *http.Request)
 	// #8034 followup: validate inputs at the HTTP boundary before calling the
 	// Kubernetes client, matching the pattern in createNamespaceHTTP.
 	if err := kube.ValidateKubeContext(cluster); err != nil {
-		slog.Error("invalid cluster for delete service export request", "cluster", sanitize.LogString(cluster), "error", err)
+		slog.Error("invalid cluster for delete service export request", "cluster", sanitize.LogString(cluster), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("namespace", namespace); err != nil {
-		slog.Error("invalid namespace for delete service export request", "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Error("invalid namespace for delete service export request", "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("name", name); err != nil {
-		slog.Error("invalid name for delete service export request", "name", sanitize.LogString(name), "error", err)
+		slog.Error("invalid name for delete service export request", "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
@@ -358,7 +358,7 @@ func (s *Server) deleteServiceExportHTTP(w http.ResponseWriter, r *http.Request)
 	defer cancel()
 
 	if err := s.k8sClient.DeleteServiceExport(ctx, cluster, namespace, name); err != nil {
-		slog.Warn("error deleting service export", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", err)
+		slog.Warn("error deleting service export", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("delete service export", err), "source": "agent"})
 		return

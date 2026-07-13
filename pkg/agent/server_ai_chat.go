@@ -443,7 +443,7 @@ func (s *Server) handleSelectAgentMessage(msg protocol.Message) protocol.Message
 	// Store the agent selection per-session (not globally)
 	previousAgent := s.registry.GetSelectedAgent(sessionID)
 	if err := s.registry.SetSelectedAgent(sessionID, req.Agent); err != nil {
-		slog.Error("set selected agent error", "error", err, "sessionID", sanitize.LogString(sessionID))
+		slog.Error("set selected agent error", "error", sanitize.LogString(err.Error()), "sessionID", sanitize.LogString(sessionID))
 		return s.errorResponse(msg.ID, "invalid_agent", "invalid agent selection")
 	}
 

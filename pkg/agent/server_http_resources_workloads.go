@@ -91,13 +91,13 @@ func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 	// render a specific error and so we don't lean on the apiserver for
 	// validation.
 	if err := kube.ValidateKubeContext(req.Cluster); err != nil {
-		slog.Error("invalid cluster for create namespace request", "cluster", sanitize.LogString(req.Cluster), "error", err)
+		slog.Error("invalid cluster for create namespace request", "cluster", sanitize.LogString(req.Cluster), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("name", req.Name); err != nil {
-		slog.Error("invalid namespace name for create request", "name", sanitize.LogString(req.Name), "error", err)
+		slog.Error("invalid namespace name for create request", "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
@@ -108,7 +108,7 @@ func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ns, err := s.k8sClient.CreateNamespace(ctx, req.Cluster, req.Name, req.Labels)
 	if err != nil {
-		slog.Warn("error creating namespace", "cluster", sanitize.LogString(req.Cluster), "name", sanitize.LogString(req.Name), "error", err)
+		slog.Warn("error creating namespace", "cluster", sanitize.LogString(req.Cluster), "name", sanitize.LogString(req.Name), "error", sanitize.LogString(err.Error()))
 		status, msg := mapK8sErrorToHTTP(err)
 		w.WriteHeader(status)
 		writeJSON(w, map[string]interface{}{"success": false, "error": msg, "source": "agent"})
@@ -132,13 +132,13 @@ func (s *Server) deleteNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 	// #8034 followup: validate inputs at the HTTP boundary before calling the
 	// Kubernetes client, matching the pattern in createNamespaceHTTP.
 	if err := kube.ValidateKubeContext(cluster); err != nil {
-		slog.Error("invalid cluster for delete namespace request", "cluster", sanitize.LogString(cluster), "error", err)
+		slog.Error("invalid cluster for delete namespace request", "cluster", sanitize.LogString(cluster), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := kube.ValidateDNS1123Label("name", name); err != nil {
-		slog.Error("invalid namespace name for delete request", "name", sanitize.LogString(name), "error", err)
+		slog.Error("invalid namespace name for delete request", "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
@@ -148,7 +148,7 @@ func (s *Server) deleteNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	if err := s.k8sClient.DeleteNamespace(ctx, cluster, name); err != nil {
-		slog.Warn("error deleting namespace", "cluster", sanitize.LogString(cluster), "name", sanitize.LogString(name), "error", err)
+		slog.Warn("error deleting namespace", "cluster", sanitize.LogString(cluster), "name", sanitize.LogString(name), "error", sanitize.LogString(err.Error()))
 		status, msg := mapK8sErrorToHTTP(err)
 		w.WriteHeader(status)
 		writeJSON(w, map[string]interface{}{"success": false, "error": msg, "source": "agent"})
@@ -363,7 +363,7 @@ func (s *Server) handleIngressesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	ingresses, err := s.k8sClient.GetIngresses(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching ingresses", "error", err)
+		slog.Warn("error fetching ingresses", "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -397,7 +397,7 @@ func (s *Server) handleNetworkPoliciesHTTP(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 	policies, err := s.k8sClient.GetNetworkPolicies(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching networkpolicies", "error", err)
+		slog.Warn("error fetching networkpolicies", "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -431,7 +431,7 @@ func (s *Server) handleServicesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	services, err := s.k8sClient.GetServices(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching services", "error", err)
+		slog.Warn("error fetching services", "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}

@@ -137,7 +137,7 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		errType := classifyError(err.Error())
-		slog.Error("[Health] cluster client error", "cluster", sanitize.LogString(contextName), "error", err)
+		slog.Error("[Health] cluster client error", "cluster", sanitize.LogString(contextName), "error", sanitize.LogString(err.Error()))
 		return &ClusterHealth{
 			Cluster:      contextName,
 			Healthy:      false,

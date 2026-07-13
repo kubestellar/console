@@ -176,7 +176,11 @@ func TestKagentProxyHandler_Authorization(t *testing.T) {
 			register: func(app *fiber.App, h *KagentProxyHandler) {
 				app.Get("/agents", h.ListAgents)
 			},
-			request:    httptest.NewRequest(http.MethodGet, "/agents", nil),
+			request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/agents", nil)
+				req.Host = "localhost"
+				return req
+			}(),
 			wantStatus: http.StatusForbidden,
 		},
 		{

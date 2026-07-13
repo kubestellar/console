@@ -312,7 +312,7 @@ func (m *MultiClusterClient) InstallGPUHealthCronJob(ctx context.Context, contex
 		}
 	}
 
-	slog.Info("[GPUHealthCronJob] installed", "cluster", sanitize.LogString(contextName), "namespace", sanitize.LogString(namespace), "schedule", sanitize.LogString(schedule), "tier", tier, "version", gpuHealthScriptVersion)
+	slog.Info("[GPUHealthCronJob] installed", "cluster", sanitize.LogString(contextName), "namespace", sanitize.LogString(namespace), "schedule", sanitize.LogString(schedule), "tier", sanitize.LogString(fmt.Sprint(tier)), "version", gpuHealthScriptVersion)
 	return nil
 }
 
