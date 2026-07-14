@@ -1,4 +1,5 @@
 import { vi, beforeEach } from 'vitest'
+import React from 'react'
 import type { CardDefinition } from '../types'
 
 type SkeletonProps = {
@@ -57,45 +58,64 @@ vi.mock('../../../components/cards/console-missions/shared', () => ({
 
 // Mock ClusterStatusBadge
 vi.mock('../../../components/ui/ClusterStatusBadge', () => ({
-  ClusterStatusDot: ({ state }: { state: string }) => 
-    ({ default: `<span data-testid="status-dot">${state}</span>` }),
+  ClusterStatusDot: ({ state }: { state: string }) => (
+    <span data-testid="status-dot">{state}</span>
+  ),
   getClusterState: () => 'healthy',
 }))
 
 // Mock Skeleton
 vi.mock('../../../components/ui/Skeleton', () => ({
-  Skeleton: ({ height, width, variant, className }: SkeletonProps) =>
-    ({ default: `<div data-testid="skeleton" data-variant=${variant} data-height=${height} data-width=${width} className=${className} />` }),
-  SkeletonCardWithRefresh: () => ({ default: `<div data-testid="skeleton-card-with-refresh" />` }),
+  Skeleton: ({ height, width, variant, className }: SkeletonProps) => (
+    <div
+      data-testid="skeleton"
+      data-variant={variant}
+      data-height={height}
+      data-width={width}
+      className={className}
+    />
+  ),
+  SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
 // Mock Pagination
 vi.mock('../../../components/ui/Pagination', () => ({
-  Pagination: ({ currentPage, totalPages }: PaginationProps) =>
-    ({ default: `<div data-testid="pagination" data-current=${currentPage} data-total=${totalPages} />` }),
+  Pagination: ({ currentPage, totalPages }: PaginationProps) => (
+    <div data-testid="pagination" data-current={currentPage} data-total={totalPages} />
+  ),
 }))
 
 // Mock CardControls
 vi.mock('../../../components/ui/CardControls', () => ({
-  CardControls: () => ({ default: `<div data-testid="card-controls" />` }),
+  CardControls: () => <div data-testid="card-controls" />,
 }))
 
 // Mock RefreshIndicator
 vi.mock('../../../components/ui/RefreshIndicator', () => ({
-  RefreshButton: ({ onRefresh, isRefreshing }: RefreshButtonProps) =>
-    ({ default: `<button data-testid="refresh-btn" data-refreshing=${isRefreshing} onClick=${onRefresh}>Refresh</button>` }),
+  RefreshButton: ({ onRefresh, isRefreshing }: RefreshButtonProps) => (
+    <button
+      data-testid="refresh-btn"
+      data-refreshing={isRefreshing}
+      onClick={onRefresh}
+    >
+      Refresh
+    </button>
+  ),
 }))
 
 // Mock ClusterBadge
 vi.mock('../../../components/ui/ClusterBadge', () => ({
-  ClusterBadge: ({ cluster }: ClusterBadgeProps) =>
-    ({ default: `<span data-testid="cluster-badge">${cluster}</span>` }),
+  ClusterBadge: ({ cluster }: ClusterBadgeProps) => (
+    <span data-testid="cluster-badge">{cluster}</span>
+  ),
 }))
 
 // Mock icons module
 vi.mock('../../icons', () => ({
   getIcon: (name: string) => {
-    return () => ({ default: `<span data-testid="icon-${name}">${name}</span>` })
+    const Icon = () => <span data-testid={`icon-${name}`}>{name}</span>
+    Icon.displayName = name
+    return Icon
   },
 }))
 
