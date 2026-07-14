@@ -1,5 +1,3 @@
-// @vitest-environment node
-
 /**
  * Unit tests for the split handlers.compliance.* modules introduced in #20970.
  *
@@ -15,6 +13,14 @@
  * structural check (handler count, path presence) guards against accidental
  * deletions; an integration check (actual HTTP responses) guards against
  * handler body regressions.
+ *
+ * NOTE: This file intentionally uses the project-default jsdom environment
+ * (no `@vitest-environment node` override).  MSW v2 resolves relative handler
+ * paths (e.g. `/api/compliance/frameworks/`) against `location.origin`.
+ * jsdom sets that to `http://localhost`, so relative paths match the
+ * `fetch('http://localhost/api/...')` calls below.  In a pure Node
+ * environment there is no `location` object and the handlers would never
+ * match, causing every request to be treated as unhandled.
  */
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import { setupServer } from 'msw/node'
