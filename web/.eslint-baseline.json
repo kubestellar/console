@@ -17204,5 +17204,789 @@
     "line": 30,
     "column": 7,
     "message": "'APP_FILE' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/main.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 200,
+    "column": 69,
+    "message": "'hook' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/cards/GPUUsageTrend.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9,
+    "column": 10,
+    "message": "'gpuNodeCache' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/cards/UserManagement.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 42,
+    "message": "'KeyboardEvent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/cards/WorkloadImportDialog.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 29,
+    "column": 10,
+    "message": "'load' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/cards/WorkloadImportDialog.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 29,
+    "column": 28,
+    "message": "'loadAll' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/cards/llmd/NightlyE2EGuideRow.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 57,
+    "message": "'FocusEvent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/clusters/ClusterDetailModal.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 15,
+    "column": 29,
+    "message": "'detectCloudProvider' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/AirGapDashboard.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'AirGapDashboardContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/BAADashboard.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'BAADashboardContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/ChangeControlAudit.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'ChangeControlAuditContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/ComplianceFrameworks.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 55,
+    "column": 10,
+    "message": "'ComplianceFrameworksContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/ComplianceReports.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 46,
+    "column": 10,
+    "message": "'ComplianceReportsContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/DataResidency.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'DataResidencyContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/FedRAMPDashboard.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'FedRAMPDashboardContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/GxPDashboard.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'GxPDashboardContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/HIPAADashboard.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'HIPAADashboardContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/NISTDashboard.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'NISTDashboardContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/SLSADashboard.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 5,
+    "column": 10,
+    "message": "'SLSADashboardContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/SegregationOfDuties.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'SegregationOfDutiesContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/STIGDashboard.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'STIGDashboardContent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/compliance/SigningStatusDashboard.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 17,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/drilldown/views/CRDDrillDown.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 44,
+    "message": "'KeyboardEvent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/drilldown/views/DeploymentDrillDown.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 57,
+    "message": "'KeyboardEvent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/drilldown/views/MultiClusterSummaryDrillDown.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 3,
+    "column": 47,
+    "message": "'Settings' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/drilldown/views/YAMLDrillDown.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 44,
+    "message": "'KeyboardEvent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/feedback/FeedbackDialogs.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 7,
+    "column": 10,
+    "message": "'LazyMarkdown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/feedback/SubmitTab.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 22,
+    "column": 10,
+    "message": "'LazyMarkdown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/layout/SnoozedMissionItem.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 3,
+    "column": 26,
+    "message": "'formatTimeRemaining' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/layout/mission-sidebar/MemoizedMessage.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 10,
+    "column": 10,
+    "message": "'LazyMarkdown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/marketplace/CommunityReview.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 3,
+    "column": 15,
+    "message": "'CommunityReview' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/mission-control/ClusterAssignmentPanel.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 11,
+    "column": 10,
+    "message": "'LazyMarkdown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/mission-control/fixer-definition-panel/AIStreamingPreview.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'LazyMarkdown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/mission-control/fixer-definition-panel/AISuggestErrorBanner.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'LazyMarkdown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/mission-control/fixer-definition-panel/ExecutiveAnalysis.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 3,
+    "column": 10,
+    "message": "'LazyMarkdown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/mission-control/fixer-definition-panel/TargetClusterSelector.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 31,
+    "message": "'X' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/ui/StatsOverview.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 32,
+    "column": 10,
+    "message": "'STAT_BLOCK_COLORS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/updates/WhatsNewModal.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 5,
+    "column": 10,
+    "message": "'LazyMarkdown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/widgets/widget-export-modal/WidgetExportModalContent.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 19,
+    "column": 30,
+    "message": "'KeyboardEvent' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useAdmissionWebhooks.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 13,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useCertManager.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 5,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useGatewayStatus.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 19,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useKubescape.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 20,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useKyverno.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 20,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useLLMd.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMCS.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 11,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions-execution.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions-operations.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions-agent-selection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.messages-stream.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.state-persist.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useProw.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 7,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useServiceExports.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 19,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useServiceImportsCard.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 19,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useStackDiscovery.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 15,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useTopology.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 18,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useTrivy.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 20,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useTrestle.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 24,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useMissionPromptBuilder.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 302,
+    "column": 31,
+    "message": "'T' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useMissionPromptBuilder.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 302,
+    "column": 49,
+    "message": "'D' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.resolution.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 44,
+    "message": "'vi' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 32,
+    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 44,
+    "message": "'vi' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'renderHook' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 22,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 22,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useUsers.core.openshift.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 22,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/crossplane.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useIntoto/fetchers.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'DEFAULT_REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 22,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 31,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9,
+    "column": 10,
+    "message": "'clearStoredAuthToken' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9,
+    "column": 52,
+    "message": "'setStoredAuthToken' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 36,
+    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 48,
+    "message": "'afterEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 36,
+    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 48,
+    "message": "'afterEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.dispatch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 36,
+    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.dispatch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 48,
+    "message": "'afterEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useKubescape.return-shape.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 67,
+    "column": 10,
+    "message": "'makeScanSummaryResponse' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useKubescape.return-shape.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 90,
+    "column": 10,
+    "message": "'makeDetailResponse' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useKubescape.state.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 90,
+    "column": 10,
+    "message": "'makeDetailResponse' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 18,
+    "column": 10,
+    "message": "'makeResolution' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 41,
+    "column": 10,
+    "message": "'seedLocalStorage' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 103,
+    "column": 10,
+    "message": "'makeHPA' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 112,
+    "column": 10,
+    "message": "'makeWVA' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 129,
+    "column": 10,
+    "message": "'makeGateway' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.provider.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 10,
+    "message": "'getCachedUser' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.session.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 80,
+    "column": 16,
+    "message": "'readStoredSessionToken' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.session.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 10,
+    "message": "'getCachedUser' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 80,
+    "column": 16,
+    "message": "'readStoredSessionToken' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useRewards.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 30,
+    "column": 3,
+    "message": "'incrementCoins' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 5,
+    "column": 3,
+    "message": "'findSimilarResolutionsStandalone' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 12,
+    "column": 12,
+    "message": "'useResolutions' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 20,
+    "column": 3,
+    "message": "'emitCardRemoved' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 47,
+    "column": 3,
+    "message": "'emitWidgetNavigation' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 81,
+    "column": 3,
+    "message": "'emitDrillDownClosed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 131,
+    "column": 3,
+    "message": "'emitScreenshotAttached' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 143,
+    "column": 3,
+    "message": "'emitAgentDisconnected' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 155,
+    "column": 3,
+    "message": "'emitMarketplaceRemove' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 20,
+    "column": 3,
+    "message": "'emitCardRemoved' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 47,
+    "column": 3,
+    "message": "'emitWidgetNavigation' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 81,
+    "column": 3,
+    "message": "'emitDrillDownClosed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 98,
+    "column": 3,
+    "message": "'emitModalTabViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 110,
+    "column": 3,
+    "message": "'emitTourCompleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 98,
+    "column": 3,
+    "message": "'emitModalTabViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 110,
+    "column": 3,
+    "message": "'emitTourCompleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 131,
+    "column": 3,
+    "message": "'emitScreenshotAttached' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 143,
+    "column": 3,
+    "message": "'emitAgentDisconnected' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 155,
+    "column": 3,
+    "message": "'emitMarketplaceRemove' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useCachedACMMScan.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 53,
+    "column": 10,
+    "message": "'useCachedACMMScan' is defined but never used. Allowed unused vars must match /^_/u."
   }
 ]

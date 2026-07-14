@@ -97,7 +97,7 @@ vi.mock('@/lib/cache', async () => {
           try { const data = await fetcher(); setState({ data, isLoading: false, error: null }) }
           catch (e) { setState((s: { data: T; isLoading: boolean; error: string | null }) => ({ ...s, isLoading: false, error: e instanceof Error ? e.message : 'error' })) }
         }, [])
-        React.useEffect(() => { void refetch() }, [])
+        React.useEffect(() => { void refetch() }, [refetch])
         return { data: state.data, isLoading: state.isLoading, error: state.error, refetch, isDemoData: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null }
       }
     },
