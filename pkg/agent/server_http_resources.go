@@ -264,7 +264,7 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get events from the cluster
 	events, err := s.k8sClient.GetEvents(ctx, cluster, namespace, limit, fieldSelector)
 	if err != nil {
-		slog.Warn("error fetching events", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching events", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
