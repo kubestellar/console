@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
-  registerDataHook,
   registerDrillAction,
   registerRenderer,
   registerCard,
@@ -8,7 +7,7 @@ import {
   getAllCardDefinitions,
   parseCardYAML,
 } from './CardRuntime.setup'
-import { registerFakeHook, makeDefinition, makeCardDataResult, CardRuntime } from './CardRuntime.setup'
+import { registerFakeHook, makeDefinition, CardRuntime } from './CardRuntime.setup'
 import { render } from '@testing-library/react'
 import React from 'react'
 

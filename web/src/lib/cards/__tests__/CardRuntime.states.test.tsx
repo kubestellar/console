@@ -4,7 +4,6 @@ import {
   CardRuntime,
   registerFakeHook,
   makeDefinition,
-  makeCardDataResult,
 } from './CardRuntime.setup'
 
 beforeEach(() => {
@@ -53,7 +52,7 @@ describe('CardRuntime — loading state', () => {
   })
 })
 
-'CardRuntime (describe error state', () => {
+describe('CardRuntime — error state', () => {
   it('renders CardErrorState when error exists and no items', () => {
     registerFakeHook('useErrorHook', { error: 'Server error 500', data: [] })
     const def = makeDefinition({ dataSource: { hook: 'useErrorHook' } })

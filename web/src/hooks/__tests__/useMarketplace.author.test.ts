@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -91,81 +91,23 @@ vi.mock('@/lib/cache', async () => {
     createCachedHook: <T>(config: { fetcher: () => Promise<T>; initialData: T }) => {
       const { fetcher, initialData } = config
       return () => {
-        const React2 = require('react') // eslint-disable-line @typescript-eslint/no-require-imports
-        const [state, setState] = React2.useState({ data: initialData, isLoading: true, error: null })
-        const refetch = React2.useCallback(async () => {
+        const [state, setState] = React.useState({ data: initialData, isLoading: true, error: null })
+        const refetch = React.useCallback(async () => {
           setState((s: { data: T; isLoading: boolean; error: string | null }) => ({ ...s, isLoading: true }))
           try { const data = await fetcher(); setState({ data, isLoading: false, error: null }) }
           catch (e) { setState((s: { data: T; isLoading: boolean; error: string | null }) => ({ ...s, isLoading: false, error: e instanceof Error ? e.message : 'error' })) }
         }, [])
-        React2.useEffect(() => { void refetch() }, [])
+        React.useEffect(() => { void refetch() }, [])
         return { data: state.data, isLoading: state.isLoading, error: state.error, refetch, isDemoData: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null }
       }
     },
   }
 })
 
-import { useMarketplace, useAuthorProfile } from '../useMarketplace'
-import type { MarketplaceItem } from '../useMarketplace'
-import { computeSha256 } from '../useMarketplace/integrity'
+import { useAuthorProfile } from '../useMarketplace'
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const INSTALLED_KEY = 'kc-marketplace-installed'
-const TRUSTED_DOWNLOAD_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/test.json'
-const UNTRUSTED_DOWNLOAD_URL = 'https://example.com/test.json'
-const DEFAULT_SHA256 = 'a'.repeat(64)
-
-function makeItem(overrides: Partial<MarketplaceItem> = {}): MarketplaceItem {
-  return {
-    id: 'test-item',
-    name: 'Test Item',
-    description: 'A test item for the marketplace',
-    author: 'tester',
-    version: '1.0.0',
-    downloadUrl: TRUSTED_DOWNLOAD_URL,
-    sha256: DEFAULT_SHA256,
-    tags: ['monitoring'],
-    cardCount: 2,
-    type: 'dashboard',
-    ...overrides,
-  }
-}
-
-function makeRegistry(items: MarketplaceItem[], presets?: MarketplaceItem[]) {
-  return {
-    version: '1.0.0',
-    updatedAt: new Date().toISOString(),
-    items,
-    presets,
-  }
-}
-
-function seedCache(items: MarketplaceItem[], presets?: MarketplaceItem[]) {
-  vi.mocked(globalThis.fetch).mockResolvedValueOnce({
-    ok: true,
-    json: () => Promise.resolve(makeRegistry(items, presets)),
-  } as Response)
-}
-
-function seedInstalledItems(map: Record<string, unknown>) {
-  localStorage.setItem(INSTALLED_KEY, JSON.stringify(map))
-  // Trigger the cross-tab sync listener so the module-level
-  // installedSnapshot is refreshed from localStorage (#7574).
-  window.dispatchEvent(new StorageEvent('storage', { key: INSTALLED_KEY }))
-  // Mock the dashboards API so reconciliation doesn't remove seeded entries (#7574).
-  const dashboardIds = Object.values(map)
-    .filter((e: Record<string, unknown>) => e.dashboardId)
-    .map((e: Record<string, unknown>) => ({ id: e.dashboardId }))
-  if (dashboardIds.length > 0) {
-    mockApiGet.mockResolvedValue({ data: dashboardIds })
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Tests — useMarketplace
+// Tests — useAuthorProfile
 // ---------------------------------------------------------------------------
 
 describe('useAuthorProfile', () => {

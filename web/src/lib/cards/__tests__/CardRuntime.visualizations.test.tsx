@@ -5,7 +5,6 @@ import {
   registerFakeHook,
   registerDrillAction,
   makeDefinition,
-  makeCardDataResult,
 } from './CardRuntime.setup'
 
 beforeEach(() => {

@@ -91,21 +91,20 @@ vi.mock('@/lib/cache', async () => {
     createCachedHook: <T>(config: { fetcher: () => Promise<T>; initialData: T }) => {
       const { fetcher, initialData } = config
       return () => {
-        const React2 = require('react') // eslint-disable-line @typescript-eslint/no-require-imports
-        const [state, setState] = React2.useState({ data: initialData, isLoading: true, error: null })
-        const refetch = React2.useCallback(async () => {
+        const [state, setState] = React.useState({ data: initialData, isLoading: true, error: null })
+        const refetch = React.useCallback(async () => {
           setState((s: { data: T; isLoading: boolean; error: string | null }) => ({ ...s, isLoading: true }))
           try { const data = await fetcher(); setState({ data, isLoading: false, error: null }) }
           catch (e) { setState((s: { data: T; isLoading: boolean; error: string | null }) => ({ ...s, isLoading: false, error: e instanceof Error ? e.message : 'error' })) }
         }, [])
-        React2.useEffect(() => { void refetch() }, [])
+        React.useEffect(() => { void refetch() }, [])
         return { data: state.data, isLoading: state.isLoading, error: state.error, refetch, isDemoData: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null }
       }
     },
   }
 })
 
-import { useMarketplace, useAuthorProfile } from '../useMarketplace'
+import { useMarketplace } from '../useMarketplace'
 import type { MarketplaceItem } from '../useMarketplace'
 import { computeSha256 } from '../useMarketplace/integrity'
 

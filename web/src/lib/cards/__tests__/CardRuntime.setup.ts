@@ -1,6 +1,27 @@
 import { vi, beforeEach } from 'vitest'
 import type { CardDefinition } from '../types'
 
+type SkeletonProps = {
+  height?: number | string
+  width?: number | string
+  variant?: string
+  className?: string
+}
+
+type PaginationProps = {
+  currentPage?: number
+  totalPages?: number
+}
+
+type RefreshButtonProps = {
+  onRefresh?: () => void
+  isRefreshing?: boolean
+}
+
+type ClusterBadgeProps = {
+  cluster?: string
+}
+
 // ---------------------------------------------------------------------------
 // Mocks — must be defined before importing the module under test
 // ---------------------------------------------------------------------------
@@ -43,14 +64,14 @@ vi.mock('../../../components/ui/ClusterStatusBadge', () => ({
 
 // Mock Skeleton
 vi.mock('../../../components/ui/Skeleton', () => ({
-  Skeleton: ({ height, width, variant, className }: any) => 
+  Skeleton: ({ height, width, variant, className }: SkeletonProps) =>
     ({ default: `<div data-testid="skeleton" data-variant=${variant} data-height=${height} data-width=${width} className=${className} />` }),
   SkeletonCardWithRefresh: () => ({ default: `<div data-testid="skeleton-card-with-refresh" />` }),
 }))
 
 // Mock Pagination
 vi.mock('../../../components/ui/Pagination', () => ({
-  Pagination: ({ currentPage, totalPages }: any) => 
+  Pagination: ({ currentPage, totalPages }: PaginationProps) =>
     ({ default: `<div data-testid="pagination" data-current=${currentPage} data-total=${totalPages} />` }),
 }))
 
@@ -61,13 +82,13 @@ vi.mock('../../../components/ui/CardControls', () => ({
 
 // Mock RefreshIndicator
 vi.mock('../../../components/ui/RefreshIndicator', () => ({
-  RefreshButton: ({ onRefresh, isRefreshing }: any) => 
+  RefreshButton: ({ onRefresh, isRefreshing }: RefreshButtonProps) =>
     ({ default: `<button data-testid="refresh-btn" data-refreshing=${isRefreshing} onClick=${onRefresh}>Refresh</button>` }),
 }))
 
 // Mock ClusterBadge
 vi.mock('../../../components/ui/ClusterBadge', () => ({
-  ClusterBadge: ({ cluster }: any) => 
+  ClusterBadge: ({ cluster }: ClusterBadgeProps) =>
     ({ default: `<span data-testid="cluster-badge">${cluster}</span>` }),
 }))
 
@@ -132,16 +153,27 @@ vi.mock('../cardHooks', () => ({
 // Import the module under test AFTER mocks are set up
 // ---------------------------------------------------------------------------
 
-export {
+const {
   CardRuntime,
-  registerDataHook,
+  registerDataHook: registerRuntimeDataHook,
   registerDrillAction,
   registerRenderer,
   registerCard,
   getCardDefinition,
   getAllCardDefinitions,
   parseCardYAML,
-} from '../CardRuntime'
+} = await import('../CardRuntime')
+
+export {
+  CardRuntime,
+  registerRuntimeDataHook as registerDataHook,
+  registerDrillAction,
+  registerRenderer,
+  registerCard,
+  getCardDefinition,
+  getAllCardDefinitions,
+  parseCardYAML,
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -170,7 +202,6 @@ export function registerFakeHook(
     lastRefresh?: Date
   } = {},
 ) {
-  const { registerDataHook } = require('../CardRuntime')
   const hook = () => ({
     data: result.data ?? [],
     isLoading: result.isLoading ?? false,
@@ -181,11 +212,11 @@ export function registerFakeHook(
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
   })
-  registerDataHook(name, hook)
+  registerRuntimeDataHook(name, hook)
   return hook
 }
 
-export function setMockCardDataResult(value: any) {
+export function setMockCardDataResult(value: ReturnType<typeof makeCardDataResult>) {
   mockCardDataResult = value
 }
 

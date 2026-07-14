@@ -4,9 +4,7 @@ import {
   CardRuntime,
   registerFakeHook,
   registerDrillAction,
-  registerRenderer,
   makeDefinition,
-  makeCardDataResult,
 } from './CardRuntime.setup'
 
 beforeEach(() => {
