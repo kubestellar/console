@@ -19,7 +19,8 @@ on:
         default: 'all'
         type: string
 
-permissions: {}
+permissions:
+  contents: read
 
 concurrency:
   group: auto-qa-tuner

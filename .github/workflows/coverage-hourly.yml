@@ -23,7 +23,8 @@ concurrency:
   group: coverage-suite
   cancel-in-progress: true
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read  # default read; writes scoped to job below
 
 env:
   NODE_VERSION: '22'
