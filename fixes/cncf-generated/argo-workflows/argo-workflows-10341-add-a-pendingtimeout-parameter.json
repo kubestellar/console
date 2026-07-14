@@ -1,0 +1,76 @@
+{
+  "version": "kc-mission-v1",
+  "name": "argo-workflows-10341-add-a-pendingtimeout-parameter",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "argo-workflows: Add a `pendingTimeout` parameter",
+    "description": "Add a `pendingTimeout` parameter. This issue affects 28+ users.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify argo-workflows troubleshoot symptoms",
+        "description": "Check for the issue in your argo-workflows deployment:\n```bash\nkubectl get pods -n argo-workflows -l app.kubernetes.io/name=argo-workflows\nkubectl logs -l app.kubernetes.io/name=argo-workflows -n argo-workflows --tail=100 | grep -i error\n```\nLook for errors or warnings in the logs that may indicate the issue."
+      },
+      {
+        "title": "Review argo-workflows configuration",
+        "description": "Inspect the relevant argo-workflows configuration:\n```bash\nkubectl get all -n argo-workflows -l app.kubernetes.io/name=argo-workflows\nkubectl get configmap -n argo-workflows -l app.kubernetes.io/part-of=argo-workflows\n```\nSee https://github.com/argoproj/argo-workflows/issues/3572 for context.\n\nSome of our workflows fails to schedule a k8s node because sometimes there are errors in the configuration that is responsible to execute a workflow."
+      },
+      {
+        "title": "Apply the fix for Add a `pendingTimeout` parameter",
+        "description": "### Motivation\n\nCurrent Template timeout parameter can handle nodes spending too long in pending phase, but if the node happens to progress to running this timeout parameter transfers to activeDeadlineSeconds, leaving no way to set a timeout that covers _just_ the pending phase.\n\n### Modifications\n\nI added a new `pendingTimeout` field to Template that should only apply while a node is in `pending` phase.  Existing logic for timeout was re-used and expanded, and requeueAfter was added to help\n\nSee the source issue for community-verified solutions."
+      },
+      {
+        "title": "Confirm Add a `pendingTimeout` parameter is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=argo-workflows -n argo-workflows --tail=50 --since=5m\nkubectl get events -n argo-workflows --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that the issue symptoms are gone."
+      }
+    ],
+    "resolution": {
+      "summary": "### Motivation\n\nCurrent Template timeout parameter can handle nodes spending too long in pending phase, but if the node happens to progress to running this timeout parameter transfers to activeDeadlineSeconds, leaving no way to set a timeout that covers _just_ the pending phase.",
+      "codeSnippets": []
+    }
+  },
+  "metadata": {
+    "tags": [
+      "argo-workflows",
+      "graduated",
+      "app-definition",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "argo-workflows"
+    ],
+    "targetResourceKinds": [
+      "Pod",
+      "Node"
+    ],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/argoproj/argo-workflows/issues/10341",
+      "repo": "https://github.com/argoproj/argo-workflows",
+      "pr": "https://github.com/argoproj/argo-workflows/pull/12762"
+    },
+    "reactions": 28,
+    "comments": 2,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with argo-workflows installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-14T06:45:30.518Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
