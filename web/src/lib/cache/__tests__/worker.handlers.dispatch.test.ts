@@ -389,7 +389,17 @@ function processMessage(
 // Tests
 // ---------------------------------------------------------------------------
 
+let db: MockDb
+
 describe('Cache Worker handlers', () => {
+  beforeEach(() => {
+    db = createMockDb()
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
   describe('processMessage dispatch', () => {
     it('dispatches get message', () => {
       const postMessage = vi.fn()

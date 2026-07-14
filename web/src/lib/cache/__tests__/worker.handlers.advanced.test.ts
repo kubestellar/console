@@ -389,7 +389,17 @@ function processMessage(
 // Tests
 // ---------------------------------------------------------------------------
 
+let db: MockDb
+
 describe('Cache Worker handlers', () => {
+  beforeEach(() => {
+    db = createMockDb()
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
   describe('handlePreloadAll', () => {
     it('returns empty result when db is null', () => {
       const result = handlePreloadAll(null)

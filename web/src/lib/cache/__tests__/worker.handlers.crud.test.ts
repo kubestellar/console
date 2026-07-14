@@ -389,7 +389,17 @@ function processMessage(
 // Tests
 // ---------------------------------------------------------------------------
 
+let db: MockDb
+
 describe('Cache Worker handlers', () => {
+  beforeEach(() => {
+    db = createMockDb()
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
   describe('handleGet', () => {
     it('returns null when db is null', () => {
       expect(handleGet(null, 'test-key')).toBeNull()
