@@ -63,7 +63,7 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 
 	namespaces, err := s.k8sClient.ListNamespacesWithDetails(ctx, cluster)
 	if err != nil {
-		slog.Warn("error fetching namespaces", "cluster", sanitize.LogString(cluster), "error", err)
+		slog.Warn("error fetching namespaces", "cluster", sanitize.LogString(cluster), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -192,7 +192,7 @@ func (s *Server) handleDeploymentsHTTP(w http.ResponseWriter, r *http.Request) {
 	// call, which lists deployments across all namespaces (#8121).
 	deployments, err := s.k8sClient.GetDeployments(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching deployments", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching deployments", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -227,7 +227,7 @@ func (s *Server) handleReplicaSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	replicasets, err := s.k8sClient.GetReplicaSets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching replicasets", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching replicasets", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -261,7 +261,7 @@ func (s *Server) handleStatefulSetsHTTP(w http.ResponseWriter, r *http.Request) 
 	defer cancel()
 	statefulsets, err := s.k8sClient.GetStatefulSets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching statefulsets", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching statefulsets", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -295,7 +295,7 @@ func (s *Server) handleDaemonSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	daemonsets, err := s.k8sClient.GetDaemonSets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching daemonsets", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching daemonsets", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -329,7 +329,7 @@ func (s *Server) handleCronJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	cronjobs, err := s.k8sClient.GetCronJobs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching cronjobs", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching cronjobs", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -363,7 +363,7 @@ func (s *Server) handleIngressesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	ingresses, err := s.k8sClient.GetIngresses(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching ingresses", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching ingresses", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -397,7 +397,7 @@ func (s *Server) handleNetworkPoliciesHTTP(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 	policies, err := s.k8sClient.GetNetworkPolicies(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching networkpolicies", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching networkpolicies", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -431,7 +431,7 @@ func (s *Server) handleServicesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	services, err := s.k8sClient.GetServices(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching services", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching services", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}

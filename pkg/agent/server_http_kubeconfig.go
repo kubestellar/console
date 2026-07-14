@@ -260,7 +260,7 @@ func (s *Server) handleKubeconfigAddHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := s.kubectl.AddCluster(req); err != nil {
-		slog.Error("add cluster error", "error", err)
+		slog.Error("add cluster error", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, kubeconfigAddResponse{Success: false, Error: sanitizeAgentError("add cluster", err)})
 		return
@@ -300,7 +300,7 @@ func (s *Server) handleKubeconfigTestHTTP(w http.ResponseWriter, r *http.Request
 
 	result, err := s.kubectl.TestClusterConnection(req)
 	if err != nil {
-		slog.Error("test connection error", "error", err)
+		slog.Error("test connection error", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, kube.TestConnectionResult{Reachable: false, Error: "connection test failed"})
 		return
