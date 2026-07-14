@@ -22,8 +22,7 @@ on:
         type: boolean
         default: false
 
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   plan:
