@@ -82,23 +82,8 @@ async function readStoredSessionToken(): Promise<string | null> {
 }
 
 
-function getCachedUser(): unknown | null {
-  try {
-    const cached = localStorage.getItem(AUTH_USER_CACHE_KEY)
-    return cached ? JSON.parse(cached) : null
-  } catch {
-    return null
-  }
-}
 
 // cacheUser
-function cacheUser(userData: unknown | null) {
-  if (userData) {
-    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(userData))
-  } else {
-    localStorage.removeItem(AUTH_USER_CACHE_KEY)
-  }
-}
 
 beforeEach(() => {
   localStorage.clear()
@@ -120,7 +105,6 @@ afterEach(() => {
 const apiMod = await import('../api')
 const dashMod = await import('../dashboards/dashboardSync')
 const analyticsMod = await import('../analytics')
-const demoMod = await import('../demoMode')
 
 // Cast to vi.Mock for type-safe mock API
 const mockCheckOAuth = apiMod.checkOAuthConfigured as unknown as ReturnType<typeof vi.fn>
@@ -133,7 +117,6 @@ const mockEmitConversionStep = analyticsMod.emitConversionStep as unknown as Ret
 const mockSetAnalyticsUserId = analyticsMod.setAnalyticsUserId as unknown as ReturnType<typeof vi.fn>
 const mockSetAnalyticsUserProperties = analyticsMod.setAnalyticsUserProperties as unknown as ReturnType<typeof vi.fn>
 const mockEmitDeveloperSession = analyticsMod.emitDeveloperSession as unknown as ReturnType<typeof vi.fn>
-const mockSetGlobalDemoMode = demoMod.setDemoMode as unknown as ReturnType<typeof vi.fn>
 
 // Helper: render useAuth inside AuthProvider using dynamic import
 async function renderWithAuthProvider() {

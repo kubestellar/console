@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -105,68 +105,7 @@ vi.mock('@/lib/cache', async () => {
   }
 })
 
-import { useMarketplace, useAuthorProfile } from '../useMarketplace'
-import type { MarketplaceItem } from '../useMarketplace'
-import { computeSha256 } from '../useMarketplace/integrity'
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const INSTALLED_KEY = 'kc-marketplace-installed'
-const TRUSTED_DOWNLOAD_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/test.json'
-const UNTRUSTED_DOWNLOAD_URL = 'https://example.com/test.json'
-const DEFAULT_SHA256 = 'a'.repeat(64)
-
-function makeItem(overrides: Partial<MarketplaceItem> = {}): MarketplaceItem {
-  return {
-    id: 'test-item',
-    name: 'Test Item',
-    description: 'A test item for the marketplace',
-    author: 'tester',
-    version: '1.0.0',
-    downloadUrl: TRUSTED_DOWNLOAD_URL,
-    sha256: DEFAULT_SHA256,
-    tags: ['monitoring'],
-    cardCount: 2,
-    type: 'dashboard',
-    ...overrides,
-  }
-}
-
-function makeRegistry(items: MarketplaceItem[], presets?: MarketplaceItem[]) {
-  return {
-    version: '1.0.0',
-    updatedAt: new Date().toISOString(),
-    items,
-    presets,
-  }
-}
-
-function seedCache(items: MarketplaceItem[], presets?: MarketplaceItem[]) {
-  vi.mocked(globalThis.fetch).mockResolvedValueOnce({
-    ok: true,
-    json: () => Promise.resolve(makeRegistry(items, presets)),
-  } as Response)
-}
-
-function seedInstalledItems(map: Record<string, unknown>) {
-  localStorage.setItem(INSTALLED_KEY, JSON.stringify(map))
-  // Trigger the cross-tab sync listener so the module-level
-  // installedSnapshot is refreshed from localStorage (#7574).
-  window.dispatchEvent(new StorageEvent('storage', { key: INSTALLED_KEY }))
-  // Mock the dashboards API so reconciliation doesn't remove seeded entries (#7574).
-  const dashboardIds = Object.values(map)
-    .filter((e: Record<string, unknown>) => e.dashboardId)
-    .map((e: Record<string, unknown>) => ({ id: e.dashboardId }))
-  if (dashboardIds.length > 0) {
-    mockApiGet.mockResolvedValue({ data: dashboardIds })
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Tests — useMarketplace
-// ---------------------------------------------------------------------------
+import { useAuthorProfile } from '../useMarketplace'
 
 // ---------------------------------------------------------------------------
 // Tests — useAuthorProfile

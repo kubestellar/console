@@ -19,7 +19,7 @@ vi.mock('../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },
 }))
 
-import { useStackDiscovery, stackToServerMetrics } from '../useStackDiscovery'
+import { useStackDiscovery } from '../useStackDiscovery'
 import type { LLMdStack } from '../useStackDiscovery'
 
 // ── Constants mirrored from source ───────────────────────────────────────────

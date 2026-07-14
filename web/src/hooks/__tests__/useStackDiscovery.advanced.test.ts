@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -29,110 +29,9 @@ const REFRESH_INTERVAL_MS = 120000
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Build a kubectl JSON response wrapping items */
-function k8sResponse(items: unknown[], exitCode = 0) {
-  return { output: JSON.stringify({ items }), exitCode }
-}
 
-/** Build an error/connection-refused kubectl response */
-function errorResponse(msg = 'connection refused', exitCode = 1) {
-  return { output: msg, exitCode }
-}
 
-/** Empty successful response (no items) */
-const EMPTY_RESPONSE = k8sResponse([])
 
-/** Namespace-list response (jsonpath format) */
-function nsResponse(namespaces: string[]) {
-  return { output: namespaces.join(' '), exitCode: 0 }
-}
-
-/** Build a minimal pod resource with llm-d labels */
-function makePod(
-  name: string,
-  namespace: string,
-  role: string,
-  phase = 'Running',
-  ready = true,
-  extraLabels: Record<string, string> = {},
-) {
-  return {
-    metadata: {
-      name,
-      namespace,
-      labels: {
-        'llm-d.ai/role': role,
-        'pod-template-hash': 'abc123',
-        ...extraLabels,
-      },
-    },
-    status: {
-      phase,
-      containerStatuses: [{ ready }],
-    },
-  }
-}
-
-/** Build a minimal deployment resource */
-function makeDeployment(
-  name: string,
-  namespace: string,
-  replicas = 1,
-  readyReplicas = 1,
-  labels: Record<string, string> = {},
-) {
-  return {
-    metadata: { name, namespace, labels: {} },
-    spec: {
-      replicas,
-      template: { metadata: { labels } },
-    },
-    status: { replicas, readyReplicas, availableReplicas: readyReplicas },
-  }
-}
-
-/** Build a minimal InferencePool resource */
-function makePool(name: string, namespace: string) {
-  return {
-    metadata: { name, namespace },
-    spec: { selector: { matchLabels: {} } },
-  }
-}
-
-/** Build a minimal HPA resource */
-function makeHPA(name: string, namespace: string, min = 1, max = 3) {
-  return {
-    metadata: { name, namespace },
-    spec: { minReplicas: min, maxReplicas: max },
-    status: { currentReplicas: min, desiredReplicas: min },
-  }
-}
-
-/** Build a minimal WVA resource */
-function makeWVA(name: string, namespace: string, min = 1, max = 5) {
-  return {
-    metadata: { name, namespace },
-    spec: { minReplicas: min, maxReplicas: max },
-    status: { currentReplicas: min, desiredReplicas: min },
-  }
-}
-
-/** Build a minimal service resource with EPP naming */
-function makeEPPService(name: string, namespace: string) {
-  return {
-    metadata: { name, namespace },
-    spec: { ports: [{ port: 9002 }] },
-  }
-}
-
-/** Build a minimal Gateway resource */
-function makeGateway(name: string, namespace: string, hasAddress = true) {
-  return {
-    metadata: { name, namespace },
-    spec: { gatewayClassName: 'istio' },
-    status: hasAddress ? { addresses: [{ value: '10.0.0.1' }] } : {},
-  }
-}
 
 /**
  * Configure mockExec to handle the standard 7 Phase-1 parallel calls,

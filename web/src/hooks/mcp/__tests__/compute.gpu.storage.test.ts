@@ -105,7 +105,6 @@ import {
   gpuNodeCache,
   gpuNodeSubscribers,
   updateGPUNodeCache,
-  notifyGPUNodeSubscribers,
 } from '../compute'
 
 // ---------------------------------------------------------------------------
@@ -390,7 +389,7 @@ describe('fetchGPUNodes — error recovery from localStorage', () => {
 
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
 
-    const { result } = renderHook(() => useGPUNodes())
+    renderHook(() => useGPUNodes())
 
     await waitFor(() => expect(gpuNodeCache.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
   })

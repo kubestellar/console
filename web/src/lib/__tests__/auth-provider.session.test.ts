@@ -73,32 +73,9 @@ vi.mock('../../hooks/mcp/shared', () => ({
 // ---------------------------------------------------------------------------
 // Constants matching auth.tsx internals
 // ---------------------------------------------------------------------------
-const AUTH_USER_CACHE_KEY = 'kc-user-cache'
 const STORAGE_KEY_TOKEN = 'token'
 const AUTH_TOKEN_SYNC_KEY = 'kc-auth-token-sync'
 
-async function readStoredSessionToken(): Promise<string | null> {
-  return getStoredAuthToken()
-}
-
-
-function getCachedUser(): unknown | null {
-  try {
-    const cached = localStorage.getItem(AUTH_USER_CACHE_KEY)
-    return cached ? JSON.parse(cached) : null
-  } catch {
-    return null
-  }
-}
-
-// cacheUser
-function cacheUser(userData: unknown | null) {
-  if (userData) {
-    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(userData))
-  } else {
-    localStorage.removeItem(AUTH_USER_CACHE_KEY)
-  }
-}
 
 beforeEach(() => {
   localStorage.clear()
@@ -118,7 +95,6 @@ afterEach(() => {
 
 
 const apiMod = await import('../api')
-const dashMod = await import('../dashboards/dashboardSync')
 const analyticsMod = await import('../analytics')
 const demoMod = await import('../demoMode')
 
@@ -126,13 +102,8 @@ const demoMod = await import('../demoMode')
 const mockCheckOAuth = apiMod.checkOAuthConfigured as unknown as ReturnType<typeof vi.fn>
 // #6055 — retry helper is the one auth.tsx actually calls on the no-token path
 const mockCheckOAuthWithRetry = apiMod.checkOAuthConfiguredWithRetry as unknown as ReturnType<typeof vi.fn>
-const mockClearCache = dashMod.dashboardSync.clearCache as unknown as ReturnType<typeof vi.fn>
 const mockEmitLogin = analyticsMod.emitLogin as unknown as ReturnType<typeof vi.fn>
-const mockEmitLogout = analyticsMod.emitLogout as unknown as ReturnType<typeof vi.fn>
 const mockEmitConversionStep = analyticsMod.emitConversionStep as unknown as ReturnType<typeof vi.fn>
-const mockSetAnalyticsUserId = analyticsMod.setAnalyticsUserId as unknown as ReturnType<typeof vi.fn>
-const mockSetAnalyticsUserProperties = analyticsMod.setAnalyticsUserProperties as unknown as ReturnType<typeof vi.fn>
-const mockEmitDeveloperSession = analyticsMod.emitDeveloperSession as unknown as ReturnType<typeof vi.fn>
 const mockSetGlobalDemoMode = demoMod.setDemoMode as unknown as ReturnType<typeof vi.fn>
 
 // Helper: render useAuth inside AuthProvider using dynamic import

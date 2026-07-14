@@ -93,9 +93,6 @@ async function getHooks() {
   return import('../useUsers')
 }
 
-// Stable empty array to avoid infinite re-renders with hooks that use
-// arrays in useCallback dependency lists (new [] on each render = new ref)
-const EMPTY_CLUSTERS: Array<{ name: string }> = []
 
 // =========================================================================
 // useConsoleUsers

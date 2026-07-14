@@ -3,10 +3,8 @@
  * Covers user cache helpers, useAuth fallback behavior,
  * expiry banner DOM behavior, and AuthProvider integration.
  */
-import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor, act } from '@testing-library/react'
-import { clearStoredAuthToken, getStoredAuthToken, setStoredAuthToken } from '../authToken'
+import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — declared before importing the module under test
@@ -74,14 +72,6 @@ vi.mock('../../hooks/mcp/shared', () => ({
 // Constants matching auth.tsx internals
 // ---------------------------------------------------------------------------
 const AUTH_USER_CACHE_KEY = 'kc-user-cache'
-const STORAGE_KEY_TOKEN = 'token'
-const AUTH_TOKEN_SYNC_KEY = 'kc-auth-token-sync'
-
-async function readStoredSessionToken(): Promise<string | null> {
-  return getStoredAuthToken()
-}
-
-
 function getCachedUser(): unknown | null {
   try {
     const cached = localStorage.getItem(AUTH_USER_CACHE_KEY)

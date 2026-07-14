@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useSearchIndex, CATEGORY_ORDER } from '../useSearchIndex'
-import type { SearchCategory, SearchItem } from '../useSearchIndex'
+import { useSearchIndex } from '../useSearchIndex'
+import type { SearchItem } from '../useSearchIndex'
 
 // ── Mock all data hooks used inside useSearchIndex ──────────────────────────
 
@@ -82,21 +82,17 @@ vi.mock('../../components/ui/StatsBlockDefinitions', () => ({
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+
+// ── Tests ───────────────────────────────────────────────────────────────────
+
 /** Flatten all results from the grouped Map into a single array, preserving order */
-function flattenResults(results: Map<SearchCategory, SearchItem[]>): SearchItem[] {
+function flattenResults(results: Map<string, SearchItem[]>): SearchItem[] {
   const flat: SearchItem[] = []
   for (const items of results.values()) {
     flat.push(...items)
   }
   return flat
 }
-
-/** Get all category keys from results in order */
-function resultCategories(results: Map<SearchCategory, SearchItem[]>): SearchCategory[] {
-  return Array.from(results.keys())
-}
-
-// ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('useSearchIndex', () => {
   beforeEach(() => {

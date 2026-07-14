@@ -63,6 +63,7 @@ import { useKubescape } from '../useKubescape'
 // Helpers
 // ---------------------------------------------------------------------------
 
+
 /** Builds a workloadconfigurationscansummaries JSON response */
 function makeScanSummaryResponse(items: Array<{
   name: string; namespace: string;
@@ -79,29 +80,6 @@ function makeScanSummaryResponse(items: Array<{
             medium: i.medium ?? 0,
             low: i.low ?? 0,
           },
-        },
-      })),
-    }),
-    exitCode: 0,
-  }
-}
-
-/** Builds a workloadconfigurationscans (detail) JSON response */
-function makeDetailResponse(items: Array<{
-  name: string; namespace: string;
-  controls: Record<string, { status: string; name?: string }>;
-}>) {
-  return {
-    output: JSON.stringify({
-      items: items.map((i) => ({
-        metadata: { name: i.name, namespace: i.namespace },
-        spec: {
-          controls: Object.fromEntries(
-            Object.entries(i.controls).map(([id, ctrl]) => [
-              id,
-              { status: { status: ctrl.status }, name: ctrl.name ?? id },
-            ])
-          ),
         },
       })),
     }),

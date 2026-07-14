@@ -105,7 +105,6 @@ import {
   gpuNodeCache,
   gpuNodeSubscribers,
   updateGPUNodeCache,
-  notifyGPUNodeSubscribers,
 } from '../compute'
 
 // ---------------------------------------------------------------------------

@@ -105,17 +105,14 @@ vi.mock('@/lib/cache', async () => {
   }
 })
 
-import { useMarketplace, useAuthorProfile } from '../useMarketplace'
+import { useMarketplace } from '../useMarketplace'
 import type { MarketplaceItem } from '../useMarketplace'
-import { computeSha256 } from '../useMarketplace/integrity'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const INSTALLED_KEY = 'kc-marketplace-installed'
 const TRUSTED_DOWNLOAD_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/test.json'
-const UNTRUSTED_DOWNLOAD_URL = 'https://example.com/test.json'
 const DEFAULT_SHA256 = 'a'.repeat(64)
 
 function makeItem(overrides: Partial<MarketplaceItem> = {}): MarketplaceItem {
@@ -150,19 +147,6 @@ function seedCache(items: MarketplaceItem[], presets?: MarketplaceItem[]) {
   } as Response)
 }
 
-function seedInstalledItems(map: Record<string, unknown>) {
-  localStorage.setItem(INSTALLED_KEY, JSON.stringify(map))
-  // Trigger the cross-tab sync listener so the module-level
-  // installedSnapshot is refreshed from localStorage (#7574).
-  window.dispatchEvent(new StorageEvent('storage', { key: INSTALLED_KEY }))
-  // Mock the dashboards API so reconciliation doesn't remove seeded entries (#7574).
-  const dashboardIds = Object.values(map)
-    .filter((e: Record<string, unknown>) => e.dashboardId)
-    .map((e: Record<string, unknown>) => ({ id: e.dashboardId }))
-  if (dashboardIds.length > 0) {
-    mockApiGet.mockResolvedValue({ data: dashboardIds })
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Tests — useMarketplace

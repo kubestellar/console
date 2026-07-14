@@ -105,7 +105,7 @@ vi.mock('@/lib/cache', async () => {
   }
 })
 
-import { useMarketplace, useAuthorProfile } from '../useMarketplace'
+import { useMarketplace } from '../useMarketplace'
 import type { MarketplaceItem } from '../useMarketplace'
 import { computeSha256 } from '../useMarketplace/integrity'
 

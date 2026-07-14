@@ -1,12 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import {
-  detectIssueSignature,
   findSimilarResolutionsStandalone,
   generateResolutionPromptContext,
-  calculateSignatureSimilarity,
   useResolutions,
-  type IssueSignature,
   type Resolution,
   type SimilarResolution,
 } from '../useResolutions'
