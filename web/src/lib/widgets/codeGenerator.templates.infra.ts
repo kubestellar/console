@@ -3,10 +3,8 @@
  */
 
 import type { TemplateHelpers } from './codeGenerator.templates'
-import { WIDGET_CARDS } from './widgetRegistry'
 
 export function generateInfraCardRender(cardType: string, helpers: TemplateHelpers): string | null {
-  const card = WIDGET_CARDS[cardType]
   const { parseBlock, wrapOpen, wrapClose, issueButton } = helpers
 
   switch (cardType) {
