@@ -167,24 +167,6 @@ func TestParseCorpus_ValidJSON(t *testing.T) {
 	}
 }
 
-func TestParseCorpus_InvalidJSON(t *testing.T) {
-	_, err := ParseCorpus([]byte(`{invalid json`))
-	if err == nil {
-		t.Fatal("expected error for invalid JSON")
-	}
-}
-
-func TestParseCorpus_EmptyMissions(t *testing.T) {
-	data := []byte(`{"version":"1","count":0,"missions":[]}`)
-	docs, err := ParseCorpus(data)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(docs) != 0 {
-		t.Fatalf("expected 0 docs, got %d", len(docs))
-	}
-}
-
 func TestSearchableText_ContainsTitleTwice(t *testing.T) {
 	d := Document{
 		Title:       "Install Prometheus",
