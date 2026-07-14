@@ -250,7 +250,7 @@ export function QuickActionsSection({
             aria-label={action.label}
             className={cn('flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50', TOUCH_TARGET_HEIGHT_CLASS, variantStyles[action.variant || 'default'])}
           >
-            <Icon className="w-4 h-4" />
+            <Icon className="w-4 h-4" aria-hidden="true" />
             {action.label}
           </button>
         )
