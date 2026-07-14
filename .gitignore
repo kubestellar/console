@@ -114,3 +114,7 @@ release-failure-diagnosis.md
 release-failure-summary.txt
 pr.md
 reviewer_log.md
+
+# Build and cache artifacts
+.npm-cache/
+web/coverage/

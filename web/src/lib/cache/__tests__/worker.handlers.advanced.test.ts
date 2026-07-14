@@ -390,6 +390,10 @@ function processMessage(
 // ---------------------------------------------------------------------------
 
 describe('Cache Worker handlers', () => {
+  let db: ReturnType<typeof createMockDb>
+  beforeEach(() => { db = createMockDb() })
+  afterEach(() => { db.store.clear(); db.metaStore.clear(); db.prefStore.clear() })
+
   describe('handlePreloadAll', () => {
     it('returns empty result when db is null', () => {
       const result = handlePreloadAll(null)
