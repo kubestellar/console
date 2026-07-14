@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -495,4 +496,74 @@ func TestTouchesMixedModeSensitiveKubectlResource(t *testing.T) {
 			t.Errorf("unexpected sensitive resource in %v", args)
 		}
 	}
+}
+
+// TestFormatMixedModeRejectedCommands verifies the user-facing formatter
+// used when the mixed-mode command validator blocks LLM-generated commands.
+// This message is the primary UX surface for security decisions in mixed mode.
+func TestFormatMixedModeRejectedCommands(t *testing.T) {
+	t.Run("empty returns empty string", func(t *testing.T) {
+		if got := formatMixedModeRejectedCommands(nil); got != "" {
+			t.Errorf("expected empty string for nil, got %q", got)
+		}
+		if got := formatMixedModeRejectedCommands([]mixedModeRejectedCommand{}); got != "" {
+			t.Errorf("expected empty string for empty slice, got %q", got)
+		}
+	})
+
+	t.Run("single blocked command", func(t *testing.T) {
+		got := formatMixedModeRejectedCommands([]mixedModeRejectedCommand{
+			{Command: "kubectl delete ns kube-system", Reason: "destructive verb", RequiresApproval: false},
+		})
+		if !strings.Contains(got, "\u26a0\ufe0f Blocked LLM-generated commands before execution:") {
+			t.Errorf("missing header, got %q", got)
+		}
+		if !strings.Contains(got, "`kubectl delete ns kube-system`") {
+			t.Errorf("command not rendered in backticks, got %q", got)
+		}
+		if !strings.Contains(got, "destructive verb") {
+			t.Errorf("reason missing, got %q", got)
+		}
+		if !strings.Contains(got, "(blocked)") {
+			t.Errorf("expected (blocked) status for RequiresApproval=false, got %q", got)
+		}
+		if !strings.HasSuffix(got, "Only prevalidated read-only commands are auto-executed in mixed mode.\n") {
+			t.Errorf("missing trailer, got %q", got)
+		}
+	})
+
+	t.Run("requires-approval status is distinct from blocked", func(t *testing.T) {
+		got := formatMixedModeRejectedCommands([]mixedModeRejectedCommand{
+			{Command: "kubectl apply -f x.yaml", Reason: "mutation", RequiresApproval: true},
+		})
+		if !strings.Contains(got, "(approval required)") {
+			t.Errorf("expected (approval required) status, got %q", got)
+		}
+		if strings.Contains(got, "(blocked)") {
+			t.Errorf("status must not be (blocked) when RequiresApproval=true, got %q", got)
+		}
+	})
+
+	t.Run("multiple commands rendered in order with correct statuses", func(t *testing.T) {
+		got := formatMixedModeRejectedCommands([]mixedModeRejectedCommand{
+			{Command: "kubectl delete ns a", Reason: "destructive", RequiresApproval: false},
+			{Command: "kubectl apply -f b.yaml", Reason: "mutation", RequiresApproval: true},
+			{Command: "kubectl drain node-1", Reason: "destructive", RequiresApproval: false},
+		})
+
+		// Header + one bullet per command + trailer = 5 lines terminated by newline.
+		lines := strings.Split(strings.TrimRight(got, "\n"), "\n")
+		if len(lines) != 5 {
+			t.Fatalf("expected 5 lines (header + 3 bullets + trailer), got %d: %q", len(lines), got)
+		}
+		if !strings.HasPrefix(lines[1], "- `kubectl delete ns a`") || !strings.HasSuffix(lines[1], "(blocked)") {
+			t.Errorf("line 1 unexpected: %q", lines[1])
+		}
+		if !strings.HasPrefix(lines[2], "- `kubectl apply -f b.yaml`") || !strings.HasSuffix(lines[2], "(approval required)") {
+			t.Errorf("line 2 unexpected: %q", lines[2])
+		}
+		if !strings.HasPrefix(lines[3], "- `kubectl drain node-1`") || !strings.HasSuffix(lines[3], "(blocked)") {
+			t.Errorf("line 3 unexpected: %q", lines[3])
+		}
+	})
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -189,5 +190,94 @@ func TestForwardEventToStellar_SemaphoreTimeout(t *testing.T) {
 
 	if called {
 		t.Error("backend was called despite semaphore being full — event should have been dropped")
+	}
+}
+
+// TestPtrInt64 verifies the trivial int64 pointer helper: the returned
+// pointer is non-nil, dereferences to the input, and successive calls return
+// distinct pointers (no shared static storage).
+func TestPtrInt64(t *testing.T) {
+	t.Parallel()
+
+	cases := []int64{0, 1, -1, 1 << 32, -(1 << 32)}
+	for _, v := range cases {
+		got := ptrInt64(v)
+		if got == nil {
+			t.Fatalf("ptrInt64(%d) returned nil", v)
+		}
+		if *got != v {
+			t.Errorf("ptrInt64(%d) dereferenced to %d", v, *got)
+		}
+	}
+
+	// Distinct pointers on repeat calls with the same value.
+	a := ptrInt64(7)
+	b := ptrInt64(7)
+	if a == b {
+		t.Errorf("ptrInt64 returned the same pointer for successive calls")
+	}
+}
+
+// TestSseWriteError verifies the SSE error frame format matches the
+// SSE specification: event: <type>\ndata: <payload>\n\n
+func TestSseWriteError(t *testing.T) {
+	t.Parallel()
+
+	rec := httptest.NewRecorder()
+	sseWriteError(rec, rec, "boom")
+
+	body := rec.Body.String()
+
+	if !strings.HasPrefix(body, "event: error\n") {
+		t.Errorf("expected event line prefix, got %q", body)
+	}
+	if !strings.HasSuffix(body, "\n\n") {
+		t.Errorf("expected trailing blank line, got %q", body)
+	}
+
+	const dataPrefix = "data: "
+	idx := strings.Index(body, dataPrefix)
+	if idx < 0 {
+		t.Fatalf("no data line in %q", body)
+	}
+	dataLine := strings.TrimRight(body[idx+len(dataPrefix):], "\n")
+
+	var payload map[string]string
+	if err := json.Unmarshal([]byte(dataLine), &payload); err != nil {
+		t.Fatalf("data line is not valid JSON: %v (%q)", err, dataLine)
+	}
+	if payload["error"] != "boom" {
+		t.Errorf("expected error=%q, got %q", "boom", payload["error"])
+	}
+}
+
+// TestSseWriteError_JSONEscapesSpecials verifies that special characters in
+// the error message are properly JSON-escaped so the resulting SSE frame
+// cannot inject additional SSE events.
+func TestSseWriteError_JSONEscapesSpecials(t *testing.T) {
+	t.Parallel()
+
+	rec := httptest.NewRecorder()
+	sseWriteError(rec, rec, "line1\nline2 \"quoted\"")
+
+	body := rec.Body.String()
+
+	const dataPrefix = "data: "
+	idx := strings.Index(body, dataPrefix)
+	if idx < 0 {
+		t.Fatalf("no data line in %q", body)
+	}
+	dataLine := strings.TrimRight(body[idx+len(dataPrefix):], "\n")
+
+	var payload map[string]string
+	if err := json.Unmarshal([]byte(dataLine), &payload); err != nil {
+		t.Fatalf("data line is not valid JSON: %v (%q)", err, dataLine)
+	}
+	if payload["error"] != "line1\nline2 \"quoted\"" {
+		t.Errorf("round-trip mismatch: got %q", payload["error"])
+	}
+
+	if strings.Count(body, "\n\n") != 1 {
+		t.Errorf("expected exactly one SSE frame terminator, got body %q", body)
 	}
 }

@@ -81,3 +81,77 @@ func TestSetWSWriteDeadline_ClosedConn(t *testing.T) {
 		t.Log("note: SetWriteDeadline may succeed on recently closed conn (OS-dependent)")
 	}
 }
+
+// TestSanitizeLogArgs verifies that odd-indexed values (attribute values) are
+// sanitized while even-indexed values (attribute keys) pass through untouched.
+// This function is used across all agent WebSocket logging to prevent
+// log-injection from user-controlled data.
+func TestSanitizeLogArgs(t *testing.T) {
+	t.Run("empty input", func(t *testing.T) {
+		got := sanitizeLogArgs(nil)
+		if len(got) != 0 {
+			t.Fatalf("expected empty result for nil input, got %v", got)
+		}
+	})
+
+	t.Run("keys untouched, string values sanitized", func(t *testing.T) {
+		key := "user\nkey"
+		val := "value\nwith\nnewlines"
+		got := sanitizeLogArgs([]any{key, val})
+		if len(got) != 2 {
+			t.Fatalf("expected 2 elements, got %d", len(got))
+		}
+		if got[0] != key {
+			t.Errorf("expected key untouched %q, got %q", key, got[0])
+		}
+		gotVal, ok := got[1].(string)
+		if !ok {
+			t.Fatalf("expected string value, got %T", got[1])
+		}
+		if strings.Contains(gotVal, "\n") {
+			t.Errorf("expected newlines removed from value, got %q", gotVal)
+		}
+	})
+
+	t.Run("non-string values are stringified and sanitized", func(t *testing.T) {
+		got := sanitizeLogArgs([]any{"count", 42, "err", struct{ S string }{S: "x\ny"}})
+		if len(got) != 4 {
+			t.Fatalf("expected 4 elements, got %d", len(got))
+		}
+		if got[0] != "count" || got[2] != "err" {
+			t.Errorf("expected keys preserved, got %+v", got)
+		}
+		countStr, ok := got[1].(string)
+		if !ok {
+			t.Fatalf("expected count value stringified, got %T", got[1])
+		}
+		if countStr != "42" {
+			t.Errorf("expected %q, got %q", "42", countStr)
+		}
+		errStr, ok := got[3].(string)
+		if !ok {
+			t.Fatalf("expected struct value stringified, got %T", got[3])
+		}
+		if strings.Contains(errStr, "\n") {
+			t.Errorf("expected newlines removed from stringified struct, got %q", errStr)
+		}
+	})
+
+	t.Run("odd length: trailing key is not sanitized", func(t *testing.T) {
+		// Real slog usage always passes an even count; this is a defensive check
+		// that a trailing element at an even index passes through untouched.
+		got := sanitizeLogArgs([]any{"only-key"})
+		if len(got) != 1 || got[0] != "only-key" {
+			t.Errorf("expected trailing key preserved, got %v", got)
+		}
+	})
+
+	t.Run("does not mutate input slice", func(t *testing.T) {
+		orig := []any{"k", "v\nwith-newline"}
+		snapshot := []any{orig[0], orig[1]}
+		_ = sanitizeLogArgs(orig)
+		if orig[0] != snapshot[0] || orig[1] != snapshot[1] {
+			t.Errorf("input mutated: got %v, expected %v", orig, snapshot)
+		}
+	})
+}
