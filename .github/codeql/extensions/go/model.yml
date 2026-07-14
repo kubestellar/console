@@ -4,3 +4,8 @@ extensions:
       extensible: barrierModel
     data:
       - ["github.com/kubestellar/console/pkg/sanitize", "", false, "LogString", "", "", "ReturnValue", "log-injection", "manual"]
+      # Internal helper in pkg/agent that applies sanitize.LogString to
+      # user-controlled slog attribute values via a type switch. CodeQL's
+      # taint tracking does not propagate the sanitization through the
+      # []any return, so mark the return value as a barrier explicitly.
+      - ["github.com/kubestellar/console/pkg/agent", "", false, "sanitizeLogArgs", "", "", "ReturnValue", "log-injection", "manual"]

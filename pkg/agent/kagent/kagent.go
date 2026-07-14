@@ -299,7 +299,7 @@ func (h *Handlers) HandleCRDAgents(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := h.Client.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Warn("error fetching kagent agents for cluster", "error", err)
+		slog.Warn("error fetching kagent agents for cluster", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"agents": []any{}, "error": "internal server error"})
 		return
@@ -382,7 +382,7 @@ func (h *Handlers) HandleCRDTools(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := h.Client.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Warn("error fetching kagent tools for cluster", "error", err)
+		slog.Warn("error fetching kagent tools for cluster", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"tools": []any{}, "error": "internal server error"})
 		return
@@ -478,7 +478,7 @@ func (h *Handlers) HandleCRDModels(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := h.Client.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Warn("error fetching kagent models for cluster", "error", err)
+		slog.Warn("error fetching kagent models for cluster", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"models": []any{}, "error": "internal server error"})
 		return
@@ -570,7 +570,7 @@ func (h *Handlers) HandleCRDMemories(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := h.Client.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Warn("error fetching kagent memories for cluster", "error", err)
+		slog.Warn("error fetching kagent memories for cluster", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"memories": []any{}, "error": "internal server error"})
 		return
@@ -633,7 +633,7 @@ func (h *Handlers) HandleCRDSummary(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := h.Client.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Warn("error fetching kagent CRD summary for cluster", "error", err)
+		slog.Warn("error fetching kagent CRD summary for cluster", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{
 			"agentCount": 0, "toolServerCount": 0, "remoteMCPServerCount": 0,
@@ -825,7 +825,7 @@ func (h *Handlers) HandleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := h.Client.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Warn("error fetching agents", "error", err)
+		slog.Warn("error fetching agents", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"agents": []any{}, "error": "internal server error"})
 		return
@@ -910,7 +910,7 @@ func (h *Handlers) HandleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := h.Client.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Warn("error fetching builds", "error", err)
+		slog.Warn("error fetching builds", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"builds": []any{}, "error": "internal server error"})
 		return
@@ -990,7 +990,7 @@ func (h *Handlers) HandleKagentiCards(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := h.Client.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Warn("error fetching cards", "error", err)
+		slog.Warn("error fetching cards", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"cards": []any{}, "error": "internal server error"})
 		return
@@ -1063,7 +1063,7 @@ func (h *Handlers) HandleKagentiTools(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := h.Client.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Warn("error fetching tools", "error", err)
+		slog.Warn("error fetching tools", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{"tools": []any{}, "error": "internal server error"})
 		return
@@ -1136,7 +1136,7 @@ func (h *Handlers) HandleKagentiSummary(w http.ResponseWriter, r *http.Request) 
 
 	dynClient, err := h.Client.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Warn("error fetching kagenti summary", "error", err)
+		slog.Warn("error fetching kagenti summary", "error", sanitize.LogString(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		httputil.WriteJSON(w, map[string]any{
 			"agentCount": 0, "readyAgents": 0, "buildCount": 0,
