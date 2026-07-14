@@ -514,10 +514,17 @@ function rolloutFailureType(text) {
     || /minimum availability|available:\s*0\/1|pod [^\r\n]+ crashloopbackoff/i.test(text)
   )
   if (!hasRolloutSymptom) return ''
+  if (
+    /deploy candidate to console-live|production|live deployment|live_release|live_deployment|promote candidate to production/i.test(text)
+    || /release ["']?kc-live["']? failed|persistentvolumeclaim\/kubestellar-console-live\/kc-live-kubestellar-console/i.test(text)
+    || /\bkc-live-kubestellar-console\b(?!-canary)|live-pod-logs|live-rollback/i.test(text)
+  ) {
+    return 'deployment-rollout'
+  }
   if (/private canary|canary deployment|canary_release|canary_deployment|kc-live-canary|deploy candidate to private canary/i.test(text)) {
     return 'canary-setup'
   }
-  if (/console-live|production|live deployment|live_release|live_deployment|kc-live|deploy candidate to console-live|promote candidate to production/i.test(text)) {
+  if (/\bkc-live\b|console-live/i.test(text)) {
     return 'deployment-rollout'
   }
   return 'canary-setup'

@@ -58,6 +58,9 @@ env:
   LIVE_CANARY_MIN_ROUTE_DELAY_MS: '15000'
   LIVE_CANARY_PHASE_COOLDOWN_MS: ${{ vars.LIVE_CANARY_PHASE_COOLDOWN_MS || '90000' }}
   LIVE_CANARY_MIN_PHASE_COOLDOWN_MS: '90000'
+  LIVE_PERSISTENCE_ACCESS_MODE: ${{ vars.CONSOLE_LIVE_PERSISTENCE_ACCESS_MODE || 'ReadWriteOnce' }}
+  LIVE_PERSISTENCE_STORAGE_CLASS: ${{ vars.CONSOLE_LIVE_PERSISTENCE_STORAGE_CLASS || '' }}
+  LIVE_BACKUP_ENABLED: ${{ vars.CONSOLE_LIVE_BACKUP_ENABLED || 'false' }}
   CONSOLE_LIVE_TEST_SESSION_COUNT: ${{ vars.CONSOLE_LIVE_TEST_SESSION_COUNT || '80' }}
   CONSOLE_LIVE_ALLOWED_GITHUB_LOGINS: ${{ secrets.CONSOLE_LIVE_ALLOWED_GITHUB_LOGINS || vars.CONSOLE_LIVE_ALLOWED_GITHUB_LOGINS }}
   CONSOLE_LIVE_ADMIN_GITHUB_LOGINS: ${{ secrets.CONSOLE_LIVE_ADMIN_GITHUB_LOGINS || vars.CONSOLE_LIVE_ADMIN_GITHUB_LOGINS }}
@@ -450,6 +453,35 @@ jobs:
         run: |
           set -euo pipefail
           export KUBECONFIG="$DEPLOY_KUBECONFIG"
+
+          target_access_mode="${LIVE_PERSISTENCE_ACCESS_MODE:-ReadWriteOnce}"
+          incompatible_pvcs="$(kubectl -n "$LIVE_NAMESPACE" get pvc -l "app.kubernetes.io/instance=$LIVE_RELEASE" -o json 2>/dev/null \
+            | jq -r --arg mode "$target_access_mode" '.items[] | select((.spec.accessModes // []) | index($mode) | not) | .metadata.name' || true)"
+          if [ -n "$incompatible_pvcs" ]; then
+            echo "::warning::Found console-live PVC(s) incompatible with ${target_access_mode}: $(echo "$incompatible_pvcs" | tr '\n' ' ')"
+            echo "Scaling down $LIVE_DEPLOYMENT before PVC migration..."
+            kubectl -n "$LIVE_NAMESPACE" scale deploy "$LIVE_DEPLOYMENT" --replicas=0 2>/dev/null || true
+            kubectl -n "$LIVE_NAMESPACE" wait pod \
+              -l "app.kubernetes.io/instance=$LIVE_RELEASE,app.kubernetes.io/component!=pvc-migration" \
+              --for=delete --timeout=180s 2>/dev/null || true
+            kubectl -n "$LIVE_NAMESPACE" delete job "${LIVE_DEPLOYMENT}-pvc-migration" --ignore-not-found=true 2>/dev/null || true
+
+            for pvc in $incompatible_pvcs; do
+              echo "::warning::Deleting incompatible PVC '$pvc'; Helm will recreate it as ${target_access_mode}."
+              kubectl -n "$LIVE_NAMESPACE" delete pvc "$pvc" --wait=false 2>/dev/null || true
+              if ! kubectl -n "$LIVE_NAMESPACE" wait --for=delete "pvc/$pvc" --timeout=180s 2>/dev/null; then
+                echo "::warning::PVC '$pvc' is still terminating after scale-down; clearing finalizers."
+                kubectl -n "$LIVE_NAMESPACE" patch pvc "$pvc" --type=merge -p '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
+                if ! kubectl -n "$LIVE_NAMESPACE" wait --for=delete "pvc/$pvc" --timeout=60s 2>/dev/null; then
+                  echo "::error::PVC '$pvc' could not be deleted; console-live deployment cannot proceed."
+                  exit 1
+                fi
+              fi
+            done
+          else
+            echo "No console-live PVC migration needed for ${target_access_mode}."
+          fi
+
           prod_values="$RUNNER_TEMP/console-live/prod-values.yaml"
           promote_timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           cat > "$prod_values" <<EOF
@@ -468,6 +500,13 @@ jobs:
           serviceAccount:
             create: false
             name: "$LIVE_SERVICE_ACCOUNT"
+          persistence:
+            enabled: true
+            storageClass: "$LIVE_PERSISTENCE_STORAGE_CLASS"
+            accessModes:
+              - "$LIVE_PERSISTENCE_ACCESS_MODE"
+          backup:
+            enabled: $LIVE_BACKUP_ENABLED
           podSecurityContext:
             seccompProfile:
               type: RuntimeDefault
@@ -507,6 +546,8 @@ jobs:
               value: "true"
             - name: SUPPRESS_OPTIONAL_POLLERS
               value: "true"
+            - name: WATCHDOG_RUNTIME_FILE
+              value: /tmp/kc-watcher-runtime.env
           EOF
           helm upgrade --install "$LIVE_RELEASE" ./deploy/helm/kubestellar-console \
             --namespace "$LIVE_NAMESPACE" \

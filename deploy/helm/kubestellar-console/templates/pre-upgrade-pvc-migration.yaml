@@ -1,4 +1,8 @@
 {{- if .Values.persistence.enabled }}
+{{- $targetAccessMode := "ReadWriteMany" -}}
+{{- if .Values.persistence.accessModes -}}
+{{- $targetAccessMode = index .Values.persistence.accessModes 0 -}}
+{{- end -}}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -100,7 +104,7 @@ spec:
               NAMESPACE="{{ .Release.Namespace }}"
               MAIN_PVC="{{ include "kubestellar-console.fullname" . }}"
               BACKUP_PVC="{{ include "kubestellar-console.fullname" . }}-backups"
-              TARGET_ACCESS_MODE="ReadWriteMany"
+              TARGET_ACCESS_MODE="{{ $targetAccessMode }}"
 
               echo "=== PVC Access Mode Migration ==="
               echo "Namespace: $NAMESPACE"

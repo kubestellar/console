@@ -320,6 +320,18 @@ test('classifies production rollout failures separately from setup and groundtru
   ].join('\n')), 'deployment-rollout')
 })
 
+test('classifies live PVC migration failures as production rollout even with canary diagnostics present', () => {
+  assert.equal(classify({}, [
+    'CANARY_RELEASE=kc-live-canary',
+    'Private canary diagnostics were captured earlier in the run',
+    'Deploy candidate to console-live',
+    'Release "kc-live" failed: resource PersistentVolumeClaim/kubestellar-console-live/kc-live-kubestellar-console not ready',
+    'status: Terminating, message: Resource scheduled for deletion',
+    'context deadline exceeded',
+    'job/kc-live-kubestellar-console-pvc-migration BackoffLimitExceeded',
+  ].join('\n')), 'deployment-rollout')
+})
+
 test('classifies signed-session /api/me 401 as auth boundary before browser layout', () => {
   assert.equal(classify({
     browserMatrixFailures: [{
