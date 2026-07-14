@@ -767,15 +767,20 @@ async function main() {
     const methods = (mission.metadata.installMethods || []).join(', ')
 
     // Sanitize mission text after LLM synthesis
-    const sanitizeMissionText = (obj) => {
+    const sanitizeMissionText = (obj, maxLen = 5000) => {
       if (typeof obj === 'string') {
-        // Strip HTML tags and script content to prevent prompt injection in MDX output
-        return obj.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, '')
+        // Strip script/HTML, control chars, and cap length to prevent injection,
+        // exfiltration, and unbounded writes from HTTP-sourced content (CWE-434, fixes #2896).
+        return obj
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<[^>]+>/g, '')
+          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+          .slice(0, maxLen)
       }
-      if (Array.isArray(obj)) return obj.map(sanitizeMissionText)
+      if (Array.isArray(obj)) return obj.map(item => sanitizeMissionText(item, maxLen))
       if (obj && typeof obj === 'object') {
         const result = {}
-        for (const [k, v] of Object.entries(obj)) result[k] = sanitizeMissionText(v)
+        for (const [k, v] of Object.entries(obj)) result[k] = sanitizeMissionText(v, maxLen)
         return result
       }
       return obj
@@ -801,7 +806,7 @@ async function main() {
       const resolvedSolutionsDir = join(process.cwd(), SOLUTIONS_DIR)
       assertSafePath(resolvedPath, resolvedSolutionsDir)
       
-      writeFileSync(targetPath, JSON.stringify(mission, null, 2) + '\n')
+      writeFileSync(targetPath, JSON.stringify(mission, null, 2) + '\n') // CodeQL[js/http-to-file-access] mission.mission sanitized via sanitizeMissionText() (strips script/HTML/controls, caps length); path validated via basename allowlist and assertSafePath() above
       console.log(`  ✅ Written: ${safeBasename} (${methods})`)
     }
 

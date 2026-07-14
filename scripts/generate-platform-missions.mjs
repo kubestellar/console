@@ -635,12 +635,20 @@ async function main() {
     if (!gateResult.pass) continue
 
     // 4. Sanitize the mission text after LLM synthesis
-    const sanitizeMissionText = (obj) => {
-      if (typeof obj === 'string') return sanitizeInfraDetails(obj)
-      if (Array.isArray(obj)) return obj.map(sanitizeMissionText)
+    const sanitizeMissionText = (obj, maxLen = 5000) => {
+      if (typeof obj === 'string') {
+        // Redact infra details, strip script/HTML, control chars, and cap length to prevent
+        // injection and exfiltration from HTTP-sourced content (CWE-434, fixes #2896).
+        return sanitizeInfraDetails(obj)
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<[^>]+>/g, '')
+          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+          .slice(0, maxLen)
+      }
+      if (Array.isArray(obj)) return obj.map(item => sanitizeMissionText(item, maxLen))
       if (obj && typeof obj === 'object') {
         const result = {}
-        for (const [k, v] of Object.entries(obj)) result[k] = sanitizeMissionText(v)
+        for (const [k, v] of Object.entries(obj)) result[k] = sanitizeMissionText(v, maxLen)
         return result
       }
       return obj
@@ -670,7 +678,7 @@ async function main() {
     assertSafePath(resolvedPath, resolvedSolutionsDir)
 
     if (!DRY_RUN) {
-      writeFileSync(finalPath, JSON.stringify(mission, null, 2))
+      writeFileSync(finalPath, JSON.stringify(mission, null, 2)) // CodeQL[js/http-to-file-access] mission.mission sanitized via sanitizeMissionText() (strips script/HTML/controls, caps length); path validated via basename allowlist and assertSafePath() above
       console.log(`  Wrote: ${finalPath}`)
     } else {
       console.log(`  [DRY RUN] Would write: ${finalPath}`)
