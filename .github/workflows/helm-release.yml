@@ -8,8 +8,9 @@ on:
         required: true
         default: '0.1.0'
 
-# Least-privilege: no default permissions; jobs declare scopes individually
-permissions: {}
+# Least-privilege: default to read-only; write scopes granted at job level
+permissions:
+  contents: read
 
 jobs:
   release-helm:
