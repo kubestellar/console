@@ -38,7 +38,7 @@ func (s *Server) handlePVCsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	pvcs, err := s.k8sClient.GetPVCs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching pvcs", "error", err)
+		slog.Warn("error fetching pvcs", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -71,7 +71,7 @@ func (s *Server) handlePVsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	pvs, err := s.k8sClient.GetPVs(ctx, cluster)
 	if err != nil {
-		slog.Warn("error fetching pvs", "error", err)
+		slog.Warn("error fetching pvs", "cluster", sanitize.LogString(cluster), "error", err)
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -105,7 +105,7 @@ func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	roles, err := s.k8sClient.ListRoles(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching roles", "error", err)
+		slog.Warn("error fetching roles", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -154,7 +154,7 @@ func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) 
 	defer cancel()
 	bindings, err := s.k8sClient.ListRoleBindings(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching rolebindings", "error", err)
+		slog.Warn("error fetching rolebindings", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
