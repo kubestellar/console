@@ -279,6 +279,7 @@ function DashboardCardWrapper({
       {...listeners}
       className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
       title="Drag to reorder"
+      aria-label="Drag to reorder"
     >
       <GripVertical className="w-4 h-4 text-muted-foreground" />
     </button>
