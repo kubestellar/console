@@ -193,6 +193,27 @@ describe('generateWidget', () => {
     }
     expect(() => generateWidget(config)).toThrow('templateId required')
   })
+
+  it('throws for unknown widget type (default switch branch)', () => {
+    const config = {
+      type: 'mystery' as 'card',
+      apiEndpoint: 'http://localhost:8080',
+      refreshInterval: 30000,
+      theme: 'dark' as const,
+    }
+    expect(() => generateWidget(config)).toThrow('Unknown widget type: mystery')
+  })
+
+  it('throws for empty statIds array on stat widget', () => {
+    const config: WidgetConfig = {
+      type: 'stat',
+      statIds: [],
+      apiEndpoint: 'http://localhost:8080',
+      refreshInterval: 30000,
+      theme: 'dark',
+    }
+    expect(() => generateWidget(config)).toThrow('statIds required')
+  })
 })
 
 describe('getWidgetFilename', () => {
