@@ -390,6 +390,10 @@ function processMessage(
 // ---------------------------------------------------------------------------
 
 describe('Cache Worker handlers', () => {
+  let db: ReturnType<typeof createMockDb>
+  beforeEach(() => { db = createMockDb() })
+  afterEach(() => { db.store.clear(); db.metaStore.clear(); db.prefStore.clear() })
+
   describe('processMessage dispatch', () => {
     it('dispatches get message', () => {
       const postMessage = vi.fn()

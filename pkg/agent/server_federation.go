@@ -90,7 +90,7 @@ func (s *Server) handleFederationDetect(w http.ResponseWriter, r *http.Request) 
 
 	contexts, err := s.resolveFederationContexts(ctx, r)
 	if err != nil {
-		slog.Warn("federation detect: failed to resolve contexts, returning empty", "error", err)
+		slog.Warn("federation detect: failed to resolve contexts, returning empty", "error", sanitize.LogString(err.Error()))
 		writeJSON(w, []federation.ProviderHubStatus{})
 		return
 	}

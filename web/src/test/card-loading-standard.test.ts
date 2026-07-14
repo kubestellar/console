@@ -52,7 +52,9 @@ const EXEMPT_CARDS: Record<string, string> = {
   'cardRegistry.ts': 'Card registry, not a card',
   'cardMetadata.ts': 'Metadata, not a card',
   'cardIcons.ts': 'Icon mapping, not a card',
+  'cardTitles.ts': 'Title mapping',
   'cardDescriptions.ts': 'Description mapping',
+  'cardDemoExempt.ts': 'Demo-exempt mapping',
   'cardCategories.ts': 'Category mapping',
   // Hooks and utilities
   'useStablePageHeight.ts': 'Utility hook',
