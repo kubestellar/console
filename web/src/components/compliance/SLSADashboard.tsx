@@ -343,15 +343,23 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-700">
+      <div role="tablist" className="flex gap-2 border-b border-gray-700">
         <button
-          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'attestations' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400 hover:text-gray-200'}`}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'attestations'}
+          aria-label="Attestations tab"
+          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'attestations' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-muted-foreground hover:text-foreground'}`}
           onClick={() => setActiveTab('attestations')}
         >
           <Shield className="w-4 h-4 inline mr-1" /> Attestations ({attestations.length})
         </button>
         <button
-          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'provenance' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400 hover:text-gray-200'}`}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'provenance'}
+          aria-label="Provenance tab"
+          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'provenance' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-muted-foreground hover:text-foreground'}`}
           onClick={() => setActiveTab('provenance')}
         >
           <GitCommitHorizontal className="w-4 h-4 inline mr-1" /> Provenance ({provenance.length})

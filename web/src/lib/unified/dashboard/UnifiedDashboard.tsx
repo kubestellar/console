@@ -525,10 +525,13 @@ export function UnifiedDashboard({
 
       {/* Tab bar (when dashboard has tabs) */}
       {hasTabs && config.tabs && (
-        <div className="flex items-center gap-1 mb-6 border-b border-border">
+        <div role="tablist" className="flex items-center gap-1 mb-6 border-b border-border">
           {config.tabs.map((tab: DashboardTab) => (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={activeTabId === tab.id}
+              aria-label={tab.label}
               onClick={() => !tab.disabled && setActiveTabId(tab.id)}
               disabled={tab.disabled}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
