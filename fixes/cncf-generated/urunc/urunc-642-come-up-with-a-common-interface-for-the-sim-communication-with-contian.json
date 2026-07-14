@@ -1,0 +1,82 @@
+{
+  "version": "kc-mission-v1",
+  "name": "urunc-642-come-up-with-a-common-interface-for-the-sim-communication-with-contian",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "urunc: Come up with a common interface for the sim communication with contianerd",
+    "description": "Come up with a common interface for the sim communication with contianerd. Community-requested feature.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current urunc deployment",
+        "description": "Verify your urunc version and configuration:\n```bash\nkubectl get pods -n urunc -l app.kubernetes.io/name=urunc\nhelm list -n urunc 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working urunc installation."
+      },
+      {
+        "title": "Review urunc configuration",
+        "description": "Inspect the relevant urunc configuration:\n```bash\nkubectl get all -n urunc -l app.kubernetes.io/name=urunc\nkubectl get configmap -n urunc -l app.kubernetes.io/part-of=urunc\n```\nWe currently have two PRs https://github.com/urunc-dev/urunc/pull/639 and https://github.com/urunc-dev/urunc/pull/565 which both create anew taskService plugin for urunc's contianerd shim and both setup a new connection with contianerd."
+      },
+      {
+        "title": "Apply the fix for Come up with a common interface for the sim communication…",
+        "description": "The containerd access layer adds a narrow `Session` helper that owns a\nshort-lived gRPC connection, namespace propagation, task-level container\nmetadata lookup, and gRPC error conversion. It keeps the raw connection private\nand exposes only common task/container metadata through getters.\n\nThe\n```yaml\nThis layer should expose only containerd primitives, for example:\n```"
+      },
+      {
+        "title": "Upgrade urunc to include the fix",
+        "description": "If the fix is included in a newer release, upgrade urunc:\n```bash\nhelm repo update\nhelm upgrade urunc urunc/urunc --namespace urunc\n```\nVerify the upgrade:\n```bash\nkubectl get pods -n urunc\nhelm list -n urunc\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n urunc -l app.kubernetes.io/name=urunc\nkubectl get events -n urunc --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Come up with a common interface for the sim communication…\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "The containerd access layer adds a narrow `Session` helper that owns a\nshort-lived gRPC connection, namespace propagation, task-level container\nmetadata lookup, and gRPC error conversion. It keeps the raw connection private\nand exposes only common task/container metadata through getters.\n\nThe generated service-client constructors are package-private helpers.",
+      "codeSnippets": [
+        "This layer should expose only containerd primitives, for example:",
+        "type containerdSession struct {\n     conn *grpc.ClientConn\n     Container *Containers // one, since this is at the task level, every task is one container\n     ctx context.Context\n  }"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "urunc",
+      "sandbox",
+      "app-definition",
+      "feature"
+    ],
+    "cncfProjects": [
+      "urunc"
+    ],
+    "targetResourceKinds": [
+      "Namespace"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "sandbox",
+    "sourceUrls": {
+      "issue": "https://github.com/urunc-dev/urunc/issues/642",
+      "repo": "https://github.com/urunc-dev/urunc",
+      "pr": "https://github.com/urunc-dev/urunc/pull/657"
+    },
+    "reactions": 1,
+    "comments": 10,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with urunc installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-14T07:05:06.951Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
