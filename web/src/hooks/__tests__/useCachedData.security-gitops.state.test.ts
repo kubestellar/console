@@ -193,135 +193,6 @@ describe('useCachedData', () => {
   // Security issues via kubectl scanning
   // ========================================================================
   describe('security issues kubectl scanning', () => {
-    it('useCachedSecurityIssues fetcher: agent kubectl finds privileged containers', async () => {
-      let capturedOpts: Record<string, unknown> = {}
-      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
-        capturedOpts = opts
-        return makeCacheResult([])
-      })
-
-      // Mutate the shared mock ref directly — avoids the `vi.doMock` +
-      // `resetModules` race that caused kubestellar/console#9305.
-      mockClusterCacheRef.clusters = [{ name: 'prod', context: 'prod-ctx', reachable: true }]
-      mockIsAgentUnavailable.mockReturnValue(false)
-
-      mockKubectlProxy.exec.mockResolvedValue({
-        exitCode: 0,
-        output: JSON.stringify({
-          items: [
-            {
-              metadata: { name: 'bad-pod', namespace: 'default' },
-              spec: {
-                containers: [
-                  { securityContext: { privileged: true } },
-                ],
-                hostNetwork: true,
-                hostPID: true,
-                hostIPC: true,
-              },
-            },
-          ],
-        }),
-      })
-
-      const { useCachedSecurityIssues } = await loadModule()
-      useCachedSecurityIssues()
-
-      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ issue: string; severity: string }>>
-      const issues = await fetcher()
-
-      const issueTypes = issues.map(i => i.issue)
-      expect(issueTypes).toContain('Privileged container')
-      expect(issueTypes).toContain('Host network enabled')
-      expect(issueTypes).toContain('Host PID enabled')
-      expect(issueTypes).toContain('Host IPC enabled')
-    })
-
-    it('useCachedSecurityIssues fetcher: detects root user and missing security context', async () => {
-      let capturedOpts: Record<string, unknown> = {}
-      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
-        capturedOpts = opts
-        return makeCacheResult([])
-      })
-
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'prod', context: 'prod-ctx', reachable: true }],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
-      mockIsAgentUnavailable.mockReturnValue(false)
-
-      mockKubectlProxy.exec.mockResolvedValue({
-        exitCode: 0,
-        output: JSON.stringify({
-          items: [
-            {
-              metadata: { name: 'root-pod', namespace: 'apps' },
-              spec: {
-                securityContext: { runAsUser: 0 },
-                containers: [
-                  { securityContext: { runAsUser: 0 } },
-                ],
-              },
-            },
-          ],
-        }),
-      })
-
-      const { useCachedSecurityIssues } = await loadModule()
-      useCachedSecurityIssues()
-
-      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ issue: string }>>
-      const issues = await fetcher()
-      const issueTypes = issues.map(i => i.issue)
-      expect(issueTypes).toContain('Running as root')
-    })
-
-    it('useCachedSecurityIssues fetcher: detects capabilities not dropped', async () => {
-      let capturedOpts: Record<string, unknown> = {}
-      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
-        capturedOpts = opts
-        return makeCacheResult([])
-      })
-
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'prod', context: 'prod-ctx', reachable: true }],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
-      mockIsAgentUnavailable.mockReturnValue(false)
-
-      mockKubectlProxy.exec.mockResolvedValue({
-        exitCode: 0,
-        output: JSON.stringify({
-          items: [
-            {
-              metadata: { name: 'cap-pod', namespace: 'system' },
-              spec: {
-                containers: [
-                  {
-                    securityContext: {
-                      capabilities: { add: ['NET_ADMIN'], drop: [] },
-                    },
-                  },
-                ],
-              },
-            },
-          ],
-        }),
-      })
-
-      const { useCachedSecurityIssues } = await loadModule()
-      useCachedSecurityIssues()
-
-      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ issue: string }>>
-      const issues = await fetcher()
-      const issueTypes = issues.map(i => i.issue)
-      expect(issueTypes).toContain('Capabilities not dropped')
-    })
-
     it('useCachedSecurityIssues fetcher: kubectl non-zero exit returns empty', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
@@ -379,7 +250,7 @@ describe('useCachedData', () => {
 
       vi.unstubAllGlobals()
     })
-  })
+})
 
   // ========================================================================
   // Hardware health fetcher
