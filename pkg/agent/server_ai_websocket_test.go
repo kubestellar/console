@@ -84,6 +84,81 @@ func TestIsReadOnlyKubectlCommand(t *testing.T) {
 	}
 }
 
+func TestIsDestructiveKubectlCommand(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want bool
+	}{
+		// Empty / defensive cases
+		{name: "empty args is not destructive", args: nil, want: false},
+		{name: "empty slice is not destructive", args: []string{}, want: false},
+
+		// Every destructive verb in the map
+		{name: "delete verb", args: []string{"delete", "pod", "foo"}, want: true},
+		{name: "drain verb", args: []string{"drain", "node-1"}, want: true},
+		{name: "cordon verb", args: []string{"cordon", "node-1"}, want: true},
+		{name: "taint verb", args: []string{"taint", "nodes", "node-1", "key=v:NoSchedule"}, want: true},
+
+		// Case insensitivity
+		{name: "DELETE uppercase", args: []string{"DELETE", "pod", "foo"}, want: true},
+		{name: "Drain mixed case", args: []string{"Drain", "node-1"}, want: true},
+
+		// Read/inspect verbs must not be considered destructive
+		{name: "get is not destructive", args: []string{"get", "pods"}, want: false},
+		{name: "describe is not destructive", args: []string{"describe", "pod", "foo"}, want: false},
+		{name: "logs is not destructive", args: []string{"logs", "pod/foo"}, want: false},
+		{name: "apply is not on the destructive list", args: []string{"apply", "-f", "x.yaml"}, want: false},
+		{name: "create is not on the destructive list", args: []string{"create", "-f", "x.yaml"}, want: false},
+
+		// replace: plain replace IS destructive (verb is in map).
+		{name: "plain replace is destructive", args: []string{"replace", "-f", "x.yaml"}, want: true},
+		{name: "replace with --force is destructive", args: []string{"replace", "--force", "-f", "x.yaml"}, want: true},
+		{name: "replace with --force after other flags", args: []string{"replace", "-f", "x.yaml", "--force"}, want: true},
+
+		// --force on a non-replace verb should NOT flip a non-destructive verb.
+		{name: "get with --force is not destructive", args: []string{"get", "--force", "pods"}, want: false},
+		{name: "apply with --force is not on the destructive list", args: []string{"apply", "--force", "-f", "x.yaml"}, want: false},
+
+		// Flag injection: leading "--" must not be treated as a verb match.
+		{name: "leading --delete flag is not a verb match", args: []string{"--delete", "pods"}, want: false},
+
+		// Substring of a destructive verb should not match.
+		{name: "prefix of delete is not destructive", args: []string{"del", "pod"}, want: false},
+		{name: "deleted is not the delete verb", args: []string{"deleted"}, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Copy args so we can detect accidental mutation.
+			args := append([]string(nil), tt.args...)
+			if got := isDestructiveKubectlCommand(args); got != tt.want {
+				t.Fatalf("isDestructiveKubectlCommand(%v) = %v, want %v", tt.args, got, tt.want)
+			}
+			// Verify no mutation. Both nil and empty inputs are treated equivalently.
+			if len(args) != len(tt.args) {
+				t.Fatalf("isDestructiveKubectlCommand mutated args len: got %v want %v", args, tt.args)
+			}
+			for i := range args {
+				if args[i] != tt.args[i] {
+					t.Fatalf("isDestructiveKubectlCommand mutated args[%d]: got %q want %q", i, args[i], tt.args[i])
+				}
+			}
+		})
+	}
+}
+
+func TestIsDestructiveKubectlCommand_DisjointFromReadOnly(t *testing.T) {
+	// Sanity: no verb should be classified as BOTH read-only and destructive.
+	// If a future change adds a verb to one map without removing it from the
+	// other, this test will catch it.
+	for verb := range destructiveKubectlVerbs {
+		if readOnlyKubectlVerbs[verb] {
+			t.Errorf("verb %q appears in both destructiveKubectlVerbs and readOnlyKubectlVerbs", verb)
+		}
+	}
+}
+
 func TestServer_HandleWebSocket_TokenRequired(t *testing.T) {
 	s := &Server{
 		agentToken:     "secret",
