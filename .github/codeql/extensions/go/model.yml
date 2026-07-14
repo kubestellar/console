@@ -1,0 +1,6 @@
+extensions:
+  - addsTo:
+      pack: codeql/go-all
+      extensible: barrierModel
+    data:
+      - ["github.com/kubestellar/console/pkg/sanitize", "", false, "LogString", "", "", "ReturnValue", "log-injection", "manual"]
