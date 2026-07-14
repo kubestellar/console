@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-14T00:19:18.537Z",
-  "count": 1633,
+  "generatedAt": "2026-07-14T07:15:21.187Z",
+  "count": 1635,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -2403,6 +2403,47 @@
       ],
       "targetResourceKinds": [],
       "difficulty": "intermediate",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/argo-workflows/argo-workflows-10341-add-a-pendingtimeout-parameter.json",
+      "title": "argo-workflows: Add a `pendingTimeout` parameter",
+      "description": "Add a `pendingTimeout` parameter. This issue affects 28+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "argo-workflows",
+        "graduated",
+        "app-definition",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "argo-workflows"
+      ],
+      "targetResourceKinds": [
+        "Pod",
+        "Node"
+      ],
+      "difficulty": "beginner",
       "issueTypes": [
         "troubleshoot"
       ],
@@ -63908,6 +63949,46 @@
       "installMethods": [
         "helm"
       ],
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/urunc/urunc-642-come-up-with-a-common-interface-for-the-sim-communication-with-contian.json",
+      "title": "urunc: Come up with a common interface for the sim communication with contianerd",
+      "description": "Come up with a common interface for the sim communication with contianerd. Community-requested feature.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "urunc",
+        "sandbox",
+        "app-definition",
+        "feature"
+      ],
+      "cncfProjects": [
+        "urunc"
+      ],
+      "targetResourceKinds": [
+        "Namespace"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "sandbox",
       "qualityScore": 100,
       "qualityPass": true,
       "qualityBreakdown": {
