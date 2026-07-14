@@ -8407,6 +8407,41 @@
     "message": "'React' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
+    "file": "src/hooks/__tests__/useKubescape.fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 31,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useKubescape.return-shape.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 31,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useKubescape.return-shape.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 67,
+    "column": 10,
+    "message": "'makeScanSummaryResponse' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useKubescape.return-shape.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 90,
+    "column": 10,
+    "message": "'makeDetailResponse' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useKubescape.state.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 90,
+    "column": 10,
+    "message": "'makeDetailResponse' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
     "file": "src/hooks/__tests__/useLLMdModels.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 41,
@@ -8673,11 +8708,102 @@
     "message": "'findSimilarResolutionsStandalone' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
-    "file": "src/hooks/__tests__/useResolutions.utils.test.ts",
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 32,
+    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 1,
     "column": 44,
     "message": "'vi' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'renderHook' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 22,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 5,
+    "column": 3,
+    "message": "'findSimilarResolutionsStandalone' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 3,
+    "message": "'generateResolutionPromptContext' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 3,
+    "message": "'useResolutions' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 11,
+    "column": 8,
+    "message": "'SimilarResolution' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 18,
+    "column": 10,
+    "message": "'makeResolution' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.detection.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 41,
+    "column": 10,
+    "message": "'seedLocalStorage' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.resolution.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 44,
+    "message": "'vi' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.resolution.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 4,
+    "column": 3,
+    "message": "'detectIssueSignature' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.resolution.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 7,
+    "column": 3,
+    "message": "'calculateSignatureSimilarity' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useResolutions.utils.resolution.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9,
+    "column": 8,
+    "message": "'IssueSignature' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/__tests__/useResultHistogram.test.ts",
@@ -8876,6 +9002,20 @@
     "message": "'WS_CONNECTION_TIMEOUT_MS' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
+    "file": "src/hooks/__tests__/useUsers.core.auth.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 98,
+    "column": 7,
+    "message": "'EMPTY_CLUSTERS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useUsers.core.openshift.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 22,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
     "file": "src/hooks/mcp/__tests__/agentFetch.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 41,
@@ -8897,11 +9037,25 @@
     "message": "'mockUseDemoMode' is assigned a value but never used. Allowed unused vars must match /^_/u."
   },
   {
-    "file": "src/hooks/mcp/__tests__/compute.gpu.test.ts",
+    "file": "src/hooks/mcp/__tests__/compute.gpu.storage.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1082,
+    "line": 108,
+    "column": 3,
+    "message": "'notifyGPUNodeSubscribers' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/compute.gpu.storage.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 393,
     "column": 13,
     "message": "'result' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/compute.gpu.variations.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 108,
+    "column": 3,
+    "message": "'notifyGPUNodeSubscribers' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/mcp/__tests__/config-agent-sse.test.ts",
@@ -16261,6 +16415,139 @@
     "message": "'cacheUser' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 8,
+    "message": "'React' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 22,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 31,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9,
+    "column": 10,
+    "message": "'clearStoredAuthToken' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9,
+    "column": 52,
+    "message": "'setStoredAuthToken' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 77,
+    "column": 7,
+    "message": "'STORAGE_KEY_TOKEN' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 78,
+    "column": 7,
+    "message": "'AUTH_TOKEN_SYNC_KEY' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 80,
+    "column": 16,
+    "message": "'readStoredSessionToken' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.provider.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 10,
+    "message": "'getCachedUser' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.provider.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 95,
+    "column": 10,
+    "message": "'cacheUser' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.provider.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 136,
+    "column": 7,
+    "message": "'mockSetGlobalDemoMode' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.session.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 80,
+    "column": 16,
+    "message": "'readStoredSessionToken' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.session.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 10,
+    "message": "'getCachedUser' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.session.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 95,
+    "column": 10,
+    "message": "'cacheUser' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.session.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 129,
+    "column": 7,
+    "message": "'mockClearCache' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.session.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 131,
+    "column": 7,
+    "message": "'mockEmitLogout' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.session.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 133,
+    "column": 7,
+    "message": "'mockSetAnalyticsUserId' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.session.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 134,
+    "column": 7,
+    "message": "'mockSetAnalyticsUserProperties' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/__tests__/auth-provider.session.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 135,
+    "column": 7,
+    "message": "'mockEmitDeveloperSession' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
     "file": "src/lib/__tests__/backendHealthEvents.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 4,
@@ -16357,6 +16644,1896 @@
     "line": 1,
     "column": 48,
     "message": "'afterEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 19,
+    "column": 3,
+    "message": "'emitCardAdded' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 20,
+    "column": 3,
+    "message": "'emitCardRemoved' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 21,
+    "column": 3,
+    "message": "'emitCardExpanded' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 22,
+    "column": 3,
+    "message": "'emitCardDragged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 23,
+    "column": 3,
+    "message": "'emitCardConfigured' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 24,
+    "column": 3,
+    "message": "'emitCardReplaced' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 25,
+    "column": 3,
+    "message": "'emitGlobalSearchOpened' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 26,
+    "column": 3,
+    "message": "'emitGlobalSearchQueried' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 27,
+    "column": 3,
+    "message": "'emitGlobalSearchSelected' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 28,
+    "column": 3,
+    "message": "'emitGlobalSearchAskAI' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 29,
+    "column": 3,
+    "message": "'emitCardSortChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 30,
+    "column": 3,
+    "message": "'emitCardSortDirectionChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 31,
+    "column": 3,
+    "message": "'emitCardLimitChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 32,
+    "column": 3,
+    "message": "'emitCardSearchUsed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 33,
+    "column": 3,
+    "message": "'emitCardClusterFilterChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 34,
+    "column": 3,
+    "message": "'emitCardPaginationUsed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 35,
+    "column": 3,
+    "message": "'emitCardListItemClicked' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 36,
+    "column": 3,
+    "message": "'emitCardRecommendationsShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 37,
+    "column": 3,
+    "message": "'emitCardRecommendationActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 38,
+    "column": 3,
+    "message": "'emitAddCardModalOpened' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 39,
+    "column": 3,
+    "message": "'emitAddCardModalAbandoned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 40,
+    "column": 3,
+    "message": "'emitCardCategoryBrowsed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 41,
+    "column": 3,
+    "message": "'emitRecommendedCardShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 42,
+    "column": 3,
+    "message": "'emitCardRefreshed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 46,
+    "column": 3,
+    "message": "'emitWidgetLoaded' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 47,
+    "column": 3,
+    "message": "'emitWidgetNavigation' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 48,
+    "column": 3,
+    "message": "'emitWidgetInstalled' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 49,
+    "column": 3,
+    "message": "'emitWidgetDownloaded' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 50,
+    "column": 3,
+    "message": "'emitNudgeShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 51,
+    "column": 3,
+    "message": "'emitNudgeDismissed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 52,
+    "column": 3,
+    "message": "'emitNudgeActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 53,
+    "column": 3,
+    "message": "'emitSmartSuggestionsShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 54,
+    "column": 3,
+    "message": "'emitSmartSuggestionAccepted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 55,
+    "column": 3,
+    "message": "'emitSmartSuggestionsAddAll' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 56,
+    "column": 3,
+    "message": "'emitDashboardScrolled' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 57,
+    "column": 3,
+    "message": "'emitPwaPromptShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 58,
+    "column": 3,
+    "message": "'emitPwaPromptDismissed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 59,
+    "column": 3,
+    "message": "'emitFeatureHintShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 60,
+    "column": 3,
+    "message": "'emitFeatureHintDismissed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 61,
+    "column": 3,
+    "message": "'emitFeatureHintActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 62,
+    "column": 3,
+    "message": "'emitGettingStartedShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 63,
+    "column": 3,
+    "message": "'emitGettingStartedActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 64,
+    "column": 3,
+    "message": "'emitPostConnectShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 65,
+    "column": 3,
+    "message": "'emitPostConnectActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 66,
+    "column": 3,
+    "message": "'emitDemoToLocalShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 67,
+    "column": 3,
+    "message": "'emitDemoToLocalActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 68,
+    "column": 3,
+    "message": "'emitAdopterNudgeShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 69,
+    "column": 3,
+    "message": "'emitAdopterNudgeActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 70,
+    "column": 3,
+    "message": "'emitInsightViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 71,
+    "column": 3,
+    "message": "'emitInsightAcknowledged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 72,
+    "column": 3,
+    "message": "'emitInsightDismissed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 73,
+    "column": 3,
+    "message": "'emitAISuggestionViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 74,
+    "column": 3,
+    "message": "'emitTipShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 75,
+    "column": 3,
+    "message": "'emitStreakDay' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 76,
+    "column": 3,
+    "message": "'emitBlogPostClicked' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 80,
+    "column": 3,
+    "message": "'emitDrillDownOpened' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 81,
+    "column": 3,
+    "message": "'emitDrillDownClosed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 82,
+    "column": 3,
+    "message": "'emitGlobalClusterFilterChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 83,
+    "column": 3,
+    "message": "'emitGlobalSeverityFilterChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 84,
+    "column": 3,
+    "message": "'emitGlobalStatusFilterChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 3,
+    "message": "'emitDashboardCreated' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 86,
+    "column": 3,
+    "message": "'emitDashboardDeleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 87,
+    "column": 3,
+    "message": "'emitDashboardRenamed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 88,
+    "column": 3,
+    "message": "'emitDashboardImported' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 89,
+    "column": 3,
+    "message": "'emitDashboardExported' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 90,
+    "column": 3,
+    "message": "'emitDashboardViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 91,
+    "column": 3,
+    "message": "'emitDataExported' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 92,
+    "column": 3,
+    "message": "'emitSnoozed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 93,
+    "column": 3,
+    "message": "'emitUnsnoozed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 97,
+    "column": 3,
+    "message": "'emitModalOpened' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 98,
+    "column": 3,
+    "message": "'emitModalTabViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 99,
+    "column": 3,
+    "message": "'emitModalClosed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 100,
+    "column": 3,
+    "message": "'emitActionClicked' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 101,
+    "column": 3,
+    "message": "'emitUserRoleChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 102,
+    "column": 3,
+    "message": "'emitUserRemoved' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 103,
+    "column": 3,
+    "message": "'emitSidebarNavigated' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 104,
+    "column": 3,
+    "message": "'emitGameStarted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 105,
+    "column": 3,
+    "message": "'emitGameEnded' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 109,
+    "column": 3,
+    "message": "'emitTourStarted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 110,
+    "column": 3,
+    "message": "'emitTourCompleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 111,
+    "column": 3,
+    "message": "'emitTourSkipped' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 112,
+    "column": 3,
+    "message": "'emitThemeChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 113,
+    "column": 3,
+    "message": "'emitLanguageChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 114,
+    "column": 3,
+    "message": "'emitAIModeChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 115,
+    "column": 3,
+    "message": "'emitAIPredictionsToggled' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 116,
+    "column": 3,
+    "message": "'emitConfidenceThresholdChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 117,
+    "column": 3,
+    "message": "'emitConsensusModeToggled' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 118,
+    "column": 3,
+    "message": "'emitUpdateChecked' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 119,
+    "column": 3,
+    "message": "'emitUpdateTriggered' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 120,
+    "column": 3,
+    "message": "'emitUpdateCompleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 121,
+    "column": 3,
+    "message": "'emitUpdateFailed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 122,
+    "column": 3,
+    "message": "'emitUpdateRefreshed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 123,
+    "column": 3,
+    "message": "'emitUpdateStalled' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 124,
+    "column": 3,
+    "message": "'emitWhatsNewModalOpened' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 125,
+    "column": 3,
+    "message": "'emitWhatsNewUpdateClicked' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.comms.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 126,
+    "column": 3,
+    "message": "'emitWhatsNewRemindLater' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 19,
+    "column": 3,
+    "message": "'emitCardAdded' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 20,
+    "column": 3,
+    "message": "'emitCardRemoved' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 21,
+    "column": 3,
+    "message": "'emitCardExpanded' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 22,
+    "column": 3,
+    "message": "'emitCardDragged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 23,
+    "column": 3,
+    "message": "'emitCardConfigured' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 24,
+    "column": 3,
+    "message": "'emitCardReplaced' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 25,
+    "column": 3,
+    "message": "'emitGlobalSearchOpened' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 26,
+    "column": 3,
+    "message": "'emitGlobalSearchQueried' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 27,
+    "column": 3,
+    "message": "'emitGlobalSearchSelected' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 28,
+    "column": 3,
+    "message": "'emitGlobalSearchAskAI' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 29,
+    "column": 3,
+    "message": "'emitCardSortChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 30,
+    "column": 3,
+    "message": "'emitCardSortDirectionChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 31,
+    "column": 3,
+    "message": "'emitCardLimitChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 32,
+    "column": 3,
+    "message": "'emitCardSearchUsed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 33,
+    "column": 3,
+    "message": "'emitCardClusterFilterChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 34,
+    "column": 3,
+    "message": "'emitCardPaginationUsed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 35,
+    "column": 3,
+    "message": "'emitCardListItemClicked' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 36,
+    "column": 3,
+    "message": "'emitCardRecommendationsShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 37,
+    "column": 3,
+    "message": "'emitCardRecommendationActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 38,
+    "column": 3,
+    "message": "'emitAddCardModalOpened' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 39,
+    "column": 3,
+    "message": "'emitAddCardModalAbandoned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 40,
+    "column": 3,
+    "message": "'emitCardCategoryBrowsed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 41,
+    "column": 3,
+    "message": "'emitRecommendedCardShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 42,
+    "column": 3,
+    "message": "'emitCardRefreshed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 46,
+    "column": 3,
+    "message": "'emitWidgetLoaded' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 47,
+    "column": 3,
+    "message": "'emitWidgetNavigation' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 48,
+    "column": 3,
+    "message": "'emitWidgetInstalled' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 49,
+    "column": 3,
+    "message": "'emitWidgetDownloaded' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 50,
+    "column": 3,
+    "message": "'emitNudgeShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 51,
+    "column": 3,
+    "message": "'emitNudgeDismissed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 52,
+    "column": 3,
+    "message": "'emitNudgeActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 53,
+    "column": 3,
+    "message": "'emitSmartSuggestionsShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 54,
+    "column": 3,
+    "message": "'emitSmartSuggestionAccepted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 55,
+    "column": 3,
+    "message": "'emitSmartSuggestionsAddAll' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 56,
+    "column": 3,
+    "message": "'emitDashboardScrolled' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 57,
+    "column": 3,
+    "message": "'emitPwaPromptShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 58,
+    "column": 3,
+    "message": "'emitPwaPromptDismissed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 59,
+    "column": 3,
+    "message": "'emitFeatureHintShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 60,
+    "column": 3,
+    "message": "'emitFeatureHintDismissed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 61,
+    "column": 3,
+    "message": "'emitFeatureHintActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 62,
+    "column": 3,
+    "message": "'emitGettingStartedShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 63,
+    "column": 3,
+    "message": "'emitGettingStartedActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 64,
+    "column": 3,
+    "message": "'emitPostConnectShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 65,
+    "column": 3,
+    "message": "'emitPostConnectActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 66,
+    "column": 3,
+    "message": "'emitDemoToLocalShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 67,
+    "column": 3,
+    "message": "'emitDemoToLocalActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 68,
+    "column": 3,
+    "message": "'emitAdopterNudgeShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 69,
+    "column": 3,
+    "message": "'emitAdopterNudgeActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 70,
+    "column": 3,
+    "message": "'emitInsightViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 71,
+    "column": 3,
+    "message": "'emitInsightAcknowledged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 72,
+    "column": 3,
+    "message": "'emitInsightDismissed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 73,
+    "column": 3,
+    "message": "'emitAISuggestionViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 74,
+    "column": 3,
+    "message": "'emitTipShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 75,
+    "column": 3,
+    "message": "'emitStreakDay' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 76,
+    "column": 3,
+    "message": "'emitBlogPostClicked' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 80,
+    "column": 3,
+    "message": "'emitDrillDownOpened' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 81,
+    "column": 3,
+    "message": "'emitDrillDownClosed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 82,
+    "column": 3,
+    "message": "'emitGlobalClusterFilterChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 83,
+    "column": 3,
+    "message": "'emitGlobalSeverityFilterChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 84,
+    "column": 3,
+    "message": "'emitGlobalStatusFilterChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 3,
+    "message": "'emitDashboardCreated' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 86,
+    "column": 3,
+    "message": "'emitDashboardDeleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 87,
+    "column": 3,
+    "message": "'emitDashboardRenamed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 88,
+    "column": 3,
+    "message": "'emitDashboardImported' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 89,
+    "column": 3,
+    "message": "'emitDashboardExported' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 90,
+    "column": 3,
+    "message": "'emitDashboardViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 91,
+    "column": 3,
+    "message": "'emitDataExported' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 92,
+    "column": 3,
+    "message": "'emitSnoozed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 93,
+    "column": 3,
+    "message": "'emitUnsnoozed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 130,
+    "column": 3,
+    "message": "'emitFeedbackSubmitted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 131,
+    "column": 3,
+    "message": "'emitScreenshotAttached' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 132,
+    "column": 3,
+    "message": "'emitScreenshotUploadFailed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 133,
+    "column": 3,
+    "message": "'emitScreenshotUploadSuccess' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 134,
+    "column": 3,
+    "message": "'emitNPSSurveyShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 135,
+    "column": 3,
+    "message": "'emitNPSResponse' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 136,
+    "column": 3,
+    "message": "'emitNPSDismissed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 137,
+    "column": 3,
+    "message": "'emitLinkedInShare' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 138,
+    "column": 3,
+    "message": "'emitPredictionFeedbackSubmitted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 142,
+    "column": 3,
+    "message": "'emitAgentConnected' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 143,
+    "column": 3,
+    "message": "'emitAgentDisconnected' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 144,
+    "column": 3,
+    "message": "'emitClusterInventory' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 145,
+    "column": 3,
+    "message": "'emitAgentProvidersDetected' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 146,
+    "column": 3,
+    "message": "'emitApiKeyConfigured' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 147,
+    "column": 3,
+    "message": "'emitApiKeyRemoved' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 148,
+    "column": 3,
+    "message": "'emitClusterCreated' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 149,
+    "column": 3,
+    "message": "'emitClusterAction' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 150,
+    "column": 3,
+    "message": "'emitClusterStatsDrillDown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 154,
+    "column": 3,
+    "message": "'emitMarketplaceInstall' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 155,
+    "column": 3,
+    "message": "'emitMarketplaceRemove' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 156,
+    "column": 3,
+    "message": "'emitMarketplaceInstallFailed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 157,
+    "column": 3,
+    "message": "'emitMarketplaceItemViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 158,
+    "column": 3,
+    "message": "'emitInstallCommandCopied' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 159,
+    "column": 3,
+    "message": "'emitConversionStep' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 160,
+    "column": 3,
+    "message": "'emitLocalClusterCreated' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 161,
+    "column": 3,
+    "message": "'emitWelcomeViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 162,
+    "column": 3,
+    "message": "'emitWelcomeActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 163,
+    "column": 3,
+    "message": "'emitFromLensViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 164,
+    "column": 3,
+    "message": "'emitFromLensActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 165,
+    "column": 3,
+    "message": "'emitFromLensTabSwitch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 166,
+    "column": 3,
+    "message": "'emitFromLensCommandCopy' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 167,
+    "column": 3,
+    "message": "'emitFromHeadlampViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 168,
+    "column": 3,
+    "message": "'emitFromHeadlampActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 169,
+    "column": 3,
+    "message": "'emitFromHeadlampTabSwitch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 170,
+    "column": 3,
+    "message": "'emitFromHeadlampCommandCopy' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 171,
+    "column": 3,
+    "message": "'emitWhiteLabelViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 172,
+    "column": 3,
+    "message": "'emitWhiteLabelActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 173,
+    "column": 3,
+    "message": "'emitWhiteLabelTabSwitch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ops.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 174,
+    "column": 3,
+    "message": "'emitWhiteLabelCommandCopy' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 97,
+    "column": 3,
+    "message": "'emitModalOpened' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 98,
+    "column": 3,
+    "message": "'emitModalTabViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 99,
+    "column": 3,
+    "message": "'emitModalClosed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 100,
+    "column": 3,
+    "message": "'emitActionClicked' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 101,
+    "column": 3,
+    "message": "'emitUserRoleChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 102,
+    "column": 3,
+    "message": "'emitUserRemoved' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 103,
+    "column": 3,
+    "message": "'emitSidebarNavigated' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 104,
+    "column": 3,
+    "message": "'emitGameStarted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 105,
+    "column": 3,
+    "message": "'emitGameEnded' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 109,
+    "column": 3,
+    "message": "'emitTourStarted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 110,
+    "column": 3,
+    "message": "'emitTourCompleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 111,
+    "column": 3,
+    "message": "'emitTourSkipped' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 112,
+    "column": 3,
+    "message": "'emitThemeChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 113,
+    "column": 3,
+    "message": "'emitLanguageChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 114,
+    "column": 3,
+    "message": "'emitAIModeChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 115,
+    "column": 3,
+    "message": "'emitAIPredictionsToggled' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 116,
+    "column": 3,
+    "message": "'emitConfidenceThresholdChanged' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 117,
+    "column": 3,
+    "message": "'emitConsensusModeToggled' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 118,
+    "column": 3,
+    "message": "'emitUpdateChecked' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 119,
+    "column": 3,
+    "message": "'emitUpdateTriggered' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 120,
+    "column": 3,
+    "message": "'emitUpdateCompleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 121,
+    "column": 3,
+    "message": "'emitUpdateFailed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 122,
+    "column": 3,
+    "message": "'emitUpdateRefreshed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 123,
+    "column": 3,
+    "message": "'emitUpdateStalled' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 124,
+    "column": 3,
+    "message": "'emitWhatsNewModalOpened' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 125,
+    "column": 3,
+    "message": "'emitWhatsNewUpdateClicked' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 126,
+    "column": 3,
+    "message": "'emitWhatsNewRemindLater' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 130,
+    "column": 3,
+    "message": "'emitFeedbackSubmitted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 131,
+    "column": 3,
+    "message": "'emitScreenshotAttached' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 132,
+    "column": 3,
+    "message": "'emitScreenshotUploadFailed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 133,
+    "column": 3,
+    "message": "'emitScreenshotUploadSuccess' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 134,
+    "column": 3,
+    "message": "'emitNPSSurveyShown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 135,
+    "column": 3,
+    "message": "'emitNPSResponse' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 136,
+    "column": 3,
+    "message": "'emitNPSDismissed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 137,
+    "column": 3,
+    "message": "'emitLinkedInShare' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 138,
+    "column": 3,
+    "message": "'emitPredictionFeedbackSubmitted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 142,
+    "column": 3,
+    "message": "'emitAgentConnected' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 143,
+    "column": 3,
+    "message": "'emitAgentDisconnected' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 144,
+    "column": 3,
+    "message": "'emitClusterInventory' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 145,
+    "column": 3,
+    "message": "'emitAgentProvidersDetected' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 146,
+    "column": 3,
+    "message": "'emitApiKeyConfigured' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 147,
+    "column": 3,
+    "message": "'emitApiKeyRemoved' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 148,
+    "column": 3,
+    "message": "'emitClusterCreated' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 149,
+    "column": 3,
+    "message": "'emitClusterAction' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 150,
+    "column": 3,
+    "message": "'emitClusterStatsDrillDown' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 154,
+    "column": 3,
+    "message": "'emitMarketplaceInstall' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 155,
+    "column": 3,
+    "message": "'emitMarketplaceRemove' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 156,
+    "column": 3,
+    "message": "'emitMarketplaceInstallFailed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 157,
+    "column": 3,
+    "message": "'emitMarketplaceItemViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 158,
+    "column": 3,
+    "message": "'emitInstallCommandCopied' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 159,
+    "column": 3,
+    "message": "'emitConversionStep' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 160,
+    "column": 3,
+    "message": "'emitLocalClusterCreated' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 161,
+    "column": 3,
+    "message": "'emitWelcomeViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 162,
+    "column": 3,
+    "message": "'emitWelcomeActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 163,
+    "column": 3,
+    "message": "'emitFromLensViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 164,
+    "column": 3,
+    "message": "'emitFromLensActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 165,
+    "column": 3,
+    "message": "'emitFromLensTabSwitch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 166,
+    "column": 3,
+    "message": "'emitFromLensCommandCopy' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 167,
+    "column": 3,
+    "message": "'emitFromHeadlampViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 168,
+    "column": 3,
+    "message": "'emitFromHeadlampActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 169,
+    "column": 3,
+    "message": "'emitFromHeadlampTabSwitch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 170,
+    "column": 3,
+    "message": "'emitFromHeadlampCommandCopy' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 171,
+    "column": 3,
+    "message": "'emitWhiteLabelViewed' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 172,
+    "column": 3,
+    "message": "'emitWhiteLabelActioned' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 173,
+    "column": 3,
+    "message": "'emitWhiteLabelTabSwitch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/analytics-events/__tests__/all-events.ui.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 174,
+    "column": 3,
+    "message": "'emitWhiteLabelCommandCopy' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/lib/api.ts",
@@ -16478,6 +18655,13 @@
     "message": "'STALE_AGE_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
   },
   {
+    "file": "src/lib/cache/__tests__/cache.deepcover.usecache.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 50,
+    "column": 7,
+    "message": "'STALE_AGE_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
     "file": "src/lib/cache/__tests__/cache.hooks.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 11,
@@ -16506,7 +18690,77 @@
     "message": "'CreateCachedHookConfig' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
-    "file": "src/lib/cache/__tests__/worker.handlers.test.ts",
+    "file": "src/lib/cache/__tests__/worker.handlers.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 36,
+    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 48,
+    "message": "'afterEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 55,
+    "column": 7,
+    "message": "'MAX_PENDING_MESSAGES' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 328,
+    "column": 10,
+    "message": "'processMessage' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 36,
+    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 48,
+    "message": "'afterEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 55,
+    "column": 7,
+    "message": "'MAX_PENDING_MESSAGES' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 57,
+    "column": 10,
+    "message": "'createMockDb' is defined but only used as a type. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 328,
+    "column": 10,
+    "message": "'processMessage' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.dispatch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 36,
+    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/cache/__tests__/worker.handlers.dispatch.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 1,
     "column": 48,
@@ -17143,11 +19397,18 @@
     "message": "Unused eslint-disable directive (no problems were reported from 'max-lines')."
   },
   {
-    "file": "src/lib/widgets/codeGenerator.templates.ts",
-    "rule": "max-lines",
-    "line": 890,
-    "column": 1,
-    "message": "File has too many lines (1179). Maximum allowed is 800."
+    "file": "src/lib/widgets/codeGenerator.templates.ci.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9,
+    "column": 9,
+    "message": "'card' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/lib/widgets/codeGenerator.templates.infra.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9,
+    "column": 9,
+    "message": "'card' is assigned a value but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/main.tsx",
@@ -17155,13 +19416,6 @@
     "line": 27,
     "column": 10,
     "message": "Fast refresh only works when a file has exports. Move your component(s) to a separate file."
-  },
-  {
-    "file": "src/mocks/handlers.compliance.ts",
-    "rule": "max-lines",
-    "line": 875,
-    "column": 1,
-    "message": "File has too many lines (1049). Maximum allowed is 800."
   },
   {
     "file": "src/pages/UnifiedDashboardTest.tsx",
