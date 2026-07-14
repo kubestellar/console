@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 /**
  * Unit tests for the split handlers.compliance.* modules introduced in #20970.
  *
