@@ -35,7 +35,7 @@ func (s *Server) handleConfigMapsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	configmaps, err := s.k8sClient.GetConfigMaps(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching configmaps", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching configmaps", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -71,7 +71,7 @@ func (s *Server) handleSecretsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	secrets, err := s.k8sClient.GetSecrets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching secrets", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching secrets", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -120,7 +120,7 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 	serviceaccounts, err := s.k8sClient.GetServiceAccounts(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching serviceaccounts", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching serviceaccounts", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -399,7 +399,7 @@ func (s *Server) handleJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	jobs, err := s.k8sClient.GetJobs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching jobs", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching jobs", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
@@ -433,7 +433,7 @@ func (s *Server) handleHPAsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	hpas, err := s.k8sClient.GetHPAs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Warn("error fetching hpas", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", err)
+		slog.Warn("error fetching hpas", "cluster", sanitize.LogString(cluster), "namespace", sanitize.LogString(namespace), "error", sanitize.LogString(err.Error()))
 		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 		return
 	}
