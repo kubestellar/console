@@ -19,8 +19,7 @@ on:
   schedule:
     - cron: '47 */12 * * *'
 
-permissions:
-  contents: read
+permissions: read-all
 
 concurrency:
   group: console-live-macos-canary

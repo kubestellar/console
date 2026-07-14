@@ -10,8 +10,7 @@ on:
       - '.github/workflows/api-contract.yml'
   workflow_dispatch: {}
 
-permissions:
-  contents: read
+permissions: read-all
 
 concurrency:
   group: api-contract-${{ github.ref }}

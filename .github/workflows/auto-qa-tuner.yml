@@ -19,8 +19,7 @@ on:
         default: 'all'
         type: string
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: auto-qa-tuner

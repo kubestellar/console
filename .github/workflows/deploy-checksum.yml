@@ -5,8 +5,7 @@ on:
     branches: [main]
     paths: [deploy.sh]
 
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   update-checksum:

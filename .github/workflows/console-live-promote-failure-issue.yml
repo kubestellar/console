@@ -14,8 +14,7 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: read
+permissions: read-all
   actions: read
   issues: write
 

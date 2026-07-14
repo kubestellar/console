@@ -8,8 +8,7 @@ on:
       - 'web/src/lib/a11y/**'
       - 'web/src/lib/accessibility.ts'
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 env:
   CI: true

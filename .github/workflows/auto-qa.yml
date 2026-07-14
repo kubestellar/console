@@ -45,8 +45,7 @@ env:
   NODE_VERSION: "22"
   GO_VERSION: "1.26.5"
 
-permissions:
-  contents: read
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   auto-qa:

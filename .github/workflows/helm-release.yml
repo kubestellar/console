@@ -9,8 +9,7 @@ on:
         default: '0.1.0'
 
 # Least-privilege: default to read-only; write scopes granted at job level
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   release-helm:

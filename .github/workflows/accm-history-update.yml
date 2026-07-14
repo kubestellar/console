@@ -22,8 +22,7 @@ on:
     - cron: "30 6 * * *"
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: read-all
 
 env:
   # Public gist that holds the computed history. Not a secret.

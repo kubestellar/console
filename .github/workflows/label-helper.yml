@@ -4,8 +4,7 @@ on:
   issue_comment:
     types: [created]
 
-permissions:
-  contents: read
+permissions: read-all
   issues: write
   pull-requests: write
 

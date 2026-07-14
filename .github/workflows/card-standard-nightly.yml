@@ -13,8 +13,7 @@ on:
   workflow_dispatch:
 
 # Least-privilege: read-only by default; jobs declare write scopes individually
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   card-standard:
