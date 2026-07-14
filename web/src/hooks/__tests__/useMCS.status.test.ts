@@ -41,7 +41,7 @@ vi.mock('../../lib/api', () => {
 })
 
 // Import after mocks
-import { useMCSStatus, useServiceExports, useServiceImports } from '../useMCS'
+import { useMCSStatus, useServiceExports } from '../useMCS'
 import { BackendUnavailableError } from '../../lib/api'
 
 describe('useMCSStatus', () => {

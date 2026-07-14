@@ -9,7 +9,6 @@
  * Dependencies are mocked at module boundaries; hook logic is exercised for real.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — declared BEFORE importing the module under test

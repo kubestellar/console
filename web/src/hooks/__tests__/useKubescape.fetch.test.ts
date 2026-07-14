@@ -401,14 +401,11 @@ describe('useKubescape — live data fetch', () => {
     unmount()
   })
 })
-<<<<<<< HEAD
-=======
 
 // ==========================================================================
 // Aggregation
 // ==========================================================================
 
->>>>>>> 1ded856ae ([scanner] test: split oversized hooks test files (batch C))
 describe('useKubescape — aggregation', () => {
   it('averages overallScore across installed clusters', async () => {
     mockUseClusters.mockReturnValue(reachableClusters('c1', 'c2'))
@@ -474,14 +471,11 @@ describe('useKubescape — aggregation', () => {
     unmount()
   })
 })
-<<<<<<< HEAD
-=======
 
 // ==========================================================================
 // Cache
 // ==========================================================================
 
->>>>>>>> 1ded856ae ([scanner] test: split oversized hooks test files (batch C)):web/src/hooks/__tests__/useKubescape.fetch.test.ts
 describe('useKubescape — cache', () => {
   it('saves completed statuses to localStorage after fetch', async () => {
     mockUseClusters.mockReturnValue(reachableClusters('cached'))
@@ -932,4 +926,3 @@ describe('useKubescape — edge cases', () => {
     unmount()
   })
 })
->>>>>>> 1ded856ae ([scanner] test: split oversized hooks test files (batch C))

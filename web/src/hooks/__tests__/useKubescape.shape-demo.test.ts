@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor, act } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 
 // Increase test timeout for hooks with async retry/backoff logic
 vi.setConfig({ testTimeout: 15_000 })
@@ -62,52 +62,6 @@ import { useKubescape } from '../useKubescape'
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Builds a workloadconfigurationscansummaries JSON response */
-function makeScanSummaryResponse(items: Array<{
-  name: string; namespace: string;
-  critical?: number; high?: number; medium?: number; low?: number;
-}>) {
-  return {
-    output: JSON.stringify({
-      items: items.map((i) => ({
-        metadata: { name: i.name, namespace: i.namespace },
-        spec: {
-          severities: {
-            critical: i.critical ?? 0,
-            high: i.high ?? 0,
-            medium: i.medium ?? 0,
-            low: i.low ?? 0,
-          },
-        },
-      })),
-    }),
-    exitCode: 0,
-  }
-}
-
-/** Builds a workloadconfigurationscans (detail) JSON response */
-function makeDetailResponse(items: Array<{
-  name: string; namespace: string;
-  controls: Record<string, { status: string; name?: string }>;
-}>) {
-  return {
-    output: JSON.stringify({
-      items: items.map((i) => ({
-        metadata: { name: i.name, namespace: i.namespace },
-        spec: {
-          controls: Object.fromEntries(
-            Object.entries(i.controls).map(([id, ctrl]) => [
-              id,
-              { status: { status: ctrl.status }, name: ctrl.name ?? id },
-            ])
-          ),
-        },
-      })),
-    }),
-    exitCode: 0,
-  }
-}
 
 function reachableClusters(...names: string[]) {
   const entries = names.map((n) => ({ name: n, reachable: true }))

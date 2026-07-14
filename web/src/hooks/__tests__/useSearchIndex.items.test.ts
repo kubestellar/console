@@ -91,11 +91,6 @@ function flattenResults(results: Map<SearchCategory, SearchItem[]>): SearchItem[
   return flat
 }
 
-/** Get all category keys from results in order */
-function resultCategories(results: Map<SearchCategory, SearchItem[]>): SearchCategory[] {
-  return Array.from(results.keys())
-}
-
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('useSearchIndex', () => {

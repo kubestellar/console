@@ -9,7 +9,6 @@
  * Dependencies are mocked at module boundaries; hook logic is exercised for real.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — declared BEFORE importing the module under test
@@ -90,42 +89,6 @@ function makeCacheResult<T>(data: T, overrides?: Record<string, unknown>) {
     lastRefresh: Date.now(),
     refetch: vi.fn(),
     ...overrides,
-  }
-}
-
-/** Create a deployment resource for testing */
-function makeDeployment(
-  name: string,
-  namespace: string,
-  opts?: {
-    replicas?: number
-    readyReplicas?: number
-    labels?: Record<string, string>
-    podLabels?: Record<string, string>
-    gpuLimits?: Record<string, string>
-  },
-) {
-  return {
-    metadata: { name, namespace, labels: opts?.labels },
-    spec: {
-      replicas: opts?.replicas ?? 1,
-      template: {
-        metadata: { labels: opts?.podLabels ?? {} },
-        spec: {
-          containers: [
-            {
-              resources: {
-                limits: opts?.gpuLimits ?? {},
-              },
-            },
-          ],
-        },
-      },
-    },
-    status: {
-      replicas: opts?.replicas ?? 1,
-      readyReplicas: opts?.readyReplicas ?? 1,
-    },
   }
 }
 

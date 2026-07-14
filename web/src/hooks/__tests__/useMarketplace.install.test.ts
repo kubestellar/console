@@ -180,6 +180,7 @@ describe('useMarketplace', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
   // ──────────────────────── Install / Remove ────────────────────────
 
   it('installs a dashboard item via API import', async () => {

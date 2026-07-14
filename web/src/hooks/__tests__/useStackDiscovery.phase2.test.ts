@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -99,38 +99,11 @@ function makePool(name: string, namespace: string) {
   }
 }
 
-/** Build a minimal HPA resource */
-function makeHPA(name: string, namespace: string, min = 1, max = 3) {
-  return {
-    metadata: { name, namespace },
-    spec: { minReplicas: min, maxReplicas: max },
-    status: { currentReplicas: min, desiredReplicas: min },
-  }
-}
-
-/** Build a minimal WVA resource */
-function makeWVA(name: string, namespace: string, min = 1, max = 5) {
-  return {
-    metadata: { name, namespace },
-    spec: { minReplicas: min, maxReplicas: max },
-    status: { currentReplicas: min, desiredReplicas: min },
-  }
-}
-
 /** Build a minimal service resource with EPP naming */
 function makeEPPService(name: string, namespace: string) {
   return {
     metadata: { name, namespace },
     spec: { ports: [{ port: 9002 }] },
-  }
-}
-
-/** Build a minimal Gateway resource */
-function makeGateway(name: string, namespace: string, hasAddress = true) {
-  return {
-    metadata: { name, namespace },
-    spec: { gatewayClassName: 'istio' },
-    status: hasAddress ? { addresses: [{ value: '10.0.0.1' }] } : {},
   }
 }
 

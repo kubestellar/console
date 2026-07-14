@@ -93,50 +93,6 @@ function makeCacheResult<T>(data: T, overrides?: Record<string, unknown>) {
   }
 }
 
-/** Create a deployment resource for testing */
-function makeDeployment(
-  name: string,
-  namespace: string,
-  opts?: {
-    replicas?: number
-    readyReplicas?: number
-    labels?: Record<string, string>
-    podLabels?: Record<string, string>
-    gpuLimits?: Record<string, string>
-  },
-) {
-  return {
-    metadata: { name, namespace, labels: opts?.labels },
-    spec: {
-      replicas: opts?.replicas ?? 1,
-      template: {
-        metadata: { labels: opts?.podLabels ?? {} },
-        spec: {
-          containers: [
-            {
-              resources: {
-                limits: opts?.gpuLimits ?? {},
-              },
-            },
-          ],
-        },
-      },
-    },
-    status: {
-      replicas: opts?.replicas ?? 1,
-      readyReplicas: opts?.readyReplicas ?? 1,
-    },
-  }
-}
-
-/** Simulate kubectlProxy.exec returning JSON data */
-function mockExecJson(items: unknown[], exitCode = 0) {
-  return {
-    exitCode,
-    output: JSON.stringify({ items }),
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Module loading
 // ---------------------------------------------------------------------------

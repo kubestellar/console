@@ -19,7 +19,7 @@ vi.mock('../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },
 }))
 
-import { useStackDiscovery, stackToServerMetrics } from '../useStackDiscovery'
+import { useStackDiscovery } from '../useStackDiscovery'
 import type { LLMdStack } from '../useStackDiscovery'
 
 // ── Constants mirrored from source ───────────────────────────────────────────
@@ -70,24 +70,6 @@ function makePod(
       phase,
       containerStatuses: [{ ready }],
     },
-  }
-}
-
-/** Build a minimal deployment resource */
-function makeDeployment(
-  name: string,
-  namespace: string,
-  replicas = 1,
-  readyReplicas = 1,
-  labels: Record<string, string> = {},
-) {
-  return {
-    metadata: { name, namespace, labels: {} },
-    spec: {
-      replicas,
-      template: { metadata: { labels } },
-    },
-    status: { replicas, readyReplicas, availableReplicas: readyReplicas },
   }
 }
 
