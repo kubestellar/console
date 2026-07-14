@@ -767,23 +767,37 @@ async function main() {
     const methods = (mission.metadata.installMethods || []).join(', ')
 
     // Sanitize mission text after LLM synthesis
-    const sanitizeMissionText = (obj, maxLen = 5000) => {
+    const sanitizeMissionText = (obj) => {
       if (typeof obj === 'string') {
-        // HTML-encode angle brackets to neutralize all tag-injection patterns
-        // (js/bad-tag-filter, js/incomplete-multi-character-sanitization — CWE-80/79).
-        // Encoding & first then < and > produces safe, non-executable HTML entities.
-        // Control chars and length cap prevent exfiltration (CWE-434, fixes #2896).
-        return obj
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-          .slice(0, maxLen)
+        // Strip HTML tags and script content to prevent prompt injection in MDX output
+        // Use loop-until-stable to handle overlapping/nested patterns (CWE-80, CWE-79)
+        let sanitized = obj
+        let prev = ''
+        
+        // Decode HTML entities first to catch entity-encoded attacks
+        sanitized = sanitized
+          .replace(/&lt;/gi, '<')
+          .replace(/&gt;/gi, '>')
+          .replace(/&quot;/gi, '"')
+          .replace(/&#x27;/gi, "'")
+          .replace(/&#x2F;/gi, '/')
+          .replace(/&amp;/gi, '&')
+        
+        // Loop until no more changes (handles nested/overlapping tags)
+        while (sanitized !== prev) {
+          prev = sanitized
+          // Remove script tags (including content)
+          sanitized = sanitized.replace(/<script[\s\S]*?<\/script>/gi, '')
+          // Remove other HTML tags
+          sanitized = sanitized.replace(/<[^>]+>/g, '')
+        }
+        
+        return sanitized
       }
-      if (Array.isArray(obj)) return obj.map(item => sanitizeMissionText(item, maxLen))
+      if (Array.isArray(obj)) return obj.map(sanitizeMissionText)
       if (obj && typeof obj === 'object') {
         const result = {}
-        for (const [k, v] of Object.entries(obj)) result[k] = sanitizeMissionText(v, maxLen)
+        for (const [k, v] of Object.entries(obj)) result[k] = sanitizeMissionText(v)
         return result
       }
       return obj
@@ -809,7 +823,7 @@ async function main() {
       const resolvedSolutionsDir = join(process.cwd(), SOLUTIONS_DIR)
       assertSafePath(resolvedPath, resolvedSolutionsDir)
       
-      writeFileSync(targetPath, JSON.stringify(mission, null, 2) + '\n') // CodeQL[js/http-to-file-access] mission.mission sanitized via sanitizeMissionText() (strips script/HTML/controls, caps length); path validated via basename allowlist and assertSafePath() above
+      writeFileSync(targetPath, JSON.stringify(mission, null, 2) + '\n')
       console.log(`  ✅ Written: ${safeBasename} (${methods})`)
     }
 

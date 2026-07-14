@@ -338,25 +338,69 @@ async function synthesizePlatformMission(platform, context) {
 
 // ─── Sanitization helpers ────────────────────────────────────────────
 
+/**
+ * Sanitize HTML content to prevent XSS (CWE-79, CWE-80).
+ * Uses loop-until-stable to handle nested/overlapping tags.
+ */
+function sanitizeHtml(text) {
+  let sanitized = text
+  let prev = ''
+  
+  // Decode HTML entities first to catch entity-encoded attacks
+  sanitized = sanitized
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#x2F;/gi, '/')
+    .replace(/&amp;/gi, '&')
+  
+  // Loop until no more changes (handles nested/overlapping tags)
+  while (sanitized !== prev) {
+    prev = sanitized
+    // Remove script tags (including content)
+    sanitized = sanitized.replace(/<script[\s\S]*?<\/script>/gi, '')
+    // Remove event handlers
+    sanitized = sanitized.replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '')
+    // Remove javascript: URIs
+    sanitized = sanitized.replace(/javascript\s*:/gi, '')
+    // Remove other HTML tags
+    sanitized = sanitized.replace(/<[^>]+>/g, '')
+  }
+  
+  return sanitized
+}
+
 /** Sanitize real infrastructure details from scraped content */
 function sanitizeInfraDetails(text) {
-  // Replace real public IPs with RFC 5737 documentation IPs (preserve private ranges)
-  let sanitized = text.replace(
-    /\b(?!10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.0\.0\.)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
-    '192.0.2.1'
-  )
-  // Replace AWS EC2 internal hostnames
-  sanitized = sanitized.replace(
-    /\bip-\d+-\d+-\d+-\d+\.\w+-\w+-\d+\.compute\.internal\b/g,
-    'ip-10-0-0-1.us-east-1.compute.internal'
-  )
-  // Replace GKE node names
-  sanitized = sanitized.replace(
-    /\bgke-[a-z0-9-]+-[a-z0-9]+-[a-z0-9]+\b/g,
-    'gke-cluster-default-pool-node'
-  )
-  // Redact cloud account IDs
-  sanitized = sanitized.replace(/\b\d{12}\b/g, '123456789012')
+  // First sanitize HTML/XSS content
+  let sanitized = sanitizeHtml(text)
+  let prev = ''
+  
+  // Use loop-until-stable to handle overlapping patterns (defense-in-depth)
+  // Loop until no more changes to catch edge cases with overlapping patterns
+  while (sanitized !== prev) {
+    prev = sanitized
+    
+    // Replace real public IPs with RFC 5737 documentation IPs (preserve private ranges)
+    sanitized = sanitized.replace(
+      /\b(?!10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.0\.0\.)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
+      '192.0.2.1'
+    )
+    // Replace AWS EC2 internal hostnames
+    sanitized = sanitized.replace(
+      /\bip-\d+-\d+-\d+-\d+\.\w+-\w+-\d+\.compute\.internal\b/g,
+      'ip-10-0-0-1.us-east-1.compute.internal'
+    )
+    // Replace GKE node names
+    sanitized = sanitized.replace(
+      /\bgke-[a-z0-9-]+-[a-z0-9]+-[a-z0-9]+\b/g,
+      'gke-cluster-default-pool-node'
+    )
+    // Redact cloud account IDs
+    sanitized = sanitized.replace(/\b\d{12}\b/g, '123456789012')
+  }
+  
   return sanitized
 }
 
