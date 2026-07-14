@@ -769,11 +769,14 @@ async function main() {
     // Sanitize mission text after LLM synthesis
     const sanitizeMissionText = (obj, maxLen = 5000) => {
       if (typeof obj === 'string') {
-        // Strip script/HTML, control chars, and cap length to prevent injection,
-        // exfiltration, and unbounded writes from HTTP-sourced content (CWE-434, fixes #2896).
+        // HTML-encode angle brackets to neutralize all tag-injection patterns
+        // (js/bad-tag-filter, js/incomplete-multi-character-sanitization — CWE-80/79).
+        // Encoding & first then < and > produces safe, non-executable HTML entities.
+        // Control chars and length cap prevent exfiltration (CWE-434, fixes #2896).
         return obj
-          .replace(/<script[\s\S]*?<\/script>/gi, '')
-          .replace(/<[^>]+>/g, '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
           .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
           .slice(0, maxLen)
       }
