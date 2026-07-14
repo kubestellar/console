@@ -101,8 +101,8 @@ describe('createComplianceFrameworkHandlers', () => {
     const res = await fetch('http://localhost/api/compliance/hipaa/summary')
     expect(res.ok).toBe(true)
     const data = await res.json() as Record<string, unknown>
-    expect(data).toHaveProperty('score')
-    expect(data).toHaveProperty('total_checks')
+    expect(data).toHaveProperty('overall_score')
+    expect(data).toHaveProperty('total_safeguards')
   })
 
   it('GET /api/compliance/baa/agreements returns an array', async () => {
@@ -116,7 +116,7 @@ describe('createComplianceFrameworkHandlers', () => {
     const res = await fetch('http://localhost/api/compliance/sod/summary')
     expect(res.ok).toBe(true)
     const data = await res.json() as Record<string, unknown>
-    expect(data).toHaveProperty('sod_score')
+    expect(data).toHaveProperty('compliance_score')
   })
 
   it('GET /api/compliance/change-control/summary returns change count', async () => {
@@ -130,7 +130,7 @@ describe('createComplianceFrameworkHandlers', () => {
     const res = await fetch('http://localhost/api/compliance/residency/summary')
     expect(res.ok).toBe(true)
     const data = await res.json() as Record<string, unknown>
-    expect(data).toHaveProperty('compliant_clusters')
+    expect(data).toHaveProperty('compliant')
   })
 })
 
@@ -168,7 +168,7 @@ describe('createComplianceGovHandlers', () => {
     const res = await fetch('http://localhost/api/compliance/nist/summary')
     expect(res.ok).toBe(true)
     const data = await res.json() as Record<string, unknown>
-    expect(data).toHaveProperty('score')
+    expect(data).toHaveProperty('overall_score')
   })
 
   it('GET /api/compliance/stig/benchmarks returns an array', async () => {
@@ -189,21 +189,21 @@ describe('createComplianceGovHandlers', () => {
     const res = await fetch('http://localhost/api/compliance/fedramp/score')
     expect(res.ok).toBe(true)
     const data = await res.json() as Record<string, unknown>
-    expect(data).toHaveProperty('score_percentage')
+    expect(data).toHaveProperty('overall_score')
   })
 
   it('GET /api/identity/oidc/summary returns providers_configured', async () => {
     const res = await fetch('http://localhost/api/identity/oidc/summary')
     expect(res.ok).toBe(true)
     const data = await res.json() as Record<string, unknown>
-    expect(data).toHaveProperty('providers_configured')
+    expect(data).toHaveProperty('total_providers')
   })
 
   it('GET /api/identity/rbac/summary returns total_subjects', async () => {
     const res = await fetch('http://localhost/api/identity/rbac/summary')
     expect(res.ok).toBe(true)
     const data = await res.json() as Record<string, unknown>
-    expect(data).toHaveProperty('total_subjects')
+    expect(data).toHaveProperty('total_bindings')
   })
 })
 
@@ -266,7 +266,7 @@ describe('createComplianceSecurityHandlers', () => {
     const res = await fetch('http://localhost/api/v1/compliance/slsa/summary')
     expect(res.ok).toBe(true)
     const data = await res.json() as Record<string, unknown>
-    expect(data).toHaveProperty('level')
+    expect(data).toHaveProperty('total_artifacts')
   })
 })
 
