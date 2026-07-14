@@ -238,7 +238,7 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      <span className="ml-3 text-gray-200">Loading SLSA data…</span>
+      <span className="ml-3 text-muted-foreground">Loading SLSA data…</span>
     </div>
   )
 

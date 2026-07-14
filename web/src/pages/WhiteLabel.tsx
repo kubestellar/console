@@ -571,7 +571,7 @@ export function WhiteLabel() {
                     key={row.feature}
                     className={cn('border-b border-border/30', idx % 2 === 0 ? 'bg-secondary/20' : 'bg-transparent')}
                   >
-                    <td className="px-6 py-3 text-sm font-medium text-slate-200">{row.feature}</td>
+                    <td className="px-6 py-3 text-sm font-medium text-foreground">{row.feature}</td>
                     <td className="px-6 py-3 text-center">
                       <VisibilityIcon visible={row.universal} />
                     </td>
