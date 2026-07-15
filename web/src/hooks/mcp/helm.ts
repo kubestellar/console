@@ -801,6 +801,7 @@ if (typeof window !== 'undefined') {
     helmReleasesCache.timestamp = 0
     helmReleasesCache.consecutiveFailures = 0
     helmReleasesCache.lastError = null
+    helmReleasesCache.isDemoData = false
 
     // Notify all listeners with isLoading: true to trigger skeleton display
     helmReleasesCache.listeners.forEach(listener => {
@@ -810,7 +811,8 @@ if (typeof window !== 'undefined') {
         isRefreshing: false,
         consecutiveFailures: 0,
         lastError: null,
-        lastRefresh: null
+        lastRefresh: null,
+        isDemoData: false
       })
     })
   })
