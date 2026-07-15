@@ -17,7 +17,6 @@ vi.mock('../../../hooks/useCachedDrasiTopology', () => ({
 const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
-  useReportCardDataState: vi.fn(),
 }))
 
 vi.mock('../../ui/Skeleton', () => ({
