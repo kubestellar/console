@@ -39,7 +39,19 @@ vi.mock('react-i18next', async () => {
   return {
     initReactI18next: { type: '3rdParty', init: () => {} },
     ...actual,
-    useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+    useTranslation: () => ({
+      t: (key: string, defaultValue?: string, options?: Record<string, unknown>) => {
+        if (options && typeof options === 'object' && defaultValue) {
+          let result = defaultValue
+          for (const [k, v] of Object.entries(options)) {
+            result = result.replace(`{{${k}}}`, String(v))
+          }
+          return result
+        }
+        return defaultValue ?? key
+      },
+      i18n: { language: 'en', changeLanguage: vi.fn() },
+    }),
     Trans: ({ children }: { children: React.ReactNode }) => children,
   }
 })

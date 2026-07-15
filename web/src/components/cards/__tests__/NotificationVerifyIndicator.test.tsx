@@ -90,6 +90,12 @@ describe('NotificationVerifyIndicator', () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it('renders nothing when Notification permission is "default" (not yet granted)', () => {
+    installNotification('default')
+    const { container } = render(<NotificationVerifyIndicator />)
+    expect(container.firstChild).toBeNull()
+  })
+
   it('renders nothing when Notification permission is not granted', () => {
     installNotification('denied')
     const { container } = render(<NotificationVerifyIndicator />)
@@ -109,6 +115,13 @@ describe('NotificationVerifyIndicator', () => {
     const button = screen.getByTitle('activeAlerts.notifNotVerified')
     expect(button).toBeTruthy()
     expect(button.tagName).toBe('BUTTON')
+  })
+
+  it('shows the amber dot indicating unverified state', () => {
+    installNotification('granted')
+    const { container } = render(<NotificationVerifyIndicator />)
+    const dot = container.querySelector('.bg-amber-400')
+    expect(dot).toBeTruthy()
   })
 
   it('sends a test notification and advances to the asked state on click', async () => {
