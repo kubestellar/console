@@ -132,7 +132,6 @@ export async function buildIndex(targetDir = SOLUTIONS_DIR) {
 
   const index = {
     version: 1,
-    generatedAt: new Date().toISOString(),
     count: missions.length,
     missions: missions.sort((a, b) => a.title.localeCompare(b.title)),
   };
