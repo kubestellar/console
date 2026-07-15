@@ -1,153 +1,223 @@
 import React from 'react'
 /**
- * Unit tests for NotificationVerifyIndicator (part of #21095 / #21094).
+ * Vitest unit tests for NotificationVerifyIndicator (#21095).
  *
- * The indicator drives the browser-notification verification flow shown in
- * the ActiveAlerts card header. It has four states (idle / asked / verified
- * / failed) that gate rendering, and it persists confirmation via
- * `notificationStatus`.
+ * Covers:
+ * - Returns null when Notification API is unavailable
+ * - Returns null when permission is not granted
+ * - Returns null when already verified
+ * - Renders bell button in idle state when permission granted and not verified
+ * - Clicking bell sends test notification and transitions to 'asked' state
+ * - 'Yes' button in asked state triggers verification
+ * - 'No' button in asked state transitions to 'failed' state
+ * - Failed state shows system settings message
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { NotificationVerifyIndicator } from '../NotificationVerifyIndicator'
+
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => key,
-    i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }))
 
-const isBrowserNotifVerified = vi.fn()
-const setBrowserNotifVerified = vi.fn()
+let mockIsBrowserNotifVerified = false
+const mockSetBrowserNotifVerified = vi.fn()
 
-vi.mock('../../lib/notificationStatus', () => ({
-  isBrowserNotifVerified: (...args: unknown[]) => isBrowserNotifVerified(...args),
-  setBrowserNotifVerified: (...args: unknown[]) => setBrowserNotifVerified(...args),
+vi.mock('../../../lib/notificationStatus', () => ({
+  isBrowserNotifVerified: () => mockIsBrowserNotifVerified,
+  setBrowserNotifVerified: (v: boolean) => mockSetBrowserNotifVerified(v),
 }))
 
-// Import after mocks so the component picks them up.
-import { NotificationVerifyIndicator } from '../NotificationVerifyIndicator'
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-type NotificationCtor = typeof globalThis.Notification
-
-interface NotificationInstanceStub {
-  title: string
-  options?: unknown
-}
-
-interface MockNotificationCtor {
-  (title: string, options?: unknown): NotificationInstanceStub
-  permission: NotificationPermission
-  requestPermission?: () => Promise<NotificationPermission>
-}
-
-function installNotification(permission: NotificationPermission | null, opts: { throwOnConstruct?: boolean } = {}) {
+/** Sets up window.Notification mock with the given permission */
+function mockNotificationPermission(permission: NotificationPermission | null) {
   if (permission === null) {
-    // Simulate a browser without the Notification API.
-    // @ts-expect-error intentional undefined for feature-detection branch
-    delete (globalThis as { Notification?: NotificationCtor }).Notification
-    return { instances: [] as NotificationInstanceStub[] }
+    // Simulate Notification API being unavailable
+    Object.defineProperty(window, 'Notification', {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+    return
   }
-  const instances: NotificationInstanceStub[] = []
-  const ctor = function (this: NotificationInstanceStub, title: string, options?: unknown) {
-    if (opts.throwOnConstruct) {
-      throw new Error('notification blocked')
-    }
-    this.title = title
-    this.options = options
-    instances.push(this)
-    return this
-  } as unknown as MockNotificationCtor
-  ctor.permission = permission
-  ctor.requestPermission = async () => permission
-  ;(globalThis as unknown as { Notification: MockNotificationCtor }).Notification = ctor
-  return { instances }
+
+  const NotificationMock = vi.fn()
+  Object.defineProperty(NotificationMock, 'permission', {
+    value: permission,
+    configurable: true,
+  })
+  Object.defineProperty(window, 'Notification', {
+    value: NotificationMock,
+    configurable: true,
+    writable: true,
+  })
 }
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 describe('NotificationVerifyIndicator', () => {
-  const originalNotification = (globalThis as { Notification?: unknown }).Notification
-
   beforeEach(() => {
-    isBrowserNotifVerified.mockReset().mockReturnValue(false)
-    setBrowserNotifVerified.mockReset().mockReturnValue(true)
+    vi.clearAllMocks()
+    mockIsBrowserNotifVerified = false
+    // Default: permission granted, not verified
+    mockNotificationPermission('granted')
   })
 
-  afterEach(() => {
-    cleanup()
-    if (originalNotification === undefined) {
-      // @ts-expect-error cleanup
-      delete (globalThis as { Notification?: unknown }).Notification
-    } else {
-      ;(globalThis as { Notification?: unknown }).Notification = originalNotification
-    }
+  // ---- Hidden / null render cases ----
+
+  describe('when component should not render', () => {
+    it('renders nothing when Notification API is unavailable', () => {
+      mockNotificationPermission(null)
+      const { container } = render(<NotificationVerifyIndicator />)
+      expect(container).toBeEmptyDOMElement()
+    })
+
+    it('renders nothing when notification permission is "default" (not granted)', () => {
+      mockNotificationPermission('default')
+      const { container } = render(<NotificationVerifyIndicator />)
+      expect(container).toBeEmptyDOMElement()
+    })
+
+    it('renders nothing when notification permission is "denied"', () => {
+      mockNotificationPermission('denied')
+      const { container } = render(<NotificationVerifyIndicator />)
+      expect(container).toBeEmptyDOMElement()
+    })
+
+    it('renders nothing when notifications are already verified', () => {
+      mockIsBrowserNotifVerified = true
+      const { container } = render(<NotificationVerifyIndicator />)
+      expect(container).toBeEmptyDOMElement()
+    })
   })
 
-  it('renders nothing when the Notification API is unavailable', () => {
-    installNotification(null)
-    const { container } = render(<NotificationVerifyIndicator />)
-    expect(container.firstChild).toBeNull()
+  // ---- Idle state ----
+
+  describe('idle state (permission granted, not yet verified)', () => {
+    it('renders the bell indicator button', () => {
+      render(<NotificationVerifyIndicator />)
+      expect(screen.getByTitle('activeAlerts.notifNotVerified')).toBeInTheDocument()
+    })
+
+    it('shows the amber dot indicating unverified state', () => {
+      const { container } = render(<NotificationVerifyIndicator />)
+      const dot = container.querySelector('.bg-amber-400')
+      expect(dot).toBeInTheDocument()
+    })
   })
 
-  it('renders nothing when Notification permission is not granted', () => {
-    installNotification('denied')
-    const { container } = render(<NotificationVerifyIndicator />)
-    expect(container.firstChild).toBeNull()
+  // ---- Transition: idle → asked ----
+
+  describe('when the bell button is clicked', () => {
+    it('sends a test notification', async () => {
+      render(<NotificationVerifyIndicator />)
+      await userEvent.click(screen.getByTitle('activeAlerts.notifNotVerified'))
+      expect(window.Notification).toHaveBeenCalledWith(
+        'KubeStellar Console',
+        expect.objectContaining({ body: 'activeAlerts.testNotificationBody' }),
+      )
+    })
+
+    it('transitions to "asked" state — shows yes/no buttons', async () => {
+      render(<NotificationVerifyIndicator />)
+      await userEvent.click(screen.getByTitle('activeAlerts.notifNotVerified'))
+
+      expect(screen.getByText('activeAlerts.didYouSeeIt')).toBeInTheDocument()
+      expect(screen.getByText('activeAlerts.yes')).toBeInTheDocument()
+      expect(screen.getByText('activeAlerts.no')).toBeInTheDocument()
+    })
+
+    it('hides the bell button after transitioning to asked state', async () => {
+      render(<NotificationVerifyIndicator />)
+      await userEvent.click(screen.getByTitle('activeAlerts.notifNotVerified'))
+      expect(screen.queryByTitle('activeAlerts.notifNotVerified')).not.toBeInTheDocument()
+    })
   })
 
-  it('renders nothing when the user has already verified notifications', () => {
-    installNotification('granted')
-    isBrowserNotifVerified.mockReturnValue(true)
-    const { container } = render(<NotificationVerifyIndicator />)
-    expect(container.firstChild).toBeNull()
+  // ---- Transition: asked → verified ----
+
+  describe('when "Yes" is clicked in asked state', () => {
+    it('calls setBrowserNotifVerified(true)', async () => {
+      render(<NotificationVerifyIndicator />)
+      await userEvent.click(screen.getByTitle('activeAlerts.notifNotVerified'))
+      await userEvent.click(screen.getByText('activeAlerts.yes'))
+      expect(mockSetBrowserNotifVerified).toHaveBeenCalledWith(true)
+    })
+
+    it('hides the indicator after verification', async () => {
+      render(<NotificationVerifyIndicator />)
+      await userEvent.click(screen.getByTitle('activeAlerts.notifNotVerified'))
+      await userEvent.click(screen.getByText('activeAlerts.yes'))
+
+      expect(screen.queryByText('activeAlerts.didYouSeeIt')).not.toBeInTheDocument()
+      expect(screen.queryByText('activeAlerts.yes')).not.toBeInTheDocument()
+    })
   })
 
-  it('renders the bell button in the idle state when permission is granted but unverified', () => {
-    installNotification('granted')
-    render(<NotificationVerifyIndicator />)
-    const button = screen.getByTitle('activeAlerts.notifNotVerified')
-    expect(button).toBeTruthy()
-    expect(button.tagName).toBe('BUTTON')
+  // ---- Transition: asked → failed ----
+
+  describe('when "No" is clicked in asked state', () => {
+    it('shows the "check system settings" message', async () => {
+      render(<NotificationVerifyIndicator />)
+      await userEvent.click(screen.getByTitle('activeAlerts.notifNotVerified'))
+      await userEvent.click(screen.getByText('activeAlerts.no'))
+
+      expect(screen.getByText('activeAlerts.checkSystemSettings')).toBeInTheDocument()
+    })
+
+    it('hides the yes/no buttons after failing', async () => {
+      render(<NotificationVerifyIndicator />)
+      await userEvent.click(screen.getByTitle('activeAlerts.notifNotVerified'))
+      await userEvent.click(screen.getByText('activeAlerts.no'))
+
+      expect(screen.queryByText('activeAlerts.yes')).not.toBeInTheDocument()
+      expect(screen.queryByText('activeAlerts.no')).not.toBeInTheDocument()
+    })
+
+    it('does not call setBrowserNotifVerified', async () => {
+      render(<NotificationVerifyIndicator />)
+      await userEvent.click(screen.getByTitle('activeAlerts.notifNotVerified'))
+      await userEvent.click(screen.getByText('activeAlerts.no'))
+
+      expect(mockSetBrowserNotifVerified).not.toHaveBeenCalled()
+    })
   })
 
-  it('sends a test notification and advances to the asked state on click', async () => {
-    const { instances } = installNotification('granted')
-    const user = userEvent.setup()
-    render(<NotificationVerifyIndicator />)
-    await user.click(screen.getByTitle('activeAlerts.notifNotVerified'))
-    expect(instances).toHaveLength(1)
-    expect(instances[0].title).toBe('KubeStellar Console')
-    expect(screen.getByText('activeAlerts.didYouSeeIt')).toBeTruthy()
-    expect(screen.getByText('activeAlerts.yes')).toBeTruthy()
-    expect(screen.getByText('activeAlerts.no')).toBeTruthy()
-  })
+  // ---- Notification constructor error resilience ----
 
-  it('still transitions to the asked state when the Notification constructor throws', async () => {
-    installNotification('granted', { throwOnConstruct: true })
-    const user = userEvent.setup()
-    render(<NotificationVerifyIndicator />)
-    await user.click(screen.getByTitle('activeAlerts.notifNotVerified'))
-    expect(screen.getByText('activeAlerts.didYouSeeIt')).toBeTruthy()
-  })
+  describe('error resilience', () => {
+    it('does not crash when Notification constructor throws', async () => {
+      const ThrowingNotification = vi.fn().mockImplementation(() => {
+        throw new Error('Notifications disabled by system')
+      })
+      Object.defineProperty(ThrowingNotification, 'permission', {
+        value: 'granted',
+        configurable: true,
+      })
+      Object.defineProperty(window, 'Notification', {
+        value: ThrowingNotification,
+        configurable: true,
+        writable: true,
+      })
 
-  it('persists verification and hides the indicator when the user confirms yes', async () => {
-    installNotification('granted')
-    const user = userEvent.setup()
-    const { container } = render(<NotificationVerifyIndicator />)
-    await user.click(screen.getByTitle('activeAlerts.notifNotVerified'))
-    await user.click(screen.getByText('activeAlerts.yes'))
-    expect(setBrowserNotifVerified).toHaveBeenCalledWith(true)
-    expect(container.firstChild).toBeNull()
-  })
-
-  it('surfaces the check-settings hint when the user confirms no', async () => {
-    installNotification('granted')
-    const user = userEvent.setup()
-    render(<NotificationVerifyIndicator />)
-    await user.click(screen.getByTitle('activeAlerts.notifNotVerified'))
-    await user.click(screen.getByText('activeAlerts.no'))
-    expect(setBrowserNotifVerified).not.toHaveBeenCalled()
-    expect(screen.getByText('activeAlerts.checkSystemSettings')).toBeTruthy()
+      render(<NotificationVerifyIndicator />)
+      // Should not throw — the catch block in handleSendTestNotif swallows errors
+      await userEvent.click(screen.getByTitle('activeAlerts.notifNotVerified'))
+      // Still transitions to asked state despite constructor throwing
+      expect(screen.getByText('activeAlerts.didYouSeeIt')).toBeInTheDocument()
+    })
   })
 })
