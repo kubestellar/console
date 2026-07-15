@@ -1,0 +1,80 @@
+{
+  "version": "kc-mission-v1",
+  "name": "kyverno-13934-reports-controller-fails-to-create-events-and-policy-expression-er",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "kyverno: Reports controller fails to create events and policy expression error after upgrade to 3.5.1",
+    "description": "Reports controller fails to create events and policy expression error after upgrade to 3.5.1. This issue affects 19+ users.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify kyverno troubleshoot symptoms",
+        "description": "Check for the issue in your kyverno deployment:\n```bash\nkubectl get pods -n kyverno -l app.kubernetes.io/name=kyverno\nkubectl logs -l app.kubernetes.io/name=kyverno -n kyverno --tail=100 | grep -i error\n```\nLook for error: `no such key: username`"
+      },
+      {
+        "title": "Review kyverno configuration",
+        "description": "Inspect the relevant kyverno configuration:\n```bash\nkubectl get all -n kyverno -l app.kubernetes.io/name=kyverno\nkubectl get configmap -n kyverno -l app.kubernetes.io/part-of=kyverno\n```\n## Environment\n- **Kyverno Version**: Upgraded from 3.4.4 to 3.5.1\n- **Kubernetes Platform**: Google Kubernetes Engine (GKE)\n- **Component**: kyverno-reports-controller\n\n## Problem Description\n\nAfter upgrading Kyverno from version 3.4.4 to 3.5.1,"
+      },
+      {
+        "title": "Apply the fix for Reports controller fails to create events and policy…",
+        "description": "Partially fixes #14281.\n\nWhen the reports controller background-scans native `ValidatingAdmissionPolicy` and `MutatingAdmissionPolicy` resources, any policy that references `request.userInfo.username` fails with `no such key: username`. The most common case is GKE's built-in\n```yaml\nexpression '![ \"system:addon-manager\", \"system:serviceaccount:kube-system:cronjob-controller\", ... ].exists(sa, sa == request.userInfo.username)' resulted in error: no such key: username\n```"
+      },
+      {
+        "title": "Confirm Reports controller fails to create events and… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=kyverno -n kyverno --tail=50 --since=5m\nkubectl get events -n kyverno --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that `no such key: username` no longer appears in logs."
+      }
+    ],
+    "resolution": {
+      "summary": "Partially fixes #14281.\n\nWhen the reports controller background-scans native `ValidatingAdmissionPolicy` and `MutatingAdmissionPolicy` resources, any policy that references `request.userInfo.username` fails with `no such key: username`. The most common case is GKE's built-in `validating-node-p4sa-audience` VAP (present on GKE >= 1.32), which users can't modify to add a `has()` guard.",
+      "codeSnippets": [
+        "expression '![ \"system:addon-manager\", \"system:serviceaccount:kube-system:cronjob-controller\", ... ].exists(sa, sa == request.userInfo.username)' resulted in error: no such key: username",
+        "@realshuting Reproduced this on current `main`.\n\nI ran the exact GKE `validating-node-p4sa-audience` expression (`... exists(sa, sa == request.userInfo.username)`) through the reports background-scan path using the empty `UserInfo` the scanner supplies, and it fails with:"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "kyverno",
+      "incubating",
+      "security",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "kyverno"
+    ],
+    "targetResourceKinds": [
+      "Pod",
+      "Cronjob",
+      "Namespace"
+    ],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "incubating",
+    "sourceUrls": {
+      "issue": "https://github.com/kyverno/kyverno/issues/13934",
+      "repo": "https://github.com/kyverno/kyverno",
+      "pr": "https://github.com/kyverno/kyverno/pull/16561"
+    },
+    "reactions": 19,
+    "comments": 9,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with kyverno installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-15T06:52:43.607Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
