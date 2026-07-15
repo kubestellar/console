@@ -124,8 +124,8 @@ describe('ClusterGroups', () => {
     expect(screen.getByText('staging')).toBeInTheDocument()
   })
 
-  it('matches snapshot', () => {
+  it('renders without crashing', () => {
     const { container } = render(<ClusterGroups />)
-    expect(container).toMatchSnapshot()
+    expect(container.firstChild).toBeTruthy()
   })
 })

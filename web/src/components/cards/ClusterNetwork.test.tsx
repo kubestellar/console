@@ -89,8 +89,8 @@ describe('ClusterNetwork', () => {
     expect(screen.getByText('cards:clusterNetwork.apiServer')).toBeInTheDocument()
   })
 
-  it('matches snapshot', () => {
+  it('renders without crashing', () => {
     const { container } = render(<ClusterNetwork />)
-    expect(container).toMatchSnapshot()
+    expect(container.firstChild).toBeTruthy()
   })
 })

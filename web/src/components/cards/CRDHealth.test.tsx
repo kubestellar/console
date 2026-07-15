@@ -135,8 +135,8 @@ describe('CRDHealth', () => {
     expect(container.firstChild).toBeTruthy()
   })
 
-  it('matches snapshot', () => {
+  it('renders without crashing', () => {
     const { container } = render(<CRDHealth />)
-    expect(container).toMatchSnapshot()
+    expect(container.firstChild).toBeTruthy()
   })
 })

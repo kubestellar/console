@@ -25,21 +25,16 @@ const mockAnalytics = {
   emitGameEnded: vi.fn(),
 }
 
-const mockLocalStorage = {
-  safeGet: vi.fn(() => null),
-  safeGetItem: vi.fn(() => null),
-  safeSet: vi.fn(),
-  safeSetItem: vi.fn(),
-}
-
 vi.mock('./CardWrapper', () => mockCardExpanded)
 vi.mock('./CardDataContext', () => mockCardDataContext)
 vi.mock('../../lib/analytics', () => mockAnalytics)
 vi.mock('../../hooks/useGameKeys', () => ({
   useGameKeys: () => ({ key: null }),
 }))
-vi.mock('../../lib/safeLocalStorage', () => mockLocalStorage)
-vi.mock('@/lib/utils/localStorage', () => mockLocalStorage)
+vi.mock('@/lib/utils/localStorage', () => ({
+  safeGetItem: vi.fn(() => null),
+  safeSetItem: vi.fn(),
+}))
 
 describe('Checkers', () => {
   beforeEach(() => {

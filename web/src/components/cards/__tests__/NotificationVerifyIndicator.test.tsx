@@ -22,7 +22,7 @@ vi.mock('react-i18next', () => ({
 const isBrowserNotifVerified = vi.fn()
 const setBrowserNotifVerified = vi.fn()
 
-vi.mock('../../lib/notificationStatus', () => ({
+vi.mock('../../../lib/notificationStatus', () => ({
   isBrowserNotifVerified: (...args: unknown[]) => isBrowserNotifVerified(...args),
   setBrowserNotifVerified: (...args: unknown[]) => setBrowserNotifVerified(...args),
 }))

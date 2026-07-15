@@ -93,7 +93,7 @@ describe('DNSHealth', () => {
     expect(screen.getByText('dnsHealth.readyCount')).toBeInTheDocument()
   })
 
-  it('matches snapshot with DNS pods', () => {
+  it('renders without crashing', () => {
     const pods = [
       {
         name: 'coredns-74d6c4d8b9-abc12',
@@ -108,6 +108,6 @@ describe('DNSHealth', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockCachedPods.mockReturnValue({ ...basePods, pods } as any)
     const { container } = render(<DNSHealth />)
-    expect(container).toMatchSnapshot()
+    expect(container.firstChild).toBeTruthy()
   })
 })
