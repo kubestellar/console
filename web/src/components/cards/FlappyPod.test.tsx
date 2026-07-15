@@ -52,12 +52,12 @@ describe('FlappyPod', () => {
 
   it('displays high score section', () => {
     render(<FlappyPod />)
-    expect(screen.getByText(/high/i)).toBeInTheDocument()
+    expect(screen.getByText(/best/i)).toBeInTheDocument()
   })
 
   it('renders start/play button', () => {
     render(<FlappyPod />)
-    const playButton = screen.getByRole('button', { name: /play|start/i })
+    const playButton = screen.getByRole('button', { name: /new game/i })
     expect(playButton).toBeInTheDocument()
   })
 
