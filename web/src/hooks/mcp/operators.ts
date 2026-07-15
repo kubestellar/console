@@ -97,6 +97,7 @@ export function useOperators(cluster?: string) {
   const [lastRefresh, setLastRefresh] = useState<number | null>(cached?.timestamp || null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [fetchVersion, setFetchVersion] = useState(0)
+  const [isDemoData, setIsDemoData] = useState(false)
   const clusterCountRef = useRef(clusterCacheRef.clusters.length)
 
   // When clusters change, bump fetchVersion to re-trigger the fetch effect
@@ -131,6 +132,7 @@ export function useOperators(cluster?: string) {
         setOperators(allOperators)
         setError(null)
         setConsecutiveFailures(0)
+        setIsDemoData(true)
         setIsLoading(false)
         setIsRefreshing(false)
         fetchInProgressRef.current = false
@@ -192,9 +194,14 @@ export function useOperators(cluster?: string) {
 
       // REST fallback — skip entirely if no token to prevent GA4 auth errors (#9957)
       if (!token) {
-        // Fall back to demo data so the UI shows placeholder content without a token
-        const effectiveClusters = cluster ? [cluster] : ['demo']
-        setOperators(effectiveClusters.flatMap(c => getDemoOperators(c)))
+        // In demo mode, populate placeholder operators so the UI shows content.
+        // Outside demo mode we intentionally leave `operators` untouched so the
+        // hook doesn't fabricate data when the caller simply lacks a token.
+        if (isDemoMode()) {
+          const effectiveClusters = cluster ? [cluster] : ['demo']
+          setOperators(effectiveClusters.flatMap(c => getDemoOperators(c)))
+          setIsDemoData(true)
+        }
         setIsLoading(false)
         setIsRefreshing(false)
         fetchInProgressRef.current = false
@@ -218,6 +225,7 @@ export function useOperators(cluster?: string) {
           setError(null)
           setConsecutiveFailures(0)
           setLastRefresh(Date.now())
+          setIsDemoData(false)
         }
       } catch (err: unknown) {
         if (!controller.signal.aborted) {
@@ -260,7 +268,7 @@ export function useOperators(cluster?: string) {
     setFetchVersion(v => v + 1)
   }, [demoMode])
 
-  return { operators, isLoading, isRefreshing, error, refetch, lastRefresh, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
+  return { operators, isLoading, isRefreshing, error, refetch, lastRefresh, consecutiveFailures, isFailed: consecutiveFailures >= 3, isDemoData }
 }
 
 // Hook to get operator subscriptions for a cluster (or all clusters if undefined)
@@ -280,6 +288,7 @@ export function useOperatorSubscriptions(cluster?: string) {
   const [lastRefresh, setLastRefresh] = useState<number | null>(cached?.timestamp || null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [fetchVersion, setFetchVersion] = useState(0)
+  const [isDemoData, setIsDemoData] = useState(false)
   const clusterCountRef = useRef(clusterCacheRef.clusters.length)
 
   // When clusters change, bump fetchVersion to re-trigger the fetch effect
@@ -314,6 +323,7 @@ export function useOperatorSubscriptions(cluster?: string) {
         setSubscriptions(allSubscriptions)
         setError(null)
         setConsecutiveFailures(0)
+        setIsDemoData(true)
         setIsLoading(false)
         setIsRefreshing(false)
         fetchInProgressRef.current = false
@@ -352,6 +362,7 @@ export function useOperatorSubscriptions(cluster?: string) {
             setError(null)
             setConsecutiveFailures(0)
             setLastRefresh(Date.now())
+            setIsDemoData(false)
           }
           setIsLoading(false)
           setIsRefreshing(false)
@@ -367,9 +378,13 @@ export function useOperatorSubscriptions(cluster?: string) {
 
       // REST fallback — skip entirely if no token to prevent GA4 auth errors (#9957)
       if (!token) {
-        // Fall back to demo data so the UI shows placeholder content without a token
-        const effectiveClusters = cluster ? [cluster] : ['demo']
-        setSubscriptions(effectiveClusters.flatMap(c => getDemoOperatorSubscriptions(c)))
+        // In demo mode, populate placeholder subscriptions so the UI shows content.
+        // Outside demo mode we intentionally leave `subscriptions` untouched.
+        if (isDemoMode()) {
+          const effectiveClusters = cluster ? [cluster] : ['demo']
+          setSubscriptions(effectiveClusters.flatMap(c => getDemoOperatorSubscriptions(c)))
+          setIsDemoData(true)
+        }
         setIsLoading(false)
         setIsRefreshing(false)
         fetchInProgressRef.current = false
@@ -390,6 +405,7 @@ export function useOperatorSubscriptions(cluster?: string) {
           setError(null)
           setConsecutiveFailures(0)
           setLastRefresh(Date.now())
+          setIsDemoData(false)
         }
       } catch (err: unknown) {
         if (!controller.signal.aborted) {
@@ -432,7 +448,7 @@ export function useOperatorSubscriptions(cluster?: string) {
     setFetchVersion(v => v + 1)
   }, [demoMode])
 
-  return { subscriptions, isLoading, isRefreshing, error, refetch, lastRefresh, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
+  return { subscriptions, isLoading, isRefreshing, error, refetch, lastRefresh, consecutiveFailures, isFailed: consecutiveFailures >= 3, isDemoData }
 }
 
 function getDemoOperators(cluster: string): Operator[] {
