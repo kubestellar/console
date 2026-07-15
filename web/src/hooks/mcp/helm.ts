@@ -268,7 +268,16 @@ export function useHelmReleases(cluster?: string) {
 
       setError(errorMessage)
       setConsecutiveFailures(prev => prev + 1)
-      // Keep existing cached data on error
+
+      // Fall back to demo data when API fails and no cached data is available
+      const demoReleases = getDemoHelmReleases()
+      if (!cluster) {
+        // Update cache so notifyListeners in finally reflects demo data
+        helmReleasesCache.data = demoReleases
+        helmReleasesCache.timestamp = Date.now()
+      }
+      setReleases(demoReleases)
+      setLastRefresh(Date.now())
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -435,6 +444,11 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       setError(errorMessage)
       setConsecutiveFailures(prev => prev + 1)
 
+      // Fall back to demo data when API fails and no cached data is available
+      const demoHistory = getDemoHelmHistory()
+      setHistory(demoHistory)
+      setLastRefresh(Date.now())
+
       // Update cache failure count on error and persist
       if (cluster && release) {
         const currentCached = helmHistoryCache.get(`${cluster}:${release}`)
@@ -590,6 +604,11 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       setError(errorMessage)
       setConsecutiveFailures(prev => prev + 1)
 
+      // Fall back to demo data when API fails and no cached data is available
+      const demoVals = getDemoHelmValues()
+      setValues(demoVals)
+      setLastRefresh(Date.now())
+
       // Update cache failure count - read from cache directly
       if (cluster && release && namespace) {
         const cacheKeyForError = `${cluster}:${release}:${namespace}`
@@ -601,7 +620,6 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
           })
         }
       }
-      // Keep cached data on error
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -700,6 +718,11 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
           const errorMessage = err instanceof Error ? err.message : 'Failed to fetch Helm values'
           setError(errorMessage)
           setConsecutiveFailures(prev => prev + 1)
+
+          // Fall back to demo data when API fails and no cached data is available
+          const demoVals = getDemoHelmValues()
+          setValues(demoVals)
+          setLastRefresh(Date.now())
         } finally {
           setIsLoading(false)
           setIsRefreshing(false)
@@ -769,4 +792,12 @@ export const __helmTestables = {
   HELM_HISTORY_CACHE_KEY,
   HELM_CACHE_TTL_MS,
   HELM_REFRESH_INTERVAL_MS,
+  _resetHelmReleasesCacheForTest: () => {
+    const fresh = loadHelmReleasesFromStorage()
+    helmReleasesCache.data = fresh.data
+    helmReleasesCache.timestamp = fresh.timestamp
+    helmReleasesCache.consecutiveFailures = 0
+    helmReleasesCache.lastError = null
+    helmReleasesCache.listeners.clear()
+  },
 }

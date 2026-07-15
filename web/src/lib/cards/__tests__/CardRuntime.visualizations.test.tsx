@@ -5,6 +5,8 @@ import {
   registerFakeHook,
   registerDrillAction,
   makeDefinition,
+  setMockCardDataResult,
+  makeCardDataResult,
 } from './CardRuntime.setup'
 
 beforeEach(() => {
@@ -17,6 +19,13 @@ describe('CardRuntime — list/status visualization', () => {
       { name: 'pod-a', namespace: 'default', status: 'Running' },
       { name: 'pod-b', namespace: 'kube-system', status: 'Failed' },
     ]})
+    setMockCardDataResult(makeCardDataResult({
+      items: [
+        { name: 'pod-a', namespace: 'default', status: 'Running' },
+        { name: 'pod-b', namespace: 'kube-system', status: 'Failed' },
+      ],
+      totalItems: 2,
+    }))
   })
 
   it('renders list items for status visualization', () => {
@@ -75,6 +84,13 @@ describe('CardRuntime — table visualization', () => {
       { name: 'svc-1', type: 'ClusterIP', port: 8080 },
       { name: 'svc-2', type: 'NodePort', port: 30080 },
     ]})
+    setMockCardDataResult(makeCardDataResult({
+      items: [
+        { name: 'svc-1', type: 'ClusterIP', port: 8080 },
+        { name: 'svc-2', type: 'NodePort', port: 30080 },
+      ],
+      totalItems: 2,
+    }))
   })
 
   it('renders a table with headers and rows', () => {

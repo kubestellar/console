@@ -248,6 +248,17 @@ export function useCrossplaneManagedResources(cluster?: string) {
 
         setError(message)
         setConsecutiveFailures(prev => prev + 1)
+
+        // Fall back to demo data when API fails and no cached data is available
+        const demoData = getDemoManagedResources()
+        if (!cluster) {
+          // Update cache so notifyListeners in finally reflects demo data
+          managedCache.data = demoData
+          managedCache.timestamp = Date.now()
+        }
+        setResources(demoData)
+        setIsDemoData(true)
+        setLastRefresh(Date.now())
       } finally {
         setIsLoading(false)
         setIsRefreshing(false)
@@ -341,4 +352,13 @@ if (typeof window !== 'undefined') {
         isDemoData: false })
     )
   })
+}
+
+export function _resetCrossplaneManagedCacheForTest(): void {
+  const fresh = typeof window !== 'undefined' ? loadFromStorage() : { data: [] as CrossplaneManagedResource[], timestamp: 0 }
+  managedCache.data = fresh.data
+  managedCache.timestamp = fresh.timestamp
+  managedCache.consecutiveFailures = 0
+  managedCache.lastError = null
+  managedCache.listeners.clear()
 }

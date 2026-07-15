@@ -35,12 +35,14 @@ const {
   BUILDPACK_CACHE_KEY,
   BUILDPACK_CACHE_TTL_MS,
   BUILDPACK_REFRESH_INTERVAL_MS,
+  _resetBuildpackCacheForTest,
 } = __buildpacksTestables
 
 beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
   vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('not available'))
+  _resetBuildpackCacheForTest()
 })
 
 // ── Pure function tests ────────────────────────────────────────────────────
@@ -157,6 +159,7 @@ describe('useBuildpackImages', () => {
     const ts = Date.now()
     const data = getDemoBuildpackImages()
     saveToStorage(data, ts)
+    _resetBuildpackCacheForTest()
     const { result, unmount } = renderHook(() => useBuildpackImages())
     expect(result.current.images.length).toBeGreaterThan(0)
     unmount()

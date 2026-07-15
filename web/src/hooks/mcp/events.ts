@@ -453,7 +453,7 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
     refetch(false)
   }, [demoMode, refetch])
 
-  return { events, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
+  return { events, isLoading, isRefreshing, lastUpdated, error, consecutiveFailures, refetch: () => refetch(false) }
 }
 
 function getDemoEvents(): ClusterEvent[] {

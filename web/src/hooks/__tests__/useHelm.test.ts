@@ -49,12 +49,14 @@ const {
   HELM_HISTORY_CACHE_KEY,
   HELM_CACHE_TTL_MS,
   HELM_REFRESH_INTERVAL_MS,
+  _resetHelmReleasesCacheForTest,
 } = __helmTestables
 
 beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
   vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('not available'))
+  _resetHelmReleasesCacheForTest()
 })
 
 // ── Pure-function tests ────────────────────────────────────────────────────
@@ -199,6 +201,7 @@ describe('useHelmReleases', () => {
     const ts = Date.now()
     const data = [{ name: 'cached-release', namespace: 'default', revision: '1', updated: '', status: 'deployed', chart: 'cached-1.0.0', app_version: '1.0', cluster: 'test' }]
     saveHelmReleasesToStorage(data, ts)
+    _resetHelmReleasesCacheForTest()
     const { result, unmount } = renderHook(() => useHelmReleases())
     expect(result.current.releases.some(r => r.name === 'cached-release')).toBe(true)
     unmount()

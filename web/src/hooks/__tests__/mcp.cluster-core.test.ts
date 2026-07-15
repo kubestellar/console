@@ -59,6 +59,13 @@ vi.mock('../mcp/sharedImpl.connection', () => ({
   resetAuthFailed: vi.fn(),
 }))
 
+// Restore the actual agentFetch implementation — the global setup.ts mock replaces
+// agentFetch with a passthrough (no token injection, no suppression logic) to keep
+// unrelated tests simple. Here we test agentFetch itself, so we need the real module.
+vi.mock('../mcp/agentFetch', async (importOriginal) => {
+  return importOriginal<typeof import('../mcp/agentFetch')>()
+})
+
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
@@ -333,7 +340,9 @@ describe('clusterUtils – deduplicateClustersByServer', () => {
     ]
     const result = deduplicateClustersByServer(clusters)
     expect(result).toHaveLength(1)
-    expect(result[0].aliases).toContain('alias')
+    // 'alias' (5 chars) is shorter than 'primary' (7 chars) so it becomes the primary
+    expect(result[0].name).toBe('alias')
+    expect(result[0].aliases).toContain('primary')
   })
 
   it('prefers shorter (user-friendly) name as primary', () => {

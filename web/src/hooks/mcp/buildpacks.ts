@@ -245,6 +245,17 @@ export function useBuildpackImages(cluster?: string) {
 
         setError(message)
         setConsecutiveFailures(prev => prev + 1)
+
+        // Fall back to demo data when API fails and no cached data is available
+        const demoData = getDemoBuildpackImages()
+        if (!cluster) {
+          // Update cache so notifyListeners in finally reflects demo data
+          buildpackCache.data = demoData
+          buildpackCache.timestamp = Date.now()
+        }
+        setImages(demoData)
+        setIsDemoData(true)
+        setLastRefresh(Date.now())
       } finally {
         setIsLoading(false)
         setIsRefreshing(false)
@@ -345,4 +356,12 @@ export const __buildpacksTestables = {
   BUILDPACK_CACHE_KEY,
   BUILDPACK_CACHE_TTL_MS,
   BUILDPACK_REFRESH_INTERVAL_MS,
+  _resetBuildpackCacheForTest: () => {
+    const fresh = typeof window !== 'undefined' ? loadFromStorage() : { data: [] as BuildpackImage[], timestamp: 0 }
+    buildpackCache.data = fresh.data
+    buildpackCache.timestamp = fresh.timestamp
+    buildpackCache.consecutiveFailures = 0
+    buildpackCache.lastError = null
+    buildpackCache.listeners.clear()
+  },
 }

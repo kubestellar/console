@@ -4,6 +4,8 @@ import {
   CardRuntime,
   registerFakeHook,
   makeDefinition,
+  setMockCardDataResult,
+  makeCardDataResult,
 } from './CardRuntime.setup'
 
 beforeEach(() => {
@@ -62,6 +64,10 @@ describe('CardRuntime — error state', () => {
 
   it('does not render error state when error exists but items are present', () => {
     registerFakeHook('useErrorWithData', { error: 'Stale data', data: [{ name: 'x' }] })
+    setMockCardDataResult(makeCardDataResult({
+      items: [{ name: 'x' }],
+      totalItems: 1,
+    }))
     const def = makeDefinition({
       dataSource: { hook: 'useErrorWithData' },
       columns: [{ field: 'name', header: 'Name' }],

@@ -41,7 +41,7 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   return { ...actual, DEFAULT_REFRESH_INTERVAL_MS: 120000 }
 })
 
-import { useCrossplaneManagedResources } from '../mcp/crossplane'
+import { useCrossplaneManagedResources, _resetCrossplaneManagedCacheForTest } from '../mcp/crossplane'
 import { useOperators, useOperatorSubscriptions, __operatorsTestables } from '../mcp/operators'
 
 const {
@@ -58,6 +58,7 @@ beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
   vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('not available'))
+  _resetCrossplaneManagedCacheForTest()
 })
 
 // ── useCrossplaneManagedResources ─────────────────────────────────────────
@@ -119,6 +120,7 @@ describe('useCrossplaneManagedResources', () => {
       timestamp: ts,
     }
     localStorage.setItem('kc-crossplane-managed-cache', JSON.stringify(cached))
+    _resetCrossplaneManagedCacheForTest()
     const { result, unmount } = renderHook(() => useCrossplaneManagedResources())
     expect(result.current.resources.some(r => r.metadata.name === 'cached-db')).toBe(true)
     unmount()

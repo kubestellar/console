@@ -5,6 +5,8 @@ import {
   registerFakeHook,
   registerDrillAction,
   makeDefinition,
+  setMockCardDataResult,
+  makeCardDataResult,
 } from './CardRuntime.setup'
 
 beforeEach(() => {
@@ -16,6 +18,10 @@ describe('CardRuntime — drill-down with context', () => {
     const drillFn = vi.fn()
     registerDrillAction('contextDrill', drillFn)
     registerFakeHook('useContextData', { data: [{ name: 'x', cluster: 'c1', ns: 'default' }] })
+    setMockCardDataResult(makeCardDataResult({
+      items: [{ name: 'x', cluster: 'c1', ns: 'default' }],
+      totalItems: 1,
+    }))
     const def = makeDefinition({
       dataSource: { hook: 'useContextData' },
       visualization: 'table',
@@ -40,6 +46,10 @@ describe('CardRuntime — drill-down with context', () => {
   it('warns when drill action is not registered', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     registerFakeHook('useWarnDrill', { data: [{ name: 'a' }] })
+    setMockCardDataResult(makeCardDataResult({
+      items: [{ name: 'a' }],
+      totalItems: 1,
+    }))
 
     const def = makeDefinition({
       dataSource: { hook: 'useWarnDrill' },
@@ -59,6 +69,10 @@ describe('CardRuntime — drill-down with context', () => {
 describe('CardRuntime — built-in renderers', () => {
   it('statusBadge renderer maps running to success variant', () => {
     registerFakeHook('useStatusRenderer', { data: [{ name: 'p1', status: 'Running' }] })
+    setMockCardDataResult(makeCardDataResult({
+      items: [{ name: 'p1', status: 'Running' }],
+      totalItems: 1,
+    }))
     const def = makeDefinition({
       dataSource: { hook: 'useStatusRenderer' },
       visualization: 'table',
@@ -73,6 +87,10 @@ describe('CardRuntime — built-in renderers', () => {
 
   it('statusBadge maps pending to warning', () => {
     registerFakeHook('usePendingStatus', { data: [{ name: 'p', status: 'Pending' }] })
+    setMockCardDataResult(makeCardDataResult({
+      items: [{ name: 'p', status: 'Pending' }],
+      totalItems: 1,
+    }))
     const def = makeDefinition({
       dataSource: { hook: 'usePendingStatus' },
       visualization: 'table',
@@ -125,6 +143,13 @@ describe('CardRuntime — search filter', () => {
 describe('CardRuntime — pagination', () => {
   it('renders Pagination when needsPagination is true', () => {
     registerFakeHook('usePaginated', { data: Array.from({ length: 20 }, (_, i) => ({ name: `item-${i}` })) })
+    setMockCardDataResult(makeCardDataResult({
+      items: [{ name: 'item-0' }],
+      totalItems: 20,
+      needsPagination: true,
+      totalPages: 4,
+      itemsPerPage: 5,
+    }))
     const def = makeDefinition({
       dataSource: { hook: 'usePaginated' },
       columns: [{ field: 'name', header: 'Name' }],
@@ -212,6 +237,10 @@ describe('CardRuntime — sort config', () => {
 describe('CardRuntime — header', () => {
   it('renders count with default variant when items exist', () => {
     registerFakeHook('useHeaderCount', { data: [{ name: 'a' }] })
+    setMockCardDataResult(makeCardDataResult({
+      items: [{ name: 'a' }],
+      totalItems: 5,
+    }))
     const def = makeDefinition({
       dataSource: { hook: 'useHeaderCount' },
       columns: [{ field: 'name', header: 'Name' }],
