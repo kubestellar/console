@@ -1,0 +1,5 @@
+﻿# codeql-config.yml
+# Modelo de barrera para sanitizadores de mission-generation
+
+extensions:
+  - codeql/javascript/ql/lib/barriers.qll
