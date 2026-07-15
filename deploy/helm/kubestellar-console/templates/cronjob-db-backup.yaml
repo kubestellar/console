@@ -85,6 +85,8 @@ spec:
           tolerations:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+{{- $existingBackupPVC := lookup "v1" "PersistentVolumeClaim" .Release.Namespace (printf "%s-backups" (include "kubestellar-console.fullname" .)) -}}
+{{- if not $existingBackupPVC }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -105,4 +107,5 @@ spec:
   {{- else if .Values.persistence.storageClass }}
   storageClassName: {{ .Values.persistence.storageClass | quote }}
   {{- end }}
+{{- end }}
 {{- end }}

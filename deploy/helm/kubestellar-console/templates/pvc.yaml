@@ -1,4 +1,6 @@
 {{- if .Values.persistence.enabled }}
+{{- $existingPVC := lookup "v1" "PersistentVolumeClaim" .Release.Namespace (include "kubestellar-console.fullname" .) -}}
+{{- if not $existingPVC }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -16,4 +18,5 @@ spec:
   {{- if .Values.persistence.storageClass }}
   storageClassName: {{ .Values.persistence.storageClass | quote }}
   {{- end }}
+{{- end }}
 {{- end }}
