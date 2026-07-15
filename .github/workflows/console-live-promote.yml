@@ -484,11 +484,24 @@ jobs:
 
           prod_values="$RUNNER_TEMP/console-live/prod-values.yaml"
           promote_timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          # ReadWriteOnce block storage cannot support RollingUpdate on a
+          # single-replica deployment: the new pod cannot mount the PVC
+          # while the old pod still holds it, causing a "Pending
+          # termination" deadlock and a subsequent Helm rollback that
+          # fails on PVC-immutability (see #21087, #21088).
+          if [ "$LIVE_PERSISTENCE_ACCESS_MODE" = "ReadWriteOnce" ]; then
+            deployment_strategy_type="Recreate"
+          else
+            deployment_strategy_type="RollingUpdate"
+          fi
           cat > "$prod_values" <<EOF
           image:
             repository: "$IMAGE_REPOSITORY"
             tag: "${{ steps.candidate.outputs.tag }}"
             pullPolicy: Always
+          deployment:
+            strategy:
+              type: "$deployment_strategy_type"
           podAnnotations:
             console-live.kubestellar.io/promote-run-id: "${{ github.run_id }}"
             console-live.kubestellar.io/promote-candidate-tag: "${{ steps.candidate.outputs.tag }}"
