@@ -1,4 +1,5 @@
 import React from 'react'
+import { Input } from '../ui/Input'
 /**
  * Unit tests for HelmHistory card component.
  *
@@ -84,7 +85,7 @@ vi.mock('../ui/StatusBadge', () => ({
 
 vi.mock('../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <input data-testid="card-search" value={value} onChange={(e) => onChange(e.target.value)} />
+    <Input data-testid="card-search" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
   CardControlsRow: () => <div data-testid="card-controls" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,

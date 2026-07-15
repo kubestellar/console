@@ -1,4 +1,5 @@
 import React from 'react'
+import { Input } from '../ui/Input'
 /**
  * Unit tests for HelmReleaseStatus card component.
  *
@@ -68,7 +69,7 @@ vi.mock('../ui/ClusterBadge', () => ({
 
 vi.mock('../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <input data-testid="card-search" value={value} onChange={(e) => onChange(e.target.value)} />
+    <Input data-testid="card-search" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
   CardControlsRow: () => <div data-testid="card-controls" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,
@@ -129,7 +130,7 @@ const defaultCardData = {
     localClusterFilter: [] as string[],
     toggleClusterFilter: vi.fn(),
     clearClusterFilter: vi.fn(),
-    availableClusters: [] as Array<{ name: string }>,
+    availableClusters: [{ name: 'cluster-1' }] as Array<{ name: string }>,
     showClusterFilter: false,
     setShowClusterFilter: vi.fn(),
     clusterFilterRef: { current: null },

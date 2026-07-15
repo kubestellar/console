@@ -1,4 +1,5 @@
 import React from 'react'
+import { Input } from '../ui/Input'
 /**
  * Unit tests for HelmValuesDiff card component.
  *
@@ -77,7 +78,7 @@ vi.mock('../ui/RefreshIndicator', () => ({
 
 vi.mock('../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <input data-testid="card-search" value={value} onChange={(e) => onChange(e.target.value)} />
+    <Input data-testid="card-search" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
   CardControlsRow: () => <div data-testid="card-controls" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,
@@ -247,7 +248,8 @@ describe('HelmValuesDiff', () => {
       })
       const { HelmValuesDiff } = await import('./HelmValuesDiff')
       render(<HelmValuesDiff config={{ cluster: 'prod', release: 'nginx' }} />)
-      const scopeBadge = screen.getByText('nginx').closest('[class*="cursor-pointer"]')!
+      const nginxElements = screen.getAllByText('nginx')
+      const scopeBadge = nginxElements[0].closest('[class*="cursor-pointer"]')!
       await userEvent.click(scopeBadge)
       expect(mockDrillToHelm).toHaveBeenCalledWith('prod', 'default', 'nginx', expect.any(Object))
     })

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Input } from '../ui/Input'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { VClusterStatus } from './VClusterStatus'
 
@@ -17,7 +18,7 @@ vi.mock('../../hooks/useLocalAgent', () => ({
 
 vi.mock('../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <input data-testid="card-search" value={value} onChange={(e) => onChange(e.target.value)} />
+    <Input data-testid="card-search" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
   CardControlsRow: () => null,
   CardPaginationFooter: () => null,

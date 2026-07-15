@@ -1,5 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Input } from '../../ui/Input'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { HardwareHealthCard } from '../HardwareHealthCard'
 import type { DeviceAlert, HardwareHealthData, NodeDeviceInventory } from '../../../hooks/useCachedData'
@@ -139,7 +140,7 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
   CardControlsRow: () => <div data-testid="card-controls-row" />,
   CardPaginationFooter: ({ totalItems }: { totalItems: number }) => <div data-testid="pagination-footer">items:{totalItems}</div>,
   CardSearchInput: ({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) => (
-    <input aria-label="hardware-search" placeholder={placeholder} value={value} onChange={event => onChange(event.target.value)} />
+    <Input aria-label="hardware-search" placeholder={placeholder} value={value} onChange={event => onChange(event.target.value)} />
   ),
 }))
 

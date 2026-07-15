@@ -5,6 +5,7 @@ import { ClusterHealth } from './ClusterHealth'
 vi.mock('./CardDataContext', () => ({
   useCardLoadingState: vi.fn(),
   useReportCardDataState: vi.fn(),
+  useCardDemoState: () => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false }),
 }))
 
 vi.mock('../../hooks/useMCP', () => ({
@@ -26,6 +27,8 @@ vi.mock('../ui/RefreshIndicator', () => ({
 
 vi.mock('../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
+  SkeletonStats: () => <div data-testid="skeleton-stats" />,
+  SkeletonList: () => <div data-testid="skeleton-list" />,
 }))
 
 import { useCardLoadingState } from './CardDataContext'

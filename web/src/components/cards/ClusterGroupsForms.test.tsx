@@ -67,7 +67,7 @@ describe('CreateGroupForm', () => {
         onCancel={onCancel}
       />
     )
-    expect(screen.getByPlaceholderText(/cards:clusterGroupsForms/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('cards:clusterGroups.groupNamePlaceholder')).toBeInTheDocument()
   })
 
   it('calls onCancel when cancel is clicked', () => {
@@ -79,7 +79,8 @@ describe('CreateGroupForm', () => {
         onCancel={onCancel}
       />
     )
-    fireEvent.click(screen.getByTitle(/cancel/i))
+    const cancelBtn = screen.getByRole('button', { name: /cancel/i })
+    fireEvent.click(cancelBtn)
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
@@ -141,8 +142,8 @@ describe('EditGroupForm', () => {
         onCancel={onCancel}
       />
     )
-    const input = screen.getByDisplayValue('production')
-    expect(input).toBeInTheDocument()
+    // Group name shown in the form header (not an editable input)
+    expect(screen.getByText(/production/)).toBeInTheDocument()
   })
 
   it('calls onCancel when cancel is clicked', () => {
@@ -155,7 +156,8 @@ describe('EditGroupForm', () => {
         onCancel={onCancel}
       />
     )
-    fireEvent.click(screen.getByTitle(/cancel/i))
+    const cancelBtn = screen.getByRole('button', { name: /cancel/i })
+    fireEvent.click(cancelBtn)
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
