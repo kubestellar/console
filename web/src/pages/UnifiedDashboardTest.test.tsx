@@ -55,7 +55,7 @@ describe('UnifiedDashboardTest', () => {
   it('shows total card count from CARD_CONFIGS', () => {
     render(<UnifiedDashboardTest />)
     // CARD_CONFIGS has 3 entries
-    const totalCards = screen.getByText('Total Cards').closest('div')!
+    const totalCards = screen.getByText('Total Cards').parentElement!
     expect(within(totalCards).getByText('3')).toBeInTheDocument()
   })
 
