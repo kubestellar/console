@@ -129,7 +129,7 @@ const defaultCardData = {
     localClusterFilter: [] as string[],
     toggleClusterFilter: vi.fn(),
     clearClusterFilter: vi.fn(),
-    availableClusters: [] as Array<{ name: string }>,
+    availableClusters: [{ name: 'cluster-1' }] as Array<{ name: string }>,
     showClusterFilter: false,
     setShowClusterFilter: vi.fn(),
     clusterFilterRef: { current: null },

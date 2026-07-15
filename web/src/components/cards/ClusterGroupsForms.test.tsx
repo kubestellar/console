@@ -67,7 +67,7 @@ describe('CreateGroupForm', () => {
         onCancel={onCancel}
       />
     )
-    expect(screen.getByPlaceholderText(/cards:clusterGroupsForms/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('cards:clusterGroups.groupNamePlaceholder')).toBeInTheDocument()
   })
 
   it('calls onCancel when cancel is clicked', () => {
@@ -142,8 +142,8 @@ describe('EditGroupForm', () => {
         onCancel={onCancel}
       />
     )
-    const input = screen.getByDisplayValue('production')
-    expect(input).toBeInTheDocument()
+    // Group name shown in the form header (not an editable input)
+    expect(screen.getByText(/production/)).toBeInTheDocument()
   })
 
   it('calls onCancel when cancel is clicked', () => {
