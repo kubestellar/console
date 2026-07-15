@@ -292,20 +292,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          MISSION_COUNT=$(ls fixes/platform-install/platform-*.json 2>/dev/null | wc -l)
-          if [ "$MISSION_COUNT" -eq 0 ]; then
-            echo "No missions generated; skipping PR"
-            exit 0
-          fi
-
           BRANCH="platform-install-gen-$(date +%Y%m%d)-$((RANDOM % 10000))"
           git checkout -b "$BRANCH"
           git add fixes/platform-install/ fixes/index.json
+          if git diff --cached --quiet; then
+            echo "No new missions to commit; skipping PR"
+            exit 0
+          fi
+          NEW_COUNT=$(git diff --cached --name-only -- 'fixes/platform-install/platform-*.json' | wc -l | tr -d ' ')
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -s -m "✨ Platform install mission generation $(date +%Y-%m-%d)
 
-          Generated $NEW_COUNT platform install missions.
+          Generated $NEW_COUNT new/updated platform install missions.
           Includes managed K8s services, distributions, and cluster operators."
 
           git push origin "$BRANCH"
