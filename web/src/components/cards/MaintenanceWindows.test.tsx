@@ -136,7 +136,7 @@ describe('MaintenanceWindows', () => {
       await userEvent.click(screen.getByText('+ Schedule'))
 
       // Set cluster via text input (falls back when no clusters with combobox)
-      const clusterSelect = screen.getByRole('combobox')
+      const clusterSelect = screen.getAllByRole('combobox')[0]
       await userEvent.selectOptions(clusterSelect, 'prod')
 
       const startInput = screen.getAllByDisplayValue('')[0]
@@ -212,11 +212,11 @@ describe('MaintenanceWindows', () => {
       expect(screen.getByText('test-cluster')).toBeInTheDocument()
 
       // First delete click
-      const deleteBtn = screen.getByLabelText('deleteAria')
+      const deleteBtn = screen.getByLabelText(/delete/i)
       await userEvent.click(deleteBtn)
 
       // Should now show confirm label
-      const confirmBtn = screen.getByLabelText('confirmDeleteAria')
+      const confirmBtn = screen.getByLabelText(/confirm/i)
       expect(confirmBtn).toBeInTheDocument()
 
       // Second click confirms deletion

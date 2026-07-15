@@ -247,7 +247,8 @@ describe('HelmValuesDiff', () => {
       })
       const { HelmValuesDiff } = await import('./HelmValuesDiff')
       render(<HelmValuesDiff config={{ cluster: 'prod', release: 'nginx' }} />)
-      const scopeBadge = screen.getByText('nginx').closest('[class*="cursor-pointer"]')!
+      const nginxElements = screen.getAllByText('nginx')
+      const scopeBadge = nginxElements[0].closest('[class*="cursor-pointer"]')!
       await userEvent.click(scopeBadge)
       expect(mockDrillToHelm).toHaveBeenCalledWith('prod', 'default', 'nginx', expect.any(Object))
     })
