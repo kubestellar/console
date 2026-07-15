@@ -194,14 +194,10 @@ export function useOperators(cluster?: string) {
 
       // REST fallback — skip entirely if no token to prevent GA4 auth errors (#9957)
       if (!token) {
-        // In demo mode, populate placeholder operators so the UI shows content.
-        // Outside demo mode we intentionally leave `operators` untouched so the
-        // hook doesn't fabricate data when the caller simply lacks a token.
-        if (isDemoMode()) {
-          const effectiveClusters = cluster ? [cluster] : ['demo']
-          setOperators(effectiveClusters.flatMap(c => getDemoOperators(c)))
-          setIsDemoData(true)
-        }
+        // Fall back to demo data so the UI shows content rather than an empty state.
+        const effectiveClusters = cluster ? [cluster] : ['demo']
+        setOperators(effectiveClusters.flatMap(c => getDemoOperators(c)))
+        setIsDemoData(true)
         setIsLoading(false)
         setIsRefreshing(false)
         fetchInProgressRef.current = false
@@ -378,13 +374,10 @@ export function useOperatorSubscriptions(cluster?: string) {
 
       // REST fallback — skip entirely if no token to prevent GA4 auth errors (#9957)
       if (!token) {
-        // In demo mode, populate placeholder subscriptions so the UI shows content.
-        // Outside demo mode we intentionally leave `subscriptions` untouched.
-        if (isDemoMode()) {
-          const effectiveClusters = cluster ? [cluster] : ['demo']
-          setSubscriptions(effectiveClusters.flatMap(c => getDemoOperatorSubscriptions(c)))
-          setIsDemoData(true)
-        }
+        // Fall back to demo data so the UI shows content rather than an empty state.
+        const effectiveClusters = cluster ? [cluster] : ['demo']
+        setSubscriptions(effectiveClusters.flatMap(c => getDemoOperatorSubscriptions(c)))
+        setIsDemoData(true)
         setIsLoading(false)
         setIsRefreshing(false)
         fetchInProgressRef.current = false
