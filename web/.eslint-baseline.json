@@ -1108,6 +1108,13 @@
   {
     "file": "src/components/cards/EventsTimeline.tsx",
     "rule": "react-hooks/exhaustive-deps",
+    "line": 157,
+    "column": 9,
+    "message": "The 'selectedClusters' conditional could make the dependencies of useMemo Hook (at line 223) change on every render. To fix this, wrap the initialization of 'selectedClusters' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/components/cards/EventsTimeline.tsx",
+    "rule": "react-hooks/exhaustive-deps",
     "line": 158,
     "column": 9,
     "message": "The 'clusterInfoMap' logical expression could make the dependencies of useMemo Hook (at line 223) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'clusterInfoMap' in its own useMemo() Hook."
@@ -1118,6 +1125,34 @@
     "line": 230,
     "column": 9,
     "message": "The 'chartTimePoints' logical expression could make the dependencies of useMemo Hook (at line 231) change on every render. To fix this, wrap the initialization of 'chartTimePoints' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/components/cards/EventsTimeline.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 230,
+    "column": 9,
+    "message": "The 'chartTimePoints' logical expression could make the dependencies of useMemo Hook (at line 232) change on every render. To fix this, wrap the initialization of 'chartTimePoints' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/components/cards/EventsTimeline.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 230,
+    "column": 9,
+    "message": "The 'chartTimePoints' logical expression could make the dependencies of useMemo Hook (at line 233) change on every render. To fix this, wrap the initialization of 'chartTimePoints' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/components/cards/EventsTimeline.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 230,
+    "column": 9,
+    "message": "The 'chartTimePoints' logical expression could make the dependencies of useMemo Hook (at line 234) change on every render. To fix this, wrap the initialization of 'chartTimePoints' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/components/cards/EventsTimeline.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 230,
+    "column": 9,
+    "message": "The 'chartTimePoints' logical expression could make the dependencies of useMemo Hook (at line 333) change on every render. To fix this, wrap the initialization of 'chartTimePoints' in its own useMemo() Hook."
   },
   {
     "file": "src/components/cards/EventsTimeline.tsx",
@@ -1346,6 +1381,13 @@
   {
     "file": "src/components/cards/KagentiStatusCard.tsx",
     "rule": "react-hooks/exhaustive-deps",
+    "line": 77,
+    "column": 9,
+    "message": "The 'buildItems' logical expression could make the dependencies of useMemo Hook (at line 124) change on every render. To fix this, wrap the initialization of 'buildItems' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/components/cards/KagentiStatusCard.tsx",
+    "rule": "react-hooks/exhaustive-deps",
     "line": 78,
     "column": 9,
     "message": "The 'toolItems' logical expression could make the dependencies of useMemo Hook (at line 117) change on every render. To fix this, wrap the initialization of 'toolItems' in its own useMemo() Hook."
@@ -1398,6 +1440,13 @@
     "line": 75,
     "column": 9,
     "message": "The 'generateFood' function makes the dependencies of useCallback Hook (at line 98) change on every render. To fix this, wrap the definition of 'generateFood' in its own useCallback() Hook."
+  },
+  {
+    "file": "src/components/cards/KubeSnake.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 75,
+    "column": 9,
+    "message": "The 'generateFood' function makes the dependencies of useCallback Hook (at line 161) change on every render. To fix this, wrap the definition of 'generateFood' in its own useCallback() Hook."
   },
   {
     "file": "src/components/cards/Kubectl.tsx",
@@ -5152,6 +5201,13 @@
     "message": "The 'handleSaveDraft' function makes the dependencies of useCallback Hook (at line 307) change on every render. To fix this, wrap the definition of 'handleSaveDraft' in its own useCallback() Hook."
   },
   {
+    "file": "src/components/feedback/FeatureRequestModal.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 187,
+    "column": 9,
+    "message": "The 'handleSaveDraft' function makes the dependencies of useCallback Hook (at line 358) change on every render. To fix this, wrap the definition of 'handleSaveDraft' in its own useCallback() Hook."
+  },
+  {
     "file": "src/components/feedback/FeedbackModal.tsx",
     "rule": "react-hooks/exhaustive-deps",
     "line": 303,
@@ -5537,6 +5593,41 @@
     "message": "The 'missionMessages' logical expression could make the dependencies of useMemo Hook (at line 135) change on every render. To fix this, wrap the initialization of 'missionMessages' in its own useMemo() Hook."
   },
   {
+    "file": "src/components/layout/mission-sidebar/mission-chat/MissionChatView.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 67,
+    "column": 9,
+    "message": "The 'missionMessages' logical expression could make the dependencies of useEffect Hook (at line 179) change on every render. To fix this, wrap the initialization of 'missionMessages' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/components/layout/mission-sidebar/mission-chat/MissionChatView.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 67,
+    "column": 9,
+    "message": "The 'missionMessages' logical expression could make the dependencies of useMemo Hook (at line 205) change on every render. To fix this, wrap the initialization of 'missionMessages' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/components/layout/mission-sidebar/mission-chat/MissionChatView.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 67,
+    "column": 9,
+    "message": "The 'missionMessages' logical expression could make the dependencies of useMemo Hook (at line 206) change on every render. To fix this, wrap the initialization of 'missionMessages' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/components/layout/mission-sidebar/mission-chat/MissionChatView.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 67,
+    "column": 9,
+    "message": "The 'missionMessages' logical expression could make the dependencies of useCallback Hook (at line 232) change on every render. To fix this, wrap the initialization of 'missionMessages' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/components/layout/mission-sidebar/mission-chat/MissionChatView.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 67,
+    "column": 9,
+    "message": "The 'missionMessages' logical expression could make the dependencies of useCallback Hook (at line 305) change on every render. To fix this, wrap the initialization of 'missionMessages' in its own useMemo() Hook."
+  },
+  {
     "file": "src/components/layout/navbar/LearnDropdown.tsx",
     "rule": "react-hooks/exhaustive-deps",
     "line": 117,
@@ -5745,6 +5836,13 @@
     "line": 88,
     "column": 9,
     "message": "The 'projects' logical expression could make the dependencies of useEffect Hook (at line 149) change on every render. To fix this, wrap the initialization of 'projects' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/components/mission-control/fixer-definition-panel/FixerDefinitionPanelContent.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 88,
+    "column": 9,
+    "message": "The 'projects' logical expression could make the dependencies of useMemo Hook (at line 153) change on every render. To fix this, wrap the initialization of 'projects' in its own useMemo() Hook."
   },
   {
     "file": "src/components/mission-control/fixer-definition-panel/fixerDefinitionPanel.constants.tsx",
@@ -8309,20 +8407,6 @@
     "message": "'React' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
-    "file": "src/hooks/__tests__/useKubescape.fetch.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 2,
-    "column": 31,
-    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/hooks/__tests__/useKubescape.return-shape.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 2,
-    "column": 31,
-    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
     "file": "src/hooks/__tests__/useKubescape.return-shape.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
     "line": 67,
@@ -8748,6 +8832,34 @@
     "line": 50,
     "column": 39,
     "message": "'ACHIEVEMENTS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 22,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 103,
+    "column": 10,
+    "message": "'makeHPA' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 112,
+    "column": 10,
+    "message": "'makeWVA' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 129,
+    "column": 10,
+    "message": "'makeGateway' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/hooks/__tests__/useStellarSource.test.tsx",
@@ -9403,7 +9515,7 @@
   {
     "file": "src/hooks/mcp/buildpacks.ts",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 254,
+    "line": 265,
     "column": 5,
     "message": "React Hook useCallback has a missing dependency: 'notifyListeners'. Either include it or remove the dependency array."
   },
@@ -9424,7 +9536,7 @@
   {
     "file": "src/hooks/mcp/crossplane.ts",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 257,
+    "line": 268,
     "column": 5,
     "message": "React Hook useCallback has a missing dependency: 'notifyListeners'. Either include it or remove the dependency array."
   },
@@ -10407,6 +10519,13 @@
     "line": 71,
     "column": 9,
     "message": "The 'safeClusters' logical expression could make the dependencies of useMemo Hook (at line 91) change on every render. To fix this, wrap the initialization of 'safeClusters' in its own useMemo() Hook."
+  },
+  {
+    "file": "src/hooks/useUniversalStats.ts",
+    "rule": "react-hooks/exhaustive-deps",
+    "line": 71,
+    "column": 9,
+    "message": "The 'safeClusters' logical expression could make the dependencies of useMemo Hook (at line 171) change on every render. To fix this, wrap the initialization of 'safeClusters' in its own useMemo() Hook."
   },
   {
     "file": "src/hooks/useUniversalStats.ts",
@@ -18587,20 +18706,6 @@
   {
     "file": "src/lib/cache/__tests__/worker.handlers.advanced.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1,
-    "column": 36,
-    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cache/__tests__/worker.handlers.advanced.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1,
-    "column": 48,
-    "message": "'afterEach' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cache/__tests__/worker.handlers.advanced.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
     "line": 55,
     "column": 7,
     "message": "'MAX_PENDING_MESSAGES' is assigned a value but never used. Allowed unused vars must match /^_/u."
@@ -18615,20 +18720,6 @@
   {
     "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1,
-    "column": 36,
-    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1,
-    "column": 48,
-    "message": "'afterEach' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
     "line": 55,
     "column": 7,
     "message": "'MAX_PENDING_MESSAGES' is assigned a value but never used. Allowed unused vars must match /^_/u."
@@ -18636,30 +18727,9 @@
   {
     "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
     "rule": "@typescript-eslint/no-unused-vars",
-    "line": 57,
-    "column": 10,
-    "message": "'createMockDb' is defined but only used as a type. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cache/__tests__/worker.handlers.crud.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
     "line": 328,
     "column": 10,
     "message": "'processMessage' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cache/__tests__/worker.handlers.dispatch.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1,
-    "column": 36,
-    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cache/__tests__/worker.handlers.dispatch.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1,
-    "column": 48,
-    "message": "'afterEach' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/lib/cache/__tests__/worker.module.test.ts",
@@ -19278,20 +19348,6 @@
     "message": "Unused eslint-disable directive (no problems were reported from 'max-lines')."
   },
   {
-    "file": "src/lib/widgets/codeGenerator.templates.ci.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 9,
-    "column": 9,
-    "message": "'card' is assigned a value but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/widgets/codeGenerator.templates.infra.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 9,
-    "column": 9,
-    "message": "'card' is assigned a value but never used. Allowed unused vars must match /^_/u."
-  },
-  {
     "file": "src/main.tsx",
     "rule": "react-refresh/only-export-components",
     "line": 27,
@@ -19339,54 +19395,5 @@
     "line": 30,
     "column": 7,
     "message": "'APP_FILE' is assigned a value but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/hooks/__tests__/useResolutions.utils.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1,
-    "column": 44,
-    "message": "'vi' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 2,
-    "column": 22,
-    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 103,
-    "column": 10,
-    "message": "'makeHPA' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 112,
-    "column": 10,
-    "message": "'makeWVA' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/hooks/__tests__/useStackDiscovery.advanced.test.ts",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 129,
-    "column": 10,
-    "message": "'makeGateway' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cards/__tests__/CardRuntime-coverage.test.tsx",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1,
-    "column": 48,
-    "message": "'afterEach' is defined but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cards/__tests__/CardRuntime.test.tsx",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 1,
-    "column": 8,
-    "message": "'React' is defined but never used. Allowed unused vars must match /^_/u."
   }
 ]
