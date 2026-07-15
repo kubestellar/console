@@ -119,6 +119,16 @@ resources:
 # an early "Progress deadline exceeded" rollback before Helm times out.
 deployment:
   progressDeadlineSeconds: 900
+  # Deployment rollout strategy. Use Recreate for single-replica deployments
+  # backed by a ReadWriteOnce PVC (e.g. kc-live on block storage) to avoid
+  # the RollingUpdate deadlock where the new pod cannot mount the RWO volume
+  # while the old pod still holds it.
+  # Values: RollingUpdate | Recreate
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
 
 # GitHub OAuth configuration
 github:
