@@ -292,8 +292,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          NEW_COUNT=$(ls fixes/platform-install/platform-*.json 2>/dev/null | wc -l | tr -d ' ')
-          [ "$NEW_COUNT" -eq 0 ] && echo "No new missions, skipping PR" && exit 0
+          MISSION_COUNT=$(ls fixes/platform-install/platform-*.json 2>/dev/null | wc -l)
+          if [ "$MISSION_COUNT" -eq 0 ]; then
+            echo "No missions generated; skipping PR"
+            exit 0
+          fi
 
           BRANCH="platform-install-gen-$(date +%Y%m%d)-$((RANDOM % 10000))"
           git checkout -b "$BRANCH"
