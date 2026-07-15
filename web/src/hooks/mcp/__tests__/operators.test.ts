@@ -441,7 +441,9 @@ describe('useOperators – SSE unavailable when no token', () => {
     // Neither SSE nor REST should be attempted without a token (#9957)
     expect(mockFetchSSE).not.toHaveBeenCalled()
     expect(mockApiGet).not.toHaveBeenCalled()
-    expect(result.current.operators.length).toBe(0)
+    // PR #21082: no-token path now returns demo data so the UI isn't empty
+    expect(result.current.isDemoData).toBe(true)
+    expect(result.current.operators.length).toBeGreaterThan(0)
   })
 
   it('falls back to REST when token is demo-token', async () => {
@@ -644,7 +646,9 @@ describe('useOperatorSubscriptions – SSE unavailable when no token', () => {
     // Neither SSE nor REST should be attempted without a token (#9957)
     expect(mockFetchSSE).not.toHaveBeenCalled()
     expect(mockApiGet).not.toHaveBeenCalled()
-    expect(result.current.subscriptions.length).toBe(0)
+    // PR #21082: no-token path now returns demo data so the UI isn't empty
+    expect(result.current.isDemoData).toBe(true)
+    expect(result.current.subscriptions.length).toBeGreaterThan(0)
   })
 })
 
