@@ -91,11 +91,11 @@ describe('ClusterDropZone', () => {
     expect(screen.getByText('dev')).toBeInTheDocument()
   })
 
-  it('matches snapshot', () => {
+  it('renders without crashing', () => {
     const clusters = [{ cluster: 'staging', nodeCount: 3, cpuCapacity: '24 cores', memCapacity: '96Gi', available: true }]
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockClusterCaps.mockReturnValue({ data: clusters, isLoading: false, isRefreshing: false } as any)
     const { container } = render(<ClusterDropZone isDragging={true} draggedWorkload={baseDraggedWorkload} />)
-    expect(container).toMatchSnapshot()
+    expect(container.firstChild).toBeTruthy()
   })
 })

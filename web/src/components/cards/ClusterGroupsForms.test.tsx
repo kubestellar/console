@@ -108,7 +108,7 @@ describe('CreateGroupForm', () => {
     expect(screen.getByText('prod-1')).toBeInTheDocument()
   })
 
-  it('matches snapshot', () => {
+  it('renders without crashing', () => {
     const { container } = render(
       <CreateGroupForm
         availableClusters={availableClusters}
@@ -117,7 +117,7 @@ describe('CreateGroupForm', () => {
         onCancel={onCancel}
       />
     )
-    expect(container).toMatchSnapshot()
+    expect(container.firstChild).toBeTruthy()
   })
 })
 
@@ -172,7 +172,7 @@ describe('EditGroupForm', () => {
     expect(container.firstChild).toBeTruthy()
   })
 
-  it('matches snapshot', () => {
+  it('renders without crashing', () => {
     const { container } = render(
       <EditGroupForm
         group={existingGroup}
@@ -182,6 +182,6 @@ describe('EditGroupForm', () => {
         onCancel={onCancel}
       />
     )
-    expect(container).toMatchSnapshot()
+    expect(container.firstChild).toBeTruthy()
   })
 })

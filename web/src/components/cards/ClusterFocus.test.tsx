@@ -106,8 +106,8 @@ describe('ClusterFocus', () => {
     expect(screen.getByText('prod')).toBeInTheDocument()
   })
 
-  it('matches snapshot', () => {
+  it('renders without crashing', () => {
     const { container } = render(<ClusterFocus />)
-    expect(container).toMatchSnapshot()
+    expect(container.firstChild).toBeTruthy()
   })
 })

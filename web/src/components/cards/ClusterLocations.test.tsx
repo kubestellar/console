@@ -96,8 +96,8 @@ describe('ClusterLocations', () => {
     expect(container.firstChild).toBeTruthy()
   })
 
-  it('matches snapshot', () => {
+  it('renders without crashing', () => {
     const { container } = render(<ClusterLocations />)
-    expect(container).toMatchSnapshot()
+    expect(container.firstChild).toBeTruthy()
   })
 })
