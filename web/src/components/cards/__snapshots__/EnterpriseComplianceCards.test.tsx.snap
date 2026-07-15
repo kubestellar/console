@@ -1,0 +1,45 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`EnterpriseComplianceCards > renders SVG with correct score percentage and matches snapshot 1`] = `
+<div>
+  <svg
+    class="shrink-0"
+    height="80"
+    width="80"
+  >
+    <circle
+      cx="40"
+      cy="40"
+      fill="none"
+      r="36"
+      stroke="hsl(var(--muted) / 0.4)"
+      stroke-width="6"
+    />
+    <circle
+      cx="40"
+      cy="40"
+      data-testid="score-ring-progress"
+      fill="none"
+      r="36"
+      stroke="hsl(var(--chart-warning, 45 93% 47%))"
+      stroke-dasharray="226.1946710584651"
+      stroke-dashoffset="56.54866776461628"
+      stroke-linecap="round"
+      stroke-width="6"
+      transform="rotate(-90 40 40)"
+    />
+    <text
+      dy=".35em"
+      fill="white"
+      font-size="20"
+      font-weight="bold"
+      text-anchor="middle"
+      x="50%"
+      y="50%"
+    >
+      75
+      %
+    </text>
+  </svg>
+</div>
+`;

@@ -1,0 +1,125 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SecurityIssues > matches snapshot 1`] = `
+<div>
+  <div
+    class="h-full flex flex-col min-h-card content-loaded"
+  >
+    <div
+      class="flex flex-wrap items-center justify-between gap-y-2 mb-3"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <span>
+          1
+           
+          securityIssues.highLabel
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-2"
+      />
+    </div>
+    <div
+      class="flex-1 space-y-2 overflow-y-auto min-h-card-content"
+    >
+      <div
+        class="p-2 rounded-lg bg-red-500/20 border border-red-500/30 cursor-pointer hover:opacity-80 transition-opacity"
+        title="securityIssues.clickViewPod"
+      >
+        <div
+          class="flex items-start gap-2 group"
+        >
+          <div
+            class="p-1.5 rounded-lg bg-red-500/20 shrink-0"
+            title="securityIssues.privilegedContainer"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-shield w-4 h-4 text-red-400"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+              />
+            </svg>
+          </div>
+          <div
+            class="flex-1 min-w-0"
+          >
+            <div
+              class="flex items-center gap-2 mb-0.5"
+            >
+              <span />
+              <span
+                class="text-xs text-muted-foreground"
+                title="Namespace: prod-ns"
+              >
+                prod-ns
+              </span>
+            </div>
+            <p
+              class="text-sm font-medium text-foreground truncate"
+              title="api-pod"
+            >
+              api-pod
+            </p>
+            <div
+              class="flex items-center gap-2 mt-1 flex-wrap"
+            >
+              <span
+                class="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400"
+                title="Issue type: Privileged container"
+              >
+                Privileged container
+              </span>
+              <span
+                class="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 capitalize"
+                title="Severity level: high"
+              >
+                high
+              </span>
+            </div>
+            <p
+              class="text-xs text-muted-foreground mt-1 truncate"
+              title="privileged mode"
+            >
+              privileged mode
+            </p>
+          </div>
+          <span
+            title="Click to view details"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-chevron-right w-4 h-4 text-muted-foreground shrink-0 mt-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m9 18 6-6-6-6"
+              />
+            </svg>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

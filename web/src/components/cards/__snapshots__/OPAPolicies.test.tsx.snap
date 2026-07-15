@@ -1,0 +1,16 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`OPAPolicies > matches snapshot 1`] = `
+<div>
+  <div
+    class="h-full flex flex-col min-h-card"
+  >
+    <div
+      data-testid="opa-table"
+    >
+      1
+       clusters
+    </div>
+  </div>
+</div>
+`;

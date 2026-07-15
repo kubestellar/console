@@ -1,0 +1,135 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CertManager > matches snapshot 1`] = `
+<div>
+  <div
+    class="space-y-3"
+  >
+    <div
+      class="flex items-center justify-end"
+    >
+      <span
+        class="text-xs text-muted-foreground"
+      >
+        0
+         renewals/24h
+      </span>
+    </div>
+    <div
+      class="grid grid-cols-2 @md:grid-cols-4 gap-1.5 text-center text-xs"
+    >
+      <div
+        class="p-2 rounded-lg bg-green-500/10"
+      >
+        <p
+          class="text-lg font-bold text-green-400"
+        >
+          1
+        </p>
+        <p
+          class="text-muted-foreground"
+        >
+          Valid
+        </p>
+      </div>
+      <div
+        class="p-2 rounded-lg bg-yellow-500/10"
+      >
+        <p
+          class="text-lg font-bold text-yellow-400"
+        >
+          0
+        </p>
+        <p
+          class="text-muted-foreground"
+        >
+          Expiring
+        </p>
+      </div>
+      <div
+        class="p-2 rounded-lg bg-red-500/10"
+      >
+        <p
+          class="text-lg font-bold text-red-400"
+        >
+          0
+        </p>
+        <p
+          class="text-muted-foreground"
+        >
+          Expired
+        </p>
+      </div>
+      <div
+        class="p-2 rounded-lg bg-secondary/30"
+      >
+        <p
+          class="text-lg font-bold text-foreground"
+        >
+          1
+        </p>
+        <p
+          class="text-muted-foreground"
+        >
+          common.total
+        </p>
+      </div>
+    </div>
+    <div
+      class="space-y-1.5"
+    >
+      <p
+        class="text-xs font-medium text-muted-foreground"
+      >
+        Issuers (
+        1
+        )
+      </p>
+      <div
+        class="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-secondary/30"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-shield w-3 h-3 text-green-400"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+            />
+          </svg>
+          <span
+            class="text-xs text-foreground truncate max-w-[120px]"
+          >
+            ca
+          </span>
+        </div>
+        <div
+          class="flex items-center gap-2"
+        >
+          <span
+            class="text-2xs text-muted-foreground"
+          >
+            Issuer
+          </span>
+          <span
+            class="text-xs font-medium text-foreground"
+          >
+            1
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

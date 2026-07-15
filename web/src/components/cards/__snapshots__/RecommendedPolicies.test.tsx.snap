@@ -1,0 +1,312 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RecommendedPolicies > matches snapshot 1`] = `
+<div>
+  <div
+    class="space-y-3"
+  >
+    <div
+      class="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/30 border border-border/50"
+    >
+      <div
+        class="relative w-12 h-12 shrink-0"
+      >
+        <svg
+          class="w-full h-full -rotate-90"
+          viewBox="0 0 36 36"
+        >
+          <circle
+            class="text-secondary"
+            cx="18"
+            cy="18"
+            fill="none"
+            r="14"
+            stroke="currentColor"
+            stroke-width="3"
+          />
+          <circle
+            class="text-red-400"
+            cx="18"
+            cy="18"
+            fill="none"
+            r="14"
+            stroke="currentColor"
+            stroke-dasharray="0, 100"
+            stroke-width="3"
+          />
+        </svg>
+        <div
+          class="absolute inset-0 flex items-center justify-center"
+        >
+          <span
+            class="text-xs font-bold text-foreground"
+          >
+            0
+            %
+          </span>
+        </div>
+      </div>
+      <div
+        class="flex-1 min-w-0"
+      >
+        <p
+          class="text-sm font-medium text-foreground"
+        >
+          Fleet Coverage
+        </p>
+        <p
+          class="text-xs text-muted-foreground"
+        >
+          7
+           policy 
+          gaps
+           across your fleet
+        </p>
+      </div>
+      <button
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs font-medium hover:bg-purple-500/30 transition-colors whitespace-nowrap"
+        title="Deploy all missing policies with a single AI mission"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sparkles w-3.5 h-3.5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"
+          />
+          <path
+            d="M20 2v4"
+          />
+          <path
+            d="M22 4h-4"
+          />
+          <circle
+            cx="4"
+            cy="20"
+            r="2"
+          />
+        </svg>
+        Deploy All
+      </button>
+    </div>
+    <div
+      class="space-y-1.5"
+    >
+      <div>
+        <button
+          class="w-full flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg border transition-colors bg-secondary/20 border-transparent hover:bg-secondary/40"
+        >
+          <div
+            class="flex items-center gap-2"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-chevron-right w-3.5 h-3.5 transition-transform  text-red-400"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m9 18 6-6-6-6"
+              />
+            </svg>
+            <span
+              class="text-xs font-medium text-red-400"
+            >
+              Security Hardening
+            </span>
+          </div>
+          <div
+            class="flex items-center gap-1.5"
+          >
+            <span>
+              2
+               gap
+              s
+            </span>
+          </div>
+        </button>
+      </div>
+      <div>
+        <button
+          class="w-full flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg border transition-colors bg-secondary/20 border-transparent hover:bg-secondary/40"
+        >
+          <div
+            class="flex items-center gap-2"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-chevron-right w-3.5 h-3.5 transition-transform  text-blue-400"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m9 18 6-6-6-6"
+              />
+            </svg>
+            <span
+              class="text-xs font-medium text-blue-400"
+            >
+              Best Practices
+            </span>
+          </div>
+          <div
+            class="flex items-center gap-1.5"
+          >
+            <span>
+              2
+               gap
+              s
+            </span>
+          </div>
+        </button>
+      </div>
+      <div>
+        <button
+          class="w-full flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg border transition-colors bg-secondary/20 border-transparent hover:bg-secondary/40"
+        >
+          <div
+            class="flex items-center gap-2"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-chevron-right w-3.5 h-3.5 transition-transform  text-purple-400"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m9 18 6-6-6-6"
+              />
+            </svg>
+            <span
+              class="text-xs font-medium text-purple-400"
+            >
+              Supply Chain
+            </span>
+          </div>
+          <div
+            class="flex items-center gap-1.5"
+          >
+            <span>
+              2
+               gap
+              s
+            </span>
+          </div>
+        </button>
+      </div>
+      <div>
+        <button
+          class="w-full flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg border transition-colors bg-secondary/20 border-transparent hover:bg-secondary/40"
+        >
+          <div
+            class="flex items-center gap-2"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-chevron-right w-3.5 h-3.5 transition-transform  text-orange-400"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m9 18 6-6-6-6"
+              />
+            </svg>
+            <span
+              class="text-xs font-medium text-orange-400"
+            >
+              Resource Governance
+            </span>
+          </div>
+          <div
+            class="flex items-center gap-1.5"
+          >
+            <span>
+              1
+               gap
+            </span>
+          </div>
+        </button>
+      </div>
+    </div>
+    <div
+      class="flex items-center gap-2 pt-2 border-t border-border/50"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-sparkles w-3.5 h-3.5 text-purple-400 shrink-0"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"
+        />
+        <path
+          d="M20 2v4"
+        />
+        <path
+          d="M22 4h-4"
+        />
+        <circle
+          cx="4"
+          cy="20"
+          r="2"
+        />
+      </svg>
+      <p
+        class="text-2xs text-muted-foreground"
+      >
+        <span
+          class="text-purple-400 font-medium"
+        >
+          AI-powered
+        </span>
+         — One click deploys policies across your entire fleet
+      </p>
+    </div>
+  </div>
+</div>
+`;
