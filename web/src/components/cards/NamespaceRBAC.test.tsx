@@ -1,6 +1,7 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { Input } from '../ui/Input'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -58,7 +59,7 @@ vi.mock('../../lib/cards/cardHooks', () => ({
 
 vi.mock('../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <input data-testid="search-input" value={value} onChange={(e) => onChange(e.target.value)} />
+    <Input data-testid="search-input" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
   CardControlsRow: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="card-controls-row">{children}</div>

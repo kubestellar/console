@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { NamespaceEvents } from './NamespaceEvents'
 import type { ClusterEvent } from '../../hooks/useMCP'
+import { Input } from '../ui/Input'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -61,7 +62,7 @@ vi.mock('../../lib/cards/cardHooks', () => ({
 vi.mock('../../lib/cards/CardComponents', () => ({
   CardSkeleton: ({ rows }: { rows?: number }) => <div data-testid="card-skeleton" data-rows={rows} />,
   CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <input data-testid="search-input" value={value} onChange={(e) => onChange(e.target.value)} />
+    <Input data-testid="search-input" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
   CardControlsRow: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="card-controls-row">{children}</div>
