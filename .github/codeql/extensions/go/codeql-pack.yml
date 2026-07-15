@@ -1,0 +1,10 @@
+# CodeQL extension pack for kubestellar/console Go barrier models.
+# GitHub Actions auto-discovers packs in .github/codeql/extensions/ when a
+# codeql-pack.yml is present; without it the directory is ignored.
+name: kubestellar/console-go-models
+version: 0.0.1
+library: true
+extensionTargets:
+  codeql/go-all: '*'
+dataExtensions:
+  - model.yml
