@@ -35,7 +35,8 @@ on:
         description: Why the actor passed or failed the gate
         value: ${{ jobs.evaluate.outputs.trust-reason }}
 
-permissions: read-all
+permissions:
+  contents: read
   issues: write
 jobs:
   evaluate:

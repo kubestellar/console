@@ -35,6 +35,7 @@ func setWSWriteDeadline(conn *websocket.Conn, logMsg string, logArgs ...any) err
 	if err := conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout)); err != nil {
 		attrs := sanitizeLogArgs(logArgs)
 		attrs = append(attrs, "client", sanitize.LogString(conn.RemoteAddr().String()), "error", sanitize.LogString(err.Error()))
+		// codeql[go/log-injection]: logMsg and attrs are sanitized with sanitize.LogString, which neutralizes CR/LF and control chars.
 		slog.Error(sanitize.LogString(logMsg), attrs...)
 		return err
 	}
@@ -45,6 +46,7 @@ func clearWSWriteDeadline(conn *websocket.Conn, logMsg string, logArgs ...any) e
 	if err := conn.SetWriteDeadline(time.Time{}); err != nil {
 		attrs := sanitizeLogArgs(logArgs)
 		attrs = append(attrs, "client", sanitize.LogString(conn.RemoteAddr().String()), "error", sanitize.LogString(err.Error()))
+		// codeql[go/log-injection]: logMsg and attrs are sanitized with sanitize.LogString, which neutralizes CR/LF and control chars.
 		slog.Error(sanitize.LogString(logMsg), attrs...)
 		return err
 	}

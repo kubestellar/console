@@ -4,7 +4,8 @@ on:
   pull_request:
     types: [closed]
 
-permissions: read-all
+permissions:
+  contents: read
   pull-requests: write
 
 jobs:
