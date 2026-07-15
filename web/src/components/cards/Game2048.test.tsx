@@ -57,12 +57,12 @@ describe('Game2048', () => {
 
   it('displays new game button', () => {
     render(<Game2048 />)
-    const newGameButton = screen.getByRole('button', { name: /new|reset/i })
+    const newGameButton = screen.getByRole('button', { name: /new game/i })
     expect(newGameButton).toBeInTheDocument()
   })
 
   it('renders control instructions', () => {
     render(<Game2048 />)
-    expect(screen.getByText(/arrow|direction|use/i)).toBeInTheDocument()
+    expect(screen.getByText(/wasd|move/i)).toBeInTheDocument()
   })
 })
