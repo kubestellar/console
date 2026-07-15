@@ -33,7 +33,8 @@ on:
         required: false
         default: '10'
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   # Compute batch matrix from total project count
