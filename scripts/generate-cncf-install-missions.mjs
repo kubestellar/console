@@ -14,7 +14,7 @@
  *   FORCE_REGENERATE   — if 'true', overwrite existing missions
  */
 import { writeFileSync, mkdirSync, existsSync, readFileSync, readdirSync } from 'fs'
-import { join, dirname, basename } from 'path'
+import { join, dirname, basename, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { parse as parseYaml } from 'yaml'
 import { CNCF_PROJECTS } from './cncf-projects.mjs'
@@ -54,10 +54,11 @@ function assertTrustedEndpoint(endpoint, allowedPrefixes = ALLOWED_ENDPOINT_PREF
   if (!allowedPrefixes.some(prefix => endpoint.startsWith(prefix))) {
     throw new Error(`Untrusted LLM_ENDPOINT: ${endpoint}. Must start with one of: ${allowedPrefixes.join(', ')}`)
   }
+  return endpoint
 }
 
 // Validate LLM_ENDPOINT at module load time (CWE-441: prevent SSRF)
-assertTrustedEndpoint(LLM_ENDPOINT)
+const TRUSTED_LLM_ENDPOINT = assertTrustedEndpoint(LLM_ENDPOINT)
 
 let rateLimitRemaining = 5000
 let rateLimitReset = 0
@@ -394,7 +395,7 @@ async function synthesizeInstallMission(project, context) {
 
   for (let attempt = 0; attempt <= 2; attempt++) {
     try {
-      const response = await fetch(LLM_ENDPOINT, {
+      const response = await fetch(TRUSTED_LLM_ENDPOINT, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -521,6 +522,26 @@ export function assertSafePath(resolvedTarget, resolvedAllowedDir) {
   if (!resolvedTarget.startsWith(resolvedAllowedDir + '/') && resolvedTarget !== resolvedAllowedDir) {
     throw new Error(`Path traversal detected: ${resolvedTarget} is outside ${resolvedAllowedDir}`)
   }
+}
+
+function replaceUntilStable(input, pattern, replacement = '') {
+  let previous
+  do {
+    previous = input
+    input = input.replace(pattern, replacement)
+  } while (input !== previous)
+  return input
+}
+
+function serializeSanitizedMissionForFile(mission) {
+  const missionJson = JSON.stringify(mission, null, 2) + '\n'
+  if (missionJson.length > 1_000_000) {
+    throw new Error(`Refusing to write oversized mission (${missionJson.length} bytes)`)
+  }
+  if (/<\s*script\b/i.test(missionJson) || /\bon\w+\s*=/i.test(missionJson)) {
+    throw new Error('Refusing to write mission containing unsafe HTML after sanitization')
+  }
+  return missionJson
 }
 
 // ─── Helm URL validation ─────────────────────────────────────────────
@@ -772,7 +793,6 @@ async function main() {
         // Strip HTML tags and script content to prevent prompt injection in MDX output
         // Use loop-until-stable to handle overlapping/nested patterns (CWE-80, CWE-79)
         let sanitized = obj
-        let prev = ''
         
         // Decode HTML entities first to catch entity-encoded attacks
         sanitized = sanitized
@@ -783,14 +803,12 @@ async function main() {
           .replace(/&#x2F;/gi, '/')
           .replace(/&amp;/gi, '&')
         
-        // Loop until no more changes (handles nested/overlapping tags)
-        while (sanitized !== prev) {
-          prev = sanitized
-          // Remove script tags (including content)
-          sanitized = sanitized.replace(/<script[\s\S]*?<\/script>/gi, '')
-          // Remove other HTML tags
-          sanitized = sanitized.replace(/<[^>]+>/g, '')
-        }
+        // Loop each multi-character sanitizer to a fixed point (CWE-80/116).
+        // Match closing </script> with any content before > to cover variants like </script\t\n bar> (js/bad-tag-filter).
+        sanitized = replaceUntilStable(sanitized, /<script[\s\S]*?<\/\s*script[^>]*>/gi)
+        sanitized = replaceUntilStable(sanitized, /\bon\w+[\s\u0000-\u001F\u007F]*=[\s\u0000-\u001F\u007F]*(?:["'][^"']*["']|[^\s>]+)/gi)
+        sanitized = replaceUntilStable(sanitized, /javascript[\s\u0000-\u001F\u007F]*:/gi)
+        sanitized = replaceUntilStable(sanitized, /<[^>]+>/g)
         
         return sanitized
       }
@@ -819,11 +837,15 @@ async function main() {
       const targetPath = join(SOLUTIONS_DIR, safeBasename)
 
       // Path traversal guard (CWE-22)
-      const resolvedPath = join(process.cwd(), targetPath)
-      const resolvedSolutionsDir = join(process.cwd(), SOLUTIONS_DIR)
+      const resolvedPath = resolve(targetPath)
+      const resolvedSolutionsDir = resolve(SOLUTIONS_DIR)
       assertSafePath(resolvedPath, resolvedSolutionsDir)
+      const missionJson = serializeSanitizedMissionForFile(mission)
       
-      writeFileSync(targetPath, JSON.stringify(mission, null, 2) + '\n')
+      // mission.mission is sanitized by sanitizeMissionText() above;
+      // path validated via basename allowlist and assertSafePath(); serializeSanitizedMissionForFile()
+      // applies a final integrity check before the bytes reach disk (fixes #2909).
+      writeFileSync(resolvedPath, missionJson) // codeql[js/http-to-file-access]
       console.log(`  ✅ Written: ${safeBasename} (${methods})`)
     }
 

@@ -17,7 +17,7 @@
  *   FORCE_REGENERATE   — if 'true', overwrite existing missions
  */
 import { writeFileSync, mkdirSync, existsSync, readFileSync, readdirSync } from 'fs'
-import { join, dirname, basename } from 'path'
+import { join, dirname, basename, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { K8S_PLATFORMS, getPlatformByName } from './k8s-platforms.mjs'
 import { OTHER_PROJECTS } from './other-projects.mjs'
@@ -61,10 +61,11 @@ function assertTrustedEndpoint(endpoint, allowedPrefixes = ALLOWED_ENDPOINT_PREF
   if (!allowedPrefixes.some(prefix => endpoint.startsWith(prefix))) {
     throw new Error(`Untrusted LLM_ENDPOINT: ${endpoint}. Must start with one of: ${allowedPrefixes.join(', ')}`)
   }
+  return endpoint
 }
 
 // Validate LLM_ENDPOINT at module load time (CWE-441: prevent SSRF)
-assertTrustedEndpoint(LLM_ENDPOINT)
+const TRUSTED_LLM_ENDPOINT = assertTrustedEndpoint(LLM_ENDPOINT)
 
 let rateLimitRemaining = 5000
 let rateLimitReset = 0
@@ -286,7 +287,7 @@ async function synthesizePlatformMission(platform, context) {
   const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS)
 
   try {
-    const response = await fetch(LLM_ENDPOINT, {
+    const response = await fetch(TRUSTED_LLM_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -342,9 +343,17 @@ async function synthesizePlatformMission(platform, context) {
  * Sanitize HTML content to prevent XSS (CWE-79, CWE-80).
  * Uses loop-until-stable to handle nested/overlapping tags.
  */
+function replaceUntilStable(input, pattern, replacement = '') {
+  let previous
+  do {
+    previous = input
+    input = input.replace(pattern, replacement)
+  } while (input !== previous)
+  return input
+}
+
 function sanitizeHtml(text) {
   let sanitized = text
-  let prev = ''
   
   // Decode HTML entities first to catch entity-encoded attacks
   sanitized = sanitized
@@ -355,18 +364,12 @@ function sanitizeHtml(text) {
     .replace(/&#x2F;/gi, '/')
     .replace(/&amp;/gi, '&')
   
-  // Loop until no more changes (handles nested/overlapping tags)
-  while (sanitized !== prev) {
-    prev = sanitized
-    // Remove script tags (including content)
-    sanitized = sanitized.replace(/<script[\s\S]*?<\/script>/gi, '')
-    // Remove event handlers
-    sanitized = sanitized.replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '')
-    // Remove javascript: URIs
-    sanitized = sanitized.replace(/javascript\s*:/gi, '')
-    // Remove other HTML tags
-    sanitized = sanitized.replace(/<[^>]+>/g, '')
-  }
+  // Loop each multi-character sanitizer to a fixed point (CWE-80/116).
+  // Match closing </script> with any content before > to cover variants like </script\t\n bar> (js/bad-tag-filter).
+  sanitized = replaceUntilStable(sanitized, /<script[\s\S]*?<\/\s*script[^>]*>/gi)
+  sanitized = replaceUntilStable(sanitized, /\bon\w+[\s\u0000-\u001F\u007F]*=[\s\u0000-\u001F\u007F]*(?:["'][^"']*["']|[^\s>]+)/gi)
+  sanitized = replaceUntilStable(sanitized, /javascript[\s\u0000-\u001F\u007F]*:/gi)
+  sanitized = replaceUntilStable(sanitized, /<[^>]+>/g)
   
   return sanitized
 }
@@ -467,6 +470,17 @@ export function assertSafePath(resolvedTarget, resolvedAllowedDir) {
   if (!resolvedTarget.startsWith(resolvedAllowedDir + '/') && resolvedTarget !== resolvedAllowedDir) {
     throw new Error(`Path traversal detected: ${resolvedTarget} is outside ${resolvedAllowedDir}`)
   }
+}
+
+function serializeSanitizedMissionForFile(mission) {
+  const missionJson = JSON.stringify(mission, null, 2)
+  if (missionJson.length > 1_000_000) {
+    throw new Error(`Refusing to write oversized mission (${missionJson.length} bytes)`)
+  }
+  if (/<\s*script\b/i.test(missionJson) || /\bon\w+\s*=/i.test(missionJson)) {
+    throw new Error('Refusing to write mission containing unsafe HTML after sanitization')
+  }
+  return missionJson
 }
 
 // ─── Helm validation ─────────────────────────────────────────────────
@@ -722,12 +736,16 @@ async function main() {
     const finalPath = join(SOLUTIONS_DIR, finalFilename)
 
     // Path traversal guard (CWE-22)
-    const resolvedPath = join(process.cwd(), finalPath)
-    const resolvedSolutionsDir = join(process.cwd(), SOLUTIONS_DIR)
+    const resolvedPath = resolve(finalPath)
+    const resolvedSolutionsDir = resolve(SOLUTIONS_DIR)
     assertSafePath(resolvedPath, resolvedSolutionsDir)
+    const missionJson = serializeSanitizedMissionForFile(mission)
 
     if (!DRY_RUN) {
-      writeFileSync(finalPath, JSON.stringify(mission, null, 2)) // CodeQL[js/http-to-file-access] mission.mission sanitized via sanitizeMissionText() (strips script/HTML/controls, caps length); path validated via basename allowlist and assertSafePath() above
+      // mission.mission is sanitized by sanitizeMissionText() above;
+      // path validated via basename allowlist and assertSafePath(); serializeSanitizedMissionForFile()
+      // applies a final integrity check before the bytes reach disk (fixes #2909).
+      writeFileSync(resolvedPath, missionJson) // codeql[js/http-to-file-access]
       console.log(`  Wrote: ${finalPath}`)
     } else {
       console.log(`  [DRY RUN] Would write: ${finalPath}`)

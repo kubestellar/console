@@ -12,7 +12,7 @@
  *   CONCURRENCY        — parallel LLM calls (default 3)
  */
 import { writeFileSync, readFileSync, readdirSync } from 'fs'
-import { join, dirname } from 'path'
+import { join, dirname, basename, resolve } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -45,10 +45,17 @@ export function assertTrustedEndpoint(endpoint, allowedPrefixes = ALLOWED_ENDPOI
   if (!allowedPrefixes.some(prefix => endpoint.startsWith(prefix))) {
     throw new Error(`Untrusted LLM_ENDPOINT: ${endpoint}. Must start with one of: ${allowedPrefixes.join(', ')}`)
   }
+  return endpoint
 }
 
 // Validate LLM_ENDPOINT at module load time (CWE-441: prevent SSRF)
-assertTrustedEndpoint(LLM_ENDPOINT)
+const TRUSTED_LLM_ENDPOINT = assertTrustedEndpoint(LLM_ENDPOINT)
+
+function assertSafePath(resolvedTarget, resolvedAllowedDir) {
+  if (!resolvedTarget.startsWith(resolvedAllowedDir + '/') && resolvedTarget !== resolvedAllowedDir) {
+    throw new Error(`Path traversal detected: ${resolvedTarget} is outside ${resolvedAllowedDir}`)
+  }
+}
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 
@@ -120,7 +127,13 @@ Based on the above install mission, generate the uninstall, upgrade, and trouble
  * data and SSRF via embedded URLs (CWE-441 / file-access-to-http).
  */
 function sanitizeMissionForHTTP(mission) {
-  const clampStr = (s, max) => (typeof s === 'string' ? s.slice(0, max) : '')
+  const redactFileText = (s) => (typeof s === 'string'
+    ? s
+      .replace(/\b(?:https?:\/\/|git@)[^\s`"'<>]+/gi, '[redacted-url]')
+      .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z]{2,}\b/gi, '[redacted-email]')
+      .replace(/\b(?:token|password|secret|api[_-]?key)\s*[:=]\s*[^\s`"']+/gi, '[redacted-secret]')
+    : '')
+  const clampStr = (s, max) => redactFileText(s).slice(0, max)
   const steps = (mission.mission?.steps || []).slice(0, 20).map(s => ({
     title: clampStr(s.title, 200),
     description: clampStr(s.description, 2000),
@@ -144,6 +157,7 @@ function sanitizeMissionForHTTP(mission) {
 // ─── LLM Call ────────────────────────────────────────────────────────
 
 async function callLLM(mission) {
+  // codeql[js/file-access-to-http] - mission is pre-sanitized via sanitizeMissionForHTTP() at every call site; prompt derived from sanitized fields only
   const token = process.env.LLM_TOKEN || GITHUB_TOKEN
   if (!token) return null
 
@@ -151,10 +165,10 @@ async function callLLM(mission) {
 
   for (let attempt = 0; attempt <= 2; attempt++) {
     try {
-      // CodeQL[js/file-access-to-http] mission is pre-sanitized via sanitizeMissionForHTTP()
+      // codeql[js/file-access-to-http] mission is pre-sanitized via sanitizeMissionForHTTP()
       // at every call site; LLM_ENDPOINT validated against allowlist by assertTrustedEndpoint()
-      // at module load (CWE-441); secret-pattern redaction in sanitizeMissionForHTTP (fixes #2896).
-      const response = await fetch(LLM_ENDPOINT, {
+      // at module load (CWE-441); secret-pattern redaction in sanitizeMissionForHTTP (fixes #2896, #2909).
+      const response = await fetch(TRUSTED_LLM_ENDPOINT, { // codeql[js/file-access-to-http]
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -225,7 +239,15 @@ function sanitizeSteps(steps, maxTitle = 120, maxDesc = 3000) {
 // ─── Main ────────────────────────────────────────────────────────────
 
 async function enrichFile(filePath, fileName) {
-  const raw = readFileSync(filePath, 'utf-8')
+  const safeBasename = basename(fileName)
+  if (!/^install-[a-z0-9-]+\.json$/.test(safeBasename)) {
+    throw new Error(`Unexpected install mission filename: ${fileName}`)
+  }
+  const resolvedSolutionsDir = resolve(SOLUTIONS_DIR)
+  const resolvedFilePath = resolve(filePath)
+  assertSafePath(resolvedFilePath, resolvedSolutionsDir)
+
+  const raw = readFileSync(resolvedFilePath, 'utf-8')
   const mission = JSON.parse(raw)
 
   // Skip if already enriched
@@ -270,7 +292,7 @@ async function enrichFile(filePath, fileName) {
   }
 
   if (!DRY_RUN) {
-    writeFileSync(filePath, JSON.stringify(mission, null, 2) + '\n')
+    writeFileSync(resolvedFilePath, JSON.stringify(mission, null, 2) + '\n')
   }
 
   return {
