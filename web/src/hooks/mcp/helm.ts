@@ -464,7 +464,8 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       setConsecutiveFailures(prev => prev + 1)
 
       // Fall back to demo data when API fails and no cached history is available.
-      if (history.length === 0) {
+      const cachedForFallback = cluster && release ? helmHistoryCache.get(`${cluster}:${release}`) : undefined
+      if (!cachedForFallback || cachedForFallback.data.length === 0) {
         const demoHistory = getDemoHelmHistory()
         setHistory(demoHistory)
         setLastRefresh(Date.now())
@@ -630,7 +631,10 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       setConsecutiveFailures(prev => prev + 1)
 
       // Fall back to demo data when API fails and no cached values are available.
-      if (!values) {
+      const cachedForFallback = cluster && release && namespace
+        ? helmValuesCache.get(`${cluster}:${release}:${namespace}`)
+        : undefined
+      if (!cachedForFallback || !cachedForFallback.values) {
         const demoVals = getDemoHelmValues()
         setValues(demoVals)
         setLastRefresh(Date.now())
@@ -748,7 +752,8 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
           setConsecutiveFailures(prev => prev + 1)
 
           // Fall back to demo data when API fails and no values are cached.
-          if (!values) {
+          const cachedForFallback = helmValuesCache.get(key)
+          if (!cachedForFallback || !cachedForFallback.values) {
             const demoVals = getDemoHelmValues()
             setValues(demoVals)
             setLastRefresh(Date.now())
