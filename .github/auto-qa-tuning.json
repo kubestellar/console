@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-07-14T03:59:51Z",
+  "last_updated": "2026-07-15T04:00:08Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -11,32 +11,32 @@
       "last_evaluated": "2026-06-11T04:30:46Z"
     },
     "security": {
-      "merged": 94,
+      "merged": 98,
       "closed": 71,
-      "acceptance_rate": 0.57,
+      "acceptance_rate": 0.58,
       "status": "normal",
-      "last_evaluated": "2026-07-14T03:59:51Z"
+      "last_evaluated": "2026-07-15T04:00:08Z"
     },
     "a11y": {
-      "merged": 62,
+      "merged": 65,
       "closed": 28,
-      "acceptance_rate": 0.69,
+      "acceptance_rate": 0.7,
       "status": "normal",
-      "last_evaluated": "2026-07-13T04:13:04Z"
+      "last_evaluated": "2026-07-15T04:00:08Z"
     },
     "operator": {
-      "merged": 649,
+      "merged": 655,
       "closed": 267,
       "acceptance_rate": 0.71,
       "status": "normal",
-      "last_evaluated": "2026-07-14T03:59:51Z"
+      "last_evaluated": "2026-07-15T04:00:08Z"
     },
     "sre": {
-      "merged": 384,
-      "closed": 92,
+      "merged": 397,
+      "closed": 93,
       "acceptance_rate": 0.81,
       "status": "boosted",
-      "last_evaluated": "2026-07-14T03:59:51Z"
+      "last_evaluated": "2026-07-15T04:00:08Z"
     },
     "features": {
       "merged": 25,
@@ -92,13 +92,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-05-27",
-      "total_merged": 457,
-      "total_closed": 365,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-05-28",
       "total_merged": 479,
@@ -303,12 +296,21 @@
       "categories_boosted": [
         "sre"
       ]
+    },
+    {
+      "date": "2026-07-15",
+      "total_merged": 1367,
+      "total_closed": 566,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
     }
   ],
   "rotation_weights": {
     "performance": 0.93,
-    "security": 0.86,
-    "a11y": 1.03,
+    "security": 0.87,
+    "a11y": 1.05,
     "operator": 1.07,
     "sre": 2.0,
     "features": 1.07,
