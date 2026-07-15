@@ -11,7 +11,7 @@ on:
     types: [opened, synchronize, ready_for_review]
 
 permissions:
-  read-all
+  contents: read
 
 concurrency:
   group: copilot-automation-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.sha }}
