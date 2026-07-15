@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-15T00:15:54.902Z",
-  "count": 1635,
+  "generatedAt": "2026-07-15T06:58:14.974Z",
+  "count": 1636,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -44924,6 +44924,48 @@
         "feature"
       ],
       "type": "feature",
+      "installMethods": [],
+      "maturity": "incubating",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/kyverno/kyverno-13934-reports-controller-fails-to-create-events-and-policy-expression-er.json",
+      "title": "kyverno: Reports controller fails to create events and policy expression error after upgrade to 3.5.1",
+      "description": "Reports controller fails to create events and policy expression error after upgrade to 3.5.1. This issue affects 19+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "kyverno",
+        "incubating",
+        "security",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "kyverno"
+      ],
+      "targetResourceKinds": [
+        "Pod",
+        "Cronjob",
+        "Namespace"
+      ],
+      "difficulty": "advanced",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
       "installMethods": [],
       "maturity": "incubating",
       "qualityScore": 100,
