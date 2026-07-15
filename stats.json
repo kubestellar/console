@@ -1,0 +1,26 @@
+[
+  {
+    "key": "actionable",
+    "label": "Actionable",
+    "source": "status",
+    "field": "actionableCount",
+    "style": "spark",
+    "trendField": "actionable"
+  },
+  {
+    "key": "openPrs",
+    "label": "Open PRs",
+    "source": "status",
+    "field": "openPrCount",
+    "style": "spark",
+    "trendField": "openPrs"
+  },
+  {
+    "key": "mergeable",
+    "label": "Mergeable",
+    "source": "status",
+    "field": "mergeableCount",
+    "style": "spark",
+    "trendField": "mergeable"
+  }
+]
