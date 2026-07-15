@@ -269,15 +269,18 @@ export function useHelmReleases(cluster?: string) {
       setError(errorMessage)
       setConsecutiveFailures(prev => prev + 1)
 
-      // Fall back to demo data when API fails and no cached data is available
-      const demoReleases = getDemoHelmReleases()
-      if (!cluster) {
-        // Update cache so notifyListeners in finally reflects demo data
-        helmReleasesCache.data = demoReleases
-        helmReleasesCache.timestamp = Date.now()
+      // Fall back to demo data when API fails — only in demo mode so real users
+      // keep whatever cached data they had (tests assert this preservation).
+      if (isDemoMode()) {
+        const demoReleases = getDemoHelmReleases()
+        if (!cluster) {
+          // Update cache so notifyListeners in finally reflects demo data
+          helmReleasesCache.data = demoReleases
+          helmReleasesCache.timestamp = Date.now()
+        }
+        setReleases(demoReleases)
+        setLastRefresh(Date.now())
       }
-      setReleases(demoReleases)
-      setLastRefresh(Date.now())
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -444,10 +447,13 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       setError(errorMessage)
       setConsecutiveFailures(prev => prev + 1)
 
-      // Fall back to demo data when API fails and no cached data is available
-      const demoHistory = getDemoHelmHistory()
-      setHistory(demoHistory)
-      setLastRefresh(Date.now())
+      // Fall back to demo data when API fails — only in demo mode so real users
+      // keep their cached history (tests assert this preservation).
+      if (isDemoMode()) {
+        const demoHistory = getDemoHelmHistory()
+        setHistory(demoHistory)
+        setLastRefresh(Date.now())
+      }
 
       // Update cache failure count on error and persist
       if (cluster && release) {
@@ -604,10 +610,13 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       setError(errorMessage)
       setConsecutiveFailures(prev => prev + 1)
 
-      // Fall back to demo data when API fails and no cached data is available
-      const demoVals = getDemoHelmValues()
-      setValues(demoVals)
-      setLastRefresh(Date.now())
+      // Fall back to demo data when API fails — only in demo mode so real users
+      // keep their cached values (tests assert this preservation).
+      if (isDemoMode()) {
+        const demoVals = getDemoHelmValues()
+        setValues(demoVals)
+        setLastRefresh(Date.now())
+      }
 
       // Update cache failure count - read from cache directly
       if (cluster && release && namespace) {
@@ -719,10 +728,13 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
           setError(errorMessage)
           setConsecutiveFailures(prev => prev + 1)
 
-          // Fall back to demo data when API fails and no cached data is available
-          const demoVals = getDemoHelmValues()
-          setValues(demoVals)
-          setLastRefresh(Date.now())
+          // Fall back to demo data when API fails — only in demo mode so real
+          // users keep their cached values.
+          if (isDemoMode()) {
+            const demoVals = getDemoHelmValues()
+            setValues(demoVals)
+            setLastRefresh(Date.now())
+          }
         } finally {
           setIsLoading(false)
           setIsRefreshing(false)
