@@ -48,7 +48,6 @@ const {
   loadOperatorsCacheFromStorage,
   saveOperatorsCacheToStorage,
   loadSubscriptionsCacheFromStorage,
-  saveSubscriptionsCacheToStorage,
   getDemoOperators,
   getDemoOperatorSubscriptions,
   OPERATORS_CACHE_KEY,
