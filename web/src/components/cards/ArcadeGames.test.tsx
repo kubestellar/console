@@ -7,33 +7,56 @@ import { Solitaire } from './Solitaire'
 import { SudokuGame } from './SudokuGame'
 import { Kubedle } from './Kubedle'
 
-// Mock shared dependencies
-const mockCardExpanded = {
+// vi.mock factories are hoisted before imports by vitest, so mock objects must
+// be inlined directly — outer const variables would be in the temporal dead
+// zone when the factory is called, causing a ReferenceError at load time.
+
+vi.mock('./cardRegistry', () => ({}))
+
+vi.mock('./CardWrapper', () => ({
   useCardExpanded: () => ({
     isExpanded: false,
     containerSize: { width: 400, height: 400 },
   }),
-}
+}))
 
-const mockCardDataContext = {
+vi.mock('./CardDataContext', () => ({
   useCardLoadingState: vi.fn(),
   useReportCardDataState: vi.fn(),
-}
+}))
 
-const mockAnalytics = {
+vi.mock('../../lib/analytics', () => ({
   emitGameStarted: vi.fn(),
   emitGameEnded: vi.fn(),
-}
+}))
 
-vi.mock('./CardWrapper', () => mockCardExpanded)
-vi.mock('./CardDataContext', () => mockCardDataContext)
-vi.mock('../../lib/analytics', () => mockAnalytics)
 vi.mock('../../hooks/useGameKeys', () => ({
   useGameKeys: () => ({ key: null }),
 }))
+
+vi.mock('../../lib/safeLocalStorage', () => ({
+  safeGet: vi.fn(() => null),
+  safeGetItem: vi.fn(() => null),
+  safeSet: vi.fn(),
+  safeSetItem: vi.fn(),
+  safeGetJSON: vi.fn(() => null),
+  safeSetJSON: vi.fn(),
+  safeRemove: vi.fn(),
+}))
+
 vi.mock('@/lib/utils/localStorage', () => ({
   safeGetItem: vi.fn(() => null),
   safeSetItem: vi.fn(),
+  safeGetJSON: vi.fn(() => null),
+  safeSetJSON: vi.fn(),
+}))
+
+vi.mock('../ui/Toast', () => ({
+  useToast: () => ({ toast: vi.fn() }),
+}))
+
+vi.mock('./DynamicCardErrorBoundary', () => ({
+  DynamicCardErrorBoundary: ({ children }: { children: React.ReactNode }) => children,
 }))
 
 describe('Checkers', () => {
