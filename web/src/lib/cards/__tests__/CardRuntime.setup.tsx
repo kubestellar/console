@@ -1,5 +1,4 @@
 import { vi, beforeEach } from 'vitest'
-import React from 'react'
 import type { CardDefinition } from '../types'
 
 type SkeletonProps = {
