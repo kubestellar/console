@@ -95,9 +95,11 @@ func newGroupWithStatics(members ...string) *v1alpha1.ClusterGroup {
 
 func newPersistenceValidationK8sClient(t *testing.T, clusterNames ...string) *k8s.MultiClusterClient {
 	t.Helper()
+	require.NotEmpty(t, clusterNames, "at least one cluster name is required")
 
 	client, err := k8s.NewMultiClusterClient("")
 	require.NoError(t, err)
+	require.NotNil(t, client)
 
 	rawConfig := &clientcmdapi.Config{
 		Clusters:       make(map[string]*clientcmdapi.Cluster, len(clusterNames)),
@@ -116,6 +118,9 @@ func newPersistenceValidationK8sClient(t *testing.T, clusterNames ...string) *k8
 }
 
 func injectNodes(client *k8s.MultiClusterClient, clusterName string, nodes ...*corev1.Node) {
+	if client == nil {
+		return
+	}
 	client.InjectClient(clusterName, k8sfake.NewSimpleClientset(nodesToRuntimeObjects(nodes)...))
 }
 
