@@ -70,6 +70,7 @@ vi.mock('../ui/RefreshIndicator', () => ({
 vi.mock('../../lib/cards/CardComponents', () => ({
   CardSkeleton: () => <div data-testid="card-skeleton" />,
   CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+    // eslint-disable-next-line no-restricted-syntax -- mock component; production code uses the ui/Input wrapper
     <input data-testid="card-search" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
   CardControlsRow: () => <div data-testid="card-controls" />,
