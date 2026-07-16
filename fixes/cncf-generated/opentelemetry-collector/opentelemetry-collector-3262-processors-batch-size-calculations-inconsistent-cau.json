@@ -1,0 +1,75 @@
+{
+  "version": "kc-mission-v1",
+  "name": "opentelemetry-collector-3262-processors-batch-size-calculations-inconsistent-cau",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "opentelemetry-collector: [processors/batch] Size calculations inconsistent, causing unbounded batch size in bytes",
+    "description": "[processors/batch] Size calculations inconsistent, causing unbounded batch size in bytes. This issue affects 20+ users.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify opentelemetry-collector troubleshoot symptoms",
+        "description": "Check for the issue in your opentelemetry-collector deployment:\n```bash\nkubectl get pods -n opentelemetry-collector -l app.kubernetes.io/name=opentelemetry-collector\nkubectl logs -l app.kubernetes.io/name=opentelemetry-collector -n opentelemetry-collector --tail=100 | grep -i error\n```\nLook for errors or warnings in the logs that may indicate the issue."
+      },
+      {
+        "title": "Review opentelemetry-collector configuration",
+        "description": "Inspect the relevant opentelemetry-collector configuration:\n```bash\nkubectl get all -n opentelemetry-collector -l app.kubernetes.io/name=opentelemetry-collector\nkubectl get configmap -n opentelemetry-collector -l app.kubernetes.io/part-of=opentelemetry-collector\n```\nThe `batch` processor is not limiting batch size by bytes, but rather by item count. I believe this is due to confusing nomenclature, let me try to explain..."
+      },
+      {
+        "title": "Apply the fix for [processors/batch] Size calculations inconsistent, causing…",
+        "description": "This fixes a bug with the batch processor's `batch_send_size` and `batch_send_size_bytes` metrics. Their values were being calculated before `SendBatchMaxSize` was applied.\n\nWe observed this issue during performance testing. With `SendBatchMaxSize` set to a small enough value that it almost always\n```yaml\nreceivers:\n  fluentforward:\n    endpoint: 0.0.0.0:8006\n\nprocessors:\n  batch:\n\nexporters:\n  logging:\n    loglevel: debug\n  otlphttp:\n    endpoint: https://redacted\n    headers:\n      authorization: Basic redacted\n\nservice:\n  pipelines:\n    logs:\n      receivers: [fluentforward]\n      processors: [batch]\n      exporters: [otlphttp, logging]\n```"
+      },
+      {
+        "title": "Confirm [processors/batch] Size calculations… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=opentelemetry-collector -n opentelemetry-collector --tail=50 --since=5m\nkubectl get events -n opentelemetry-collector --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that the issue symptoms are gone."
+      }
+    ],
+    "resolution": {
+      "summary": "This fixes a bug with the batch processor's `batch_send_size` and `batch_send_size_bytes` metrics. Their values were being calculated before `SendBatchMaxSize` was applied.\n\nWe observed this issue during performance testing.",
+      "codeSnippets": [
+        "receivers:\n  fluentforward:\n    endpoint: 0.0.0.0:8006\n\nprocessors:\n  batch:\n\nexporters:\n  logging:\n    loglevel: debug\n  otlphttp:\n    endpoint: https://redacted\n    headers:\n      authorization: Basic redacted\n\nservice:\n  pipelines:\n    logs:\n      receivers: [fluentforward]\n      processors: [batch]\n      exporters: [otlphttp, logging]"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "opentelemetry-collector",
+      "incubating",
+      "observability",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "opentelemetry-collector"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "incubating",
+    "sourceUrls": {
+      "issue": "https://github.com/open-telemetry/opentelemetry-collector/issues/3262",
+      "repo": "https://github.com/open-telemetry/opentelemetry-collector",
+      "pr": "https://github.com/open-telemetry/opentelemetry-collector/pull/5385"
+    },
+    "reactions": 20,
+    "comments": 12,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with opentelemetry-collector installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-16T07:00:29.235Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
