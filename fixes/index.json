@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 1636,
+  "count": 1637,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -54202,6 +54202,44 @@
         "feature"
       ],
       "type": "feature",
+      "installMethods": [],
+      "maturity": "incubating",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/opentelemetry-collector/opentelemetry-collector-3262-processors-batch-size-calculations-inconsistent-cau.json",
+      "title": "opentelemetry-collector: [processors/batch] Size calculations inconsistent, causing unbounded batch size in bytes",
+      "description": "[processors/batch] Size calculations inconsistent, causing unbounded batch size in bytes. This issue affects 20+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "opentelemetry-collector",
+        "incubating",
+        "observability",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "opentelemetry-collector"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
       "installMethods": [],
       "maturity": "incubating",
       "qualityScore": 100,
