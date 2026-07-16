@@ -64,7 +64,9 @@ export function WatchDetailModal({
   const warningCount = relatedEvents.filter(n => n.severity === 'warning').length
 
   const watchAgeMs = Date.now() - new Date(watch.createdAt).getTime()
-  const isStale = watch.lastChecked && (Date.now() - new Date(watch.lastChecked).getTime() > STALE_THRESHOLD_MS)
+  const isStale = Boolean(
+    watch.lastChecked && (Date.now() - new Date(watch.lastChecked).getTime() > STALE_THRESHOLD_MS)
+  )
   const isRecurring = totalEvents >= RECURRING_EVENT_THRESHOLD
 
   // Pick a dominant color based on highest severity of recent events
