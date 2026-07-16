@@ -4,6 +4,7 @@
  * Dashboard focused on networking resources: Services, Ingresses, NetworkPolicies.
  */
 
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const networkDashboardConfig: UnifiedDashboardConfig = {
@@ -87,7 +88,7 @@ export const networkDashboardConfig: UnifiedDashboardConfig = {
   features: {
     dragDrop: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
     addCard: true,
   },
 

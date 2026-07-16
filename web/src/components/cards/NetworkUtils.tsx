@@ -50,15 +50,17 @@ const PING_INTERVAL_KEY = 'network_utils_ping_interval'
 const PING_TIMEOUT = 5000
 const DEFAULT_PING_INTERVAL_MS = 3000
 const PARSE_INT_RADIX = 10
+const PING_INTERVAL_5S_MS = 5_000
+const PING_INTERVAL_30S_MS = 30_000
 
 // Ping interval options in milliseconds
 const PING_INTERVALS = [
   { value: 1000, label: '1s' },
   { value: 2000, label: '2s' },
   { value: DEFAULT_PING_INTERVAL_MS, label: '3s' },
-  { value: 5000, label: '5s' },
+  { value: PING_INTERVAL_5S_MS, label: '5s' },
   { value: 10000, label: '10s' },
-  { value: 30000, label: '30s' },
+  { value: PING_INTERVAL_30S_MS, label: '30s' },
 ]
 
 function getStoredPingInterval(): number {

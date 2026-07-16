@@ -24,6 +24,8 @@ import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
 import { POLL_INTERVAL_FAST_MS, PACKET_SPAWN_INTERVAL_MS } from '../../../lib/constants/network'
 
+const WAVE_PERIOD_MS = 5_000
+
 interface ServerStats {
   id: string
   name: string
@@ -45,7 +47,7 @@ interface TransferPacket {
 
 // Generate realistic server stats
 function generateServerStats(): ServerStats[] {
-  const wave = Math.sin(Date.now() / 5000)
+  const wave = Math.sin(Date.now() / WAVE_PERIOD_MS)
 
   return [
     // Prefill servers
@@ -218,7 +220,7 @@ export function PDDisaggregation() {
     }
 
     const stats: ServerStats[] = []
-    const wave = Math.sin(Date.now() / 5000)
+    const wave = Math.sin(Date.now() / WAVE_PERIOD_MS)
 
     // Build prefill server stats from stack components
     let prefillIndex = 0

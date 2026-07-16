@@ -7,6 +7,10 @@ import { isDemoMode } from '../../lib/demoMode'
 const BATCH_UPDATE_INTERVAL_MS = 2000
 const SECONDS_PER_MINUTE = 60
 const MS_PER_SECOND = 1000
+const OVERLAY_Z_INDEX = 9_999
+const STEP_INTERVAL_MS = 3_000
+const BATCH_START_OFFSET_MS = 5_000
+const BATCH_WINDOW_MS = 30_000
 
 const FLEX_MIN_WIDTH_STYLE = { flex: 1, minWidth: 0 } as const
 const BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS = 'flex items-center gap-2'
@@ -72,8 +76,8 @@ const DEMO_STEPS_RESOLVED: ResolutionStep[] = [
 ]
 
 const DEMO_STEPS_IN_PROGRESS: ResolutionStep[] = [
-  { name: 'Analyzing root cause', status: 'completed', startTime: Date.now() - 8000, endTime: Date.now() - 5000, output: 'CrashLoopBackOff: exit code 1 on init', error: null },
-  { name: 'Generating remediation plan', status: 'in_progress', startTime: Date.now() - 5000, endTime: null, output: '', error: null },
+  { name: 'Analyzing root cause', status: 'completed', startTime: Date.now() - 8000, endTime: Date.now() - BATCH_START_OFFSET_MS, output: 'CrashLoopBackOff: exit code 1 on init', error: null },
+  { name: 'Generating remediation plan', status: 'in_progress', startTime: Date.now() - BATCH_START_OFFSET_MS, endTime: null, output: '', error: null },
   { name: 'Executing resolution', status: 'pending', startTime: 0, endTime: null, output: '', error: null },
   { name: 'Validating result', status: 'pending', startTime: 0, endTime: null, output: '', error: null },
 ]
@@ -86,7 +90,7 @@ const DEMO_STEPS_FAILED: ResolutionStep[] = [
 ]
 
 function buildDemoBatch(batchTimestamp: string): BatchProcessing {
-  const start = new Date(batchTimestamp).getTime() || Date.now() - 30000
+  const start = new Date(batchTimestamp).getTime() || Date.now() - BATCH_WINDOW_MS
   const events: BatchEvent[] = [
     {
       id: 'demo-event-1',
@@ -119,7 +123,7 @@ function buildDemoBatch(batchTimestamp: string): BatchProcessing {
       name: 'redis-cache HighMemoryUsage (production/cache)',
       status: 'pending',
       durationSeconds: 3,
-      startedAt: new Date(start + 5000).toISOString(),
+      startedAt: new Date(start + BATCH_START_OFFSET_MS).toISOString(),
       steps: [],
     },
     {
@@ -202,8 +206,8 @@ function buildResolutionStepsFromProgress(progress?: StellarSolveProgress): Reso
     return {
       name,
       status,
-      startTime: i <= currentIdx ? Date.now() - (currentIdx - i + 1) * 3000 : 0,
-      endTime: i < currentIdx ? Date.now() - (currentIdx - i) * 3000 : null,
+      startTime: i <= currentIdx ? Date.now() - (currentIdx - i + 1) * STEP_INTERVAL_MS : 0,
+      endTime: i < currentIdx ? Date.now() - (currentIdx - i) * STEP_INTERVAL_MS : null,
       output: '',
       error: null,
     }
@@ -550,7 +554,7 @@ export function BatchMonitorModal({
         position: 'fixed', inset: 0,
         background: 'rgba(0,0,0,0.7)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 9999,
+        zIndex: OVERLAY_Z_INDEX,
       }}
       onClick={onClose}
     >

@@ -3,6 +3,7 @@
  *
  * Reactive data pipelines — sources, continuous queries, and reactions.
  */
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const drasiDashboardConfig: UnifiedDashboardConfig = {
@@ -20,7 +21,7 @@ export const drasiDashboardConfig: UnifiedDashboardConfig = {
     dragDrop: true,
     addCard: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
   },
   storageKey: 'drasi-dashboard-cards',
 }

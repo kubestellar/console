@@ -5,6 +5,7 @@
  * and status cards.
  */
 
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const mainDashboardConfig: UnifiedDashboardConfig = {
@@ -145,7 +146,7 @@ export const mainDashboardConfig: UnifiedDashboardConfig = {
   features: {
     dragDrop: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
     addCard: true,
     templates: true,
     recommendations: true,

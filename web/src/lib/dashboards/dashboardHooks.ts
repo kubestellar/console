@@ -16,6 +16,8 @@ import { useDashboardUndoRedo } from '../../hooks/useUndoRedo'
 import { setAutoRefreshPaused } from '../cache'
 import { POLL_INTERVAL_MS } from '../constants/network'
 
+const DASHBOARD_DEFAULT_REFRESH_MS = 30_000
+
 // Re-export dashboardSync for use in auth context (clear cache on logout)
 export { dashboardSync } from './dashboardSync'
 
@@ -504,7 +506,7 @@ export interface UseDashboardResult
 }
 
 export function useDashboard(options: UseDashboardOptions): UseDashboardResult {
-  const { storageKey, defaultCards, isActive = true, onRefresh, autoRefreshInterval = 30000 } = options
+  const { storageKey, defaultCards, isActive = true, onRefresh, autoRefreshInterval = DASHBOARD_DEFAULT_REFRESH_MS } = options
 
   // Card management
   const cardState = useDashboardCards(storageKey, defaultCards, isActive)

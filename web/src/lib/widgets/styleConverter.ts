@@ -7,6 +7,8 @@
 
 import type { CSSProperties } from 'react'
 
+const OVERLAY_Z_INDEX = 9_999
+
 // Tailwind to inline CSS mappings
 const TAILWIND_TO_CSS: Record<string, CSSProperties> = {
   // Display
@@ -395,7 +397,7 @@ const openIssue = (errorMsg) => {
 export const className = css\`
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 9999;
+  z-index: ${OVERLAY_Z_INDEX};
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   color: #fff;
   user-select: none;

@@ -28,13 +28,14 @@ const GRID_LEFT_PX = 55
 const GRID_RIGHT_PX = 20
 const GRID_TOP_PX = 10
 const GRID_BOTTOM_PX = 45
+const P99_LATENCY_SLA_MS = 5_000
 
 type MetricTab = 'ttftP50Ms' | 'tpotP50Ms' | 'p99LatencyMs' | 'itlP50Ms' | 'requestLatencyMs'
 
 const TABS: { key: MetricTab; label: string; unit: string; sla?: number }[] = [
   { key: 'ttftP50Ms', label: 'TTFT p50', unit: 'ms', sla: 100 },
   { key: 'tpotP50Ms', label: 'TPOT p50', unit: 'ms' },
-  { key: 'p99LatencyMs', label: 'p99 Latency', unit: 'ms', sla: 5000 },
+  { key: 'p99LatencyMs', label: 'p99 Latency', unit: 'ms', sla: P99_LATENCY_SLA_MS },
   { key: 'itlP50Ms', label: 'ITL p50', unit: 'ms' },
   { key: 'requestLatencyMs', label: 'Request p50', unit: 'ms' },
 ]

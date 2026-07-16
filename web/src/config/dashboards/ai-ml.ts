@@ -1,6 +1,7 @@
 /**
  * AI/ML Dashboard Configuration
  */
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const aiMlDashboardConfig: UnifiedDashboardConfig = {
@@ -37,7 +38,7 @@ export const aiMlDashboardConfig: UnifiedDashboardConfig = {
     dragDrop: true,
     addCard: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
   },
   storageKey: 'ai-ml-dashboard-cards',
 }

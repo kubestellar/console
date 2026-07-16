@@ -4,6 +4,7 @@
  * Dashboard focused on workload resources: Deployments, StatefulSets, DaemonSets, Jobs.
  */
 
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const workloadsDashboardConfig: UnifiedDashboardConfig = {
@@ -109,7 +110,7 @@ export const workloadsDashboardConfig: UnifiedDashboardConfig = {
   features: {
     dragDrop: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
     addCard: true,
   },
 

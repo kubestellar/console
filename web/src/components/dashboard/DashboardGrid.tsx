@@ -9,6 +9,8 @@ import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 import { useDashboardHealth } from '../../hooks/useDashboardHealth'
 import type { DashboardState } from './DashboardState'
 
+const OVERLAY_Z_INDEX = 9_999
+
 type DashboardGridProps = Pick<DashboardState,
   'activeDragData' |
   'activeId' |
@@ -152,7 +154,7 @@ export function DashboardGrid({
           />
         )}
 
-        <DragOverlay dropAnimation={null} zIndex={9999}>
+        <DragOverlay dropAnimation={null} zIndex={OVERLAY_Z_INDEX}>
           {activeCard ? (
             <div className="opacity-80 rotate-3 scale-105">
               <DragPreviewCard card={activeCard} />

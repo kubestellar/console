@@ -1,6 +1,7 @@
 /**
  * GPU Dashboard Configuration
  */
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const gpuDashboardConfig: UnifiedDashboardConfig = {
@@ -25,7 +26,7 @@ export const gpuDashboardConfig: UnifiedDashboardConfig = {
     dragDrop: true,
     addCard: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
   },
   storageKey: 'gpu-dashboard-cards',
 }

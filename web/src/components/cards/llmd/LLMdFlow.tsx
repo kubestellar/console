@@ -37,6 +37,8 @@ import {
   Sparkline,
   type Connection,
 } from './LLMdFlowNodes'
+
+const WAVE_PERIOD_MS = 5_000
 type ViewMode = 'default' | 'horseshoe'
 type MetricType = 'load' | 'queue' | 'rps'
 interface MetricsHistoryData {
@@ -240,7 +242,7 @@ export function LLMdFlow() {
       return []
     }
     const now = Date.now()
-    const wave = Math.sin(now / 5000)
+    const wave = Math.sin(now / WAVE_PERIOD_MS)
     const metrics: ServerMetrics[] = []
     if (selectedStack.components.gateway) {
       metrics.push({

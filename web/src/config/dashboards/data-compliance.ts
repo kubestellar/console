@@ -1,6 +1,7 @@
 /**
  * Data Compliance Dashboard Configuration
  */
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const dataComplianceDashboardConfig: UnifiedDashboardConfig = {
@@ -19,7 +20,7 @@ export const dataComplianceDashboardConfig: UnifiedDashboardConfig = {
     dragDrop: true,
     addCard: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
   },
   storageKey: 'data-compliance-dashboard-cards',
 }

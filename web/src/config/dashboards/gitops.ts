@@ -4,6 +4,7 @@
  * Dashboard focused on GitOps sync status and deployments.
  */
 
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const gitopsDashboardConfig: UnifiedDashboardConfig = {
@@ -87,7 +88,7 @@ export const gitopsDashboardConfig: UnifiedDashboardConfig = {
   features: {
     dragDrop: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
     addCard: true,
   },
 
