@@ -48,12 +48,21 @@ describe('MobileBrowser', () => {
   })
 
   it('renders quick links panel', () => {
+    // Quick links are shown on the new-tab page (empty URL); seed localStorage accordingly
+    localStorage.setItem('mobile_browser_state', JSON.stringify({
+      tabs: [{ id: '1', url: '', title: 'New Tab' }],
+      activeTabId: '1',
+    }))
     render(<MobileBrowser />)
     // Quick links include KubeStellar, Google, etc.
     expect(screen.getByText('KubeStellar')).toBeInTheDocument()
   })
 
   it('renders Google quick link', () => {
+    localStorage.setItem('mobile_browser_state', JSON.stringify({
+      tabs: [{ id: '1', url: '', title: 'New Tab' }],
+      activeTabId: '1',
+    }))
     render(<MobileBrowser />)
     expect(screen.getByText('Google')).toBeInTheDocument()
   })
@@ -80,6 +89,10 @@ describe('MobileBrowser', () => {
 
   // 5. Navigate to URL
   it('navigates when a quick link is clicked', async () => {
+    localStorage.setItem('mobile_browser_state', JSON.stringify({
+      tabs: [{ id: '1', url: '', title: 'New Tab' }],
+      activeTabId: '1',
+    }))
     const user = userEvent.setup()
     render(<MobileBrowser />)
     const googleLink = screen.getByText('Google')

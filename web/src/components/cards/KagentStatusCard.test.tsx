@@ -144,7 +144,8 @@ describe('KagentStatusCard', () => {
   // 4. Happy path — metric tiles
   it('renders agent count', () => {
     render(<KagentStatusCard />)
-    expect(screen.getByText('1')).toBeInTheDocument()
+    // '1' may appear in multiple metric tiles — getAllByText is safe
+    expect(screen.getAllByText('1')[0]).toBeInTheDocument()
   })
 
   it('renders runtime distribution row', () => {

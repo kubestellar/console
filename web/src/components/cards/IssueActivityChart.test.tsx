@@ -119,19 +119,19 @@ describe('IssueActivityChart', () => {
   })
 
   // 3. Time range buttons
-  it('renders 90 Days time range button', () => {
+  it('renders 90d time range button', () => {
     render(<IssueActivityChart />)
-    expect(screen.getByRole('button', { name: /90 Days/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '90d' })).toBeInTheDocument()
   })
 
-  it('renders 30 Days time range button', () => {
+  it('renders 30d time range button', () => {
     render(<IssueActivityChart />)
-    expect(screen.getByRole('button', { name: /30 Days/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '30d' })).toBeInTheDocument()
   })
 
-  it('renders 7 Days time range button', () => {
+  it('renders 60d time range button', () => {
     render(<IssueActivityChart />)
-    expect(screen.getByRole('button', { name: /7 Days/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '60d' })).toBeInTheDocument()
   })
 
   // 4. Repo subtitle

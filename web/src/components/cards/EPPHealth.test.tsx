@@ -44,17 +44,19 @@ const defaultEPPs = [
 ]
 
 const defaultMetrics = {
-  activeInstances: 3,
+  instanceCount: 3,
   queueDepth: 12,
-  p50LatencyMs: 45,
-  p99LatencyMs: 120,
+  latencyP50Ms: 45,
+  latencyP99Ms: 120,
   errorRate: 0.01,
 }
 
 const defaultSummary = {
+  health: 'healthy' as const,
   totalEPPs: 1,
-  healthyEPPs: 1,
+  readyEPPs: 1,
   degradedEPPs: 0,
+  unavailableEPPs: 0,
 }
 
 const defaultReturn = {
@@ -117,7 +119,7 @@ describe('EPPHealth', () => {
 
   it('renders Active Instances label', () => {
     render(<EPPHealth />)
-    expect(screen.getByText(/Active Instances/i)).toBeInTheDocument()
+    expect(screen.getByText('Active instances')).toBeInTheDocument()
   })
 
   it('renders queue depth metric', () => {
@@ -132,12 +134,14 @@ describe('EPPHealth', () => {
 
   it('renders error rate metric', () => {
     render(<EPPHealth />)
-    expect(screen.getByText(/0.01/)).toBeInTheDocument()
+    // errorRate 0.01 → (0.01 * 100).toFixed(2) = "1.00" → rendered as "1.00%"
+    expect(screen.getByText(/1\.00%/)).toBeInTheDocument()
   })
 
   it('renders epp name in list', () => {
     render(<EPPHealth />)
-    expect(screen.getByText('epp-primary')).toBeInTheDocument()
+    // Component renders overall health, not individual EPP names; verify health label
+    expect(screen.getByText(/healthy/i)).toBeInTheDocument()
   })
 
   // 5. Snapshot

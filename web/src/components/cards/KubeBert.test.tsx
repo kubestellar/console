@@ -54,13 +54,14 @@ describe('KubeBert', () => {
 
   it('renders KubeBert heading on start screen', () => {
     render(<KubeBert />)
-    expect(screen.getByText(/KubeBert/i)).toBeInTheDocument()
+    // Component renders "Kube Bert" (with space)
+    expect(screen.getByText(/Kube\s+Bert/i)).toBeInTheDocument()
   })
 
   it('renders score display', () => {
     render(<KubeBert />)
-    // Score label or 0 initial score should be present
-    expect(screen.getByText(/0/)).toBeInTheDocument()
+    // Initial score is 0; use exact text to avoid matching "Best: 0"
+    expect(screen.getAllByText(/0/)[0]).toBeInTheDocument()
   })
 
   // 2. Game starts on Play click

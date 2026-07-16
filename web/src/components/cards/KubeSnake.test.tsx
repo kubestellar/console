@@ -36,7 +36,8 @@ describe('KubeSnake', () => {
 
   it('renders without crashing', () => {
     render(<KubeSnake />)
-    expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument()
+    // KubeSnake uses h3 headings
+    expect(screen.getByRole('heading', { level: 3 })).toBeInTheDocument()
   })
 
   it('displays game canvas element', () => {

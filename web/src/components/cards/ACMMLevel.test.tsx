@@ -115,7 +115,8 @@ describe('ACMMLevel', () => {
   // 3. Current level gauge
   it('renders current level label', () => {
     render(<ACMMLevel />)
-    expect(screen.getByText('L2')).toBeInTheDocument()
+    // 'L2' appears in both the gauge and the ladder row — use getAllByText
+    expect(screen.getAllByText('L2')[0]).toBeInTheDocument()
   })
 
   it('renders role label', () => {
@@ -149,13 +150,15 @@ describe('ACMMLevel', () => {
   it('renders all 6 level rows', () => {
     render(<ACMMLevel />)
     for (let n = 1; n <= 6; n++) {
-      expect(screen.getByText(`L${n}`)).toBeInTheDocument()
+      // 'L2' also appears in the gauge — getAllByText is safe for all n
+      expect(screen.getAllByText(`L${n}`)[0]).toBeInTheDocument()
     }
   })
 
   it('highlights current level row', () => {
     render(<ACMMLevel />)
-    const l2 = screen.getByText('L2').closest('div')
+    // getAllByText('L2'): [0] = gauge div, [1] = ladder span
+    const l2 = screen.getAllByText('L2')[1].closest('div')
     expect(l2?.className).toContain('bg-primary/15')
   })
 
