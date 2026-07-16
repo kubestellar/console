@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import type { StellarNotification, StellarWatch } from '../../../types/stellar'
 
 export const EVENT_TIMELINE_LIMIT = 10
@@ -64,7 +65,7 @@ export function matchesWatch(n: StellarNotification, watch: StellarWatch, deploy
   return false
 }
 
-export function footerBtn(color: string): React.CSSProperties {
+export function footerBtn(color: string): CSSProperties {
   return {
     background: 'none', border: `1px solid ${color}`, color,
     borderRadius: 'var(--s-rs)',

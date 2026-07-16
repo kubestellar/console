@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export function Tag({ label, color, highlighted }: { label: string; color: string; highlighted?: boolean }) {
@@ -34,7 +35,7 @@ export function SectionHeader({ title }: { title: string }) {
   )
 }
 
-export function Section({ title, children }: { title: string; children: React.ReactNode }) {
+export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="mb-3">
       <SectionHeader title={title} />
