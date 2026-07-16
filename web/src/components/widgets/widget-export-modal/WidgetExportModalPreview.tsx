@@ -146,7 +146,7 @@ const ps = {
     color: PREV_CLR_MUTED,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
-    marginTop: '1px' } as CSSProperties,
+    marginTop: PREV_XS } as CSSProperties,
   row: { display: 'flex', gap: PREV_SM, alignItems: 'center' } as CSSProperties,
   col: { display: 'flex', flexDirection: 'column' as const, gap: PREV_XS } as CSSProperties,
   muted: { color: PREV_CLR_MUTED, fontSize: PREV_FS_CAPTION } as CSSProperties,

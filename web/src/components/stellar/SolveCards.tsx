@@ -4,7 +4,6 @@ import type { StellarSolve, StellarSolveProgress } from '../../types/stellar'
 const SOLVE_BODY_TEXT_STYLE = {
   fontSize: 12,
   color: 'var(--s-text)',
-  marginTop: 4,
   lineHeight: 1.4,
 } as const
 
@@ -50,7 +49,7 @@ export function SolveProgressCard({ progress }: { progress: StellarSolveProgress
           {progress.actionsTaken} action{progress.actionsTaken === 1 ? '' : 's'}
         </span>
       </div>
-      <div style={SOLVE_BODY_TEXT_STYLE}>
+      <div className="mt-1" style={SOLVE_BODY_TEXT_STYLE}>
         {progress.message}
       </div>
     </div>
@@ -99,7 +98,7 @@ export function SolveEscalatedCard({ solve, onDismiss }: {
           >✕</button>
         )}
       </div>
-      <div style={SOLVE_BODY_TEXT_STYLE}>
+      <div className="mt-1" style={SOLVE_BODY_TEXT_STYLE}>
         {solve.summary}{limitNote}
       </div>
       {expanded && (

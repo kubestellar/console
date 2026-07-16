@@ -20,7 +20,7 @@ export function Stat({ label, value, accent }: { label: string; value: string; a
       borderRadius: 'var(--s-rs)',
     }}>
       <div style={{ fontSize: 18, fontWeight: 600, color: accent ?? 'var(--s-text)', fontFamily: 'var(--s-mono)' }}>{value}</div>
-      <div style={{ fontSize: 9, color: 'var(--s-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{label}</div>
+      <div className="mt-0.5" style={{ fontSize: 9, color: 'var(--s-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
     </div>
   )
 }
