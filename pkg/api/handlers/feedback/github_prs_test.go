@@ -217,9 +217,10 @@ func TestHandlePREvent_MissingPRNumberReturns400(t *testing.T) {
 
 	err := handler.handlePREvent(context.Background(), payload)
 	var fe *fiber.Error
-	if assert.Error(t, err) && assert.ErrorAs(t, err, &fe) {
-		assert.Equal(t, fiber.StatusBadRequest, fe.Code)
+	if !assert.Error(t, err) || !assert.ErrorAs(t, err, &fe) || fe == nil {
+		t.FailNow()
 	}
+	assert.Equal(t, fiber.StatusBadRequest, fe.Code)
 	mockStore.AssertExpectations(t)
 }
 
@@ -237,9 +238,10 @@ func TestHandlePREvent_MissingHTMLURLReturns400(t *testing.T) {
 
 	err := handler.handlePREvent(context.Background(), payload)
 	var fe *fiber.Error
-	if assert.Error(t, err) && assert.ErrorAs(t, err, &fe) {
-		assert.Equal(t, fiber.StatusBadRequest, fe.Code)
+	if !assert.Error(t, err) || !assert.ErrorAs(t, err, &fe) || fe == nil {
+		t.FailNow()
 	}
+	assert.Equal(t, fiber.StatusBadRequest, fe.Code)
 	mockStore.AssertExpectations(t)
 }
 
@@ -267,9 +269,10 @@ func TestHandlePREvent_UpdatePRErrorReturns500(t *testing.T) {
 
 	err := handler.handlePREvent(context.Background(), payload)
 	var fe *fiber.Error
-	if assert.Error(t, err) && assert.ErrorAs(t, err, &fe) {
-		assert.Equal(t, fiber.StatusInternalServerError, fe.Code)
+	if !assert.Error(t, err) || !assert.ErrorAs(t, err, &fe) || fe == nil {
+		t.FailNow()
 	}
+	assert.Equal(t, fiber.StatusInternalServerError, fe.Code)
 	// Status should NOT be advanced if the PR-info update failed.
 	mockStore.AssertNotCalled(t, "UpdateFeatureRequestStatus", requestID, models.RequestStatusFixReady)
 }
@@ -297,9 +300,10 @@ func TestHandlePREvent_UpdateStatusErrorReturns500(t *testing.T) {
 
 	err := handler.handlePREvent(context.Background(), payload)
 	var fe *fiber.Error
-	if assert.Error(t, err) && assert.ErrorAs(t, err, &fe) {
-		assert.Equal(t, fiber.StatusInternalServerError, fe.Code)
+	if !assert.Error(t, err) || !assert.ErrorAs(t, err, &fe) || fe == nil {
+		t.FailNow()
 	}
+	assert.Equal(t, fiber.StatusInternalServerError, fe.Code)
 }
 
 // A closed/merged event with a failing store update must also return 500
@@ -327,9 +331,10 @@ func TestHandlePREvent_ClosedMergedStatusErrorReturns500(t *testing.T) {
 
 	err := handler.handlePREvent(context.Background(), payload)
 	var fe *fiber.Error
-	if assert.Error(t, err) && assert.ErrorAs(t, err, &fe) {
-		assert.Equal(t, fiber.StatusInternalServerError, fe.Code)
+	if !assert.Error(t, err) || !assert.ErrorAs(t, err, &fe) || fe == nil {
+		t.FailNow()
 	}
+	assert.Equal(t, fiber.StatusInternalServerError, fe.Code)
 	mockStore.AssertNotCalled(t, "CreateNotification", mock.Anything)
 }
 
