@@ -61,7 +61,12 @@
     "toggleGPUNodeAria": "Toggle details for GPU node {{node}}",
     "selectCloudProviderAria": "Select {{provider}} cloud provider",
     "openSettingsSectionAria": "Open {{section}} settings section",
-    "retry": "Retry"
+    "retry": "Retry",
+    "refetch": "Refetch",
+    "next": "Next",
+    "insertBefore": "Insert Before",
+    "insertAfter": "Insert After",
+    "trigger": "Trigger"
   },
   "buttons": {
     "addCard": "Add Card",

@@ -33,7 +33,12 @@
     "signOut": "Sign Out",
     "getYourOwn": "Get Your Own Console",
     "viewDetails": "View Details",
-    "copied": "Copied!"
+    "copied": "Copied!",
+    "refetch": "Refetch",
+    "next": "Next",
+    "insertBefore": "Insert Before",
+    "insertAfter": "Insert After",
+    "trigger": "Trigger"
   },
   "buttons": {
     "addCard": "Add Card",

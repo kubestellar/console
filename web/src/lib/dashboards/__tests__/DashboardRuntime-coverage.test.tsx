@@ -12,6 +12,7 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -72,11 +73,14 @@ vi.mock('../DashboardComponents', () => ({
       {children}
     </div>
   ),
-  DashboardEmptyCards: ({ onAddCards }: { onAddCards: () => void }) => (
-    <div data-testid="empty-cards">
-      <button data-testid="empty-add" onClick={onAddCards}>Add</button>
-    </div>
-  ),
+  DashboardEmptyCards: ({ onAddCards }: { onAddCards: () => void }) => {
+    const { t } = useTranslation()
+    return (
+      <div data-testid="empty-cards">
+        <button data-testid="empty-add" onClick={onAddCards}>{t('actions.add')}</button>
+      </div>
+    )
+  },
   DashboardCardsGrid: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="cards-grid">{children}</div>
   ),
@@ -106,32 +110,34 @@ vi.mock('../../../components/dashboard/AddCardModal', () => ({
     isOpen: boolean
     onAddCards: (c: Array<{ type: string; title: string; config: Record<string, unknown> }>) => void
     onClose: () => void
-  }) => (
-    isOpen ? (
+  }) => {
+    const { t } = useTranslation()
+    return isOpen ? (
       <div data-testid="add-card-modal">
-        <button data-testid="modal-add" onClick={() => onAddCards([{ type: 'x', title: 'X', config: {} }])}>Add</button>
-        <button data-testid="modal-close" onClick={onClose}>Close</button>
+        <button data-testid="modal-add" onClick={() => onAddCards([{ type: 'x', title: 'X', config: {} }])}>{t('actions.add')}</button>
+        <button data-testid="modal-close" onClick={onClose}>{t('actions.close')}</button>
       </div>
     ) : null
-  ),
+  },
 }))
 
 vi.mock('../../../components/dashboard/TemplatesModal', () => ({
   TemplatesModal: ({ isOpen, onApplyTemplate, onClose }: {
     isOpen: boolean
-    onApplyTemplate: (t: { cards: Array<{ card_type: string; title: string; config?: Record<string, unknown> }> }) => void
+    onApplyTemplate: (tmpl: { cards: Array<{ card_type: string; title: string; config?: Record<string, unknown> }> }) => void
     onClose: () => void
-  }) => (
-    isOpen ? (
+  }) => {
+    const { t } = useTranslation()
+    return isOpen ? (
       <div data-testid="templates-modal">
         <button
           data-testid="apply-tmpl"
           onClick={() => onApplyTemplate({ cards: [{ card_type: 'ta', title: 'A' }] })}
-        >Apply</button>
-        <button data-testid="tmpl-close" onClick={onClose}>Close</button>
+        >{t('actions.apply')}</button>
+        <button data-testid="tmpl-close" onClick={onClose}>{t('actions.close')}</button>
       </div>
     ) : null
-  ),
+  },
 }))
 
 vi.mock('../../../components/dashboard/ConfigureCardModal', () => ({
@@ -142,14 +148,15 @@ vi.mock('../../../components/dashboard/ConfigureCardModal', () => ({
     disabled?: boolean
     loading?: boolean
     [key: string]: unknown
-  }) => (
-    isOpen ? (
+  }) => {
+    const { t } = useTranslation()
+    return isOpen ? (
       <div data-testid="configure-modal">
-        <button data-testid="save-config" onClick={() => onSave?.('r1', { updated: true })} disabled={rest.disabled} data-loading={rest.loading}>Save</button>
-        <button data-testid="close-config" onClick={onClose} disabled={rest.disabled}>Close</button>
+        <button data-testid="save-config" onClick={() => onSave?.('r1', { updated: true })} disabled={rest.disabled} data-loading={rest.loading}>{t('actions.save')}</button>
+        <button data-testid="close-config" onClick={onClose} disabled={rest.disabled}>{t('actions.close')}</button>
       </div>
     ) : null
-  ),
+  },
 }))
 
 vi.mock('../../../components/dashboard/FloatingDashboardActions', () => ({
