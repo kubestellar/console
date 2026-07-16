@@ -924,13 +924,6 @@
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
   {
-    "file": "src/components/cards/ChartVersions.test.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 73,
-    "column": 5,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
     "file": "src/components/cards/Checkers.tsx",
     "rule": "null",
     "line": 1,
@@ -1048,13 +1041,6 @@
     "line": 447,
     "column": 13,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/cards/ClusterMetrics.test.tsx",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 32,
-    "column": 14,
-    "message": "'fn' is defined but never used. Allowed unused args must match /^_/u."
   },
   {
     "file": "src/components/cards/ClusterMetrics.tsx",
@@ -1808,28 +1794,28 @@
   {
     "file": "src/components/cards/NetworkUtils.tsx",
     "rule": "no-restricted-syntax",
-    "line": 401,
+    "line": 403,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/cards/NetworkUtils.tsx",
     "rule": "no-restricted-syntax",
-    "line": 442,
+    "line": 444,
     "column": 15,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
   {
     "file": "src/components/cards/NetworkUtils.tsx",
     "rule": "no-restricted-syntax",
-    "line": 551,
+    "line": 553,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/cards/NetworkUtils.tsx",
     "rule": "no-restricted-syntax",
-    "line": 558,
+    "line": 560,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
@@ -3271,9 +3257,9 @@
   {
     "file": "src/components/cards/llmd/LLMdFlow.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 235,
+    "line": 237,
     "column": 9,
-    "message": "The 'generateLiveMetrics' function makes the dependencies of useEffect Hook (at line 328) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'generateLiveMetrics' in its own useCallback() Hook."
+    "message": "The 'generateLiveMetrics' function makes the dependencies of useEffect Hook (at line 330) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'generateLiveMetrics' in its own useCallback() Hook."
   },
   {
     "file": "src/components/cards/llmd/LLMdFlowNodes.tsx",
@@ -3299,21 +3285,21 @@
   {
     "file": "src/components/cards/llmd/LatencyBreakdown.tsx",
     "rule": "no-restricted-syntax",
-    "line": 223,
+    "line": 224,
     "column": 11,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
   {
     "file": "src/components/cards/llmd/LatencyBreakdown.tsx",
     "rule": "no-restricted-syntax",
-    "line": 231,
+    "line": 232,
     "column": 11,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
   {
     "file": "src/components/cards/llmd/LatencyBreakdown.tsx",
     "rule": "no-restricted-syntax",
-    "line": 239,
+    "line": 240,
     "column": 11,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
@@ -3334,7 +3320,7 @@
   {
     "file": "src/components/cards/llmd/PDDisaggregation.tsx",
     "rule": "null",
-    "line": 280,
+    "line": 282,
     "column": 3,
     "message": "Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')."
   },
@@ -18748,14 +18734,14 @@
   {
     "file": "src/lib/auth.tsx",
     "rule": "react-refresh/only-export-components",
-    "line": 843,
+    "line": 844,
     "column": 17,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
   {
     "file": "src/lib/auth.tsx",
     "rule": "react-refresh/only-export-components",
-    "line": 854,
+    "line": 855,
     "column": 14,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
@@ -19126,42 +19112,42 @@
   {
     "file": "src/lib/dashboards/DashboardPage.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 267,
+    "line": 268,
     "column": 6,
     "message": "React Hook useEffect has missing dependencies: 'dashCtx' and 'setShowAddCard'. Either include them or remove the dependency array."
   },
   {
     "file": "src/lib/dashboards/DashboardRuntime.tsx",
     "rule": "react-refresh/only-export-components",
-    "line": 70,
+    "line": 72,
     "column": 17,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
   {
     "file": "src/lib/dashboards/DashboardRuntime.tsx",
     "rule": "react-refresh/only-export-components",
-    "line": 74,
+    "line": 76,
     "column": 17,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
   {
     "file": "src/lib/dashboards/DashboardRuntime.tsx",
     "rule": "react-refresh/only-export-components",
-    "line": 78,
+    "line": 80,
     "column": 17,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
   {
     "file": "src/lib/dashboards/DashboardRuntime.tsx",
     "rule": "react-refresh/only-export-components",
-    "line": 89,
+    "line": 91,
     "column": 17,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
   {
     "file": "src/lib/dashboards/DashboardRuntime.tsx",
     "rule": "react-refresh/only-export-components",
-    "line": 448,
+    "line": 450,
     "column": 17,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
