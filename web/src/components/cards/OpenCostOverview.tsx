@@ -192,9 +192,9 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
 
   const clusterIndicator = useMemo(() =>
     localClusterFilter.length > 0
-      ? { selectedCount: localClusterFilter.length, totalCount: availableClusters.length }
+      ? { selectedCount: localClusterFilter.length, totalCount: (availableClusters || []).length }
       : undefined,
-    [localClusterFilter, availableClusters.length]
+    [localClusterFilter, availableClusters]
   )
 
   const clusterFilter = useMemo(() => ({

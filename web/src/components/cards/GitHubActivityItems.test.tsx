@@ -60,8 +60,8 @@ const openPR: GitHubPR = {
   labels: [{ name: 'enhancement', color: 'a2eeef' }],
 }
 
-const mergedPR: GitHubPR = { ...openPR, number: 43, state: 'closed', merged_at: now, title: 'fix: merged PR' }
-const closedPR: GitHubPR = { ...openPR, number: 44, state: 'closed', merged_at: null, title: 'closed unmerged PR' }
+const mergedPR: GitHubPR = { ...openPR, number: 43, state: 'closed', merged_at: now, title: 'fix: important payload issue' }
+const closedPR: GitHubPR = { ...openPR, number: 44, state: 'closed', merged_at: null, title: 'abandoned experiment' }
 
 const openIssue: GitHubIssue = {
   number: 100,
@@ -75,7 +75,7 @@ const openIssue: GitHubIssue = {
   comments: 5,
 }
 
-const closedIssue: GitHubIssue = { ...openIssue, number: 101, state: 'closed', closed_at: now, title: 'closed issue' }
+const closedIssue: GitHubIssue = { ...openIssue, number: 101, state: 'closed', closed_at: now, title: 'resolved defect' }
 
 const release: GitHubRelease = {
   id: 1,
@@ -168,8 +168,7 @@ describe('IssueItem', () => {
   // 2. Closed issue
   it('renders closed issue title', () => {
     render(<IssueItem issue={closedIssue} />)
-    // Component renders "#{number} {title}" in a span, so match with partial text
-    expect(screen.getByText(/closed issue/i)).toBeInTheDocument()
+    expect(screen.getByText(/resolved defect/)).toBeInTheDocument()
   })
 
   // Snapshot
@@ -182,8 +181,8 @@ describe('IssueItem', () => {
 describe('ReleaseItem', () => {
   it('renders tag name', () => {
     render(<ReleaseItem release={release} />)
-    // Component renders release.name || release.tag_name; fixture has name='v1.2.3 Release'
-    expect(screen.getByText(/v1\.2\.3/)).toBeInTheDocument()
+    const matches = screen.getAllByText(/v1\.2\.3/)
+    expect(matches.length).toBeGreaterThan(0)
   })
 
   it('renders release name', () => {

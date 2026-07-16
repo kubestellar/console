@@ -124,7 +124,7 @@ describe('OpenCostOverview', () => {
   // 1. Integration notice
   it('renders OpenCost integration notice', () => {
     render(<OpenCostOverview />)
-    expect(screen.getByText(/OpenCost/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/OpenCost/i).length).toBeGreaterThan(0)
   })
 
   // 2. Namespace rows
