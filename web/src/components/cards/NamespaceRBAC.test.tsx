@@ -234,13 +234,13 @@ describe('NamespaceRBAC', () => {
   it('renders roles tab items', () => {
     const roleItem = { name: 'pod-reader', type: 'Role' as const, rules: 3, cluster: 'prod-cluster' }
     setupMocks({ cardItems: [roleItem] })
-    render(<NamespaceRBAC />)
+    render(<NamespaceRBAC config={{ cluster: 'prod-cluster', namespace: 'default' }} />)
     expect(screen.getByText('pod-reader')).toBeInTheDocument()
   })
 
   it('renders cluster badges when clusters are present', () => {
     setupMocks({ clusters: [makeCluster('cluster-x')], namespaces: ['default'] })
-    render(<NamespaceRBAC />)
+    render(<NamespaceRBAC config={{ cluster: 'cluster-x', namespace: 'default' }} />)
     const badges = screen.getAllByTestId('cluster-badge')
     expect(badges.length).toBeGreaterThan(0)
   })

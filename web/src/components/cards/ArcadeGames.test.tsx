@@ -66,7 +66,8 @@ describe('Checkers', () => {
 
   it('renders Checkers card without crashing', () => {
     render(<Checkers />)
-    expect(screen.getByRole('button', { name: /new game/i })).toBeInTheDocument()
+    // Button aria-label uses t('checkers.newGame') → "newGame" (camelCase from i18n key)
+    expect(screen.getByRole('button', { name: /newGame/i })).toBeInTheDocument()
   })
 
   it('displays checkers board', () => {

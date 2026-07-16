@@ -53,7 +53,7 @@ vi.mock('../useMultiTenancyOverview', () => ({
 }))
 
 const mockUseCardLoadingState = vi.fn()
-vi.mock('../../CardDataContext', () => ({
+vi.mock('../../../CardDataContext', () => ({
   useCardLoadingState: (opts: Record<string, unknown>) => mockUseCardLoadingState(opts),
   useReportCardDataState: () => {},
 }))

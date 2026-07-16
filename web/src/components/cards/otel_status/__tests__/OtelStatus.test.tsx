@@ -32,7 +32,7 @@ vi.mock('../../../../hooks/useCachedOtel', () => ({
   useCachedOtel: () => mockUseCachedOtel(),
 }))
 
-vi.mock('../CardDataContext', () => ({
+vi.mock('../../CardDataContext', () => ({
   useCardLoadingState: ({ isLoading }: { isLoading: boolean }) => ({
     showSkeleton: isLoading,
     showEmptyState: false,
@@ -202,7 +202,7 @@ describe('OtelStatus', () => {
     render(<OtelStatus />)
     const tiles = screen.getAllByTestId('metric-tile')
     expect(tiles.length).toBeGreaterThanOrEqual(4)
-    expect(screen.getByText('Running')).toBeInTheDocument()
+    expect(screen.getAllByText('Running')[0]).toBeInTheDocument()
     expect(screen.getAllByText('Degraded')[0]).toBeInTheDocument()
     expect(screen.getByText('Pipelines')).toBeInTheDocument()
     expect(screen.getByText('Dropped')).toBeInTheDocument()

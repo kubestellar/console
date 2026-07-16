@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ClusterGroups } from './ClusterGroups'
 
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({
+    t: (key: string) => key.split('.').pop() ?? key,
+  }),
+}))
+
 vi.mock('./CardDataContext', () => ({
   useCardLoadingState: vi.fn(),
   useCardDemoState: vi.fn(),

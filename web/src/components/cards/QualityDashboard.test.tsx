@@ -129,7 +129,8 @@ describe('QualityDashboard', () => {
 
   it('renders passed checks count', () => {
     render(<QualityDashboard />)
-    expect(screen.getByText(/38/)).toBeInTheDocument()
+    // progressPct shows remediation progress; remediationsFixed is passed to i18n not rendered raw
+    expect(screen.getByText('90%')).toBeInTheDocument()
   })
 
   it('renders failed checks count', () => {

@@ -9,7 +9,7 @@ import React from 'react'
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // ---------------------------------------------------------------------------
@@ -142,9 +142,9 @@ describe('MaintenanceWindows', () => {
       const startInput = screen.getAllByDisplayValue('')[0]
       const endInput = screen.getAllByDisplayValue('')[1]
 
-      // Set end before start
-      await userEvent.type(startInput, getTwoHoursFromNow())
-      await userEvent.type(endInput, getOneHourFromNow())
+      // Use fireEvent.change for datetime-local inputs (userEvent.type has issues with these)
+      fireEvent.change(startInput, { target: { value: getTwoHoursFromNow() } })
+      fireEvent.change(endInput, { target: { value: getOneHourFromNow() } })
 
       await userEvent.click(screen.getByText('Add'))
       expect(screen.getByText('End time must be after start time')).toBeInTheDocument()
@@ -168,16 +168,17 @@ describe('MaintenanceWindows', () => {
       render(<MaintenanceWindows />)
       await userEvent.click(screen.getByText('+ Schedule'))
 
-      const clusterSelect = screen.getByRole('combobox', { name: '' })
+      // Use getAllByRole to avoid "found multiple" error when multiple comboboxes exist
+      const clusterSelect = screen.getAllByRole('combobox')[0]
       await userEvent.selectOptions(clusterSelect, 'prod-cluster')
 
       const descInput = screen.getByPlaceholderText('Description')
       await userEvent.type(descInput, 'Weekly maintenance')
 
-      // Set valid start and end times
+      // Use fireEvent.change for datetime-local inputs
       const dateInputs = screen.getAllByDisplayValue('')
-      await userEvent.type(dateInputs[0], getOneHourFromNow())
-      await userEvent.type(dateInputs[1], getTwoHoursFromNow())
+      fireEvent.change(dateInputs[0], { target: { value: getOneHourFromNow() } })
+      fireEvent.change(dateInputs[1], { target: { value: getTwoHoursFromNow() } })
 
       await userEvent.click(screen.getByText('Add'))
       // The window should now appear — either name or description visible

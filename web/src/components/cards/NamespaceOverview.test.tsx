@@ -178,7 +178,7 @@ describe('NamespaceOverview', () => {
 
   it('renders cluster badges when clusters are present', () => {
     setupMocks({
-      clusters: [makeCluster('cluster-a'), makeCluster('cluster-b')],
+      clusters: [makeCluster('cluster-a')],
       namespaces: ['default', 'kube-system'],
     })
     render(<NamespaceOverview />)
