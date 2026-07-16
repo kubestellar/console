@@ -13,7 +13,7 @@ vi.mock('../../../hooks/useMCP', () => ({
   })),
 }))
 
-vi.mock('./SortableGpuCard', () => ({
+vi.mock('../SortableGpuCard', () => ({
   SortableGpuCard: ({ card }: { card: GpuDashCard }) => (
     <div data-testid="sortable-card" data-type={card.type} />
   ),

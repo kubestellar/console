@@ -87,10 +87,12 @@ function renderTab(overrides: Partial<GPUOverviewTabProps> = {}) {
 
 describe('GPUOverviewTab', () => {
   it('displays the key headline stat numbers', () => {
-    renderTab({ stats: makeStats({ totalGPUs: 8, availableGPUs: 3, activeReservations: 5, reservedGPUs: 5 }) })
+    // Use distinct values for all stats to avoid multiple-match errors with getByText
+    renderTab({ stats: makeStats({ totalGPUs: 8, availableGPUs: 3, activeReservations: 5, reservedGPUs: 6 }) })
     expect(screen.getByText('8')).toBeTruthy()
     expect(screen.getByText('3')).toBeTruthy()
     expect(screen.getByText('5')).toBeTruthy()
+    expect(screen.getByText('6')).toBeTruthy()
   })
 
   it('shows the utilization percentage in the donut gauge', () => {
@@ -142,7 +144,8 @@ describe('GPUOverviewTab', () => {
   it('shows "no usage data yet" when utilizations is null for a reservation', () => {
     const reservations = [makeReservation()]
     renderTab({ filteredReservations: reservations, utilizations: null })
-    expect(screen.getByText('gpuReservations.utilization.noData')).toBeTruthy()
+    // t('gpuReservations.utilization.noData', 'No usage data yet') returns the default value
+    expect(screen.getByText('No usage data yet')).toBeTruthy()
   })
 
   it('calls onSelectReservation when an interactive reservation is clicked', () => {
