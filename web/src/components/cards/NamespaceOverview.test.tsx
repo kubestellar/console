@@ -66,8 +66,8 @@ vi.mock('../ui/ClusterBadge', () => ({
 }))
 
 vi.mock('../ui/ClusterStatusBadge', () => ({
-  ClusterStatusBadge: ({ cluster }: { cluster: { name: string } }) => (
-    <span data-testid="cluster-status-badge">{cluster.name}</span>
+  ClusterStatusBadge: ({ state }: { state: string }) => (
+    <span data-testid="cluster-status-badge">{state}</span>
   ),
   getClusterState: vi.fn(() => 'healthy'),
 }))
