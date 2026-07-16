@@ -139,8 +139,12 @@ describe('MaintenanceWindows', () => {
       const clusterSelect = screen.getAllByRole('combobox')[0]
       await userEvent.selectOptions(clusterSelect, 'prod')
 
-      const startInput = screen.getAllByDisplayValue('')[0]
-      const endInput = screen.getAllByDisplayValue('')[1]
+      // Get datetime-local inputs specifically (description text input is at index [0])
+      const datetimeInputs = screen.getAllByDisplayValue('').filter(
+        el => (el as HTMLInputElement).type === 'datetime-local'
+      )
+      const startInput = datetimeInputs[0]
+      const endInput = datetimeInputs[1]
 
       // Use fireEvent.change for datetime-local inputs (userEvent.type has issues with these)
       fireEvent.change(startInput, { target: { value: getTwoHoursFromNow() } })

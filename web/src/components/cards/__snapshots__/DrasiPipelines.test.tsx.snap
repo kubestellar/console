@@ -1,0 +1,131 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DrasiPipelines > matches snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="h-full flex flex-col min-h-card"
+  >
+    <div
+      class="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0"
+    >
+      <span
+        class="text-sm font-medium text-muted-foreground"
+      >
+        1 pipeline
+      </span>
+      <div
+        data-testid="card-controls"
+      />
+    </div>
+    <input
+      data-testid="card-search"
+      placeholder="Search pipelines..."
+      value=""
+    />
+    <div
+      class="grid grid-cols-3 gap-2 mb-3"
+    >
+      <div
+        class="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center"
+      >
+        <p
+          class="text-2xs text-green-400"
+        >
+          Running
+        </p>
+        <p
+          class="text-lg font-bold text-foreground"
+        >
+          1
+        </p>
+      </div>
+      <div
+        class="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center"
+      >
+        <p
+          class="text-2xs text-yellow-400"
+        >
+          Stopped
+        </p>
+        <p
+          class="text-lg font-bold text-foreground"
+        >
+          0
+        </p>
+      </div>
+      <div
+        class="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-center"
+      >
+        <p
+          class="text-2xs text-red-400"
+        >
+          Error
+        </p>
+        <p
+          class="text-lg font-bold text-foreground"
+        >
+          0
+        </p>
+      </div>
+    </div>
+    <div
+      class="flex-1 overflow-y-auto space-y-2"
+    >
+      <div
+        class="p-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+      >
+        <div
+          class="flex flex-wrap items-center justify-between gap-y-1 mb-1"
+        >
+          <div
+            class="flex items-center gap-2"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-activity w-4 h-4 text-green-400"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
+              />
+            </svg>
+            <span
+              class="text-sm font-medium text-foreground truncate"
+            >
+              pipeline-alpha
+            </span>
+            <span
+              class="px-1.5 py-0.5 rounded text-2xs bg-green-500/10 text-green-400"
+            >
+              Running
+            </span>
+          </div>
+          <span
+            class="text-2xs text-muted-foreground/60"
+          >
+            1m ago
+          </span>
+        </div>
+        <div
+          class="flex items-center gap-4 text-xs text-muted-foreground"
+        >
+          <span>
+            3 queries
+          </span>
+          <span>
+            2 reactions
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;

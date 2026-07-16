@@ -104,9 +104,10 @@ describe('ClusterGroups', () => {
     expect(container.firstChild).toBeTruthy()
   })
 
-  it('renders empty state when no groups exist', () => {
+  it('renders built-in group when no user groups exist', () => {
     render(<ClusterGroups />)
-    expect(screen.getByText('noGroupsYet')).toBeInTheDocument()
+    // builtInGroup (all-healthy-clusters) is always included; noGroupsYet is never shown
+    expect(screen.getByText('all-healthy-clusters')).toBeInTheDocument()
   })
 
   it('renders demo data when shouldUseDemoData is true', () => {
