@@ -19,6 +19,7 @@ vi.mock('../../hooks/useCachedData', () => ({
 
 vi.mock('react-router-dom', () => ({
   useLocation: vi.fn(() => ({ pathname: '/', search: '', hash: '', state: null })),
+  useNavigate: vi.fn(() => vi.fn()),
 }))
 
 vi.mock('../ui/RefreshIndicator', () => ({

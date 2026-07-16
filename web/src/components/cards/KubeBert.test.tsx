@@ -31,6 +31,7 @@ vi.mock('../../lib/analytics', () => ({
 
 vi.mock('../../hooks/useGameKeys', () => ({
   useGameKeys: vi.fn(),
+  useGameKeyTracking: vi.fn(),
 }))
 
 // ---------------------------------------------------------------------------

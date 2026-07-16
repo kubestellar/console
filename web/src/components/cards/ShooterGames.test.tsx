@@ -22,6 +22,7 @@ vi.mock('./CardWrapper', () => ({
 vi.mock('./CardDataContext', () => ({
   useCardLoadingState: vi.fn(),
   useReportCardDataState: vi.fn(),
+  useCardDemoState: vi.fn(() => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false })),
 }))
 
 vi.mock('../../lib/analytics', () => ({
@@ -31,6 +32,7 @@ vi.mock('../../lib/analytics', () => ({
 
 vi.mock('../../hooks/useGameKeys', () => ({
   useGameKeys: () => ({ key: null }),
+  useGameKeyTracking: vi.fn(),
 }))
 
 vi.mock('../../lib/safeLocalStorage', () => ({
