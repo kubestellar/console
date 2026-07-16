@@ -137,6 +137,7 @@ vi.mock('./GitHubActivityItems', () => ({
 
 vi.mock('../../lib/constants/time', () => ({
   MS_PER_DAY: 86400000,
+  MS_PER_HOUR: 3600000,
 }))
 
 vi.mock('../../lib/constants/network', () => ({

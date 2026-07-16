@@ -20,6 +20,11 @@ vi.mock('../../lib/analytics', () => ({
   emitGameEnded: vi.fn(),
 }))
 
+vi.mock('../../hooks/useGameKeys', () => ({
+  useGameKeys: () => ({ key: null }),
+  useGameKeyTracking: vi.fn(),
+}))
+
 vi.mock('../../lib/safeLocalStorage', () => ({
   safeGetItem: vi.fn(() => null),
   safeSetItem: vi.fn(),

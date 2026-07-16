@@ -22,6 +22,7 @@ vi.mock('../../lib/analytics', () => ({
 
 vi.mock('../../hooks/useGameKeys', () => ({
   useGameKeys: () => ({ key: null }),
+  useGameKeyTracking: vi.fn(),
 }))
 
 vi.mock('@/lib/utils/localStorage', () => ({
