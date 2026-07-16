@@ -12,6 +12,12 @@ import (
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 // ---------- matchString ----------
@@ -87,6 +93,54 @@ func newGroupWithStatics(members ...string) *v1alpha1.ClusterGroup {
 	}
 }
 
+func newPersistenceValidationK8sClient(t *testing.T, clusterNames ...string) *k8s.MultiClusterClient {
+	t.Helper()
+	require.NotEmpty(t, clusterNames, "at least one cluster name is required")
+
+	client, err := k8s.NewMultiClusterClient("")
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	rawConfig := &clientcmdapi.Config{
+		Clusters:       make(map[string]*clientcmdapi.Cluster, len(clusterNames)),
+		Contexts:       make(map[string]*clientcmdapi.Context, len(clusterNames)),
+		AuthInfos:      map[string]*clientcmdapi.AuthInfo{"test-user": {}},
+		CurrentContext: clusterNames[0],
+	}
+	for _, name := range clusterNames {
+		rawConfig.Clusters[name] = &clientcmdapi.Cluster{Server: "https://" + name + ".example.com"}
+		rawConfig.Contexts[name] = &clientcmdapi.Context{Cluster: name, AuthInfo: "test-user"}
+		client.InjectClient(name, k8sfake.NewSimpleClientset())
+	}
+	client.SetRawConfig(rawConfig)
+
+	return client
+}
+
+func injectNodes(client *k8s.MultiClusterClient, clusterName string, nodes ...*corev1.Node) {
+	if client == nil {
+		return
+	}
+	client.InjectClient(clusterName, k8sfake.NewSimpleClientset(nodesToRuntimeObjects(nodes)...))
+}
+
+func nodesToRuntimeObjects(nodes []*corev1.Node) []runtime.Object {
+	objects := make([]runtime.Object, 0, len(nodes))
+	for _, node := range nodes {
+		objects = append(objects, node)
+	}
+	return objects
+}
+
+func testNode(name string, labels map[string]string) *corev1.Node {
+	return &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+	}
+}
+
 func TestEvaluateClusterGroup_EmptyGroup(t *testing.T) {
 	h := newTestHandler() // k8sClient == nil
 	result := h.evaluateClusterGroup(context.Background(), &v1alpha1.ClusterGroup{})
@@ -141,6 +195,29 @@ func TestEvaluateClusterGroup_NoDynamicFiltersNoClient(t *testing.T) {
 	}
 	result := h.evaluateClusterGroup(context.Background(), group)
 	assert.Empty(t, result)
+}
+
+func TestEvaluateClusterGroup_DynamicFiltersMatchClusterAndNodeLabels(t *testing.T) {
+	client := newPersistenceValidationK8sClient(t, "prod-gpu", "prod-cpu", "dev-gpu")
+	injectNodes(client, "prod-gpu", testNode("prod-gpu-node", map[string]string{"nodepool": "gpu"}))
+	injectNodes(client, "prod-cpu", testNode("prod-cpu-node", map[string]string{"nodepool": "cpu"}))
+	injectNodes(client, "dev-gpu", testNode("dev-gpu-node", map[string]string{"nodepool": "gpu"}))
+
+	h := &ConsolePersistenceHandlers{k8sClient: client}
+	group := &v1alpha1.ClusterGroup{
+		Spec: v1alpha1.ClusterGroupSpec{
+			StaticMembers: []string{"static-cluster"},
+			DynamicFilters: []v1alpha1.ClusterFilter{
+				{Field: "name", Operator: "contains", Value: "prod"},
+				{Field: "label", Operator: "eq", LabelKey: "nodepool", Value: "gpu"},
+			},
+		},
+	}
+
+	result := h.evaluateClusterGroup(context.Background(), group)
+	sort.Strings(result)
+
+	assert.Equal(t, []string{"prod-gpu", "static-cluster"}, result)
 }
 
 // ---------- clusterGPUCount ----------

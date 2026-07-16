@@ -292,11 +292,10 @@ function EventRow({ event }: { event: BatchEvent }) {
         </span>
 
         <div style={FLEX_MIN_WIDTH_STYLE}>
-          <div style={{
+          <div className="mb-0.5" style={{
             fontSize: 12,
             fontWeight: 500,
             color: 'var(--s-text)',
-            marginBottom: 2,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -313,7 +312,7 @@ function EventRow({ event }: { event: BatchEvent }) {
             </div>
           )}
           {event.failureReason && (
-            <div style={{ fontSize: 10, color: 'var(--s-critical)', marginTop: 2 }}>
+            <div className="mt-0.5" style={{ fontSize: 10, color: 'var(--s-critical)' }}>
               {event.failureReason}
             </div>
           )}
@@ -361,10 +360,9 @@ function EventRow({ event }: { event: BatchEvent }) {
           </div>
           {event.steps.map((step, i) => (
             <div key={i} className="flex items-start gap-2">
-              <span style={{
+              <span className="mt-px" style={{
                 fontSize: 12,
                 flexShrink: 0,
-                marginTop: 1,
                 color: step.status === 'completed' ? 'var(--s-success)'
                   : step.status === 'failed' ? 'var(--s-critical)'
                   : step.status === 'in_progress' ? 'var(--s-info)'
@@ -384,22 +382,20 @@ function EventRow({ event }: { event: BatchEvent }) {
                   {step.name}
                 </div>
                 {step.output && (
-                  <div style={{
+                  <div className="mt-0.5" style={{
                     fontFamily: 'var(--s-mono)',
                     fontSize: 10,
                     color: 'var(--s-text-muted)',
-                    marginTop: 2,
                     wordBreak: 'break-all',
                   }}>
                     {step.output}
                   </div>
                 )}
                 {step.error && (
-                  <div style={{
+                  <div className="mt-0.5" style={{
                     fontFamily: 'var(--s-mono)',
                     fontSize: 10,
                     color: 'var(--s-critical)',
-                    marginTop: 2,
                   }}>
                     {step.error}
                   </div>
