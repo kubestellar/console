@@ -2,6 +2,7 @@
  * AI Agents Dashboard Configuration
  * Tabbed view: Kagenti | Kagent
  */
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const aiAgentsDashboardConfig: UnifiedDashboardConfig = {
@@ -53,7 +54,7 @@ export const aiAgentsDashboardConfig: UnifiedDashboardConfig = {
     dragDrop: true,
     addCard: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
   },
   storageKey: 'ai-agents-dashboard-cards',
 }

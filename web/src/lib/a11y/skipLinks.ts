@@ -1,5 +1,7 @@
 import { FOCUS_OUTLINE_WIDTH_PX, FOCUS_OUTLINE_OFFSET_PX } from './constants'
 
+const OVERLAY_Z_INDEX = 9_999
+
 export interface SkipLink {
   id: string
   label: string
@@ -46,7 +48,7 @@ export const SKIP_LINK_STYLES = {
     width: 'auto',
     height: 'auto',
     overflow: 'visible',
-    zIndex: 9999,
+    zIndex: OVERLAY_Z_INDEX,
     padding: '8px 16px',
     backgroundColor: '#1e293b',
     color: '#f8fafc',
@@ -92,7 +94,7 @@ export function injectSkipLinkStyles(): void {
       width: auto;
       height: auto;
       overflow: visible;
-      z-index: 9999;
+      z-index: ${OVERLAY_Z_INDEX};
       padding: 8px 16px;
       background-color: #1e293b;
       color: #f8fafc;

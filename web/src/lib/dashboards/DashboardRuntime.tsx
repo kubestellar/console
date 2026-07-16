@@ -65,6 +65,8 @@ import { useToast } from '../../components/ui/Toast'
 // Dashboard Registry
 // ============================================================================
 
+const DASHBOARD_DEFAULT_REFRESH_MS = 30_000
+
 const dashboardRegistry = new Map<string, DashboardDefinition>()
 
 export function registerDashboard(definition: DashboardDefinition) {
@@ -139,7 +141,7 @@ export function DashboardRuntime({
 
   const {
     autoRefresh: enableAutoRefresh = true,
-    autoRefreshInterval = 30000,
+    autoRefreshInterval = DASHBOARD_DEFAULT_REFRESH_MS,
     templates: enableTemplates = true,
     addCard: enableAddCard = true,
     cardSections: enableCardSections = true,

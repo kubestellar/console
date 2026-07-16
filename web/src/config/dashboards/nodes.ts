@@ -1,6 +1,7 @@
 /**
  * Nodes Dashboard Configuration
  */
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const nodesDashboardConfig: UnifiedDashboardConfig = {
@@ -20,7 +21,7 @@ export const nodesDashboardConfig: UnifiedDashboardConfig = {
     dragDrop: true,
     addCard: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
   },
   storageKey: 'nodes-dashboard-cards',
 }

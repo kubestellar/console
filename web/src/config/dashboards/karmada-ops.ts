@@ -4,6 +4,7 @@
  * Multi-cluster operations dashboard for Karmada-based environments.
  * Monitors KubeRay fleet, Trino gateways, SLO compliance, and failover events.
  */
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const karmadaOpsDashboardConfig: UnifiedDashboardConfig = {
@@ -29,7 +30,7 @@ export const karmadaOpsDashboardConfig: UnifiedDashboardConfig = {
     dragDrop: true,
     addCard: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
   },
   storageKey: 'karmada-ops-dashboard-cards',
 }

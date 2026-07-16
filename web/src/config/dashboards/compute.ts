@@ -4,6 +4,7 @@
  * Dashboard focused on compute resources: clusters, nodes, pods.
  */
 
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const computeDashboardConfig: UnifiedDashboardConfig = {
@@ -116,7 +117,7 @@ export const computeDashboardConfig: UnifiedDashboardConfig = {
   features: {
     dragDrop: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
     addCard: true,
   },
 

@@ -2,6 +2,8 @@
  * Übersicht widget code generators.
  */
 
+const WIDGET_DEFAULT_REFRESH_INTERVAL_MS = 30_000
+
 import { WIDGET_CARDS, WIDGET_STATS, WIDGET_TEMPLATES } from './widgetRegistry'
 import { generateWidgetStyles, generateWidgetShell } from './styleConverter'
 import { resolveWidgetEndpoint, generateWidgetCommand } from './codeGenerator.utils'
@@ -11,7 +13,7 @@ import { generateCardRenderFunction } from './codeGenerator.templates'
 export function generateCardWidget(
   cardType: string,
   apiEndpoint: string,
-  refreshInterval: number = 30000
+  refreshInterval: number = WIDGET_DEFAULT_REFRESH_INTERVAL_MS
 ): string {
   const card = WIDGET_CARDS[cardType]
   if (!card) {
@@ -152,7 +154,7 @@ export const render = ({ output }) => {
 export function generateTemplateWidget(
   templateId: string,
   apiEndpoint: string,
-  refreshInterval: number = 30000
+  refreshInterval: number = WIDGET_DEFAULT_REFRESH_INTERVAL_MS
 ): string {
   const template = WIDGET_TEMPLATES[templateId]
   if (!template) {

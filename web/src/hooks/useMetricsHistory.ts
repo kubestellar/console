@@ -7,6 +7,7 @@ import { MS_PER_DAY, MS_PER_MINUTE } from '../lib/constants/time'
 const STORAGE_KEY = 'kubestellar-metrics-history'
 const HISTORY_CHANGED_EVENT = 'kubestellar-metrics-history-changed'
 const MAX_SNAPSHOTS = 1008 // 7 days at 10-min intervals (6 per hour * 24 hours * 7 days)
+const METRICS_INITIAL_CAPTURE_DELAY_MS = 5_000
 /** Cache TTL: 7 days — remove snapshots older than this */
 const CACHE_TTL_MS = 7 * MS_PER_DAY
 /** Maximum number of increasing-restart pods to include in AI context */
@@ -355,7 +356,7 @@ export function useMetricsHistory() {
       if (clustersRef.current.length > 0 && lastSnapshotRef.current === 0) {
         captureSnapshot()
       }
-    }, 5000)
+    }, METRICS_INITIAL_CAPTURE_DELAY_MS)
 
     // Set up stable interval — reads latest data from refs each tick
     const intervalId = setInterval(captureSnapshot, interval)

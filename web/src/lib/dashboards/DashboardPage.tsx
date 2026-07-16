@@ -39,6 +39,7 @@ import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 
 const GRID_STYLE = { gridAutoRows: `${DASHBOARD_CARD_ROW_HEIGHT_PX}px` } as const
 const COMPACT_GRID_BREAKPOINT_PX = 1200
+const OVERLAY_Z_INDEX = 9_999
 
 // ============================================================================
 // Types
@@ -562,7 +563,7 @@ export function DashboardPage({
                       <div ref={loadMoreRef} className="h-1 w-full" aria-hidden="true" />
                     )}
                   </SortableContext>
-                  <DragOverlay dropAnimation={null} zIndex={9999}>
+                  <DragOverlay dropAnimation={null} zIndex={OVERLAY_Z_INDEX}>
                     {activeId && cards.find(c => c.id === activeId) ? (
                       <DragPreviewCard card={cards.find(c => c.id === activeId)!} />
                     ) : activeId && activeDragData?.type === 'workload' ? (

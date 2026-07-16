@@ -24,6 +24,7 @@ const SESSION_EXPIRY_REDIRECT_MS = 3_000
 const TOKEN_REFRESH_HEADER = 'X-Token-Refresh' // server signals when token should be refreshed
 /** Endpoint used to invalidate the HttpOnly auth cookie on the server side (#6061). */
 const AUTH_LOGOUT_ENDPOINT = '/auth/logout'
+const TOAST_Z_INDEX = 99_999
 
 // Public API paths that don't require authentication (served without JWT on the backend)
 const PUBLIC_API_PREFIXES = ['/api/missions/browse', '/api/missions/file', '/api/compliance/']
@@ -215,7 +216,7 @@ function showSessionExpiredBanner(): void {
   const toast = document.createElement('div')
   toast.id = 'session-expired-banner'
   toast.style.cssText = `
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 99999;
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: ${TOAST_Z_INDEX};
     display: flex; align-items: center; gap: 12px;
     padding: 12px 20px;
     background: rgba(234,179,8,0.15);

@@ -4,6 +4,7 @@
  * Dashboard focused on storage resources: PVCs, PVs, StorageClasses.
  */
 
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const storageDashboardConfig: UnifiedDashboardConfig = {
@@ -97,7 +98,7 @@ export const storageDashboardConfig: UnifiedDashboardConfig = {
   features: {
     dragDrop: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
     addCard: true,
   },
 

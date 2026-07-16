@@ -1,6 +1,7 @@
 /**
  * Deploy Dashboard Configuration
  */
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const deployDashboardConfig: UnifiedDashboardConfig = {
@@ -38,7 +39,7 @@ export const deployDashboardConfig: UnifiedDashboardConfig = {
     dragDrop: true,
     addCard: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
   },
   // Reset the saved layout key so the Deploy dashboard no longer resurrects
   // the old placeholder Test Card from previously persisted defaults.

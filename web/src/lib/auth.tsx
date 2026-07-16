@@ -108,11 +108,12 @@ function showExpiryWarningBanner(onRefresh: () => void): void {
   const BTN_MARGIN_LEFT_PX = '8px'
   const BTN_PAD_V_PX = '4px'
   const BTN_PAD_H_PX = '12px'
+  const TOAST_Z_INDEX = 99_999
 
   const banner = document.createElement('div')
   banner.id = 'session-expiry-warning'
   banner.style.cssText = `
-    position: fixed; bottom: ${BANNER_BOTTOM_PX}; left: 50%; transform: translateX(-50%); z-index: 99999;
+    position: fixed; bottom: ${BANNER_BOTTOM_PX}; left: 50%; transform: translateX(-50%); z-index: ${TOAST_Z_INDEX};
     display: flex; align-items: center; gap: ${BANNER_GAP_PX};
     padding: ${BANNER_PAD_V_PX} ${BANNER_PAD_H_PX};
     background: ${WARN_BG};

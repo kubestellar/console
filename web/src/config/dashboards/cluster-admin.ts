@@ -4,6 +4,7 @@
  * Persona-based dashboard for platform engineers managing multi-cluster
  * Kubernetes environments. Covers health, operations, security, and tooling.
  */
+import { DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS } from './constants'
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const clusterAdminDashboardConfig: UnifiedDashboardConfig = {
@@ -52,7 +53,7 @@ export const clusterAdminDashboardConfig: UnifiedDashboardConfig = {
     dragDrop: true,
     addCard: true,
     autoRefresh: true,
-    autoRefreshInterval: 30000,
+    autoRefreshInterval: DASHBOARD_DEFAULT_REFRESH_INTERVAL_MS,
   },
   storageKey: 'kubestellar-cluster-admin-cards',
 }
