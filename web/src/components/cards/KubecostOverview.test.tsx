@@ -61,17 +61,17 @@ describe('KubecostOverview', () => {
   // 3. Cost breakdown
   it('renders CPU cost category', () => {
     render(<KubecostOverview />)
-    expect(screen.getByText('CPU')).toBeInTheDocument()
+    expect(screen.getByText(/CPU: \$/)).toBeInTheDocument()
   })
 
   it('renders Memory cost category', () => {
     render(<KubecostOverview />)
-    expect(screen.getByText('Memory')).toBeInTheDocument()
+    expect(screen.getByText(/Memory: \$/)).toBeInTheDocument()
   })
 
   it('renders Storage cost category', () => {
     render(<KubecostOverview />)
-    expect(screen.getByText('Storage')).toBeInTheDocument()
+    expect(screen.getByText(/Storage: \$/)).toBeInTheDocument()
   })
 
   // 4. Recommendations
@@ -83,7 +83,7 @@ describe('KubecostOverview', () => {
 
   it('renders potential savings amount', () => {
     render(<KubecostOverview />)
-    expect(screen.getByText(/890/)).toBeInTheDocument()
+    expect(screen.getAllByText(/890/).length).toBeGreaterThan(0)
   })
 
   // 5. External link

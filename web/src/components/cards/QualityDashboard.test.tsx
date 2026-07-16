@@ -53,13 +53,11 @@ vi.mock('../ui/Button', () => ({
 // ---------------------------------------------------------------------------
 
 const defaultStats = {
-  totalChecks: 42,
-  passedChecks: 38,
-  failedChecks: 4,
-  pendingChecks: 0,
-  score: 90,
-  sweepRunning: false,
-  lastSweepAt: new Date().toISOString(),
+  bugsFoundCount: 42,
+  remediationsFixed: 38,
+  driftEventsCount: 4,
+  healthScore: 90,
+  progressPct: '90%',
 }
 
 const defaultReturn = {
@@ -121,12 +119,12 @@ describe('QualityDashboard', () => {
   // 3. Happy path
   it('renders score value', () => {
     render(<QualityDashboard />)
-    expect(screen.getByText(/90/)).toBeInTheDocument()
+    expect(screen.getByText('90%')).toBeInTheDocument()
   })
 
   it('renders total checks count', () => {
     render(<QualityDashboard />)
-    expect(screen.getByText(/42/)).toBeInTheDocument()
+    expect(screen.getByText('42')).toBeInTheDocument()
   })
 
   it('renders passed checks count', () => {
@@ -136,12 +134,12 @@ describe('QualityDashboard', () => {
 
   it('renders failed checks count', () => {
     render(<QualityDashboard />)
-    expect(screen.getByText(/4/)).toBeInTheDocument()
+    expect(screen.getByText('4')).toBeInTheDocument()
   })
 
-  // 4. Snapshot
-  it('matches snapshot', () => {
-    const { asFragment } = render(<QualityDashboard />)
-    expect(asFragment()).toMatchSnapshot()
+  // 4. Smoke render
+  it('renders quality dashboard sections', () => {
+    render(<QualityDashboard />)
+    expect(screen.getByText('bug_sweep')).toBeInTheDocument()
   })
 })

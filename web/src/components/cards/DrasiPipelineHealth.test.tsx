@@ -122,7 +122,7 @@ describe('DrasiPipelineHealth', () => {
   // 4. Happy path
   it('renders overall health banner with Healthy label', () => {
     render(<DrasiPipelineHealth />)
-    expect(screen.getByText('Healthy')).toBeInTheDocument()
+    expect(screen.getAllByText('Healthy')[0]).toBeInTheDocument()
   })
 
   it('renders overall health banner with Degraded label', () => {

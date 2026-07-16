@@ -187,7 +187,7 @@ describe('DrasiPipelines', () => {
 
   it('renders Running status label', () => {
     render(<DrasiPipelines />)
-    expect(screen.getByText('Running')).toBeInTheDocument()
+    expect(screen.getAllByText('Running')[0]).toBeInTheDocument()
   })
 
   it('renders query count', () => {

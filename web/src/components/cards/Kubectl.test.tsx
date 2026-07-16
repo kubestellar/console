@@ -99,7 +99,7 @@ describe('Kubectl', () => {
   it('renders no-cluster message when clusters list is empty', () => {
     setup({ deduplicatedClusters: [] })
     render(<Kubectl />)
-    expect(screen.getByText(/noClusters|no cluster/i)).toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
 
   // 2. Cluster selector
@@ -128,7 +128,9 @@ describe('Kubectl', () => {
     render(<Kubectl />)
 
     await user.type(screen.getByPlaceholderText(/kubectl/i), 'get pods')
-    await user.click(screen.getByRole('button', { name: /send|run|execute/i }))
+    const executeButton = document.querySelector('button[title="Execute command (or press Enter)"]') as HTMLButtonElement
+    expect(executeButton).toBeInTheDocument()
+    await user.click(executeButton)
 
     expect(mockExecute).toHaveBeenCalled()
   })

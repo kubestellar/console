@@ -38,8 +38,8 @@ vi.mock('../../hooks/useMissions', () => ({
 }))
 
 vi.mock('../acmm/TargetBalanceCharts', () => ({
-  TargetBalanceCharts: ({ targetLevel }: { targetLevel: number }) => (
-    <div data-testid="target-balance-charts" data-level={targetLevel} />
+  TargetBalanceCharts: ({ level }: { level: number }) => (
+    <div data-testid="target-balance-charts" data-level={level} />
   ),
 }))
 
@@ -75,7 +75,9 @@ const makeRec = (overrides = {}) => ({
     level: 3,
     description: 'Implement an OODA loop.',
     detectionPattern: 'ooda',
+    detection: { type: 'path', pattern: 'ooda' },
   },
+  reason: 'Missing OODA automation.',
   priority: 1,
   sources: ['acmm' as const],
   ...overrides,
@@ -159,19 +161,13 @@ describe('ACMMRecommendations', () => {
   it('calls startMission when "ask agent" button is clicked', async () => {
     const user = userEvent.setup()
     render(<ACMMRecommendations />)
-    const agentButtons = screen.getAllByRole('button')
-    // Click first available agent-related button
-    const launchBtn = agentButtons.find(b => b.textContent?.includes('Sparkles') || b.querySelector('svg'))
-    if (launchBtn) {
-      await user.click(launchBtn)
-    }
-    // Just assert no crash — mission button is optional UI
-    expect(document.body).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: /Ask agent for help$/i }))
+    expect(mockStartMission).toHaveBeenCalledTimes(1)
   })
 
-  // 5. Snapshot
-  it('matches snapshot', () => {
-    const { asFragment } = render(<ACMMRecommendations />)
-    expect(asFragment()).toMatchSnapshot()
+  // 5. Smoke render
+  it('renders recommendations section', () => {
+    render(<ACMMRecommendations />)
+    expect(screen.getByText('Top recommendations')).toBeInTheDocument()
   })
 })

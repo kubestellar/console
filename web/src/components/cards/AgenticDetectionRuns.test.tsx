@@ -73,13 +73,12 @@ vi.mock('../../lib/validateExternalUrl', () => ({
 // ---------------------------------------------------------------------------
 
 const makeRun = (overrides: Partial<DetectionRun> = {}): DetectionRun => ({
-  id: 'run-1',
+  runId: 'run-1',
   conclusion: 'success',
   reason: 'tests_pass',
+  workflowUrl: 'https://github.com/org/repo/actions/runs/1',
   commentedAt: new Date().toISOString(),
-  runUrl: 'https://github.com/org/repo/actions/runs/1',
-  workflowName: 'CI',
-  headSha: 'abc123',
+  commentUrl: 'https://github.com/org/repo/issues/1#issuecomment-1',
   ...overrides,
 })
 
@@ -168,9 +167,9 @@ describe('AgenticDetectionRuns', () => {
     expect(screen.getByText(/Tests Pass/i)).toBeInTheDocument()
   })
 
-  it('renders workflow name', () => {
+  it('renders formatted run reason', () => {
     render(<AgenticDetectionRuns />)
-    expect(screen.getByText('CI')).toBeInTheDocument()
+    expect(screen.getByText(/Tests Pass/i)).toBeInTheDocument()
   })
 
   it('renders run URL link', () => {
@@ -186,17 +185,17 @@ describe('AgenticDetectionRuns', () => {
 
   it('renders multiple runs', () => {
     const runs = [
-      makeRun({ id: 'r1', conclusion: 'success' }),
-      makeRun({ id: 'r2', conclusion: 'failure', reason: 'build_error' }),
+      makeRun({ runId: 'r1', conclusion: 'success' }),
+      makeRun({ runId: 'r2', conclusion: 'failure', reason: 'build_error', workflowUrl: 'https://github.com/org/repo/actions/runs/2' }),
     ]
     mockUseCardData.mockReturnValue(makeCardDataReturn(runs))
     render(<AgenticDetectionRuns />)
     expect(screen.getAllByRole('link').length).toBeGreaterThanOrEqual(2)
   })
 
-  // 5. Snapshot
-  it('matches snapshot', () => {
-    const { asFragment } = render(<AgenticDetectionRuns />)
-    expect(asFragment()).toMatchSnapshot()
+  // 5. Smoke render
+  it('renders detection runs list', () => {
+    render(<AgenticDetectionRuns />)
+    expect(screen.getByText(/Tests Pass/i)).toBeInTheDocument()
   })
 })

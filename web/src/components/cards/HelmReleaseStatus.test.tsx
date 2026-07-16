@@ -219,8 +219,8 @@ describe('HelmReleaseStatus', () => {
       render(<HelmReleaseStatus />)
       expect(screen.getByText('prometheus')).toBeInTheDocument()
       expect(screen.getByText('grafana')).toBeInTheDocument()
-      expect(screen.getByText('deployed')).toBeInTheDocument()
-      expect(screen.getByText('failed')).toBeInTheDocument()
+      expect(screen.getAllByText('deployed')[0]).toBeInTheDocument()
+      expect(screen.getAllByText('failed')[0]).toBeInTheDocument()
     })
 
     it('renders cluster badges for each release', async () => {

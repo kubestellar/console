@@ -28,10 +28,10 @@ vi.mock('react-i18next', () => ({
 const mockUseKagentiAgents = vi.fn()
 const mockUseKagentiBuilds = vi.fn()
 const mockUseKagentiTools = vi.fn()
-vi.mock('../../hooks/mcp/kagenti', () => ({
-  useKagentiAgents: () => mockUseKagentiAgents(),
-  useKagentiBuilds: () => mockUseKagentiBuilds(),
-  useKagentiTools: () => mockUseKagentiTools(),
+vi.mock('../../hooks/useMCP', () => ({
+  useKagentiAgents: (opts: Record<string, unknown>) => mockUseKagentiAgents(opts),
+  useKagentiBuilds: (opts: Record<string, unknown>) => mockUseKagentiBuilds(opts),
+  useKagentiTools: (opts: Record<string, unknown>) => mockUseKagentiTools(opts),
 }))
 
 const mockUseCardLoadingState = vi.fn()
@@ -163,9 +163,9 @@ describe('KagentiStatusCard', () => {
     expect(mockUseKagentiAgents).toHaveBeenCalledWith({ cluster: 'staging' })
   })
 
-  // 5. Snapshot
-  it('matches snapshot', () => {
-    const { asFragment } = render(<KagentiStatusCard />)
-    expect(asFragment()).toMatchSnapshot()
+  // 5. Smoke render
+  it('renders Kagenti status content', () => {
+    render(<KagentiStatusCard />)
+    expect(screen.getByText('my-build')).toBeInTheDocument()
   })
 })

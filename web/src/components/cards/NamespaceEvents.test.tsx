@@ -71,7 +71,7 @@ vi.mock('../../lib/cards/CardComponents', () => ({
 }))
 
 vi.mock('../ui/ClusterBadge', () => ({
-  ClusterBadge: ({ name }: { name: string }) => <span data-testid="cluster-badge">{name}</span>,
+  ClusterBadge: ({ cluster }: { cluster: string }) => <span data-testid="cluster-badge">{cluster}</span>,
 }))
 
 vi.mock('../ui/StatusBadge', () => ({
@@ -204,7 +204,7 @@ describe('NamespaceEvents', () => {
   it('renders empty state when showEmptyState is true', () => {
     setupMocks({ showEmptyState: true })
     render(<NamespaceEvents />)
-    expect(screen.getByText('noNamespaceEvents')).toBeInTheDocument()
+    expect(screen.getByText('noEvents')).toBeInTheDocument()
   })
 
   it('passes isLoading=true to useCardLoadingState when loading', () => {

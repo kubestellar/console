@@ -73,7 +73,7 @@ vi.mock('../ui/Skeleton', () => ({
 }))
 
 vi.mock('../ui/ClusterBadge', () => ({
-  ClusterBadge: ({ name }: { name: string }) => <span data-testid="cluster-badge">{name}</span>,
+  ClusterBadge: ({ cluster }: { cluster: string }) => <span data-testid="cluster-badge">{cluster}</span>,
 }))
 
 vi.mock('../ui/StatusBadge', () => ({
@@ -206,13 +206,13 @@ describe('NamespaceRBAC', () => {
   it('renders skeleton when showSkeleton is true', () => {
     setupMocks({ showSkeleton: true })
     render(<NamespaceRBAC />)
-    expect(screen.getByTestId('skeleton')).toBeInTheDocument()
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
   })
 
   it('renders empty state when showEmptyState is true', () => {
     setupMocks({ showEmptyState: true })
     render(<NamespaceRBAC />)
-    expect(screen.getByText('noRBACData')).toBeInTheDocument()
+    expect(screen.getByText('noData')).toBeInTheDocument()
   })
 
   it('passes isLoading=true when clusters are loading', () => {
@@ -239,7 +239,7 @@ describe('NamespaceRBAC', () => {
   })
 
   it('renders cluster badges when clusters are present', () => {
-    setupMocks({ clusters: [makeCluster('cluster-x')] })
+    setupMocks({ clusters: [makeCluster('cluster-x')], namespaces: ['default'] })
     render(<NamespaceRBAC />)
     const badges = screen.getAllByTestId('cluster-badge')
     expect(badges.length).toBeGreaterThan(0)

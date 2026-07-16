@@ -79,7 +79,7 @@ describe('CreateGroupForm', () => {
         onCancel={onCancel}
       />
     )
-    const cancelBtn = screen.getByRole('button', { name: /cancel/i })
+    const cancelBtn = screen.getAllByRole('button', { name: /common:common.cancel/i })[0]
     fireEvent.click(cancelBtn)
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
@@ -156,7 +156,7 @@ describe('EditGroupForm', () => {
         onCancel={onCancel}
       />
     )
-    const cancelBtn = screen.getByRole('button', { name: /cancel/i })
+    const cancelBtn = screen.getAllByRole('button', { name: /common:common.cancel/i })[0]
     fireEvent.click(cancelBtn)
     expect(onCancel).toHaveBeenCalledTimes(1)
   })

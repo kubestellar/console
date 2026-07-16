@@ -50,7 +50,7 @@ describe('KubeBert', () => {
   // 1. Start screen
   it('renders Play button on start screen', () => {
     render(<KubeBert />)
-    expect(screen.getByRole('button', { name: /play/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /start game/i })).toBeInTheDocument()
   })
 
   it('renders KubeBert heading on start screen', () => {
@@ -69,7 +69,7 @@ describe('KubeBert', () => {
   it('starts game when Play is clicked', async () => {
     const user = userEvent.setup()
     render(<KubeBert />)
-    await user.click(screen.getByRole('button', { name: /play/i }))
+    await user.click(screen.getByRole('button', { name: /start game/i }))
     // After game starts, board should be present
     expect(document.body).toBeTruthy()
   })

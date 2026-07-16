@@ -107,7 +107,7 @@ describe('KagentAgentListCard', () => {
   it('renders empty state when showEmptyState is true', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: true })
     render(<KagentAgentListCard />)
-    expect(screen.getByText(/noAgents/i)).toBeInTheDocument()
+    expect(screen.getByText('noAgents')).toBeInTheDocument()
   })
 
   // 3. Error / zero data

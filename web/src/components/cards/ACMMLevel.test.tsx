@@ -121,7 +121,7 @@ describe('ACMMLevel', () => {
 
   it('renders role label', () => {
     render(<ACMMLevel />)
-    expect(screen.getByText('Rule-writer')).toBeInTheDocument()
+    expect(screen.getAllByText('Rule-writer')[0]).toBeInTheDocument()
   })
 
   it('renders characteristic text', () => {

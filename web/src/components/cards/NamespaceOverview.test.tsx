@@ -62,7 +62,7 @@ vi.mock('../ui/Skeleton', () => ({
 }))
 
 vi.mock('../ui/ClusterBadge', () => ({
-  ClusterBadge: ({ name }: { name: string }) => <span data-testid="cluster-badge">{name}</span>,
+  ClusterBadge: ({ cluster }: { cluster: string }) => <span data-testid="cluster-badge">{cluster}</span>,
 }))
 
 vi.mock('../ui/ClusterStatusBadge', () => ({
@@ -167,13 +167,13 @@ describe('NamespaceOverview', () => {
   it('renders skeleton when showSkeleton is true', () => {
     setupMocks({ showSkeleton: true })
     render(<NamespaceOverview />)
-    expect(screen.getByTestId('skeleton')).toBeInTheDocument()
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
   })
 
   it('renders empty state when showEmptyState is true', () => {
     setupMocks({ showEmptyState: true })
     render(<NamespaceOverview />)
-    expect(screen.getByText('noClusters')).toBeInTheDocument()
+    expect(screen.getByText('noNamespaces')).toBeInTheDocument()
   })
 
   it('renders cluster badges when clusters are present', () => {

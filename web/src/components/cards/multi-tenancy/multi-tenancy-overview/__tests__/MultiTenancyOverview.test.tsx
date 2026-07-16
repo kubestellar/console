@@ -168,8 +168,7 @@ describe('MultiTenancyOverview', () => {
   it('renders tenant count', () => {
     setupMocks()
     render(<MultiTenancyOverview />)
-    expect(screen.getByText('3')).toBeInTheDocument()
-    expect(screen.getByText('tenants')).toBeInTheDocument()
+    expect(screen.getByText(/3\s+tenants/)).toBeInTheDocument()
   })
 
   it('renders component badges for each component', () => {
@@ -220,7 +219,7 @@ describe('MultiTenancyOverview', () => {
     setupMocks({ data: makeOverviewData({ isDemoData: true }) })
     render(<MultiTenancyOverview />)
     // DEMO_MULTI_TENANCY_OVERVIEW has 3 tenants
-    expect(screen.getByText('tenants')).toBeInTheDocument()
+    expect(screen.getByText(/tenants/)).toBeInTheDocument()
   })
 
   it('renders the detail modal placeholder', () => {

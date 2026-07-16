@@ -99,7 +99,7 @@ describe('ClusterGroups', () => {
 
   it('renders empty state when no groups exist', () => {
     render(<ClusterGroups />)
-    expect(screen.getByText('cards:clusterGroups.noGroupsYet')).toBeInTheDocument()
+    expect(screen.getByText('noGroupsYet')).toBeInTheDocument()
   })
 
   it('renders demo data when shouldUseDemoData is true', () => {

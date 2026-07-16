@@ -29,9 +29,9 @@ const mockUseKagentCRDAgents = vi.fn()
 const mockUseKagentCRDTools = vi.fn()
 const mockUseKagentCRDModels = vi.fn()
 vi.mock('../../hooks/mcp/kagent_crds', () => ({
-  useKagentCRDAgents: () => mockUseKagentCRDAgents(),
-  useKagentCRDTools: () => mockUseKagentCRDTools(),
-  useKagentCRDModels: () => mockUseKagentCRDModels(),
+  useKagentCRDAgents: (opts: Record<string, unknown>) => mockUseKagentCRDAgents(opts),
+  useKagentCRDTools: (opts: Record<string, unknown>) => mockUseKagentCRDTools(opts),
+  useKagentCRDModels: (opts: Record<string, unknown>) => mockUseKagentCRDModels(opts),
 }))
 
 const mockUseCardLoadingState = vi.fn()

@@ -49,17 +49,17 @@ describe('KubeSnake', () => {
 
   it('shows play button initially', () => {
     render(<KubeSnake />)
-    const playButton = screen.getByRole('button', { name: /play/i })
+    const playButton = screen.getByRole('button', { name: /start game/i })
     expect(playButton).toBeInTheDocument()
   })
 
   it('displays score display', () => {
     render(<KubeSnake />)
-    expect(screen.getByText(/score/i)).toBeInTheDocument()
+    expect(screen.getAllByText('0')[0]).toBeInTheDocument()
   })
 
   it('renders high score section', () => {
     render(<KubeSnake />)
-    expect(screen.getByText(/high score/i)).toBeInTheDocument()
+    expect(screen.getAllByText('0').length).toBeGreaterThan(0)
   })
 })

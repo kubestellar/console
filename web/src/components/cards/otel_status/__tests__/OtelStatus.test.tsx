@@ -19,7 +19,9 @@ vi.mock('react-i18next', () => ({
       if (typeof optsOrDefault === 'string') return optsOrDefault
       if (optsOrDefault && typeof optsOrDefault === 'object') {
         const opts = optsOrDefault as Record<string, unknown>
-        if (typeof opts.defaultValue === 'string') return opts.defaultValue
+        if (typeof opts.defaultValue === 'string') {
+          return opts.defaultValue.replace(/\{\{(\w+)\}\}/g, (_: string, k: string) => String(opts[k] ?? `{{${k}}}`))
+        }
       }
       return key
     },
@@ -186,7 +188,7 @@ describe('OtelStatus', () => {
   it('renders degraded status badge when health is degraded', () => {
     setupMock({ data: DEGRADED_DATA })
     render(<OtelStatus />)
-    expect(screen.getByText('Degraded')).toBeInTheDocument()
+    expect(screen.getAllByText('Degraded')[0]).toBeInTheDocument()
   })
 
   it('renders collector count in summary', () => {
@@ -201,7 +203,7 @@ describe('OtelStatus', () => {
     const tiles = screen.getAllByTestId('metric-tile')
     expect(tiles.length).toBeGreaterThanOrEqual(4)
     expect(screen.getByText('Running')).toBeInTheDocument()
-    expect(screen.getByText('Degraded')).toBeInTheDocument()
+    expect(screen.getAllByText('Degraded')[0]).toBeInTheDocument()
     expect(screen.getByText('Pipelines')).toBeInTheDocument()
     expect(screen.getByText('Dropped')).toBeInTheDocument()
   })
