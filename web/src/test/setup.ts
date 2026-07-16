@@ -15,26 +15,26 @@ if (isBrowserEnvironment) {
   // i18n.ts already guards with `if (initReactI18next)` for safety.
   vi.mock('react-i18next', () => ({
     useTranslation: () => ({
-      t: (key: string, options?: Record<string, unknown>) => {
+      // Support both t(key, opts) and t(key, defaultValue, opts) i18next overloads.
+      // Without the 3-arg form, components that call t(key, 'default {{count}}', {count})
+      // would pass the string as `opts`, causing `'count' in string` TypeErrors.
+      t: (key: string, optsOrDefault?: Record<string, unknown> | string, maybeOpts?: Record<string, unknown>) => {
+        const opts = typeof optsOrDefault === 'object' && optsOrDefault !== null ? optsOrDefault : maybeOpts
+        const template = typeof optsOrDefault === 'string' ? optsOrDefault : key
         // Preserve specific LaunchSequence strings used in tests
         if (key === 'missionControl.launchSequence.missionFailed') return 'Mission failed'
         if (key === 'missionControl.launchSequence.missionCancelled') return 'Mission cancelled'
         // Support Deploying X projects in Y phase with pluralization
         if (key.includes('missionControl.launchSequence.deployingProjects')) {
-          const count = typeof options?.count === 'number' ? options!.count as number : 0
-          const phaseCount = typeof options?.phaseCount === 'number' ? options!.phaseCount as number : 0
+          const count = typeof opts?.count === 'number' ? opts.count : 0
+          const phaseCount = typeof opts?.phaseCount === 'number' ? opts.phaseCount : 0
           return `Deploying ${count} project${count === 1 ? '' : 's'} in ${phaseCount} phase`
         }
         // Generic interpolation: replace {{key}} placeholders when options provided
-        if (options && typeof key === 'string') {
-          let s = key
-          for (const [k, v] of Object.entries(options)) {
-            s = s.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
-          }
-          return s
+        if (opts) {
+          return template.replace(/\{\{(\w+)\}\}/g, (_, k) => String(opts[k] ?? `{{${k}}}`))
         }
-        // Default: return the key as a fallback
-        return key
+        return template
       },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),

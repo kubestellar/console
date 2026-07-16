@@ -19,7 +19,12 @@ import QualityDashboard from './QualityDashboard'
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback ?? key.split('.').pop() ?? key,
+    t: (key: string, optsOrDefault?: Record<string, unknown> | string, maybeOpts?: Record<string, unknown>) => {
+      const opts = typeof optsOrDefault === 'object' && optsOrDefault !== null ? optsOrDefault : maybeOpts
+      const template = typeof optsOrDefault === 'string' ? optsOrDefault : key.split('.').pop() ?? key
+      if (opts) return template.replace(/\{\{(\w+)\}\}/g, (_, k: string) => String(opts[k] ?? `{{${k}}}`))
+      return template
+    },
   }),
 }))
 

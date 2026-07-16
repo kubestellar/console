@@ -18,8 +18,10 @@ import { render, screen } from '@testing-library/react'
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) => {
-      if (opts && 'count' in opts) return `${opts.count} releases`
+    t: (key: string, optsOrDefault?: Record<string, unknown> | string, maybeOpts?: Record<string, unknown>) => {
+      const opts = typeof optsOrDefault === 'object' && optsOrDefault !== null ? optsOrDefault : maybeOpts
+      const template = typeof optsOrDefault === 'string' ? optsOrDefault : key
+      if (opts) return template.replace(/\{\{(\w+)\}\}/g, (_, k: string) => String(opts[k] ?? `{{${k}}}`))
       if (key === 'common.searchCharts') return 'Search charts...'
       return String(key).split('.').pop() ?? key
     },
