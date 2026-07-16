@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/kubestellar/console/pkg/agent/protocol"
 )
 
 func TestHandleHealth_ReturnsOK(t *testing.T) {
@@ -76,6 +78,40 @@ func TestHandleStatus_Authenticated(t *testing.T) {
 	}
 }
 
+func TestHandleStatus_IncludesAvailableProviderSummaries(t *testing.T) {
+	t.Parallel()
+	reg := &Registry{providers: make(map[string]AIProvider)}
+	reg.providers["ready-ai"] = &mockProvider{name: "ready-ai", displayName: "Ready AI", available: true}
+	reg.providers["offline-ai"] = &mockProvider{name: "offline-ai", displayName: "Offline AI", available: false}
+	s := newTestServer(t, withToken("secret-token"), withRegistry(reg))
+	req := httptest.NewRequest(http.MethodGet, "/status", nil)
+	req.Host = "localhost"
+	authRequest(req, "secret-token")
+	rec := serveAndRecord(s.handleStatus, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var body protocol.HealthPayload
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if len(body.AvailableProviders) != 1 {
+		t.Fatalf("expected one available provider, got %#v", body.AvailableProviders)
+	}
+	provider := body.AvailableProviders[0]
+	if provider.Name != "ready-ai" {
+		t.Errorf("expected ready-ai provider, got %q", provider.Name)
+	}
+	if provider.DisplayName != "Ready AI" {
+		t.Errorf("expected Ready AI display name, got %q", provider.DisplayName)
+	}
+	if provider.Capabilities != int(CapabilityChat) {
+		t.Errorf("expected chat capability bitmask %d, got %d", CapabilityChat, provider.Capabilities)
+	}
+}
+
 func TestHandleStatus_Options(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t)
@@ -106,6 +142,18 @@ func TestHandleMetrics_Options(t *testing.T) {
 	req := httptest.NewRequest(http.MethodOptions, "/metrics", nil)
 	req.Host = "localhost"
 	rec := serveAndRecord(s.handleMetrics, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("expected 204 for OPTIONS, got %d", rec.Code)
+	}
+}
+
+func TestHandleProviderCheck_Options(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, withToken("tok"))
+	req := httptest.NewRequest(http.MethodOptions, "/provider/check?name=test-ai", nil)
+	req.Host = "localhost"
+	rec := serveAndRecord(s.handleProviderCheck, req)
 
 	if rec.Code != http.StatusNoContent {
 		t.Errorf("expected 204 for OPTIONS, got %d", rec.Code)
@@ -151,6 +199,13 @@ func TestHandleProviderCheck_MissingName(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", rec.Code)
 	}
+	var body protocol.ErrorPayload
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if body.Code != "missing_name" {
+		t.Errorf("expected missing_name code, got %q", body.Code)
+	}
 }
 
 func TestHandleProviderCheck_NotFound(t *testing.T) {
@@ -163,6 +218,19 @@ func TestHandleProviderCheck_NotFound(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("expected 404, got %d", rec.Code)
+	}
+	var body protocol.ProviderCheckResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if body.Provider != "nonexistent" {
+		t.Errorf("expected nonexistent provider name, got %q", body.Provider)
+	}
+	if body.Ready {
+		t.Error("expected missing provider to report ready=false")
+	}
+	if body.State != "failed" {
+		t.Errorf("expected failed state, got %q", body.State)
 	}
 }
 
