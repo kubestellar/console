@@ -926,7 +926,7 @@
   {
     "file": "src/components/cards/ChartVersions.test.tsx",
     "rule": "no-restricted-syntax",
-    "line": 71,
+    "line": 73,
     "column": 5,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
