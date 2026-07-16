@@ -132,8 +132,14 @@ export function ReservationFormModal({
 }) {
   const { t } = useTranslation(['cards', 'common'])
   const [cluster, setCluster] = useState(editingReservation?.cluster || '')
-  const [namespace, setNamespace] = useState(editingReservation?.namespace || '')
-  const [isNewNamespace, setIsNewNamespace] = useState(false)
+  // namespace value and "create new" toggle always change together → merged into
+  // a single state object so each user interaction causes only one re-render.
+  const [nsField, setNsField] = useState<{ value: string; isNew: boolean }>({
+    value: editingReservation?.namespace || '',
+    isNew: false,
+  })
+  const namespace = nsField.value
+  const isNewNamespace = nsField.isNew
   const [title, setTitle] = useState(editingReservation?.title || '')
   const [description, setDescription] = useState(editingReservation?.description || '')
   const [gpuCount, setGpuCount] = useState(editingReservation ? String(editingReservation.gpu_count) : '')
@@ -472,7 +478,7 @@ export function ReservationFormModal({
           {/* Cluster (GPU-only, with counts) */}
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-1">{t('gpuReservations.form.fields.clusterLabel')}</label>
-            <select value={cluster} onChange={e => { setCluster(e.target.value); setNamespace(''); setIsNewNamespace(false); setGpuPreferences([]) }}
+            <select value={cluster} onChange={e => { setCluster(e.target.value); setNsField({ value: '', isNew: false }); setGpuPreferences([]) }}
               disabled={!!editingReservation}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50">
               <option value="">{t('gpuReservations.form.fields.selectCluster')}</option>
@@ -495,11 +501,10 @@ export function ReservationFormModal({
                 value={namespace}
                 onChange={e => {
                   if (e.target.value === '__new__' || e.target.value === '__new_bottom__') {
-                    setIsNewNamespace(true)
-                    setNamespace('')
+                    setNsField({ value: '', isNew: true })
                     setTimeout(() => document.getElementById('new-ns-input')?.focus(), 0)
                   } else {
-                    setNamespace(e.target.value)
+                    setNsField(prev => ({ ...prev, value: e.target.value }))
                   }
                 }}
                 disabled={!!editingReservation || !cluster || (namespacesLoading && clusterNamespaces.length === 0)}
@@ -520,7 +525,7 @@ export function ReservationFormModal({
                   id="new-ns-input"
                   type="text"
                   value={namespace}
-                  onChange={e => setNamespace(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  onChange={e => setNsField(prev => ({ ...prev, value: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
                   placeholder={t('gpuReservations.form.fields.enterNamespace')}
                   disabled={!!editingReservation}
                   className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground disabled:opacity-50"
@@ -528,7 +533,7 @@ export function ReservationFormModal({
                 />
                 <button
                   type="button"
-                  onClick={() => { setIsNewNamespace(false); setNamespace('') }}
+                  onClick={() => setNsField({ value: '', isNew: false })}
                   className="px-3 py-2 rounded-lg bg-secondary border border-border text-muted-foreground hover:text-foreground"
                   title={t('gpuReservations.form.fields.backToList')}
                   aria-label={t('gpuReservations.form.fields.backToList')}

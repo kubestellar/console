@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Calendar,
@@ -441,6 +441,45 @@ export function GPUReservations() {
     }
   }
 
+  // Named callbacks for multi-state transitions — keeps JSX clean and ensures
+  // the paired state updates are always applied atomically (React 19 batches
+  // all setState calls within the same synchronous function).
+  const openCreateForm = useCallback(() => {
+    setEditingReservation(null)
+    setShowReservationForm(true)
+  }, [])
+
+  const openEditForm = useCallback((r: GPUReservation) => {
+    setEditingReservation(r)
+    setShowReservationForm(true)
+  }, [])
+
+  const closeReservationForm = useCallback(() => {
+    setShowReservationForm(false)
+    setEditingReservation(null)
+    setPrefillDate(null)
+  }, [])
+
+  const openCreateFormForDate = useCallback((dateStr: string) => {
+    setPrefillDate(dateStr)
+    setEditingReservation(null)
+    setShowReservationForm(true)
+  }, [])
+
+  const goToReservation = useCallback((id: string) => {
+    setExpandedReservationId(id)
+    setActiveTab('quotas')
+  }, [])
+
+  const toggleShowOnlyMine = useCallback(() => {
+    setShowOnlyMine(prev => {
+      // Navigate to reservations tab when the filter is being switched on so
+      // users immediately see the filtered list.
+      if (!prev) setActiveTab('quotas')
+      return !prev
+    })
+  }, [])
+
   const deleteConfirmReservation = deleteConfirmId
     ? allReservations.find(r => r.id === deleteConfirmId)
     : null
@@ -527,11 +566,7 @@ export function GPUReservations() {
               <input
                 type="checkbox"
                 checked={showOnlyMine}
-                onChange={() => {
-                  setShowOnlyMine(!showOnlyMine)
-                  // Switch to Reservations tab so filtered results are visible
-                  if (!showOnlyMine) setActiveTab('quotas')
-                }}
+                onChange={toggleShowOnlyMine}
                 className="sr-only"
               />
               {showOnlyMine ? <User className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
@@ -539,7 +574,7 @@ export function GPUReservations() {
             </label>
           )}
           <button
-            onClick={() => { setEditingReservation(null); setShowReservationForm(true) }}
+            onClick={openCreateForm}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -556,7 +591,7 @@ export function GPUReservations() {
           utilizations={utilizations}
           effectiveDemoMode={effectiveDemoMode}
           showOnlyMine={showOnlyMine}
-          onSelectReservation={(id) => { setExpandedReservationId(id); setActiveTab('quotas') }}
+          onSelectReservation={goToReservation}
         />
       )}
 
@@ -570,7 +605,7 @@ export function GPUReservations() {
           onSetExpandedReservationId={setExpandedReservationId}
           onPrevMonth={prevMonth}
           onNextMonth={nextMonth}
-          onAddReservation={(dateStr) => { setPrefillDate(dateStr); setEditingReservation(null); setShowReservationForm(true) }}
+          onAddReservation={openCreateFormForDate}
           getGPUCountForDay={getGPUCountForDay}
         />
       )}
@@ -591,9 +626,9 @@ export function GPUReservations() {
           onSetSearchTerm={setSearchTerm}
           onSetShowOnlyMine={setShowOnlyMine}
           onSetExpandedReservationId={setExpandedReservationId}
-          onEditReservation={(r) => { setEditingReservation(r); setShowReservationForm(true) }}
+          onEditReservation={openEditForm}
           onDeleteReservation={setDeleteConfirmId}
-          onCreateReservation={() => { setEditingReservation(null); setShowReservationForm(true) }}
+          onCreateReservation={openCreateForm}
         />
       )}
 
@@ -634,7 +669,7 @@ export function GPUReservations() {
       {/* Create/Edit Reservation Modal */}
       <ReservationFormModal
         isOpen={showReservationForm}
-        onClose={() => { setShowReservationForm(false); setEditingReservation(null); setPrefillDate(null) }}
+        onClose={closeReservationForm}
         editingReservation={editingReservation}
         gpuClusters={gpuClusters}
         allNodes={rawNodes}
