@@ -1,0 +1,110 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProviderHealth > snapshot > matches snapshot for mixed AI and cloud providers 1`] = `
+<div
+  class="h-full min-h-0 overflow-y-auto pr-1"
+>
+  <div
+    class="space-y-4"
+  >
+    <div>
+      <h3
+        class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2"
+      >
+        aiProviders
+      </h3>
+      <div
+        class="space-y-0.5"
+      >
+        <div
+          class="@container flex flex-wrap items-start gap-2 rounded-lg px-1 py-2 transition-colors hover:bg-secondary/30 @lg:flex-nowrap @lg:items-center"
+          style="container-type: inline-size;"
+        >
+          <div
+            class="shrink-0 pt-0.5 @lg:pt-0"
+          >
+            <span
+              data-provider="openai"
+              data-testid="agent-icon"
+            />
+          </div>
+          <div
+            class="min-w-0 flex-1 basis-[10rem]"
+          >
+            <div
+              class="text-sm font-medium text-foreground truncate"
+            >
+              OpenAI
+            </div>
+          </div>
+          <div
+            class="ml-auto flex flex-wrap items-center justify-end gap-1.5"
+          >
+            <div
+              class="flex flex-wrap items-center justify-end gap-1.5 shrink-0"
+            >
+              <div
+                class="w-2 h-2 rounded-full bg-green-500"
+              />
+              <span
+                class="text-xs text-muted-foreground"
+              >
+                operational
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3
+        class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2"
+      >
+        cloudProviders
+      </h3>
+      <div
+        class="space-y-0.5"
+      >
+        <div
+          class="@container flex flex-wrap items-start gap-2 rounded-lg px-1 py-2 transition-colors hover:bg-secondary/30 @lg:flex-nowrap @lg:items-center"
+          style="container-type: inline-size;"
+        >
+          <div
+            class="shrink-0 pt-0.5 @lg:pt-0"
+          >
+            <span
+              data-provider="aws"
+              data-testid="cloud-provider-icon"
+            />
+          </div>
+          <div
+            class="min-w-0 flex-1 basis-[10rem]"
+          >
+            <div
+              class="text-sm font-medium text-foreground truncate"
+            >
+              AWS
+            </div>
+          </div>
+          <div
+            class="ml-auto flex flex-wrap items-center justify-end gap-1.5"
+          >
+            <div
+              class="flex flex-wrap items-center justify-end gap-1.5 shrink-0"
+            >
+              <div
+                class="w-2 h-2 rounded-full bg-yellow-500"
+              />
+              <span
+                class="text-xs text-muted-foreground"
+              >
+                degraded
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
