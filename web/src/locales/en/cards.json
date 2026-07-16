@@ -3627,7 +3627,12 @@
     "monthlyCost": "Monthly Cost",
     "savingsRecommendations": "Savings Recommendations",
     "poweredBy": "Powered by Kubecost",
-    "docs": "Docs"
+    "docs": "Docs",
+    "healthStatusHealthy": "Healthy",
+    "healthStatusModerate": "Moderate Efficiency",
+    "healthStatusCritical": "Critical — Low Efficiency",
+    "efficiencyLabel": "{{efficiency}}% efficient",
+    "recommendationsCount": "{{count}} optimizations"
   },
   "keda": {
     "healthy": "Healthy",

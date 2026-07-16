@@ -2689,5 +2689,12 @@
     "noSearchResults": "No matches found.",
     "clusterPolicies": "ClusterPolicies",
     "overridePolicies": "OverridePolicies"
+  },
+  "kubecostOverview": {
+    "healthStatusHealthy": "jiankang",
+    "healthStatusModerate": "zhongdeng",
+    "healthStatusCritical": "yanzhong",
+    "efficiencyLabel": "{{efficiency}}% xiaolv",
+    "recommendationsCount": "{{count}} youhua"
   }
 }

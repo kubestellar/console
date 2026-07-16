@@ -3482,7 +3482,10 @@
   },
   "costs": {
     "poweredByOpenCost": "Powered by OpenCost",
-    "docs": "Docs"
+    "docs": "Docs",
+    "healthySpend": "healthy",
+    "reviewSpend": "review",
+    "highSpend": "high spend"
   },
   "common": {
     "search": "Search...",

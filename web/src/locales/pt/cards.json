@@ -2689,5 +2689,12 @@
     "noSearchResults": "No matches found.",
     "clusterPolicies": "ClusterPolicies",
     "overridePolicies": "OverridePolicies"
+  },
+  "kubecostOverview": {
+    "healthStatusHealthy": "Saudavel",
+    "healthStatusModerate": "Moderado",
+    "healthStatusCritical": "Critico",
+    "efficiencyLabel": "{{efficiency}}% eficiente",
+    "recommendationsCount": "{{count}} otimizacoes"
   }
 }

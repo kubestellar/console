@@ -2689,5 +2689,12 @@
     "noSearchResults": "No matches found.",
     "clusterPolicies": "ClusterPolicies",
     "overridePolicies": "OverridePolicies"
+  },
+  "kubecostOverview": {
+    "healthStatusHealthy": "seijo",
+    "healthStatusModerate": "chutei",
+    "healthStatusCritical": "juudai",
+    "efficiencyLabel": "{{efficiency}}% kouritsu",
+    "recommendationsCount": "{{count}} saiteki"
   }
 }
