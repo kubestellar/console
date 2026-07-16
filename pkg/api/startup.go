@@ -270,6 +270,22 @@ func (s *Server) Shutdown() error {
 		if s.background != nil && s.background.gpuUtilWorker != nil {
 			s.background.gpuUtilWorker.Stop()
 		}
+		// Wait for background goroutines tracked by lifecycle.wg (e.g. KB gap sweeper)
+		// to finish any in-flight writes before we close the store and allow
+		// t.TempDir / os.RemoveAll to remove the data directory. Without this wait
+		// the sweeper's eager first runSweep() can race with RemoveAll and produce
+		// "unlinkat .../001: directory not empty" failures in tests (#21198).
+		bgDrained := make(chan struct{})
+		go func() {
+			s.lifecycle.wg.Wait()
+			close(bgDrained)
+		}()
+		const bgDrainTimeout = 3 * time.Second
+		select {
+		case <-bgDrained:
+		case <-time.After(bgDrainTimeout):
+			slog.Warn("[Server] timed out waiting for background goroutines to drain")
+		}
 		s.hub.Close()
 		// #10007 — stop the periodic cluster group cache refresh goroutine.
 		if s.background != nil && s.background.workloadHandlers != nil {

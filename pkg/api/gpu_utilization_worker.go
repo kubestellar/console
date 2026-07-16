@@ -60,6 +60,7 @@ type GPUUtilizationWorker struct {
 	interval           time.Duration
 	stopCh             chan struct{}
 	stopOnce           sync.Once // protects stopCh from double-close panic
+	wg                 sync.WaitGroup // tracks the background polling goroutine
 	baseCtx            context.Context
 	baseCancel         context.CancelFunc
 	gpuMetricsEnabled  bool
@@ -130,7 +131,9 @@ func NewGPUUtilizationWorker(s store.Store, k8sClient *k8s.MultiClusterClient, n
 
 // Start begins the background polling loop
 func (w *GPUUtilizationWorker) Start() {
+	w.wg.Add(1)
 	safego.GoWith("gpu-utilization-worker", func() {
+		defer w.wg.Done()
 		// Cleanup old snapshots on startup
 		w.cleanupOldSnapshots()
 
@@ -152,13 +155,14 @@ func (w *GPUUtilizationWorker) Start() {
 	slog.Info("GPU utilization worker started", "interval", w.interval)
 }
 
-// Stop signals the worker to stop. It is safe to call multiple times;
-// only the first call actually closes the stop channel.
+// Stop signals the worker to stop and waits for the background goroutine to exit.
+// It is safe to call multiple times; only the first call actually closes the stop channel.
 func (w *GPUUtilizationWorker) Stop() {
 	w.stopOnce.Do(func() {
 		w.baseCancel() // cancel all in-flight Kubernetes API calls (#6966)
 		close(w.stopCh)
 	})
+	w.wg.Wait() // wait for the polling goroutine to drain
 }
 
 // collectUtilization queries active reservations and records utilization snapshots

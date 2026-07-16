@@ -26,6 +26,7 @@ type serverLifecycle struct {
 	done         chan struct{}
 	shutdownOnce sync.Once
 	shuttingDown int32
+	wg           sync.WaitGroup // tracks background goroutines that write to the data directory
 }
 
 type authRuntime struct {
