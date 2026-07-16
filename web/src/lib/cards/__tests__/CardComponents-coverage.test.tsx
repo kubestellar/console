@@ -222,8 +222,8 @@ describe('CardClusterFilter', () => {
 
   it('renders dropdown portal when open', () => {
     // Mock getBoundingClientRect for positioning
-    const btnRef = { current: null as HTMLButtonElement | null }
-    const { container } = render(<CardClusterFilter {...defaultProps} isOpen={true} />)
+    const _btnRef = { current: null as HTMLButtonElement | null }
+    const { container: _container } = render(<CardClusterFilter {...defaultProps} isOpen={true} />)
     // The portal renders into document.body
     const allClustersBtn = screen.queryByText('All clusters')
     expect(allClustersBtn).toBeTruthy()
@@ -263,7 +263,7 @@ describe('CardClusterFilter', () => {
   })
 
   it('shows active style on filter button when clusters selected', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <CardClusterFilter {...defaultProps} selectedClusters={['cluster-a']} />
     )
     const btn = screen.getByTitle('Filter by cluster')
@@ -680,7 +680,7 @@ describe('Modal Escape Key Handling', () => {
   it('ApiKeyPromptModal handles Escape key to close', () => {
     // ApiKeyPromptModal is mocked in this file, but we verify that real modals
     // used in CardComponents (like those triggered by AI actions) support escape
-    const onDismiss = vi.fn()
+    const _onDismiss = vi.fn()
     // Simulate escape key press
     fireEvent.keyDown(document, { key: 'Escape' })
     // This test ensures modals have proper escape key handling infrastructure
