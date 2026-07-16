@@ -37,7 +37,8 @@ describe('DraftsTab', () => {
       />
     )
 
-    expect(screen.getByText(/drafts\.savedDrafts/i)).toBeInTheDocument()
+    // t('drafts.savedDrafts', 'Saved Drafts') returns the default value when provided
+    expect(screen.getByText(/Saved Drafts/i)).toBeInTheDocument()
     expect(screen.getByText(/Improve touch targets/)).toBeInTheDocument()
   })
 })

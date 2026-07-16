@@ -32,7 +32,11 @@ env:
   TOTAL_SHARDS: 12
 
 jobs:
-  # Run tests in 12 shards to stay within 7GB runner memory
+  # Run tests in 12 shards to stay within 7GB runner memory.
+  # NODE_OPTIONS is capped at 5120 MB (5 GB) to leave ~2 GB headroom for
+  # OS, V8 off-heap memory, and npm/Node overhead on the ubuntu-latest
+  # 7 GB runner. Setting it to ≥7 GB causes OOM kills from the kernel
+  # rather than a graceful V8 heap exhaustion (#21169, #21083).
   test-shard:
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
@@ -62,7 +66,7 @@ jobs:
         id: test
         working-directory: web
         env:
-          NODE_OPTIONS: '--max-old-space-size=7168'
+          NODE_OPTIONS: '--max-old-space-size=5120'
         run: |
           npx vitest run --coverage --coverage.reportOnFailure \
             --reporter=verbose --reporter=json \

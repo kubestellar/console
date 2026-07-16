@@ -37,6 +37,10 @@ echo "Running Vitest unit tests..."
 # headroom: 3.5 GB worker + 1.5 GB system/V8 overhead + 2 GB safety margin.
 # Previous 1792 MB limit caused "Worker exited unexpectedly" OOM crashes (#20007).
 # Increased to 3584 MB (3.5 GB) to prevent nightly regressions.
+# The test suite has since grown past 560 files; the nightly runner OOMs with
+# 4 shards when a single shard accumulates too many heavy test files in one
+# batch. Increasing to 8 shards halves per-shard test count and peak memory
+# while keeping the sequential run within the 180m nightly timeout (#21083).
 if [ -n "${CI:-}" ]; then
   export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=3584"
 fi
@@ -50,20 +54,20 @@ fi
 # vite.config correctly limited to 1 for CI memory constraints (#20007).
 #
 # In CI, run tests in shards to reduce parent process memory footprint. With
-# 2100+ test files, the Vitest parent process accumulates results in memory
+# 560+ test files, the Vitest parent process accumulates results in memory
 # for final reporting, causing OOM on 7GB runners even with 1 worker (#20007).
-# Running 4 shards sequentially reduces peak memory by ~75%.
+# Running 8 shards sequentially reduces peak memory by ~87.5% vs single run.
 OUTPUT_FILE="vitest-output.log"
 EXIT_CODE=0
 
 if [ -n "${CI:-}" ]; then
-  # CI: run in 4 shards sequentially, combining output
-  echo "Running tests in 4 shards to prevent OOM..."
+  # CI: run in 8 shards sequentially, combining output
+  echo "Running tests in 8 shards to prevent OOM..."
   > "$OUTPUT_FILE"  # Clear file
-  for shard in 1 2 3 4; do
+  for shard in 1 2 3 4 5 6 7 8; do
     echo ""
-    echo "=== Shard $shard/4 ==="
-    npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --reporter=verbose --shard=$shard/4 2>&1 | tee -a "$OUTPUT_FILE" || EXIT_CODE=$?
+    echo "=== Shard $shard/8 ==="
+    npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --reporter=verbose --shard=$shard/8 2>&1 | tee -a "$OUTPUT_FILE" || EXIT_CODE=$?
   done
 else
   # Local: run all tests at once
