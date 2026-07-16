@@ -14,7 +14,8 @@ on:
       - '.lint-warning-baseline'
   workflow_dispatch:
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 
 jobs:
   check-warnings:

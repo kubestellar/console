@@ -5,7 +5,8 @@ on:
     - cron: '17 * * * *'
   workflow_dispatch:
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 
 jobs:
   mttr:

@@ -3,7 +3,8 @@ name: Netlify Deploy Failure Reporter
 on:
   status:
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   report-netlify-failure:

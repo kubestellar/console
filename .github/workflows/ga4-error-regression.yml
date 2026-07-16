@@ -33,7 +33,8 @@ env:
   # Absolute weekly threshold: flag any category exceeding this even if WoW trend is flat
   ABSOLUTE_WEEKLY_THRESHOLD: 200
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 concurrency:
   group: ga4-error-regression
   cancel-in-progress: true

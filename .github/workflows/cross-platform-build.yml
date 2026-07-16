@@ -30,7 +30,8 @@ on:
       - 'go.sum'
       - '.github/workflows/cross-platform-build.yml'
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 
 jobs:
   build:

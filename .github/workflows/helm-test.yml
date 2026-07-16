@@ -13,7 +13,8 @@ on:
   workflow_call: {}
 
 # Minimum permissions: checkout only — no write scopes needed
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 
 jobs:
   helm-lint-and-template:

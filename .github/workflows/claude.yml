@@ -11,7 +11,8 @@ on:
     types: [submitted]
 
 # Least-privilege: read-only by default; jobs declare write scopes individually
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   claude:

@@ -4,7 +4,8 @@ on:
   pull_request_target:
     types: [closed]
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   forensics:

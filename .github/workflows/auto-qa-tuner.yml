@@ -20,7 +20,7 @@ on:
         type: string
 
 permissions:
-  contents: read  # default read; writes scoped to job below
+  contents: read
 
 concurrency:
   group: auto-qa-tuner

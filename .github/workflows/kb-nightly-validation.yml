@@ -4,7 +4,8 @@ on:
     - cron: '0 4 * * *'  # 4 AM UTC daily
   workflow_dispatch:
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 
 jobs:
   validate-kb:

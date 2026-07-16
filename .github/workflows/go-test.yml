@@ -36,7 +36,8 @@ concurrency:
   group: go-test-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 
 env:
   GO_COVERAGE_RATCHET_FILE: .github/go-coverage-ratchet.txt

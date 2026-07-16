@@ -37,7 +37,8 @@ env:
   DAILY_LOOKBACK_HOURS: 24
   DAILY_ERROR_THRESHOLD: 50
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  contents: read
 concurrency:
   group: ga4-error-monitor
   cancel-in-progress: true
