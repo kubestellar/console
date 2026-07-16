@@ -1,7 +1,8 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { WhatsNewModal, isUpdateSnoozed } from './WhatsNewModal'
+import { WhatsNewModal } from './WhatsNewModal'
+import { isUpdateSnoozed } from './whatsNew/snooze'
 
 // Mock dependencies
 vi.mock('../../hooks/useVersionCheck', () => ({

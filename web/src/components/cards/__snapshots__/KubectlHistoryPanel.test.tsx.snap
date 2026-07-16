@@ -110,7 +110,7 @@ exports[`CommandHistoryPanel > matches snapshot with history 1`] = `
           <span
             class="text-2xs text-muted-foreground ml-2 shrink-0"
           >
-            5:00:00 AM
+            10:00:00 AM
           </span>
         </div>
         <div
