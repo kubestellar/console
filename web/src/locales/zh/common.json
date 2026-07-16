@@ -2033,7 +2033,10 @@
   },
   "costs": {
     "poweredByOpenCost": "Powered by OpenCost",
-    "docs": "Docs"
+    "docs": "Docs",
+    "healthySpend": "zhengchang",
+    "reviewSpend": "shencha",
+    "highSpend": "gaozichchu"
   },
   "common": {
     "search": "Search...",

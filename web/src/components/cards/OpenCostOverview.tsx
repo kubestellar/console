@@ -1,5 +1,5 @@
 import { memo, useMemo, useCallback } from 'react'
-import { Server, Box, HardDrive, ExternalLink, AlertCircle, ChevronRight } from 'lucide-react'
+import { Server, Box, HardDrive, ExternalLink, AlertCircle, ChevronRight, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -290,6 +290,36 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
         <p className="text-xs text-blue-400 mb-1">Monthly Cost (Demo)</p>
         <p className="text-xl font-bold text-foreground">${totalCost.toLocaleString()}</p>
       </div>
+
+      {/* Namespace cost health summary */}
+      {(() => {
+        const avgCost = totalCost / DEMO_NAMESPACE_COSTS.length
+        const highSpend = DEMO_NAMESPACE_COSTS.filter(ns => ns.totalCost > avgCost * 1.5).length
+        const atRisk = DEMO_NAMESPACE_COSTS.filter(ns => ns.totalCost > avgCost * 0.8 && ns.totalCost <= avgCost * 1.5).length
+        const healthy = DEMO_NAMESPACE_COSTS.length - highSpend - atRisk
+        return (
+          <div className="flex items-center gap-3 p-2 mb-3 rounded-lg bg-secondary/30 border border-border/50 text-xs">
+            {healthy > 0 && (
+              <span className="flex items-center gap-1 text-green-400">
+                <CheckCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                {healthy} {t('costs.healthySpend')}
+              </span>
+            )}
+            {atRisk > 0 && (
+              <span className="flex items-center gap-1 text-yellow-400">
+                <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                {atRisk} {t('costs.reviewSpend')}
+              </span>
+            )}
+            {highSpend > 0 && (
+              <span className="flex items-center gap-1 text-red-400">
+                <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                {highSpend} {t('costs.highSpend')}
+              </span>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Namespace costs.
         * Issue 8883: roving-tabindex list — Enter/Space activate; ArrowUp/Down

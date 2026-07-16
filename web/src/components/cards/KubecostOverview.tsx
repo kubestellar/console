@@ -1,4 +1,4 @@
-import { TrendingDown, AlertTriangle, ExternalLink, AlertCircle, PieChart, ChevronRight } from 'lucide-react'
+import { TrendingDown, AlertTriangle, ExternalLink, AlertCircle, PieChart, ChevronRight, CheckCircle, XCircle } from 'lucide-react'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -35,10 +35,19 @@ const DEMO_RECOMMENDATIONS = [
   { type: 'spot', description: 'Use spot instances for batch jobs', savings: 1000 },
 ]
 
+const EFFICIENCY_HEALTH = (efficiency: number) => {
+  if (efficiency >= 80) return { labelKey: 'kubecostOverview.healthStatusHealthy' as const, Icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/20' }
+  if (efficiency >= 60) return { labelKey: 'kubecostOverview.healthStatusModerate' as const, Icon: AlertTriangle, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' }
+  return { labelKey: 'kubecostOverview.healthStatusCritical' as const, Icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' }
+}
+
 export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
   const { t } = useTranslation('cards')
   const { drillToCost } = useDrillDownActions()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false, isRefreshing: false })
+
+  const efficiencyHealth = EFFICIENCY_HEALTH(DEMO_COST_SUMMARY.efficiency)
+  const { Icon: HealthIcon } = efficiencyHealth
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
@@ -53,6 +62,16 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
         >
           <ExternalLink className="w-4 h-4" />
         </a>
+      </div>
+
+      {/* Cost health status indicator */}
+      <div className={`flex items-center gap-2 p-2 mb-3 rounded-lg ${efficiencyHealth.bg} border ${efficiencyHealth.border} text-xs`}>
+        <HealthIcon className={`w-4 h-4 ${efficiencyHealth.color} shrink-0`} aria-hidden="true" />
+        <div className="flex-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <span className={`font-medium ${efficiencyHealth.color}`}>{t(efficiencyHealth.labelKey)}</span>
+          <span className="text-muted-foreground">{t('kubecostOverview.efficiencyLabel', { efficiency: DEMO_COST_SUMMARY.efficiency })}</span>
+          <span className="text-muted-foreground">{t('kubecostOverview.recommendationsCount', { count: DEMO_RECOMMENDATIONS.length })}</span>
+        </div>
       </div>
 
       {/* Integration notice */}

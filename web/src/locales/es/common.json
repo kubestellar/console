@@ -2033,7 +2033,10 @@
   },
   "costs": {
     "poweredByOpenCost": "Powered by OpenCost",
-    "docs": "Docs"
+    "docs": "Docs",
+    "healthySpend": "saludable",
+    "reviewSpend": "revisar",
+    "highSpend": "gasto alto"
   },
   "common": {
     "search": "Search...",
