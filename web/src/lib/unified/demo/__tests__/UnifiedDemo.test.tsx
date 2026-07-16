@@ -14,6 +14,7 @@ import React from 'react'
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
+import { useTranslation } from 'react-i18next'
 import { UnifiedDemoProvider, useUnifiedData } from '../UnifiedDemo'
 import { useUnifiedDemoContext } from '../UnifiedDemoContext'
 
@@ -79,6 +80,7 @@ function DataConsumer({
   isLiveLoading: boolean
   options?: Parameters<typeof useUnifiedData>[3]
 }) {
+  const { t } = useTranslation()
   const result = useUnifiedData('test-component', liveData, isLiveLoading, options)
   return (
     <div>
@@ -87,7 +89,7 @@ function DataConsumer({
       <span data-testid="show-skeleton">{String(result.showSkeleton)}</span>
       <span data-testid="is-demo-data">{String(result.isDemoData)}</span>
       <span data-testid="error">{result.error?.message ?? 'none'}</span>
-      <button data-testid="refetch" onClick={result.refetch}>Refetch</button>
+      <button data-testid="refetch" onClick={result.refetch}>{t('actions.refetch')}</button>
     </div>
   )
 }

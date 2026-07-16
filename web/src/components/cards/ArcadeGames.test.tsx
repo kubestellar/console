@@ -39,7 +39,7 @@ vi.mock('../../lib/safeLocalStorage', () => ({
   safeGetItem: vi.fn(() => null),
   safeSet: vi.fn(),
   safeSetItem: vi.fn(),
-  safeGetJSON: vi.fn(() => null),
+  safeGetJSON: vi.fn((_key, fallback) => fallback),
   safeSetJSON: vi.fn(),
   safeRemove: vi.fn(),
 }))
@@ -47,7 +47,7 @@ vi.mock('../../lib/safeLocalStorage', () => ({
 vi.mock('@/lib/utils/localStorage', () => ({
   safeGetItem: vi.fn(() => null),
   safeSetItem: vi.fn(),
-  safeGetJSON: vi.fn(() => null),
+  safeGetJSON: vi.fn((_key, fallback) => fallback),
   safeSetJSON: vi.fn(),
 }))
 
@@ -71,9 +71,10 @@ describe('Checkers', () => {
   })
 
   it('displays checkers board', () => {
-    render(<Checkers />)
-    const board = document.querySelector('[role="grid"]')
-    expect(board || screen.getByText(/checkers|board/i)).toBeInTheDocument()
+    const { container } = render(<Checkers />)
+    // Board renders as 8 rows of divs inside an inline-block container
+    const boardContainer = container.querySelector('.inline-block')
+    expect(boardContainer).toBeInTheDocument()
   })
 
   it('shows score or game state', () => {

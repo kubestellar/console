@@ -2,6 +2,7 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 /**
  * Dashboard runtime tests.
@@ -86,14 +87,15 @@ vi.mock('../../../components/dashboard/AddCardModal', () => ({
     isOpen: boolean;
     onAddCards: (c: Array<{ type: string; title: string; config: Record<string, unknown> }>) => void;
     onClose: () => void;
-  }) => (
-    isOpen ? (
+  }) => {
+    const { t } = useTranslation()
+    return isOpen ? (
       <div data-testid="add-card-modal">
-        <button data-testid="modal-add-card" onClick={() => onAddCards([{ type: 'new_card', title: 'New', config: {} }])}>Add</button>
-        <button data-testid="modal-close" onClick={onClose}>Close</button>
+        <button data-testid="modal-add-card" onClick={() => onAddCards([{ type: 'new_card', title: 'New', config: {} }])}>{t('actions.add')}</button>
+        <button data-testid="modal-close" onClick={onClose}>{t('actions.close')}</button>
       </div>
     ) : null
-  ),
+  },
 }))
 
 vi.mock('../../../components/dashboard/TemplatesModal', () => ({

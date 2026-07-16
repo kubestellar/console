@@ -91,7 +91,8 @@ describe('KubeGalaga', () => {
 
   it('shows score indicator', () => {
     render(<KubeGalaga />)
-    expect(screen.getByText(/score|level/i)).toBeInTheDocument()
+    // Stats bar shows level as "Lv.N"; no "score"/"level" labels, just the prefix
+    expect(screen.getByText(/Lv\./)).toBeInTheDocument()
   })
 })
 
@@ -114,7 +115,8 @@ describe('KubeKart', () => {
 
   it('shows game status', () => {
     render(<KubeKart />)
-    expect(screen.getByText(/race|time|lap/i)).toBeInTheDocument()
+    // Stats bar renders "Lap N/M"; use getAllByText since "Pod Racer" also matches /race/i
+    expect(screen.getAllByText(/race|time|lap/i)[0]).toBeInTheDocument()
   })
 })
 
@@ -137,7 +139,8 @@ describe('KubeKong', () => {
 
   it('shows score and level', () => {
     render(<KubeKong />)
-    expect(screen.getByText(/score|level/i)).toBeInTheDocument()
+    // Stats bar renders t('kubeKong.score') → "score" and t('kubeKong.level') → "level"
+    expect(screen.getAllByText(/score|level/i)[0]).toBeInTheDocument()
   })
 })
 
@@ -160,7 +163,8 @@ describe('KubeMan', () => {
 
   it('shows game metrics', () => {
     render(<KubeMan />)
-    expect(screen.getByText(/score|lives/i)).toBeInTheDocument()
+    // Stats bar renders "Score" and "Lives" labels; use getAllByText for multiple matches
+    expect(screen.getAllByText(/score|lives/i)[0]).toBeInTheDocument()
   })
 })
 
@@ -183,7 +187,8 @@ describe('KubePong', () => {
 
   it('shows score display', () => {
     render(<KubePong />)
-    expect(screen.getByText(/score|player/i)).toBeInTheDocument()
+    // Stats bar renders "{wins} wins" (e.g. "0 wins"); no "score"/"player" labels
+    expect(screen.getAllByText(/\d+ wins/i)[0]).toBeInTheDocument()
   })
 })
 
@@ -230,7 +235,8 @@ describe('MissileCommand', () => {
 
   it('shows game status', () => {
     render(<MissileCommand />)
-    expect(screen.getByText(/score|wave|city/i)).toBeInTheDocument()
+    // Stats bar renders "Score" and "Wave" labels; use getAllByText for multiple matches
+    expect(screen.getAllByText(/score|wave|city/i)[0]).toBeInTheDocument()
   })
 })
 
@@ -253,6 +259,7 @@ describe('NodeInvaders', () => {
 
   it('shows score and level', () => {
     render(<NodeInvaders />)
-    expect(screen.getByText(/score|level|wave/i)).toBeInTheDocument()
+    // Stats bar renders t('nodeInvaders.score') → "score", t('nodeInvaders.wave') → "wave"
+    expect(screen.getAllByText(/score|level|wave/i)[0]).toBeInTheDocument()
   })
 })
