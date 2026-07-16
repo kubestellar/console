@@ -92,6 +92,8 @@ function makeCardDataReturn(items = demoItems) {
       sortDirection: 'desc',
       setSortDirection: vi.fn(),
     },
+    localClusterFilter: [],
+    availableClusters: [],
     containerRef: { current: null },
     containerStyle: {},
   }

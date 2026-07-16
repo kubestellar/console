@@ -77,6 +77,7 @@ const makeRec = (overrides = {}) => ({
     detectionPattern: 'ooda',
   },
   priority: 1,
+  sources: ['acmm' as const],
   ...overrides,
 })
 

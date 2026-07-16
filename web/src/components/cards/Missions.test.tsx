@@ -130,6 +130,8 @@ vi.mock('../../lib/constants/time', () => ({
 
 const defaultMissionsReturn = {
   missions: [],
+  activeMissions: [],
+  completedMissions: [],
   isLoading: false,
   isRefreshing: false,
   isDemoFallback: false,

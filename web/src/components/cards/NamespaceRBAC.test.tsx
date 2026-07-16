@@ -54,6 +54,7 @@ vi.mock('../../lib/cards/cardHooks', () => ({
   useCardData: (...args: unknown[]) => mockUseCardData(...args),
   commonComparators: {
     string: (_field: string) => () => 0,
+    number: (_field: string) => () => 0,
   },
 }))
 

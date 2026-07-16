@@ -112,21 +112,19 @@ describe('YAMLEditorPanel', () => {
     expect(textarea.value).toContain('apiVersion')
   })
 
-  // 2. Validate button
-  it('renders validate button', () => {
+  // 2. Apply button
+  it('renders apply button', () => {
     render(<YAMLEditorPanel {...defaultProps} />)
-    const validateBtn = screen.getAllByRole('button').find(b => b.textContent?.includes('validate') || b.textContent?.includes('Validate'))
-    expect(validateBtn).toBeTruthy()
+    const applyBtn = screen.getAllByRole('button').find(b => b.textContent?.includes('apply') || b.textContent?.includes('Apply'))
+    expect(applyBtn).toBeTruthy()
   })
 
-  it('calls onValidate when validate button is clicked', async () => {
+  it('calls onValidate when YAML content is typed in textarea', async () => {
     const user = userEvent.setup()
     render(<YAMLEditorPanel {...defaultProps} />)
-    const validateBtn = screen.getAllByRole('button').find(b => b.textContent?.includes('validate') || b.textContent?.includes('Validate'))
-    if (validateBtn) {
-      await user.click(validateBtn)
-      expect(defaultProps.onValidate).toHaveBeenCalled()
-    }
+    const textarea = screen.getByRole('textbox')
+    await user.type(textarea, 'x')
+    expect(defaultProps.onValidate).toHaveBeenCalled()
   })
 
   // 3. Apply button

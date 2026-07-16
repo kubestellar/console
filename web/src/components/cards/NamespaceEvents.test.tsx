@@ -172,11 +172,11 @@ function setupMocks(opts: {
   })
 
   mockUseCascadingSelection.mockReturnValue({
-    selectedCluster: '',
-    setSelectedCluster: vi.fn(),
-    selectedNamespace: '',
-    setSelectedNamespace: vi.fn(),
-    namespaces: ['default'],
+    selectedFirst: '',
+    setSelectedFirst: vi.fn(),
+    selectedSecond: '',
+    setSelectedSecond: vi.fn(),
+    availableFirstLevel: [],
   })
 }
 

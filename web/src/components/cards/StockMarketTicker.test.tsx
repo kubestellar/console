@@ -28,7 +28,7 @@ vi.mock('./CardDataContext', () => ({
 
 vi.mock('../../lib/cache', () => ({
   useCache: () => ({
-    data: null,
+    data: [],
     isLoading: false,
     isRefreshing: false,
     isDemoFallback: false,

@@ -93,14 +93,14 @@ const defaultScan = {
     detectedByLevel: {},
     nextTransitionTrigger: '',
   },
-  detectedIds: ['c1'],
+  detectedIds: new Set(['c1']),
   isLoading: false,
   isRefreshing: false,
   isDemoData: false,
   isFailed: false,
   consecutiveFailures: 0,
   lastRefresh: null,
-  data: { detectedIds: ['c1'] },
+  data: { detectedIds: new Set(['c1']) },
 }
 
 function setup(overrides = {}) {
@@ -156,7 +156,7 @@ describe('ACMMFeedbackLoops', () => {
 
   // 4. No crash with no data
   it('does not crash when detectedIds is empty', () => {
-    setup({ data: { detectedIds: [] } })
+    setup({ detectedIds: new Set<string>(), data: { detectedIds: new Set<string>() } })
     render(<ACMMFeedbackLoops />)
     expect(document.body).toBeTruthy()
   })
