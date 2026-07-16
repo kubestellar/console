@@ -25,7 +25,7 @@ export function ScheduleActionForm() {
         {Object.entries(ACTION_CONFIGS).map(([key, cfg]) => <option key={key} value={key}>{cfg.label}</option>)}
       </select>
       {(ACTION_CONFIGS[actionType]?.params || []).map(param => (
-        <input key={param.name} type={param.type} value={values[param.name] || ''} onChange={(e) => setValues(prev => ({ ...prev, [param.name]: e.target.value }))} placeholder={param.label} />
+        <input key={param.name} type={param.type} value={values[param.name] || ''} onChange={(e) => setValues(prev => ({ ...prev, [param.name]: e.target.value }))} placeholder={param.placeholder ?? param.label} />
       ))}
       <button
         onClick={() => {

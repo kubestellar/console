@@ -35,7 +35,8 @@ describe('WatchCard', () => {
         onSnooze={vi.fn()}
       />
     )
-    expect(screen.getByText('api-server')).toBeInTheDocument()
+    // namespace and name are rendered together as "namespace/name"
+    expect(screen.getByText('default/api-server')).toBeInTheDocument()
   })
 
   it('renders the namespace', () => {
@@ -47,7 +48,8 @@ describe('WatchCard', () => {
         onSnooze={vi.fn()}
       />
     )
-    expect(screen.getByText('default')).toBeInTheDocument()
+    // namespace is rendered as part of "namespace/name"
+    expect(screen.getByText('default/api-server')).toBeInTheDocument()
   })
 
   it('renders the resource kind', () => {
@@ -59,7 +61,8 @@ describe('WatchCard', () => {
         onSnooze={vi.fn()}
       />
     )
-    expect(screen.getByText('Deployment')).toBeInTheDocument()
+    // kind is rendered as part of "kind · cluster"
+    expect(screen.getByText('Deployment · prod')).toBeInTheDocument()
   })
 
   it('renders the watch reason', () => {
