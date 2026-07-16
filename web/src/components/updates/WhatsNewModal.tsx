@@ -15,31 +15,11 @@ import { useRecentPRs } from './whatsNew/useRecentPRs'
 import { ReleaseNotesContent } from './whatsNew/ReleaseNotesContent'
 import { PreviousReleases } from './whatsNew/PreviousReleases'
 import { WhatsNewFooter } from './whatsNew/WhatsNewFooter'
-
-const SNOOZE_STORAGE_KEY = 'kc-update-snoozed'
+import { snoozeUpdate } from './whatsNew/snooze'
 
 // Clean up the removed kill-switch key so users who had it set during
 // development don't get a dead button. Runs once on module load.
 try { localStorage.removeItem('kc-whats-new-modal-disabled') } catch { /* ignore */ }
-
-export function isUpdateSnoozed(): boolean {
-  try {
-    const raw = localStorage.getItem(SNOOZE_STORAGE_KEY)
-    if (!raw) return false
-    const snoozedUntil = Number(raw)
-    return Date.now() < snoozedUntil
-  } catch {
-    return false
-  }
-}
-
-function snoozeUpdate(durationMs: number) {
-  try {
-    localStorage.setItem(SNOOZE_STORAGE_KEY, String(Date.now() + durationMs))
-  } catch {
-    // localStorage unavailable — silently ignore
-  }
-}
 
 interface WhatsNewModalProps {
   isOpen: boolean
