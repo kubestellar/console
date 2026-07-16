@@ -282,7 +282,9 @@ func (s *Server) startKBGapsSweeper(gapStore kbGapSweeper) {
 	if gapStore == nil {
 		return
 	}
+	s.lifecycle.wg.Add(1)
 	safego.GoWith("api/kb-gap-sweeper", func() {
+		defer s.lifecycle.wg.Done()
 		runSweep := func() {
 			deleted, err := gapStore.SweepOldKBGaps(context.Background())
 			if err != nil {
