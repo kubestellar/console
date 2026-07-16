@@ -1,0 +1,51 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`HelmHistory > snapshot > matches snapshot for selector-only state 1`] = `
+<div
+  class="h-full flex flex-col min-h-card content-loaded overflow-hidden"
+>
+  <div
+    class="flex flex-wrap items-center justify-between gap-y-2 mb-4"
+  >
+    <div
+      class="flex items-center gap-2"
+    />
+    <div
+      data-testid="card-controls"
+    />
+  </div>
+  <div
+    class="flex gap-2 mb-4"
+  >
+    <select
+      class="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
+    >
+      <option
+        value=""
+      >
+        selectCluster
+      </option>
+      <option
+        value="prod"
+      >
+        prod
+      </option>
+    </select>
+    <select
+      class="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
+      disabled=""
+    >
+      <option
+        value=""
+      >
+        selectRelease
+      </option>
+    </select>
+  </div>
+  <div
+    class="flex-1 flex items-center justify-center text-muted-foreground text-sm"
+  >
+    selectClusterRelease
+  </div>
+</div>
+`;
