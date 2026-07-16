@@ -138,7 +138,7 @@ export function EventCard({
       )}
       {attemptCount && attemptCount > 0 ? (
         <div
-          className="mt-1 inline-flex items-center gap-1 rounded-[10px] px-1.5 text-[10px] font-mono"
+          className="mt-1 inline-flex items-center gap-1 rounded-[10px] px-1.5 py-px text-[10px] font-mono"
           style={EVENT_CARD_ATTEMPT_BADGE_STYLE}
         >
           <span>{t('stellar.eventCard.attemptCount', { count: attemptCount })}</span>

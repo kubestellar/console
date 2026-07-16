@@ -29,13 +29,13 @@ export function WatchDetailHeader({
     <div className="px-4 py-3.5" style={{ borderBottom: '1px solid var(--s-border)', flexShrink: 0 }}>
       <div className="flex items-start gap-2.5">
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
+          <div className="mb-1" style={{ fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Watch · {watch.resourceKind} · watching for {formatDuration(watchAgeMs)}
           </div>
           <div id={titleId} style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}>
             {watch.namespace}/{watch.resourceName}
           </div>
-          <div style={{ fontSize: 11, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', marginTop: 4 }}>
+          <div className="mt-1" style={{ fontSize: 11, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)' }}>
             {watch.cluster}
           </div>
         </div>

@@ -77,7 +77,7 @@ export function WatchDetailContent({
             {watch.lastUpdate}
           </div>
           {watch.lastChecked && (
-            <div style={{ fontSize: 10, color: 'var(--s-text-dim)', marginTop: 4, fontFamily: 'var(--s-mono)' }}>
+            <div className="mt-1" style={{ fontSize: 10, color: 'var(--s-text-dim)', fontFamily: 'var(--s-mono)' }}>
               checked {formatRelative(watch.lastChecked)}{isStale && ' · ⚠ stale'}
             </div>
           )}
@@ -186,7 +186,7 @@ export function WatchDetailContent({
               </div>
             ))}
             {relatedEvents.length > EVENT_TIMELINE_LIMIT && (
-              <div style={{ fontSize: 10, color: 'var(--s-text-dim)', textAlign: 'center', marginTop: 4 }}>
+              <div className="mt-1" style={{ fontSize: 10, color: 'var(--s-text-dim)', textAlign: 'center' }}>
                 +{relatedEvents.length - EVENT_TIMELINE_LIMIT} earlier
               </div>
             )}

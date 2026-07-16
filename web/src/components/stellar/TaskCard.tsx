@@ -11,12 +11,12 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
     <div className="flex items-start gap-1.5 px-2.5 py-1.5 text-xs">
       <button
         onClick={() => onStatusChange(task.id, nextStatus)}
+        className="mt-px"
         style={{
           width: 14,
           height: 14,
           borderRadius: 3,
           flexShrink: 0,
-          marginTop: 1,
           border: '1px solid var(--s-border)',
           background: task.status === 'done' ? 'var(--s-success)' : 'none',
           cursor: 'pointer',

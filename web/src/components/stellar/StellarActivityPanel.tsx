@@ -121,7 +121,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
                 // sweeps with no event) render as plain rows.
                 const clickable = !!(entry.eventId && onOpenEvent)
                 const baseStyle: React.CSSProperties = {
-                  display: 'flex', alignItems: 'baseline', gap: 8,
+                  display: 'flex', alignItems: 'baseline',
                   borderRadius: 'var(--s-rs)',
                   borderLeft: `2px solid ${k.color}`,
                   background: 'var(--s-surface-2)',
@@ -167,7 +167,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
                   <button
                     key={entry.id}
                     type="button"
-                    className="px-2 py-1"
+                    className="px-2 py-1 gap-2"
                     title={`${entry.detail ?? ''}\n\nClick to open the event in the events column.`}
                     onClick={() => entry.eventId && onOpenEvent?.(entry.eventId, entry)}
                     style={baseStyle}
@@ -175,7 +175,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
                     {body}
                   </button>
                 ) : (
-                  <div key={entry.id} className="px-2 py-1" title={entry.detail} style={baseStyle}>
+                  <div key={entry.id} className="px-2 py-1 gap-2" title={entry.detail} style={baseStyle}>
                     {body}
                   </div>
                 )
