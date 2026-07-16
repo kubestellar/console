@@ -11,6 +11,8 @@ import type {
 } from '../types/stellar'
 
 const STELLAR_CHAT_TIMEOUT_MS = 300_000
+const STELLAR_DEFAULT_ITEM_LIMIT = 50
+const STELLAR_EXTENDED_ITEM_LIMIT = 100
 const UUID_PATH_PARAM_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 interface GetStateOptions {
@@ -105,7 +107,7 @@ export const stellarApi = {
     }
   },
 
-  async getNotifications(limit = 50, unreadOnly = false): Promise<StellarNotification[]> {
+  async getNotifications(limit = STELLAR_DEFAULT_ITEM_LIMIT, unreadOnly = false): Promise<StellarNotification[]> {
     try {
       const query = new URLSearchParams()
       query.set('limit', String(limit))
@@ -122,7 +124,7 @@ export const stellarApi = {
     }
   },
 
-  async getMissions(limit = 50): Promise<StellarMission[]> {
+  async getMissions(limit = STELLAR_DEFAULT_ITEM_LIMIT): Promise<StellarMission[]> {
     try {
       const { data } = await api.get<{ items: StellarMission[] }>(`/api/stellar/missions?limit=${limit}`)
       return data.items || []
@@ -136,7 +138,7 @@ export const stellarApi = {
     }
   },
 
-  async getActions(status?: string, limit = 50): Promise<StellarAction[]> {
+  async getActions(status?: string, limit = STELLAR_DEFAULT_ITEM_LIMIT): Promise<StellarAction[]> {
     try {
       const query = new URLSearchParams()
       query.set('limit', String(limit))
@@ -325,7 +327,7 @@ export const stellarApi = {
     await api.post(`/api/stellar/watches/${encodeURIComponent(id)}/snooze`, { minutes })
   },
 
-  async getAuditLog(limit = 50, signal?: AbortSignal): Promise<StellarAuditEntry[]> {
+  async getAuditLog(limit = STELLAR_DEFAULT_ITEM_LIMIT, signal?: AbortSignal): Promise<StellarAuditEntry[]> {
     try {
       const { data } = await api.get<{ items: StellarAuditEntry[] }>(`/api/stellar/audit?limit=${limit}`, { signal })
       return data.items || []
@@ -346,7 +348,7 @@ export const stellarApi = {
     const { data } = await api.post<{ solveId: string; status: string; existing?: boolean }>(`/api/stellar/solve/${encodedEventID}`)
     return data
   },
-  async listSolves(limit = 100): Promise<import('../types/stellar').StellarSolve[]> {
+  async listSolves(limit = STELLAR_EXTENDED_ITEM_LIMIT): Promise<import('../types/stellar').StellarSolve[]> {
     try {
       const { data } = await api.get<{ items: import('../types/stellar').StellarSolve[] }>(`/api/stellar/solves?limit=${limit}`)
       return data.items || []
@@ -359,7 +361,7 @@ export const stellarApi = {
       return []
     }
   },
-  async listActivity(limit = 100): Promise<import('../types/stellar').StellarActivity[]> {
+  async listActivity(limit = STELLAR_EXTENDED_ITEM_LIMIT): Promise<import('../types/stellar').StellarActivity[]> {
     try {
       const { data } = await api.get<{ items: import('../types/stellar').StellarActivity[] }>(`/api/stellar/activity?limit=${limit}`)
       return data.items || []
@@ -378,7 +380,7 @@ export async function getStellarState(): Promise<StellarOperationalState> {
   return stellarApi.getState()
 }
 
-export async function getStellarNotifications(limit = 50, unreadOnly = false): Promise<StellarNotification[]> {
+export async function getStellarNotifications(limit = STELLAR_DEFAULT_ITEM_LIMIT, unreadOnly = false): Promise<StellarNotification[]> {
   return stellarApi.getNotifications(limit, unreadOnly)
 }
 
@@ -386,11 +388,11 @@ export async function markStellarNotificationRead(id: string): Promise<void> {
   return stellarApi.acknowledgeNotification(id)
 }
 
-export async function getStellarMissions(limit = 50): Promise<StellarMission[]> {
+export async function getStellarMissions(limit = STELLAR_DEFAULT_ITEM_LIMIT): Promise<StellarMission[]> {
   return stellarApi.getMissions(limit)
 }
 
-export async function getStellarActions(status?: string, limit = 50): Promise<StellarAction[]> {
+export async function getStellarActions(status?: string, limit = STELLAR_DEFAULT_ITEM_LIMIT): Promise<StellarAction[]> {
   return stellarApi.getActions(status, limit)
 }
 
