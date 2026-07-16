@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   CardSearchInput,
   CardClusterFilter,
@@ -68,11 +69,14 @@ vi.mock('../../../components/ui/Skeleton', () => ({
 }))
 
 vi.mock('../../../components/ui/Pagination', () => ({
-  Pagination: ({ onPageChange, currentPage }: { onPageChange: (p: number) => void; currentPage: number }) => (
-    <div data-testid="pagination">
-      <button data-testid="next-page" onClick={() => onPageChange(currentPage + 1)}>Next</button>
-    </div>
-  ),
+  Pagination: ({ onPageChange, currentPage }: { onPageChange: (p: number) => void; currentPage: number }) => {
+    const { t } = useTranslation()
+    return (
+      <div data-testid="pagination">
+        <button data-testid="next-page" onClick={() => onPageChange(currentPage + 1)}>{t('actions.next')}</button>
+      </div>
+    )
+  },
 }))
 
 vi.mock('../../../components/ui/CardControls', () => ({
@@ -642,10 +646,11 @@ describe('CardEmptyState - error variant', () => {
 
 describe('useDropdownPortal', () => {
   function TestHarness({ isOpen }: { isOpen: boolean }) {
+    const { t } = useTranslation()
     const { triggerRef, style } = useDropdownPortal(isOpen)
     return (
       <div>
-        <button ref={triggerRef} data-testid="trigger">Trigger</button>
+        <button ref={triggerRef} data-testid="trigger">{t('actions.trigger')}</button>
         {style && <div data-testid="portal-style">{JSON.stringify(style)}</div>}
       </div>
     )

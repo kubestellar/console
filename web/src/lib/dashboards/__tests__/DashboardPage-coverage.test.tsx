@@ -11,6 +11,7 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import type { DragEndEvent } from '@dnd-kit/core'
+import { useTranslation } from 'react-i18next'
 
 // ---------------------------------------------------------------------------
 // Mocks — declared before component import
@@ -81,13 +82,16 @@ vi.mock('../DashboardComponents', () => ({
     card: { id: string; card_type: string }
     onInsertBefore?: () => void
     onInsertAfter?: () => void
-  }) => (
-    <div data-testid={`sortable-card-${card.id}`}>
-      {card.card_type}
-      {onInsertBefore && <button data-testid={`insert-before-${card.id}`} onClick={onInsertBefore}>Before</button>}
-      {onInsertAfter && <button data-testid={`insert-after-${card.id}`} onClick={onInsertAfter}>After</button>}
-    </div>
-  ),
+  }) => {
+    const { t } = useTranslation()
+    return (
+      <div data-testid={`sortable-card-${card.id}`}>
+        {card.card_type}
+        {onInsertBefore && <button data-testid={`insert-before-${card.id}`} onClick={onInsertBefore}>{t('actions.insertBefore')}</button>}
+        {onInsertAfter && <button data-testid={`insert-after-${card.id}`} onClick={onInsertAfter}>{t('actions.insertAfter')}</button>}
+      </div>
+    )
+  },
   DragPreviewCard: ({ card }: { card: { id: string } }) => (
     <div data-testid={`drag-preview-${card.id}`} />
   ),
@@ -111,22 +115,23 @@ vi.mock('../../../components/dashboard/customizer/DashboardCustomizer', () => ({
     initialSection?: string
     initialSearch?: string
     initialWidgetCardType?: string
-  }) => (
-    isOpen ? (
+  }) => {
+    const { t } = useTranslation()
+    return isOpen ? (
       <div data-testid="dashboard-customizer">
         <span data-testid="initial-section">{initialSection || 'none'}</span>
         <span data-testid="initial-search">{initialSearch || ''}</span>
         <span data-testid="initial-widget">{initialWidgetCardType || ''}</span>
-        <button data-testid="customizer-close" onClick={onClose}>Close</button>
+        <button data-testid="customizer-close" onClick={onClose}>{t('actions.close')}</button>
         <button
           data-testid="customizer-add"
           onClick={() => onAddCards([{ type: 'inserted', title: 'Inserted', config: {} }])}
         >
-          Add
+          {t('actions.add')}
         </button>
       </div>
     ) : null
-  ),
+  },
 }))
 
 vi.mock('../../../components/dashboard/templates', () => ({}))
