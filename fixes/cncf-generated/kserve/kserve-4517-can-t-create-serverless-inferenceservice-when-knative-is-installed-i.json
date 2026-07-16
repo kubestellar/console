@@ -1,0 +1,78 @@
+{
+  "version": "kc-mission-v1",
+  "name": "kserve-4517-can-t-create-serverless-inferenceservice-when-knative-is-installed-i",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "kserve: Can't create Serverless InferenceService when knative is installed in non-default namespace",
+    "description": "Can't create Serverless InferenceService when knative is installed in non-default namespace. This issue affects 5+ users.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify kserve troubleshoot symptoms",
+        "description": "Check for the issue in your kserve deployment:\n```bash\nkubectl get pods -n kserve -l app.kubernetes.io/name=kserve\nkubectl logs -l app.kubernetes.io/name=kserve -n kserve --tail=100 | grep -i error\n```\nLook for errors or warnings in the logs that may indicate the issue."
+      },
+      {
+        "title": "Review kserve configuration",
+        "description": "Inspect the relevant kserve configuration:\n```bash\nkubectl get all -n kserve -l app.kubernetes.io/name=kserve\nkubectl get configmap -n kserve -l app.kubernetes.io/part-of=kserve\n```\n**What steps did you take and what happened:**\n1. I was running kserve 0.15.0, and created a Serverless InferenceService.\n2. I upgraded kserve from 0.15.0 to 0.15.2\n3."
+      },
+      {
+        "title": "Apply the fix for Can't create Serverless InferenceService when knative is…",
+        "description": "Apply the configuration change to resolve the issue:\n```yaml\napiVersion: serving.kserve.io/v1beta1\nkind: InferenceService\nmetadata:\n  annotations:\n    serving.kserve.io/deploymentMode: Serverless\n  creationTimestamp: \"2025-06-11T07:40:57Z\"\n  finalizers:\n    - inferenceservice.finalizers\n  generation: 2\n  labels:\n    app: pythondeployment-kapitan-1749627522005-0\n    app.kubernetes.io/name: pythondeployment-kapitan-1749627522005-0\n  name: pythondeployment-kapitan-1749627522005-0\n  namespace: ...\nspec:\n  ...\n```"
+      },
+      {
+        "title": "Confirm Can't create Serverless InferenceService when… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=kserve -n kserve --tail=50 --since=5m\nkubectl get events -n kserve --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that the issue symptoms are gone."
+      }
+    ],
+    "resolution": {
+      "summary": "See the source issue for the community-verified solution: https://github.com/kserve/kserve/issues/4517",
+      "codeSnippets": [
+        "apiVersion: serving.kserve.io/v1beta1\nkind: InferenceService\nmetadata:\n  annotations:\n    serving.kserve.io/deploymentMode: Serverless\n  creationTimestamp: \"2025-06-11T07:40:57Z\"\n  finalizers:\n    - inferenceservice.finalizers\n  generation: 2\n  labels:\n    app: pythondeployment-kapitan-1749627522005-0\n    app.kubernetes.io/name: pythondeployment-kapitan-1749627522005-0\n  name: pythondeployment-kapitan-1749627522005-0\n  namespace: ...\nspec:\n  ..."
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "kserve",
+      "incubating",
+      "app-definition",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "kserve"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Configmap",
+      "Namespace"
+    ],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "incubating",
+    "sourceUrls": {
+      "issue": "https://github.com/kserve/kserve/issues/4517",
+      "repo": "https://github.com/kserve/kserve"
+    },
+    "reactions": 5,
+    "comments": 14,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with kserve installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-16T06:54:58.148Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
