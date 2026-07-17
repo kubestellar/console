@@ -37,7 +37,16 @@ vi.mock('../../ui/Toast', () => ({
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) => {
+    t: (key: string, optsOrDefault?: Record<string, unknown> | string, extraOpts?: Record<string, unknown>) => {
+      // Handle t(key, defaultValue, options) — interpolate the default value string
+      if (typeof optsOrDefault === 'string') {
+        const options = extraOpts ?? {}
+        return Object.entries(options).reduce(
+          (s, [k, v]) => s.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v ?? '')),
+          optsOrDefault,
+        )
+      }
+      const opts = optsOrDefault
       if (key === 'orbit.cardRequest') return `Request card for ${opts?.project}`
       if (key === 'orbit.cardRequestRequested') return 'Requested'
       if (key === 'orbit.cardRequestAction') return 'Request Card'
