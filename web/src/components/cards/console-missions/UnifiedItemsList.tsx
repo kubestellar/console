@@ -5,7 +5,7 @@
  * Pure UI component — renders mission items based on props; no data fetching.
  * Demo data support provided by parent mission cards.
  */
-import { ChevronRight, RefreshCw, Cpu, HardDrive, Sparkles, Zap, ThumbsUp, ThumbsDown, CheckCircle } from 'lucide-react'
+import { ChevronRight, RefreshCw, Cpu, HardDrive, Sparkles, Zap, ThumbsUp, ThumbsDown, CheckCircle, Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -24,6 +24,8 @@ type UnifiedItemsListProps = {
   drillToCluster: (cluster: string) => void
   getFeedback: (id: string) => string | null
   submitFeedback: (id: string, feedback: string, type: string, provider?: string) => void
+  dataLoading?: boolean
+  dataError?: string | null
 }
 
 export function UnifiedItemsList({
@@ -35,8 +37,28 @@ export function UnifiedItemsList({
   drillToCluster,
   getFeedback,
   submitFeedback,
+  dataLoading,
+  dataError,
 }: UnifiedItemsListProps) {
   const { t } = useTranslation(['cards', 'common'])
+
+  if (dataLoading) {
+    return (
+      <div className="flex items-center justify-center h-full py-4 text-sm text-muted-foreground">
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        {t('common:common.loading', 'Loading...')}
+      </div>
+    )
+  }
+
+  if (dataError) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+        <AlertCircle className="w-4 h-4 shrink-0" />
+        {dataError}
+      </div>
+    )
+  }
 
   return (
     <>

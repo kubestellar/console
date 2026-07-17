@@ -5,8 +5,9 @@
  * Pure UI component — renders analysis panel based on props; no data fetching.
  * Demo data support provided by parent mission cards.
  */
-import { AlertCircle, CheckCircle, Clock, TrendingUp, Sparkles } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock, TrendingUp, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 type AIAnalysisPanelProps = {
   filteredTotalIssues: number
@@ -16,6 +17,8 @@ type AIAnalysisPanelProps = {
   isFiltered: boolean
   runningMission: boolean
   onStartAnalysis: () => void
+  dataLoading?: boolean
+  dataError?: string | null
 }
 
 export function AIAnalysisPanel({
@@ -26,7 +29,29 @@ export function AIAnalysisPanel({
   isFiltered,
   runningMission,
   onStartAnalysis,
+  dataLoading,
+  dataError,
 }: AIAnalysisPanelProps) {
+  const { t } = useTranslation(['cards', 'common'])
+
+  if (dataLoading) {
+    return (
+      <div className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm text-muted-foreground bg-secondary/30">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        {t('common:common.loading', 'Loading...')}
+      </div>
+    )
+  }
+
+  if (dataError) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+        <AlertCircle className="w-4 h-4 shrink-0" />
+        {dataError}
+      </div>
+    )
+  }
+
   return (
     <button
       onClick={onStartAnalysis}
@@ -47,22 +72,29 @@ export function AIAnalysisPanel({
       {filteredTotalIssues === 0 && filteredTotalPredicted === 0 ? (
         <>
           <CheckCircle className="w-4 h-4" />
-          {isFiltered ? 'No matching items' : 'All Healthy'}
+          {isFiltered ? t('common:common.noMatchingItems', 'No matching items') : t('cards:consoleOfflineDetection.allHealthy', 'All Healthy')}
         </>
       ) : runningMission ? (
         <>
           <Clock className="w-4 h-4 animate-pulse" />
-          Analyzing...
+          {t('cards:consoleOfflineDetection.analyzing', 'Analyzing...')}
         </>
       ) : filteredTotalIssues > 0 ? (
         <>
           <AlertCircle className="w-4 h-4" />
-          Analyze {filteredTotalIssues} Issue{filteredTotalIssues !== 1 ? 's' : ''}{filteredTotalPredicted > 0 ? ` + ${filteredTotalPredicted} Risks` : ''}
+          {t('cards:consoleOfflineDetection.analyzeIssues', 'Analyze {{count}} Issue{{plural}}{{risks}}', {
+            count: filteredTotalIssues,
+            plural: filteredTotalIssues !== 1 ? 's' : '',
+            risks: filteredTotalPredicted > 0 ? ` + ${filteredTotalPredicted} Risks` : '',
+          })}
         </>
       ) : (
         <>
           {filteredAIPredictionCount > 0 ? <Sparkles className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
-          Analyze {filteredTotalPredicted} Predicted Risk{filteredTotalPredicted !== 1 ? 's' : ''}
+          {t('cards:consoleOfflineDetection.analyzePredictions', 'Analyze {{count}} Predicted Risk{{plural}}', {
+            count: filteredTotalPredicted,
+            plural: filteredTotalPredicted !== 1 ? 's' : '',
+          })}
           {filteredAIPredictionCount > 0 && (
             <span className="text-xs opacity-75">({filteredAIPredictionCount} AI)</span>
           )}

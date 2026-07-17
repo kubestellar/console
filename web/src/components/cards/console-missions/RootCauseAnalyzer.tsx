@@ -5,7 +5,7 @@
  * Pure UI component — renders root cause groups based on props; no data fetching.
  * Demo data support provided by parent mission cards.
  */
-import { ChevronRight, CheckCircle } from 'lucide-react'
+import { ChevronRight, CheckCircle, Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
@@ -28,6 +28,8 @@ type RootCauseAnalyzerProps = {
     initialPrompt: string
     context: Record<string, unknown>
   }) => void
+  dataLoading?: boolean
+  dataError?: string | null
 }
 
 const SEVERITY_RGB: Record<string, string> = {
@@ -57,8 +59,28 @@ export function RootCauseAnalyzer({
   drillToNode,
   drillToCluster,
   startMission,
+  dataLoading,
+  dataError,
 }: RootCauseAnalyzerProps) {
   const { t } = useTranslation(['cards', 'common'])
+
+  if (dataLoading) {
+    return (
+      <div className="flex items-center justify-center h-full py-4 text-sm text-muted-foreground">
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        {t('common:common.loading', 'Loading...')}
+      </div>
+    )
+  }
+
+  if (dataError) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+        <AlertCircle className="w-4 h-4 shrink-0" />
+        {dataError}
+      </div>
+    )
+  }
 
   if (rootCauseGroups.length === 0) {
     return (

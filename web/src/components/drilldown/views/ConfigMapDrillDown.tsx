@@ -38,6 +38,8 @@ export function ConfigMapDrillDown({ data }: Props) {
   const [describeLoading, setDescribeLoading] = useState(false)
   const [yamlOutput, setYamlOutput] = useState<string | null>(null)
   const [yamlLoading, setYamlLoading] = useState(false)
+  const [dataLoading, setDataLoading] = useState(false)
+  const [dataError, setDataError] = useState<string | null>(null)
   const [labels, setLabels] = useState<Record<string, string> | null>(null)
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -68,7 +70,8 @@ export function ConfigMapDrillDown({ data }: Props) {
   // Fetch ConfigMap data
   const fetchData = async () => {
     if (!agentConnected || !hasRequiredContext) return
-
+    setDataLoading(true)
+    setDataError(null)
     try {
       const output = await runKubectl(['get', 'configmap', configmapName, '-n', namespace, '-o', 'json'])
       if (output) {
@@ -83,8 +86,10 @@ export function ConfigMapDrillDown({ data }: Props) {
         setConfigmapData(cm.data || {})
         setLabels(cm.metadata?.labels || {})
       }
-    } catch {
-      // Ignore parse errors
+    } catch (err) {
+      setDataError(err instanceof Error ? err.message : t('common.fetchFailed', 'Failed to load ConfigMap data'))
+    } finally {
+      setDataLoading(false)
     }
   }
 
@@ -251,6 +256,17 @@ export function ConfigMapDrillDown({ data }: Props) {
             {!hasRequiredContext && (
               <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm text-yellow-400">
                 {t('drilldown.configmap.missingContext', 'Unable to load this ConfigMap because the selected resource is missing required details.')}
+              </div>
+            )}
+            {dataLoading && (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">{t('common.loading', 'Loading...')}</span>
+              </div>
+            )}
+            {dataError && !dataLoading && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <p className="text-sm text-red-400">{dataError}</p>
               </div>
             )}
             {/* Basic Info */}

@@ -39,7 +39,8 @@ export function RequestApprovalModal({
   const [issueUrl, setIssueUrl] = useState<string | null>(null)
   const [hasGitHubToken, setHasGitHubToken] = useState(false)
   const [checkingGitHubToken, setCheckingGitHubToken] = useState(false)
-  const [tokenCheckError, setTokenCheckError] = useState(false)
+  // Canonical string|null pattern (per #21202): stores actual error message for inline display
+  const [tokenCheckError, setTokenCheckError] = useState<string | null>(null)
   const tokenCheckedRef = useRef(false)
   const submittingRef = useRef(false)
 
@@ -47,18 +48,18 @@ export function RequestApprovalModal({
 
   const checkGitHubTokenStatus = useCallback(async () => {
     setCheckingGitHubToken(true)
-    setTokenCheckError(false)
+    setTokenCheckError(null)
     try {
       const res = await fetch('/api/github/token/status', { headers: token ? { Authorization: `Bearer ${token}` } : {}, signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       setHasGitHubToken(Boolean((await res.json() as { hasToken?: boolean }).hasToken))
-    } catch {
+    } catch (err) {
       setHasGitHubToken(false)
-      setTokenCheckError(true)
+      setTokenCheckError(err instanceof Error ? err.message : t('common.fetchFailed', 'Could not verify GitHub access'))
     } finally {
       setCheckingGitHubToken(false)
     }
-  }, [token])
+  }, [token, t])
 
   // Check whether GitHub token is configured via /api/github/token/status
   useEffect(() => {
@@ -144,7 +145,7 @@ export function RequestApprovalModal({
     setSubmitting(false)
     setHasGitHubToken(false)
     setCheckingGitHubToken(false)
-    setTokenCheckError(false)
+    setTokenCheckError(null)
     onClose()
   }, [onClose])
 
@@ -224,7 +225,10 @@ export function RequestApprovalModal({
                 </p>
               ) : tokenCheckError ? (
                 <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
-                  Could not verify GitHub access. <button type="button" className="underline underline-offset-2" onClick={() => void checkGitHubTokenStatus()}>Retry</button>
+                  {tokenCheckError}{' '}
+                  <button type="button" className="underline underline-offset-2" onClick={() => void checkGitHubTokenStatus()}>
+                    {t('common.retry', 'Retry')}
+                  </button>
                 </p>
               ) : !hasGitHubToken && (
                 <p className="text-xs text-amber-400">
@@ -265,7 +269,7 @@ export function RequestApprovalModal({
                 disabled={!isValidRepo || submitting || checkingGitHubToken || !hasGitHubToken}
                 icon={submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <GitPullRequestArrow className="w-3.5 h-3.5" />}
               >
-                {submitting ? 'Creating…' : 'Create Issue'}
+                {submitting ? 'Creating\u2026' : 'Create Issue'}
               </Button>
             </>
           ) : (
