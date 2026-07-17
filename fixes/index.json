@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 1640,
+  "count": 1641,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -56505,6 +56505,48 @@
         "feature"
       ],
       "type": "feature",
+      "installMethods": [],
+      "maturity": "sandbox",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/pipecd/pipecd-4980-plugin-architectured-piped-pipedv1-supports-deployment-for-applicati.json",
+      "title": "pipecd: Plugin architectured piped (pipedv1) supports deployment for applications",
+      "description": "Plugin architectured piped (pipedv1) supports deployment for applications. Community-requested feature.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "pipecd",
+        "sandbox",
+        "app-definition",
+        "deploy"
+      ],
+      "cncfProjects": [
+        "pipecd"
+      ],
+      "targetResourceKinds": [
+        "Deployment",
+        "Service",
+        "Secret"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "deploy"
+      ],
+      "type": "deploy",
       "installMethods": [],
       "maturity": "sandbox",
       "qualityScore": 100,
