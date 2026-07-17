@@ -148,14 +148,17 @@ vi.mock('../../../../lib/cards/CardComponents', () => ({
     value: string
     onChange: (v: string) => void
     placeholder?: string
-  }) => (
-    <input
-      data-testid="search-input"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-    />
-  ),
+  }) => {
+    // eslint-disable-next-line no-restricted-syntax -- test mock needs native input for simplicity
+    return (
+      <input
+        data-testid="search-input"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
+    )
+  },
   CardPaginationFooter: () => <div data-testid="pagination-footer" />,
   CardAIActions: () => null,
 }))
@@ -357,7 +360,7 @@ describe('ConsoleOfflineDetectionCard', () => {
       })
       render(<ConsoleOfflineDetectionCard />)
 
-      expect(screen.getByRole('button', { name: /All Healthy/i })).toBeDisabled()
+      expect(screen.getByRole('button', { name: /consoleOfflineDetection\.allHealthy/i })).toBeDisabled()
     })
 
     it('starts analysis mission when issues exist and button is clicked', async () => {
@@ -368,7 +371,7 @@ describe('ConsoleOfflineDetectionCard', () => {
       })
       render(<ConsoleOfflineDetectionCard />)
 
-      await userEvent.click(screen.getByRole('button', { name: /Analyze 1 Issue/i }))
+      await userEvent.click(screen.getByRole('button', { name: /consoleOfflineDetection\.analyzeIssues/i }))
       expect(mockStartMission).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'troubleshoot',
