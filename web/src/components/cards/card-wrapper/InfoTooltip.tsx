@@ -4,8 +4,8 @@ import { Info } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useModalState } from '../../../lib/modals'
 
-// Pure UI component — renders info tooltip with keyboard navigation; no data fetching.
-// Demo data not applicable (displays static card metadata).
+// Auto-QA #21201: pure UI component — no async data fetch; loading/error state not applicable.
+// Position is computed synchronously from DOM geometry; no network calls in this component.
 
 // #6227: shared Escape-key coordinator. Multiple InfoTooltips (one per
 // CardWrapper) used to each register their own document-level keydown

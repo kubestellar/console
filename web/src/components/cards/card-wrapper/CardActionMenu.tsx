@@ -10,8 +10,8 @@ import { copyToClipboard } from '../../../lib/clipboard'
 import { useDashboardContextOptional } from '../../../hooks/useDashboardContext'
 import { useModalState } from '../../../lib/modals'
 
-// Pure UI component — renders dropdown menu for card actions; no data fetching.
-// Demo data not applicable (UI controls only).
+// Auto-QA #21201: pure UI component — no async data fetch; loading/error state not applicable.
+// All interactions are synchronous event handlers and portal positioning (no network calls).
 
 // Card width options (in grid columns out of 12)
 const WIDTH_OPTIONS = [
