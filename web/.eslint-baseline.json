@@ -5567,14 +5567,14 @@
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 649,
+    "line": 644,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 644,
+    "line": 649,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
@@ -7458,13 +7458,6 @@
     "file": "src/components/ui/Toast.tsx",
     "rule": "react-refresh/only-export-components",
     "line": 26,
-    "column": 17,
-    "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
-  },
-  {
-    "file": "src/components/updates/WhatsNewModal.tsx",
-    "rule": "react-refresh/only-export-components",
-    "line": 32,
     "column": 17,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
@@ -19024,34 +19017,6 @@
     "line": 19,
     "column": 14,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
-  },
-  {
-    "file": "src/lib/cards/__tests__/CardComponents-coverage.test.tsx",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 221,
-    "column": 11,
-    "message": "'btnRef' is assigned a value but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cards/__tests__/CardComponents-coverage.test.tsx",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 222,
-    "column": 13,
-    "message": "'container' is assigned a value but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cards/__tests__/CardComponents-coverage.test.tsx",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 262,
-    "column": 13,
-    "message": "'container' is assigned a value but never used. Allowed unused vars must match /^_/u."
-  },
-  {
-    "file": "src/lib/cards/__tests__/CardComponents-coverage.test.tsx",
-    "rule": "@typescript-eslint/no-unused-vars",
-    "line": 678,
-    "column": 11,
-    "message": "'onDismiss' is assigned a value but never used. Allowed unused vars must match /^_/u."
   },
   {
     "file": "src/lib/cards/__tests__/useStablePageHeight-coverage.test.ts",
