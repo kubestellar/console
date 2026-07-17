@@ -118,7 +118,7 @@ export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAcces
         <h3 className="text-sm font-medium text-foreground">
           {t('teams.accessGrants')}
         </h3>
-        <Button variant="ghost" size="sm" icon={<Plus className="w-3 h-3" />} onClick={() => setShowGrant(true)}>
+        <Button variant="ghost" size="sm" className="min-h-11 min-w-11" icon={<Plus className="w-3 h-3" />} onClick={() => setShowGrant(true)}>
           {t('teams.grantAccess')}
         </Button>
       </div>
