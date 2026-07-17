@@ -5,7 +5,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { crdStatusIcons, crdStatusColors } from '../../lib/cards/statusMappers'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions, CardBody, CardBodyLoaded, CardBodyEmpty } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import { useCRDs } from '../../hooks/useCRDs'
 import type { CRDData } from '../../hooks/useCRDs'
@@ -128,7 +128,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
 
   if (showSkeleton) {
     return (
-      <div className="h-full flex flex-col min-h-card">
+      <CardBody>
         <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={110} height={20} />
           <Skeleton variant="rounded" width={120} height={32} />
@@ -138,21 +138,21 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
           <Skeleton variant="rounded" height={40} />
           <Skeleton variant="rounded" height={40} />
         </div>
-      </div>
+      </CardBody>
     )
   }
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+      <CardBodyEmpty>
         <p className="text-sm">{t('crdHealth.noCRDs')}</p>
         <p className="text-xs mt-1">{t('crdHealth.noCRDsHint')}</p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded">
+    <CardBodyLoaded>
       {/* Controls - single row */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-4">
         <div className="flex items-center gap-2" />
@@ -292,6 +292,6 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
           </div>
         </>
       )}
-    </div>
+    </CardBodyLoaded>
   )
 }

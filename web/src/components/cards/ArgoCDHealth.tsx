@@ -4,6 +4,7 @@ import { useArgoCDHealth } from '../../hooks/useArgoCD'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
+import { CardBody, CardBodyLoaded, CardBodyEmpty, CardScrollList } from '../../lib/cards/CardComponents'
 
 interface ArgoCDHealthProps {
   config?: Record<string, unknown>
@@ -53,7 +54,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
 
   if (showSkeleton) {
     return (
-      <div className="h-full flex flex-col min-h-card">
+      <CardBody>
         <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={130} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
@@ -63,21 +64,21 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
           <Skeleton variant="rounded" height={20} />
           <Skeleton variant="rounded" height={20} />
         </div>
-      </div>
+      </CardBody>
     )
   }
 
   if (showEmptyState) {
     return (
-      <div className="card-empty-state">
+      <CardBodyEmpty>
         <p className="text-sm">{t('argoCDHealth.noData')}</p>
         <p className="text-xs mt-1">{t('argoCDHealth.connectArgoCD')}</p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded">
+    <CardBodyLoaded>
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <h3 className="text-sm font-medium text-foreground truncate">{t('argoCDHealth.title')}</h3>
@@ -124,7 +125,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
       </div>
 
       {/* Health breakdown */}
-      <div className="flex-1 space-y-2 overflow-y-auto">
+      <CardScrollList>
         {(Object.entries(stats) as [keyof typeof healthConfig, number][]).map(([key, count]) => {
           const config = healthConfig[key]
           const Icon = config.icon
@@ -139,7 +140,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
             </div>
           )
         })}
-      </div>
+      </CardScrollList>
 
       {/* Health bar */}
       <div className="mt-4 pt-3 border-t border-border/50">
@@ -166,6 +167,6 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
           />
         </div>
       </div>
-    </div>
+    </CardBodyLoaded>
   )
 }
