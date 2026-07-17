@@ -28,7 +28,7 @@ const SINGLE_VISIBLE_CLUSTER_COUNT = 1
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation(['common', 'cards'])
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
-  const safeAllClusters = allClusters || []
+  const safeAllClusters = useMemo(() => allClusters || [], [allClusters])
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
