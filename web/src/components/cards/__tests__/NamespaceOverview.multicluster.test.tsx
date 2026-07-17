@@ -24,6 +24,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
 
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (args: Record<string, unknown>) => mockUseCardLoadingState(args),
+  useCardDemoState: () => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false }),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
