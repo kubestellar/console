@@ -1,0 +1,79 @@
+{
+  "version": "kc-mission-v1",
+  "name": "argo-rollouts-4842-bug-experiments-experiment-replicaset-alreadyexists-handler-h",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "argo-rollouts: bug(experiments): experiment ReplicaSet AlreadyExists handler has no API fallback when lister cache is stale (same gap as #4804, fixed for AnalysisRun by #4805)",
+    "description": "bug(experiments): experiment ReplicaSet AlreadyExists handler has no API fallback when lister cache is stale (same gap as #4804, fixed for AnalysisRun by #4805). This issue affects 96+ users.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify argo-rollouts troubleshoot symptoms",
+        "description": "Check for the issue in your argo-rollouts deployment:\n```bash\nkubectl get pods -n argo-rollouts -l app.kubernetes.io/name=argo-rollouts\nkubectl logs -l app.kubernetes.io/name=argo-rollouts -n argo-rollouts --tail=100 | grep -i error\n```\nLook for errors or warnings in the logs that may indicate the issue."
+      },
+      {
+        "title": "Review argo-rollouts configuration",
+        "description": "Inspect the relevant argo-rollouts configuration:\n```bash\nkubectl get all -n argo-rollouts -l app.kubernetes.io/name=argo-rollouts\nkubectl get configmap -n argo-rollouts -l app.kubernetes.io/part-of=argo-rollouts\n```\nRollouts with Experiment steps intermittently abort with:\n\n```\nRolloutAborted: Rollout aborted update to revision N: Experiment analysis phase is error/failed:\nFailed to create ReplicaSet for template 'canary':\nreplicaset.apps"
+      },
+      {
+        "title": "Apply the fix for bug(experiments): experiment ReplicaSet AlreadyExists…",
+        "description": "## What does this PR do?\n\nWhen the Experiment controller reconciles and tries to create a ReplicaSet that was already created in a prior sync, the \\`AlreadyExists\\` handler falls back to the lister to fetch the existing RS. If the informer cache is stale (fast resync before the cache updates), the\n```yaml\nRolloutAborted: Rollout aborted update to revision N: Experiment analysis phase is error/failed:\nFailed to create ReplicaSet for template 'canary':\nreplicaset.apps \"<rollout>-<hash>-<revision>-0-canary\" not found\n```"
+      },
+      {
+        "title": "Confirm bug(experiments): experiment ReplicaSet… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=argo-rollouts -n argo-rollouts --tail=50 --since=5m\nkubectl get events -n argo-rollouts --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that the issue symptoms are gone."
+      }
+    ],
+    "resolution": {
+      "summary": "## What does this PR do?\n\nWhen the Experiment controller reconciles and tries to create a ReplicaSet that was already created in a prior sync, the \\`AlreadyExists\\` handler falls back to the lister to fetch the existing RS.",
+      "codeSnippets": [
+        "RolloutAborted: Rollout aborted update to revision N: Experiment analysis phase is error/failed:\nFailed to create ReplicaSet for template 'canary':\nreplicaset.apps \"<rollout>-<hash>-<revision>-0-canary\" not found",
+        "The race:\n\n1. **Reconcile N**: `replicaSetLister.List()` → stale cache, RS not visible → `Create(RS)` → **success**\n2. **Reconcile N+1** (fast resync before informer updates): `replicaSetLister.List()` → still empty → `Create(RS)` → **AlreadyExists**\n3. Falls back to `replicaSetLister.Get(name)` → **\"not found\"** (cache still stale) → error propagates → Rollout aborted\n\n## Relation to existing fixes\n\nPR #4805 fixed the identical race for `AnalysisRun` in the Experiment controller (lister miss → direct API Get fallback). The same fallback pattern is missing for `ReplicaSet` in the `AlreadyExists` handler above.\n\nThe same race was also fixed for the main rollout ReplicaSet lister in v1.9.0 — but experiment ReplicaSets use a separate code path that was not covered by that fix.\n\nThe race is la"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "argo-rollouts",
+      "graduated",
+      "app-definition",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "argo-rollouts"
+    ],
+    "targetResourceKinds": [
+      "Namespace",
+      "Replicaset"
+    ],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/argoproj/argo-rollouts/issues/4842",
+      "repo": "https://github.com/argoproj/argo-rollouts",
+      "pr": "https://github.com/argoproj/argo-rollouts/pull/4855"
+    },
+    "reactions": 96,
+    "comments": 0,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with argo-rollouts installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-17T06:49:26.360Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
