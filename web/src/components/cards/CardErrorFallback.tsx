@@ -1,8 +1,9 @@
-import { ReactNode, useCallback, useEffect, useState, type ComponentProps } from 'react'
+import { ReactNode, useCallback, useEffect, type ComponentProps } from 'react'
 import { AlertTriangle, ChevronDown, ChevronUp, FileText, RefreshCw, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useModal } from '../../hooks/useModal'
 
 // Pure error boundary component — no data fetching; demo data not applicable
 import { shouldShowFailureBanner } from './card-wrapper/badgeVisibility'
@@ -62,13 +63,13 @@ export function CardFailureBanner({
   isVisuallySpinning,
 }: CardFailureBannerProps) {
   const { t } = useTranslation('cards')
-  const [showFailureLogs, setShowFailureLogs] = useState(false)
+  const { isOpen: showFailureLogs, close: closeFailureLogs, toggle: toggleFailureLogs } = useModal()
 
   useEffect(() => {
     if (!isFailed) {
-      setShowFailureLogs(false)
+      closeFailureLogs()
     }
-  }, [isFailed])
+  }, [isFailed, closeFailureLogs])
 
   if (!shouldShowFailureBanner({ cardType, isFailed, isCollapsed })) {
     return null
@@ -92,7 +93,7 @@ export function CardFailureBanner({
           <div className="flex shrink-0 items-center gap-1.5">
             {errorMessage && (
               <button
-                onClick={() => setShowFailureLogs(prev => !prev)}
+                onClick={toggleFailureLogs}
                 className="no-underline flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs text-muted-foreground transition-colors hover:bg-background/40 hover:text-foreground"
                 aria-label={showFailureLogs ? t('cardWrapper.hideLogs') : t('cardWrapper.viewLogs')}
                 aria-expanded={showFailureLogs}
