@@ -912,14 +912,14 @@
   {
     "file": "src/components/cards/CardWrapper.tsx",
     "rule": "react-refresh/only-export-components",
-    "line": 100,
+    "line": 101,
     "column": 17,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
   {
     "file": "src/components/cards/CardWrapper.tsx",
     "rule": "react-refresh/only-export-components",
-    "line": 110,
+    "line": 111,
     "column": 17,
     "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   },
@@ -1696,21 +1696,21 @@
   {
     "file": "src/components/cards/NamespaceOverview.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 87,
+    "line": 88,
     "column": 9,
     "message": "The 'safeNamespaces' logical expression could make the dependencies of useEffect Hook (at line 96) change on every render. To fix this, wrap the initialization of 'safeNamespaces' in its own useMemo() Hook."
   },
   {
     "file": "src/components/cards/NamespaceOverview.tsx",
     "rule": "no-restricted-syntax",
-    "line": 213,
+    "line": 214,
     "column": 9,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
   {
     "file": "src/components/cards/NamespaceOverview.tsx",
     "rule": "no-restricted-syntax",
-    "line": 227,
+    "line": 228,
     "column": 9,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },

@@ -625,7 +625,7 @@ export const CardWrapper = memo(function CardWrapper({
   const handleOpenBugReport = useCallback(() => {
     setFullScreen(false)
     openBugReport()
-  }, [setFullScreen])
+  }, [setFullScreen, openBugReport])
 
   // Silence unused variable warnings for future chat implementation
   void messages
