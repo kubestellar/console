@@ -14,7 +14,16 @@ import type { NodeData } from '../offlineDataTransforms'
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
-    t: (key: string, opts?: { defaultValue?: string; count?: number }) => {
+    t: (key: string, optsOrDefault?: { defaultValue?: string; count?: number } | string, extraOpts?: Record<string, unknown>) => {
+      // Handle t(key, defaultValue, options) — interpolate the default value string
+      if (typeof optsOrDefault === 'string') {
+        const options = extraOpts ?? {}
+        return Object.entries(options).reduce(
+          (s, [k, v]) => s.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v ?? '')),
+          optsOrDefault,
+        )
+      }
+      const opts = optsOrDefault
       if (opts?.defaultValue) return String(opts.defaultValue)
       if (key.includes('allHealthy')) return 'All Healthy'
       if (key.includes('gpuIssues')) return 'GPU Issues'

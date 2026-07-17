@@ -2718,7 +2718,7 @@
   {
     "file": "src/components/cards/console-missions/__tests__/ConsoleOfflineDetectionCard.test.tsx",
     "rule": "no-restricted-syntax",
-    "line": 152,
+    "line": 161,
     "column": 5,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
