@@ -23,6 +23,7 @@ vi.mock('./CardWrapper', () => ({
 vi.mock('./CardDataContext', () => ({
   useCardLoadingState: vi.fn(),
   useReportCardDataState: vi.fn(),
+  useCardDemoState: () => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false }),
 }))
 
 vi.mock('../../lib/analytics', () => ({

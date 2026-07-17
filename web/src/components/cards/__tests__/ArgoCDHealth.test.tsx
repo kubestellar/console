@@ -41,6 +41,13 @@ vi.mock('../../ui/Skeleton', () => ({
   SkeletonCardWithRefresh: () => <div data-testid="skeleton-card-with-refresh" />,
 }))
 
+vi.mock('../../../lib/cards/CardComponents', () => ({
+  CardBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardBodyLoaded: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardBodyEmpty: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardScrollList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ArgoCDHealth', () => {

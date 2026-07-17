@@ -53,6 +53,9 @@ vi.mock('../ui/Skeleton', () => ({
 
 vi.mock('../../lib/cards/CardComponents', () => ({
   CardClusterFilter: () => <div data-testid="cluster-filter" />,
+  CardBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardBodyLoaded: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardBodyEmpty: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
 // ---------------------------------------------------------------------------

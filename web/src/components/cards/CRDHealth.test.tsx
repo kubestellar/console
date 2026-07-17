@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { CRDHealth } from './CRDHealth'
@@ -18,6 +19,9 @@ vi.mock('../../lib/cards/CardComponents', () => ({
   CardControlsRow: () => null,
   CardPaginationFooter: () => null,
   CardAIActions: () => null,
+  CardBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardBodyLoaded: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardBodyEmpty: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
 vi.mock('../../lib/cards/cardHooks', () => ({
