@@ -666,6 +666,11 @@ html[data-mission-resizing] [data-transition-margin] {
   min-height: 280px;
 }
 
+/* Shared empty/error state layout for cards */
+.card-empty-state {
+  @apply h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2;
+}
+
 /* Card content minimum height - ensures consistent card heights regardless of item count */
 .min-h-card-content {
   min-height: 200px;

@@ -28,7 +28,7 @@ export function AdmissionWebhooks() {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+      <div className="card-empty-state">
         <Shield className="w-8 h-8 mb-2 opacity-50" />
         <p className="text-sm">{t('admissionWebhooks.noWebhooks', 'No admission webhooks found')}</p>
         <p className="text-xs mt-1">{t('admissionWebhooks.noWebhooksHint', 'Webhooks will appear here when configured')}</p>
