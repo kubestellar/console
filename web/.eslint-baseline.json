@@ -5497,7 +5497,7 @@
   {
     "file": "src/components/gpu/GPUReservations.tsx",
     "rule": "no-restricted-syntax",
-    "line": 527,
+    "line": 566,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
@@ -5511,63 +5511,63 @@
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 443,
+    "line": 449,
     "column": 13,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 453,
+    "line": 459,
     "column": 17,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 458,
+    "line": 464,
     "column": 17,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 467,
+    "line": 473,
     "column": 13,
     "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
   },
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 475,
+    "line": 481,
     "column": 13,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 494,
+    "line": 500,
     "column": 15,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 519,
+    "line": 524,
     "column": 17,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 570,
+    "line": 575,
     "column": 13,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 639,
+    "line": 649,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
@@ -5581,21 +5581,21 @@
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 662,
+    "line": 667,
     "column": 19,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
   },
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 672,
+    "line": 677,
     "column": 19,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
     "file": "src/components/gpu/ReservationFormModal.tsx",
     "rule": "no-restricted-syntax",
-    "line": 690,
+    "line": 695,
     "column": 13,
     "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
   },
