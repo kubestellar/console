@@ -1,0 +1,76 @@
+{
+  "version": "kc-mission-v1",
+  "name": "argo-rollouts-4276-support-evaluating-grouped-datadog-metrics-by-tag-in-analysis",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "argo-rollouts: Support evaluating grouped Datadog metrics (`by {tag}`) in AnalysisTemplates",
+    "description": "Support evaluating grouped Datadog metrics (`by {tag}`) in AnalysisTemplates. Requested by 23+ users.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current argo-rollouts deployment",
+        "description": "Verify your argo-rollouts version and configuration:\n```bash\nkubectl get pods -n argo-rollouts -l app.kubernetes.io/name=argo-rollouts\nhelm list -n argo-rollouts 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working argo-rollouts installation."
+      },
+      {
+        "title": "Review argo-rollouts configuration",
+        "description": "Inspect the relevant argo-rollouts configuration:\n```bash\nkubectl get all -n argo-rollouts -l app.kubernetes.io/name=argo-rollouts\nkubectl get configmap -n argo-rollouts -l app.kubernetes.io/part-of=argo-rollouts\n```\nSupport evaluating grouped Datadog metrics in AnalysisTemplates. Specifically, enable the use of `by {tag}` clauses in Datadog queries."
+      },
+      {
+        "title": "Apply the fix for Support evaluating grouped Datadog metrics (`by {tag}`) in…",
+        "description": "--> I am just going to create a reducer so this doesnt fail and submit a PR\n\nCan you please confirm this plan is aligned with what you are looking for?\n\nPLAN:\n\n1. New API field: Reducer\n\n  Adding to DatadogMetric (analysis_types.go:615):\n\n  // Reducer is used to aggregate grouped Datadog scalar\n```yaml\nsum:trace.http.request.errors{service:my-service} by {resource_name}.as_count()\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n argo-rollouts -l app.kubernetes.io/name=argo-rollouts\nkubectl get events -n argo-rollouts --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Support evaluating grouped Datadog metrics (`by {tag}`) in…\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "--> I am just going to create a reducer so this doesnt fail and submit a PR\n\nCan you please confirm this plan is aligned with what you are looking for?\n\nPLAN:\n\n1. New API field: Reducer\n\n  Adding to DatadogMetric (analysis_types.go:615):\n\n  // Reducer is used to aggregate grouped Datadog scalar results (queries with `by {tag}`)\n  // into a single value.",
+      "codeSnippets": [
+        "sum:trace.http.request.errors{service:my-service} by {resource_name}.as_count()",
+        "{\n    \"data\": { \"attributes\": { \"columns\": [\n      { \"name\": \"resource_name\", \"type\": \"group\", \"values\": [\"a\", \"b\"] },\n      { \"name\": \"query1\", \"type\": \"number\", \"values\": [42.0, 7.0] }\n    ]}}}",
+        "ype datadogResponseV2Column struct {\n      Name   string            `json:\"name\"`\n      Type   string            `json:\"type\"`\n      Values []json.RawMessage `json:\"values\"`\n  }"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "argo-rollouts",
+      "graduated",
+      "app-definition",
+      "feature"
+    ],
+    "cncfProjects": [
+      "argo-rollouts"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/argoproj/argo-rollouts/issues/4276",
+      "repo": "https://github.com/argoproj/argo-rollouts"
+    },
+    "reactions": 23,
+    "comments": 1,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with argo-rollouts installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-17T06:49:44.589Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
