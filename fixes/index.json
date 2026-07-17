@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 1641,
+  "count": 1642,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -15981,6 +15981,47 @@
         "troubleshoot"
       ],
       "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "sandbox",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/external-secrets/external-secrets-4936-aws-certificate-manager-provider-for-exportable-certificat.json",
+      "title": "external-secrets: AWS Certificate manager provider for exportable certificates",
+      "description": "AWS Certificate manager provider for exportable certificates. Requested by 20+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "external-secrets",
+        "sandbox",
+        "security",
+        "feature"
+      ],
+      "cncfProjects": [
+        "external-secrets"
+      ],
+      "targetResourceKinds": [
+        "Service",
+        "Secret"
+      ],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
       "installMethods": [],
       "maturity": "sandbox",
       "qualityScore": 100,
