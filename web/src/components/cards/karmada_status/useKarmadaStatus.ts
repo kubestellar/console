@@ -1,5 +1,5 @@
 import { useCache } from '../../../lib/cache'
-import { useCardLoadingState } from '../CardDataContext'
+import { useCardLoadingState, useCardDemoState } from '../CardDataContext'
 import { authFetch } from '../../../lib/api'
 import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import {
@@ -323,6 +323,7 @@ export interface UseKarmadaStatusResult {
 }
 
 export function useKarmadaStatus(): UseKarmadaStatusResult {
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
   const {
     data,
     isLoading,
@@ -339,7 +340,7 @@ export function useKarmadaStatus(): UseKarmadaStatusResult {
     fetcher: fetchKarmadaStatus,
   })
 
-  const effectiveIsDemoData = isDemoFallback && !isLoading
+  const effectiveIsDemoData = shouldUseDemoData || (isDemoFallback && !isLoading)
 
   // Treat "not-installed" as valid data so the card can render its own hint message.
   const hasAnyData = true;

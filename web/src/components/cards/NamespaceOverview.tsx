@@ -11,7 +11,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { ClusterStatusBadge, getClusterState } from '../ui/ClusterStatusBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { STORAGE_KEY_NS_OVERVIEW_CLUSTER, STORAGE_KEY_NS_OVERVIEW_NAMESPACE } from '../../lib/constants/storage'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 
@@ -28,6 +28,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation(['common', 'cards'])
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
   const safeAllClusters = allClusters || []
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
   const [selectedCluster, setSelectedCluster] = useState<string>(
@@ -144,7 +145,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     isLoading: clustersLoading && !hasData,
     isRefreshing: clustersRefreshing || isRefreshing,
     hasAnyData: hasData,
-    isDemoData: podIssuesDemoFallback || deploymentIssuesDemoFallback || namespacesDemoFallback,
+    isDemoData: shouldUseDemoData || podIssuesDemoFallback || deploymentIssuesDemoFallback || namespacesDemoFallback,
     isFailed,
     consecutiveFailures })
 
