@@ -1,0 +1,80 @@
+{
+  "version": "kc-mission-v1",
+  "name": "pipecd-4980-plugin-architectured-piped-pipedv1-supports-deployment-for-applicati",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "pipecd: Plugin architectured piped (pipedv1) supports deployment for applications",
+    "description": "Plugin architectured piped (pipedv1) supports deployment for applications. Community-requested feature.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current pipecd deployment",
+        "description": "Verify your pipecd version and configuration:\n```bash\nkubectl get pods -n pipecd -l app.kubernetes.io/name=pipecd\nhelm list -n pipecd 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working pipecd installation."
+      },
+      {
+        "title": "Review pipecd configuration",
+        "description": "Inspect the relevant pipecd configuration:\n```bash\nkubectl get all -n pipecd -l app.kubernetes.io/name=pipecd\nkubectl get configmap -n pipecd -l app.kubernetes.io/part-of=pipecd\n```\n**What would you like to be added**:\n\nThis issue is for managing the process of adopting plugin architecture to piped. The ideal result is to make all platform providers' logic independent from the piped core logic (the controller package)."
+      },
+      {
+        "title": "Apply the fix for Plugin architectured piped (pipedv1) supports deployment…",
+        "description": "Part of [#4980](https://github.com/pipe-cd/pipecd/issues/4980)\n```yaml\nref: https://github.com/pipe-cd/pipecd/blob/master/pkg/plugin/api/v1alpha1/platform/api.proto\nLatest update of the `PlannerService` interface\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n pipecd -l app.kubernetes.io/name=pipecd\nkubectl get events -n pipecd --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"Plugin architectured piped (pipedv1) supports deployment…\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "Part of [#4980](https://github.com/pipe-cd/pipecd/issues/4980)",
+      "codeSnippets": [
+        "ref: https://github.com/pipe-cd/pipecd/blob/master/pkg/plugin/api/v1alpha1/platform/api.proto\nLatest update of the `PlannerService` interface",
+        "TBD:\n- MetadataStore service, the current MetadataStore interface is quite complicated and had used widely across stages (1)\n- AnalysisResultStore service, this be used only for analysis stage plugin, but use apiClient to connect to controlplane (store value to filestore) (2)\n\nref:\n(1)\nhttps://github.com/pipe-cd/pipecd/blob/master/pkg/app/pipedv1/metadatastore/store.go#L46-L49\n(2)"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "pipecd",
+      "sandbox",
+      "app-definition",
+      "deploy"
+    ],
+    "cncfProjects": [
+      "pipecd"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Service",
+      "Secret"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "deploy"
+    ],
+    "maturity": "sandbox",
+    "sourceUrls": {
+      "issue": "https://github.com/pipe-cd/pipecd/issues/4980",
+      "repo": "https://github.com/pipe-cd/pipecd",
+      "pr": "https://github.com/pipe-cd/pipecd/pull/5019"
+    },
+    "reactions": 4,
+    "comments": 13,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with pipecd installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-17T07:10:14.631Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
