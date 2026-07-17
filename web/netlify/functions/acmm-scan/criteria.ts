@@ -76,6 +76,7 @@ export const CRITERIA: Criterion[] = [
   { id: "acmm:public-metrics", source: "acmm", level: 5, category: "observability", name: "Public metrics", detection: { type: "any-of", pattern: ["web/netlify/functions/analytics-accm.mts", "web/public/analytics.js", "docs/metrics/"] } },
   { id: "acmm:policy-as-code", source: "acmm", level: 5, category: "governance", name: "Policy-as-code", detection: { type: "any-of", pattern: ["policies/", ".github/policies/", "kyverno/", "conftest.yaml", "opa/"] } },
   { id: "acmm:reflection-log", source: "acmm", level: 5, category: "feedback-loop", name: "Reflection log", detection: { type: "any-of", pattern: [".claude/reflections/", "memory/", ".memory/", "docs/reflections/", "REFLECTIONS.md"] } },
+  { id: "acmm:audit-trail", source: "acmm", level: 5, category: "traceability", name: "Audit trail workflow", detection: { type: "any-of", pattern: [".github/workflows/audit-trail.yml", ".github/workflows/ai-attribution.yml"] } },
 
   // ACMM L6 — Autonomous (moved from old L5 + new items)
   { id: "acmm:auto-issue-gen", source: "acmm", level: 6, category: "autonomy", name: "Auto issue generation", detection: { type: "any-of", pattern: [".github/workflows/auto-issues.yml", ".github/workflows/auto-issue.yml", ".github/workflows/issue-gen.yml", ".github/workflows/auto-generate-issues.yml", "scripts/generate-issues.mjs"] } },
