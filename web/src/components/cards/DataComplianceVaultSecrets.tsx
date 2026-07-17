@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { AlertTriangle, AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { useDemoMode } from '../../hooks/useDemoMode'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { KUBECTL_DEFAULT_TIMEOUT_MS, DEFAULT_REFRESH_INTERVAL_MS } from '../../lib/constants/network'
 
@@ -28,7 +27,7 @@ const DEMO_VAULT: VaultStatus = {
 
 export function VaultSecrets({ config: _config }: CardConfig) {
   const { t } = useTranslation()
-  const { isDemoMode } = useDemoMode()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
   const { deduplicatedClusters: allClusters } = useClusters()
   const [vaultStatus, setVaultStatus] = useState<VaultStatus>(DEMO_VAULT)
   const [isLoading, setIsLoading] = useState(true)
@@ -45,7 +44,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
   )
 
   const refetch = useCallback(async () => {
-    if (isDemoMode || clusters.length === 0 || fetchInProgress.current) return
+    if (shouldUseDemoData || clusters.length === 0 || fetchInProgress.current) return
     fetchInProgress.current = true
 
     if (initialLoadDone.current) {
@@ -110,10 +109,10 @@ export function VaultSecrets({ config: _config }: CardConfig) {
     setIsRefreshing(false)
     initialLoadDone.current = true
     fetchInProgress.current = false
-  }, [clusters, isDemoMode])
+  }, [clusters, shouldUseDemoData])
 
   useEffect(() => {
-    if (isDemoMode || clusters.length === 0) {
+    if (shouldUseDemoData || clusters.length === 0) {
       setVaultStatus(DEMO_VAULT)
       setSecretCount(0)
       setIsLoading(false)
@@ -122,13 +121,13 @@ export function VaultSecrets({ config: _config }: CardConfig) {
       return
     }
     refetch()
-  }, [clusters, isDemoMode, refetch])
+  }, [clusters, shouldUseDemoData, refetch])
 
   useEffect(() => {
-    if (isDemoMode || clusters.length === 0) return
+    if (shouldUseDemoData || clusters.length === 0) return
     const interval = setInterval(() => refetch(), DEFAULT_REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
-  }, [isDemoMode, clusters.length, refetch])
+  }, [shouldUseDemoData, clusters.length, refetch])
 
   const isFailed = consecutiveFailures >= 3
 
@@ -136,12 +135,12 @@ export function VaultSecrets({ config: _config }: CardConfig) {
     isLoading: isLoading && !vaultStatus.installed,
     isRefreshing,
     hasAnyData: true,
-    isDemoData: isDemoMode,
+    isDemoData: shouldUseDemoData,
     isFailed,
     consecutiveFailures,
   })
 
-  if (fetchError && !isDemoMode) {
+  if (fetchError && !shouldUseDemoData) {
     return (
       <div className="space-y-3">
         <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs" role="alert">
