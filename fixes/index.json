@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 1638,
+  "count": 1640,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -1939,6 +1939,47 @@
       "qualitySuggestions": []
     },
     {
+      "path": "fixes/cncf-generated/argo-rollouts/argo-rollouts-4842-bug-experiments-experiment-replicaset-alreadyexists-handler-h.json",
+      "title": "argo-rollouts: bug(experiments): experiment ReplicaSet AlreadyExists handler has no API fallback when lister cache is stale (same gap as #4804, fixed for AnalysisRun by #4805)",
+      "description": "bug(experiments): experiment ReplicaSet AlreadyExists handler has no API fallback when lister cache is stale (same gap as #4804, fixed for AnalysisRun by #4805). This issue affects 96+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "argo-rollouts",
+        "graduated",
+        "app-definition",
+        "troubleshoot"
+      ],
+      "cncfProjects": [
+        "argo-rollouts"
+      ],
+      "targetResourceKinds": [
+        "Namespace",
+        "Replicaset"
+      ],
+      "difficulty": "beginner",
+      "issueTypes": [
+        "troubleshoot"
+      ],
+      "type": "troubleshoot",
+      "installMethods": [],
+      "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
       "path": "fixes/cncf-generated/argo-rollouts/argo-rollouts-2813-datadog-v2-api-fails-when-using-formulas-in-query.json",
       "title": "argo-rollouts: Datadog v2 API fails when using formulas in query",
       "description": "Datadog v2 API fails when using formulas in query. This issue affects 21+ users.",
@@ -2123,6 +2164,44 @@
         "Replicaset"
       ],
       "difficulty": "advanced",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/argo-rollouts/argo-rollouts-4276-support-evaluating-grouped-datadog-metrics-by-tag-in-analysis.json",
+      "title": "argo-rollouts: Support evaluating grouped Datadog metrics (`by {tag}`) in AnalysisTemplates",
+      "description": "Support evaluating grouped Datadog metrics (`by {tag}`) in AnalysisTemplates. Requested by 23+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "argo-rollouts",
+        "graduated",
+        "app-definition",
+        "feature"
+      ],
+      "cncfProjects": [
+        "argo-rollouts"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "beginner",
       "issueTypes": [
         "feature"
       ],
