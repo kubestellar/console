@@ -3,10 +3,11 @@ import { useState, useEffect, useRef } from 'react'
 import { Box, Server, Crown, RotateCcw, Trophy, Play, Loader2 } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
-import { useReportCardDataState } from './CardDataContext'
+import { useReportCardDataState, useCardDemoState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { safeGet, safeGetJSON, safeSetJSON, safeRemove } from '../../lib/safeLocalStorage'
+import { Select } from '../ui/Select'
 
 /** localStorage key for Checkers win/loss score tracking */
 const SCORE_STORAGE_KEY = 'checkers-score'
@@ -423,7 +424,8 @@ function saveGameState(state: SavedGameState) {
 
 export function Checkers(_props: CardComponentProps) {
   const { t } = useTranslation(['cards', 'common'])
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'none' })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: shouldUseDemoData })
   const { isExpanded } = useCardExpanded()
   const thinkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tauntIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -715,16 +717,16 @@ export function Checkers(_props: CardComponentProps) {
         </div>
 
         <div className="flex items-center gap-1">
-          <select
+          <Select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value as Difficulty)}
-            className="text-xs bg-secondary border border-border rounded px-1.5 py-1"
+            selectSize="sm"
             disabled={moveCount > 0 && !gameOver}
           >
             <option value="easy">{t('checkers.easy')}</option>
             <option value="medium">{t('checkers.medium')}</option>
             <option value="hard">{t('checkers.hard')}</option>
-          </select>
+          </Select>
           <button
             onClick={newGame}
             className="p-1.5 rounded hover:bg-secondary"
