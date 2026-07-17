@@ -157,17 +157,15 @@ vi.mock('../../../../lib/cards/CardComponents', () => ({
     value: string
     onChange: (v: string) => void
     placeholder?: string
-  }) => {
-    // eslint-disable-next-line no-restricted-syntax -- test mock needs native input for simplicity
-    return (
-      <input
-        data-testid="search-input"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-      />
-    )
-  },
+  }) => (
+    // eslint-disable-next-line no-restricted-syntax -- test mock uses native input intentionally
+    <input
+      data-testid="search-input"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+    />
+  ),
   CardPaginationFooter: () => <div data-testid="pagination-footer" />,
   CardAIActions: () => null,
 }))
