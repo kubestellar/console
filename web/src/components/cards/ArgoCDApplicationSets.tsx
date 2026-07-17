@@ -130,7 +130,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+      <div className="card-empty-state">
         <Layers className="w-8 h-8 mb-2 opacity-50" />
         <p className="text-sm">{t('argoCDApplicationSets.noApplicationSets', 'No ApplicationSets found')}</p>
         <p className="text-xs mt-1">{t('argoCDApplicationSets.deployWithArgoCD', 'Deploy ApplicationSets with ArgoCD to manage fleet-wide deployments')}</p>
