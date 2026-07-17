@@ -14,6 +14,7 @@ vi.mock('../../hooks/useCRDs', () => ({
 
 vi.mock('../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) => (
+    // eslint-disable-next-line no-restricted-syntax
     <input data-testid="card-search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
   ),
   CardControlsRow: () => null,
