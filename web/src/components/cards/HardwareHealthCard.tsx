@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTabKeyboardNav } from '../../hooks/useKeyboardNav'
 import { XCircle } from 'lucide-react'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedHardwareHealth, type DeviceAlert, type NodeDeviceInventory } from '../../hooks/useCachedData'
@@ -24,6 +24,7 @@ import { HardwareHealthCardContent } from './HardwareHealthCardContent'
 import { HardwareHealthCardHeader } from './HardwareHealthCardHeader'
 
 export function HardwareHealthCard() {
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
   // Use cached hook — persists to IndexedDB, survives navigation, handles demo mode
   const {
     data: hwData,
@@ -111,7 +112,7 @@ export function HardwareHealthCard() {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoFallback,
+    isDemoData: shouldUseDemoData || isDemoFallback,
     isFailed,
     consecutiveFailures })
 
@@ -433,7 +434,7 @@ export function HardwareHealthCard() {
         handleRetry={handleRetry}
         isRetrying={isRetrying}
         isRefreshing={isRefreshing}
-        isDemoData={isDemoFallback}
+        isDemoData={shouldUseDemoData || isDemoFallback}
       />
 
       <HardwareHealthCardContent
