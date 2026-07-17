@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor, act } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
+// React 19 exports `act` from 'react'; import it there for maximum compatibility
+// with @testing-library/react v16 which may not re-export `act` in all builds.
+import { act } from 'react'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
