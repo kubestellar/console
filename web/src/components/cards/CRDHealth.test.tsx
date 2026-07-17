@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { CRDHealth } from './CRDHealth'
@@ -13,11 +14,15 @@ vi.mock('../../hooks/useCRDs', () => ({
 
 vi.mock('../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) => (
+    // eslint-disable-next-line no-restricted-syntax
     <input data-testid="card-search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
   ),
   CardControlsRow: () => null,
   CardPaginationFooter: () => null,
   CardAIActions: () => null,
+  CardBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardBodyLoaded: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardBodyEmpty: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
 vi.mock('../../lib/cards/cardHooks', () => ({

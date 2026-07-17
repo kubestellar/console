@@ -70,6 +70,7 @@ vi.mock('../../../hooks/useCachedData', async (importOriginal) => ({
 
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (state: unknown) => mockUseCardLoadingState(state),
+  useCardDemoState: () => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false }),
 }))
 
 vi.mock('../../../hooks/useMCP', () => ({
