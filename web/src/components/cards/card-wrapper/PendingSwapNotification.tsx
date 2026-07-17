@@ -2,8 +2,8 @@ import { Clock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../ui/Button'
 
-// Pure UI component — renders pending swap notification banner; no data fetching.
-// Demo data not applicable (displays card swap actions).
+// Auto-QA #21201: pure UI component — no async data fetch; loading/error state not applicable.
+// All data is received via props; no network calls or async operations in this component.
 
 interface PendingSwap {
   newType: string

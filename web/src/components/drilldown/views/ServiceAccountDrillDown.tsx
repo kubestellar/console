@@ -34,6 +34,8 @@ export function ServiceAccountDrillDown({ data }: Props) {
   const [describeLoading, setDescribeLoading] = useState(false)
   const [yamlOutput, setYamlOutput] = useState<string | null>(null)
   const [yamlLoading, setYamlLoading] = useState(false)
+  const [dataLoading, setDataLoading] = useState(false)
+  const [dataError, setDataError] = useState<string | null>(null)
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -41,7 +43,8 @@ export function ServiceAccountDrillDown({ data }: Props) {
   // Fetch ServiceAccount data
   const fetchData = async () => {
     if (!agentConnected) return
-
+    setDataLoading(true)
+    setDataError(null)
     try {
       const output = await runKubectl(['get', 'serviceaccount', serviceaccountName, '-n', namespace, '-o', 'json'])
       if (output) {
@@ -51,8 +54,10 @@ export function ServiceAccountDrillDown({ data }: Props) {
         setLabels(sa.metadata?.labels || {})
         setAnnotations(sa.metadata?.annotations || {})
       }
-    } catch {
-      // Ignore parse errors
+    } catch (err) {
+      setDataError(err instanceof Error ? err.message : t('common.fetchFailed', 'Failed to load ServiceAccount data'))
+    } finally {
+      setDataLoading(false)
     }
   }
 
@@ -194,6 +199,17 @@ export function ServiceAccountDrillDown({ data }: Props) {
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            {dataLoading && (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">{t('common.loading', 'Loading...')}</span>
+              </div>
+            )}
+            {dataError && !dataLoading && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <p className="text-sm text-red-400">{dataError}</p>
+              </div>
+            )}
             {/* Basic Info */}
             <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
               <div className="flex items-center gap-3">
