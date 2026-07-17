@@ -4832,23 +4832,23 @@
   {
     "file": "src/components/drilldown/views/ConfigMapDrillDown.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 69,
+    "line": 71,
     "column": 9,
-    "message": "The 'fetchData' function makes the dependencies of useEffect Hook (at line 143) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchData' in its own useCallback() Hook."
+    "message": "The 'fetchData' function makes the dependencies of useEffect Hook (at line 148) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchData' in its own useCallback() Hook."
   },
   {
     "file": "src/components/drilldown/views/ConfigMapDrillDown.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 91,
+    "line": 96,
     "column": 9,
-    "message": "The 'fetchDescribe' function makes the dependencies of useEffect Hook (at line 143) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchDescribe' in its own useCallback() Hook."
+    "message": "The 'fetchDescribe' function makes the dependencies of useEffect Hook (at line 148) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchDescribe' in its own useCallback() Hook."
   },
   {
     "file": "src/components/drilldown/views/ConfigMapDrillDown.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 102,
+    "line": 107,
     "column": 9,
-    "message": "The 'fetchYaml' function makes the dependencies of useEffect Hook (at line 143) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchYaml' in its own useCallback() Hook."
+    "message": "The 'fetchYaml' function makes the dependencies of useEffect Hook (at line 148) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchYaml' in its own useCallback() Hook."
   },
   {
     "file": "src/components/drilldown/views/DeploymentDrillDown.tsx",
@@ -5084,44 +5084,44 @@
   {
     "file": "src/components/drilldown/views/SecretDrillDown.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 61,
+    "line": 63,
     "column": 9,
-    "message": "The 'fetchData' function makes the dependencies of useEffect Hook (at line 126) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchData' in its own useCallback() Hook."
+    "message": "The 'fetchData' function makes the dependencies of useEffect Hook (at line 131) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchData' in its own useCallback() Hook."
   },
   {
     "file": "src/components/drilldown/views/SecretDrillDown.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 89,
+    "line": 94,
     "column": 9,
-    "message": "The 'fetchDescribe' function makes the dependencies of useEffect Hook (at line 126) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchDescribe' in its own useCallback() Hook."
+    "message": "The 'fetchDescribe' function makes the dependencies of useEffect Hook (at line 131) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchDescribe' in its own useCallback() Hook."
   },
   {
     "file": "src/components/drilldown/views/SecretDrillDown.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 97,
+    "line": 102,
     "column": 9,
-    "message": "The 'fetchYaml' function makes the dependencies of useEffect Hook (at line 126) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchYaml' in its own useCallback() Hook."
+    "message": "The 'fetchYaml' function makes the dependencies of useEffect Hook (at line 131) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchYaml' in its own useCallback() Hook."
   },
   {
     "file": "src/components/drilldown/views/ServiceAccountDrillDown.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 42,
+    "line": 44,
     "column": 9,
-    "message": "The 'fetchData' function makes the dependencies of useEffect Hook (at line 96) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchData' in its own useCallback() Hook."
+    "message": "The 'fetchData' function makes the dependencies of useEffect Hook (at line 101) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchData' in its own useCallback() Hook."
   },
   {
     "file": "src/components/drilldown/views/ServiceAccountDrillDown.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 59,
+    "line": 64,
     "column": 9,
-    "message": "The 'fetchDescribe' function makes the dependencies of useEffect Hook (at line 96) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchDescribe' in its own useCallback() Hook."
+    "message": "The 'fetchDescribe' function makes the dependencies of useEffect Hook (at line 101) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchDescribe' in its own useCallback() Hook."
   },
   {
     "file": "src/components/drilldown/views/ServiceAccountDrillDown.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 67,
+    "line": 72,
     "column": 9,
-    "message": "The 'fetchYaml' function makes the dependencies of useEffect Hook (at line 96) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchYaml' in its own useCallback() Hook."
+    "message": "The 'fetchYaml' function makes the dependencies of useEffect Hook (at line 101) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'fetchYaml' in its own useCallback() Hook."
   },
   {
     "file": "src/components/drilldown/views/ServiceDrillDown.tsx",
