@@ -22,10 +22,13 @@ export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialo
   const [submittingProjects, setSubmittingProjects] = useState<Set<string>>(new Set())
   const [submitted, setSubmitted] = useState<Set<string>>(new Set())
   const [failedProjects, setFailedProjects] = useState<Set<string>>(new Set())
+  // Per-project error messages (canonical string|null pattern per #21202)
+  const [failedMessages, setFailedMessages] = useState<Map<string, string>>(new Map())
 
   const handleRequest = useCallback(async (project: string) => {
     setSubmittingProjects(prev => new Set(prev).add(project))
     setFailedProjects(prev => { const next = new Set(prev); next.delete(project); return next })
+    setFailedMessages(prev => { const next = new Map(prev); next.delete(project); return next })
     try {
       await api.post('/api/feedback/requests', {
         title: `Card Request: ${project} monitoring card`,
@@ -34,14 +37,16 @@ export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialo
       })
       emitGroundControlCardRequestOpened(project)
       setSubmitted(prev => new Set(prev).add(project))
-      showToast(`Card request submitted for ${project}`, 'success')
-    } catch {
+      showToast(t('orbit.cardRequestSubmitted', 'Card request submitted for {{project}}', { project }), 'success')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t('common.fetchFailed', 'Request failed')
       setFailedProjects(prev => new Set(prev).add(project))
-      showToast('Could not submit request — try opening a GitHub issue directly', 'warning')
+      setFailedMessages(prev => new Map(prev).set(project, msg))
+      showToast(t('orbit.cardRequestFailed', 'Could not submit request — try opening a GitHub issue directly'), 'warning')
     } finally {
       setSubmittingProjects(prev => { const next = new Set(prev); next.delete(project); return next })
     }
-  }, [showToast])
+  }, [showToast, t])
 
   if ((missingProjects || []).length === 0) return null
 
@@ -71,15 +76,22 @@ export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialo
             ) : failedProjects.has(project) ? (
               // Auto-QA #9036 — explicit inline error + retry affordance so
               // the failed state persists beyond the one-shot toast.
-              <button
-                onClick={() => handleRequest(project)}
-                disabled={submittingProjects.has(project)}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                title="Request failed — click to retry"
-              >
-                <AlertTriangle className="w-2.5 h-2.5" />
-                {t('orbit.cardRequestRetry')}
-              </button>
+              <div className="flex flex-col items-end gap-0.5">
+                {failedMessages.get(project) && (
+                  <span className="text-[9px] text-red-400 max-w-[160px] truncate" title={failedMessages.get(project)}>
+                    {failedMessages.get(project)}
+                  </span>
+                )}
+                <button
+                  onClick={() => handleRequest(project)}
+                  disabled={submittingProjects.has(project)}
+                  className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                  title={t('orbit.cardRequestRetryTitle', 'Request failed — click to retry')}
+                >
+                  <AlertTriangle className="w-2.5 h-2.5" />
+                  {t('orbit.cardRequestRetry')}
+                </button>
+              </div>
             ) : (
               <button
                 onClick={() => handleRequest(project)}
