@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Box, Server, Crown, RotateCcw, Trophy, Play, Loader2 } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
-import { useReportCardDataState } from './CardDataContext'
+import { useReportCardDataState, useCardDemoState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { safeGet, safeGetJSON, safeSetJSON, safeRemove } from '../../lib/safeLocalStorage'
@@ -423,7 +423,8 @@ function saveGameState(state: SavedGameState) {
 
 export function Checkers(_props: CardComponentProps) {
   const { t } = useTranslation(['cards', 'common'])
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'none' })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: shouldUseDemoData })
   const { isExpanded } = useCardExpanded()
   const thinkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tauntIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
