@@ -103,7 +103,7 @@ function makePool(name: string, namespace: string) {
 }
 
 /** Build a minimal HPA resource */
-function makeHPA(name: string, namespace: string, min = 1, max = 3) {
+function _makeHPA(name: string, namespace: string, min = 1, max = 3) {
   return {
     metadata: { name, namespace },
     spec: { minReplicas: min, maxReplicas: max },
@@ -112,7 +112,7 @@ function makeHPA(name: string, namespace: string, min = 1, max = 3) {
 }
 
 /** Build a minimal WVA resource */
-function makeWVA(name: string, namespace: string, min = 1, max = 5) {
+function _makeWVA(name: string, namespace: string, min = 1, max = 5) {
   return {
     metadata: { name, namespace },
     spec: { minReplicas: min, maxReplicas: max },
@@ -129,7 +129,7 @@ function makeEPPService(name: string, namespace: string) {
 }
 
 /** Build a minimal Gateway resource */
-function makeGateway(name: string, namespace: string, hasAddress = true) {
+function _makeGateway(name: string, namespace: string, hasAddress = true) {
   return {
     metadata: { name, namespace },
     spec: { gatewayClassName: 'istio' },
