@@ -24,6 +24,7 @@ import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../ui/Toast'
 import { cn } from '../../lib/cn'
+import { Input } from '../ui/Input'
 import { useGPUReservations } from '../../hooks/useGPUReservations'
 import { useGPUUtilizations } from '../../hooks/useGPUUtilizations'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
@@ -290,7 +291,7 @@ export function GPUReservations() {
 
   // Get the start/end day index (0-based from month start) for a reservation within the visible month.
   // Duration is added to the ORIGINAL start time first, then day boundaries are derived.
-  const getReservationDayRange = (r: GPUReservation) => {
+  const getReservationDayRange = useCallback((r: GPUReservation) => {
     if (!r.start_date) return null
     const MS_PER_HOUR = 3_600_000
     const DEFAULT_DURATION_HOURS = 24
@@ -316,7 +317,7 @@ export function GPUReservations() {
     const clampedStart = start < monthStart ? 1 : start.getDate()
     const clampedEnd = end > monthEnd ? daysInMonth : end.getDate()
     return { startDay: clampedStart, endDay: clampedEnd }
-  }
+  }, [currentMonth, daysInMonth])
 
   // Compute spanning reservation rows per calendar week
   const calendarWeeks = useMemo(() => {
@@ -393,7 +394,7 @@ export function GPUReservations() {
     }
 
     return weeks
-  }, [filteredReservations, startingDay, daysInMonth, currentMonth, getReservationDayRange])
+  }, [filteredReservations, startingDay, daysInMonth, getReservationDayRange])
 
   // Get GPU count reserved on a specific day
   const getGPUCountForDay = (day: number) => {
@@ -564,7 +565,7 @@ export function GPUReservations() {
                   : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
               )}
             >
-              <input
+              <Input
                 type="checkbox"
                 checked={showOnlyMine}
                 onChange={toggleShowOnlyMine}
