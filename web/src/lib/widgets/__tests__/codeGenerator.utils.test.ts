@@ -64,5 +64,48 @@ describe('codeGenerator.utils', () => {
       const cmd = generateWidgetCommand('http://host', 'http://host/api/x')
       expect(cmd).toContain('Missing authorization')
     })
+
+    it('prevents command injection via backticks in URL', () => {
+      const urlWithBackticks = "http://host/api?q=`id`"
+      const cmd = generateWidgetCommand('http://localhost', urlWithBackticks)
+      // Inside single quotes, backticks are literal
+      expect(cmd).toContain("'http://localhost/api?q=`id`'")
+    })
+
+    it('prevents command injection via $() substitution in URL', () => {
+      const urlWithSubst = "http://host/api?q=$(whoami)"
+      const cmd = generateWidgetCommand('http://localhost', urlWithSubst)
+      expect(cmd).toContain("'http://localhost/api?q=$(whoami)'")
+    })
+
+    it('handles multiple single quotes in URL', () => {
+      const urlWithMultipleQuotes = "http://host/api?a='1'&b='2'"
+      const cmd = generateWidgetCommand('http://localhost', urlWithMultipleQuotes)
+      expect(cmd).toContain("'\\''1'\\''")
+      expect(cmd).toContain("'\\''2'\\''")
+    })
+
+    it('handles consecutive single quotes in URL', () => {
+      const urlWithConsecutiveQuotes = "http://host/api?q=''"
+      const cmd = generateWidgetCommand('http://localhost', urlWithConsecutiveQuotes)
+      expect(cmd).toContain("'\\'''\\''")
+    })
+
+    it('preserves shell metacharacters as literals when quoted', () => {
+      const urlWithMetachars = "http://host/api?q=test&other=val;rm -rf"
+      const cmd = generateWidgetCommand('http://localhost', urlWithMetachars)
+      expect(cmd).toContain("'http://localhost/api?q=test&other=val;rm -rf'")
+    })
+
+    it('handles empty URL gracefully', () => {
+      const cmd = generateWidgetCommand('http://localhost', '')
+      expect(cmd.length).toBeGreaterThan(0)
+    })
+
+    it('handles URL with special query parameters', () => {
+      const urlWithSpecialParams = "http://host/api?filter={id:1}&sort=asc"
+      const cmd = generateWidgetCommand('http://localhost', urlWithSpecialParams)
+      expect(cmd).toContain("'http://localhost/api?filter={id:1}&sort=asc'")
+    })
   })
 })
