@@ -262,6 +262,7 @@ export function useBuildpackImages(cluster?: string) {
         if (!cluster) notifyListeners(false)
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- notifyListeners is a stable ref (notifyListenersRef.current)
     [cluster]
   )
 
