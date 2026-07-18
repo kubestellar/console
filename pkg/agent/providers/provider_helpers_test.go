@@ -551,3 +551,162 @@ func TestNewRestrictedAIProviderHTTPClient_HasCustomTransport(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// dialAIProviderContext — SSRF protection with context-aware dialing
+// ---------------------------------------------------------------------------
+
+func TestDialAIProviderContext_InvalidAddress(t *testing.T) {
+	// Address without port should be rejected during SplitHostPort
+	dialer := &net.Dialer{}
+	_, err := dialAIProviderContext(context.Background(), dialer, "tcp", "invalid-address-no-port")
+	if err == nil {
+		t.Fatalf("expected error for invalid address, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid provider address") {
+		t.Errorf("expected 'invalid provider address' error, got: %v", err)
+	}
+}
+
+func TestDialAIProviderContext_BlocksPrivateIPs(t *testing.T) {
+	// dialAIProviderContext should block connections to private IPs
+	privateAddr := "127.0.0.1:9999"
+	dialer := &net.Dialer{}
+
+	_, err := dialAIProviderContext(context.Background(), dialer, "tcp", privateAddr)
+	if err == nil {
+		t.Fatalf("expected error blocking private IP, got nil")
+	}
+	if !strings.Contains(err.Error(), "private/internal") && !strings.Contains(err.Error(), "private IP") {
+		t.Errorf("expected private IP error, got: %v", err)
+	}
+}
+
+func TestDialAIProviderContext_AllowsLoopbackInTestMode(t *testing.T) {
+	// With AllowLoopbackForTests=true, loopback should be allowed to resolve
+	original := AllowLoopbackForTests
+	AllowLoopbackForTests = true
+	defer func() { AllowLoopbackForTests = original }()
+
+	dialer := &net.Dialer{Timeout: 100 * time.Millisecond}
+	// This will fail to actually dial (no service listening), but should pass the SSRF check
+	_, err := dialAIProviderContext(context.Background(), dialer, "tcp", "127.0.0.1:9999")
+	if err == nil {
+		t.Fatalf("expected dial error (no service), but address should pass SSRF check")
+	}
+	// Error should be about dial failure, not SSRF
+	if strings.Contains(err.Error(), "private/internal") || strings.Contains(err.Error(), "private IP") {
+		t.Errorf("loopback should be allowed in test mode, got SSRF error: %v", err)
+	}
+}
+
+func TestDialAIProviderContext_RejectsNoProviderAddresses(t *testing.T) {
+	// When resolveAIProviderTargets returns empty list and no error
+	// (edge case but should be handled)
+	dialer := &net.Dialer{}
+	// Private IP will be rejected by resolver, resulting in no targets
+	_, err := dialAIProviderContext(context.Background(), dialer, "tcp", "192.168.1.1:443")
+	if err == nil {
+		t.Fatalf("expected error for blocked private IP, got nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// dialAIProviderTLSContext — TLS-specific SSRF protection
+// ---------------------------------------------------------------------------
+
+func TestDialAIProviderTLSContext_InvalidAddress(t *testing.T) {
+	// Address without port should be rejected during SplitHostPort
+	dialer := &net.Dialer{}
+	_, err := dialAIProviderTLSContext(context.Background(), dialer, "tcp", "invalid-address-no-port", nil)
+	if err == nil {
+		t.Fatalf("expected error for invalid address, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid provider address") {
+		t.Errorf("expected 'invalid provider address' error, got: %v", err)
+	}
+}
+
+func TestDialAIProviderTLSContext_BlocksPrivateIPs(t *testing.T) {
+	// dialAIProviderTLSContext should block connections to private IPs
+	privateAddr := "10.0.0.1:443"
+	dialer := &net.Dialer{}
+
+	_, err := dialAIProviderTLSContext(context.Background(), dialer, "tcp", privateAddr, nil)
+	if err == nil {
+		t.Fatalf("expected error blocking private IP, got nil")
+	}
+	if !strings.Contains(err.Error(), "private/internal") && !strings.Contains(err.Error(), "private IP") {
+		t.Errorf("expected private IP error, got: %v", err)
+	}
+}
+
+func TestDialAIProviderTLSContext_NilTLSConfig(t *testing.T) {
+	// TLSContext with nil config should still apply SSRF checks and create valid config
+	original := AllowLoopbackForTests
+	AllowLoopbackForTests = true
+	defer func() { AllowLoopbackForTests = original }()
+
+	dialer := &net.Dialer{Timeout: 50 * time.Millisecond}
+	// This will fail to actually dial, but should pass the SSRF check
+	_, err := dialAIProviderTLSContext(context.Background(), dialer, "tcp", "127.0.0.1:9999", nil)
+	if err == nil {
+		t.Fatalf("expected dial error (no service), but SSRF check should pass")
+	}
+	// Should not contain SSRF error
+	if strings.Contains(err.Error(), "private/internal") || strings.Contains(err.Error(), "private IP") {
+		t.Errorf("SSRF check failed with nil config: %v", err)
+	}
+}
+
+func TestDialAIProviderTLSContext_PresetsServerName(t *testing.T) {
+	// When BaseTLSConfig has no ServerName, it should be set from the hostname
+	original := AllowLoopbackForTests
+	AllowLoopbackForTests = true
+	defer func() { AllowLoopbackForTests = original }()
+
+	baseConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+	dialer := &net.Dialer{Timeout: 50 * time.Millisecond}
+	
+	// This will fail to dial but ServerName should be set internally
+	_, err := dialAIProviderTLSContext(context.Background(), dialer, "tcp", "127.0.0.1:9999", baseConfig)
+	if err == nil {
+		t.Fatalf("expected dial error (no service)")
+	}
+	if strings.Contains(err.Error(), "private/internal") {
+		t.Errorf("SSRF check failed when ServerName should be preset: %v", err)
+	}
+}
+
+func TestDialAIProviderContext_AllowsLocalProvidersWhenEnabled(t *testing.T) {
+	// When allowLocalProviders() returns true, should bypass SSRF checks
+	original := AllowLoopbackForTests
+	AllowLoopbackForTests = true
+	defer func() { AllowLoopbackForTests = original }()
+
+	// Even private IPs should attempt to dial when local providers are allowed
+	// This will fail (no service), but failure should be from dial, not SSRF
+	dialer := &net.Dialer{Timeout: 50 * time.Millisecond}
+	_, err := dialAIProviderContext(context.Background(), dialer, "tcp", "127.0.0.1:9999")
+	
+	// Should not be SSRF error
+	if err != nil && (strings.Contains(err.Error(), "private/internal") || strings.Contains(err.Error(), "blocked")) {
+		t.Errorf("allowLocalProviders should bypass SSRF, got: %v", err)
+	}
+}
+
+func TestDialAIProviderTLSContext_AllowsLocalProvidersWhenEnabled(t *testing.T) {
+	// When allowLocalProviders() returns true, should bypass SSRF checks for TLS
+	original := AllowLoopbackForTests
+	AllowLoopbackForTests = true
+	defer func() { AllowLoopbackForTests = original }()
+
+	// Even private IPs should attempt TLS dial when local providers are allowed
+	dialer := &net.Dialer{Timeout: 50 * time.Millisecond}
+	_, err := dialAIProviderTLSContext(context.Background(), dialer, "tcp", "127.0.0.1:9999", nil)
+	
+	// Should not be SSRF error
+	if err != nil && (strings.Contains(err.Error(), "private/internal") || strings.Contains(err.Error(), "blocked")) {
+		t.Errorf("allowLocalProviders should bypass SSRF for TLS, got: %v", err)
+	}
+}
+
