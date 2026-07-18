@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { AlertTriangle, Loader2, Database } from 'lucide-react'
+import { AlertTriangle, Loader2, Database, RefreshCw } from 'lucide-react'
 import { getStoredAuthToken } from '../../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { getDynamicCard } from '../../lib/dynamic-cards/dynamicCardRegistry'
@@ -291,6 +291,11 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
 
   return (
     <div className="h-full flex flex-col min-h-card">
+      {isApiSource && apiRefreshing && (
+        <div className="flex justify-end mb-1">
+          <RefreshCw className="w-3 h-3 text-muted-foreground animate-spin" />
+        </div>
+      )}
       {/* Stats */}
       {showStats && cardDefinition.stats && cardDefinition.stats.length > 0 && (
         <div className={cn(
