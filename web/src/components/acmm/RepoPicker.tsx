@@ -14,6 +14,7 @@ import { cn } from '../../lib/cn'
 import { useACMM, DEFAULT_REPO, normalizeRepoInput } from './ACMMProvider'
 import { ALL_CRITERIA } from '../../lib/acmm/sources'
 import { useToast } from '../ui/Toast'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 /** ACMM-source criteria only — used for the badge preview to match the
  *  shields.io badge endpoint which counts only ACMM criteria, not criteria
@@ -346,7 +347,14 @@ export function RepoPicker() {
           </div>
         ) : (
           <div>
-            Scanned {scannedLabel} · {detected}/{totalCriteria} criteria detected · L{scan.level.level} ({scan.level.levelName})
+            <div className="flex items-center gap-1.5">
+              <RefreshIndicator
+                isRefreshing={scan.isRefreshing}
+                lastUpdated={scan.lastRefresh ? new Date(scan.lastRefresh) : null}
+                size="xs"
+              />
+              <span>· {detected}/{totalCriteria} criteria detected · L{scan.level.level} ({scan.level.levelName})</span>
+            </div>
           </div>
         )}
       </div>

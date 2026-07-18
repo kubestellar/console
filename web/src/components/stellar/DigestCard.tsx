@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { StellarNotification, StellarSolve } from '../../types/stellar'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 interface DigestCardProps {
   notification: StellarNotification
@@ -46,6 +47,12 @@ export function DigestCard({ notification, solves, onDismiss, onOpenEvent }: Dig
             color: 'var(--s-info)',
           }}
         >{t('stellar.digest.dailyRecap')}</span>
+        <RefreshIndicator
+          isRefreshing={false}
+          lastUpdated={new Date(notification.createdAt)}
+          size="xs"
+          className="mr-1"
+        />
         <div style={{ flex: 1 }} />
         <button
           onClick={() => setExpanded(e => !e)}

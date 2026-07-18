@@ -22,6 +22,7 @@ import { useComplianceFrameworks, useFrameworkEvaluation, type Framework, type C
 import { clusterCache, subscribeClusterData } from '../../hooks/mcp/shared'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useTranslation } from 'react-i18next'
 
 /* ────────── status badge helpers ────────── */
@@ -207,10 +208,16 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
   const [selectedFwId, setSelectedFwId] = useState<string | null>(null)
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // Stable ID of the first framework — avoids re-running the effect when the
   // frameworks array gets a new reference but its contents haven't changed.
   const firstFwId = frameworks.length > 0 ? frameworks[0].id : null
+
+  // Record timestamp when evaluation result arrives so the freshness indicator updates
+  useEffect(() => {
+    if (result) setLastUpdated(new Date())
+  }, [result])
 
   // Auto-select first framework when loaded
   useEffect(() => {
@@ -342,6 +349,12 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
               <p className="text-xs text-muted-foreground">
                 Evaluated at {new Date(result.evaluated_at).toLocaleString()}
               </p>
+              <RefreshIndicator
+                isRefreshing={isEvaluating}
+                lastUpdated={lastUpdated}
+                size="xs"
+                className="mt-1"
+              />
             </div>
           </div>
 
