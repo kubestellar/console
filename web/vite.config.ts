@@ -292,16 +292,12 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/highlight.js/')) return 'highlight-vendor'
           if (id.includes('/sql.js/') || id.includes('/@sqlite/')) return 'sqlite-vendor'
           if (id.includes('/kubernetes-client/') || id.includes('/@kubernetes/')) return 'k8s-client-vendor'
-          // Split libraries that currently fall into the generic vendor catch-all (408K)
-          if (id.includes('/tailwind-merge/')) return 'classnames-vendor'
-          if (id.includes('/jose/')) return 'jose-vendor'
-          if (id.includes('/isomorphic-dompurify/')) return 'sanitize-vendor'
+          // Split larger libraries that would otherwise dominate the generic
+          // vendor chunk. Keep smaller utility packages in the shared `vendor`
+          // catch-all so the `vendor-*.js` chunk (required by
+          // check-vendor-safety.mjs) is always emitted with meaningful content.
           if (id.includes('/@opentelemetry/')) return 'otel-vendor'
-          if (id.includes('/form-data/') || id.includes('/formdata-node/')) return 'form-data-vendor'
-          if (id.includes('/@netlify/')) return 'netlify-vendor'
           if (id.includes('/msw/') || id.includes('/mswjs/')) return 'msw-vendor'
-          if (id.includes('/ws/') || id.includes('/websocket/')) return 'ws-vendor'
-          if (id.includes('/minimatch/') || id.includes('/micromatch/') || id.includes('/glob/')) return 'glob-vendor'
           if (id.includes('/@babel/') || id.includes('/babel-')) return 'babel-vendor'
           return 'vendor'
         },
