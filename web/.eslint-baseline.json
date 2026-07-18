@@ -5490,14 +5490,14 @@
   {
     "file": "src/components/gpu/GPUReservations.tsx",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 395,
+    "line": 396,
     "column": 6,
     "message": "React Hook useMemo has an unnecessary dependency: 'currentMonth'. Either exclude it or remove the dependency array."
   },
   {
     "file": "src/components/gpu/GPUReservations.tsx",
     "rule": "no-restricted-syntax",
-    "line": 566,
+    "line": 567,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
