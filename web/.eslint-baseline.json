@@ -9667,13 +9667,6 @@
     "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
   },
   {
-    "file": "src/hooks/mcp/buildpacks.ts",
-    "rule": "react-hooks/exhaustive-deps",
-    "line": 265,
-    "column": 5,
-    "message": "React Hook useCallback has a missing dependency: 'notifyListeners'. Either include it or remove the dependency array."
-  },
-  {
     "file": "src/hooks/mcp/compute.ts",
     "rule": "null",
     "line": 1,
@@ -9686,13 +9679,6 @@
     "line": 385,
     "column": 6,
     "message": "React Hook useEffect has an unnecessary dependency: 'gpuNodeCache.consecutiveFailures'. Either exclude it or remove the dependency array. Outer scope values like 'gpuNodeCache.consecutiveFailures' aren't valid dependencies because mutating them doesn't re-render the component."
-  },
-  {
-    "file": "src/hooks/mcp/crossplane.ts",
-    "rule": "react-hooks/exhaustive-deps",
-    "line": 268,
-    "column": 5,
-    "message": "React Hook useCallback has a missing dependency: 'notifyListeners'. Either include it or remove the dependency array."
   },
   {
     "file": "src/hooks/mcp/useClusterResourceQuery.ts",
