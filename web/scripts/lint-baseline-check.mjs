@@ -58,17 +58,27 @@ if (!fs.existsSync(BASELINE_FILE)) {
 
 const baselineViolations = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
 
-// Build sets for comparison (file:line:column:rule)
-const baselineSet = new Set(baselineViolations.map(v => `${v.file}:${v.line}:${v.column}:${v.rule}`));
-const currentSet = new Set(currentViolations.map(v => `${v.file}:${v.line}:${v.column}:${v.rule}`));
+// Compare by count per (file, rule) — line/column shifts from refactors are not new violations.
+const baselineCounts = countByFileRule(baselineViolations);
+const currentCounts = countByFileRule(currentViolations);
 
-const newViolations = currentViolations.filter(v => 
-  !baselineSet.has(`${v.file}:${v.line}:${v.column}:${v.rule}`)
-);
+// Keys that appear in current but exceed baseline count → new violations
+const allKeys = new Set([...Object.keys(baselineCounts), ...Object.keys(currentCounts)]);
+const newEntries = [];
+const fixedEntries = [];
 
-const fixedViolations = baselineViolations.filter(v =>
-  !currentSet.has(`${v.file}:${v.line}:${v.column}:${v.rule}`)
-);
+for (const key of allKeys) {
+  const baselineCount = baselineCounts[key] || 0;
+  const currentCount = currentCounts[key] || 0;
+  if (currentCount > baselineCount) {
+    newEntries.push({ key, added: currentCount - baselineCount });
+  } else if (currentCount < baselineCount) {
+    fixedEntries.push({ key, removed: baselineCount - currentCount });
+  }
+}
+
+const newViolationCount = newEntries.reduce((sum, e) => sum + e.added, 0);
+const fixedViolationCount = fixedEntries.reduce((sum, e) => sum + e.removed, 0);
 
 fs.unlinkSync(TEMP_FILE);
 
@@ -76,28 +86,30 @@ fs.unlinkSync(TEMP_FILE);
 console.log(`\n📊 Lint Baseline Check`);
 console.log(`   Baseline: ${baselineViolations.length} violations`);
 console.log(`   Current:  ${currentViolations.length} violations`);
-console.log(`   Fixed:    ${fixedViolations.length} violations`);
-console.log(`   New:      ${newViolations.length} violations\n`);
+console.log(`   Fixed:    ${fixedViolationCount} violations`);
+console.log(`   New:      ${newViolationCount} violations\n`);
 
-if (fixedViolations.length > 0) {
+if (fixedEntries.length > 0) {
   console.log('✨ Violations fixed (run `npm run lint:baseline` to update baseline):');
-  const byRule = groupByRule(fixedViolations);
-  Object.entries(byRule).forEach(([rule, violations]) => {
-    console.log(`   ${rule}: ${violations.length} fixed`);
+  fixedEntries.forEach(({ key, removed }) => {
+    const [, rule] = key.split('\0');
+    console.log(`   ${rule}: ${removed} fixed`);
   });
   console.log();
 }
 
-if (newViolations.length > 0) {
+if (newEntries.length > 0) {
   console.log('❌ New lint violations detected:\n');
-  const byRule = groupByRule(newViolations);
-  Object.entries(byRule).forEach(([rule, violations]) => {
-    console.log(`   ${rule} (${violations.length} new):`);
-    violations.slice(0, 5).forEach(v => {
+  newEntries.forEach(({ key, added }) => {
+    const [file, rule] = key.split('\0');
+    console.log(`   ${rule} (${added} new) in ${file}`);
+    // Show the actual new violations for context
+    const current = currentViolations.filter(v => v.file === file && v.rule === rule);
+    current.slice(0, 5).forEach(v => {
       console.log(`     ${v.file}:${v.line}:${v.column} — ${v.message}`);
     });
-    if (violations.length > 5) {
-      console.log(`     ... and ${violations.length - 5} more`);
+    if (current.length > 5) {
+      console.log(`     ... and ${current.length - 5} more`);
     }
   });
   console.log('\n❌ CI fails on new violations. Fix them or update baseline after review.');
@@ -120,11 +132,12 @@ function extractViolations(eslintData) {
   );
 }
 
-function groupByRule(violations) {
-  const groups = {};
+// Count violations per (file, rule) key — used for line-number-independent comparison.
+function countByFileRule(violations) {
+  const counts = {};
   violations.forEach(v => {
-    if (!groups[v.rule]) groups[v.rule] = [];
-    groups[v.rule].push(v);
+    const key = `${v.file}\0${v.rule}`;
+    counts[key] = (counts[key] || 0) + 1;
   });
-  return groups;
+  return counts;
 }
