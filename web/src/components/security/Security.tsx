@@ -366,6 +366,7 @@ export function Security() {
           stats={stats}
           complianceByCategory={complianceByCategory}
           handleRefresh={handleRefresh}
+          isRefreshing={dataRefreshing || securityLoading || securityRefreshing}
         />
       )}
     </>
