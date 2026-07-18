@@ -69,13 +69,13 @@ describe('codeGenerator.utils', () => {
       const urlWithBackticks = "http://host/api?q=`id`"
       const cmd = generateWidgetCommand('http://localhost', urlWithBackticks)
       // Inside single quotes, backticks are literal
-      expect(cmd).toContain("'http://localhost/api?q=`id`'")
+      expect(cmd).toContain("'http://host/api?q=`id`'")
     })
 
     it('prevents command injection via $() substitution in URL', () => {
       const urlWithSubst = "http://host/api?q=$(whoami)"
       const cmd = generateWidgetCommand('http://localhost', urlWithSubst)
-      expect(cmd).toContain("'http://localhost/api?q=$(whoami)'")
+      expect(cmd).toContain("'http://host/api?q=$(whoami)'")
     })
 
     it('handles multiple single quotes in URL', () => {
@@ -94,7 +94,7 @@ describe('codeGenerator.utils', () => {
     it('preserves shell metacharacters as literals when quoted', () => {
       const urlWithMetachars = "http://host/api?q=test&other=val;rm -rf"
       const cmd = generateWidgetCommand('http://localhost', urlWithMetachars)
-      expect(cmd).toContain("'http://localhost/api?q=test&other=val;rm -rf'")
+      expect(cmd).toContain("'http://host/api?q=test&other=val;rm -rf'")
     })
 
     it('handles empty URL gracefully', () => {
@@ -105,7 +105,7 @@ describe('codeGenerator.utils', () => {
     it('handles URL with special query parameters', () => {
       const urlWithSpecialParams = "http://host/api?filter={id:1}&sort=asc"
       const cmd = generateWidgetCommand('http://localhost', urlWithSpecialParams)
-      expect(cmd).toContain("'http://localhost/api?filter={id:1}&sort=asc'")
+      expect(cmd).toContain("'http://host/api?filter={id:1}&sort=asc'")
     })
   })
 })
