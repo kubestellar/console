@@ -212,8 +212,16 @@ func TestGetDynamicClient_CacheHit(t *testing.T) {
 // TestGetDynamicClient_FromCachedRestConfig verifies that when a REST config is
 // already cached (e.g., injected via InjectRestConfig), GetDynamicClient builds
 // a new dynamic client without re-resolving the kubeconfig.
+//
+// Construct MultiClusterClient directly (not via NewMultiClusterClient) so
+// noClusterMode is unset — otherwise the noClusterMode guard short-circuits
+// before the cached-config path is exercised.
 func TestGetDynamicClient_FromCachedRestConfig(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m := &MultiClusterClient{
+		clients:        make(map[string]kubernetes.Interface),
+		configs:        make(map[string]*rest.Config),
+		dynamicClients: make(map[string]dynamic.Interface),
+	}
 	cfg := &rest.Config{Host: "https://example.com:6443"}
 	m.InjectRestConfig("cached-config-ctx", cfg)
 
