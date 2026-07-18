@@ -9,6 +9,7 @@ import {
   Users,
   Globe,
   Key,
+  RefreshCw,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
@@ -119,7 +120,7 @@ function RealmRow({ realm }: { realm: KeycloakRealm }) {
 
 export function KeycloakStatus() {
   const { t } = useTranslation('cards')
-  const { data, isFailed, showSkeleton, showEmptyState } =
+  const { data, isRefreshing, isFailed, showSkeleton, showEmptyState } =
     useKeycloakStatus()
 
   const realms = data.realms || []
@@ -251,6 +252,9 @@ export function KeycloakStatus() {
             {operatorPods.ready}/{operatorPods.total}{' '}
             {t('keycloak.pods')}
           </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
         </div>
       </div>
 
