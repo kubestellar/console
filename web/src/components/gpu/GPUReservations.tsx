@@ -24,6 +24,7 @@ import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../ui/Toast'
 import { cn } from '../../lib/cn'
+import { Input } from '../ui/Input'
 import { useGPUReservations } from '../../hooks/useGPUReservations'
 import { useGPUUtilizations } from '../../hooks/useGPUUtilizations'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
@@ -393,7 +394,7 @@ export function GPUReservations() {
     }
 
     return weeks
-  }, [filteredReservations, startingDay, daysInMonth, currentMonth, getReservationDayRange])
+  }, [filteredReservations, startingDay, daysInMonth, getReservationDayRange])
 
   // Get GPU count reserved on a specific day
   const getGPUCountForDay = (day: number) => {
@@ -564,7 +565,7 @@ export function GPUReservations() {
                   : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
               )}
             >
-              <input
+              <Input
                 type="checkbox"
                 checked={showOnlyMine}
                 onChange={toggleShowOnlyMine}
