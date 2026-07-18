@@ -291,7 +291,7 @@ export function GPUReservations() {
 
   // Get the start/end day index (0-based from month start) for a reservation within the visible month.
   // Duration is added to the ORIGINAL start time first, then day boundaries are derived.
-  const getReservationDayRange = (r: GPUReservation) => {
+  const getReservationDayRange = useCallback((r: GPUReservation) => {
     if (!r.start_date) return null
     const MS_PER_HOUR = 3_600_000
     const DEFAULT_DURATION_HOURS = 24
@@ -317,7 +317,7 @@ export function GPUReservations() {
     const clampedStart = start < monthStart ? 1 : start.getDate()
     const clampedEnd = end > monthEnd ? daysInMonth : end.getDate()
     return { startDay: clampedStart, endDay: clampedEnd }
-  }
+  }, [currentMonth, daysInMonth])
 
   // Compute spanning reservation rows per calendar week
   const calendarWeeks = useMemo(() => {
