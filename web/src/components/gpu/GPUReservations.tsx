@@ -53,6 +53,7 @@ import { GPUReservationsTab } from './GPUReservationsTab'
 import { GPUInventoryTab } from './GPUInventoryTab'
 import { GPUDashboardTab } from './GPUDashboardTab'
 import { computeGPUOverviewStats } from './gpuOverviewStats'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
 type ViewTab = 'overview' | 'calendar' | 'quotas' | 'inventory' | 'dashboard'
 
@@ -585,6 +586,7 @@ export function GPUReservations() {
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
+        <CompactErrorBoundary context="GPUOverviewTab">
         <GPUOverviewTab
           stats={stats}
           filteredReservations={filteredReservations}
@@ -593,10 +595,12 @@ export function GPUReservations() {
           showOnlyMine={showOnlyMine}
           onSelectReservation={goToReservation}
         />
+        </CompactErrorBoundary>
       )}
 
       {/* Calendar Tab */}
       {activeTab === 'calendar' && (
+        <CompactErrorBoundary context="GPUCalendarTab">
         <GPUCalendarTab
           currentMonth={currentMonth}
           calendarWeeks={calendarWeeks}
@@ -608,10 +612,12 @@ export function GPUReservations() {
           onAddReservation={openCreateFormForDate}
           getGPUCountForDay={getGPUCountForDay}
         />
+        </CompactErrorBoundary>
       )}
 
       {/* Reservations Tab */}
       {activeTab === 'quotas' && (
+        <CompactErrorBoundary context="GPUReservationsTab">
         <GPUReservationsTab
           filteredReservations={filteredReservations}
           utilizations={utilizations}
@@ -630,20 +636,24 @@ export function GPUReservations() {
           onDeleteReservation={setDeleteConfirmId}
           onCreateReservation={openCreateForm}
         />
+        </CompactErrorBoundary>
       )}
 
       {/* Inventory Tab */}
       {activeTab === 'inventory' && (
+        <CompactErrorBoundary context="GPUInventoryTab">
         <GPUInventoryTab
           gpuClusters={gpuClusters}
           nodes={nodes}
           nodesLoading={nodesLoading}
           effectiveDemoMode={effectiveDemoMode}
         />
+        </CompactErrorBoundary>
       )}
 
       {/* Dashboard Tab */}
       {activeTab === 'dashboard' && (
+        <CompactErrorBoundary context="GPUDashboardTab">
         <GPUDashboardTab
           dashboardCards={dashboardCards}
           dashCardIds={dashCardIds}
@@ -656,6 +666,7 @@ export function GPUReservations() {
           onTriggerRefresh={triggerRefresh}
           onShowAddCardModal={openAddCardModal}
         />
+        </CompactErrorBoundary>
       )}
 
       {/* Add Card Modal */}
