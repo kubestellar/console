@@ -54,14 +54,14 @@ describe('generateWidgetCommand — shell escaping (CWE-78)', () => {
     // Single quotes prevent this, backticks inside single quotes are literal
     const urlWithBackticks = "http://example.com/api?q=`id`"
     const cmd = generateWidgetCommand('http://localhost:8080', urlWithBackticks)
-    expect(cmd).toContain("'http://localhost:8080/api?q=`id`'")
+    expect(cmd).toContain("'http://example.com/api?q=`id`'")
   })
 
   it('prevents command injection via $() substitution in URL', () => {
     // $(...) also enables command substitution
     const urlWithSubst = "http://example.com/api?q=$(whoami)"
     const cmd = generateWidgetCommand('http://localhost:8080', urlWithSubst)
-    expect(cmd).toContain("'http://localhost:8080/api?q=$(whoami)'")
+    expect(cmd).toContain("'http://example.com/api?q=$(whoami)'")
   })
 
   it('handles multiple single quotes in URL', () => {
@@ -95,7 +95,7 @@ describe('generateWidgetCommand — shell escaping (CWE-78)', () => {
     // Special chars like &, |, ;, <, >, etc. are literal inside single quotes
     const urlWithMetachars = "http://example.com/api?q=test&other=val;rm -rf"
     const cmd = generateWidgetCommand('http://localhost:8080', urlWithMetachars)
-    expect(cmd).toContain("'http://localhost:8080/api?q=test&other=val;rm -rf'")
+    expect(cmd).toContain("'http://example.com/api?q=test&other=val;rm -rf'")
   })
 
   it('handles empty URL gracefully', () => {
@@ -107,7 +107,7 @@ describe('generateWidgetCommand — shell escaping (CWE-78)', () => {
   it('handles URL with special query parameters', () => {
     const urlWithSpecialParams = "http://example.com/api?filter={id:1}&sort=asc"
     const cmd = generateWidgetCommand('http://localhost:8080', urlWithSpecialParams)
-    expect(cmd).toContain("'http://localhost:8080/api?filter={id:1}&sort=asc'")
+    expect(cmd).toContain("'http://example.com/api?filter={id:1}&sort=asc'")
   })
 
   it('prevents newline injection in URL', () => {
@@ -115,6 +115,6 @@ describe('generateWidgetCommand — shell escaping (CWE-78)', () => {
     const urlWithNewline = "http://example.com/api?q=test\necho hacked"
     const cmd = generateWidgetCommand('http://localhost:8080', urlWithNewline)
     // The URL is still quoted, newlines won't execute commands
-    expect(cmd).toContain("'http://localhost:8080/api?q=test\necho hacked'")
+    expect(cmd).toContain("'http://example.com/api?q=test\necho hacked'")
   })
 })

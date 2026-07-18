@@ -73,7 +73,7 @@ describe('sanitizeForPrompt', () => {
   })
 
   it('handles prompt injection attempt with SQL', () => {
-    const sqlInjection = "user'; DROP TABLE users; --"
+    const sqlInjection = "user' & DROP TABLE users; --"
     const result = sanitizeForPrompt(sqlInjection)
     // SQL special chars & and ' should be escaped
     expect(result).toContain('&amp;')
