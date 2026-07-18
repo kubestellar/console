@@ -133,9 +133,6 @@ export function RepoPicker() {
     [scan.data.detectedIds],
   )
   const acmmTotal = useMemo(() => ACMM_CRITERIA.length, [])
-  const scannedLabel = scan.data.scannedAt
-    ? new Date(scan.data.scannedAt).toLocaleTimeString()
-    : '—'
 
   return (
     // Issue 8857 — the `border-b` used to live on this outer sticky wrapper,
