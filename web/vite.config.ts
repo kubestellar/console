@@ -400,8 +400,9 @@ export default defineConfig(({ mode }) => ({
       threads: { maxThreads: 1, minThreads: 1 },
     } : undefined,
     // isolate: true ensures each test file runs in its own subprocess with a clean global environment,
-    // preventing vi.stubGlobal() cross-contamination between files (#20256)
-    isolate: true,
+    // preventing vi.stubGlobal() cross-contamination between files (#20256). Disabled in CI to prevent
+    // worker crashes from excessive memory usage when loading hundreds of split chunks per test file (#21083)
+    isolate: process.env.CI ? false : true,
     coverage: {
       provider: 'v8',
       // Disable coverage.all to prevent force-importing source files that trigger
