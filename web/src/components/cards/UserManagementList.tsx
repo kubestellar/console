@@ -161,10 +161,7 @@ export const ConsoleUsersTab = memo(function ConsoleUsersTab({
       <DeleteUserConfirmModal
         userId={deleteConfirmUserId}
         onClose={() => setDeleteConfirmUserId(null)}
-        onConfirm={(userId) => {
-          onDeleteUser(userId)
-          setDeleteConfirmUserId(null)
-        }}
+        onConfirm={(userId) => onDeleteUser(userId)}
       />
     </div>
   )

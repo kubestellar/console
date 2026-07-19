@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../lib/modals'
 
@@ -6,11 +7,12 @@ import { ConfirmDialog } from '../../lib/modals'
 interface DeleteUserConfirmModalProps {
   userId: string | null
   onClose: () => void
-  onConfirm: (userId: string) => void
+  onConfirm: (userId: string) => Promise<void>
 }
 
 export function DeleteUserConfirmModal({ userId, onClose, onConfirm }: DeleteUserConfirmModalProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const [isDeleting, setIsDeleting] = useState(false)
   const isOpen = userId !== null
 
   if (!isOpen) return null
@@ -19,10 +21,16 @@ export function DeleteUserConfirmModal({ userId, onClose, onConfirm }: DeleteUse
     <ConfirmDialog
       isOpen={isOpen}
       onClose={onClose}
-      onConfirm={() => {
+      isLoading={isDeleting}
+      onConfirm={async () => {
         if (userId) {
-          onConfirm(userId)
-          onClose()
+          setIsDeleting(true)
+          try {
+            await onConfirm(userId)
+          } finally {
+            setIsDeleting(false)
+            onClose()
+          }
         }
       }}
       title={t('userManagement.deleteUser')}

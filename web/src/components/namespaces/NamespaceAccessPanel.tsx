@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Shield, Trash2, UserPlus } from 'lucide-react'
+import { Shield, Trash2, UserPlus, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { api, authFetch } from '../../lib/api'
 import { useToast } from '../ui/Toast'
@@ -22,6 +22,7 @@ export function NamespaceAccessPanel({
   const { showToast } = useToast()
   const [accessEntries, setAccessEntries] = useState<NamespaceAccessEntry[]>([])
   const [accessLoading, setAccessLoading] = useState(false)
+  const [revokingBindingName, setRevokingBindingName] = useState<string | null>(null)
 
   const fetchAccess = useCallback(async (ns: NamespaceDetails, signal?: AbortSignal) => {
     setAccessLoading(true)
@@ -49,6 +50,7 @@ export function NamespaceAccessPanel({
       return
     }
 
+    setRevokingBindingName(binding.bindingName)
     try {
       const params = new URLSearchParams({
         cluster: namespace.cluster,
@@ -66,6 +68,8 @@ export function NamespaceAccessPanel({
     } catch (err: unknown) {
       console.error('Failed to revoke access:', err)
       showToast('Failed to revoke access', 'error')
+    } finally {
+      setRevokingBindingName(null)
     }
   }
 
@@ -133,10 +137,13 @@ export function NamespaceAccessPanel({
               </div>
               <button
                 onClick={() => handleRevokeAccess(entry)}
-                className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                disabled={revokingBindingName === entry.bindingName}
+                className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title={t('namespaces.revokeAccess', 'Revoke access')}
               >
-                <Trash2 className="w-4 h-4" />
+                {revokingBindingName === entry.bindingName
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Trash2 className="w-4 h-4" />}
               </button>
             </div>
           ))}
