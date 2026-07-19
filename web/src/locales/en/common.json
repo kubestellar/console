@@ -969,7 +969,9 @@
       "kubevirtDetectedCount_other": "KubeVirt detected on {{count}} clusters",
       "kubevirtNotDetected": "KubeVirt Not Detected",
       "kubevirtInstallHint": "KubeVirt lets you run virtual machines alongside containers on your Kubernetes clusters. Use the guided mission to install it.",
-      "kubevirtOpenMission": "Open Install KubeVirt Mission"
+      "kubevirtOpenMission": "Open Install KubeVirt Mission",
+      "deleteSuccess": "Cluster \"{{name}}\" deleted",
+      "deleteError": "Failed to delete cluster \"{{name}}\""
     },
     "backup": {
       "title": "Backup & Sync",
@@ -1604,7 +1606,8 @@
       "declarativeTableList": "Declarative (table/list)",
       "customCodeReact": "Custom Code (React)",
       "fieldsLabel": "Fields:",
-      "invalidJsonData": "Invalid JSON data."
+      "invalidJsonData": "Invalid JSON data.",
+      "deleteSuccess": "Card deleted"
     },
     "statFactory": {
       "title": "Stat Block Factory",
@@ -5515,7 +5518,9 @@
     "selectCluster": "Select a cluster",
     "namespace": "Namespace",
     "selectNamespace": "Select a namespace",
-    "applyToAllClusters": "Apply to all clusters"
+    "applyToAllClusters": "Apply to all clusters",
+    "teamDeleted": "Team deleted",
+    "teamDeleteError": "Failed to delete team"
   },
   "notFound": {
     "title": "Page not found",

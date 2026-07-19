@@ -400,9 +400,15 @@ export default defineConfig(({ mode }) => ({
       threads: { maxThreads: 1, minThreads: 1 },
     } : undefined,
     // isolate: true ensures each test file runs in its own subprocess with a clean global environment,
-    // preventing vi.stubGlobal() cross-contamination between files (#20256). Disabled in CI to prevent
-    // worker crashes from excessive memory usage when loading hundreds of split chunks per test file (#21083)
-    isolate: process.env.CI ? false : true,
+    // preventing vi.stubGlobal() cross-contamination between files (#20256).
+    // Note: A prior attempt to disable isolate in CI to work around worker OOM crashes with hundreds of
+    // split chunks (#21083) caused 1598 test failures (#21284) from cross-file mock/global leakage —
+    // 143 test files use vi.stubGlobal, many at module scope, and vi.unstubAllGlobals() in setup.ts's
+    // afterAll runs only once per worker (end of shard) when isolate is false, not once per file.
+    // Restoring isolate:true unconditionally to keep the test suite green; the OOM issue must be
+    // addressed via a different mechanism (chunk-splitting tuning or memory bump) rather than by
+    // sacrificing test isolation.
+    isolate: true,
     coverage: {
       provider: 'v8',
       // Disable coverage.all to prevent force-importing source files that trigger
