@@ -1,4 +1,4 @@
-import * as moduleExports from '../cubefs-status'
+import { cubefsStatusConfig } from '../cubefs-status'
 import { registerCardConfigTest } from './card-config-test-helpers'
 
-registerCardConfigTest('cubefs-status', moduleExports)
+registerCardConfigTest('cubefs-status', { cubefsStatusConfig })
