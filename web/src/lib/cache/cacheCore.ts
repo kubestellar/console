@@ -594,7 +594,11 @@ export function useCache<T>({
       const dataAge = lastRefresh ? Date.now() - lastRefresh : Infinity
       const hasFreshData = !state.isLoading && !state.isRefreshing && dataAge < baseInterval
       if (!hasFreshData) {
-        refetch().catch((e) => logger.warn(`[Cache] Initial refetch failed for ${key}:`, e))(`cache:${key}`, refetch)
+        refetch().catch((e) => logger.warn(`[Cache] Initial refetch failed for ${key}:`, e))
+      }
+    }
+
+    const unregisterRefetch = registerRefetch(`cache:${key}`, refetch)
 
     if (autoRefresh && !autoRefreshGloballyPaused && keepAliveActive) {
       if (!autoRefreshTimerRef.current) {

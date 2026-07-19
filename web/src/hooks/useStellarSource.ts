@@ -247,7 +247,9 @@ export function useStellarSource() {
     })
     on<{ id: string; summary: string; suggest?: string }>('observation', payload => {
       setNudge({ id: payload.id, summary: payload.summary, suggest: payload.suggest, ts: new Date().toISOString() })
-      stellarApi.getWatches().then(setWatches).catch((e) => logger.warn('[StellarSource] Failed to refresh watches on observation:', e)); pendingActions?: StellarAction[]; operationalState?: StellarOperationalState }>('initial_batch', batch => {
+      stellarApi.getWatches().then(setWatches).catch((e) => logger.warn('[StellarSource] Failed to refresh watches on observation:', e))
+    })
+    on<{ notifications?: StellarNotification[]; watches?: StellarWatch[]; pendingActions?: StellarAction[]; operationalState?: StellarOperationalState }>('initial_batch', batch => {
       if (batch.notifications) setNotifications(sortNotificationsByCreatedAt(batch.notifications))
       if (batch.watches) setWatches(batch.watches)
       if (batch.pendingActions) setPendingActions(batch.pendingActions)
@@ -272,7 +274,9 @@ export function useStellarSource() {
         ...prev,
         [payload.eventId]: { solveId: payload.solveId, eventId: payload.eventId, step: 'reading', message: 'Solve started — Stellar is on it.', actionsTaken: 0, status: 'running' },
       }))
-      stellarApi.listSolves().then(setSolves).catch((e) => logger.warn('[StellarSource] Failed to refresh solves on solve_started:', e)), payload => setSolveProgress(prev => ({ ...prev, [payload.eventId]: payload })))
+      stellarApi.listSolves().then(setSolves).catch((e) => logger.warn('[StellarSource] Failed to refresh solves on solve_started:', e))
+    })
+    on<StellarSolveProgress>('solve_progress', payload => setSolveProgress(prev => ({ ...prev, [payload.eventId]: payload })))
     on<{ solveId: string; eventId: string; status: string; summary: string }>('solve_complete', payload => {
       setSolveProgress(prev => {
         const copy = { ...prev }
