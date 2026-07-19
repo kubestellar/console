@@ -23,6 +23,7 @@ import {
   type Subscriber,
   workerRpc,
 } from './cacheStorage'
+import { logger } from '../logger'
 import {
   isDemoMode,
   isEquivalentToInitial,
@@ -139,7 +140,7 @@ export class CacheStore<T> {
     try {
       await cacheStorage.set(this.key, data)
       if (workerRpc) {
-        _idbStorage.set(this.key, data).catch(() => {})
+        _idbStorage.set(this.key, data).catch((e) => logger.warn(`[Cache] IDB worker write failed for ${this.key}:`, e))
       }
     } catch (e: unknown) {
       console.error(`[Cache] Failed to save ${this.key}:`, e)
@@ -593,16 +594,12 @@ export function useCache<T>({
       const dataAge = lastRefresh ? Date.now() - lastRefresh : Infinity
       const hasFreshData = !state.isLoading && !state.isRefreshing && dataAge < baseInterval
       if (!hasFreshData) {
-        refetch().catch(() => {})
-      }
-    }
-
-    const unregisterRefetch = registerRefetch(`cache:${key}`, refetch)
+        refetch().catch((e) => logger.warn(`[Cache] Initial refetch failed for ${key}:`, e))(`cache:${key}`, refetch)
 
     if (autoRefresh && !autoRefreshGloballyPaused && keepAliveActive) {
       if (!autoRefreshTimerRef.current) {
         autoRefreshTimerRef.current = setInterval(() => {
-          refetch().catch(() => {})
+          refetch().catch((e) => logger.warn(`[Cache] Auto-refresh failed for ${key}:`, e))
         }, effectiveInterval)
       }
     } else if (autoRefreshTimerRef.current) {
@@ -619,7 +616,7 @@ export function useCache<T>({
     if (!autoRefreshTimerRef.current || !autoRefresh || autoRefreshGloballyPaused || !keepAliveActive) return
     clearInterval(autoRefreshTimerRef.current)
     autoRefreshTimerRef.current = setInterval(() => {
-      refetch().catch(() => {})
+      refetch().catch((e) => logger.warn(`[Cache] Auto-refresh interval failed for ${key}:`, e))
     }, effectiveInterval)
   }, [effectiveInterval, autoRefresh, autoRefreshGloballyPaused, keepAliveActive, refetch])
 

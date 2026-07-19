@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { logger } from '../lib/logger'
 import { getNextBatchTime, resolveStellarBatchIntervalMs } from '../components/stellar/lib/time'
 import { STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS } from '../lib/constants/storage'
 import { areOptionalPollersSuppressed } from '../lib/constants/network'
@@ -246,9 +247,7 @@ export function useStellarSource() {
     })
     on<{ id: string; summary: string; suggest?: string }>('observation', payload => {
       setNudge({ id: payload.id, summary: payload.summary, suggest: payload.suggest, ts: new Date().toISOString() })
-      stellarApi.getWatches().then(setWatches).catch(() => {})
-    })
-    on<{ notifications?: StellarNotification[]; watches?: StellarWatch[]; pendingActions?: StellarAction[]; operationalState?: StellarOperationalState }>('initial_batch', batch => {
+      stellarApi.getWatches().then(setWatches).catch((e) => logger.warn('[StellarSource] Failed to refresh watches on observation:', e)); pendingActions?: StellarAction[]; operationalState?: StellarOperationalState }>('initial_batch', batch => {
       if (batch.notifications) setNotifications(sortNotificationsByCreatedAt(batch.notifications))
       if (batch.watches) setWatches(batch.watches)
       if (batch.pendingActions) setPendingActions(batch.pendingActions)
@@ -256,7 +255,7 @@ export function useStellarSource() {
     })
     on<StellarWatch[]>('watches', updated => setWatches(updated || []))
     on<StellarWatch>('watch_update', updated => setWatches(prev => prev.map(watch => watch.id === updated.id ? updated : watch)))
-    es.addEventListener('watch_created', () => { stellarApi.getWatches().then(setWatches).catch(() => {}) })
+    es.addEventListener('watch_created', () => { stellarApi.getWatches().then(setWatches).catch((e) => logger.warn('[StellarSource] Failed to refresh watches on watch_created:', e)) })
     on<StellarAction>('action_update', updated => {
       setPendingActions(prev => {
         const exists = prev.some(action => action.id === updated.id)
@@ -273,17 +272,15 @@ export function useStellarSource() {
         ...prev,
         [payload.eventId]: { solveId: payload.solveId, eventId: payload.eventId, step: 'reading', message: 'Solve started — Stellar is on it.', actionsTaken: 0, status: 'running' },
       }))
-      stellarApi.listSolves().then(setSolves).catch(() => {})
-    })
-    on<StellarSolveProgress>('solve_progress', payload => setSolveProgress(prev => ({ ...prev, [payload.eventId]: payload })))
+      stellarApi.listSolves().then(setSolves).catch((e) => logger.warn('[StellarSource] Failed to refresh solves on solve_started:', e)), payload => setSolveProgress(prev => ({ ...prev, [payload.eventId]: payload })))
     on<{ solveId: string; eventId: string; status: string; summary: string }>('solve_complete', payload => {
       setSolveProgress(prev => {
         const copy = { ...prev }
         delete copy[payload.eventId]
         return copy
       })
-      stellarApi.listSolves().then(setSolves).catch(() => {})
-      stellarApi.listActivity(STELLAR_ACTIVITY_LIMIT).then(setActivity).catch(() => {})
+      stellarApi.listSolves().then(setSolves).catch((e) => logger.warn('[StellarSource] Failed to refresh solves on solve_complete:', e))
+      stellarApi.listActivity(STELLAR_ACTIVITY_LIMIT).then(setActivity).catch((e) => logger.warn('[StellarSource] Failed to refresh activity on solve_complete:', e))
     })
     on<{ id: string }>('action_bumped', payload => {
       setPendingActions(prev => {
@@ -297,7 +294,7 @@ export function useStellarSource() {
     on<StellarActivity>('activity', entry => {
       setActivity(prev => (prev.some(item => item.id === entry.id) ? prev : [entry, ...prev].slice(0, STELLAR_ACTIVITY_LIMIT)))
     })
-    es.addEventListener('digest_fired', () => { stellarApi.listSolves().then(setSolves).catch(() => {}) })
+    es.addEventListener('digest_fired', () => { stellarApi.listSolves().then(setSolves).catch((e) => logger.warn('[StellarSource] Failed to refresh solves on digest_fired:', e)) })
     on<CatchUpState>('catchup', payload => setCatchUp(payload))
     on<{ content: string; period: string }>('digest', digest => {
       setNudge({ id: crypto.randomUUID(), summary: digest.content, ts: new Date().toISOString() })
