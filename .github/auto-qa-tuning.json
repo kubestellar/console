@@ -61,18 +61,17 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "XL",
+    "best_pr_size": "S",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #20875: Superseded by #20876, which merged the same fix pattern for `liveFixtureManager.test.ts`. Closing.",
-      "- PR #20858: Superseded by #20876 (also Fixes #20853), which merged the fix. Closing.",
-      "- PR #20833: Superseded by #20841, which was merged.",
-      "- PR #20828: Superseded by #20840, which was merged.",
-      "- PR #20713: Closing — branch was rebased but PR ref is stale. Reopening as a new PR from the rebased `sec-check/fix-20712` branch."
+      "- PR #21093: Closing as duplicate — the two test files added here are already present on `main` (merged via #21091, which addressed the same two advisory items). Advisory #20963 items covered by that PR are resolved. Remaining advisory items (if any) should be re-triaged in a fresh advisory report.",
+      "- PR #21084: <!-- test-coverage-check-report -->",
+      "## :white_check_mark: Test Coverage Check",
+      "- PR #20974: Closing this PR — 4 CI attempts have failed on `build-gate`. Root cause: `handlers.compliance.test.ts` uses `setupServer(...)` from `msw/node` with `onUnhandledRequest: 'error'`, which conflicts with the global MSW test setup wired into `src/test/setup.ts` under MSW v2's experimental network mode. Every intercepted request is being classified as unhandled and MSW throws `InternalError: Cannot bypass a request when using the \"error\" strategy`."
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-07-12"
+    "last_report_date": "2026-07-19"
   },
   "cncf_insights": {
     "last_scan_date": "2026-07-15",
