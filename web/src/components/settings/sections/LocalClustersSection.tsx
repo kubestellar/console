@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Container, RefreshCw, Plus, Trash2, Check, AlertCircle, Loader2, Plug, Unplug, Bot, ExternalLink, Monitor } from 'lucide-react'
 import { Button } from '../../ui/Button'
+import { useToast } from '../../ui/Toast'
 import { useLocalClusterTools } from '../../../hooks/useLocalClusterTools'
 import { emitLocalClusterCreated } from '../../../lib/analytics'
 import { friendlyErrorMessage } from '../../../lib/clusterErrors'
@@ -48,6 +49,7 @@ function getToolDescription(tool: string) {
 // ------------------------------------------------------------------
 export function LocalClustersSection() {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const navigate = useNavigate()
   const {
     installedTools,
@@ -123,9 +125,14 @@ export function LocalClustersSection() {
 
   const handleDelete = async (tool: string, name: string) => {
     try {
-      await deleteCluster(tool, name)
+      const success = await deleteCluster(tool, name)
+      if (success) {
+        showToast(t('settings.localClusters.deleteSuccess', { name }), 'success')
+      } else {
+        showToast(t('settings.localClusters.deleteError', { name }), 'error')
+      }
     } catch {
-      // deleteCluster handles errors internally; ignore unexpected throws
+      showToast(t('settings.localClusters.deleteError', { name }), 'error')
     }
   }
 

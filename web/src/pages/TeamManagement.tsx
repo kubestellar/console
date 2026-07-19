@@ -1,10 +1,14 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { TeamList } from '../components/teams/TeamList'
 import { TeamDetail } from '../components/teams/TeamDetail'
 import { useTeams, useTeamDetail } from '../hooks/useTeams'
+import { useToast } from '../components/ui/Toast'
 import type { TeamRole } from '../types/teams'
 
 export function TeamManagementPage() {
+  const { t } = useTranslation()
+  const { showToast } = useToast()
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const { teams, isLoading, createTeam, deleteTeam } = useTeams()
   const { team, addMember, removeMember } = useTeamDetail(selectedTeamId)
@@ -15,7 +19,12 @@ export function TeamManagementPage() {
 
   const handleDelete = async () => {
     if (selectedTeamId) {
-      await deleteTeam(selectedTeamId)
+      const success = await deleteTeam(selectedTeamId)
+      if (success) {
+        showToast(t('teams.teamDeleted'), 'success')
+      } else {
+        showToast(t('teams.teamDeleteError'), 'error')
+      }
       setSelectedTeamId(null)
     }
   }

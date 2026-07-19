@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { renderHook } from '@testing-library/react'
 import { useTenantIsolationSetup } from '../useTenantIsolationSetup'
 
 const mockUseOvnStatus = vi.fn()
@@ -68,15 +69,15 @@ describe('useTenantIsolationSetup', () => {
       kubevirt: { detected: true, health: 'healthy' },
     })
 
-    const result = useTenantIsolationSetup()
+    const { result } = renderHook(() => useTenantIsolationSetup())
 
-    expect(result.readyCount).toBe(4)
-    expect(result.totalComponents).toBe(4)
-    expect(result.allReady).toBe(true)
-    expect(result.isolationScore).toBe(3)
-    expect(result.isolationLevels.map((level) => level.status)).toEqual(['ready', 'ready', 'ready'])
-    expect(result.isLoading).toBe(false)
-    expect(result.isDemoData).toBe(false)
+    expect(result.current.readyCount).toBe(4)
+    expect(result.current.totalComponents).toBe(4)
+    expect(result.current.allReady).toBe(true)
+    expect(result.current.isolationScore).toBe(3)
+    expect(result.current.isolationLevels.map((level) => level.status)).toEqual(['ready', 'ready', 'ready'])
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.isDemoData).toBe(false)
   })
 
   it('marks control plane as degraded when one component is unhealthy', () => {
@@ -87,16 +88,16 @@ describe('useTenantIsolationSetup', () => {
       kubevirt: { detected: false, health: 'unknown' },
     })
 
-    const result = useTenantIsolationSetup()
+    const { result } = renderHook(() => useTenantIsolationSetup())
 
-    expect(result.readyCount).toBe(3)
-    expect(result.allReady).toBe(false)
-    expect(result.isolationLevels).toEqual([
+    expect(result.current.readyCount).toBe(3)
+    expect(result.current.allReady).toBe(false)
+    expect(result.current.isolationLevels).toEqual([
       { type: 'Control-plane', status: 'degraded', provider: 'KubeFlex + K3s' },
       { type: 'Data-plane', status: 'missing', provider: 'KubeVirt' },
       { type: 'Network', status: 'ready', provider: 'OVN-Kubernetes' },
     ])
-    expect(result.isolationScore).toBe(1)
+    expect(result.current.isolationScore).toBe(1)
   })
 
   it('combines loading and demo flags across all sources', () => {
@@ -107,10 +108,10 @@ describe('useTenantIsolationSetup', () => {
       kubevirt: { detected: true, health: 'healthy', loading: false, isDemoData: false },
     })
 
-    const result = useTenantIsolationSetup()
+    const { result } = renderHook(() => useTenantIsolationSetup())
 
-    expect(result.isLoading).toBe(true)
-    expect(result.isDemoData).toBe(false)
-    expect(result.totalIsolationLevels).toBe(3)
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.isDemoData).toBe(false)
+    expect(result.current.totalIsolationLevels).toBe(3)
   })
 })
