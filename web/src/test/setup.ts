@@ -239,12 +239,17 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-// Clear global stubs after every test file.
-// In vitest 4.x with pool:'forks'/isolate:false and maxWorkers:1 (CI), all test
-// files in a shard share one worker process, so vi.stubGlobal() calls in one
-// file's beforeAll leak into subsequent files.
-// afterAll in setupFiles runs once per worker (end of shard), not once per file.
-// Belt-and-suspenders: primary cleanup now happens in afterEach above (#20007).
+// Clear global stubs when this test file finishes.
+// With isolate:true (current setting in vite.config.ts), the setupFile runs inside
+// each test file's own subprocess, so this afterAll executes once per FILE —
+// correctly cleaning up any vi.stubGlobal() calls the file made at module scope,
+// in beforeAll, or inside test callbacks.
+//
+// WARNING: if isolate is ever set to false, afterAll in setupFiles runs only once
+// per shard (at the end of the worker), NOT once per file. That means
+// vi.stubGlobal() calls in one file leak into all subsequent files in the same
+// shard, which caused 1598 test failures in Coverage Suite run #4339 (#21284).
+// Do NOT set isolate:false — see web/vite.config.ts for the full explanation.
 afterAll(() => {
   vi.unstubAllGlobals()
 })
