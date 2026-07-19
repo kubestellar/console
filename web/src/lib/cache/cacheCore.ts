@@ -622,7 +622,7 @@ export function useCache<T>({
     autoRefreshTimerRef.current = setInterval(() => {
       refetch().catch((e) => logger.warn(`[Cache] Auto-refresh interval failed for ${key}:`, e))
     }, effectiveInterval)
-  }, [effectiveInterval, autoRefresh, autoRefreshGloballyPaused, keepAliveActive, refetch])
+  }, [effectiveInterval, autoRefresh, autoRefreshGloballyPaused, keepAliveActive, refetch, key])
 
   useEffect(() => {
     return () => {
