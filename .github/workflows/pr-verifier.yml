@@ -5,14 +5,10 @@ on:
     types: [opened, edited, synchronize, reopened]
 
 permissions:
-  contents: read
+  checks: write
+  pull-requests: read
 
 jobs:
   verify:
-    # Skip Dependabot PRs - reusable workflow doesn't support pull_request_target from forks
-    if: github.actor != 'dependabot[bot]'
-    permissions:
-      checks: write
-      pull-requests: read
     uses: kubestellar/infra/.github/workflows/reusable-pr-verifier.yml@main
     secrets: inherit
