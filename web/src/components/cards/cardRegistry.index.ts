@@ -1,4 +1,5 @@
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
+import { logger } from '../../lib/logger'
 import { registerAllDescriptorCards } from './cardDescriptors.registry'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 import { quantumCardRegistry } from './cardRegistry.quantum'
@@ -83,7 +84,7 @@ registerAllDescriptorCards({
 
 export function prefetchCardChunks(cardTypes: string[]): void {
   for (const type of cardTypes) {
-    CARD_CHUNK_PRELOADERS[type]?.()?.catch(() => {})
+    CARD_CHUNK_PRELOADERS[type]?.()?.catch((e) => logger.warn('[CardRegistry] Failed to prefetch card chunk:', type, e))
   }
 }
 
@@ -123,7 +124,7 @@ export function prefetchDemoCardChunks(): void {
     () => import('./VClusterStatus'),
   ]
 
-  startupChunks.forEach(load => load().catch(() => {}))
+  startupChunks.forEach(load => load().catch((e) => logger.warn('[CardRegistry] Failed to prefetch demo card chunk:', e)))
 }
 
 const DEFAULT_CARD_WIDTH = 4

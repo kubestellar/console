@@ -43,6 +43,7 @@ import { RouteSearchPanel } from './sidebar-customizer/RouteSearchPanel'
 import { renderIcon } from './sidebar-customizer/renderIcon'
 import { SidebarItemsPanel } from './sidebar-customizer/SidebarItemsPanel'
 import { SortableItem } from './sidebar-customizer/SortableItem'
+import { logger } from '../../lib/logger'
 
 const createLocalDashboardId = () => `${LOCAL_DASHBOARD_ID_PREFIX}${crypto.randomUUID()}`
 
@@ -204,7 +205,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
         )
         if (item) updateItem(item.id, { icon: aiIcon })
       })
-      .catch(() => {})
+      .catch((e) => logger.warn('[SidebarCustomizer] Failed to suggest dashboard icon:', e))
   }
 
   const renderItemList = (items: SidebarItem[], target: 'primary' | 'secondary') => (
