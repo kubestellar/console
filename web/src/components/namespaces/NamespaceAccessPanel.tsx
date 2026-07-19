@@ -23,12 +23,13 @@ export function NamespaceAccessPanel({
   const [accessEntries, setAccessEntries] = useState<NamespaceAccessEntry[]>([])
   const [accessLoading, setAccessLoading] = useState(false)
 
-  const fetchAccess = useCallback(async (ns: NamespaceDetails) => {
+  const fetchAccess = useCallback(async (ns: NamespaceDetails, signal?: AbortSignal) => {
     setAccessLoading(true)
     try {
-      const response = await api.get<{ bindings: typeof accessEntries }>(`/api/namespaces/${encodeURIComponent(ns.name)}/access?cluster=${encodeURIComponent(ns.cluster)}`)
+      const response = await api.get<{ bindings: typeof accessEntries }>(`/api/namespaces/${encodeURIComponent(ns.name)}/access?cluster=${encodeURIComponent(ns.cluster)}`, { signal })
       setAccessEntries(response.data?.bindings || [])
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
       console.error('Failed to fetch access:', err)
       setAccessEntries([])
       const message = err instanceof Error && err.message?.includes('403')
@@ -70,7 +71,9 @@ export function NamespaceAccessPanel({
 
   useEffect(() => {
     if (namespace && isAdmin) {
-      fetchAccess(namespace)
+      const controller = new AbortController()
+      fetchAccess(namespace, controller.signal)
+      return () => controller.abort()
     }
   }, [namespace, fetchAccess, isAdmin])
 

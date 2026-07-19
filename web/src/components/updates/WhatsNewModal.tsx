@@ -1,6 +1,6 @@
 import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { formatTimeAgo } from '../../lib/formatters'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Download, ChevronDown, Copy, Check } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
@@ -43,6 +43,13 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
   const [updating, setUpdating] = useState(false)
   const [showManualUpdate, setShowManualUpdate] = useState(false)
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    }
+  }, [])
 
   const markdownComponents = useMemo(() => buildReleaseNotesComponents('sm'), [])
   const hasReleaseNotes = !!latestRelease?.releaseNotes?.trim()
@@ -101,7 +108,8 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
   const handleCopyCommand = useCallback(async (cmd: string) => {
     await copyToClipboard(cmd)
     setCopiedCommand(cmd)
-    setTimeout(() => setCopiedCommand(null), COPY_FEEDBACK_TIMEOUT_MS)
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    copyTimeoutRef.current = setTimeout(() => setCopiedCommand(null), COPY_FEEDBACK_TIMEOUT_MS)
   }, [])
 
   const manualCommands: { label: string; command: string }[] = useMemo(() => {
