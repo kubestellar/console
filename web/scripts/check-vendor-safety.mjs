@@ -63,8 +63,12 @@ if (!defineCorrupted) pass('No Vite define corruption in JS bundles')
 // Code splitting must produce these chunks. If any are missing or empty,
 // the app will fail to load with a blank page or chunk load error.
 
-const CRITICAL_PREFIXES = ['index-', 'vendor-']
-const OPTIONAL_CHUNK_PREFIXES = ['react-vendor-']
+const CRITICAL_PREFIXES = ['index-']
+// vendor-*.js is no longer required as a single chunk: the build now splits
+// node_modules into many named vendor chunks (e.g. msw-vendor-*, drei-core-vendor-*,
+// react-dom-client-vendor-*). We still require *some* vendor chunk to exist so a
+// regression that inlines node_modules into feature chunks is caught below.
+const OPTIONAL_CHUNK_PREFIXES = ['react-vendor-', 'vendor-']
 const MIN_CHUNK_SIZE_BYTES = {
   'index-': 200,
   default: 1_000,
@@ -101,6 +105,20 @@ for (const prefix of OPTIONAL_CHUNK_PREFIXES) {
 }
 
 if (!check2Failed) pass('Critical chunks present and non-empty')
+
+// ── Check 2b: At least one vendor chunk must exist ───────────────────────
+// Guards against the regression where node_modules code gets inlined into
+// feature/app chunks (e.g., a broken manualChunks that drops vendors into
+// index-*.js). Any file whose name contains "vendor" satisfies this.
+const vendorChunks = jsFiles.filter((name) => name.includes('vendor'))
+if (vendorChunks.length === 0) {
+  fail(
+    'No *vendor*.js chunks emitted — node_modules code may have been ' +
+    'accidentally inlined into feature chunks.',
+  )
+} else {
+  pass(`Vendor chunks present (${vendorChunks.length} emitted)`)
+}
 
 // ── Check 3: MSW not leaked into non-demo builds ────────────────────────
 // In demo mode (VITE_DEMO_MODE=true), MSW is expected. But if it somehow
