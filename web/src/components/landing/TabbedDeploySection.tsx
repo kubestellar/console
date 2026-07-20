@@ -7,6 +7,7 @@ import { emitInstallCommandCopied } from '../../lib/analytics'
 import type { InstallCopySource } from '../../lib/analytics-types'
 import { InstallStepCard, type InstallStep } from './InstallStepCard'
 import { ACCENT_CLASSES, type AccentColor } from './styles'
+import { useTabKeyboardNav } from '../../hooks/useKeyboardNav'
 
 export type DeployTab = 'localhost' | 'cluster-portforward' | 'cluster-ingress'
 
@@ -39,6 +40,16 @@ export function TabbedDeploySection({
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => () => clearTimeout(copiedTimerRef.current), [])
+
+  const DEPLOY_TABS: readonly DeployTab[] = ['localhost', 'cluster-portforward', 'cluster-ingress']
+  const { tabListProps, getTabProps, getTabPanelProps } = useTabKeyboardNav<DeployTab>({
+    tabs: DEPLOY_TABS,
+    activeTab,
+    onChange: (tab) => {
+      setActiveTab(tab)
+      onTabSwitch?.(tab)
+    },
+  })
 
   const switchTab = (tab: DeployTab) => {
     if (tab === activeTab) return
@@ -80,8 +91,9 @@ export function TabbedDeploySection({
       </p>
 
       <div className="max-w-3xl mx-auto mb-8">
-        <div className="flex rounded-lg border border-slate-700/50 overflow-hidden">
+        <div className="flex rounded-lg border border-slate-700/50 overflow-hidden" {...tabListProps}>
           <button
+            {...getTabProps('localhost')}
             onClick={() => switchTab('localhost')}
             className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
               activeTab === 'localhost'
@@ -94,6 +106,7 @@ export function TabbedDeploySection({
             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-200">curl | bash</span>
           </button>
           <button
+            {...getTabProps('cluster-portforward')}
             onClick={() => switchTab('cluster-portforward')}
             className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
               activeTab === 'cluster-portforward'
@@ -106,6 +119,7 @@ export function TabbedDeploySection({
             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-200">port-forward</span>
           </button>
           <button
+            {...getTabProps('cluster-ingress')}
             onClick={() => switchTab('cluster-ingress')}
             className={`flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors ${
               activeTab === 'cluster-ingress'
@@ -120,7 +134,7 @@ export function TabbedDeploySection({
         </div>
       </div>
 
-      <div className="space-y-6 max-w-3xl mx-auto">
+      <div {...getTabPanelProps(activeTab)} className="space-y-6 max-w-3xl mx-auto">
         {steps.map(step => {
           const copyKey = `${activeTab}-${step.step}`
           return (
