@@ -363,9 +363,13 @@ describe('AuthProvider expanded', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     const { result } = await renderWithAuthProvider()
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    expect(result.current.token).toBeNull()
+    // Wait for both: isLoading to settle AND token to be cleared.
+    // isLoading may start false if there's a cached token, and only becomes true
+    // inside the async refreshUser; checking it alone races past the assertion.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.token).toBeNull()
+    })
   }, 10_000)
 
   it('refreshUser with real token drops session when /api/me returns 500 (#6067)', async () => {
@@ -377,10 +381,13 @@ describe('AuthProvider expanded', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     const { result } = await renderWithAuthProvider()
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    // Non-ok → throws → no cache → session dropped
-    expect(result.current.token).toBeNull()
+    // Wait for both: isLoading to settle AND token to be cleared.
+    // isLoading may start false if there's a cached token, and only becomes true
+    // inside the async refreshUser; checking it alone races past the assertion.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.token).toBeNull()
+    })
   })
 
   it('storage sync cleared event clears local auth state (#6065)', async () => {
@@ -397,7 +404,13 @@ describe('AuthProvider expanded', () => {
     } as unknown as Location
 
     const { result } = await renderWithAuthProvider()
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Wait for both: isLoading to settle AND initial state to be ready.
+    // isLoading may start false in demo mode; checking it alone races
+    // past the assertion before the provider completes initialization.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.token).toBe('demo-token')
+    })
 
     act(() => {
       window.dispatchEvent(new StorageEvent('storage', {
@@ -417,7 +430,13 @@ describe('AuthProvider expanded', () => {
     localStorage.setItem('kc-demo-mode', 'true')
 
     const { result } = await renderWithAuthProvider()
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Wait for both: isLoading to settle AND token to be set.
+    // isLoading may start false in demo mode; checking it alone races
+    // past the assertion before the provider completes initialization.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.token).toBe('demo-token')
+    })
 
     const tokenBefore = result.current.token
 
@@ -435,7 +454,13 @@ describe('AuthProvider expanded', () => {
   it('login with checkOAuthConfigured throwing falls to demo mode', async () => {
     mockCheckOAuth.mockResolvedValue({ backendUp: false, oauthConfigured: false })
     const { result } = await renderWithAuthProvider()
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Wait for both: isLoading to settle AND initial token to be set.
+    // isLoading may start false in demo mode; checking it alone races
+    // past the assertion before the provider completes initialization.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.token).toBe('demo-token')
+    })
 
     vi.clearAllMocks()
     mockCheckOAuth.mockRejectedValue(new Error('network down'))
@@ -451,7 +476,13 @@ describe('AuthProvider expanded', () => {
   it('login with backend up but no OAuth uses demo mode', async () => {
     mockCheckOAuth.mockResolvedValue({ backendUp: false, oauthConfigured: false })
     const { result } = await renderWithAuthProvider()
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Wait for both: isLoading to settle AND initial token to be set.
+    // isLoading may start false in demo mode; checking it alone races
+    // past the assertion before the provider completes initialization.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.token).toBe('demo-token')
+    })
 
     vi.clearAllMocks()
     mockCheckOAuth.mockResolvedValue({ backendUp: true, oauthConfigured: false })
@@ -469,7 +500,13 @@ describe('AuthProvider expanded', () => {
     mockCheckOAuth.mockResolvedValue({ backendUp: false, oauthConfigured: false })
 
     const { result } = await renderWithAuthProvider()
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Wait for both: isLoading to settle AND initial token to be set.
+    // isLoading may start false in demo mode; checking it alone races
+    // past the assertion before the provider completes initialization.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.token).toBe('demo-token')
+    })
 
     act(() => {
       result.current.setToken('new-jwt', false)
@@ -493,17 +530,26 @@ describe('AuthProvider expanded', () => {
 
     const { result } = await renderWithAuthProvider()
 
-    // Initially loading since token exists but no cached user
-    // (May have already resolved by the time we check, so just verify it eventually loads)
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.user).not.toBeNull()
+    // Wait for both: isLoading to settle AND user to be populated.
+    // isLoading starts true when token exists but no cached user, but checking
+    // it alone races past the assertion before refreshUser completes.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.user).not.toBeNull()
+    })
   })
 
   it('refreshUser called manually with overrideToken', async () => {
     mockCheckOAuth.mockResolvedValue({ backendUp: false, oauthConfigured: false })
 
     const { result } = await renderWithAuthProvider()
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Wait for both: isLoading to settle AND initial token to be set.
+    // isLoading may start false in demo mode; checking it alone races
+    // past the assertion before the provider completes initialization.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.token).toBe('demo-token')
+    })
 
     // Setup fetch mock for /api/me
     const realUser = { id: 'override-user', github_id: '99', github_login: 'overridden', onboarded: true }
