@@ -1,0 +1,78 @@
+{
+  "version": "kc-mission-v1",
+  "name": "litellm-26343-feature-support-python-3-14",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "litellm: [Feature]: Support Python 3.14",
+    "description": "[Feature]: Support Python 3.14. Requested by 34+ users.",
+    "type": "feature",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check current litellm deployment",
+        "description": "Verify your litellm version and configuration:\n```bash\nkubectl get pods -n litellm -l app.kubernetes.io/name=litellm\nhelm list -n litellm 2>/dev/null || echo \"Not installed via Helm\"\n```\nThis feature requires a working litellm installation."
+      },
+      {
+        "title": "Review litellm configuration",
+        "description": "Inspect the relevant litellm configuration:\n```bash\nkubectl get all -n litellm -l app.kubernetes.io/name=litellm\nkubectl get configmap -n litellm -l app.kubernetes.io/part-of=litellm\n```\n### Check for existing issues\n\n### The Feature\n\nSupport Python 3.14\n\n### Motivation, pitch\n\nVersion [1.83.7](https://pypi.org/project/litellm/1.83.7/) supported Python 3.14, but support for it was dropped since"
+      },
+      {
+        "title": "Apply the fix for [Feature]: Support Python 3.14",
+        "description": "Sharing what I found while looking at #27565, since that PR turned out to target the wrong cause.\n\nThe blocker for 3.14 right now is just the version cap in pyproject on litellm_internal_staging:\n\n```toml\nrequires-python = \">=3.10, <3.14\"\n```\n\nThat's what makes 1.83.8+ reject 3.14 (1.83.7 didn't\n```yaml\nThat's what makes 1.83.8+ reject 3.14 (1.83.7 didn't have the tightened cap). It isn't fastuuid: fastuuid 0.14.0 ships cp314 wheels and works on 3.14. Verified on 3.14.3:\n```"
+      },
+      {
+        "title": "Upgrade litellm to include the fix",
+        "description": "If the fix is included in a newer release, upgrade litellm:\n```bash\nhelm repo update\nhelm upgrade litellm litellm/litellm --namespace litellm\n```\nVerify the upgrade:\n```bash\nkubectl get pods -n litellm\nhelm list -n litellm\n```"
+      },
+      {
+        "title": "Verify the feature works",
+        "description": "Test that the new capability is working as expected:\n```bash\nkubectl get pods -n litellm -l app.kubernetes.io/name=litellm\nkubectl get events -n litellm --sort-by='.lastTimestamp' | tail -10\n```\nConfirm the feature described in \"[Feature]: Support Python 3.14\" is functioning correctly."
+      }
+    ],
+    "resolution": {
+      "summary": "Sharing what I found while looking at #27565, since that PR turned out to target the wrong cause.\n\nThe blocker for 3.14 right now is just the version cap in pyproject on litellm_internal_staging:\n\n```toml\nrequires-python = \">=3.10, <3.14\"\n```\n\nThat's what makes 1.83.8+ reject 3.14 (1.83.7 didn't have the tightened cap). It isn't fastuuid: fastuuid 0.14.0 ships cp314 wheels and works on 3.14.",
+      "codeSnippets": [
+        "That's what makes 1.83.8+ reject 3.14 (1.83.7 didn't have the tightened cap). It isn't fastuuid: fastuuid 0.14.0 ships cp314 wheels and works on 3.14. Verified on 3.14.3:"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "litellm",
+      "community",
+      "llm-gateway",
+      "feature"
+    ],
+    "cncfProjects": [
+      "litellm"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "feature"
+    ],
+    "maturity": "community",
+    "sourceUrls": {
+      "issue": "https://github.com/BerriAI/litellm/issues/26343",
+      "repo": "https://github.com/BerriAI/litellm"
+    },
+    "reactions": 34,
+    "comments": 16,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with litellm installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-20T07:29:42.216Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
