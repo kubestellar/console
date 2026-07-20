@@ -63,7 +63,7 @@ describe('CreateNamespaceModal', () => {
     expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0)
   })
 
-  it('initializes with first cluster selected', () => {
+  it('initializes with cluster placeholder selected', () => {
     render(
       <CreateNamespaceModal
         clusters={clusters}
@@ -74,7 +74,7 @@ describe('CreateNamespaceModal', () => {
 
     const comboboxes = screen.getAllByRole('combobox')
     expect(comboboxes.length).toBeGreaterThan(0)
-    expect((comboboxes[0] as HTMLSelectElement).value).toBe('cluster-1')
+    expect((comboboxes[0] as HTMLSelectElement).value).toBe('')
   })
 
   it('allows cluster selection change', async () => {
@@ -124,8 +124,10 @@ describe('CreateNamespaceModal', () => {
 
     const nameInput = screen.getByPlaceholderText('my-namespace')
     const teamInput = screen.getByPlaceholderText('platform-team')
+    const clusterSelect = screen.getAllByRole('combobox')[0]
     const createBtn = screen.getByRole('button', { name: /create/i })
 
+    await user.selectOptions(clusterSelect, 'cluster-1')
     await user.type(nameInput, 'test-ns')
     await user.type(teamInput, 'my-team')
     await user.click(createBtn)
@@ -153,8 +155,10 @@ describe('CreateNamespaceModal', () => {
     )
 
     const nameInput = screen.getByPlaceholderText('my-namespace')
+    const clusterSelect = screen.getAllByRole('combobox')[0]
     const createBtn = screen.getByRole('button', { name: /create/i })
 
+    await user.selectOptions(clusterSelect, 'cluster-1')
     await user.type(nameInput, 'existing-ns')
     await user.click(createBtn)
 
@@ -229,8 +233,10 @@ describe('CreateNamespaceModal', () => {
 
     const nameInput = screen.getByPlaceholderText('my-namespace')
     const teamInput = screen.getByPlaceholderText('platform-team')
+    const clusterSelect = screen.getAllByRole('combobox')[0]
     const createBtn = screen.getByRole('button', { name: /create/i })
 
+    await user.selectOptions(clusterSelect, 'cluster-1')
     await user.type(nameInput, 'test-ns')
     await user.type(teamInput, 'platform-team')
     await user.click(createBtn)
@@ -256,8 +262,10 @@ describe('CreateNamespaceModal', () => {
     )
 
     const nameInput = screen.getByPlaceholderText('my-namespace')
+    const clusterSelect = screen.getAllByRole('combobox')[0]
     const createBtn = screen.getByRole('button', { name: /create/i })
 
+    await user.selectOptions(clusterSelect, 'cluster-1')
     await user.type(nameInput, 'test-ns')
     await user.click(createBtn)
 
