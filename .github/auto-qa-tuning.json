@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-07-19T04:08:33Z",
+  "last_updated": "2026-07-20T04:15:19Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -25,32 +25,32 @@
       "last_evaluated": "2026-07-15T04:00:08Z"
     },
     "operator": {
-      "merged": 687,
+      "merged": 692,
       "closed": 267,
       "acceptance_rate": 0.72,
       "status": "normal",
-      "last_evaluated": "2026-07-19T04:08:33Z"
+      "last_evaluated": "2026-07-20T04:15:19Z"
     },
     "sre": {
-      "merged": 433,
+      "merged": 434,
       "closed": 95,
       "acceptance_rate": 0.82,
       "status": "boosted",
-      "last_evaluated": "2026-07-19T04:08:33Z"
+      "last_evaluated": "2026-07-20T04:15:19Z"
     },
     "features": {
-      "merged": 34,
+      "merged": 35,
       "closed": 10,
-      "acceptance_rate": 0.77,
+      "acceptance_rate": 0.78,
       "status": "normal",
-      "last_evaluated": "2026-07-19T04:08:33Z"
+      "last_evaluated": "2026-07-20T04:15:19Z"
     },
     "resilience": {
-      "merged": 84,
+      "merged": 86,
       "closed": 66,
-      "acceptance_rate": 0.56,
+      "acceptance_rate": 0.57,
       "status": "normal",
-      "last_evaluated": "2026-07-18T03:59:18Z"
+      "last_evaluated": "2026-07-20T04:15:19Z"
     },
     "consistency": {
       "merged": 31,
@@ -91,13 +91,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-06-01",
-      "total_merged": 616,
-      "total_closed": 403,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-06-02",
       "total_merged": 662,
@@ -312,6 +305,15 @@
       "categories_boosted": [
         "sre"
       ]
+    },
+    {
+      "date": "2026-07-20",
+      "total_merged": 1463,
+      "total_closed": 568,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
     }
   ],
   "rotation_weights": {
@@ -320,12 +322,12 @@
     "a11y": 1.05,
     "operator": 1.08,
     "sre": 2.0,
-    "features": 1.16,
-    "resilience": 0.84,
+    "features": 1.17,
+    "resilience": 0.86,
     "consistency": 0.9
   },
   "max_issues_override": 5,
-  "pr_guidance": "Keep PRs small and focused. Smaller PRs have higher acceptance rates.",
+  "pr_guidance": "Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs.",
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],

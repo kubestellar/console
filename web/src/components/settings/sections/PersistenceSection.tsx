@@ -70,11 +70,11 @@ export function PersistenceSection() {
   const getHealthIcon = (health: ClusterHealth) => {
     switch (health) {
       case 'healthy':
-        return <Check className="w-4 h-4 text-green-400" />
+        return <Check className="w-4 h-4 text-status-success" />
       case 'degraded':
-        return <AlertCircle className="w-4 h-4 text-yellow-400" />
+        return <AlertCircle className="w-4 h-4 text-status-warning" />
       case 'unreachable':
-        return <X className="w-4 h-4 text-red-400" />
+        return <X className="w-4 h-4 text-status-error" />
       default:
         return <AlertCircle className="w-4 h-4 text-muted-foreground" />
     }
@@ -120,7 +120,7 @@ export function PersistenceSection() {
 
       {error && (
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
-          <p className="text-sm text-red-400">{error}</p>
+          <p className="text-sm text-status-error">{error}</p>
         </div>
       )}
 
@@ -181,7 +181,7 @@ export function PersistenceSection() {
               </button>
             </div>
             {testResult && testResult.cluster === localConfig.primaryCluster && (
-              <p className={cn('text-xs mt-1', testResult.success ? 'text-green-400' : 'text-red-400')}>
+              <p className={cn('text-xs mt-1', testResult.success ? 'text-status-success' : 'text-status-error')}>
                 {testResult.success ? t('settings.persistence.connectionSuccess') : t('settings.persistence.connectionFailed')}
               </p>
             )}
@@ -253,7 +253,7 @@ export function PersistenceSection() {
                 </button>
               </div>
               {testResult && testResult.cluster === localConfig.secondaryCluster && (
-                <p className={cn('text-xs mt-1', testResult.success ? 'text-green-400' : 'text-red-400')}>
+                <p className={cn('text-xs mt-1', testResult.success ? 'text-status-success' : 'text-status-error')}>
                   {testResult.success ? t('settings.persistence.connectionSuccess') : t('settings.persistence.connectionFailed')}
                 </p>
               )}
@@ -304,7 +304,7 @@ export function PersistenceSection() {
                   <span className="text-foreground">
                     {status.activeCluster || t('settings.persistence.none')}
                     {status.failoverActive && (
-                      <span className="ml-2 text-xs text-yellow-400">{t('settings.persistence.failover')}</span>
+                      <span className="ml-2 text-xs text-status-warning">{t('settings.persistence.failover')}</span>
                     )}
                   </span>
                 </div>
