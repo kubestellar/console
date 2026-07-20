@@ -10,6 +10,7 @@ import { copyToClipboard } from '../../lib/clipboard'
 import { downloadText } from '../../lib/download'
 import { PageErrorBoundary } from '../PageErrorBoundary'
 import { Button } from '../ui/Button'
+import { useTabKeyboardNav } from '../../hooks/useKeyboardNav'
 
 interface LogEntry {
   id: string
@@ -105,6 +106,12 @@ function RemediationConsoleContent({
   const [isComplete, setIsComplete] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [activeTab, setActiveTab] = useState<'ai' | 'shell'>('ai')
+  const REMEDIATION_TABS = ['ai', 'shell'] as const
+  const { tabListProps, getTabProps } = useTabKeyboardNav<'ai' | 'shell'>({
+    tabs: REMEDIATION_TABS,
+    activeTab,
+    onChange: setActiveTab,
+  })
   // Shell state consolidated into a single object to prevent re-render flicker
   // when multiple fields change together (e.g. after command execution completes).
   const [shell, setShell] = useState({
@@ -468,13 +475,9 @@ Labels:       app=${resourceName.split('-')[0]}
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-border">
-          <div
-            role="tab"
-            tabIndex={0}
-            aria-selected={activeTab === 'ai'}
-            onClick={() => setActiveTab('ai')}
-            onKeyDown={(event) => handleButtonLikeKeyDown(event, () => setActiveTab('ai'))}
+        <div {...tabListProps} className="flex border-b border-border">
+          <button
+            {...getTabProps('ai')}
             aria-label={t('remediation.aiAnalysis')}
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors cursor-pointer',
@@ -485,19 +488,13 @@ Labels:       app=${resourceName.split('-')[0]}
           >
             <Sparkles className="w-4 h-4" />
             {t('remediation.aiAnalysis')}
-          </div>
-          <div
-            role="tab"
-            tabIndex={0}
-            aria-selected={activeTab === 'shell'}
+          </button>
+          <button
+            {...getTabProps('shell')}
             onClick={() => {
               setActiveTab('shell')
               setTimeout(() => shellInputRef.current?.focus(), FOCUS_DELAY_MS)
             }}
-            onKeyDown={(event) => handleButtonLikeKeyDown(event, () => {
-              setActiveTab('shell')
-              setTimeout(() => shellInputRef.current?.focus(), FOCUS_DELAY_MS)
-            })}
             aria-label={t('remediation.shell')}
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors cursor-pointer',
@@ -508,7 +505,7 @@ Labels:       app=${resourceName.split('-')[0]}
           >
             <Terminal className="w-4 h-4" />
             {t('remediation.shell')}
-          </div>
+          </button>
         </div>
 
         {/* Console Output */}
