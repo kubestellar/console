@@ -12,14 +12,14 @@ import { authFetch, safeJson } from '../../lib/api'
 import { useCache } from '../../lib/cache'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
-// ── Shared helpers ──────────────────────────────────────────────────────
+// ── Shared helpers ────────────────────────────────────────────────────────
 
 const SCORE_GOOD = 'hsl(var(--chart-success, 142 71% 45%))'
 const SCORE_WARN = 'hsl(var(--chart-warning, 45 93% 47%))'
 const SCORE_BAD = 'hsl(var(--chart-danger, 0 84% 60%))'
 const RING_BG = 'hsl(var(--muted) / 0.4)'
 const ERROR_TEXT_CLASS = 'text-red-400 text-sm'
-const LOADING_TEXT_CLASS = 'text-gray-500 text-sm'
+const LOADING_TEXT_CLASS = 'text-muted-foreground text-sm'
 const ENTERPRISE_SUMMARY_CACHE_PREFIX = 'enterprise-summary:'
 
 function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
@@ -54,7 +54,7 @@ export function ScoreRing({ score, size = 64 }: { score: number; size?: number }
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={6}
         strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
         transform={`rotate(-90 ${size/2} ${size/2})`} data-testid="score-ring-progress" />
-      <text x="50%" y="50%" textAnchor="middle" dy=".35em" fill="white" fontSize={size/4} fontWeight="bold">
+      <text x="50%" y="50%" textAnchor="middle" dy=".35em" fill="currentColor" fontSize={size/4} fontWeight="bold">
         {score}%
       </text>
     </svg>
@@ -66,28 +66,28 @@ function CardShell({ title, icon: Icon, children, onClick }: {
 }) {
   return (
     <div
-      className={`h-full flex flex-col ${onClick ? 'cursor-pointer hover:bg-gray-700/30 transition-colors min-h-11' : ''}`}
+      className={`h-full flex flex-col ${onClick ? 'cursor-pointer hover:bg-secondary transition-colors min-h-11' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center gap-2 mb-3">
         <Icon className="w-4 h-4 text-blue-400 shrink-0" />
-        <span className="text-sm font-medium text-white truncate">{title}</span>
+        <span className="text-sm font-medium text-foreground truncate">{title}</span>
       </div>
       <div className="flex-1 min-h-0">{children}</div>
     </div>
   )
 }
 
-function MiniStat({ label, value, color = 'text-white' }: { label: string; value: string | number; color?: string }) {
+function MiniStat({ label, value, color = 'text-foreground' }: { label: string; value: string | number; color?: string }) {
   return (
     <div>
-      <p className="text-xs text-gray-400">{label}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
       <p className={`text-lg font-bold ${color}`}>{value}</p>
     </div>
   )
 }
 
-// ── HIPAA Card ──────────────────────────────────────────────────────────
+// ── HIPAA Card ──────────────────────────────────────────────────────────────
 
 export function HIPAACard() {
   const { t } = useTranslation('errors')
@@ -108,7 +108,7 @@ export function HIPAACard() {
       {error ? (
         <p className="text-red-400 text-sm">{error}</p>
       ) : isLoading ? (
-        <p className="text-gray-500 text-sm">Loading…</p>
+        <p className="text-muted-foreground text-sm">Loading…</p>
       ) : data ? (
         <div className="flex items-center gap-4">
           <ScoreRing score={data.overall_score ?? 0} />
@@ -120,13 +120,13 @@ export function HIPAACard() {
           </div>
         </div>
       ) : (
-        <p className="text-gray-500 text-sm">No data</p>
+        <p className="text-muted-foreground text-sm">No data</p>
       )}
     </CardShell>
   )
 }
 
-// ── GxP Card ────────────────────────────────────────────────────────────
+// ── GxP Card ─────────────────────────────────────────────────────────────────
 
 export function GxPCard() {
   const { t } = useTranslation('errors')
@@ -147,7 +147,7 @@ export function GxPCard() {
       {error ? (
         <p className="text-red-400 text-sm">{error}</p>
       ) : isLoading ? (
-        <p className="text-gray-500 text-sm">Loading…</p>
+        <p className="text-muted-foreground text-sm">Loading…</p>
       ) : data ? (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -163,13 +163,13 @@ export function GxPCard() {
           </div>
         </div>
       ) : (
-        <p className="text-gray-500 text-sm">No data</p>
+        <p className="text-muted-foreground text-sm">No data</p>
       )}
     </CardShell>
   )
 }
 
-// ── BAA Card ────────────────────────────────────────────────────────────
+// ── BAA Card ─────────────────────────────────────────────────────────────────
 
 export function BAACard() {
   const { t } = useTranslation('errors')
@@ -190,7 +190,7 @@ export function BAACard() {
       {error ? (
         <p className="text-red-400 text-sm">{error}</p>
       ) : isLoading ? (
-        <p className="text-gray-500 text-sm">Loading…</p>
+        <p className="text-muted-foreground text-sm">Loading…</p>
       ) : data ? (
         <div className="grid grid-cols-2 gap-2">
           <MiniStat label="Total" value={data.total_agreements ?? 0} />
@@ -199,13 +199,13 @@ export function BAACard() {
           <MiniStat label="Expired" value={data.expired ?? 0} color="text-red-400" />
         </div>
       ) : (
-        <p className="text-gray-500 text-sm">No data</p>
+        <p className="text-muted-foreground text-sm">No data</p>
       )}
     </CardShell>
   )
 }
 
-// ── Compliance Frameworks Card ──────────────────────────────────────────
+// ── Compliance Frameworks Card ───────────────────────────────────────────────
 
 export function ComplianceFrameworksCard() {
   const nav = useNavigate()
@@ -214,13 +214,13 @@ export function ComplianceFrameworksCard() {
       <div className="space-y-2">
         <div className="flex items-center gap-2"><CheckCircle2 className="w-3 h-3 text-green-400" /><span className="text-sm text-muted-foreground">PCI-DSS 4.0</span></div>
         <div className="flex items-center gap-2"><CheckCircle2 className="w-3 h-3 text-green-400" /><span className="text-sm text-muted-foreground">SOC 2 Type II</span></div>
-        <p className="text-xs text-gray-500 mt-2">Click to evaluate frameworks</p>
+        <p className="text-xs text-muted-foreground mt-2">Click to evaluate frameworks</p>
       </div>
     </CardShell>
   )
 }
 
-// ── Data Residency Card ─────────────────────────────────────────────────
+// ── Data Residency Card ────────────────────────────────────────────────────────
 
 export function DataResidencyCard() {
   const nav = useNavigate()
@@ -231,13 +231,13 @@ export function DataResidencyCard() {
           <MiniStat label="Regions" value={4} />
           <MiniStat label="Compliant" value="100%" color="text-green-400" />
         </div>
-        <p className="text-xs text-gray-500">Data sovereignty enforcement active</p>
+        <p className="text-xs text-muted-foreground">Data sovereignty enforcement active</p>
       </div>
     </CardShell>
   )
 }
 
-// ── Change Control Card ─────────────────────────────────────────────────
+// ── Change Control Card ────────────────────────────────────────────────────────
 
 export function ChangeControlCard() {
   const nav = useNavigate()
@@ -248,13 +248,13 @@ export function ChangeControlCard() {
           <MiniStat label="Pending" value={3} color="text-yellow-400" />
           <MiniStat label="Approved" value={12} color="text-green-400" />
         </div>
-        <p className="text-xs text-gray-500">Audit trail active</p>
+        <p className="text-xs text-muted-foreground">Audit trail active</p>
       </div>
     </CardShell>
   )
 }
 
-// ── Segregation of Duties Card ──────────────────────────────────────────
+// ── Segregation of Duties Card ────────────────────────────────────────────────
 
 export function SegregationOfDutiesCard() {
   const nav = useNavigate()
@@ -265,13 +265,13 @@ export function SegregationOfDutiesCard() {
           <MiniStat label="Policies" value={8} />
           <MiniStat label="Violations" value={0} color="text-green-400" />
         </div>
-        <p className="text-xs text-gray-500">Duty separation enforced</p>
+        <p className="text-xs text-muted-foreground">Duty separation enforced</p>
       </div>
     </CardShell>
   )
 }
 
-// ── Compliance Reports Card ─────────────────────────────────────────────
+// ── Compliance Reports Card ───────────────────────────────────────────────────
 
 export function ComplianceReportsCard() {
   const nav = useNavigate()
@@ -282,13 +282,13 @@ export function ComplianceReportsCard() {
           <MiniStat label="Generated" value={24} />
           <MiniStat label="Scheduled" value={3} color="text-blue-400" />
         </div>
-        <p className="text-xs text-gray-500">Export PDF/JSON/CSV</p>
+        <p className="text-xs text-muted-foreground">Export PDF/JSON/CSV</p>
       </div>
     </CardShell>
   )
 }
 
-// ── NIST 800-53 Card ────────────────────────────────────────────────────
+// ── NIST 800-53 Card ─────────────────────────────────────────────────────────────
 
 export function NISTCard() {
   const nav = useNavigate()
@@ -310,7 +310,7 @@ export function NISTCard() {
   )
 }
 
-// ── STIG Card ───────────────────────────────────────────────────────────
+// ── STIG Card ───────────────────────────────────────────────────────────────────
 
 export function STIGCard() {
   const nav = useNavigate()
@@ -332,7 +332,7 @@ export function STIGCard() {
   )
 }
 
-// ── Air-Gap Card ────────────────────────────────────────────────────────
+// ── Air-Gap Card ────────────────────────────────────────────────────────────────
 
 export function AirGapCard() {
   const nav = useNavigate()
@@ -373,7 +373,7 @@ export function SIEMIntegrationCard() {
   )
 }
 
-// ── Incident Response Card ──────────────────────────────────────────────
+// ── Incident Response Card ──────────────────────────────────────────────────
 
 export function IncidentResponseCard() {
   const nav = useNavigate()
@@ -392,7 +392,7 @@ export function IncidentResponseCard() {
   )
 }
 
-// ── Threat Intelligence Card ────────────────────────────────────────────
+// ── Threat Intelligence Card ──────────────────────────────────────────────────
 
 export function ThreatIntelCard() {
   const nav = useNavigate()
@@ -414,7 +414,7 @@ export function ThreatIntelCard() {
   )
 }
 
-// ── FedRAMP Card ────────────────────────────────────────────────────────
+// ── FedRAMP Card ───────────────────────────────────────────────────────────────
 
 export function FedRAMPCard() {
   const nav = useNavigate()
@@ -429,7 +429,7 @@ export function FedRAMPCard() {
             <MiniStat label="Partial" value={Number(data.partial_controls ?? 0)} color="text-yellow-400" />
             <MiniStat label="Open POAMs" value={Number(data.open_poams ?? 0)} color="text-red-400" />
             <MiniStat label="Status" value={String(data.authorization_status ?? 'unknown').replace(/_/g, ' ')} color={
-              ({ authorized: 'text-green-400', in_process: 'text-orange-400', in_progress: 'text-orange-400', pending: 'text-yellow-400' } as Record<string, string>)[String(data.authorization_status ?? '')] ?? 'text-white'
+              ({ authorized: 'text-green-400', in_process: 'text-orange-400', in_progress: 'text-orange-400', pending: 'text-yellow-400' } as Record<string, string>)[String(data.authorization_status ?? '')] ?? 'text-foreground'
             } />
           </div>
         </div>
@@ -438,7 +438,7 @@ export function FedRAMPCard() {
   )
 }
 
-// ── OIDC Federation Card ────────────────────────────────────────────────
+// ── OIDC Federation Card ───────────────────────────────────────────────────
 
 export function OIDCFederationCard() {
   const nav = useNavigate()
@@ -457,7 +457,7 @@ export function OIDCFederationCard() {
   )
 }
 
-// ── RBAC Audit Card ─────────────────────────────────────────────────────
+// ── RBAC Audit Card ───────────────────────────────────────────────────────────
 
 export function RBACAuditCard() {
   const nav = useNavigate()
@@ -479,7 +479,7 @@ export function RBACAuditCard() {
   )
 }
 
-// ── Session Management Card ─────────────────────────────────────────────
+// ── Session Management Card ──────────────────────────────────────────────────
 
 export function SessionManagementCard() {
   const nav = useNavigate()
@@ -498,7 +498,7 @@ export function SessionManagementCard() {
   )
 }
 
-// ── SBOM Manager Card ───────────────────────────────────────────────────
+// ── SBOM Manager Card ───────────────────────────────────────────────────────────
 
 export function SBOMManagerCard() {
   const nav = useNavigate()
@@ -517,7 +517,7 @@ export function SBOMManagerCard() {
   )
 }
 
-// ── Sigstore Verify Card ────────────────────────────────────────────────
+// ── Sigstore Verify Card ───────────────────────────────────────────────────────
 
 export function SigstoreVerifyCard() {
   const nav = useNavigate()
@@ -536,7 +536,7 @@ export function SigstoreVerifyCard() {
   )
 }
 
-// ── SLSA Provenance Card ────────────────────────────────────────────────
+// ── SLSA Provenance Card ──────────────────────────────────────────────────────
 
 export function SLSAProvenanceCard() {
   const nav = useNavigate()
@@ -556,7 +556,7 @@ export function SLSAProvenanceCard() {
   )
 }
 
-// ── Risk Matrix Card ────────────────────────────────────────────────────
+// ── Risk Matrix Card ─────────────────────────────────────────────────────────────
 
 export function RiskMatrixCard() {
   const nav = useNavigate()
@@ -575,7 +575,7 @@ export function RiskMatrixCard() {
   )
 }
 
-// ── Risk Register Card ──────────────────────────────────────────────────
+// ── Risk Register Card ───────────────────────────────────────────────────────────
 
 export function RiskRegisterCard() {
   const nav = useNavigate()
@@ -594,7 +594,7 @@ export function RiskRegisterCard() {
   )
 }
 
-// ── Risk Appetite Card ──────────────────────────────────────────────────
+// ── Risk Appetite Card ───────────────────────────────────────────────────────────
 
 export function RiskAppetiteCard() {
   const nav = useNavigate()
