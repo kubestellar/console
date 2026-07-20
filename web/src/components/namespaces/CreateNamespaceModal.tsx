@@ -15,7 +15,7 @@ interface CreateNamespaceModalProps {
 export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceModalProps) {
   const { t } = useTranslation()
   const [name, setName] = useState('')
-  const [cluster, setCluster] = useState(clusters[0] ?? '')
+  const [cluster, setCluster] = useState('')
   const [teamLabel, setTeamLabel] = useState('')
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
