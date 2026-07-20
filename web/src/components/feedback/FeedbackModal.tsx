@@ -9,7 +9,7 @@
  * in the created issue as markdown images.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2, Film } from 'lucide-react'
@@ -37,6 +37,7 @@ import {
   isFeedbackRequestBodyLimitError,
 } from './FeatureRequestTypes'
 import { safeRemove, safeSetJSON } from '../../lib/safeLocalStorage'
+import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
 
 type FeedbackType = 'bug' | 'feature'
 
@@ -497,12 +498,25 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 </div>
               )}
 
-              {/* Type selector */}
-              <div className="flex gap-2 mb-4">
+              {/* Type selector — radiogroup with arrow-key navigation (#21301) */}
+              <div
+                role="radiogroup"
+                aria-label={t('feedback.feedbackType', 'Feedback type')}
+                className="flex gap-2 mb-4"
+                onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+                  const next = moveFocusByKey(e, { selector: '[role="radio"]:not([disabled])', orientation: 'horizontal' })
+                  const nextType = next?.dataset.radioValue as FeedbackType | undefined
+                  if (nextType) setType(nextType)
+                }}
+              >
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={type === 'bug'}
+                  tabIndex={type === 'bug' ? 0 : -1}
+                  data-radio-value="bug"
                   onClick={() => setType('bug')}
-                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/70 ${
                     type === 'bug'
                       ? 'bg-red-500/10 border-red-500/30 text-red-400'
                       : 'bg-secondary/30 border-border text-muted-foreground hover:text-foreground'
@@ -514,8 +528,12 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 </button>
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={type === 'feature'}
+                  tabIndex={type === 'feature' ? 0 : -1}
+                  data-radio-value="feature"
                   onClick={() => setType('feature')}
-                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/70 ${
                     type === 'feature'
                       ? 'bg-green-500/10 border-green-500/30 text-green-400'
                       : 'bg-secondary/30 border-border text-muted-foreground hover:text-foreground'
