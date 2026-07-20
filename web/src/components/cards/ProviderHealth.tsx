@@ -17,7 +17,7 @@ const STATUS_COLORS: Record<ProviderHealthInfo['status'], string> = {
   operational: 'bg-green-500',
   degraded: 'bg-yellow-500',
   down: 'bg-red-500',
-  unknown: 'bg-gray-400',
+  unknown: 'bg-status-neutral',
 }
 
 const STATUS_LABEL_KEYS = {
