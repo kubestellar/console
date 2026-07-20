@@ -10,13 +10,14 @@
  * - Automatic reconnection with exponential backoff and countdown (#3029)
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { useExecSession, type ExecSessionConfig, type SessionStatus } from '../../hooks/useExecSession'
 import { Loader2, AlertCircle, RotateCcw, Power, ChevronDown, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react'
 import '@xterm/xterm/css/xterm.css'
 import { useTranslation } from 'react-i18next'
+import { useKeyboardNav } from '../../hooks/useKeyboardNav'
 
 // ============================================================================
 // Constants
@@ -100,6 +101,12 @@ export default function PodExecTerminal({
   )
   const [showContainerPicker, setShowContainerPicker] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
+
+  const containerMenuNav = useKeyboardNav({
+    selector: '[role="menuitem"]:not([disabled])',
+    orientation: 'vertical',
+    onEscape: () => setShowContainerPicker(false),
+  })
 
   const {
     status,
@@ -264,6 +271,8 @@ export default function PodExecTerminal({
             <div className="relative">
               <button
                 onClick={() => setShowContainerPicker(!showContainerPicker)}
+                aria-haspopup="true"
+                aria-expanded={showContainerPicker}
                 className="flex items-center gap-2 px-3 py-1 text-xs rounded bg-secondary border border-border text-foreground/80 hover:border-blue-400 transition-colors"
               >
                 <span className="text-muted-foreground">container:</span>
@@ -271,10 +280,16 @@ export default function PodExecTerminal({
                 <ChevronDown className="w-3 h-3 text-muted-foreground" />
               </button>
               {showContainerPicker && (
-                <div className="absolute top-full left-0 mt-1 z-dropdown bg-card border border-border rounded shadow-lg">
+                <div
+                  ref={containerMenuNav.containerRef as RefObject<HTMLDivElement>}
+                  role="menu"
+                  onKeyDown={containerMenuNav.handleKeyDown}
+                  className="absolute top-full left-0 mt-1 z-dropdown bg-card border border-border rounded shadow-lg"
+                >
                   {(containers || []).map((c) => (
                     <button
                       key={c}
+                      role="menuitem"
                       onClick={() => {
                         setSelectedContainer(c)
                         setShowContainerPicker(false)
