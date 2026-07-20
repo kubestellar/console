@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 1642,
+  "count": 1643,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -47641,6 +47641,44 @@
       "path": "fixes/cncf-generated/litellm/litellm-29463-feature-support-openai-frontier-models-gpt-5-5-gpt-5-4-on-bedrock-.json",
       "title": "litellm: [Feature]: Support OpenAI frontier models (gpt-5.5 / gpt-5.4) on bedrock-mantle via the /openai/v1/responses path",
       "description": "[Feature]: Support OpenAI frontier models (gpt-5.5 / gpt-5.4) on bedrock-mantle via the /openai/v1/responses path. Requested by 29+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "litellm",
+        "community",
+        "llm-gateway",
+        "feature"
+      ],
+      "cncfProjects": [
+        "litellm"
+      ],
+      "targetResourceKinds": [],
+      "difficulty": "intermediate",
+      "issueTypes": [
+        "feature"
+      ],
+      "type": "feature",
+      "installMethods": [],
+      "maturity": "community",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/litellm/litellm-26343-feature-support-python-3-14.json",
+      "title": "litellm: [Feature]: Support Python 3.14",
+      "description": "[Feature]: Support Python 3.14. Requested by 34+ users.",
       "category": "cncf-generated",
       "missionClass": "fixer",
       "author": "KubeStellar Bot",
