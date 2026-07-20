@@ -91,6 +91,19 @@ export function NPSSurvey() {
     resetForm()
   }, [dismiss, resetForm])
 
+  // Dismiss on Escape key for keyboard accessibility
+  useEffect(() => {
+    if (!isVisible) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        handleDismiss()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [isVisible, handleDismiss])
+
   if (!isVisible && !showThankYou) return null
 
   const content = showThankYou ? (

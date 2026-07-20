@@ -36,6 +36,7 @@ export const FeedFilterEditor = memo(function FeedFilterEditor({
         <button
           onClick={onClose}
           className="p-1 rounded hover:bg-secondary text-muted-foreground"
+          aria-label={t('common:common.close')}
         >
           <X className="w-3 h-3" />
         </button>

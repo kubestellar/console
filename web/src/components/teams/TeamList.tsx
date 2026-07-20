@@ -82,7 +82,7 @@ export function TeamList({ teams, isLoading, onCreateTeam, onSelectTeam }: TeamL
       )}
 
       {showCreate && (
-        <BaseModal isOpen={true} onClose={() => setShowCreate(false)} size="sm">
+        <BaseModal isOpen={true} onClose={() => setShowCreate(false)} size="sm" closeOnBackdrop={false}>
           <BaseModal.Header
             title={t('teams.createTeam')}
             onClose={() => setShowCreate(false)}

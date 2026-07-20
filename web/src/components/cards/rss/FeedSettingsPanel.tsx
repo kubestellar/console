@@ -67,12 +67,18 @@ export const FeedSettingsPanel = memo(function FeedSettingsPanel({
   const nonAggregateFeeds = feeds.filter(f => !f.isAggregate)
 
   return (
-    <div className="absolute inset-x-3 top-16 bottom-3 p-3 bg-card border border-border rounded-lg shadow-lg z-40 flex flex-col overflow-hidden">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('cards:rssFeed.manageFeeds')}
+      className="absolute inset-x-3 top-16 bottom-3 p-3 bg-card border border-border rounded-lg shadow-lg z-40 flex flex-col overflow-hidden"
+    >
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <span className="text-sm font-medium">{t('cards:rssFeed.manageFeeds')}</span>
         <button
           onClick={onClose}
           className="p-1 rounded hover:bg-secondary text-muted-foreground"
+          aria-label={t('common:common.close')}
         >
           <X className="w-4 h-4" />
         </button>
