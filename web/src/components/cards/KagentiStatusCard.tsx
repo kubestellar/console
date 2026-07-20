@@ -23,7 +23,7 @@ function StatusDot({ status }: { status: string }) {
   const color =
     status === 'Running' || status === 'Ready' || status === 'Succeeded' ? 'bg-green-400' :
     status === 'Building' || status === 'Pending' ? 'bg-yellow-400' :
-    status === 'Failed' ? 'bg-red-400' : 'bg-gray-400'
+    status === 'Failed' ? 'bg-red-400' : 'bg-status-neutral'
   return <span className={`inline-block w-1.5 h-1.5 rounded-full ${color}`} />
 }
 
