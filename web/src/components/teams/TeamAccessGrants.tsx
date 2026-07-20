@@ -143,7 +143,7 @@ export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAcces
       )}
 
       {showGrant && (
-        <BaseModal isOpen={true} onClose={() => setShowGrant(false)} size="md">
+        <BaseModal isOpen={true} onClose={() => setShowGrant(false)} size="md" closeOnBackdrop={false}>
           <BaseModal.Header
             title={t('teams.grantAccessTo', { teamName })}
             icon={Shield}

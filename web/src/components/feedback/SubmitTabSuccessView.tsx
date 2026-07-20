@@ -14,7 +14,7 @@ export function SuccessView({ success, screenshots, onViewUpdates }: SuccessView
   return (
     <div className="p-6 text-center flex-1 overflow-y-auto min-h-0">
       <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
-        <Sparkles className="w-6 h-6 text-green-400" />
+        <Sparkles className="w-6 h-6 text-status-success" />
       </div>
       <h3 className="text-lg font-medium text-foreground mb-2">
         {t('feedback.requestSubmitted')}
@@ -49,7 +49,7 @@ export function SuccessView({ success, screenshots, onViewUpdates }: SuccessView
       {/* Attachment status */}
       {screenshots.length > 0 && (success.screenshotsUploaded ?? 0) > 0 && (
         <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-          <p className="text-xs text-green-400 font-medium">
+          <p className="text-xs text-status-success font-medium">
             {(success.screenshotsUploaded ?? 0) === 1
               ? 'Attachment uploaded to the issue successfully.'
               : `${success.screenshotsUploaded} attachments uploaded to the issue successfully.`}
@@ -58,7 +58,7 @@ export function SuccessView({ success, screenshots, onViewUpdates }: SuccessView
       )}
       {screenshots.length > 0 && (success.screenshotsFailed ?? 0) > 0 && (
         <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-          <p className="text-xs text-yellow-400 font-medium">
+          <p className="text-xs text-status-warning font-medium">
             {success.screenshotsFailed === 1
               ? 'Attachment could not be uploaded — unsupported format or too large.'
               : `${success.screenshotsFailed} attachments could not be uploaded — unsupported format or too large.`}
@@ -67,7 +67,7 @@ export function SuccessView({ success, screenshots, onViewUpdates }: SuccessView
       )}
       {success.warning && (
         <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-          <p className="text-xs text-yellow-400 font-medium">{success.warning}</p>
+          <p className="text-xs text-status-warning font-medium">{success.warning}</p>
         </div>
       )}
     </div>

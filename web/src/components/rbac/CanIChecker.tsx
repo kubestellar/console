@@ -1,4 +1,4 @@
-import { useReducer } from 'react'
+import { useReducer, useEffect } from 'react'
 import { Shield, Check, X, Loader2, AlertCircle, ChevronDown } from 'lucide-react'
 import { useCanI } from '../../hooks/usePermissions'
 import { useClusters, useNamespaces } from '../../hooks/useMCP'
@@ -177,6 +177,13 @@ function CanICheckerContent() {
     selectedUserGroups, customUserGroup, showAdvanced, checkedSnapshot,
   } = form
 
+  // Auto-select first cluster when clusters load and none is selected yet
+  useEffect(() => {
+    if (cluster === '' && clusters.length > 0) {
+      dispatch({ type: 'SET_FIELD', field: 'cluster', value: clusters[0] })
+    }
+  }, [clusters, cluster])
+
   // Get selected cluster for namespace fetching — only after the user makes an explicit choice
   const selectedCluster = cluster
   const { namespaces } = useNamespaces(selectedCluster)
@@ -265,7 +272,6 @@ function CanICheckerContent() {
               className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500 appearance-none pr-8"
               data-testid="can-i-cluster"
             >
-              <option value="" disabled>{t('common.selectCluster', 'Select a cluster')}</option>
               {clusters.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}

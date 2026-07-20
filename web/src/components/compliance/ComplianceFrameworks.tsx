@@ -24,6 +24,7 @@ import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useTranslation } from 'react-i18next'
+import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
 
 /* ────────── status badge helpers ────────── */
 
@@ -138,16 +139,18 @@ function ControlAccordion({ control }: { control: ControlResult }) {
 
 /* ────────── framework card ────────── */
 
-function FrameworkCard({ fw, selected, onSelect }: { fw: Framework; selected: boolean; onSelect: () => void }) {
+function FrameworkCard({ fw, selected, onSelect, isFirst = false }: { fw: Framework; selected: boolean; onSelect: () => void; isFirst?: boolean }) {
   return (
     <button
-      className={`text-left p-4 rounded-lg border transition-all ${
+      className={`text-left p-4 rounded-lg border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${
         selected
           ? 'border-blue-500/60 bg-blue-500/10 shadow-lg shadow-blue-500/5'
           : 'border-border bg-card hover:border-blue-500/30'
       }`}
       onClick={onSelect}
       type="button"
+      aria-pressed={selected}
+      tabIndex={selected || isFirst ? 0 : -1}
     >
       <div className="flex items-center gap-2 mb-1">
         <Shield className="w-4 h-4 text-blue-400" />
@@ -282,14 +285,22 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
         rightExtra={<RotatingTip page="compliance" />}
       />
 
-      {/* Framework picker */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {frameworks.map(fw => (
+      {/* Framework picker — arrow key navigation (#21301) */}
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+        role="group"
+        aria-label={t('compliance.selectFramework', 'Select a compliance framework')}
+        onKeyDown={(e) => {
+          moveFocusByKey(e, { selector: 'button:not([disabled])', orientation: 'both' })
+        }}
+      >
+        {frameworks.map((fw, index) => (
           <FrameworkCard
             key={fw.id}
             fw={fw}
             selected={fw.id === selectedFwId}
             onSelect={() => setSelectedFwId(fw.id)}
+            isFirst={index === 0}
           />
         ))}
       </div>

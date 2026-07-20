@@ -1,5 +1,5 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CanIChecker } from '../CanIChecker'
@@ -23,8 +23,11 @@ vi.mock('../../../hooks/usePermissions', () => ({
   }),
 }))
 
-let mockClusters = [{ name: 'cluster-a' }, { name: 'cluster-b' }]
-let mockNamespaces = ['default', 'kube-system', 'kube-public']
+const defaultMockClusters = [{ name: 'cluster-a' }, { name: 'cluster-b' }]
+const defaultMockNamespaces = ['default', 'kube-system', 'kube-public']
+
+let mockClusters = [...defaultMockClusters]
+let mockNamespaces = [...defaultMockNamespaces]
 
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({
@@ -59,6 +62,20 @@ vi.mock('../../PageErrorBoundary', () => ({
 
 /* ---------- Tests ---------- */
 
+function selectCluster(cluster = 'cluster-a') {
+  fireEvent.change(screen.getByTestId('can-i-cluster'), { target: { value: cluster } })
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockClusters = [...defaultMockClusters]
+  mockNamespaces = [...defaultMockNamespaces]
+  mockChecking = false
+  mockResult = null
+  mockError = null
+})
+
+
 describe('CanIChecker — Initial Rendering', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -85,9 +102,10 @@ describe('CanIChecker — Initial Rendering', () => {
     const clusterSelect = screen.getByTestId('can-i-cluster') as HTMLSelectElement
     const options = Array.from(clusterSelect.options)
 
-    expect(options).toHaveLength(2)
-    expect(options[0].value).toBe('cluster-a')
-    expect(options[1].value).toBe('cluster-b')
+    expect(options).toHaveLength(3)
+    expect(options[0].value).toBe('')
+    expect(options[1].value).toBe('cluster-a')
+    expect(options[2].value).toBe('cluster-b')
   })
 
   it('populates namespace dropdown with fetched namespaces', () => {
@@ -102,11 +120,11 @@ describe('CanIChecker — Initial Rendering', () => {
     expect(options.some(opt => opt.value === 'kube-system')).toBe(true)
   })
 
-  it('defaults to first cluster', () => {
+  it('starts with no cluster selected', () => {
     render(<CanIChecker />)
 
     const clusterSelect = screen.getByTestId('can-i-cluster') as HTMLSelectElement
-    expect(clusterSelect.value).toBe('cluster-a')
+    expect(clusterSelect.value).toBe('')
   })
 
   it('defaults verb and resource to common values', () => {
@@ -130,6 +148,7 @@ describe('CanIChecker — Form Interactions', () => {
 
   it('calls checkPermission with defaults when Check button is clicked', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const checkBtn = screen.getByTestId('can-i-check')
     await userEvent.click(checkBtn)
@@ -161,6 +180,7 @@ describe('CanIChecker — Form Interactions', () => {
 
   it('allows changing verb selection', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const verbSelect = screen.getByTestId('can-i-verb')
     fireEvent.change(verbSelect, { target: { value: 'list' } })
@@ -177,6 +197,7 @@ describe('CanIChecker — Form Interactions', () => {
 
   it('allows changing resource selection', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const resourceSelect = screen.getByTestId('can-i-resource')
     fireEvent.change(resourceSelect, { target: { value: 'deployments' } })
@@ -193,6 +214,7 @@ describe('CanIChecker — Form Interactions', () => {
 
   it('allows changing namespace selection', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const nsSelect = screen.getByTestId('can-i-namespace')
     fireEvent.change(nsSelect, { target: { value: 'kube-system' } })
@@ -209,6 +231,7 @@ describe('CanIChecker — Form Interactions', () => {
 
   it('sends undefined namespace when "all namespaces" is selected', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const nsSelect = screen.getByTestId('can-i-namespace')
     // First option is "all namespaces"
@@ -235,6 +258,7 @@ describe('CanIChecker — Form Interactions', () => {
 
   it('uses custom verb value when submitted', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const verbSelect = screen.getByTestId('can-i-verb')
     fireEvent.change(verbSelect, { target: { value: 'custom' } })
@@ -263,6 +287,7 @@ describe('CanIChecker — Form Interactions', () => {
 
   it('uses custom resource value when submitted', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const resourceSelect = screen.getByTestId('can-i-resource')
     fireEvent.change(resourceSelect, { target: { value: 'custom' } })
@@ -291,6 +316,7 @@ describe('CanIChecker — Form Interactions', () => {
 
   it('uses custom API group value when submitted', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const apiGroupSelect = screen.getByTestId('can-i-api-group')
     fireEvent.change(apiGroupSelect, { target: { value: 'custom' } })
@@ -384,6 +410,7 @@ describe('CanIChecker — Result Display (Allowed)', () => {
     mockError = null
 
     render(<CanIChecker />)
+    selectCluster()
 
     await userEvent.click(screen.getByTestId('can-i-check'))
 
@@ -426,6 +453,7 @@ describe('CanIChecker — Result Display (Denied)', () => {
     mockError = null
 
     render(<CanIChecker />)
+    selectCluster()
 
     await userEvent.click(screen.getByTestId('can-i-check'))
 
@@ -480,10 +508,6 @@ describe('CanIChecker — No Clusters Available', () => {
     mockError = null
   })
 
-  afterEach(() => {
-    // Restore default clusters
-    mockClusters = [{ name: 'cluster-a' }, { name: 'cluster-b' }]
-  })
 
   it('shows warning and disables check button when no clusters available', () => {
     render(<CanIChecker />)
@@ -546,6 +570,7 @@ describe('CanIChecker — Edge Cases', () => {
 
   it('handles wildcard resources', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const resourceSelect = screen.getByTestId('can-i-resource')
     fireEvent.change(resourceSelect, { target: { value: 'custom' } })
@@ -577,6 +602,7 @@ describe('CanIChecker — Edge Cases', () => {
 
   it('handles special characters in custom inputs', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const resourceSelect = screen.getByTestId('can-i-resource')
     fireEvent.change(resourceSelect, { target: { value: 'custom' } })
@@ -596,6 +622,7 @@ describe('CanIChecker — Edge Cases', () => {
 
   it('handles multiple rapid clicks on check button', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const checkBtn = screen.getByTestId('can-i-check')
     
@@ -618,6 +645,7 @@ describe('CanIChecker — API Group Handling', () => {
 
   it('sends correct API group for apps resources', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const resourceSelect = screen.getByTestId('can-i-resource')
     fireEvent.change(resourceSelect, { target: { value: 'deployments' } })
@@ -635,6 +663,7 @@ describe('CanIChecker — API Group Handling', () => {
 
   it('sends empty API group for core resources', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const resourceSelect = screen.getByTestId('can-i-resource')
     fireEvent.change(resourceSelect, { target: { value: 'pods' } })
@@ -652,6 +681,7 @@ describe('CanIChecker — API Group Handling', () => {
 
   it('allows overriding automatic API group selection', async () => {
     render(<CanIChecker />)
+    selectCluster()
 
     const resourceSelect = screen.getByTestId('can-i-resource')
     fireEvent.change(resourceSelect, { target: { value: 'deployments' } })
