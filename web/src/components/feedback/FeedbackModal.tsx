@@ -9,7 +9,7 @@
  * in the created issue as markdown images.
  */
 
-import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2, Film } from 'lucide-react'
@@ -503,7 +503,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 role="radiogroup"
                 aria-label={t('feedback.feedbackType', 'Feedback type')}
                 className="flex gap-2 mb-4"
-                onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+                onKeyDown={(e) => {
                   const next = moveFocusByKey(e, { selector: '[role="radio"]:not([disabled])', orientation: 'horizontal' })
                   const nextType = next?.dataset.radioValue as FeedbackType | undefined
                   if (nextType) setType(nextType)

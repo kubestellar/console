@@ -14,7 +14,7 @@
  * that subscribes via useSyncExternalStore and only re-renders when the
  * actual list of cluster names changes.
  */
-import { useState, useMemo, useEffect, useCallback, useSyncExternalStore, memo, type KeyboardEvent } from 'react'
+import { useState, useMemo, useEffect, useCallback, useSyncExternalStore, memo } from 'react'
 import { Shield, ChevronDown, ChevronRight, CheckCircle2, XCircle, AlertTriangle, MinusCircle, Loader2 } from 'lucide-react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { complianceFrameworksDashboardConfig } from '../../config/dashboards/compliance-frameworks'
@@ -290,7 +290,7 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
         role="group"
         aria-label={t('compliance.selectFramework', 'Select a compliance framework')}
-        onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+        onKeyDown={(e) => {
           moveFocusByKey(e, { selector: 'button:not([disabled])', orientation: 'both' })
         }}
       >
