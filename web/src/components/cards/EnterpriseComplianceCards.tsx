@@ -66,7 +66,7 @@ function CardShell({ title, icon: Icon, children, onClick }: {
 }) {
   return (
     <div
-      className={`h-full flex flex-col ${onClick ? 'cursor-pointer hover:bg-secondary/30 transition-colors min-h-11' : ''}`}
+      className={`h-full flex flex-col ${onClick ? 'cursor-pointer hover:bg-secondary transition-colors min-h-11' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center gap-2 mb-3">
