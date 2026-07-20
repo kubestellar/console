@@ -290,10 +290,9 @@ describe('NamespaceAccessPanel', () => {
       expect(screen.getByText('alice')).toBeInTheDocument()
     })
 
-    // Verify first call with original namespace
-    expect(api.get).toHaveBeenCalledWith(
-      expect.stringContaining('test-namespace')
-    )
+    // Verify first call with original namespace. api.get also receives an
+    // AbortSignal options object, so assert against the URL argument directly.
+    expect(vi.mocked(api.get).mock.calls[0]?.[0]).toContain('test-namespace')
 
     const newNamespace: NamespaceDetails = {
       ...mockNamespace,
