@@ -38,6 +38,7 @@ vi.mock('../../../lib/kubectlProxy', () => ({
 const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (...args: unknown[]) => mockUseCardLoadingState(...args),
+  useCardDemoState: () => ({ shouldUseDemoData: mockIsDemoMode(), reason: null, showDemoBadge: false }),
 }))
 
 const mockUseCertManager = vi.fn()

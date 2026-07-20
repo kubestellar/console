@@ -61,6 +61,7 @@ vi.mock('../../../hooks/useDrillDown', () => ({
 
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
+  useCardDemoState: () => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false }),
 }))
 
 vi.mock('../../ui/Toast', () => ({

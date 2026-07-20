@@ -6,6 +6,7 @@ import { useArgoCDSyncStatus } from '../../hooks/useArgoCD'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
+import { CardBody, CardBodyLoaded, CardBodyEmpty } from '../../lib/cards/CardComponents'
 
 interface ArgoCDSyncStatusProps {
   config?: Record<string, unknown>
@@ -52,7 +53,7 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
 
   if (showSkeleton) {
     return (
-      <div className="h-full flex flex-col min-h-card">
+      <CardBody>
         <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <Skeleton variant="text" width={130} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
@@ -62,21 +63,21 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
           <Skeleton variant="rounded" height={20} />
           <Skeleton variant="rounded" height={20} />
         </div>
-      </div>
+      </CardBody>
     )
   }
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+      <CardBodyEmpty>
         <p className="text-sm">{t('argoCDSyncStatus.noData')}</p>
         <p className="text-xs mt-1">{t('argoCDSyncStatus.connectArgoCD')}</p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded">
+    <CardBodyLoaded>
       {/* Header */}
       <div className="flex items-center justify-end mb-3">
         <div className="flex items-center gap-1">
@@ -199,6 +200,6 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
           <span className="text-sm font-bold text-muted-foreground">{stats.unknown}</span>
         </div>
       </div>
-    </div>
+    </CardBodyLoaded>
   )
 }

@@ -127,12 +127,31 @@ export default defineConfig(({ mode }) => ({
             ['cards-monitoring', ['/src/components/cards/slo_compliance/', '/src/components/cards/workload-detection/', '/src/components/cards/workload-monitor/', '/src/components/cards/change_timeline/', '/src/components/cards/failover_timeline/']],
             ['cards-data', ['/src/components/cards/artifact_hub_status/', '/src/components/cards/backstage_status/', '/src/components/cards/rss/', '/src/components/cards/weather/', '/src/components/cards/insights/']],
             ['cards-security-extra', ['/src/components/cards/openfga_status/', '/src/components/cards/openfeature_status/', '/src/components/cards/tuf_status/']],
-            ['cards-platform-extra', ['/src/components/cards/drasi/', '/src/components/cards/karmada_status/', '/src/components/cards/openyurt_status/', '/src/components/cards/multi-tenancy/']],
+            // Split cards-platform-extra (632K) into separate chunks by library
+            ['cards-drasi', ['/src/components/cards/drasi/', '/src/components/cards/DrasiPipelineHealth', '/src/components/cards/DrasiPipelines', '/src/components/cards/DrasiTopology']],
+            ['cards-karmada', ['/src/components/cards/karmada_status/', '/src/components/cards/openyurt_status/']],
+            ['cards-multitenancy', ['/src/components/cards/multi-tenancy/']],
             ['cards-ui', ['/src/components/cards/gadget/', '/src/components/cards/card-wrapper/', '/src/components/cards/cluster-resource-tree/']],
             ['cards-shared', ['/src/components/cards/shared/']],
+            // Split root-level card files (278 files → 1.3M cards-misc) into domain chunks
+            ['cards-root-gpu', ['/src/components/cards/GPU', '/src/components/cards/EPPHealth', '/src/components/cards/ProactiveGPUNodeHealthMonitor']],
+            ['cards-root-gitops', ['/src/components/cards/ArgoCD', '/src/components/cards/GitOpsDrift', '/src/components/cards/KustomizationStatus', '/src/components/cards/HelmHistory', '/src/components/cards/HelmReleaseStatus', '/src/components/cards/HelmValuesDiff']],
+            ['cards-root-security', ['/src/components/cards/AdmissionWebhooks', '/src/components/cards/ComplianceCards', '/src/components/cards/ComplianceDrift', '/src/components/cards/CrossClusterPolicyComparison', '/src/components/cards/DataCompliance', '/src/components/cards/EnterpriseComplianceCards', '/src/components/cards/FleetComplianceHeatmap', '/src/components/cards/ISO27001Audit', '/src/components/cards/KyvernoPolicies', '/src/components/cards/OPAPolicies', '/src/components/cards/RBACExplorer', '/src/components/cards/RecommendedPolicies', '/src/components/cards/RuntimeAttestationCard', '/src/components/cards/SecurityIssues', '/src/components/cards/TrestleScan']],
+            ['cards-root-aiml', ['/src/components/cards/AgenticDetectionRuns', '/src/components/cards/CardChat', '/src/components/cards/KagentAgentListCard', '/src/components/cards/KagentStatusCard', '/src/components/cards/KagentiStatusCard', '/src/components/cards/KubeBert', '/src/components/cards/Kubectl', '/src/components/cards/PredictiveHealth']],
+            ['cards-root-cluster', ['/src/components/cards/ClusterChangelog', '/src/components/cards/ClusterComparison', '/src/components/cards/ClusterCosts', '/src/components/cards/ClusterDropZone', '/src/components/cards/ClusterFocus', '/src/components/cards/ClusterGroups', '/src/components/cards/ClusterHealth', '/src/components/cards/ClusterLocations', '/src/components/cards/ClusterMetrics', '/src/components/cards/ClusterNetwork', '/src/components/cards/ProviderHealth', '/src/components/cards/AppStatus', '/src/components/cards/VClusterStatus', '/src/components/cards/OverlayComparison']],
+            ['cards-root-workloads', ['/src/components/cards/ComputeOverview', '/src/components/cards/DeploymentIssues', '/src/components/cards/DeploymentProgress', '/src/components/cards/DeploymentRiskScore', '/src/components/cards/DeploymentStatus', '/src/components/cards/NodeConditions', '/src/components/cards/NodeDebug', '/src/components/cards/PVCStatus', '/src/components/cards/PodHealthTrend', '/src/components/cards/PodIssues', '/src/components/cards/PodLogs', '/src/components/cards/ResourceCapacity', '/src/components/cards/ResourceMarshall', '/src/components/cards/ResourceTrend', '/src/components/cards/ResourceUsage', '/src/components/cards/StorageOverview', '/src/components/cards/TopPods', '/src/components/cards/UpgradeStatus', '/src/components/cards/WorkloadDeployment']],
+            ['cards-root-network', ['/src/components/cards/DNSHealth', '/src/components/cards/GatewayStatus', '/src/components/cards/NetworkOverview', '/src/components/cards/NetworkPolicyCoverage', '/src/components/cards/NetworkUtils', '/src/components/cards/ServiceExports', '/src/components/cards/ServiceImports', '/src/components/cards/ServiceStatus', '/src/components/cards/ServiceTopology']],
+            ['cards-root-platform', ['/src/components/cards/ACMM', '/src/components/cards/CRDHealth', '/src/components/cards/ChartVersions', '/src/components/cards/ControlPlaneHealth', '/src/components/cards/EtcdStatus', '/src/components/cards/HardwareHealth', '/src/components/cards/KubecostOverview', '/src/components/cards/MaintenanceWindows', '/src/components/cards/OpenCostOverview', '/src/components/cards/OperatorStatus', '/src/components/cards/OperatorSubscriptions']],
+            ['cards-root-events', ['/src/components/cards/ActiveAlerts', '/src/components/cards/AlertListItem', '/src/components/cards/AlertRules', '/src/components/cards/EventStream', '/src/components/cards/EventSummary', '/src/components/cards/EventsTimeline', '/src/components/cards/Namespace', '/src/components/cards/NotificationVerifyIndicator', '/src/components/cards/RecentEvents', '/src/components/cards/WarningEvents', '/src/components/cards/QuotaHeatmap']],
+            ['cards-root-games', ['/src/components/cards/Checkers', '/src/components/cards/ContainerTetris', '/src/components/cards/FlappyPod', '/src/components/cards/Game2048', '/src/components/cards/KubeChess', '/src/components/cards/KubeDoom', '/src/components/cards/KubeGalaga', '/src/components/cards/KubeKart', '/src/components/cards/KubeKong', '/src/components/cards/KubeMan', '/src/components/cards/KubePong', '/src/components/cards/KubeSnake', '/src/components/cards/Kubedle', '/src/components/cards/MatchGame', '/src/components/cards/MissileCommand', '/src/components/cards/NodeInvaders', '/src/components/cards/PodBrothers', '/src/components/cards/PodCrosser', '/src/components/cards/PodPitfall', '/src/components/cards/PodSweeper', '/src/components/cards/Solitaire', '/src/components/cards/SudokuGame', '/src/components/cards/MobileBrowser']],
+            ['cards-root-github', ['/src/components/cards/GitHubActivity', '/src/components/cards/IssueActivityChart', '/src/components/cards/QualityDashboard', '/src/components/cards/StockMarketTicker']],
             ['cards-misc', ['/src/components/cards/']],
             // Split drilldown into modal and views to reduce 468KB chunk
             ['drilldown-modal', ['/src/components/drilldown/DrillDownModal']],
+            // Split drilldown-views (460K) into domain groups
+            ['drilldown-k8s', ['/src/components/drilldown/views/PodDrillDown', '/src/components/drilldown/views/pod-drilldown/', '/src/components/drilldown/views/NodeDrillDown', '/src/components/drilldown/views/DeploymentDrillDown', '/src/components/drilldown/views/ReplicaSetDrillDown', '/src/components/drilldown/views/ServiceDrillDown', '/src/components/drilldown/views/PVCDrillDown', '/src/components/drilldown/views/NamespaceDrillDown', '/src/components/drilldown/views/ConfigMapDrillDown', '/src/components/drilldown/views/SecretDrillDown', '/src/components/drilldown/views/ServiceAccountDrillDown', '/src/components/drilldown/views/ResourcesDrillDown']],
+            ['drilldown-gitops', ['/src/components/drilldown/views/ArgoAppDrillDown', '/src/components/drilldown/views/KustomizationDrillDown', '/src/components/drilldown/views/DriftDrillDown', '/src/components/drilldown/views/HelmReleaseDrillDown', '/src/components/drilldown/views/BuildpackDrillDown', '/src/components/drilldown/views/CRDDrillDown', '/src/components/drilldown/views/OperatorDrillDown']],
+            ['drilldown-security', ['/src/components/drilldown/views/PolicyDrillDown', '/src/components/drilldown/views/AttestationDrillDown', '/src/components/drilldown/views/RBACDrillDown', '/src/components/drilldown/views/ComplianceDrillDown']],
             ['drilldown-views', ['/src/components/drilldown/']],
             // Split dashboard into separate chunks to reduce bundle size
             ['dashboard-custom', ['/src/components/dashboard/CustomDashboard']],
@@ -141,7 +160,10 @@ export default defineConfig(({ mode }) => ({
             ['dashboard-unified', ['/src/lib/unified/dashboard/']],
             ['dashboard-lib', ['/src/lib/dashboards/']],
             // Split layout-shell into smaller chunks to reduce 396KB chunk
-            ['layout-header', ['/src/components/layout/Header', '/src/components/layout/Sidebar']],
+            ['layout-header', ['/src/components/layout/Header', '/src/components/layout/Sidebar.tsx']],
+            ['layout-sidebar-customizer', ['/src/components/layout/SidebarCustomizer', '/src/components/layout/sidebar-customizer/']],
+            ['layout-navbar', ['/src/components/layout/navbar/']],
+            ['layout-mission-sidebar', ['/src/components/layout/mission-sidebar/']],
             ['layout-components', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
             ['contexts-providers', ['/src/contexts/']],
@@ -175,6 +197,11 @@ export default defineConfig(({ mode }) => ({
           // Split drei into sub-chunks to reduce 1012KB drei-core chunk
           if (id.includes('/@react-three/drei/') && id.includes('/core/shaders/')) return 'drei-shaders-vendor'
           if (id.includes('/@react-three/drei/') && id.includes('/core/Text3D')) return 'drei-text3d-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/environment/')) return 'drei-env-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/staging/')) return 'drei-staging-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/controls/')) return 'drei-controls-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/loaders/')) return 'drei-loaders-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/misc/')) return 'drei-misc-vendor'
           if (id.includes('/@react-three/drei/') && id.includes('/core/')) return 'drei-core-vendor'
           if (id.includes('/@react-three/drei/') && id.includes('/web/')) return 'drei-web-vendor'
           if (id.includes('/@react-three/drei/')) return 'drei-helpers-vendor'
@@ -193,9 +220,11 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/@xterm/addon-fit/')) return 'xterm-addon-fit-vendor'
           if (id.includes('/@xterm/addon-web-links/')) return 'xterm-addon-links-vendor'
           if (id.includes('/@xterm/addon-')) return 'xterm-addon-vendor'
-          // Further split xterm-core by internal modules to reduce 336KB chunk
+          // Further split xterm-core by internal modules to reduce 332KB chunk
           if (id.includes('/@xterm/xterm/') && id.includes('/common/')) return 'xterm-common-vendor'
+          if (id.includes('/@xterm/xterm/') && id.includes('/browser/renderer/')) return 'xterm-renderer-vendor'
           if (id.includes('/@xterm/xterm/') && id.includes('/browser/')) return 'xterm-browser-vendor'
+          if (id.includes('/@xterm/xterm/') && id.includes('/headless/')) return 'xterm-headless-vendor'
           if (id.includes('/@xterm/xterm/')) return 'xterm-core-vendor'
           if (id.includes('/@xterm/')) return 'xterm-vendor'
           // UI libraries
@@ -263,6 +292,13 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/highlight.js/')) return 'highlight-vendor'
           if (id.includes('/sql.js/') || id.includes('/@sqlite/')) return 'sqlite-vendor'
           if (id.includes('/kubernetes-client/') || id.includes('/@kubernetes/')) return 'k8s-client-vendor'
+          // Split larger libraries that would otherwise dominate the generic
+          // vendor chunk. Keep smaller utility packages in the shared `vendor`
+          // catch-all so the `vendor-*.js` chunk (required by
+          // check-vendor-safety.mjs) is always emitted with meaningful content.
+          if (id.includes('/@opentelemetry/')) return 'otel-vendor'
+          if (id.includes('/msw/') || id.includes('/mswjs/')) return 'msw-vendor'
+          if (id.includes('/@babel/') || id.includes('/babel-')) return 'babel-vendor'
           return 'vendor'
         },
       },
@@ -364,7 +400,14 @@ export default defineConfig(({ mode }) => ({
       threads: { maxThreads: 1, minThreads: 1 },
     } : undefined,
     // isolate: true ensures each test file runs in its own subprocess with a clean global environment,
-    // preventing vi.stubGlobal() cross-contamination between files (#20256)
+    // preventing vi.stubGlobal() cross-contamination between files (#20256).
+    // Note: A prior attempt to disable isolate in CI to work around worker OOM crashes with hundreds of
+    // split chunks (#21083) caused 1598 test failures (#21284) from cross-file mock/global leakage —
+    // 143 test files use vi.stubGlobal, many at module scope, and vi.unstubAllGlobals() in setup.ts's
+    // afterAll runs only once per worker (end of shard) when isolate is false, not once per file.
+    // Restoring isolate:true unconditionally to keep the test suite green; the OOM issue must be
+    // addressed via a different mechanism (chunk-splitting tuning or memory bump) rather than by
+    // sacrificing test isolation.
     isolate: true,
     coverage: {
       provider: 'v8',

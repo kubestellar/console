@@ -183,7 +183,7 @@ export function UnifiedDashboard({
         localStorage.setItem(config.storageKey, JSON.stringify(cards))
         setDashboardError(null)
       } catch (error) {
-        console.warn('Failed to persist unified dashboard cards', error)
+        console.error('Failed to persist unified dashboard cards', error)
         setDashboardError(t('errors.storagePersistFailed'))
       }
     }
@@ -207,7 +207,7 @@ export function UnifiedDashboard({
         localStorage.setItem(slot, JSON.stringify(placements))
         setDashboardError(null)
       } catch (error) {
-        console.warn('Failed to persist unified dashboard tab cards', error)
+        console.error('Failed to persist unified dashboard tab cards', error)
         setDashboardError(t('errors.storagePersistFailed'))
       }
     }
@@ -350,7 +350,7 @@ export function UnifiedDashboard({
         setDashboardError(null)
         showToast(t('dashboard.resetSuccess', 'Dashboard layout reset to defaults'), 'success')
       } catch (error) {
-        console.warn('Failed to reset unified dashboard layout', error)
+        console.error('Failed to reset unified dashboard layout', error)
         setDashboardError(t('errors.storagePersistFailed'))
       }
     }
@@ -375,7 +375,7 @@ export function UnifiedDashboard({
             setDashboardError(null)
           }
         } catch (error) {
-          console.warn('Failed to sync unified dashboard cards from storage event', error)
+          console.error('Failed to sync unified dashboard cards from storage event', error)
           setDashboardError(t('errors.storageRestoreFailed'))
         }
         return
@@ -393,7 +393,7 @@ export function UnifiedDashboard({
             setDashboardError(null)
           }
         } catch (error) {
-          console.warn('Failed to sync unified dashboard tab cards from storage event', error)
+          console.error('Failed to sync unified dashboard tab cards from storage event', error)
           setDashboardError(t('errors.storageRestoreFailed'))
         }
       }

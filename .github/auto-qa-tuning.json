@@ -1,21 +1,21 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-07-17T04:00:32Z",
+  "last_updated": "2026-07-20T04:15:19Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
-      "merged": 16,
+      "merged": 17,
       "closed": 10,
-      "acceptance_rate": 0.62,
+      "acceptance_rate": 0.63,
       "status": "normal",
-      "last_evaluated": "2026-06-11T04:30:46Z"
+      "last_evaluated": "2026-07-19T04:08:33Z"
     },
     "security": {
-      "merged": 102,
+      "merged": 103,
       "closed": 71,
       "acceptance_rate": 0.59,
       "status": "normal",
-      "last_evaluated": "2026-07-17T04:00:32Z"
+      "last_evaluated": "2026-07-19T04:08:33Z"
     },
     "a11y": {
       "merged": 65,
@@ -25,32 +25,32 @@
       "last_evaluated": "2026-07-15T04:00:08Z"
     },
     "operator": {
-      "merged": 675,
+      "merged": 692,
       "closed": 267,
       "acceptance_rate": 0.72,
       "status": "normal",
-      "last_evaluated": "2026-07-17T04:00:32Z"
+      "last_evaluated": "2026-07-20T04:15:19Z"
     },
     "sre": {
-      "merged": 426,
+      "merged": 434,
       "closed": 95,
       "acceptance_rate": 0.82,
       "status": "boosted",
-      "last_evaluated": "2026-07-17T04:00:32Z"
+      "last_evaluated": "2026-07-20T04:15:19Z"
     },
     "features": {
-      "merged": 26,
+      "merged": 35,
       "closed": 10,
-      "acceptance_rate": 0.72,
+      "acceptance_rate": 0.78,
       "status": "normal",
-      "last_evaluated": "2026-07-16T04:00:49Z"
+      "last_evaluated": "2026-07-20T04:15:19Z"
     },
     "resilience": {
-      "merged": 82,
+      "merged": 86,
       "closed": 66,
-      "acceptance_rate": 0.55,
+      "acceptance_rate": 0.57,
       "status": "normal",
-      "last_evaluated": "2026-07-16T04:00:49Z"
+      "last_evaluated": "2026-07-20T04:15:19Z"
     },
     "consistency": {
       "merged": 31,
@@ -61,18 +61,17 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "XL",
+    "best_pr_size": "S",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #20875: Superseded by #20876, which merged the same fix pattern for `liveFixtureManager.test.ts`. Closing.",
-      "- PR #20858: Superseded by #20876 (also Fixes #20853), which merged the fix. Closing.",
-      "- PR #20833: Superseded by #20841, which was merged.",
-      "- PR #20828: Superseded by #20840, which was merged.",
-      "- PR #20713: Closing — branch was rebased but PR ref is stale. Reopening as a new PR from the rebased `sec-check/fix-20712` branch."
+      "- PR #21093: Closing as duplicate — the two test files added here are already present on `main` (merged via #21091, which addressed the same two advisory items). Advisory #20963 items covered by that PR are resolved. Remaining advisory items (if any) should be re-triaged in a fresh advisory report.",
+      "- PR #21084: <!-- test-coverage-check-report -->",
+      "## :white_check_mark: Test Coverage Check",
+      "- PR #20974: Closing this PR — 4 CI attempts have failed on `build-gate`. Root cause: `handlers.compliance.test.ts` uses `setupServer(...)` from `msw/node` with `onUnhandledRequest: 'error'`, which conflicts with the global MSW test setup wired into `src/test/setup.ts` under MSW v2's experimental network mode. Every intercepted request is being classified as unhandled and MSW throws `InternalError: Cannot bypass a request when using the \"error\" strategy`."
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-07-12"
+    "last_report_date": "2026-07-19"
   },
   "cncf_insights": {
     "last_scan_date": "2026-07-15",
@@ -92,27 +91,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-05-30",
-      "total_merged": 535,
-      "total_closed": 390,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-05-31",
-      "total_merged": 571,
-      "total_closed": 397,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-06-01",
-      "total_merged": 616,
-      "total_closed": 403,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-06-02",
       "total_merged": 662,
@@ -309,20 +287,47 @@
       "categories_boosted": [
         "sre"
       ]
+    },
+    {
+      "date": "2026-07-18",
+      "total_merged": 1443,
+      "total_closed": 568,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
+    },
+    {
+      "date": "2026-07-19",
+      "total_merged": 1454,
+      "total_closed": 568,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
+    },
+    {
+      "date": "2026-07-20",
+      "total_merged": 1463,
+      "total_closed": 568,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
     }
   ],
   "rotation_weights": {
-    "performance": 0.93,
+    "performance": 0.95,
     "security": 0.89,
     "a11y": 1.05,
     "operator": 1.08,
     "sre": 2.0,
-    "features": 1.08,
-    "resilience": 0.83,
+    "features": 1.17,
+    "resilience": 0.86,
     "consistency": 0.9
   },
   "max_issues_override": 5,
-  "pr_guidance": "Keep PRs small and focused. Smaller PRs have higher acceptance rates.",
+  "pr_guidance": "Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs.",
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],

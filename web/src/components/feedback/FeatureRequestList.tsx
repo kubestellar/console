@@ -188,7 +188,7 @@ export function FeatureRequestList() {
           onClick={() => loadRequests()}
           className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1 mx-auto"
         >
-          <RefreshCw className="w-3 h-3" />
+          <RefreshCw className={cn('w-3 h-3', isLoading && 'animate-spin')} />
           Retry
         </button>
       </div>

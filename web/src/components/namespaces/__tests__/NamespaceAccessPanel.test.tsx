@@ -290,6 +290,10 @@ describe('NamespaceAccessPanel', () => {
       expect(screen.getByText('alice')).toBeInTheDocument()
     })
 
+    // Verify first call with original namespace. api.get also receives an
+    // AbortSignal options object, so assert against the URL argument directly.
+    expect(vi.mocked(api.get).mock.calls[0]?.[0]).toContain('test-namespace')
+
     const newNamespace: NamespaceDetails = {
       ...mockNamespace,
       name: 'another-namespace',
@@ -303,10 +307,13 @@ describe('NamespaceAccessPanel', () => {
       />
     )
 
+    // Wait for second call with new namespace
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith(
-        expect.stringContaining('another-namespace')
-      )
+      expect(api.get).toHaveBeenCalledTimes(2)
     })
+
+    // Verify the last call used the new namespace
+    const lastCall = vi.mocked(api.get).mock.calls[vi.mocked(api.get).mock.calls.length - 1]
+    expect(lastCall[0]).toContain('another-namespace')
   })
 })

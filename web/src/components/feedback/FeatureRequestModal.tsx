@@ -426,6 +426,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
           onClick={handleClose}
           disabled={isSubmitting}
           className="p-1 rounded hover:bg-secondary/50 text-muted-foreground disabled:opacity-50"
+          aria-label={t('actions.close')}
         >
           <X className="w-5 h-5" />
         </button>

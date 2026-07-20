@@ -50,6 +50,7 @@ import {
 } from './submitTab.utils'
 
 import { SubmitTabAttachments } from './SubmitTabAttachments'
+import { getSettingsWithHash } from '../../config/routes'
 
 export { SuccessView } from './SubmitTabSuccessView'
 
@@ -443,7 +444,7 @@ export function SubmitForm({
                 <span>{' · '}</span>
                 <button
                   type="button"
-                  onClick={() => { window.location.href = '/settings#github-token' }}
+                  onClick={() => { window.location.href = getSettingsWithHash('github-token') }}
                   className="text-purple-400 hover:text-purple-300 underline underline-offset-2 p-0 h-auto bg-transparent border-none"
                 >
                   Console Settings

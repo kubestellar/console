@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import i18next from 'i18next'
 import { emitError, markErrorReported } from '../lib/analytics'
 import { Button } from './ui/Button'
+import { ROUTES } from '../config/routes'
 
 interface Props {
   children: ReactNode
@@ -59,7 +60,7 @@ export class AppErrorBoundary extends Component<Props, State> {
   handleGoHome = () => {
     // Full navigation (not client-side) so any bad state in the SPA —
     // including router/query caches — is cleared before landing on "/".
-    window.location.href = '/'
+    window.location.href = ROUTES.HOME
   }
 
   handleRecover = () => {

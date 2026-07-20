@@ -125,6 +125,11 @@ export function useHelmReleases(cluster?: string) {
     helmReleasesCache.timestamp > 0 ? helmReleasesCache.timestamp : null
   )
   const [isDemoData, setIsDemoData] = useState(helmReleasesCache.isDemoData)
+  // Track latest local releases so error-fallback path can decide whether to
+  // overwrite existing data with demo data. This matters for cluster-scoped
+  // fetches where the module-level cache is not populated on success (#21083).
+  const releasesRef = useRef(releases)
+  releasesRef.current = releases
 
   // Register this component to receive cache updates
   useEffect(() => {
@@ -281,8 +286,12 @@ export function useHelmReleases(cluster?: string) {
       setError(errorMessage)
       setConsecutiveFailures(prev => prev + 1)
 
-      // Fall back to demo data when API fails and no cached data is available.
-      if (helmReleasesCache.data.length === 0) {
+      // Fall back to demo data when API fails and no data is available at all.
+      // Check BOTH the module-level cache (all-cluster fetches) AND the local
+      // releases state (per-cluster fetches don't touch the module cache).
+      // Without the local check, a failed refetch after a successful per-cluster
+      // fetch would overwrite live data with demo data (#21083).
+      if (helmReleasesCache.data.length === 0 && releasesRef.current.length === 0) {
         const demoReleases = getDemoHelmReleases()
         if (!cluster) {
           // Update cache so notifyListeners in finally reflects demo data
@@ -396,6 +405,10 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
   const [consecutiveFailures, setConsecutiveFailures] = useState(cachedEntry?.consecutiveFailures || 0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(cachedEntry?.timestamp || null)
   const [isDemoData, setIsDemoData] = useState(false)
+  // Track latest history to avoid overwriting live data with demo data on
+  // transient fetch errors (#21083).
+  const historyRef = useRef(history)
+  historyRef.current = history
 
   const refetch = useCallback(async () => {
     // Always set isRefreshing to show animation on manual refresh (even if returning early)
@@ -463,9 +476,13 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       setError(errorMessage)
       setConsecutiveFailures(prev => prev + 1)
 
-      // Fall back to demo data when API fails and no cached history is available.
+      // Fall back to demo data when API fails and no history is available at all.
+      // Check BOTH the module-level cache and the current local history state —
+      // the local state reflects the most recent successful fetch for this
+      // cluster/release pair even if the cache entry is stale (#21083).
       const cachedForFallback = cluster && release ? helmHistoryCache.get(`${cluster}:${release}`) : undefined
-      if (!cachedForFallback || cachedForFallback.data.length === 0) {
+      const cacheEmpty = !cachedForFallback || cachedForFallback.data.length === 0
+      if (cacheEmpty && historyRef.current.length === 0) {
         const demoHistory = getDemoHelmHistory()
         setHistory(demoHistory)
         setLastRefresh(Date.now())
@@ -555,6 +572,10 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
   const [consecutiveFailures, setConsecutiveFailures] = useState(cachedEntry?.consecutiveFailures || 0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(cachedEntry?.timestamp || null)
   const [isDemoData, setIsDemoData] = useState(false)
+  // Track latest local values so an error after a successful fetch doesn't
+  // clobber live data with demo data (#21083).
+  const valuesRef = useRef(values)
+  valuesRef.current = values
 
   // Track the key we last initiated a fetch for (to avoid duplicate fetches)
   const fetchingKeyRef = useRef<string | null>(null)
@@ -630,11 +651,14 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       setError(errorMessage)
       setConsecutiveFailures(prev => prev + 1)
 
-      // Fall back to demo data when API fails and no cached values are available.
+      // Fall back to demo data when API fails and no values are available at all.
+      // Check the local values state in addition to the cache so a per-request
+      // failure after a successful fetch preserves the live data (#21083).
       const cachedForFallback = cluster && release && namespace
         ? helmValuesCache.get(`${cluster}:${release}:${namespace}`)
         : undefined
-      if (!cachedForFallback || !cachedForFallback.values) {
+      const cacheEmpty = !cachedForFallback || !cachedForFallback.values
+      if (cacheEmpty && valuesRef.current === null) {
         const demoVals = getDemoHelmValues()
         setValues(demoVals)
         setLastRefresh(Date.now())

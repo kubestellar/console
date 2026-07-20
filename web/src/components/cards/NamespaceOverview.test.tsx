@@ -45,6 +45,7 @@ const mockUseCardLoadingState = vi.fn()
 vi.mock('./CardDataContext', () => ({
   useCardLoadingState: (opts: Record<string, unknown>) => mockUseCardLoadingState(opts),
   useReportCardDataState: () => {},
+  useCardDemoState: () => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false }),
 }))
 
 vi.mock('../../lib/constants/storage', () => ({

@@ -128,7 +128,7 @@ export function EmailNotificationSettings({
             className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
           />
           {portError && (
-            <p id="email-smtp-port-error" role="alert" className="mt-1 text-xs text-red-400">{portError}</p>
+            <p id="email-smtp-port-error" role="alert" className="mt-1 text-xs text-status-error">{portError}</p>
           )}
         </div>
       </div>
@@ -197,7 +197,7 @@ export function EmailNotificationSettings({
             className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
           />
           {hasStoredPassword && (
-            <p className="mt-1 text-xs text-green-400">
+            <p className="mt-1 text-xs text-status-success">
               {t('settings.notifications.secretConfigured')}
             </p>
           )}
@@ -219,11 +219,11 @@ export function EmailNotificationSettings({
           }`}
         >
           {testResult.success ? (
-            <Check className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
+            <Check className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
           ) : (
-            <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+            <X className="w-4 h-4 text-status-error shrink-0 mt-0.5" />
           )}
-          <p className={`text-sm ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
+          <p className={`text-sm ${testResult.success ? 'text-status-success' : 'text-status-error'}`}>
             {testResult.message}
           </p>
         </div>

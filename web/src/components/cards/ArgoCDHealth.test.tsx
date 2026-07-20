@@ -45,6 +45,13 @@ vi.mock('../ui/Skeleton', () => ({
   ),
 }))
 
+vi.mock('../../lib/cards/CardComponents', () => ({
+  CardBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardBodyLoaded: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardBodyEmpty: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardScrollList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

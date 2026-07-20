@@ -17,9 +17,10 @@ interface SecurityComplianceTabProps {
   }
   complianceByCategory: ComplianceByCategory
   handleRefresh: () => void
+  isRefreshing?: boolean
 }
 
-export function SecurityComplianceTab({ stats, complianceByCategory, handleRefresh }: SecurityComplianceTabProps) {
+export function SecurityComplianceTab({ stats, complianceByCategory, handleRefresh, isRefreshing = false }: SecurityComplianceTabProps) {
   const { t } = useTranslation('cards')
   const { t: tc } = useTranslation()
 
@@ -78,7 +79,7 @@ export function SecurityComplianceTab({ stats, complianceByCategory, handleRefre
             onClick={handleRefresh}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm text-foreground transition-colors"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
             {tc('common.refresh')}
           </button>
         </div>

@@ -27,7 +27,7 @@ export interface ConsoleUsersTabProps {
   expandedUser: string | null
   setExpandedUser: (id: string | null) => void
   onRoleChange: (userId: string, role: UserRole) => void
-  onDeleteUser: (userId: string) => void
+  onDeleteUser: (userId: string) => Promise<void>
   getRoleBadgeClass: (role: UserRole) => string
 }
 

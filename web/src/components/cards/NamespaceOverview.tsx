@@ -11,7 +11,8 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { ClusterStatusBadge, getClusterState } from '../ui/ClusterStatusBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
-import { useCardLoadingState } from './CardDataContext'
+import { Select } from '../ui/Select'
+import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { STORAGE_KEY_NS_OVERVIEW_CLUSTER, STORAGE_KEY_NS_OVERVIEW_NAMESPACE } from '../../lib/constants/storage'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 
@@ -27,7 +28,8 @@ const SINGLE_VISIBLE_CLUSTER_COUNT = 1
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation(['common', 'cards'])
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
-  const safeAllClusters = allClusters || []
+  const safeAllClusters = useMemo(() => allClusters || [], [allClusters])
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
   const [selectedCluster, setSelectedCluster] = useState<string>(
@@ -84,7 +86,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
   // Fetch namespaces for the selected cluster
   const { namespaces, isRefreshing: isNamespacesRefreshing, isFailed: namespacesFailed, consecutiveFailures: namespacesConsecutiveFailures, isDemoFallback: namespacesDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
-  const safeNamespaces = namespaces || []
+  const safeNamespaces = useMemo(() => namespaces || [], [namespaces])
 
   // Auto-select first namespace when cluster is selected and no valid namespace is chosen (#3113)
   useEffect(() => {
@@ -144,7 +146,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     isLoading: clustersLoading && !hasData,
     isRefreshing: clustersRefreshing || isRefreshing,
     hasAnyData: hasData,
-    isDemoData: podIssuesDemoFallback || deploymentIssuesDemoFallback || namespacesDemoFallback,
+    isDemoData: shouldUseDemoData || podIssuesDemoFallback || deploymentIssuesDemoFallback || namespacesDemoFallback,
     isFailed,
     consecutiveFailures })
 
@@ -210,32 +212,34 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
       {/* Selectors */}
       <div className="flex gap-2 mb-4">
-        <select
-          value={selectedCluster}
-          onChange={(e) => {
-            setSelectedCluster(e.target.value)
-            setSelectedNamespace('')
-          }}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
-          title={t('cards:namespaceOverview.selectClusterTitle')}
-        >
-          <option value="">{t('selectors.selectCluster')}</option>
-          {(clusters || []).map(c => (
-            <option key={c.name} value={c.name}>{c.name}</option>
-          ))}
-        </select>
-        <select
-          value={selectedNamespace}
-          onChange={(e) => setSelectedNamespace(e.target.value)}
-          disabled={!selectedCluster}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
-          title={selectedCluster ? t('cards:namespaceOverview.selectNamespaceTitle') : t('cards:namespaceOverview.selectClusterFirst')}
-        >
-          <option value="">{t('selectors.selectNamespace')}</option>
-          {safeNamespaces.map(ns => (
-            <option key={ns} value={ns}>{ns}</option>
-          ))}
-        </select>
+        <div className="flex-1">
+          <Select
+            value={selectedCluster}
+            onChange={(e) => {
+              setSelectedCluster(e.target.value)
+              setSelectedNamespace('')
+            }}
+            title={t('cards:namespaceOverview.selectClusterTitle')}
+          >
+            <option value="">{t('selectors.selectCluster')}</option>
+            {(clusters || []).map(c => (
+              <option key={c.name} value={c.name}>{c.name}</option>
+            ))}
+          </Select>
+        </div>
+        <div className="flex-1">
+          <Select
+            value={selectedNamespace}
+            onChange={(e) => setSelectedNamespace(e.target.value)}
+            disabled={!selectedCluster}
+            title={selectedCluster ? t('cards:namespaceOverview.selectNamespaceTitle') : t('cards:namespaceOverview.selectClusterFirst')}
+          >
+            <option value="">{t('selectors.selectNamespace')}</option>
+            {safeNamespaces.map(ns => (
+              <option key={ns} value={ns}>{ns}</option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       {needsSelection ? (

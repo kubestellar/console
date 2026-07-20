@@ -11,6 +11,7 @@ import { cn } from '@/lib/cn'
 import { useCardCollapse } from '../../lib/cards/cardHooks'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useModal } from '../../hooks/useModal'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { CardDataReportContext, ForceLiveContext, type CardDataState } from './CardDataContext'
@@ -266,8 +267,8 @@ export const CardWrapper = memo(function CardWrapper({
     observer.observe(el)
     return () => observer.disconnect()
   }, [isExpanded])
-  const [showBugReport, setShowBugReport] = useState(false)
-  const [showWidgetExport, setShowWidgetExport] = useState(false)
+  const { isOpen: showBugReport, open: openBugReport, close: closeBugReport } = useModal()
+  const { isOpen: showWidgetExport, open: openWidgetExport, close: closeWidgetExport } = useModal()
 
   // Register expand trigger for keyboard navigation
   useEffect(() => {
@@ -623,8 +624,8 @@ export const CardWrapper = memo(function CardWrapper({
 
   const handleOpenBugReport = useCallback(() => {
     setFullScreen(false)
-    setShowBugReport(true)
-  }, [setFullScreen])
+    openBugReport()
+  }, [setFullScreen, openBugReport])
 
   // Silence unused variable warnings for future chat implementation
   void messages
@@ -726,7 +727,7 @@ export const CardWrapper = memo(function CardWrapper({
                 onRemove={onRemove}
                 onWidthChange={onWidthChange}
                 onHeightChange={onHeightChange}
-                onShowWidgetExport={() => setShowWidgetExport(true)}
+                onShowWidgetExport={openWidgetExport}
               />
             </div>
 
@@ -837,7 +838,7 @@ export const CardWrapper = memo(function CardWrapper({
             <Suspense fallback={null}>
               <WidgetExportModal
                 isOpen={showWidgetExport}
-                onClose={() => setShowWidgetExport(false)}
+                onClose={closeWidgetExport}
                 cardType={cardType}
               />
             </Suspense>
@@ -848,7 +849,7 @@ export const CardWrapper = memo(function CardWrapper({
             <Suspense fallback={null}>
               <FeatureRequestModal
                 isOpen={showBugReport}
-                onClose={() => setShowBugReport(false)}
+                onClose={closeBugReport}
                 initialTab="submit"
                 initialContext={{
                   cardType,

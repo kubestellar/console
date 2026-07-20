@@ -8,6 +8,7 @@ import {
   shouldMarkBackendUnavailable,
 } from './backendHealthEvents'
 import { reportAppError } from './errors/handleError'
+import { ROUTES } from '../config/routes'
 
 const API_BASE = ''
 const DEFAULT_TIMEOUT = MCP_HOOK_TIMEOUT_MS
@@ -201,7 +202,7 @@ function performSessionExpiry(): void {
 
   // Redirect to login after a delay so the user sees the banner
   setTimeout(() => {
-    window.location.href = '/login?reason=session_expired'
+    window.location.href = `${ROUTES.LOGIN}?reason=session_expired`
   }, SESSION_EXPIRY_REDIRECT_MS)
 }
 

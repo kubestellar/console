@@ -185,6 +185,7 @@ var acmmCriteria = []acmmCriterion{
 	{ID: "acmm:public-metrics", Patterns: []string{"web/netlify/functions/analytics-accm.mts", "web/public/analytics.js", "docs/metrics/"}},
 	{ID: "acmm:policy-as-code", Patterns: []string{"policies/", ".github/policies/", "kyverno/", "conftest.yaml", "opa/"}},
 	{ID: "acmm:reflection-log", Patterns: []string{".claude/reflections/", "memory/", ".memory/", "docs/reflections/", "REFLECTIONS.md"}},
+	{ID: "acmm:audit-trail", Patterns: []string{".github/workflows/audit-trail.yml", ".github/workflows/ai-attribution.yml"}},
 	// ACMM L6 — Autonomous
 	{ID: "acmm:auto-issue-gen", Patterns: []string{".github/workflows/auto-issues.yml", ".github/workflows/auto-issue.yml", ".github/workflows/issue-gen.yml", ".github/workflows/auto-generate-issues.yml", "scripts/generate-issues.mjs"}},
 	{ID: "acmm:multi-agent-orchestration", Patterns: []string{".github/workflows/dispatcher.yml", ".github/workflows/orchestrate.yml", "scripts/orchestrate.mjs", "docs/multi-agent.md", ".claude/dispatcher/", "orchestrator/"}},

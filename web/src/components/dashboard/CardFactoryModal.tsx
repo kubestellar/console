@@ -5,6 +5,7 @@ import {
   CheckCircle } from 'lucide-react'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { cn } from '../../lib/cn'
+import { useToast } from '../ui/Toast'
 import { deleteDynamicCard, getAllDynamicCards } from '../../lib/dynamic-cards'
 import type { DynamicCardDefinition } from '../../lib/dynamic-cards/types'
 import { CardFactoryTemplates } from './CardFactoryTemplates'
@@ -31,6 +32,7 @@ const SAVE_MESSAGE_TIMEOUT_MS = 3000 // Duration to display save/error messages 
 
 export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = false }: CardFactoryModalProps) {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const [tab, setTab] = useState<Tab>('declarative')
 
   // Manage state
@@ -61,6 +63,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
   const handleDelete = (id: string) => {
     deleteDynamicCard(id)
     setExistingCards(getAllDynamicCards())
+    showToast(t('dashboard.cardFactory.deleteSuccess'), 'success')
   }
 
   // Handle save message with timeout

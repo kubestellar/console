@@ -2,6 +2,7 @@ import { useState, useCallback, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { oidcDashboardConfig } from '../../config/dashboards/oidc'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
   Users, ShieldCheck, Fingerprint, Clock,
@@ -57,6 +58,7 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
     isLoading: summaryLoading,
     isRefreshing: summaryRefreshing,
     refetch: refetchSummary,
+    lastRefresh: summaryLastRefresh,
   } = useCache<OIDCSummary | null>({
     key: OIDC_SUMMARY_CACHE_KEY,
     category: 'rbac',
@@ -264,10 +266,14 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
         </div>
       )}
 
-      {/* Evaluated At */}
+      {/* Freshness indicator */}
       {summary && (
-        <div className="text-xs text-muted-foreground text-right">
-          Last evaluated: {new Date(summary.evaluated_at).toLocaleString()}
+        <div className="flex justify-end">
+          <RefreshIndicator
+            isRefreshing={summaryRefreshing}
+            lastUpdated={summaryLastRefresh ? new Date(summaryLastRefresh) : null}
+            size="xs"
+          />
         </div>
       )}
     </div>
