@@ -111,7 +111,7 @@ export function TeamMemberManager({ members, currentUserId, onAddMember, onRemov
       </div>
 
       {showAdd && (
-        <BaseModal isOpen={true} onClose={() => setShowAdd(false)} size="sm">
+        <BaseModal isOpen={true} onClose={() => setShowAdd(false)} size="sm" closeOnBackdrop={false}>
           <BaseModal.Header title={t('teams.addMember')} onClose={() => setShowAdd(false)} />
           <BaseModal.Content>
             <div className="space-y-4">
