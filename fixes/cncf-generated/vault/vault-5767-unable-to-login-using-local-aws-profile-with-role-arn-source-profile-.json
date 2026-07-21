@@ -1,0 +1,75 @@
+{
+  "version": "kc-mission-v1",
+  "name": "vault-5767-unable-to-login-using-local-aws-profile-with-role-arn-source-profile-",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "vault: Unable to login using local AWS profile with role_arn / source_profile and MFA",
+    "description": "Unable to login using local AWS profile with role_arn / source_profile and MFA. This issue affects 22+ users.",
+    "type": "troubleshoot",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify vault troubleshoot symptoms",
+        "description": "Check for the issue in your vault installation:\n```bash\nvault version\nvault status\n```\nLook for error: `%v\", err)`"
+      },
+      {
+        "title": "Review vault configuration",
+        "description": "Review the relevant vault configuration:\nAttempting to `vault login` using this particular IAM profile setup in `~/.aws/credentials` fails with the following error:\n\n```\nError authenticating: failed to retrieve credentials from credential chain: NoCredentialProviders: no valid providers in"
+      },
+      {
+        "title": "Apply the fix for Unable to login using local AWS profile with role_arn /…",
+        "description": "I haven't had time to learn the Vault codebase yet, but I was able to whip up a workaround for this that others might find usable. It's based on the signing code present in the Vault CLI.\n\nhttps://gist.github.com/gwilym/1db446f67a4d62db50d1139082e5b719\n\nThe output of this app should usable as part\n```yaml\nError authenticating: failed to retrieve credentials from credential chain: NoCredentialProviders: no valid providers in chain. Deprecated.\n\tFor verbose messaging see aws.Config.CredentialsChainVerboseErrors\n```"
+      },
+      {
+        "title": "Confirm Unable to login using local AWS profile with… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\nTest vault to confirm the issue is resolved.\nConfirm that `%v\", err)` no longer appears."
+      }
+    ],
+    "resolution": {
+      "summary": "I haven't had time to learn the Vault codebase yet, but I was able to whip up a workaround for this that others might find usable. It's based on the signing code present in the Vault CLI.",
+      "codeSnippets": [
+        "Error authenticating: failed to retrieve credentials from credential chain: NoCredentialProviders: no valid providers in chain. Deprecated.\n\tFor verbose messaging see aws.Config.CredentialsChainVerboseErrors",
+        "[main]\naws_access_key_id = ?\naws_secret_access_key = ?\n[admin]\nmfa_serial = arn:aws:iam::MAINACCOUNTID:mfa/USERNAME\nrole_arn = arn:aws:iam::SUBACCOUNTID:role/admin\nsource_profile = main",
+        "... I get the following extra info:"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "vault",
+      "community",
+      "secrets",
+      "troubleshoot"
+    ],
+    "cncfProjects": [
+      "vault"
+    ],
+    "targetResourceKinds": [],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "troubleshoot"
+    ],
+    "maturity": "community",
+    "sourceUrls": {
+      "issue": "https://github.com/hashicorp/vault/issues/5767",
+      "repo": "https://github.com/hashicorp/vault"
+    },
+    "reactions": 22,
+    "comments": 23,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "tools": [
+      "vault"
+    ],
+    "description": "A working vault installation or development environment."
+  },
+  "security": {
+    "scannedAt": "2026-07-21T07:18:08.307Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
