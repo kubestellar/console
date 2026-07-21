@@ -9,7 +9,7 @@
  *   <UnifiedDashboard config={mainDashboardConfig} />
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Activity, RefreshCw, Plus, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Button } from '../../../components/ui/Button'
@@ -28,6 +28,7 @@ import { SHORT_DELAY_MS } from '../../constants/network'
 import { ConfirmDialog, useModalState } from '../../modals'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../../../components/ui/Toast'
+import { moveFocusByKey } from '../../a11y/rovingFocus'
 
 /** Card suggestion type from AddCardModal */
 interface CardSuggestion {
@@ -231,6 +232,15 @@ export function UnifiedDashboard({
   // Handle card reorder
   const handleReorder = (newCards: DashboardCardPlacement[]) => {
     mutateActiveCards(() => newCards)
+  }
+
+  // Handle tab keyboard navigation — arrow keys move focus and activate tab
+  const handleTabListKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const nextEl = moveFocusByKey(event, { selector: '[role="tab"]:not([disabled])', orientation: 'horizontal' })
+    if (nextEl instanceof HTMLElement) {
+      const tabId = nextEl.dataset.tabId
+      if (tabId) setActiveTabId(tabId)
+    }
   }
 
   // Handle card removal - show confirmation first
@@ -525,13 +535,15 @@ export function UnifiedDashboard({
 
       {/* Tab bar (when dashboard has tabs) */}
       {hasTabs && config.tabs && (
-        <div role="tablist" className="flex items-center gap-1 mb-6 border-b border-border">
+        <div role="tablist" className="flex items-center gap-1 mb-6 border-b border-border" onKeyDown={handleTabListKeyDown}>
           {config.tabs.map((tab: DashboardTab) => (
             <button
               key={tab.id}
               role="tab"
+              data-tab-id={tab.id}
               aria-selected={activeTabId === tab.id}
               aria-label={tab.label}
+              tabIndex={activeTabId === tab.id ? 0 : -1}
               onClick={() => !tab.disabled && setActiveTabId(tab.id)}
               disabled={tab.disabled}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${

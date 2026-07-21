@@ -14,6 +14,7 @@ import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { slsaDashboardConfig } from '../../config/dashboards/slsa'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
+import { useTabKeyboardNav } from '../../hooks/useKeyboardNav'
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -199,6 +200,13 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const cancelledRef = useRef(false)
 
+  const SLSA_TABS = ['attestations', 'provenance'] as const
+  const { tabListProps, getTabProps, getTabPanelProps } = useTabKeyboardNav<'attestations' | 'provenance'>({
+    tabs: SLSA_TABS,
+    activeTab,
+    onChange: setActiveTab,
+  })
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -343,24 +351,20 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
       )}
 
       {/* Tabs */}
-      <div role="tablist" className="flex gap-2 border-b border-gray-700">
+      <div {...tabListProps} className="flex gap-2 border-b border-gray-700">
         <button
           type="button"
-          role="tab"
-          aria-selected={activeTab === 'attestations'}
+          {...getTabProps('attestations')}
           aria-label="Attestations tab"
           className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'attestations' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-muted-foreground hover:text-foreground'}`}
-          onClick={() => setActiveTab('attestations')}
         >
           <Shield className="w-4 h-4 inline mr-1" /> Attestations ({attestations.length})
         </button>
         <button
           type="button"
-          role="tab"
-          aria-selected={activeTab === 'provenance'}
+          {...getTabProps('provenance')}
           aria-label="Provenance tab"
           className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'provenance' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-muted-foreground hover:text-foreground'}`}
-          onClick={() => setActiveTab('provenance')}
         >
           <GitCommitHorizontal className="w-4 h-4 inline mr-1" /> Provenance ({provenance.length})
         </button>
@@ -368,7 +372,7 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
 
       {/* Attestations table */}
       {activeTab === 'attestations' && (
-        <div className="overflow-x-auto">
+        <div {...getTabPanelProps('attestations')} className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-700 text-left">
@@ -405,7 +409,7 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
 
       {/* Provenance table */}
       {activeTab === 'provenance' && (
-        <div className="overflow-x-auto">
+        <div {...getTabPanelProps('provenance')} className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-700 text-left">

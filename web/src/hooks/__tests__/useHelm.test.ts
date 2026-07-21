@@ -251,8 +251,13 @@ describe('useHelmValues', () => {
 
   it('falls back to demo values when API unavailable', async () => {
     const { result, unmount } = renderHook(() => useHelmValues('prod', 'prometheus', 'monitoring'))
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.values).not.toBeNull()
+    // Wait for both: isLoading to settle AND values to be populated.
+    // isLoading starts as false and only becomes true inside the async doFetch;
+    // checking it alone would race past the assertion before the fetch completes.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.values).not.toBeNull()
+    })
     unmount()
   })
 })
