@@ -11,8 +11,6 @@ import { CardLoadingState, type CardLoadingStateProps } from '../CardLoadingStat
 import type { CardDataState } from '../CardDataContext'
 
 const TEST_CARD_ID = 'card-loading-test-id'
-const TEST_CARD_TYPE = 'cluster_health'
-const TEST_CARD_TITLE = 'Cluster Health'
 const CHILD_CONTENT_TEXT = 'card-loading-child-content'
 const SKELETON_ROW_COUNT = 3
 const CHILDREN_CONTAINER_TEST_ID = 'card-loading-children'
@@ -25,17 +23,9 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../card-wrapper/InstallCTAFlow', () => ({
-  InstallCTAFlow: ({ cardType, title }: { cardType: string; title: string }) => (
-    <div data-testid="install-cta-flow" data-card-type={cardType} data-title={title} />
-  ),
-}))
-
 function renderCardLoadingState(overrides: Partial<CardLoadingStateProps> = {}) {
   const props: CardLoadingStateProps = {
     cardId: TEST_CARD_ID,
-    cardType: TEST_CARD_TYPE,
-    title: TEST_CARD_TITLE,
     children: <div data-testid="card-child">{CHILD_CONTENT_TEXT}</div>,
     isVisible: true,
     isExpanded: false,
@@ -45,7 +35,6 @@ function renderCardLoadingState(overrides: Partial<CardLoadingStateProps> = {}) 
     cardLoadingTimedOut: false,
     childDataState: null,
     isVisuallySpinning: false,
-    showInstallCta: false,
     ...overrides,
   }
   return render(<CardLoadingState {...props} />)
@@ -243,16 +232,4 @@ describe('CardLoadingState', () => {
     })
   })
 
-  describe('InstallCTAFlow', () => {
-    it('renders InstallCTAFlow when showInstallCta is true', () => {
-      renderCardLoadingState({
-        showInstallCta: true,
-        childDataState: emptyChildDataState({ hasData: true }),
-      })
-
-      const cta = screen.getByTestId('install-cta-flow')
-      expect(cta).toHaveAttribute('data-card-type', TEST_CARD_TYPE)
-      expect(cta).toHaveAttribute('data-title', TEST_CARD_TITLE)
-    })
-  })
 })

@@ -86,7 +86,8 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
 
   return (
     <>
-      {/* Install CTA button */}
+      {/* Install CTA button — rendered by CardWrapper as a pinned footer
+          outside the card's scroll container. */}
       <div className="border-t border-yellow-500/10 pt-2">
         <button
           onClick={(e) => { e.stopPropagation(); void handleClick() }}

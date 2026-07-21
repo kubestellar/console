@@ -3,6 +3,7 @@ import { LayoutDashboard } from 'lucide-react'
 import { ROUTES } from '../../config/routes'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
+import { TryStellarButton } from '../stellar/TryStellarButton'
 import { StatsOverview } from '../ui/StatsOverview'
 import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 import { CardRecommendations } from './CardRecommendations'
@@ -75,7 +76,12 @@ export function DashboardTopSection({
         showTimestamp={false}
         error={clustersError}
         afterTitle={<DashboardHealthIndicator />}
-        rightExtra={<RotatingTip page="home" />}
+        rightExtra={
+          <div className="flex items-center gap-2">
+            <TryStellarButton />
+            <RotatingTip page="home" />
+          </div>
+        }
       />
 
       <StatsOverview
