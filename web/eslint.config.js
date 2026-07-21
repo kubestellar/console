@@ -28,6 +28,11 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // When you don't need the error value, use `catch { }` (no binding).
+      // Using a named binding like `catch (err)` when err is never referenced
+      // is flagged as a new baseline violation and will block the nightly
+      // release (see issues #21352/#21353). Prefix with _ (e.g. `catch (_err)`)
+      // only when you need the type annotation but not the value.
       '@typescript-eslint/no-unused-vars': ['warn', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
