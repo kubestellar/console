@@ -8,11 +8,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'pkg/agent/updater_checker.go'
-      - 'pkg/agent/updater_build.go'
-      - 'pkg/agent/updater_helpers.go'
-      - 'pkg/agent/updater_poller.go'
-      - 'pkg/agent/updater_checker_test.go'
+      - 'pkg/agent/updater/**'
       - 'pkg/agent/server.go'
       - 'web/src/hooks/useUpdateProgress.ts'
       - 'startup-oauth.sh'
@@ -36,7 +32,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -46,35 +42,38 @@ jobs:
           echo "=== Running full update mechanism test suite ==="
           echo ""
           echo "--- Phase 1: 5-iteration reliability loop ---"
-          go test ./pkg/agent/ -v -run "TestDeveloperUpdateLoop_5x" -timeout 120s
+          go test ./pkg/agent/updater/ -v -run "TestDeveloperUpdateLoop_5x" -timeout 120s
           echo ""
           echo "--- Phase 2: Build timeout handling ---"
-          go test ./pkg/agent/ -v -run "TestDeveloperUpdate_BuildTimeout" -timeout 30s
+          go test ./pkg/agent/updater/ -v -run "TestDeveloperUpdate_BuildTimeout" -timeout 30s
           echo ""
           echo "--- Phase 3: Build failure with output capture ---"
-          go test ./pkg/agent/ -v -run "TestDeveloperUpdate_BuildFailure" -timeout 30s
+          go test ./pkg/agent/updater/ -v -run "TestDeveloperUpdate_BuildFailure" -timeout 30s
           echo ""
           echo "--- Phase 4: npm install retry logic ---"
-          go test ./pkg/agent/ -v -run "TestDeveloperUpdate_NpmInstallRetry" -timeout 30s
+          go test ./pkg/agent/updater/ -v -run "TestDeveloperUpdate_NpmInstallRetry" -timeout 30s
           echo ""
           echo "--- Phase 5: Git pull failure (early abort) ---"
-          go test ./pkg/agent/ -v -run "TestDeveloperUpdate_GitPullFailure" -timeout 30s
+          go test ./pkg/agent/updater/ -v -run "TestDeveloperUpdate_GitPullFailure" -timeout 30s
           echo ""
           echo "--- Phase 6: Heartbeat during long builds ---"
-          go test ./pkg/agent/ -v -run "TestDeveloperUpdate_HeartbeatDuringBuild" -timeout 120s
+          go test ./pkg/agent/updater/ -v -run "TestDeveloperUpdate_HeartbeatDuringBuild" -timeout 120s
           echo ""
           echo "--- Phase 7: Output capture and utilities ---"
-          go test ./pkg/agent/ -v -run "TestRunBuildCmd_OutputCapture|TestTailLines|TestBuildErrorDetail|TestMockPathResolution" -timeout 30s
+          go test ./pkg/agent/updater/ -v -run "TestRunBuildCmd_OutputCapture|TestTailLines|TestBuildErrorDetail|TestMockPathResolution" -timeout 30s
 
       - name: Run concurrency safety tests
         run: |
           echo "=== Running concurrency safety tests ==="
-          go test ./pkg/agent/ -v -run "TestTriggerNow|TestIsUpdating|TestStatus" -timeout 30s -count=3
+          go test ./pkg/agent/updater/ -v -run "TestTriggerNow|TestStatus" -timeout 30s -count=3
 
       - name: Verify update invariants in source
         run: |
           echo "=== Verifying critical update invariants ==="
-          UPDATE_FILES="pkg/agent/updater_checker.go pkg/agent/updater_build.go pkg/agent/updater_build_helpers.go pkg/agent/updater_download.go pkg/agent/updater_execute.go pkg/agent/updater_git.go pkg/agent/updater_helpers.go pkg/agent/updater_poller.go"
+          # Non-test source files of the updater package (moved from flat
+          # pkg/agent/updater_*.go files). Tests are excluded so invariant
+          # greps match production code, not test scaffolding.
+          UPDATE_FILES=$(ls pkg/agent/updater/*.go | grep -v _test.go)
           ERRORS=0
 
           # 1. Atomic flag for mutual exclusion

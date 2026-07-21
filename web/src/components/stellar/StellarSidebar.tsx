@@ -1,6 +1,4 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
 import { useStellar } from '../../hooks/useStellar'
 import {
   STELLAR_NAVIGATION_EVENT,
@@ -10,8 +8,7 @@ import {
   type StellarRailItem,
 } from './navigation'
 import { STORAGE_KEY_STELLAR_ATTENTION_DISMISSED } from '../../lib/constants/storage'
-import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
-import { cn } from '../../lib/cn'
+import { safeSetItem } from '../../lib/utils/localStorage'
 
 import '../../styles/stellar.css'
 
@@ -27,9 +24,6 @@ const STELLAR_BADGE_OFFSET_PX = -4
 const STELLAR_BADGE_PADDING_X_PX = 3
 const STELLAR_BADGE_FONT_SIZE_PX = 9
 const STELLAR_UNREAD_COUNT_CAP = 99
-const STELLAR_ATTENTION_BUBBLE_OFFSET_RIGHT_PX = 50
-const STELLAR_ATTENTION_BUBBLE_OFFSET_TOP_PX = 60
-const ATTENTION_BUBBLE_Z_INDEX = 40
 
 function getTargetHash(target: StellarRailItem): string {
   return new URL(target.href, window.location.origin).hash
@@ -41,22 +35,13 @@ function getTargetHash(target: StellarRailItem): string {
 export function StellarSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { t } = useTranslation()
   const { isConnected, unreadCount } = useStellar()
   const onStellarRoute = isOnStellarRoute(location.pathname)
-  const [showAttentionBubble, setShowAttentionBubble] = useState(false)
-
-  useEffect(() => {
-    const dismissed = safeGetItem(STORAGE_KEY_STELLAR_ATTENTION_DISMISSED)
-    setShowAttentionBubble(!dismissed)
-  }, [])
 
   const handleNavigation = (target: StellarRailItem) => {
-    // Dismiss the attention bubble when user interacts with Stellar
-    if (showAttentionBubble) {
-      setShowAttentionBubble(false)
-      safeSetItem(STORAGE_KEY_STELLAR_ATTENTION_DISMISSED, 'true')
-    }
+    // Interacting with Stellar dismisses the "Try Stellar AI!" nudge shown
+    // in the dashboard header (TryStellarButton reads the same flag).
+    safeSetItem(STORAGE_KEY_STELLAR_ATTENTION_DISMISSED, 'true')
 
     const targetHash = getTargetHash(target)
     const sameTarget = location.pathname === target.route && location.hash === targetHash
@@ -153,33 +138,6 @@ export function StellarSidebar() {
           )
         })}
       </nav>
-      
-      {/* Attention bubble for new users */}
-      {showAttentionBubble && (
-        <div
-          className={cn(
-            'absolute bg-brand text-background px-3 py-2 rounded-lg shadow-lg',
-            'animate-bounce pointer-events-none select-none',
-            'font-medium text-sm whitespace-nowrap'
-          )}
-          style={{
-            right: STELLAR_ATTENTION_BUBBLE_OFFSET_RIGHT_PX,
-            top: STELLAR_ATTENTION_BUBBLE_OFFSET_TOP_PX,
-            zIndex: ATTENTION_BUBBLE_Z_INDEX,
-          }}
-          aria-label={t('stellar.attentionBubble')}
-        >
-          {t('stellar.attentionBubble')}
-          <div
-            className="absolute w-3 h-3 bg-brand transform rotate-45"
-            style={{
-              right: '-6px',
-              top: '50%',
-              marginTop: '-6px',
-            }}
-          />
-        </div>
-      )}
     </div>
   )
 }
