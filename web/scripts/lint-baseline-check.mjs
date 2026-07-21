@@ -113,6 +113,8 @@ if (newEntries.length > 0) {
     }
   });
   console.log('\n❌ CI fails on new violations. Fix them or update baseline after review.');
+  console.log('   Tip: For unused catch bindings (no-unused-vars), use `catch { }` instead');
+  console.log('   of `catch (err)` when you don\'t need the error value. See eslint.config.js.');
   process.exit(1);
 }
 
