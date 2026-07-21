@@ -9,7 +9,18 @@
 
 import { describe, it, expect } from 'vitest'
 import { CARD_CONFIGS } from '../index'
-import type { UnifiedCardConfig, CardDataSource, CardContent } from '../../../lib/unified/types'
+import type {
+  CardDataSourceHook,
+  CardDataSourceApi,
+  CardDataSourceStatic,
+  CardDataSourceContext,
+  CardContentList,
+  CardContentTable,
+  CardContentChart,
+  CardContentCustom,
+  CardContentStatusGrid,
+  CardContentStatsGrid,
+} from '../../../lib/unified/types'
 
 /** Minimum number of card configs expected */
 const MIN_CARD_COUNT = 150
@@ -129,7 +140,7 @@ describe('Card config schema validation', () => {
       })
 
       it('has valid category value', () => {
-        expect(VALID_CATEGORIES).toContain(config.category as any)
+        expect(VALID_CATEGORIES).toContain(config.category as string)
       })
 
       it('has optional description property with correct type', () => {
@@ -155,7 +166,7 @@ describe('Card config schema validation', () => {
 
       it('has valid defaultWidth if specified', () => {
         if (config.defaultWidth !== undefined) {
-          expect(VALID_WIDTHS).toContain(config.defaultWidth as any)
+          expect(VALID_WIDTHS).toContain(config.defaultWidth as number)
         }
       })
 
@@ -172,7 +183,7 @@ describe('Card config schema validation', () => {
       })
 
       it('has valid dataSource type', () => {
-        expect(VALID_DATA_SOURCE_TYPES).toContain(config.dataSource.type as any)
+        expect(VALID_DATA_SOURCE_TYPES).toContain(config.dataSource.type as string)
       })
 
       it('has required content property', () => {
@@ -181,7 +192,7 @@ describe('Card config schema validation', () => {
       })
 
       it('has valid content type', () => {
-        expect(VALID_CONTENT_TYPES).toContain(config.content.type as any)
+        expect(VALID_CONTENT_TYPES).toContain(config.content.type as string)
       })
 
       it('has boolean isDemoData property if specified', () => {
@@ -218,53 +229,57 @@ describe('DataSource validation', () => {
       })
 
       if (ds.type === 'hook') {
+        const hookDs = ds as CardDataSourceHook
         it('has required hook property for hook dataSource', () => {
-          expect((ds as any).hook).toBeDefined()
-          expect(typeof (ds as any).hook).toBe('string')
-          expect((ds as any).hook.length).toBeGreaterThan(0)
+          expect(hookDs.hook).toBeDefined()
+          expect(typeof hookDs.hook).toBe('string')
+          expect(hookDs.hook.length).toBeGreaterThan(0)
         })
 
         it('has object params property if specified', () => {
-          if ((ds as any).params !== undefined) {
-            expect(typeof (ds as any).params).toBe('object')
+          if (hookDs.params !== undefined) {
+            expect(typeof hookDs.params).toBe('object')
           }
         })
       }
 
       if (ds.type === 'api') {
+        const apiDs = ds as CardDataSourceApi
         it('has required endpoint property for api dataSource', () => {
-          expect((ds as any).endpoint).toBeDefined()
-          expect(typeof (ds as any).endpoint).toBe('string')
-          expect((ds as any).endpoint).toMatch(/^\//)
+          expect(apiDs.endpoint).toBeDefined()
+          expect(typeof apiDs.endpoint).toBe('string')
+          expect(apiDs.endpoint).toMatch(/^\//)
         })
 
         it('has valid method if specified', () => {
-          if ((ds as any).method !== undefined) {
-            expect(['GET', 'POST']).toContain((ds as any).method)
+          if (apiDs.method !== undefined) {
+            expect(['GET', 'POST']).toContain(apiDs.method)
           }
         })
 
         it('has number pollInterval if specified', () => {
-          if ((ds as any).pollInterval !== undefined) {
-            expect(typeof (ds as any).pollInterval).toBe('number')
-            expect((ds as any).pollInterval).toBeGreaterThanOrEqual(0)
+          if (apiDs.pollInterval !== undefined) {
+            expect(typeof apiDs.pollInterval).toBe('number')
+            expect(apiDs.pollInterval).toBeGreaterThanOrEqual(0)
           }
         })
       }
 
       if (ds.type === 'static') {
+        const staticDs = ds as CardDataSourceStatic
         it('has array data property if specified', () => {
-          if ((ds as any).data !== undefined) {
-            expect(Array.isArray((ds as any).data)).toBe(true)
+          if (staticDs.data !== undefined) {
+            expect(Array.isArray(staticDs.data)).toBe(true)
           }
         })
       }
 
       if (ds.type === 'context') {
+        const contextDs = ds as CardDataSourceContext
         it('has required contextKey property for context dataSource', () => {
-          expect((ds as any).contextKey).toBeDefined()
-          expect(typeof (ds as any).contextKey).toBe('string')
-          expect((ds as any).contextKey.length).toBeGreaterThan(0)
+          expect(contextDs.contextKey).toBeDefined()
+          expect(typeof contextDs.contextKey).toBe('string')
+          expect(contextDs.contextKey.length).toBeGreaterThan(0)
         })
       }
     })
@@ -281,14 +296,15 @@ describe('Content validation', () => {
       })
 
       if (content.type === 'list' || content.type === 'table') {
+        const columnarContent = content as CardContentList | CardContentTable
         it('has required columns array', () => {
-          expect((content as any).columns).toBeDefined()
-          expect(Array.isArray((content as any).columns)).toBe(true)
-          expect((content as any).columns.length).toBeGreaterThan(0)
+          expect(columnarContent.columns).toBeDefined()
+          expect(Array.isArray(columnarContent.columns)).toBe(true)
+          expect(columnarContent.columns.length).toBeGreaterThan(0)
         })
 
         it('has valid column configurations', () => {
-          (content as any).columns.forEach((col: any) => {
+          columnarContent.columns.forEach((col) => {
             expect(col.field).toBeDefined()
             expect(typeof col.field).toBe('string')
 
@@ -319,98 +335,102 @@ describe('Content validation', () => {
         })
 
         it('has valid pageSize if specified', () => {
-          if ((content as any).pageSize !== undefined) {
-            expect(typeof (content as any).pageSize).toBe('number')
-            expect((content as any).pageSize).toBeGreaterThan(0)
+          if (columnarContent.pageSize !== undefined) {
+            expect(typeof columnarContent.pageSize).toBe('number')
+            expect(columnarContent.pageSize).toBeGreaterThan(0)
           }
         })
 
         it('has valid sortable property if specified', () => {
-          if ((content as any).sortable !== undefined) {
-            expect(typeof (content as any).sortable).toBe('boolean')
+          if (columnarContent.sortable !== undefined) {
+            expect(typeof columnarContent.sortable).toBe('boolean')
           }
         })
 
         it('has valid defaultSort if specified', () => {
-          if ((content as any).defaultSort !== undefined) {
-            expect(typeof (content as any).defaultSort).toBe('string')
-            const fields = (content as any).columns.map((c: any) => c.field)
-            expect(fields).toContain((content as any).defaultSort)
+          if (columnarContent.defaultSort !== undefined) {
+            expect(typeof columnarContent.defaultSort).toBe('string')
+            const fields = columnarContent.columns.map((c) => c.field)
+            expect(fields).toContain(columnarContent.defaultSort)
           }
         })
 
         it('has valid defaultDirection if specified', () => {
-          if ((content as any).defaultDirection !== undefined) {
-            expect(['asc', 'desc']).toContain((content as any).defaultDirection)
+          if (columnarContent.defaultDirection !== undefined) {
+            expect(['asc', 'desc']).toContain(columnarContent.defaultDirection)
           }
         })
       }
 
       if (content.type === 'chart') {
+        const chartContent = content as CardContentChart
         it('has required chartType property', () => {
-          expect((content as any).chartType).toBeDefined()
+          expect(chartContent.chartType).toBeDefined()
           expect(['line', 'bar', 'donut', 'gauge', 'sparkline', 'area']).toContain(
-            (content as any).chartType
+            chartContent.chartType
           )
         })
 
         it('has valid height if specified', () => {
-          if ((content as any).height !== undefined) {
-            expect(typeof (content as any).height).toBe('number')
-            expect((content as any).height).toBeGreaterThan(0)
+          if (chartContent.height !== undefined) {
+            expect(typeof chartContent.height).toBe('number')
+            expect(chartContent.height).toBeGreaterThan(0)
           }
         })
 
         it('has valid showLegend if specified', () => {
-          if ((content as any).showLegend !== undefined) {
-            expect(typeof (content as any).showLegend).toBe('boolean')
+          if (chartContent.showLegend !== undefined) {
+            expect(typeof chartContent.showLegend).toBe('boolean')
           }
         })
       }
 
       if (content.type === 'custom') {
+        const customContent = content as CardContentCustom
         it('has component or componentName property', () => {
-          const hasComponent = (content as any).component !== undefined
-          const hasComponentName = (content as any).componentName !== undefined
+          const hasComponent = customContent.component !== undefined
+          const hasComponentName = customContent.componentName !== undefined
           expect(hasComponent || hasComponentName).toBe(true)
 
           if (hasComponent) {
-            expect(typeof (content as any).component).toBe('string')
+            expect(typeof customContent.component).toBe('string')
           }
           if (hasComponentName) {
-            expect(typeof (content as any).componentName).toBe('string')
+            expect(typeof customContent.componentName).toBe('string')
           }
         })
 
         it('has valid props object if specified', () => {
-          if ((content as any).props !== undefined) {
-            expect(typeof (content as any).props).toBe('object')
+          if (customContent.props !== undefined) {
+            expect(typeof customContent.props).toBe('object')
           }
         })
       }
 
       if (content.type === 'status-grid') {
+        const statusGridContent = content as CardContentStatusGrid
         it('has required items array', () => {
-          expect((content as any).items).toBeDefined()
-          expect(Array.isArray((content as any).items)).toBe(true)
+          expect(statusGridContent.items).toBeDefined()
+          expect(Array.isArray(statusGridContent.items)).toBe(true)
         })
 
         it('has valid columns if specified', () => {
-          if ((content as any).columns !== undefined) {
-            expect(typeof (content as any).columns).toBe('number')
-            expect((content as any).columns).toBeGreaterThan(0)
+          if (statusGridContent.columns !== undefined) {
+            expect(typeof statusGridContent.columns).toBe('number')
+            expect(statusGridContent.columns).toBeGreaterThan(0)
           }
         })
       }
 
       if (content.type === 'stats-grid') {
+        const statsGridContent = content as CardContentStatsGrid
         it('has required stats array', () => {
-          expect((content as any).stats).toBeDefined()
-          expect(Array.isArray((content as any).stats)).toBe(true)
+          expect(statsGridContent.stats).toBeDefined()
+          expect(Array.isArray(statsGridContent.stats)).toBe(true)
         })
 
         it('has valid stat items', () => {
-          (content as any).stats.forEach((stat: any) => {
+          statsGridContent.stats.forEach((stat) => {
             expect(stat.field).toBeDefined()
             expect(typeof stat.field).toBe('string')
             expect(stat.label).toBeDefined()
@@ -487,8 +507,8 @@ describe('Filters validation', () => {
             expect(typeof filter.storageKey).toBe('string')
           }
 
-          if ((filter as any).searchFields !== undefined) {
-            expect(Array.isArray((filter as any).searchFields)).toBe(true)
+          if (filter.searchFields !== undefined) {
+            expect(Array.isArray(filter.searchFields)).toBe(true)
           }
         })
       })
@@ -543,15 +563,15 @@ describe('LoadingState validation', () => {
       })
 
       it('has valid rows if specified', () => {
-        if ((loadingState as any).rows !== undefined) {
-          expect(typeof (loadingState as any).rows).toBe('number')
-          expect((loadingState as any).rows).toBeGreaterThan(0)
+        if (loadingState.rows !== undefined) {
+          expect(typeof loadingState.rows).toBe('number')
+          expect(loadingState.rows).toBeGreaterThan(0)
         }
       })
 
       it('has valid showSearch if specified', () => {
-        if ((loadingState as any).showSearch !== undefined) {
-          expect(typeof (loadingState as any).showSearch).toBe('boolean')
+        if (loadingState.showSearch !== undefined) {
+          expect(typeof loadingState.showSearch).toBe('boolean')
         }
       })
     })
