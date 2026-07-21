@@ -159,7 +159,7 @@ export function StellarSidebar() {
         <div
           className={cn(
             'absolute bg-brand text-background px-3 py-2 rounded-lg shadow-lg',
-            'animate-bounce pointer-events-none select-none',
+            'animate-stellar-nudge pointer-events-none select-none',
             'font-medium text-sm whitespace-nowrap'
           )}
           style={{

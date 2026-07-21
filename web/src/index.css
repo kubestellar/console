@@ -396,6 +396,24 @@ layer(base);
   animation: fab-shimmer 2s ease-in-out infinite;
 }
 
+/* Stellar attention bubble nudge — a brief double shimmy on mount instead of
+   an endless animate-bounce (constant motion over the dashboard controls). */
+@keyframes stellar-nudge {
+  0%, 100% { transform: translateY(0); }
+  20% { transform: translateY(-6px); }
+  40% { transform: translateY(0); }
+  60% { transform: translateY(-3px); }
+  80% { transform: translateY(0); }
+}
+
+.animate-stellar-nudge {
+  animation: stellar-nudge 0.9s ease-in-out 2;
+}
+
+.reduce-motion .animate-stellar-nudge {
+  animation: none;
+}
+
 .reduce-motion .animate-fab-shimmer {
   animation: none;
 }
