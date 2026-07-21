@@ -179,9 +179,8 @@ function EnterpriseLayoutContent() {
     let previousSerialized: string | null = null
     try {
       previousSerialized = localStorage.getItem(activeStorageKey)
-    } catch (error) {
+    } catch {
       // Ignore storage errors (e.g. private-browsing SecurityError); treat as no previous value.
-      // error is intentionally unused - we treat all localStorage errors the same way.
     }
     const timestamp = Date.now()
     const additions: DashboardCardPlacement[] = cards.map((card, index) => ({
