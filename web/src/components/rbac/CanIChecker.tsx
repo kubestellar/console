@@ -1,4 +1,4 @@
-import { useReducer } from 'react'
+import { useReducer, useEffect, useMemo } from 'react'
 import { Shield, Check, X, Loader2, AlertCircle, ChevronDown } from 'lucide-react'
 import { useCanI } from '../../hooks/usePermissions'
 import { useClusters, useNamespaces } from '../../hooks/useMCP'
@@ -167,7 +167,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
 function CanICheckerContent() {
   const { t } = useTranslation('common')
   const { deduplicatedClusters: rawClusters } = useClusters()
-  const clusters = rawClusters.map(c => c.name)
+  const clusters = useMemo(() => rawClusters.map(c => c.name), [rawClusters])
   const { checkPermission, checking, result, error, reset } = useCanI()
 
   const [form, dispatch] = useReducer(formReducer, INITIAL_FORM_STATE)
@@ -177,7 +177,14 @@ function CanICheckerContent() {
     selectedUserGroups, customUserGroup, showAdvanced, checkedSnapshot,
   } = form
 
-  // Get selected cluster for namespace fetching — only after the user makes an explicit choice
+  // Auto-select the first cluster when clusters load and none is selected yet
+  useEffect(() => {
+    if (!cluster && clusters.length > 0) {
+      dispatch({ type: 'SET_FIELD', field: 'cluster', value: clusters[0] })
+    }
+  }, [cluster, clusters])
+
+  // Get selected cluster for namespace fetching
   const selectedCluster = cluster
   const { namespaces } = useNamespaces(selectedCluster)
 
