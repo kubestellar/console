@@ -60,7 +60,7 @@ describe('EnterpriseComplianceCards', () => {
 
       const loadingText = screen.getByText('Loading…');
       expect(loadingText).toBeInTheDocument();
-      expect(loadingText.className).toContain('text-gray-500');
+      expect(loadingText.className).toContain('text-muted-foreground');
     });
 
     it('renders success state and navigates on click', async () => {
