@@ -23,6 +23,7 @@ import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_
 import { useTimeoutFlag, useConditionalTimeout } from '../../hooks/useTimeoutFlag'
 import { CardErrorFallback, CardFailureBanner } from './CardErrorFallback'
 import { CardLoadingState } from './CardLoadingState'
+import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
 import { CardMeta } from './CardMeta'
 import { CardToolbar } from './CardToolbar'
 import { InfoTooltip } from './card-wrapper/InfoTooltip'
@@ -754,8 +755,6 @@ export const CardWrapper = memo(function CardWrapper({
                 <div className="@container flex min-h-0 flex-1 flex-col" style={CONTAINER_QUERY_STYLE}>
                   <CardLoadingState
                     cardId={cardId || cardType}
-                    cardType={cardType}
-                    title={title}
                     isVisible={isVisible}
                     isExpanded={isExpanded}
                     shouldShowSkeleton={shouldShowSkeleton}
@@ -768,12 +767,22 @@ export const CardWrapper = memo(function CardWrapper({
                     onLoadingTimeoutRetry={onRefresh ? handleLoadingTimeoutRetry : undefined}
                     isRefreshing={isRefreshing}
                     isVisuallySpinning={isVisuallySpinning}
-                    showInstallCta={showInstallCta}
                   >
                     {children}
                   </CardLoadingState>
                 </div>{/* Close @container query boundary */}
 
+              </div>
+            )}
+
+            {/* Demo-mode install CTA — rendered OUTSIDE the scroll container
+                so it is a pinned card footer on every card. Inside the
+                scroller it sat at the flex-box boundary, which put it
+                mid-card whenever content overflowed (min-h-card) and made
+                it scroll with the data on some cards but not others. */}
+            {!isCollapsed && showInstallCta && (
+              <div className="shrink-0 px-4 pb-2">
+                <InstallCTAFlow cardType={cardType} title={title} />
               </div>
             )}
 

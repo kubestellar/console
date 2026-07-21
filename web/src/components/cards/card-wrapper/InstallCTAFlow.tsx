@@ -86,12 +86,9 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
 
   return (
     <>
-      {/* Install CTA button. relative+z-10 with an opaque backdrop: card
-          content constrained by min-h-card can bleed past its flex box
-          (overflow is visible), and without a background the CTA text
-          renders mixed into that overflowing row (#overlap on most cards
-          in demo mode). shrink-0 keeps the row from being squeezed away. */}
-      <div className="relative z-10 shrink-0 border-t border-yellow-500/10 bg-card/90 pt-2 backdrop-blur-sm">
+      {/* Install CTA button — rendered by CardWrapper as a pinned footer
+          outside the card's scroll container. */}
+      <div className="border-t border-yellow-500/10 pt-2">
         <button
           onClick={(e) => { e.stopPropagation(); void handleClick() }}
           disabled={isPreparingInstall}

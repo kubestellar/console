@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import type { CardDataState } from './CardDataContext'
 import { CardErrorFallback } from './CardErrorFallback'
-import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
 import { CardSkeleton, type CardSkeletonProps } from '@/lib/cards/CardComponents'
 
 // Pure presentation component — renders loading/error states based on props; no data fetching.
@@ -13,8 +12,6 @@ import { CardSkeleton, type CardSkeletonProps } from '@/lib/cards/CardComponents
 
 export interface CardLoadingStateProps {
   cardId: string
-  cardType: string
-  title: string
   children: ReactNode
   isVisible: boolean
   isExpanded: boolean
@@ -28,13 +25,10 @@ export interface CardLoadingStateProps {
   onLoadingTimeoutRetry?: () => void
   isRefreshing?: boolean
   isVisuallySpinning: boolean
-  showInstallCta: boolean
 }
 
 export function CardLoadingState({
   cardId,
-  cardType,
-  title,
   children,
   isVisible,
   isExpanded,
@@ -48,7 +42,6 @@ export function CardLoadingState({
   onLoadingTimeoutRetry,
   isRefreshing,
   isVisuallySpinning,
-  showInstallCta,
 }: CardLoadingStateProps) {
   const { t } = useTranslation('cards')
   const shouldShowLoadingTimeout = cardLoadingTimedOut && !childDataState?.hasData
@@ -145,9 +138,6 @@ export function CardLoadingState({
           </Suspense>
         </CardErrorFallback>
       </div>
-      {showInstallCta && (
-        <InstallCTAFlow cardType={cardType} title={title} />
-      )}
     </>
   )
 }
