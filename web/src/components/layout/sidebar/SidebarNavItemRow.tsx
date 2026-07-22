@@ -174,6 +174,7 @@ export function SidebarNavItemRow({
           )}>
             {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
             {!isCollapsed && (
+              // eslint-disable-next-line no-restricted-syntax -- inline rename needs bg-transparent + border-b styling that the shared <Input> wrapper (div-wrapped, rounded, filled bg) doesn't support
               <input
                 type="text"
                 value={editingName}
