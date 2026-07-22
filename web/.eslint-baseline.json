@@ -19507,5 +19507,33 @@
     "line": 30,
     "column": 7,
     "message": "'APP_FILE' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/components/dashboard/__tests__/layout.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 36,
+    "column": 69,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/components/dashboard/__tests__/layout.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 40,
+    "column": 65,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/components/dashboard/__tests__/layout.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 129,
+    "column": 96,
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/components/dashboard/__tests__/persistence.test.ts",
+    "rule": "@typescript-eslint/no-explicit-any",
+    "line": 91,
+    "column": 36,
+    "message": "Unexpected any. Specify a different type."
   }
 ]

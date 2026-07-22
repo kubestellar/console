@@ -1,6 +1,7 @@
 import { COPY_FEEDBACK_TIMEOUT_MS } from '../lib/constants'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   ArrowRight,
   ExternalLink,
@@ -226,6 +227,7 @@ function VisibilityIcon({ visible }: { visible: boolean }) {
 /* ------------------------------------------------------------------ */
 
 function DeploymentSection() {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<DeployTab>('helm')
   const [copyFeedback, setCopyFeedback] = useState({ stepKey: null as string | null, token: 0 })
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -290,6 +292,7 @@ function DeploymentSection() {
           <button
             role="tab"
             aria-selected={activeTab === 'binary'}
+            aria-label={t('whiteLabel.selectBinaryTab')}
             onClick={() => switchTab('binary')}
             className={cn(
               'flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors',
@@ -305,6 +308,7 @@ function DeploymentSection() {
           <button
             role="tab"
             aria-selected={activeTab === 'helm'}
+            aria-label={t('whiteLabel.selectHelmTab')}
             onClick={() => switchTab('helm')}
             className={cn(
               'flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors',
@@ -320,6 +324,7 @@ function DeploymentSection() {
           <button
             role="tab"
             aria-selected={activeTab === 'docker'}
+            aria-label={t('whiteLabel.selectDockerTab')}
             onClick={() => switchTab('docker')}
             className={cn(
               'flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors',
@@ -359,7 +364,7 @@ function DeploymentSection() {
                       <button
                         onClick={() => copyCommands(s.commands!, s.step)}
                         className="absolute top-2.5 right-2.5 p-1.5 rounded-md bg-card border border-border/50 text-muted-foreground hover:text-white hover:border-border transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                        aria-label="Copy commands"
+                        aria-label={t('whiteLabel.copyCommands')}
                       >
                         {isCopied ? (
                           <Check className="w-3.5 h-3.5 text-green-400" />
