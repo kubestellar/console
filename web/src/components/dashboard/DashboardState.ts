@@ -2,14 +2,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  closestCenter,
-  pointerWithin,
-  rectIntersection,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -27,10 +23,9 @@ import { useDashboardContext } from '../../hooks/useDashboardContext'
 import { useToast } from '../ui/Toast'
 import { prefetchCardChunks } from '../cards/cardRegistry'
 import { ROUTES } from '../../config/routes'
-import { getDefaultCardsForDashboard } from '../../config/dashboards'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { STORAGE_KEY_DASHBOARD_AUTO_REFRESH } from '../../lib/constants'
-import { loadDashboardCardsFromStorage, saveDashboardCardsToStorage } from '../../lib/dashboards/dashboardCardStorage'
+import { saveDashboardCardsToStorage } from '../../lib/dashboards/dashboardCardStorage'
 import { useMissions } from '../../hooks/useMissions'
 import type { Card, DashboardData } from './dashboardUtils'
 import { isLocalOnlyCard, mapVisualizationToCardType, getDefaultCardSize, getDemoCards } from './dashboardUtils'
@@ -46,30 +41,19 @@ import { useCardGridNavigation } from '../../hooks/useCardGridNavigation'
 import { useModalState } from '../../lib/modals'
 import { setAutoRefreshPaused } from '../../lib/cache'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { STORAGE_KEY_MAIN_DASHBOARD_CARDS } from '../../lib/constants/storage'
 import { isClusterHealthy } from '../clusters/utils'
 import type { DashboardTemplate } from './templates'
-
-const AUTO_REFRESH_INTERVAL_MS = 30_000
-
-interface CachedDashboard {
-  dashboard: DashboardData | null
-  cards: Card[]
-  timestamp: number
-}
-
-interface PendingDeploy {
-  workloadName: string
-  namespace: string
-  sourceCluster: string
-  targetClusters: string[]
-  groupName: string
-}
-
-let dashboardCache: CachedDashboard | null = null
-
-const DASHBOARD_STORAGE_KEY = STORAGE_KEY_MAIN_DASHBOARD_CARDS
-const DEFAULT_DASHBOARD_CARDS: Card[] = getDefaultCardsForDashboard('main')
+import { dashboardCollisionDetection, POINTER_SENSOR_ACTIVATION_DISTANCE } from './layout'
+import {
+  AUTO_REFRESH_INTERVAL_MS,
+  DASHBOARD_STORAGE_KEY,
+  DEFAULT_DASHBOARD_CARDS,
+  dashboardCache,
+  setDashboardCache,
+  patchDashboardCache,
+  initLocalCardsState,
+  type PendingDeploy,
+} from './persistence'
 
 export function useDashboardState() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(() => dashboardCache?.dashboard || null)
@@ -80,18 +64,7 @@ export function useDashboardState() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { isOpen: isConfigureCardOpen, open: openConfigureCard, close: closeConfigureCard } = useModalState()
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
-  const [localCards, setLocalCards] = useState<Card[]>(() => {
-    if (dashboardCache?.cards?.length) return dashboardCache.cards
-    const restoredCards = loadDashboardCardsFromStorage<Card>(
-      DASHBOARD_STORAGE_KEY,
-      DEFAULT_DASHBOARD_CARDS,
-      { requirePosition: true, requireGridCoordinates: true },
-    )
-    if (restoredCards.length > 0) {
-      return restoredCards
-    }
-    return DEFAULT_DASHBOARD_CARDS
-  })
+  const [localCards, setLocalCards] = useState<Card[]>(initLocalCardsState)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeDragData, setActiveDragData] = useState<Record<string, unknown> | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -268,7 +241,7 @@ export function useDashboardState() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 3,
+        distance: POINTER_SENSOR_ACTIVATION_DISTANCE,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -276,40 +249,7 @@ export function useDashboardState() {
     }),
   )
 
-  const collisionDetection: CollisionDetection = useCallback((args) => {
-    const isWorkloadDrag = args.active.data.current?.type === 'workload'
-    if (isWorkloadDrag) {
-      const allCollisions = [
-        ...pointerWithin(args),
-        ...rectIntersection(args),
-      ]
-      const seen = new Set<string>()
-      const unique = allCollisions.filter(collision => {
-        const id = String(collision.id)
-        if (seen.has(id)) return false
-        seen.add(id)
-        return true
-      })
-      const targetCollision = unique.find(
-        collision => String(collision.id).startsWith('cluster-group-') || String(collision.id).startsWith('cluster-drop-')
-      )
-      if (targetCollision) return [targetCollision]
-      const cardTarget = unique.find(collision => String(collision.id) === 'cluster-groups-card')
-      if (cardTarget) return [cardTarget]
-      const dashboardCollision = unique.find(
-        collision => String(collision.id).startsWith('dashboard-drop-') || String(collision.id) === 'create-new-dashboard'
-      )
-      if (dashboardCollision) return [dashboardCollision]
-      return []
-    }
-    const centerCollisions = closestCenter(args)
-    const pointerCollisions = pointerWithin(args)
-    const dashboardDropTarget = pointerCollisions.find(
-      collision => String(collision.id).startsWith('dashboard-drop-') || String(collision.id) === 'create-new-dashboard'
-    )
-    if (dashboardDropTarget) return [dashboardDropTarget]
-    return centerCollisions
-  }, [])
+  const collisionDetection = dashboardCollisionDetection
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const id = event.active.id as string
@@ -507,14 +447,14 @@ export function useDashboardState() {
           }
           return apiCards
         })
-        dashboardCache = { dashboard: data, cards: apiCards, timestamp: Date.now() }
+        setDashboardCache({ dashboard: data, cards: apiCards, timestamp: Date.now() })
       } else {
         if (isBackground) {
           return
         }
         const cards = getDemoCards()
         setLocalCards(cards)
-        dashboardCache = { dashboard: null, cards, timestamp: Date.now() }
+        setDashboardCache({ dashboard: null, cards, timestamp: Date.now() })
       }
     } catch (error: unknown) {
       const isExpectedFailure = error instanceof BackendUnavailableError ||
@@ -538,7 +478,7 @@ export function useDashboardState() {
         setLocalCards(prevCards => {
           if (prevCards.length > 0) return prevCards
           const cards = getDemoCards()
-          dashboardCache = { dashboard: null, cards, timestamp: Date.now() }
+          setDashboardCache({ dashboard: null, cards, timestamp: Date.now() })
           return cards
         })
       }
@@ -560,9 +500,7 @@ export function useDashboardState() {
 
   useEffect(() => {
     if (localCards.length > 0) {
-      if (dashboardCache) {
-        dashboardCache = { ...dashboardCache, cards: localCards, timestamp: Date.now() }
-      }
+      patchDashboardCache({ cards: localCards, timestamp: Date.now() })
       saveDashboardCardsToStorage(DASHBOARD_STORAGE_KEY, localCards)
     }
   }, [localCards])
