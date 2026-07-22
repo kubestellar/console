@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { MCP_HOOK_TIMEOUT_MS, BACKEND_HEALTH_CHECK_TIMEOUT_MS, STORAGE_KEY_USER_CACHE, STORAGE_KEY_HAS_SESSION, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
 import { clearStoredAuthToken, getStoredAuthToken, getStoredAuthTokenSync } from './authToken'
 import { emitSessionExpired, emitHttpError } from './analytics'
@@ -9,56 +8,42 @@ import {
 } from './backendHealthEvents'
 import { reportAppError } from './errors/handleError'
 import { ROUTES } from '../config/routes'
+import {
+  UnauthenticatedError,
+  UnauthorizedError,
+  RateLimitError,
+  BackendUnavailableError,
+  type OAuthProbeResult,
+} from './api/types'
+import {
+  AUTH_LOGOUT_ENDPOINT,
+  AUTH_VERIFY_ENDPOINT,
+  PUBLIC_API_PREFIXES,
+  BACKEND_OUTAGE_EXEMPT_PREFIXES,
+} from './api/endpoints'
+
+export {
+  UnauthenticatedError,
+  UnauthorizedError,
+  RateLimitError,
+  BackendUnavailableError,
+  type OAuthProbeResult,
+} from './api/types'
 
 const API_BASE = ''
 const DEFAULT_TIMEOUT = MCP_HOOK_TIMEOUT_MS
 const BACKEND_CHECK_INTERVAL = 10_000 // 10 seconds between backend checks when unavailable
 /** How long to trust a cached backend-availability check (5 minutes) */
 const BACKEND_CACHE_TTL_MS = 300_000
-/**
- * Routes whose 5xx responses indicate an optional upstream/dependency issue,
- * not that the console backend itself is down.
- */
-const BACKEND_OUTAGE_EXEMPT_PREFIXES = ['/api/kagent/', '/api/kagenti-provider/']
 /** Delay before redirecting to login after session expiry (lets user see the banner) */
 const SESSION_EXPIRY_REDIRECT_MS = 3_000
 const TOKEN_REFRESH_HEADER = 'X-Token-Refresh' // server signals when token should be refreshed
-/** Endpoint used to invalidate the HttpOnly auth cookie on the server side (#6061). */
-const AUTH_LOGOUT_ENDPOINT = '/auth/logout'
 const TOAST_Z_INDEX = 99_999
-
-// Public API paths that don't require authentication (served without JWT on the backend)
-const PUBLIC_API_PREFIXES = ['/api/missions/browse', '/api/missions/file', '/api/compliance/']
-
-// Error class for unauthenticated requests
-export class UnauthenticatedError extends Error {
-  constructor() {
-    super('No authentication token available')
-    this.name = 'UnauthenticatedError'
-  }
-}
-
-// Error class for 401 unauthorized responses (invalid/expired token)
-export class UnauthorizedError extends Error {
-  constructor() {
-    super('Token is invalid or expired')
-    this.name = 'UnauthorizedError'
-  }
-}
 
 /** localStorage key for global API rate-limit backoff deadline (epoch ms). */
 const STORAGE_KEY_RATE_LIMIT_UNTIL = 'kc-api-rate-limit-until'
 /** Default Retry-After when the header is missing or unparseable. */
 const DEFAULT_RATE_LIMIT_RETRY_AFTER_S = 60
-
-export class RateLimitError extends Error {
-  retryAfter: number
-  constructor(retryAfter: number) {
-    super(`Rate limited. Try again in ${retryAfter} seconds.`)
-    this.name = 'RateLimitError'
-    this.retryAfter = retryAfter
-  }
-}
 
 function handle429(response: Response): never {
   const retryAfterRaw = response.headers.get('Retry-After')
@@ -86,10 +71,6 @@ const HANDLING_401_RESET_MS = 10_000
 /** Short timeout on the session-verify probe so a hung backend doesn't block
  *  the session-expired UI indefinitely (#8372). */
 const SESSION_VERIFY_TIMEOUT_MS = 3_000
-/** Endpoint used to verify the HttpOnly cookie is still valid. A 200 here
- *  means the cookie still authenticates, so a 401 from another endpoint was
- *  endpoint-specific (not a session expiry). */
-const AUTH_VERIFY_ENDPOINT = '/api/me'
 
 /**
  * Handle 401 Unauthorized responses by clearing auth state and redirecting to login.
@@ -246,14 +227,6 @@ function showSessionExpiredBanner(): void {
   document.body.appendChild(toast)
 }
 
-// Error class for backend unavailable
-export class BackendUnavailableError extends Error {
-  constructor() {
-    super('Backend API is currently unavailable')
-    this.name = 'BackendUnavailableError'
-  }
-}
-
 // Backend availability tracking with localStorage persistence
 const BACKEND_STATUS_KEY = 'kc-backend-status'
 let backendLastCheckTime = 0
@@ -375,16 +348,6 @@ export async function checkOAuthConfiguredWithRetry(): Promise<OAuthProbeResult>
     }
   }
   return lastResult
-}
-
-/** Result of probing the backend /health endpoint for auth configuration. */
-export interface OAuthProbeResult {
-  backendUp: boolean
-  oauthConfigured: boolean
-  /** True when the backend reports it is running inside a Kubernetes cluster
-   *  (`in_cluster` in /health). Defaults to false when absent (e.g. Netlify
-   *  functions or older backends) so hosted-site behavior is unchanged. */
-  inCluster: boolean
 }
 
 /**
