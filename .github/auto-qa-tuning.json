@@ -74,21 +74,8 @@
     "last_report_date": "2026-07-19"
   },
   "cncf_insights": {
-    "last_scan_date": "2026-07-15",
-    "suggested_checks": [
-      {
-        "pattern": "data_viz",
-        "count": 6,
-        "added": "2026-07-15",
-        "priority": "medium"
-      },
-      {
-        "pattern": "form_ux",
-        "count": 21,
-        "added": "2026-07-15",
-        "priority": "medium"
-      }
-    ]
+    "last_scan_date": "2026-07-22",
+    "suggested_checks": []
   },
   "history": [
     {
