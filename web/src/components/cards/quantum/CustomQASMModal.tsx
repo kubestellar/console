@@ -130,7 +130,7 @@ const MemoizedCustomQASMModal = React.memo(function MemoizedCustomQASMModal({
             onClick={handleCancel}
             className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            <X className="w-5 h-5 text-gray-500 dark:text-gray-300" />
           </button>
         </div>
 
@@ -145,7 +145,7 @@ const MemoizedCustomQASMModal = React.memo(function MemoizedCustomQASMModal({
               'px-4 py-3 font-medium text-sm border-b-2 transition-colors',
               mode === 'paste'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-200'
             )}
           >
             <div className="flex items-center gap-2">
@@ -162,7 +162,7 @@ const MemoizedCustomQASMModal = React.memo(function MemoizedCustomQASMModal({
               'px-4 py-3 font-medium text-sm border-b-2 transition-colors',
               mode === 'upload'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-200'
             )}
           >
             <div className="flex items-center gap-2">
@@ -176,7 +176,7 @@ const MemoizedCustomQASMModal = React.memo(function MemoizedCustomQASMModal({
         <div className="flex-1 overflow-auto p-4">
           {mode === 'paste' ? (
             <div className="space-y-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
                 Paste your QASM circuit code below. Must start with "OPENQASM".
               </p>
               <TextArea
@@ -188,23 +188,23 @@ const MemoizedCustomQASMModal = React.memo(function MemoizedCustomQASMModal({
                 error={!!error}
               />
               {content && (
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-gray-500 dark:text-gray-300">
                   {content.length} / {MAX_SIZE_BYTES} bytes
                 </div>
               )}
             </div>
           ) : (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
                 Select a .qasm file from your computer.
               </p>
               <div
                 className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Upload className="w-8 h-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                <Upload className="w-8 h-8 text-gray-300 dark:text-gray-500 mx-auto mb-2" />
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Click to upload or drag & drop</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">QASM files up to 50KB</p>
+                <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">QASM files up to 50KB</p>
               </div>
               <Input
                 ref={fileInputRef}
