@@ -21,7 +21,7 @@ export function computeIntotoStats(layouts: IntotoLayout[]): IntotoStats {
     missingSteps: 0,
   }
 
-  for (const layout of safeLayouts) {
+  for (const layout of (safeLayouts || [])) {
     stats.totalSteps += layout.steps.length
     stats.verifiedSteps += layout.verifiedSteps
     stats.failedSteps += layout.failedSteps

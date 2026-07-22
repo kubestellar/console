@@ -416,7 +416,7 @@ export function useStackDiscovery(clusters: string[]) {
             // Phase 1: replace all stacks for this cluster
             const cachedById = new Map<string, LLMdStack>()
             const filtered: LLMdStack[] = []
-            for (const s of prev) {
+            for (const s of (prev || [])) {
               if (s.cluster === cluster) {
                 cachedById.set(s.id, s)
               } else {
