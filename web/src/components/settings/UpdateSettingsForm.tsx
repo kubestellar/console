@@ -15,6 +15,8 @@ import {
   GitCommitHorizontal,
   Info,
   Store,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { type UpdateSettingsState } from './useUpdateSettingsState'

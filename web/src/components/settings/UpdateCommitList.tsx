@@ -7,7 +7,7 @@ import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time
 const DAYS_PER_WEEK = 7
 const MS_PER_WEEK = MS_PER_DAY * DAYS_PER_WEEK
 
-export function formatCommitDate(iso: string): string {
+function formatCommitDate(iso: string): string {
   const date = new Date(iso)
   const now = Date.now()
   const diff = now - date.getTime()
