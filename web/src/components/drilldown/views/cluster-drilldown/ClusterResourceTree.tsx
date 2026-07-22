@@ -2,6 +2,7 @@ import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, Hard
 import { StatusBadge } from '../../../ui/StatusBadge'
 import { StatusIndicator } from '../../../charts/StatusIndicator'
 import { NamespaceResources } from '../../../clusters/components'
+import { Input } from '../../../ui/Input'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../../lib/cn'
 import type { NodeInfo, NamespaceStats, ClusterHealth, Service, PodIssue, Deployment, PVC } from '../../../../hooks/useMCP'
@@ -74,12 +75,13 @@ export function ClusterResourceTree({
         {/* Search */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
+          <Input
             type="text"
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
             placeholder={t('common.searchResources')}
-            className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
+            className="pl-10"
+            leadingIcon={null}
           />
         </div>
 
