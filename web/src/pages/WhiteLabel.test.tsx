@@ -45,7 +45,7 @@ function getCopyButtonForStep(stepTitle: string) {
     throw new Error(`Missing card for step: ${stepTitle}`)
   }
 
-  return within(card as HTMLElement).getByRole('button', { name: 'Copy commands' })
+  return within(card as HTMLElement).getByRole('button', { name: 'whiteLabel.copyCommands' })
 }
 
 describe('WhiteLabel', () => {
