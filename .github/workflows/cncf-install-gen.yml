@@ -811,14 +811,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           BRANCH="cncf-install-gen-$(date +%Y%m%d)-$(date +%s | tail -c 5)"
           git checkout -b "$BRANCH"
           git add fixes/cncf-install/ fixes/index.json
+          if git diff --cached --quiet; then
+            echo "No new missions to commit; skipping PR"
+            exit 0
+          fi
+          NEW_COUNT=$(git diff --cached --name-only -- 'fixes/cncf-install/cncf-*.json' | wc -l | tr -d ' ')
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -s -m "✨ Auto-generate CNCF install missions ($(date +%Y-%m-%d))
 
-          Generated install & configure missions across ${{ needs.plan.outputs.batch_count }} batches.
+          Generated $NEW_COUNT new/updated install & configure missions across ${{ needs.plan.outputs.batch_count }} batches.
           Published: ${{ needs.collect.outputs.published }}, Drafts: ${{ needs.collect.outputs.drafts }}
           Average quality score: ${{ needs.collect.outputs.avg_score }}
           Integration test: ${{ needs.integration-test.outputs.result }} (${{ needs.integration-test.outputs.passed }}/${{ needs.integration-test.outputs.total }} passed)
