@@ -42,10 +42,7 @@ import {
 import {
   useServiceExports,
   useServiceImports } from '../../../hooks/useMCS'
-import { useFluxStatus } from '../../../components/cards/flux_status/useFluxStatus'
 import { useCachedBackstage } from '../../../hooks/useCachedBackstage'
-import { useContourStatus } from '../../../components/cards/contour_status/useContourStatus'
-import { useChaosMeshStatus } from '../../../components/cards/chaos_mesh_status/useChaosMeshStatus'
 import { useCachedContainerd } from '../../../hooks/useCachedContainerd'
 import { useCachedCortex } from '../../../hooks/useCachedCortex'
 import { useCachedDapr } from '../../../hooks/useCachedDapr'
