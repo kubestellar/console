@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 1644,
+  "count": 1645,
   "missions": [
     {
       "path": "fixes/cncf-generated/akri/akri-85-extensibility-http-protocol.json",
@@ -2801,6 +2801,48 @@
         "feature"
       ],
       "type": "feature",
+      "installMethods": [],
+      "maturity": "graduated",
+      "qualityScore": 100,
+      "qualityPass": true,
+      "qualityBreakdown": {
+        "clarity": 100,
+        "completeness": 100,
+        "correctness": 100,
+        "structure": 100,
+        "observability": 100
+      },
+      "qualityIssues": [],
+      "qualitySuggestions": []
+    },
+    {
+      "path": "fixes/cncf-generated/argo-workflows/argo-workflows-11657-controller-invalid-config-map-object-received-in-config-wat.json",
+      "title": "argo-workflows: Controller: `invalid config map object received in config watcher. Ignored processing` with CPU spike",
+      "description": "Controller: `invalid config map object received in config watcher. Ignored processing` with CPU spike. This issue affects 34+ users.",
+      "category": "cncf-generated",
+      "missionClass": "fixer",
+      "author": "KubeStellar Bot",
+      "authorGithub": "kubestellar",
+      "authorAvatar": "https://github.com/kubestellar.png",
+      "tags": [
+        "argo-workflows",
+        "graduated",
+        "app-definition",
+        "analyze"
+      ],
+      "cncfProjects": [
+        "argo-workflows"
+      ],
+      "targetResourceKinds": [
+        "Pod",
+        "Configmap",
+        "Namespace"
+      ],
+      "difficulty": "advanced",
+      "issueTypes": [
+        "analyze"
+      ],
+      "type": "analyze",
       "installMethods": [],
       "maturity": "graduated",
       "qualityScore": 100,
