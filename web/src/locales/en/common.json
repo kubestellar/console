@@ -5567,5 +5567,11 @@
     "approved": "Approved",
     "unapproved": "Unapproved"
   },
-  "clearSelection": "Clear selection"
+  "clearSelection": "Clear selection",
+  "whiteLabel": {
+    "selectBinaryTab": "Select binary installation method",
+    "selectHelmTab": "Select Helm installation method",
+    "selectDockerTab": "Select Docker installation method",
+    "copyCommands": "Copy installation commands"
+  }
 }
