@@ -486,12 +486,12 @@ phase6() {
     local issues=""
 
     # Check for named cache key constant (CACHE_KEY, STORAGE_KEY, STATUS_KEY, CACHE_PREFIX — defined or imported)
-    if ! rg -Uq '(?s)(const\s+\w*(CACHE_KEY|STORAGE_KEY|STATUS_KEY|CACHE_PREFIX)\w*\s*=|import\s*\{.*?\b\w*(CACHE_KEY|STORAGE_KEY|STATUS_KEY|CACHE_PREFIX)\w*\b.*?\}\s*from)' "$filepath" 2>/dev/null; then
+    if ! rg -Uq '(?s)(const\s+\w*(CACHE_KEY|STORAGE_KEY|STATUS_KEY|CACHE_PREFIX)\w*\s*=|import\s*\{[^}]*\b\w*(CACHE_KEY|STORAGE_KEY|STATUS_KEY|CACHE_PREFIX)\w*\b[^}]*\}\s*from)' "$filepath" 2>/dev/null; then
       issues="${issues}missing named cache key constant; "
     fi
 
     # Check for named TTL constant (TTL, MAX_AGE, CACHE_DURATION, CACHE_EXPIRY — defined or imported)
-    if ! rg -Uq '(?s)(const\s+\w*(TTL|MAX_AGE|CACHE_DURATION|CACHE_EXPIRY)\w*\s*=|import\s*\{.*?\b\w*(TTL|MAX_AGE|CACHE_DURATION|CACHE_EXPIRY)\w*\b.*?\}\s*from)' "$filepath" 2>/dev/null; then
+    if ! rg -Uq '(?s)(const\s+\w*(TTL|MAX_AGE|CACHE_DURATION|CACHE_EXPIRY)\w*\s*=|import\s*\{[^}]*\b\w*(TTL|MAX_AGE|CACHE_DURATION|CACHE_EXPIRY)\w*\b[^}]*\}\s*from)' "$filepath" 2>/dev/null; then
       issues="${issues}missing named TTL constant; "
     fi
 
