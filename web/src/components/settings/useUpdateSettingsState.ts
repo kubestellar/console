@@ -322,7 +322,7 @@ export function useUpdateSettingsState() {
     return new Date(lastChecked).toLocaleDateString()
   }
 
-  const shortSHA = (sha: string) => (sha ? sha.slice(0, 7) : '—')
+  const shortSHA = (sha: string | null | undefined) => (sha ? sha.slice(0, 7) : '—')
 
   return {
     t,

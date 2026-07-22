@@ -1,15 +1,10 @@
 import { useState, useRef } from 'react'
-
-interface NavItem {
-  id: string
-  order: number
-  [key: string]: unknown
-}
+import type { SidebarItem } from '../../../hooks/useSidebarConfig'
 
 interface UseSidebarDragDropParams {
-  primaryNav: NavItem[]
-  secondaryNav: NavItem[]
-  reorderItems: (items: NavItem[], section: 'primary' | 'secondary') => void
+  primaryNav: SidebarItem[]
+  secondaryNav: SidebarItem[]
+  reorderItems: (items: SidebarItem[], target: 'primary' | 'secondary' | 'sections') => void
 }
 
 export function useSidebarDragDrop({ primaryNav, secondaryNav, reorderItems }: UseSidebarDragDropParams) {

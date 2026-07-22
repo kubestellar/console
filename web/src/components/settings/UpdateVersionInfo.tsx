@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle } from 'lucide-react'
 
 interface LatestRelease {
   tag: string

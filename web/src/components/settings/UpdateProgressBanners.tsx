@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { INITIAL_PROGRESS_PCT } from './useUpdateSettingsState'
 
 interface ProgressEntry {
-  step: string
+  step: number
   message: string
   status: 'completed' | 'active' | 'pending'
 }
