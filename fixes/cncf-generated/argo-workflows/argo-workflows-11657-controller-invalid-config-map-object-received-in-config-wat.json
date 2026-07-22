@@ -1,0 +1,84 @@
+{
+  "version": "kc-mission-v1",
+  "name": "argo-workflows-11657-controller-invalid-config-map-object-received-in-config-wat",
+  "missionClass": "fixer",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "argo-workflows: Controller: `invalid config map object received in config watcher. Ignored processing` with CPU spike",
+    "description": "Controller: `invalid config map object received in config watcher. Ignored processing` with CPU spike. This issue affects 34+ users.",
+    "type": "analyze",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Identify argo-workflows analyze symptoms",
+        "description": "Check for the issue in your argo-workflows deployment:\n```bash\nkubectl get pods -n argo-workflows -l app.kubernetes.io/name=argo-workflows\nkubectl logs -l app.kubernetes.io/name=argo-workflows -n argo-workflows --tail=100 | grep -i error\n```\nLook for errors or warnings in the logs that may indicate the issue."
+      },
+      {
+        "title": "Review argo-workflows configuration",
+        "description": "Inspect the relevant argo-workflows configuration:\n```bash\nkubectl get all -n argo-workflows -l app.kubernetes.io/name=argo-workflows\nkubectl get configmap -n argo-workflows -l app.kubernetes.io/part-of=argo-workflows\n```\n_edits below by agilgur5 for clarity as this issue is very popular_\n\n### Updates summary\n- this [seems to be caused by](https://github.com/argoproj/argo-workflows/issues/11657#issuecomment-1835920034) upgrading your cluster to k8s 1.27\n  - an"
+      },
+      {
+        "title": "Apply the fix for Controller: `invalid config map object received in config…",
+        "description": "It seems this is only happening with kubernetes version 1.27 or later. Does anyone have evidence of it happening on earlier versions?\n\nWe are still using client-go from 0.24, which should not be compatible with 1.27, so perhaps that's the cause here.\n```yaml\nName:         argo-workflow-controller-configmap\nNamespace:    argo\nLabels:       app.kubernetes.io/component=workflow-controller\n              app.kubernetes.io/instance=argo\n              app.kubernetes.io/managed-by=Helm\n              app.kubernetes.io/name=argo-workflows-cm\n              app.kubernetes.io/part-of=argo-workflows\n              helm.sh/chart=argo-workflows-0.33.1\nAnnotations:  meta.helm.sh/release-name: argo\n              meta.helm.sh/release-namespace: argo\n```"
+      },
+      {
+        "title": "Upgrade argo-workflows to include the fix",
+        "description": "If the fix is included in a newer release, upgrade argo-workflows:\n```bash\nhelm repo update\nhelm upgrade argo-workflows argo-workflows/argo-workflows --namespace argo-workflows\n```\nVerify the upgrade:\n```bash\nkubectl get pods -n argo-workflows\nhelm list -n argo-workflows\n```"
+      },
+      {
+        "title": "Confirm Controller: `invalid config map object received… is resolved",
+        "description": "Verify the fix by checking that the original error no longer occurs:\n```bash\nkubectl logs -l app.kubernetes.io/name=argo-workflows -n argo-workflows --tail=50 --since=5m\nkubectl get events -n argo-workflows --sort-by='.lastTimestamp' | tail -10\n```\nConfirm that the issue symptoms are gone."
+      }
+    ],
+    "resolution": {
+      "summary": "It seems this is only happening with kubernetes version 1.27 or later. Does anyone have evidence of it happening on earlier versions?\n\nWe are still using client-go from 0.24, which should not be compatible with 1.27, so perhaps that's the cause here. https://github.com/argoproj/argo-workflows/blob/6c0697928f92160f84e2fc6581551d26e13c0dc5/go.mod#L70",
+      "codeSnippets": [
+        "Name:         argo-workflow-controller-configmap\nNamespace:    argo\nLabels:       app.kubernetes.io/component=workflow-controller\n              app.kubernetes.io/instance=argo\n              app.kubernetes.io/managed-by=Helm\n              app.kubernetes.io/name=argo-workflows-cm\n              app.kubernetes.io/part-of=argo-workflows\n              helm.sh/chart=argo-workflows-0.33.1\nAnnotations:  meta.helm.sh/release-name: argo\n              meta.helm.sh/release-namespace: argo",
+        "data:\n  metricsConfig:\n    enabled: true\n    path: /metrics\n    port: 9090\n    ignoreErrors: false\n    secure: false\n  persistence:\n    archive: true\n    archiveTTL: 60d\n    postgresql:\n      database: argo\n      host: <REDACTED>\n      passwordSecret: <REDACTED> password\n        name: argo-postgres-config\n      port: 5432\n      ssl: false\n      sslMode: disabled\n      tableName: argo_workflows\n      userNameSecret: <REDACTED> username\n        name: argo-postgres-config\n  workflowDefaults:\n    spec:\n      ttlStrategy:\n        secondsAfterFailure: 604800\n  sso:\n    issuer: https://<REDACTED>\n    clientId:\n      name: argo-server-clientid\n      key: clientid\n    clientSecret: <REDACTED> argo-server-clientsecret\n      key: clientsecret\n    redirectUrl: https://<REDACTED>/oauth2/callback\n ",
+        "time=\"2023-08-23T09:41:01.370Z\" level=error msg=\"invalid config map object received in config watcher. Ignored processing\""
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "argo-workflows",
+      "graduated",
+      "app-definition",
+      "analyze"
+    ],
+    "cncfProjects": [
+      "argo-workflows"
+    ],
+    "targetResourceKinds": [
+      "Pod",
+      "Configmap",
+      "Namespace"
+    ],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "analyze"
+    ],
+    "maturity": "graduated",
+    "sourceUrls": {
+      "issue": "https://github.com/argoproj/argo-workflows/issues/11657",
+      "repo": "https://github.com/argoproj/argo-workflows"
+    },
+    "reactions": 34,
+    "comments": 82,
+    "synthesizedBy": "copilot"
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "A running Kubernetes cluster with argo-workflows installed or the issue environment reproducible."
+  },
+  "security": {
+    "scannedAt": "2026-07-22T06:53:22.497Z",
+    "scannerVersion": "cncf-gen-3.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}
