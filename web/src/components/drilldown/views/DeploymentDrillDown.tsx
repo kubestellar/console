@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect, useRef, useCallback, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
@@ -16,120 +15,9 @@ import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { PageErrorBoundary } from '../../PageErrorBoundary'
 import { Button } from '../../ui/Button'
-
-/** Maximum replicas allowed via the UI scale widget. Kubernetes itself supports
- *  up to 2^31-1 but most real deployments won't exceed a few hundred. */
-const MAX_SCALE_REPLICAS = 100
-
-/** Pod status styling configuration */
-const POD_STATUS_CONFIG: Record<string, { bg: string; text: string }> = {
-  Running: { bg: 'bg-green-500/20', text: 'text-green-400' },
-  Pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-400' },
-  Failed: { bg: 'bg-red-500/20', text: 'text-red-400' },
-  CrashLoopBackOff: { bg: 'bg-red-500/20', text: 'text-red-400' },
-  ImagePullBackOff: { bg: 'bg-red-500/20', text: 'text-red-400' },
-  Unknown: { bg: 'bg-red-500/20', text: 'text-red-400' },
-}
-
-/**
- * Classify a raw kubectl scale error into a stable i18n key. The caller
- * runs `t(...)` on the result. Returning a static key literal keeps the
- * keys compatible with i18next-typescript strict typing (no runtime
- * template literals inside t()).
- *
- * Issue 9284: previously we surfaced the full kubectl stderr, which exposed
- * internal cluster details (namespaces, group-version-kind, resource versions)
- * that aren't useful to end users.
- */
-type ScaleErrorKey =
-  | 'drilldown.scale.failedGeneric'
-  | 'drilldown.scale.failedForbidden'
-  | 'drilldown.scale.failedNotFound'
-  | 'drilldown.scale.failedInvalid'
-  | 'drilldown.scale.failedConflict'
-  | 'drilldown.scale.failedTimeout'
-
-function classifyScaleError(raw: string): ScaleErrorKey {
-  const lc = (raw || '').toLowerCase()
-  if (!raw) return 'drilldown.scale.failedGeneric'
-  if (lc.includes('forbidden') || lc.includes('cannot patch') || lc.includes('unauthorized')) {
-    return 'drilldown.scale.failedForbidden'
-  }
-  if (lc.includes('not found') || lc.includes('notfound')) {
-    return 'drilldown.scale.failedNotFound'
-  }
-  if (lc.includes('invalid') || lc.includes('must be') || lc.includes('out of range')) {
-    return 'drilldown.scale.failedInvalid'
-  }
-  if (lc.includes('conflict') || lc.includes('modified')) {
-    return 'drilldown.scale.failedConflict'
-  }
-  if (lc.includes('timeout') || lc.includes('timed out') || lc.includes('deadline')) {
-    return 'drilldown.scale.failedTimeout'
-  }
-  return 'drilldown.scale.failedGeneric'
-}
-
-interface Props {
-  data: Record<string, unknown>
-}
-
-type TabType = 'overview' | 'pods' | 'events' | 'describe' | 'yaml'
-
-/** Kubernetes set-based label selector expression */
-interface LabelSelectorRequirement {
-  key: string
-  operator: 'In' | 'NotIn' | 'Exists' | 'DoesNotExist'
-  values?: string[]
-}
-
-/**
- * Build a kubectl-compatible label selector string from matchLabels and matchExpressions.
- * Supports both equality-based (matchLabels) and set-based (matchExpressions) selectors.
- *
- * kubectl -l format:
- *   matchLabels:      "key=value"
- *   In:               "key in (val1,val2)"
- *   NotIn:            "key notin (val1,val2)"
- *   Exists:           "key"
- *   DoesNotExist:     "!key"
- */
-function buildLabelSelector(
-  matchLabels?: Record<string, unknown>,
-  matchExpressions?: LabelSelectorRequirement[],
-): string {
-  const parts: string[] = []
-
-  // Equality-based selectors from matchLabels
-  if (matchLabels) {
-    for (const [k, v] of Object.entries(matchLabels)) {
-      parts.push(`${k}=${v}`)
-    }
-  }
-
-  // Set-based selectors from matchExpressions
-  if (matchExpressions) {
-    for (const expr of matchExpressions) {
-      const values = (expr.values || []).join(',')
-      switch (expr.operator) {
-        case 'In':
-          parts.push(`${expr.key} in (${values})`)
-          break
-        case 'NotIn':
-          parts.push(`${expr.key} notin (${values})`)
-          break
-        case 'Exists':
-          parts.push(expr.key)
-          break
-        case 'DoesNotExist':
-          parts.push(`!${expr.key}`)
-          break
-      }
-    }
-  }
-
-  return parts.join(',')
-}
+import { MAX_SCALE_REPLICAS, POD_STATUS_CONFIG } from './deployment-drilldown/types'
+import { classifyScaleError, buildLabelSelector } from './deployment-drilldown/helpers'
+import type { TabType, Props } from './deployment-drilldown/types'
 
 function DeploymentDrillDownContent({ data }: Props) {
   const { t } = useTranslation()
