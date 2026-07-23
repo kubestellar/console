@@ -136,7 +136,7 @@ vi.mock('../../../hooks/useMCS', () => ({
 const FAST_DELAY_MS = 10
 
 /** Speed up demo data timer for tests */
-vi.mock('../../constants/network', async (importOriginal) => {
+vi.mock('@/lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return {
     ...actual,
