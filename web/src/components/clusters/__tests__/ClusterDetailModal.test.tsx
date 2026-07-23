@@ -52,7 +52,7 @@ vi.mock('../../../hooks/useMCP', () => ({
 vi.mock('../utils', () => ({
   isClusterUnreachable: () => false,
   isClusterHealthy: () => true,
-  getProviderInfo: () => ({ color: 'text-gray-400', bgColor: 'bg-gray-500/10' }),
+  getProviderInfo: () => ({ color: '#ffffff', bgColor: '#000000' }),
 }))
 
 vi.mock('../../../hooks/useDrillDown', () => ({
