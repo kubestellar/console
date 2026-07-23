@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useRef, useEffect } from 'react'
 import { X, CheckCircle, AlertTriangle, WifiOff, Pencil, Trash2, ChevronDown, ChevronRight, Layers, Server, Network, HardDrive, FolderOpen, Loader2, Cpu, MemoryStick, Database, ExternalLink } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
