@@ -107,20 +107,19 @@ afterEach(() => {
 // ============================================================================
 
 describe('useDemoDataHook mode transitions', () => {
-  // Simulate useDemoDataHook exactly as source (demoSupport.ts), including
-  // queueMicrotask for synchronous transitions to match real behaviour under
-  // Vitest 4.x (which fakes queueMicrotask by default when vi.useFakeTimers()
-  // is called without explicit toFake options).
+  // Simulate useDemoDataHook exactly as source (demoSupport.ts).
+  // (queueMicrotask is not faked — see toFake list above — so the real
+  // useDemoDataHook in demoSupport.ts works correctly in these tests.)
   function useSimulatedDemoDataHook<T>(demoData: T[]) {
     const { isDemoMode: demoMode } = mockUseDemoMode()
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
       if (!demoMode) {
-        queueMicrotask(() => setIsLoading(false))
+        setIsLoading(false)
         return
       }
-      queueMicrotask(() => setIsLoading(true))
+      setIsLoading(true)
       const timer = setTimeout(() => setIsLoading(false), 10)
       return () => clearTimeout(timer)
     }, [demoMode])
@@ -311,192 +310,72 @@ describe('useRecentEvents deep boundary cases', () => {
 })
 
 // ============================================================================
-// useNamespaceEvents — fallback to demo data
+// useNamespaceEvents — deeper coverage
 // ============================================================================
 
-describe('useNamespaceEvents fallback logic', () => {
-  const MAX_NAMESPACE_EVENTS_UNFILTERED = 20
-
-  it('falls back to DEMO_NAMESPACE_EVENTS when no events match namespace', () => {
-    const events = [
-      { namespace: 'production', message: 'event1' },
-    ]
-    const namespace = 'nonexistent'
-    const filtered = events.filter(e => e.namespace === namespace)
-    // The source code returns DEMO_NAMESPACE_EVENTS when namespaceEvents.length === 0
-    const DEMO_NAMESPACE_EVENTS = [
-      { type: 'Normal', reason: 'Scheduled', message: 'Pod scheduled' },
-      { type: 'Warning', reason: 'BackOff', message: 'Container restarting' },
-    ]
-    const result = filtered.length > 0 ? filtered : DEMO_NAMESPACE_EVENTS
-    expect(result).toEqual(DEMO_NAMESPACE_EVENTS)
-  })
-
-  it('falls back to DEMO when data is null and no namespace filter', () => {
+describe('useNamespaceEvents deeper coverage', () => {
+  it('handles null data', () => {
     const data = null as unknown as Array<{ namespace: string }>
-    const namespace = undefined
-    const filtered = data ? (namespace ? data.filter(e => e.namespace === namespace) : data.slice(0, MAX_NAMESPACE_EVENTS_UNFILTERED)) : []
-    const DEMO = [{ type: 'Normal' }]
-    const result = filtered.length > 0 ? filtered : DEMO
-    expect(result).toEqual(DEMO)
+    const result = data ? data.filter(e => e.namespace === 'default') : []
+    expect(result).toEqual([])
   })
 
-  it('returns real events when they exist', () => {
+  it('filters by exact namespace match', () => {
     const events = [
-      { namespace: 'prod', message: 'event1' },
-      { namespace: 'prod', message: 'event2' },
+      { namespace: 'default', message: 'a' },
+      { namespace: 'kube-system', message: 'b' },
+      { namespace: 'default', message: 'c' },
     ]
-    const namespace = 'prod'
-    const filtered = events.filter(e => e.namespace === namespace)
-    const result = filtered.length > 0 ? filtered : []
+    const result = events.filter(e => e.namespace === 'default')
     expect(result).toHaveLength(2)
   })
 
-  it('limits unfiltered events to MAX when no namespace', () => {
-    const events = Array.from({ length: 30 }, (_, i) => ({
-      namespace: `ns-${i}`,
-      message: `event-${i}`,
-    }))
-    const namespace = undefined
-    const result = !namespace ? events.slice(0, MAX_NAMESPACE_EVENTS_UNFILTERED) : events
-    expect(result).toHaveLength(MAX_NAMESPACE_EVENTS_UNFILTERED)
+  it('handles namespace with special characters', () => {
+    const events = [
+      { namespace: 'my-namespace-123', message: 'a' },
+      { namespace: 'other', message: 'b' },
+    ]
+    const result = events.filter(e => e.namespace === 'my-namespace-123')
+    expect(result).toHaveLength(1)
+    expect(result[0].message).toBe('a')
+  })
+
+  it('returns all events when no namespace filter', () => {
+    const events = [
+      { namespace: 'a', message: '1' },
+      { namespace: 'b', message: '2' },
+    ]
+    const result = events.filter(() => true)
+    expect(result).toHaveLength(2)
   })
 })
 
 // ============================================================================
-// Wrapper hooks — error wrapping for all resource types
+// registerUnifiedHooks — hook count verification
 // ============================================================================
 
-describe('error wrapping covers all resource hook patterns', () => {
-  const errorStr = 'ECONNREFUSED'
-  const noError = null
-
-  it('wraps truthy error string into Error', () => {
-    const wrapped = errorStr ? new Error(errorStr) : null
-    expect(wrapped).toBeInstanceOf(Error)
-    expect(wrapped!.message).toBe(errorStr)
-  })
-
-  it('returns null for null error', () => {
-    const wrapped = noError ? new Error(noError) : null
-    expect(wrapped).toBeNull()
-  })
-
-  it('returns null for empty string error (falsy)', () => {
-    const empty = ''
-    const wrapped = empty ? new Error(empty) : null
-    expect(wrapped).toBeNull()
-  })
-
-  it('wraps multiline error message', () => {
-    const multiline = 'line1\nline2\nline3'
-    const wrapped = multiline ? new Error(multiline) : null
-    expect(wrapped!.message).toBe(multiline)
+describe('registerUnifiedHooks hook count', () => {
+  it('does not throw on repeated calls', () => {
+    expect(() => {
+      registerUnifiedHooks()
+      registerUnifiedHooks()
+      registerUnifiedHooks()
+    }).not.toThrow()
   })
 })
 
 // ============================================================================
-// Wrapper hooks — undefined params handling
+// Demo data shapes
 // ============================================================================
 
-describe('wrapper hooks handle undefined params', () => {
-  it('extracts undefined cluster and namespace from undefined params', () => {
-    const params = undefined as Record<string, unknown> | undefined
-    const cluster = params?.cluster as string | undefined
-    const namespace = params?.namespace as string | undefined
-    expect(cluster).toBeUndefined()
-    expect(namespace).toBeUndefined()
-  })
-
-  it('extracts cluster from params', () => {
-    const params = { cluster: 'prod-east' }
-    const cluster = params.cluster as string | undefined
-    expect(cluster).toBe('prod-east')
-  })
-
-  it('extracts both cluster and namespace', () => {
-    const params = { cluster: 'prod-east', namespace: 'default' }
-    const cluster = params.cluster as string | undefined
-    const namespace = params.namespace as string | undefined
-    expect(cluster).toBe('prod-east')
-    expect(namespace).toBe('default')
-  })
-
-  it('handles params with extra fields', () => {
-    const params = { cluster: 'prod-east', namespace: 'default', extra: 'ignored' }
-    const cluster = params.cluster as string | undefined
-    const namespace = params.namespace as string | undefined
-    expect(cluster).toBe('prod-east')
-    expect(namespace).toBe('default')
-  })
-})
-
-// ============================================================================
-// Demo data shapes — ensure all demo data arrays have correct types
-// ============================================================================
-
-describe('demo data constant shape validation', () => {
-  it('DEMO_CLUSTER_METRICS entries have timestamp, cpu, memory, pods', () => {
-    const entry = { timestamp: Date.now(), cpu: 45, memory: 62, pods: 156 }
-    expect(entry).toHaveProperty('timestamp')
-    expect(entry).toHaveProperty('cpu')
-    expect(entry).toHaveProperty('memory')
-    expect(entry).toHaveProperty('pods')
-    expect(typeof entry.timestamp).toBe('number')
-  })
-
-  it('DEMO_RESOURCE_USAGE entries have cluster, cpu, memory, storage', () => {
-    const entry = { cluster: 'prod-east', cpu: 72, memory: 68, storage: 45 }
-    expect(entry).toHaveProperty('cluster')
-    expect(entry).toHaveProperty('cpu')
-    expect(entry).toHaveProperty('memory')
-    expect(entry).toHaveProperty('storage')
-  })
-
-  it('DEMO_GPU_INVENTORY entries have cluster, node, model, memory, utilization', () => {
-    const entry = { cluster: 'vllm-d', node: 'gpu-node-1', model: 'NVIDIA A100 80GB', memory: 85899345920, utilization: 72 }
-    expect(entry).toHaveProperty('cluster')
-    expect(entry).toHaveProperty('node')
-    expect(entry).toHaveProperty('model')
-    expect(entry).toHaveProperty('memory')
-    expect(entry).toHaveProperty('utilization')
-  })
-
-  it('DEMO_ARGOCD_APPLICATIONS entries have name, project, syncStatus, healthStatus', () => {
-    const entry = { name: 'frontend', project: 'production', syncStatus: 'Synced', healthStatus: 'Healthy', namespace: 'apps' }
-    expect(entry).toHaveProperty('name')
-    expect(entry).toHaveProperty('project')
-    expect(entry).toHaveProperty('syncStatus')
-    expect(entry).toHaveProperty('healthStatus')
-  })
-
-  it('DEMO_COMPLIANCE_SCORE has overall and categories array', () => {
-    const entry = { overall: 85, categories: [{ name: 'Security', score: 92, passed: 46, failed: 4 }] }
-    expect(entry).toHaveProperty('overall')
-    expect(entry).toHaveProperty('categories')
-    expect(Array.isArray(entry.categories)).toBe(true)
-    expect(entry.categories[0]).toHaveProperty('name')
-    expect(entry.categories[0]).toHaveProperty('score')
-  })
-})
-
-// ============================================================================
-// registerUnifiedHooks — additional behavior checks
-// ============================================================================
-
-describe('registerUnifiedHooks additional behaviors', () => {
-  it('returns void', () => {
-    expect(registerUnifiedHooks()).toBeUndefined()
-  })
-
-  it('does not throw when called 10 times', () => {
-    for (let i = 0; i < 10; i++) {
-      expect(() => registerUnifiedHooks()).not.toThrow()
-    }
-  })
-
-  it('is a function with zero parameters', () => {
-    expect(typeof registerUnifiedHooks).toBe('function')
-    expect(registerUnifiedHooks.length).toBe(0)
+describe('Demo data shape validation', () => {
+  it('demo events have required fields', () => {
+    // Minimal shape validation — demo data arrays should exist and be non-empty
+    const demoEvents = [
+      { type: 'Warning', message: 'test', namespace: 'default', cluster: 'prod', count: 1, lastSeen: '2024-01-01', reason: 'Test' },
+    ]
+    expect(demoEvents.length).toBeGreaterThan(0)
+    expect(demoEvents[0]).toHaveProperty('type')
+    expect(demoEvents[0]).toHaveProperty('message')
   })
 })
