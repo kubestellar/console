@@ -136,7 +136,7 @@ vi.mock('../../../hooks/useMCS', () => ({
 const FAST_DELAY_MS = 10
 
 /** Speed up demo data timer for tests */
-vi.mock('../../constants/network', async (importOriginal) => {
+vi.mock('@/lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return {
     ...actual,
@@ -167,7 +167,11 @@ function getHook(name: string): HookFn {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.useFakeTimers()
+  // Fake setTimeout/setInterval/Date but NOT queueMicrotask — Vitest 4 fakes
+  // queueMicrotask by default, which prevents the demo-mode-OFF isLoading
+  // transition from firing (useDemoDataHook uses queueMicrotask to clear
+  // isLoading when demo mode is off).
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
   mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
 })
 
