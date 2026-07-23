@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react'
 import { useDemoMode } from '../../../hooks/useDemoMode'
-import { SHORT_DELAY_MS } from '../../constants/network'
+import { SHORT_DELAY_MS } from '@/lib/constants/network'
 import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../constants/time'
 
 const THIRTY_SECONDS_MS = 30 * MS_PER_SECOND
@@ -39,14 +39,17 @@ export {
 
 export function useDemoDataHook<T>(demoData: T[]) {
   const { isDemoMode: demoMode } = useDemoMode()
-  const [isLoading, setIsLoading] = useState(true)
+  // Lazy-initialise so demo-OFF mode starts with isLoading=false immediately —
+  // no async microtask required, which keeps synchronous act() wrappers happy
+  // in tests and avoids a visible loading flash in the UI for non-demo users.
+  const [isLoading, setIsLoading] = useState(() => !!demoMode)
 
   useEffect(() => {
     if (!demoMode) {
-      queueMicrotask(() => setIsLoading(false))
+      setIsLoading(false)
       return
     }
-    queueMicrotask(() => setIsLoading(true))
+    setIsLoading(true)
     const timer = setTimeout(() => setIsLoading(false), SHORT_DELAY_MS)
     return () => clearTimeout(timer)
   }, [demoMode])
