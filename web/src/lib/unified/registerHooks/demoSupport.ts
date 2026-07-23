@@ -39,10 +39,10 @@ export {
 
 export function useDemoDataHook<T>(demoData: T[]) {
   const { isDemoMode: demoMode } = useDemoMode()
-  // Lazy-initialise so demo-OFF mode starts with isLoading=false immediately —
-  // no async microtask required, which keeps synchronous act() wrappers happy
-  // in tests and avoids a visible loading flash in the UI for non-demo users.
-  const [isLoading, setIsLoading] = useState(() => !!demoMode)
+  // Initialise directly from demoMode so demo-OFF mode starts with isLoading=false
+  // immediately — no async microtask required, which keeps synchronous act() wrappers
+  // happy in tests and avoids a visible loading flash in the UI for non-demo users.
+  const [isLoading, setIsLoading] = useState(demoMode)
 
   useEffect(() => {
     if (!demoMode) {
