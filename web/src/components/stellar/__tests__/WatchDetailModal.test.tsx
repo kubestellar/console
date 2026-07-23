@@ -19,10 +19,10 @@ vi.mock('../watchDetail/WatchDetailContent', () => ({
 }))
 
 vi.mock('../watchDetail/WatchDetailFooter', () => ({
-  WatchDetailFooter: ({ onResolve, onDismiss }: { onResolve: () => void; onDismiss: () => void }) => (
+  WatchDetailFooter: ({ watchId, onResolve, onDismiss }: { watchId: string; onResolve: (id: string) => void; onDismiss: (id: string) => void }) => (
     <div data-testid="watch-detail-footer">
-      <button onClick={onResolve}>Resolve</button>
-      <button onClick={onDismiss}>Dismiss</button>
+      <button onClick={() => onResolve(watchId)}>Resolve</button>
+      <button onClick={() => onDismiss(watchId)}>Dismiss</button>
     </div>
   ),
 }))
@@ -37,10 +37,11 @@ function makeWatch(overrides: Partial<StellarWatch> = {}): StellarWatch {
     resourceKind: 'Pod',
     resourceName: 'test-pod',
     reason: 'CrashLoopBackOff detected',
+    status: 'active',
     createdAt: '2024-01-15T00:00:00Z',
+    updatedAt: '2024-01-15T12:00:00Z',
     lastUpdate: 'Pod is crashing',
     lastChecked: '2024-01-15T12:00:00Z',
-    active: true,
     ...overrides,
   }
 }
@@ -48,15 +49,14 @@ function makeWatch(overrides: Partial<StellarWatch> = {}): StellarWatch {
 function makeNotification(overrides: Partial<StellarNotification> = {}): StellarNotification {
   return {
     id: 'notif-1',
+    type: 'event',
+    severity: 'warning',
+    title: 'test-pod crashed',
+    body: 'Pod crashed',
     cluster: 'test-cluster',
     namespace: 'default',
-    resourceKind: 'Pod',
-    resourceName: 'test-pod',
-    severity: 'warning',
-    message: 'Pod crashed',
+    read: false,
     createdAt: '2024-01-15T00:00:00Z',
-    dismissed: false,
-    snoozedUntil: null,
     ...overrides,
   }
 }
@@ -136,7 +136,7 @@ describe('WatchDetailModal', () => {
     const watch = makeWatch()
     const notifications = [
       makeNotification(),
-      makeNotification({ id: 'notif-2', resourceName: 'other-pod' }),
+      makeNotification({ id: 'notif-2', title: 'other-pod issue' }),
     ]
     render(
       <WatchDetailModal
