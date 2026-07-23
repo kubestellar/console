@@ -172,7 +172,10 @@ vi.spyOn({ registerDataHook: originalRegister }, 'registerDataHook')
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.useFakeTimers()
+  // Fake setTimeout/setInterval/Date but NOT queueMicrotask — Vitest 4 fakes
+  // queueMicrotask by default, which prevents demo-mode-OFF isLoading
+  // transitions from firing (useDemoDataHook uses queueMicrotask internally).
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
   mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
 })
 

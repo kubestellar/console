@@ -89,7 +89,11 @@ import { registerUnifiedHooks } from '../registerHooks'
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.useFakeTimers()
+  // Fake setTimeout/setInterval/Date but NOT queueMicrotask — Vitest 4 fakes
+  // queueMicrotask by default, which would prevent the demo-mode-OFF isLoading
+  // transition from firing (useDemoDataHook uses queueMicrotask to clear
+  // isLoading when demo mode is off).
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
   mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
   mockUseCachedEvents.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() })
 })
@@ -103,17 +107,20 @@ afterEach(() => {
 // ============================================================================
 
 describe('useDemoDataHook mode transitions', () => {
-  // Simulate useDemoDataHook exactly as source
+  // Simulate useDemoDataHook exactly as source (demoSupport.ts), including
+  // queueMicrotask for synchronous transitions to match real behaviour under
+  // Vitest 4.x (which fakes queueMicrotask by default when vi.useFakeTimers()
+  // is called without explicit toFake options).
   function useSimulatedDemoDataHook<T>(demoData: T[]) {
     const { isDemoMode: demoMode } = mockUseDemoMode()
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
       if (!demoMode) {
-        setIsLoading(false)
+        queueMicrotask(() => setIsLoading(false))
         return
       }
-      setIsLoading(true)
+      queueMicrotask(() => setIsLoading(true))
       const timer = setTimeout(() => setIsLoading(false), 10)
       return () => clearTimeout(timer)
     }, [demoMode])
