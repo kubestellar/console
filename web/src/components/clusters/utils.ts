@@ -208,3 +208,24 @@ export function loadClusterCards(): ClusterCard[] {
 export function saveClusterCards(cards: ClusterCard[]): void {
   safeSetItem(CLUSTERS_CARDS_KEY, JSON.stringify(cards))
 }
+
+// Cloud provider display type (excludes 'kubernetes' which maps to 'unknown' at call sites)
+export type ClusterDetailCloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'unknown'
+
+export function getProviderInfo(provider: ClusterDetailCloudProvider): { color: string; bgColor: string } {
+  switch (provider) {
+    case 'eks': return { color: 'text-orange-400', bgColor: 'bg-orange-500/20' }
+    case 'gke': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
+    case 'aks': return { color: 'text-cyan-400', bgColor: 'bg-cyan-500/20' }
+    case 'openshift': return { color: 'text-red-400', bgColor: 'bg-red-500/20' }
+    case 'oci': return { color: 'text-red-500', bgColor: 'bg-red-500/20' }
+    case 'alibaba': return { color: 'text-orange-300', bgColor: 'bg-orange-500/20' }
+    case 'digitalocean': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
+    case 'rancher': return { color: 'text-green-400', bgColor: 'bg-green-500/20' }
+    case 'coreweave': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
+    case 'kind': return { color: 'text-blue-300', bgColor: 'bg-blue-500/20' }
+    case 'minikube': return { color: 'text-purple-400', bgColor: 'bg-purple-500/20' }
+    case 'k3s': return { color: 'text-green-300', bgColor: 'bg-green-500/20' }
+    default: return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
+  }
+}
