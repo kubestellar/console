@@ -148,7 +148,7 @@ vi.mock('../../../hooks/useMCS', () => ({
   useServiceImports: (...a: unknown[]) => mockUseServiceImports(...a),
 }))
 
-vi.mock('../../constants/network', async (importOriginal) => {
+vi.mock('@/lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return {
     ...actual,
