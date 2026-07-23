@@ -1,6 +1,7 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { useTranslation } from 'react-i18next'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before component import
@@ -136,7 +137,10 @@ vi.mock('../../ui/ClusterBadge', () => ({
 }))
 
 vi.mock('../../ui/RefreshIndicator', () => ({
-  RefreshButton: () => <button data-testid="refresh-button">Refresh</button>,
+  RefreshButton: () => {
+    const { t } = useTranslation()
+    return <button data-testid="refresh-button">{t('actions.refresh')}</button>
+  },
 }))
 
 // Import component after mocks
