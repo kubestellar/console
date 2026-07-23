@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { ActiveAlerts } from './ActiveAlerts'
 import type { Alert } from '../../types/alerts'
 import type { GroupedAlert } from '../../lib/alerts/groupAlertsForDisplay'
+import { useTranslation } from 'react-i18next'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -137,11 +138,14 @@ vi.mock('../ui/Pagination', () => ({
     currentPage: number
     totalPages: number
     onPageChange: (p: number) => void
-  }) => (
-    <div data-testid="pagination" data-page={currentPage} data-total={totalPages}>
-      <button onClick={() => onPageChange(currentPage + 1)}>Next</button>
-    </div>
-  ),
+  }) => {
+    const { t } = useTranslation()
+    return (
+      <div data-testid="pagination" data-page={currentPage} data-total={totalPages}>
+        <button onClick={() => onPageChange(currentPage + 1)}>{t('actions.next')}</button>
+      </div>
+    )
+  },
 }))
 
 // ---------------------------------------------------------------------------
