@@ -8,6 +8,7 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen,waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useTranslation } from 'react-i18next'
 
 // ── Mocks ────────────────────────────────────────────────────────────
 vi.mock('react-i18next', () => ({
@@ -59,12 +60,15 @@ vi.mock('../../../lib/modals', () => ({
       return <div data-testid="base-modal">{children}</div>
     },
     {
-      Header: ({ title, onClose, disabled }: MockModalHeaderProps) => (
-        <div data-testid="modal-header">
-          <span>{title}</span>
-          <button onClick={onClose} data-testid="close-button" disabled={disabled}>Close</button>
-        </div>
-      ),
+      Header: ({ title, onClose, disabled }: MockModalHeaderProps) => {
+        const { t } = useTranslation()
+        return (
+          <div data-testid="modal-header">
+            <span>{title}</span>
+            <button onClick={onClose} data-testid="close-button" disabled={disabled}>{t('actions.close')}</button>
+          </div>
+        )
+      },
       Content: ({ children }: { children: React.ReactNode }) => (
         <div data-testid="modal-content">{children}</div>
       ),

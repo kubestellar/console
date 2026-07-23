@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { useTranslation } from 'react-i18next'
 import { TeamDetail } from '../TeamDetail'
 import type { TeamWithMembers } from '../../../types/teams'
 
@@ -31,14 +32,16 @@ vi.mock('../../../lib/auth', () => ({
 vi.mock('../../../lib/modals', () => ({
   ConfirmDialog: ({ isOpen, onConfirm, onCancel, title }: {
     isOpen: boolean; onConfirm: () => void; onCancel: () => void; title: string
-  }) =>
-    isOpen ? (
+  }) => {
+    const { t } = useTranslation()
+    return isOpen ? (
       <div data-testid="confirm-dialog">
         <span>{title}</span>
-        <button onClick={onConfirm} data-testid="confirm-btn">Confirm</button>
-        <button onClick={onCancel} data-testid="cancel-btn">Cancel</button>
+        <button onClick={onConfirm} data-testid="confirm-btn">{t('common.confirm')}</button>
+        <button onClick={onCancel} data-testid="cancel-btn">{t('common.cancel')}</button>
       </div>
-    ) : null,
+    ) : null
+  },
 }))
 
 vi.mock('../TeamMemberManager', () => ({

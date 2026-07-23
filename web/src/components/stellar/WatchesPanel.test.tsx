@@ -1,8 +1,14 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { useTranslation } from 'react-i18next'
 import { WatchesPanel } from './WatchesPanel'
 import type { StellarWatch } from '../../types/stellar'
+
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({ t: (key: string) => key }),
+}))
 
 vi.mock('./WatchCard', () => ({
   WatchCard: ({ watch }: { watch: StellarWatch }) => (
@@ -11,12 +17,15 @@ vi.mock('./WatchCard', () => ({
 }))
 
 vi.mock('./WatchDetailModal', () => ({
-  WatchDetailModal: ({ watch, onClose }: { watch: StellarWatch; onClose: () => void }) => (
-    <div data-testid="watch-detail-modal">
-      <span>{watch.resourceName}</span>
-      <button onClick={onClose}>Close</button>
-    </div>
-  ),
+  WatchDetailModal: ({ watch, onClose }: { watch: StellarWatch; onClose: () => void }) => {
+    const { t } = useTranslation()
+    return (
+      <div data-testid="watch-detail-modal">
+        <span>{watch.resourceName}</span>
+        <button onClick={onClose}>{t('actions.close')}</button>
+      </div>
+    )
+  },
 }))
 
 const makeWatch = (overrides: Partial<StellarWatch> = {}): StellarWatch => ({
