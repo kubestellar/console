@@ -39,14 +39,17 @@ export {
 
 export function useDemoDataHook<T>(demoData: T[]) {
   const { isDemoMode: demoMode } = useDemoMode()
-  const [isLoading, setIsLoading] = useState(true)
+  // Initialise loading state from the current demo mode so that
+  // when demo mode is OFF from the start, isLoading is already false
+  // without relying on a microtask flush inside act().
+  const [isLoading, setIsLoading] = useState(() => !!demoMode)
 
   useEffect(() => {
     if (!demoMode) {
-      queueMicrotask(() => setIsLoading(false))
+      setIsLoading(false)
       return
     }
-    queueMicrotask(() => setIsLoading(true))
+    setIsLoading(true)
     const timer = setTimeout(() => setIsLoading(false), SHORT_DELAY_MS)
     return () => clearTimeout(timer)
   }, [demoMode])

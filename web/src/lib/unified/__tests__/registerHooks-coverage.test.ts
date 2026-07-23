@@ -133,9 +133,12 @@ vi.mock('../../../hooks/useMCS', () => ({
   useServiceImports: (...args: unknown[]) => mockUseServiceImports(...args),
 }))
 
-const FAST_DELAY_MS = 10
+// Advance fake timers by more than the real SHORT_DELAY_MS (500 ms) so that the
+// timer tests pass even if the module mock below does not intercept the
+// transitive import inside registerHooks/demoSupport.ts.
+const FAST_DELAY_MS = 600
 
-/** Speed up demo data timer for tests */
+/** Speed up demo data timer for tests (best-effort alias mock) */
 vi.mock('@/lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return {
