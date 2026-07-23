@@ -100,19 +100,17 @@ afterEach(() => {
 // ============================================================================
 
 describe('useDemoDataHook deep branches', () => {
-  // Simulate the useDemoDataHook logic exactly as the source does it,
-  // including queueMicrotask for the synchronous transitions so that
-  // the simulation matches demoSupport.ts behaviour under Vitest 4.x.
+  // Simulate the useDemoDataHook logic as the source does it.
   function useDemoDataHookSimulation<T>(demoData: T[]) {
     const { isDemoMode: demoMode } = mockUseDemoMode()
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
       if (!demoMode) {
-        queueMicrotask(() => setIsLoading(false))
+        setIsLoading(false)
         return
       }
-      queueMicrotask(() => setIsLoading(true))
+      setIsLoading(true)
       const timer = setTimeout(() => setIsLoading(false), 10) // SHORT_DELAY_MS
       return () => clearTimeout(timer)
     }, [demoMode])
