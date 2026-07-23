@@ -1,9 +1,8 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useRef, useEffect } from 'react'
-import { X, CheckCircle, AlertTriangle, WifiOff, Pencil, Trash2, ChevronRight, ChevronDown, Layers, Server, Network, HardDrive, Box, FolderOpen, Loader2, Cpu, MemoryStick, Database, Wand2, Stethoscope, Wrench, Bot, ExternalLink } from 'lucide-react'
+import { X, CheckCircle, AlertTriangle, WifiOff, Pencil, Trash2, ChevronDown, ChevronRight, Layers, Server, Network, HardDrive, FolderOpen, Loader2, Cpu, MemoryStick, Database, ExternalLink } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaceStats, useDeployments, useClusters } from '../../hooks/useMCP'
-import { isClusterUnreachable, isClusterHealthy } from './utils'
+import { isClusterUnreachable, isClusterHealthy, getProviderInfo, type ClusterDetailCloudProvider } from './utils'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { emitClusterAction } from '../../lib/analytics'
@@ -20,32 +19,13 @@ import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import { ClusterStatusDetails } from './ClusterStatusDetails'
 import { formatMemoryPromptStat } from '../../lib/formatStats'
 import { buildDiagnosePrompt, buildRepairPrompt } from './diagnosePrompt'
-
-// Cloud provider types
-type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'unknown'
+import { ClusterAIActions } from './ClusterAIActions'
+import { ClusterIssuesList } from './ClusterIssuesList'
 
 // Maximum time to wait for initial data before forcing modal to show content (10 seconds)
 // Prevents indefinite loading when cluster is slow or unreachable
 const MAX_INITIAL_LOADING_MS = 10_000
 const MAX_HEADER_ALIASES = 2
-
-function getProviderInfo(provider: CloudProvider): { color: string; bgColor: string } {
-  switch (provider) {
-    case 'eks': return { color: 'text-orange-400', bgColor: 'bg-orange-500/20' }
-    case 'gke': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
-    case 'aks': return { color: 'text-cyan-400', bgColor: 'bg-cyan-500/20' }
-    case 'openshift': return { color: 'text-red-400', bgColor: 'bg-red-500/20' }
-    case 'oci': return { color: 'text-red-500', bgColor: 'bg-red-500/20' }
-    case 'alibaba': return { color: 'text-orange-300', bgColor: 'bg-orange-500/20' }
-    case 'digitalocean': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
-    case 'rancher': return { color: 'text-green-400', bgColor: 'bg-green-500/20' }
-    case 'coreweave': return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
-    case 'kind': return { color: 'text-blue-300', bgColor: 'bg-blue-500/20' }
-    case 'minikube': return { color: 'text-purple-400', bgColor: 'bg-purple-500/20' }
-    case 'k3s': return { color: 'text-green-300', bgColor: 'bg-green-500/20' }
-    default: return { color: 'text-blue-400', bgColor: 'bg-blue-500/20' }
-  }
-}
 
 interface ClusterDetailModalProps {
   clusterName: string
@@ -278,7 +258,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
                 detectCloudProviderShared(clusterName, serverUrl, clusterInfo?.namespaces, clusterUser)
               // Get console URL based on detected provider
               const consoleUrl = getConsoleUrl(detectedProvider, clusterName, serverUrl)
-              const providerInfo = getProviderInfo(detectedProvider === 'kubernetes' ? 'unknown' : detectedProvider as CloudProvider)
+              const providerInfo = getProviderInfo(detectedProvider === 'kubernetes' ? 'unknown' : detectedProvider as ClusterDetailCloudProvider)
               const providerLabel = getProviderLabel(detectedProvider)
               return (
                 <>
@@ -378,58 +358,25 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
         )}
 
         {/* AI Actions */}
-        <div className="mb-6 p-4 rounded-lg bg-linear-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Bot className="w-5 h-5 text-purple-400" />
-            <span className="text-sm font-medium text-foreground">{t('clusterDetail.aiAssistant')}</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleDiagnose}
-              disabled={isUnreachable}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={t('clusterDetail.diagnoseTitle')}
-            >
-              <Stethoscope className="w-3.5 h-3.5" />
-              {t('clusterDetail.diagnose')}
-            </button>
-            <button
-              onClick={handleRepair}
-              disabled={isUnreachable || (podIssues.length === 0 && clusterDeploymentIssues.length === 0)}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={podIssues.length === 0 && clusterDeploymentIssues.length === 0 ? t('clusterDetail.noIssuesToRepair') : t('clusterDetail.repairTitle')}
-            >
-              <Wrench className="w-3.5 h-3.5" />
-              {t('clusterDetail.repair')}
-              {(podIssues.length > 0 || clusterDeploymentIssues.length > 0) && (
-                <StatusBadge color="red" size="xs">
-                  {podIssues.length + clusterDeploymentIssues.length}
-                </StatusBadge>
-              )}
-            </button>
-            <Button
-              variant="accent"
-              size="sm"
-              onClick={() => {
-                emitClusterAction('ask', clusterName)
-                onClose() // Close modal so mission sidebar is visible
-                startMission({
-                  title: `Ask about ${clusterName.split('/').pop()}`,
-                  description: 'Custom question about the cluster',
-                  type: 'custom',
-                  cluster: clusterName,
-                  initialPrompt: `I have a question about Kubernetes cluster "${clusterName}". The cluster currently has ${health?.nodeCount || 0} nodes, ${health?.podCount || 0} pods, ${health?.cpuCores || 0} CPU cores, and ${promptMemorySummary} memory. How can I help you?`,
-                  context: { clusterName, health }
-                })
-              }}
-              disabled={isUnreachable}
-              icon={<Wand2 className="w-3.5 h-3.5" />}
-              title={t('clusterDetail.askTitle')}
-            >
-              {t('clusterDetail.ask')}
-            </Button>
-          </div>
-        </div>
+        <ClusterAIActions
+          isUnreachable={isUnreachable}
+          podIssuesCount={podIssues.length}
+          deploymentIssuesCount={clusterDeploymentIssues.length}
+          onDiagnose={handleDiagnose}
+          onRepair={handleRepair}
+          onAsk={() => {
+            emitClusterAction('ask', clusterName)
+            onClose()
+            startMission({
+              title: `Ask about ${clusterName.split('/').pop()}`,
+              description: 'Custom question about the cluster',
+              type: 'custom',
+              cluster: clusterName,
+              initialPrompt: `I have a question about Kubernetes cluster "${clusterName}". The cluster currently has ${health?.nodeCount || 0} nodes, ${health?.podCount || 0} pods, ${health?.cpuCores || 0} CPU cores, and ${promptMemorySummary} memory. How can I help you?`,
+              context: { clusterName, health }
+            })
+          }}
+        />
 
         {/* Stats - Interactive Cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
@@ -691,76 +638,14 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
         )}
 
         {/* Issues Section */}
-        {(podIssues.length > 0 || clusterDeploymentIssues.length > 0) && (
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-400" />
-              {t('clusterDetail.issuesCount', { count: podIssues.length + clusterDeploymentIssues.length })}
-            </h3>
-            <div className="space-y-2">
-              {podIssues.slice(0, 5).map((issue, i) => (
-                <div
-                  key={`pod-${i}`}
-                  onClick={() => {
-                    drillToPod(clusterName, issue.namespace, issue.name, {
-                      status: issue.status,
-                      restarts: issue.restarts,
-                      issues: issue.issues,
-                      reason: issue.reason })
-                    onClose()
-                  }}
-                  className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <StatusBadge color="blue" size="xs" icon={<Box className="w-3 h-3" />} className="shrink-0">{t('clusterDetail.pod')}</StatusBadge>
-                      <span className="font-medium text-foreground truncate">{issue.name}</span>
-                      <span className="text-xs text-muted-foreground shrink-0">({issue.namespace})</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                      <StatusBadge color="red" size="xs">{issue.status}</StatusBadge>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                  {issue.restarts > 0 && (
-                    <div className="mt-1 text-xs text-muted-foreground pl-14">{t('clusterDetail.restarts', { count: issue.restarts })}</div>
-                  )}
-                </div>
-              ))}
-              {clusterDeploymentIssues.slice(0, 3).map((issue, i) => (
-                <div
-                  key={`dep-${i}`}
-                  onClick={() => {
-                    drillToDeployment(clusterName, issue.namespace, issue.name, {
-                      replicas: issue.replicas,
-                      readyReplicas: issue.readyReplicas,
-                      reason: issue.reason,
-                      message: issue.message })
-                    onClose()
-                  }}
-                  className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <StatusBadge color="purple" size="xs" icon={<Layers className="w-3 h-3" />} className="shrink-0">{t('clusterDetail.deploy')}</StatusBadge>
-                      <span className="font-medium text-foreground truncate">{issue.name}</span>
-                      <span className="text-xs text-muted-foreground shrink-0">({issue.namespace})</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                      <StatusBadge color="red" size="xs">
-                        {issue.readyReplicas}/{issue.replicas} ready
-                      </StatusBadge>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                  {issue.message && (
-                    <div className="mt-1 text-xs text-red-400 pl-16 truncate">{issue.message}</div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <ClusterIssuesList
+          podIssues={podIssues}
+          deploymentIssues={clusterDeploymentIssues}
+          clusterName={clusterName}
+          onDrillToPod={drillToPod}
+          onDrillToDeployment={drillToDeployment}
+          onClose={onClose}
+        />
 
         {/* GPU Section */}
         {stableClusterGPUs.length > 0 && (
