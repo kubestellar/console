@@ -8,8 +8,8 @@ import type { GPUNode } from '../../../hooks/mcp/types.gpu'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock('../../../lib/modals', () => ({
-  BaseModal: ({ children, onClose }: { children: React.ReactNode; onClose: () => void }) => (
+vi.mock('../../../lib/modals', () => {
+  const BaseModal = ({ children, onClose }: { children: React.ReactNode; onClose: () => void }) => (
     <div
       data-testid="base-modal"
       onClick={onClose}
@@ -21,10 +21,22 @@ vi.mock('../../../lib/modals', () => ({
     >
       {children}
     </div>
-  ),
-  ConfirmDialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
-    open ? <div data-testid="confirm-dialog">{children}</div> : null,
-}))
+  )
+  BaseModal.Header = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="base-modal-header">{children}</div>
+  )
+  BaseModal.Content = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="base-modal-content">{children}</div>
+  )
+  BaseModal.Footer = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="base-modal-footer">{children}</div>
+  )
+  return {
+    BaseModal,
+    ConfirmDialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
+      open ? <div data-testid="confirm-dialog">{children}</div> : null,
+  }
+})
 
 vi.mock('../../../hooks/useMCP', () => ({
   useNamespaces: vi.fn(() => ({
