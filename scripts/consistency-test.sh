@@ -456,6 +456,9 @@ phase6() {
     'src/hooks/useSelfUpgrade.ts'  # Date.now() for restart polling elapsed, not cache TTL
     'src/components/cards/workload-monitor/gitHubCIUtils.ts'  # Date.now() for formatTimeAgo display, not cache TTL
     'src/components/feedback/UpdatesTab.tsx'  # Date.now() for preview warmup elapsed, not cache TTL; localStorage for persistent verified-fix flags (no expiry by design)
+    'src/hooks/useMissions.state.ts'  # Mission/UI persistence plus completion timing, not cache expiry
+    'src/hooks/useMissions.messages.ts'  # Selected-agent persistence plus mission timing, not a cache
+    'src/hooks/mcp/sharedImpl.orchestration.ts'  # Session marker plus refresh animation timing, not a cache
   )
 
   # Find files that implement caching with TTL: have localStorage AND Date.now() - (subtraction
@@ -482,13 +485,13 @@ phase6() {
 
     local issues=""
 
-    # Check for named cache key constant (CACHE_KEY, STORAGE_KEY, CACHE_PREFIX — defined or imported)
-    if ! rg -q '(const\s+\w*(CACHE_KEY|STORAGE_KEY|CACHE_PREFIX)\w*\s*=|import\s+.*\b\w*(CACHE_KEY|STORAGE_KEY|CACHE_PREFIX)\w*\b)' "$filepath" 2>/dev/null; then
+    # Check for named cache key constant (CACHE_KEY, STORAGE_KEY, STATUS_KEY, CACHE_PREFIX — defined or imported)
+    if ! rg -Uq '(?s)(const\s+\w*(CACHE_KEY|STORAGE_KEY|STATUS_KEY|CACHE_PREFIX)\w*\s*=|import\s*\{[^}]*\b\w*(CACHE_KEY|STORAGE_KEY|STATUS_KEY|CACHE_PREFIX)\w*\b[^}]*\}\s*from)' "$filepath" 2>/dev/null; then
       issues="${issues}missing named cache key constant; "
     fi
 
     # Check for named TTL constant (TTL, MAX_AGE, CACHE_DURATION, CACHE_EXPIRY — defined or imported)
-    if ! rg -q '(const\s+\w*(TTL|MAX_AGE|CACHE_DURATION|CACHE_EXPIRY)\w*\s*=|import\s+.*\b\w*(TTL|MAX_AGE|CACHE_DURATION|CACHE_EXPIRY)\w*\b)' "$filepath" 2>/dev/null; then
+    if ! rg -Uq '(?s)(const\s+\w*(TTL|MAX_AGE|CACHE_DURATION|CACHE_EXPIRY)\w*\s*=|import\s*\{[^}]*\b\w*(TTL|MAX_AGE|CACHE_DURATION|CACHE_EXPIRY)\w*\b[^}]*\}\s*from)' "$filepath" 2>/dev/null; then
       issues="${issues}missing named TTL constant; "
     fi
 

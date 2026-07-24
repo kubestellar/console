@@ -9,40 +9,32 @@ import type { GPUNode } from '../../../hooks/mcp/types.gpu'
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../lib/modals', () => {
-  const BaseModalFn = ({
-    isOpen,
-    children,
-    onClose,
-  }: {
-    isOpen: boolean
-    children: React.ReactNode
-    onClose: () => void
-  }) =>
-    isOpen ? (
-      <div data-testid="base-modal" onClick={onClose}>
-        {children}
-      </div>
-    ) : null
-  const BaseModal = Object.assign(BaseModalFn, {
-    Header: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
-      <div data-testid="modal-header">{title}{children}</div>
-    ),
-    Content: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="modal-content">{children}</div>
-    ),
-    Footer: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="modal-footer">{children}</div>
-    ),
-  })
+  const BaseModal = ({ children, onClose }: { children: React.ReactNode; onClose: () => void }) => (
+    <div
+      data-testid="base-modal"
+      onClick={onClose}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') onClose()
+      }}
+    >
+      {children}
+    </div>
+  )
+  BaseModal.Header = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="base-modal-header">{children}</div>
+  )
+  BaseModal.Content = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="base-modal-content">{children}</div>
+  )
+  BaseModal.Footer = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="base-modal-footer">{children}</div>
+  )
   return {
     BaseModal,
-    ConfirmDialog: ({
-      open,
-      children,
-    }: {
-      open: boolean
-      children: React.ReactNode
-    }) => (open ? <div data-testid="confirm-dialog">{children}</div> : null),
+    ConfirmDialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
+      open ? <div data-testid="confirm-dialog">{children}</div> : null,
   }
 })
 
