@@ -24,8 +24,8 @@ vi.mock('../../../lib/modals', () => {
       </div>
     ) : null
   const BaseModal = Object.assign(BaseModalFn, {
-    Header: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="modal-header">{children}</div>
+    Header: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
+      <div data-testid="modal-header">{title}{children}</div>
     ),
     Content: ({ children }: { children: React.ReactNode }) => (
       <div data-testid="modal-content">{children}</div>
