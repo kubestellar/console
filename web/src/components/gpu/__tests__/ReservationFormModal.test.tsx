@@ -8,7 +8,13 @@ import type { ReservationFormModalProps } from '../ReservationFormModal'
 
 vi.mock('../../../lib/modals', () => ({
   BaseModal: ({ children, onClose }: { children: React.ReactNode; onClose: () => void }) => (
-    <div data-testid="base-modal" onClick={onClose}>{children}</div>
+    <div
+      data-testid="base-modal"
+      role="button"
+      tabIndex={0}
+      onClick={onClose}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClose(); } }}
+    >{children}</div>
   ),
   ConfirmDialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div data-testid="confirm-dialog">{children}</div> : null,
