@@ -108,6 +108,13 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
   const userOverrodeLevel = useRef(false)
 
   const scan = useCachedACMMScan(repo)
+  
+  // Log scan errors for debugging (non-fatal — cards render demo/fallback data)
+  useEffect(() => {
+    if (scan.error) {
+      console.warn(`ACMM scan failed for ${repo}:`, scan.error)
+    }
+  }, [scan.error, repo])
 
   // Force-refresh the scan when a mission completes — the mission may
   // have added a feedback loop (e.g. created CLAUDE.md, added a workflow)

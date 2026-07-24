@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertTriangle } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { getLastRoute } from '../../hooks/useLastRoute'
@@ -28,6 +28,7 @@ export function AuthCallback() {
   // skip calling setStatus synchronously inside the effect body
   // (react-hooks/set-state-in-effect).
   const [status, setStatus] = useState(() => t('authCallback.fetchingUserInfo'))
+  const [authError, setAuthError] = useState<string | null>(null)
   const hasProcessed = useRef(false)
   const errorTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -165,6 +166,8 @@ export function AuthCallback() {
           return
         }
 
+        const errorMessage = _err instanceof Error ? _err.message : String(_err)
+        setAuthError(errorMessage)
         showToast(t('authCallback.failedToFetchUser'), 'warning')
         setStatus(t('authCallback.completingSignIn'))
         errorTimerRef.current = setTimeout(() => {
@@ -182,8 +185,18 @@ export function AuthCallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-terminal">
       <div className="text-center">
-        <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-primary" role="status" aria-label={status} />
-        <p className="text-muted-foreground">{status}</p>
+        {authError ? (
+          <>
+            <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-warning" role="img" aria-label={t('authCallback.authenticationError', 'Authentication Error')} />
+            <p className="text-muted-foreground mb-2">{status}</p>
+            <p className="text-xs text-muted-foreground/60">{authError}</p>
+          </>
+        ) : (
+          <>
+            <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-primary" role="status" aria-label={status} />
+            <p className="text-muted-foreground">{status}</p>
+          </>
+        )}
       </div>
     </div>
   )
