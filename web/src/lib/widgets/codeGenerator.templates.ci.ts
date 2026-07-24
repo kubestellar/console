@@ -137,7 +137,7 @@ ${wrapOpen}
                     </span>
                     <span style={{fontSize: '10px', color: '#cbd5e1', display: 'inline-block', width: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{g.guide}</span>
                   </span>
-                  <div style={{display: 'flex', gap: '2px', alignItems: 'center'}}>
+                  <div style={{display: 'flex', gap: '4px', alignItems: 'center'}}>
                     {runs.map((r, i) => {
                       const isGpu = r.conclusion === 'failure' && r.failureReason === 'gpu_unavailable';
                       const isFailed = r.conclusion === 'failure';
@@ -158,7 +158,7 @@ ${wrapOpen}
                             {' · '}{timeAgo(r.updatedAt || r.createdAt)}
                           </div>
                           {hasLLMD && (
-                            <div style={{borderTop: '1px solid #334155', paddingTop: 3, marginTop: 2}}>
+                            <div style={{borderTop: '1px solid #334155', paddingTop: 4, marginTop: 4}}>
                               <div style={{fontSize: '8px', fontWeight: 600, color: '#64748b', marginBottom: 1}}>llm-d components</div>
                               {Object.entries(dotLLMD).map(([name, tag]) => (
                                 <div key={name} style={{display: 'flex', gap: 4}}>
@@ -169,7 +169,7 @@ ${wrapOpen}
                             </div>
                           )}
                           {hasOther && (
-                            <div style={{borderTop: '1px solid #334155', paddingTop: 3, marginTop: 2}}>
+                            <div style={{borderTop: '1px solid #334155', paddingTop: 4, marginTop: 4}}>
                               <div style={{fontSize: '8px', fontWeight: 600, color: '#64748b', marginBottom: 1}}>other images</div>
                               {Object.entries(dotOther).map(([name, tag]) => (
                                 <div key={name} style={{display: 'flex', gap: 4}}>
@@ -179,7 +179,7 @@ ${wrapOpen}
                               ))}
                             </div>
                           )}
-                          {r.htmlUrl && <div style={{borderTop: '1px solid #334155', paddingTop: 3, marginTop: 2}}><a href={r.htmlUrl + '#logs'} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}#logs"\`); }} style={{color: '#60a5fa', fontSize: '9px'}}>View Logs</a></div>}
+                            <div style={{borderTop: '1px solid #334155', paddingTop: 4, marginTop: 4}}><a href={r.htmlUrl + '#logs'} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); run(\`open "\${r.htmlUrl}#logs"\`); }} style={{color: '#60a5fa', fontSize: '10px'}}>View Logs</a></div>}
                         </span>
                         <span style={{
                           width: 7, height: 7, borderRadius: '50%', display: 'inline-block', cursor: 'pointer',
@@ -296,7 +296,7 @@ ${wrapOpen}
         <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: runs.length > 0 ? styles.colors.error : styles.colors.healthy}} />Recent Failures</div>
         <div style={styles.column}>
           {runs.map((r, i) => (
-            <div key={i} style={{fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+            <div key={i} style={{fontSize: '11px', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
               <div style={{color: styles.colors.error}}>{r.name || r.workflow || 'Unknown'}</div>
               <div style={{color: '#64748b', fontSize: '10px'}}>{r.repo || ''}</div>
             </div>
@@ -331,7 +331,7 @@ ${wrapOpen}
         </div>
         <div style={styles.column}>
           {recent.map((r, i) => (
-            <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
               <span style={{color: '#e2e8f0', maxWidth: '55%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{r.name || r.workflow || 'Run'}</span>
               <span style={{color: r.conclusion === 'success' ? styles.colors.healthy : r.conclusion === 'failure' ? styles.colors.error : '#9ca3af', fontSize: '10px'}}>{r.conclusion || r.status || ''}</span>
             </div>
@@ -380,7 +380,7 @@ ${wrapOpen}
         <div style={styles.cardTitle}><span style={{...styles.statusDot, backgroundColor: styles.colors.info}} />GitHub Activity</div>
         <div style={styles.column}>
           {repos.slice(0, 6).map((r, i) => (
-            <div key={i} style={{fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+            <div key={i} style={{fontSize: '11px', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
               {typeof r === 'string' ? r : (r.name || r.repo)}
             </div>
           ))}

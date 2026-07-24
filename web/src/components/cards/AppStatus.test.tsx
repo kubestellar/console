@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AppStatus } from './AppStatus'
 import type { Deployment } from '../../hooks/mcp/types'
+import { useTranslation } from 'react-i18next'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -70,12 +71,14 @@ vi.mock('../../lib/cards/CardComponents', () => ({
     currentPage: number
     totalPages: number
     onPageChange: (p: number) => void
-  }) =>
-    needsPagination ? (
+  }) => {
+    const { t } = useTranslation()
+    return needsPagination ? (
       <div data-testid="pagination" data-page={currentPage} data-total={totalPages}>
-        <button onClick={() => onPageChange(currentPage + 1)}>Next</button>
+        <button onClick={() => onPageChange(currentPage + 1)}>{t('actions.next')}</button>
       </div>
-    ) : null,
+    ) : null
+  },
   CardAIActions: ({ resource }: { resource: { name: string } }) => (
     <div data-testid={`ai-actions-${resource.name}`} />
   ),

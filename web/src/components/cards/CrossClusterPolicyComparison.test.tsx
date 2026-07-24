@@ -12,6 +12,7 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useTranslation } from 'react-i18next'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -65,12 +66,14 @@ vi.mock('../ui/Button', () => ({
 }))
 
 vi.mock('./kyverno/KyvernoDetailModal', () => ({
-  KyvernoDetailModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
-    isOpen ? (
+  KyvernoDetailModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+    const { t } = useTranslation()
+    return isOpen ? (
       <div data-testid="kyverno-modal">
-        <button onClick={onClose}>Close</button>
+        <button onClick={onClose}>{t('actions.close')}</button>
       </div>
-    ) : null,
+    ) : null
+  },
 }))
 
 // ---------------------------------------------------------------------------
@@ -238,7 +241,7 @@ describe('CrossClusterPolicyComparison', () => {
       render(<CrossClusterPolicyComparison />)
       const policyRow = screen.getByRole('button', { name: /View policy details: ClusterPolicy\/require-labels/i })
       await userEvent.click(policyRow)
-      await userEvent.click(screen.getByText('Close'))
+      await userEvent.click(screen.getByText('actions.close'))
       expect(screen.queryByTestId('kyverno-modal')).not.toBeInTheDocument()
     })
   })

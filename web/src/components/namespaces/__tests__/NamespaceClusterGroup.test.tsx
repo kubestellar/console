@@ -5,6 +5,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { NamespaceClusterGroup } from '../NamespaceClusterGroup'
 import type { NamespaceDetails } from '../types'
+import { useTranslation } from 'react-i18next'
 
 /**
  * NamespaceClusterGroup Component Tests
@@ -25,13 +26,16 @@ vi.mock('../NamespaceCard', () => ({
     namespace: NamespaceDetails
     onSelect: () => void
     onDelete?: () => void
-  }) => (
-    <div data-testid="namespace-card">
-      <span>{namespace.name}</span>
-      <button onClick={onSelect}>Select</button>
-      {onDelete && <button onClick={onDelete}>Delete</button>}
-    </div>
-  ),
+  }) => {
+    const { t } = useTranslation()
+    return (
+      <div data-testid="namespace-card">
+        <span>{namespace.name}</span>
+        <button onClick={onSelect}>{t('common.select')}</button>
+        {onDelete && <button onClick={onDelete}>{t('actions.delete')}</button>}
+      </div>
+    )
+  },
   NamespaceCardSkeleton: () => <div data-testid="namespace-skeleton">Loading...</div>,
 }))
 
