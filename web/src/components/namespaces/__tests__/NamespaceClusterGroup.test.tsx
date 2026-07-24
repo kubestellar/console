@@ -26,10 +26,9 @@ vi.mock('../NamespaceCard', () => ({
     onSelect: () => void
     onDelete?: () => void
   }) => (
-    <div data-testid="namespace-card">
+    <div data-testid="namespace-card" onClick={onSelect}>
       <span>{namespace.name}</span>
-      <button onClick={onSelect}>Select</button>
-      {onDelete && <button onClick={onDelete}>Delete</button>}
+      {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete() }} title="Delete namespace">Delete Icon</button>}
     </div>
   ),
   NamespaceCardSkeleton: () => <div data-testid="namespace-skeleton">Loading...</div>,
@@ -326,8 +325,8 @@ describe('NamespaceClusterGroup', () => {
       />
     )
 
-    const selectButtons = screen.getAllByRole('button', { name: 'Select' })
-    await userEvent.click(selectButtons[0])
+    const namespaceCards = screen.getAllByTestId('namespace-card')
+    await userEvent.click(namespaceCards[0])
 
     expect(mockOnSelect).toHaveBeenCalledWith(mockNamespaces[0])
   })
@@ -348,7 +347,7 @@ describe('NamespaceClusterGroup', () => {
       />
     )
 
-    const deleteButtons = screen.getAllByRole('button', { name: 'Delete' })
+    const deleteButtons = screen.getAllByRole('button', { name: /Delete namespace/i })
     await userEvent.click(deleteButtons[0])
 
     // mockNamespaces[0] ('default') and [1] ('kube-system') are system namespaces

@@ -1,12 +1,12 @@
 import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { WatchDetailContent } from '../watchDetail/WatchDetailContent'
-import type { StellarWatch, StellarNotification } from '../../../types/stellar'
+import { WatchDetailContent } from '../WatchDetailContent'
+import type { StellarWatch, StellarNotification } from '../../../../types/stellar'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock('../watchDetail/WatchDetailPrimitives', () => ({
+vi.mock('../WatchDetailPrimitives', () => ({
   Section: ({ title, children }: { title: string; children: React.ReactNode }) => (
     <div data-testid="section" data-title={title}>{children}</div>
   ),
@@ -16,8 +16,19 @@ vi.mock('../watchDetail/WatchDetailPrimitives', () => ({
   Stat: ({ label, value }: { label: string; value: string }) => (
     <div data-testid="stat" data-label={label}>{value}</div>
   ),
-  Recommendation: ({ title, onClick }: { title: string; onClick: () => void }) => (
-    <button data-testid="recommendation" onClick={onClick}>{title}</button>
+  Recommendation: ({
+    label,
+    onExecute,
+  }: {
+    label: string
+    rationale: string
+    confidence: number
+    color: string
+    onExecute: () => void
+  }) => (
+    <button data-testid="recommendation" onClick={onExecute}>
+      {label}
+    </button>
   ),
 }))
 
@@ -31,10 +42,11 @@ function makeWatch(overrides: Partial<StellarWatch> = {}): StellarWatch {
     resourceKind: 'Pod',
     resourceName: 'test-pod',
     reason: 'CrashLoopBackOff detected',
-    createdAt: '2024-01-15T00:00:00Z',
+    status: 'active',
     lastUpdate: 'Pod is crashing',
     lastChecked: '2024-01-15T12:00:00Z',
-    active: true,
+    createdAt: '2024-01-15T00:00:00Z',
+    updatedAt: '2024-01-15T00:00:00Z',
     ...overrides,
   }
 }
@@ -42,15 +54,14 @@ function makeWatch(overrides: Partial<StellarWatch> = {}): StellarWatch {
 function makeNotification(overrides: Partial<StellarNotification> = {}): StellarNotification {
   return {
     id: 'notif-1',
+    type: 'event',
+    severity: 'warning',
+    title: 'Pod crashed',
+    body: 'Pod crashed unexpectedly',
     cluster: 'test-cluster',
     namespace: 'default',
-    resourceKind: 'Pod',
-    resourceName: 'test-pod',
-    severity: 'warning',
-    message: 'Pod crashed',
+    read: false,
     createdAt: '2024-01-15T00:00:00Z',
-    dismissed: false,
-    snoozedUntil: null,
     ...overrides,
   }
 }
@@ -163,8 +174,8 @@ describe('WatchDetailContent', () => {
   it('displays event timeline when related events are provided', () => {
     const watch = makeWatch()
     const events = [
-      makeNotification(),
-      makeNotification({ id: 'notif-2', severity: 'critical' }),
+      makeNotification({ title: 'Pod crashed' }),
+      makeNotification({ id: 'notif-2', severity: 'critical', title: 'Critical failure' }),
     ]
     render(
       <WatchDetailContent
@@ -185,16 +196,18 @@ describe('WatchDetailContent', () => {
         onClose={vi.fn()}
       />
     )
+    // The component renders ev.title in the event timeline
     expect(screen.getByText('Pod crashed')).toBeTruthy()
   })
 
-  it('shows attempt summary when provided', () => {
+  it('shows attempt summary section headers when provided', () => {
     const watch = makeWatch()
     const attemptSummary = {
-      totalAttempts: 3,
-      successCount: 1,
-      failureCount: 2,
-      lastAttemptStatus: 'failed',
+      total: 3,
+      resolved: 1,
+      escalated: 1,
+      paused: 1,
+      recent: [],
     }
     render(
       <WatchDetailContent
@@ -215,6 +228,6 @@ describe('WatchDetailContent', () => {
         onClose={vi.fn()}
       />
     )
-    expect(screen.getByTestId('section-header')).toBeTruthy()
+    expect(screen.getAllByTestId('section-header').length).toBeGreaterThan(0)
   })
 })

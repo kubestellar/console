@@ -18,6 +18,8 @@ interface UseCardGridNavigationOptions {
   gridColumns?: number
 }
 
+const DEFAULT_GRID_COLUMNS = 12
+
 function computeGridLayout(cards: CardLike[], gridColumns: number): GridPosition[] {
   const layout: GridPosition[] = []
   let row = 0
@@ -38,7 +40,7 @@ function computeGridLayout(cards: CardLike[], gridColumns: number): GridPosition
 export function useCardGridNavigation({
   cards,
   onExpandCard,
-  gridColumns = 12 }: UseCardGridNavigationOptions) {
+  gridColumns = DEFAULT_GRID_COLUMNS }: UseCardGridNavigationOptions) {
   const cardRefMap = useRef<Map<string, HTMLElement>>(new Map())
 
   const layout = computeGridLayout(cards, gridColumns)

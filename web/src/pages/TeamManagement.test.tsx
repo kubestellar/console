@@ -1,6 +1,7 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
+import { useTranslation } from 'react-i18next'
 
 const useTeamsMock = vi.hoisted(() => ({
   teams: [{ id: 'team-1', name: 'Alpha Team', description: 'First team', memberCount: 3, createdBy: '1', createdAt: '', updatedAt: '' }],
@@ -46,12 +47,15 @@ vi.mock('@/components/teams/TeamList', () => ({
 }))
 
 vi.mock('@/components/teams/TeamDetail', () => ({
-  TeamDetail: ({ team, onBack }: { team: { name: string }; onBack: () => void }) => (
-    <div data-testid="team-detail">
-      <span>{team.name}</span>
-      <button onClick={onBack}>Back</button>
-    </div>
-  ),
+  TeamDetail: ({ team, onBack }: { team: { name: string }; onBack: () => void }) => {
+    const { t } = useTranslation()
+    return (
+      <div data-testid="team-detail">
+        <span>{team.name}</span>
+        <button onClick={onBack}>{t('common.back')}</button>
+      </div>
+    )
+  },
 }))
 
 import { TeamManagementPage } from './TeamManagement'
@@ -95,7 +99,7 @@ describe('TeamManagementPage', () => {
     expect(screen.getByTestId('team-detail')).toBeInTheDocument()
 
     await act(async () => {
-      fireEvent.click(screen.getByText('Back'))
+      fireEvent.click(screen.getByText('common.back'))
     })
     expect(screen.getByTestId('team-list')).toBeInTheDocument()
     expect(screen.queryByTestId('team-detail')).not.toBeInTheDocument()

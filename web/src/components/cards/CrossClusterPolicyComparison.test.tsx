@@ -238,7 +238,7 @@ describe('CrossClusterPolicyComparison', () => {
       render(<CrossClusterPolicyComparison />)
       const policyRow = screen.getByRole('button', { name: /View policy details: ClusterPolicy\/require-labels/i })
       await userEvent.click(policyRow)
-      await userEvent.click(screen.getByText('Close'))
+      await userEvent.click(screen.getByRole('button', { name: /Close/i }))
       expect(screen.queryByTestId('kyverno-modal')).not.toBeInTheDocument()
     })
   })

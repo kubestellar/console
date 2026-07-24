@@ -193,7 +193,7 @@ export function createMissionStateUtils(state: MissionProviderState) {
   const clearMissionStatusTimers = (missionId: string) => {
     const timers = state.missionStatusTimers.current.get(missionId)
     if (timers) {
-      for (const handle of timers) {
+      for (const handle of (timers || [])) {
         clearTimeout(handle)
       }
       state.missionStatusTimers.current.delete(missionId)

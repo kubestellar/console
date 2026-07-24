@@ -57,7 +57,7 @@ export function createMissionExecutionApi(
 
     const conflicts = new Set<string>()
     for (const lockedTools of state.missionToolLocks.current.values()) {
-      for (const tool of normalizedRequiredTools) {
+      for (const tool of (normalizedRequiredTools || [])) {
         if (lockedTools.includes(tool)) {
           conflicts.add(tool)
         }
@@ -361,7 +361,7 @@ export function createMissionExecutionApi(
     if (state.queuedMissionExecutions.current.length === 0) return
 
     const remainingQueue: typeof state.queuedMissionExecutions.current = []
-    for (const entry of state.queuedMissionExecutions.current) {
+    for (const entry of (state.queuedMissionExecutions.current || [])) {
       const mission = state.missionsRef.current.find(candidate => candidate.id === entry.missionId)
       if (!mission) continue
       if (mission.status === 'completed' || mission.status === 'failed' || mission.status === 'cancelled') continue

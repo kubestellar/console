@@ -4,6 +4,8 @@ import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
 import { logger } from '@/lib/logger'
 
+const HTTP_NO_CONTENT = 204
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -328,7 +330,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
       const response = await agentFetch(agentWriteURL('', { name }), {
         method: 'DELETE',
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-      if (response.ok || response.status === 204) {
+      if (response.ok || response.status === HTTP_NO_CONTENT) {
         // Optimistic update
         setItems(prev => prev.filter(i => i.metadata.name !== name))
         return true

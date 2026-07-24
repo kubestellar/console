@@ -26,6 +26,7 @@ function authHeaders(): Record<string, string> {
 }
 
 const DEMO_REPORTS = generateBenchmarkReports()
+const HTTP_SERVICE_UNAVAILABLE = 503
 
 // ---------------------------------------------------------------------------
 // Module-level SSE singleton — shared across all card hook instances
@@ -221,7 +222,7 @@ export function useCachedBenchmarkReports() {
         headers: authHeaders(),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
-      if (res.status === 503) throw new Error('BENCHMARK_UNAVAILABLE')
+      if (res.status === HTTP_SERVICE_UNAVAILABLE) throw new Error('BENCHMARK_UNAVAILABLE')
       if (!res.ok) throw new Error(`Benchmark API error: ${res.status}`)
       const data = await res.json()
       return (data.reports ?? []) as BenchmarkReport[]

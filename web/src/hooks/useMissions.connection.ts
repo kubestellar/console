@@ -116,7 +116,7 @@ export function createMissionConnectionApi(
           )
           const now = Date.now()
 
-          for (const mission of reconnectCandidates) {
+          for (const mission of (reconnectCandidates || [])) {
             const ageMs = now - new Date(mission.updatedAt).getTime()
             if (ageMs > MISSION_RECONNECT_MAX_AGE_MS) {
               missionsToMarkStale.add(mission.id)
@@ -220,7 +220,7 @@ export function createMissionConnectionApi(
 
           if (dedupedMissions.length > 0) {
             const OPTIMISTIC_TOOLS_IN_FLIGHT = 1
-            for (const mission of dedupedMissions) {
+            for (const mission of (dedupedMissions || [])) {
               state.toolsInFlight.current.set(mission.id, OPTIMISTIC_TOOLS_IN_FLIGHT)
             }
 
@@ -341,7 +341,7 @@ export function createMissionConnectionApi(
           }
           state.cancelTimeouts.current.clear()
 
-          for (const handle of state.wsSendRetryTimers.current) {
+          for (const handle of (state.wsSendRetryTimers.current || [])) {
             clearTimeout(handle)
           }
           state.wsSendRetryTimers.current.clear()
@@ -433,7 +433,7 @@ export function createMissionConnectionApi(
             state.pendingRequests.current.clear()
           }
           state.pendingRequests.current.clear()
-          for (const handle of state.wsSendRetryTimers.current) {
+          for (const handle of (state.wsSendRetryTimers.current || [])) {
             clearTimeout(handle)
           }
           state.wsSendRetryTimers.current.clear()
@@ -445,7 +445,7 @@ export function createMissionConnectionApi(
           state.lastStreamTimestamp.current.clear()
           state.streamSplitCounter.current.clear()
           for (const timers of state.missionStatusTimers.current.values()) {
-            for (const handle of timers) {
+            for (const handle of (timers || [])) {
               clearTimeout(handle)
             }
           }
