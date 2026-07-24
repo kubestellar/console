@@ -61,6 +61,7 @@ export function NamespaceCard({ namespace, isSelected, onSelect, onDelete, isSys
           disabled={isDeleting}
           className="p-2 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Delete namespace"
+          aria-label="Delete namespace"
         >
           {isDeleting
             ? <Loader2 className="w-4 h-4 animate-spin" />
