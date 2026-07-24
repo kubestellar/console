@@ -161,7 +161,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
           <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto p-6" role="dialog" aria-modal="true" aria-labelledby="install-guide-title" onClick={e => e.stopPropagation()}>
             <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
               <h3 id="install-guide-title" className="text-lg font-semibold">{showInstallGuide.mission.mission?.title ?? `Install ${installInfo?.project ?? 'Component'}`}</h3>
-              <button onClick={() => setShowInstallGuide(null)} className="p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-secondary rounded" aria-label={t('common:actions.close')}><X className="w-4 h-4" /></button>
+              <button onClick={() => setShowInstallGuide(null)} className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-secondary rounded" aria-label={t('common:actions.close')}><X className="w-4 h-4" /></button>
             </div>
             {showInstallGuide.mission.mission?.description && (
               <p className="text-sm text-muted-foreground mb-4">{showInstallGuide.mission.mission.description}</p>
