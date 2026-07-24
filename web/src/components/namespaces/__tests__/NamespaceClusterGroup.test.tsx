@@ -28,7 +28,7 @@ vi.mock('../NamespaceCard', () => ({
   }) => (
     <div data-testid="namespace-card" onClick={onSelect}>
       <span>{namespace.name}</span>
-      {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete() }} title="Delete namespace">Delete Icon</button>}
+      {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete() }} title="Delete namespace" aria-label="Delete namespace">Delete Icon</button>}
     </div>
   ),
   NamespaceCardSkeleton: () => <div data-testid="namespace-skeleton">Loading...</div>,
