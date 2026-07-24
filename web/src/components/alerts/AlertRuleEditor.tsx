@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Trash2, Server, Bell, BellOff, Bot, Webhook, Siren, ShieldAlert } from 'lucide-react'
 import { Slack } from '@/lib/icons'
 import { useClusters } from '../../hooks/useMCP'
-import { BaseModal, ConfirmDialog } from '../../lib/modals'
+import { BaseModal, ConfirmDialog, useModalState } from '../../lib/modals'
 import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR } from '../../lib/constants/time'
 import type {
   AlertRule,
@@ -98,10 +98,10 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
   // Validation
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+  const { isOpen: showDiscardConfirm, open: openDiscardConfirm, close: closeDiscardConfirm } = useModalState()
 
   const forceClose = () => {
-    setShowDiscardConfirm(false)
+    closeDiscardConfirm()
     onCancel()
   }
 
@@ -137,7 +137,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
          selectedClusters.length > 0 ||
          JSON.stringify(channels) !== JSON.stringify(DEFAULT_NEW_RULE_CHANNELS))
     if (hasChanges) {
-      setShowDiscardConfirm(true)
+      openDiscardConfirm()
       return
     }
     onCancel()
@@ -243,7 +243,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
     <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false} closeOnEscape={true}>
       <ConfirmDialog
         isOpen={showDiscardConfirm}
-        onClose={() => setShowDiscardConfirm(false)}
+        onClose={closeDiscardConfirm}
         onConfirm={forceClose}
         title={t('common:common.discardUnsavedChanges', 'Discard unsaved changes?')}
         message={t('common:common.discardUnsavedChangesMessage', 'You have unsaved changes that will be lost.')}

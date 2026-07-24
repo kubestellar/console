@@ -18,6 +18,7 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useModalState } from '../../lib/modals'
 
 type SortField = 'name' | 'severity' | 'enabled'
 type SortTranslationKey = 'alertRules.sortName' | 'alertRules.sortSeverity' | 'alertRules.sortStatus'
@@ -37,7 +38,7 @@ const ALERT_SORT_COMPARATORS = {
 export function AlertRulesCard() {
   const { t } = useTranslation('cards')
   const { rules, createRule, updateRule, toggleRule, deleteRule } = useAlertRules()
-  const [showEditor, setShowEditor] = useState(false)
+  const { isOpen: showEditor, open: openEditor, close: closeEditor } = useModalState()
   const [editingRule, setEditingRule] = useState<AlertRule | undefined>(undefined)
   const { isDemoMode } = useDemoMode()
 
@@ -140,12 +141,12 @@ export function AlertRulesCard() {
   const handleEdit = (e: React.MouseEvent, rule: AlertRule) => {
     e.stopPropagation()
     setEditingRule(rule)
-    setShowEditor(true)
+    openEditor()
   }
 
   const handleCreateNew = () => {
     setEditingRule(undefined)
-    setShowEditor(true)
+    openEditor()
   }
 
   const handleSave = (ruleData: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -154,12 +155,12 @@ export function AlertRulesCard() {
     } else {
       createRule(ruleData)
     }
-    setShowEditor(false)
+    closeEditor()
     setEditingRule(undefined)
   }
 
   const handleCloseEditor = () => {
-    setShowEditor(false)
+    closeEditor()
     setEditingRule(undefined)
   }
 
