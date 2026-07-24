@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useReducer, useState, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { useMobile } from './useMobile'
 import { SETTINGS_CHANGED_EVENT, SETTINGS_RESTORED_EVENT } from '../lib/settingsSync'
 import { emitTourStarted, emitTourCompleted, emitTourSkipped } from '../lib/analytics'
@@ -89,9 +89,32 @@ interface TourContextValue {
 
 const TourContext = createContext<TourContextValue | null>(null)
 
+// Combine isActive + currentStepIndex into a single reducer to prevent
+// consecutive setState calls in startTour, nextStep, and skipTour.
+type TourNavState = { isActive: boolean; currentStepIndex: number }
+type TourNavAction =
+  | { type: 'start' }
+  | { type: 'next' }
+  | { type: 'complete' }
+  | { type: 'deactivate' }
+  | { type: 'goTo'; index: number }
+
+function tourNavReducer(state: TourNavState, action: TourNavAction): TourNavState {
+  switch (action.type) {
+    case 'start': return { isActive: true, currentStepIndex: 0 }
+    case 'next': return { ...state, currentStepIndex: state.currentStepIndex + 1 }
+    case 'complete': return { ...state, isActive: false }
+    case 'deactivate': return { ...state, isActive: false }
+    case 'goTo': return { ...state, currentStepIndex: action.index }
+    default: return state
+  }
+}
+
 export function TourProvider({ children }: { children: ReactNode }) {
-  const [isActive, setIsActive] = useState(false)
-  const [currentStepIndex, setCurrentStepIndex] = useState(0)
+  const [{ isActive, currentStepIndex }, dispatchTourNav] = useReducer(
+    tourNavReducer,
+    { isActive: false, currentStepIndex: 0 }
+  )
   const [hasCompletedTour, setHasCompletedTour] = useState(true) // Default to true until we check
   const { isMobile } = useMobile()
 
@@ -111,7 +134,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   // render loop on mobile (setState in effect body + value in deps = cycle).
   useEffect(() => {
     if (isMobile) {
-      setIsActive(false)
+      dispatchTourNav({ type: 'deactivate' })
     }
   }, [isMobile])
 
@@ -120,17 +143,16 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const startTour = useCallback(() => {
     // Don't start tour on mobile devices
     if (isMobile) return
-    setCurrentStepIndex(0)
-    setIsActive(true)
+    dispatchTourNav({ type: 'start' })
     emitTourStarted()
   }, [isMobile])
 
   const nextStep = useCallback(() => {
     if (currentStepIndex < TOUR_STEPS.length - 1) {
-      setCurrentStepIndex(prev => prev + 1)
+      dispatchTourNav({ type: 'next' })
     } else {
       // Tour complete
-      setIsActive(false)
+      dispatchTourNav({ type: 'complete' })
       setHasCompletedTour(true)
       localStorage.setItem(STORAGE_KEY_TOUR_COMPLETED, 'true')
       window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
@@ -140,13 +162,13 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   const prevStep = useCallback(() => {
     if (currentStepIndex > 0) {
-      setCurrentStepIndex(prev => prev - 1)
+      dispatchTourNav({ type: 'goTo', index: currentStepIndex - 1 })
     }
   }, [currentStepIndex])
 
   const skipTour = useCallback(() => {
     emitTourSkipped(currentStepIndex)
-    setIsActive(false)
+    dispatchTourNav({ type: 'deactivate' })
     setHasCompletedTour(true)
     localStorage.setItem(STORAGE_KEY_TOUR_COMPLETED, 'true')
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
@@ -161,7 +183,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const goToStep = useCallback((stepId: string) => {
     const index = TOUR_STEPS.findIndex(s => s.id === stepId)
     if (index >= 0) {
-      setCurrentStepIndex(index)
+      dispatchTourNav({ type: 'goTo', index })
     }
   }, [])
 
