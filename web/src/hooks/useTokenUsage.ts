@@ -80,7 +80,7 @@ const SETTINGS_KEY = 'kubestellar-token-settings'
 const CATEGORY_KEY = 'kubestellar-token-categories'
 const PERIOD_KEY = 'kubestellar-token-period'
 const SETTINGS_CHANGED_EVENT = 'kubestellar-token-settings-changed'
-const POLL_INTERVAL = 30000 // Poll every 30 seconds
+const POLL_INTERVAL_MS = 30_000 // Poll every 30 seconds
 const LOCAL_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' })
 
 const DEFAULT_SETTINGS = {
@@ -661,7 +661,7 @@ function startPolling() {
   fetchTokenUsage()
 
   // Poll at interval — store the ID so we can clean up when all subscribers leave
-  pollIntervalId = setInterval(fetchTokenUsage, POLL_INTERVAL)
+  pollIntervalId = setInterval(fetchTokenUsage, POLL_INTERVAL_MS)
 }
 
 // Stop singleton polling when no subscribers remain (prevents memory leaks)
