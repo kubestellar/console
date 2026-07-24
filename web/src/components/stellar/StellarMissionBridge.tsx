@@ -118,11 +118,17 @@ export function StellarMissionBridge() {
           status: stellarStatus,
           summary,
         }),
-      }).catch((error) => {
-        // Non-fatal: card stays at "Solving" and the user can dismiss
-        // manually. We don't want a stuck retry loop. Log for debugging.
-        console.warn(`Failed to complete Stellar solve ${link.solveId}:`, error instanceof Error ? error.message : String(error))
       })
+        .then(res => {
+          if (!res.ok) {
+            console.warn(`Stellar solve complete returned ${res.status} for ${link.solveId}`)
+          }
+        })
+        .catch((error) => {
+          // Non-fatal: card stays at "Solving" and the user can dismiss
+          // manually. We don't want a stuck retry loop. Log for debugging.
+          console.warn(`Failed to complete Stellar solve ${link.solveId}:`, error instanceof Error ? error.message : String(error))
+        })
     }
   }, [missions])
 
