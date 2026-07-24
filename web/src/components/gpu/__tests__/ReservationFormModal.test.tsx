@@ -57,7 +57,7 @@ describe('ReservationFormModal', () => {
 
   it('shows "Create Reservation" title when editingReservation is null', () => {
     renderModal()
-    expect(screen.getByText('gpuReservations.createReservation')).toBeTruthy()
+    expect(screen.getByText('gpuReservations.form.createTitle')).toBeTruthy()
   })
 
   it('shows "Edit Reservation" title when editingReservation is provided', () => {
@@ -77,7 +77,7 @@ describe('ReservationFormModal', () => {
       updatedAt: '2024-01-15T00:00:00Z',
     }
     renderModal({ editingReservation })
-    expect(screen.getByText('gpuReservations.editReservation')).toBeTruthy()
+    expect(screen.getByText('gpuReservations.form.editTitle')).toBeTruthy()
   })
 
   it('calls onClose when the close button is clicked', () => {
