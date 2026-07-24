@@ -9,21 +9,40 @@ import type { GPUNode } from '../../../hooks/mcp/types.gpu'
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../lib/modals', () => ({
-  BaseModal: ({ children, onClose }: { children: React.ReactNode; onClose: () => void }) => (
-    <div
-      data-testid="base-modal"
-      onClick={onClose}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onClose()
-      }}
-    >
-      {children}
-    </div>
+  BaseModal: Object.assign(
+    ({ children, isOpen, onClose }: { children: React.ReactNode; isOpen: boolean; onClose: () => void }) =>
+      isOpen ? (
+        <div
+          data-testid="base-modal"
+          onClick={onClose}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') onClose()
+          }}
+        >
+          {children}
+        </div>
+      ) : null,
+    {
+      Header: ({ title, onClose }: { title: string; icon?: unknown; onClose?: () => void; showBack?: boolean }) => (
+        <div data-testid="modal-header">
+          <h2>{title}</h2>
+          {onClose && <button onClick={onClose} aria-label="close">×</button>}
+        </div>
+      ),
+      Content: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+        <div data-testid="modal-content" className={className}>
+          {children}
+        </div>
+      ),
+      Footer: ({ children }: { children: React.ReactNode }) => (
+        <div data-testid="modal-footer">{children}</div>
+      ),
+    },
   ),
-  ConfirmDialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
-    open ? <div data-testid="confirm-dialog">{children}</div> : null,
+  ConfirmDialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
+    isOpen ? <div data-testid="confirm-dialog">{children}</div> : null,
 }))
 
 vi.mock('../../../hooks/useMCP', () => ({
