@@ -5,7 +5,6 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { NamespaceClusterGroup } from '../NamespaceClusterGroup'
 import type { NamespaceDetails } from '../types'
-import { useTranslation } from 'react-i18next'
 
 /**
  * NamespaceClusterGroup Component Tests
@@ -26,16 +25,12 @@ vi.mock('../NamespaceCard', () => ({
     namespace: NamespaceDetails
     onSelect: () => void
     onDelete?: () => void
-  }) => {
-    const { t } = useTranslation()
-    return (
-      <div data-testid="namespace-card">
-        <span>{namespace.name}</span>
-        <button onClick={onSelect}>{t('common.select')}</button>
-        {onDelete && <button onClick={onDelete}>{t('actions.delete')}</button>}
-      </div>
-    )
-  },
+  }) => (
+    <div data-testid="namespace-card" onClick={onSelect}>
+      <span>{namespace.name}</span>
+      {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete() }} title="Delete namespace">Delete Icon</button>}
+    </div>
+  ),
   NamespaceCardSkeleton: () => <div data-testid="namespace-skeleton">Loading...</div>,
 }))
 
@@ -330,8 +325,8 @@ describe('NamespaceClusterGroup', () => {
       />
     )
 
-    const selectButtons = screen.getAllByRole('button', { name: 'Select' })
-    await userEvent.click(selectButtons[0])
+    const namespaceCards = screen.getAllByTestId('namespace-card')
+    await userEvent.click(namespaceCards[0])
 
     expect(mockOnSelect).toHaveBeenCalledWith(mockNamespaces[0])
   })
@@ -352,7 +347,7 @@ describe('NamespaceClusterGroup', () => {
       />
     )
 
-    const deleteButtons = screen.getAllByRole('button', { name: 'Delete' })
+    const deleteButtons = screen.getAllByRole('button', { name: /Delete namespace/i })
     await userEvent.click(deleteButtons[0])
 
     // mockNamespaces[0] ('default') and [1] ('kube-system') are system namespaces
