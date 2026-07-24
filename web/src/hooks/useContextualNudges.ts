@@ -25,6 +25,8 @@ export type NudgeType = 'customize' | 'drag-hint' | 'pwa-install'
 const CUSTOMIZE_NUDGE_VISIT_THRESHOLD = 3
 /** Number of sessions before showing the PWA install nudge */
 const PWA_NUDGE_SESSION_THRESHOLD = 3
+/** Duration the drag-hint shimmy animation plays before auto-hiding */
+const SHIMMY_DURATION_MS = 2000
 
 interface NudgeState {
   /** Which nudge (if any) should currently be shown */
@@ -82,7 +84,6 @@ export function useContextualNudges(hasCustomizedDashboard: boolean): NudgeState
       setShowDragHint(true)
       safeSetItem(STORAGE_KEY_DRAG_HINT_SHOWN, 'true')
       // Auto-hide shimmy after animation completes
-      const SHIMMY_DURATION_MS = 2000
       const timer = setTimeout(() => setShowDragHint(false), SHIMMY_DURATION_MS)
       return () => clearTimeout(timer)
     }
