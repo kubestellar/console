@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {

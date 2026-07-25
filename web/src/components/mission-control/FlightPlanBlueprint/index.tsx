@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 /**
  * FlightPlanBlueprint — Phase 3: Master SVG blueprint.
  *
