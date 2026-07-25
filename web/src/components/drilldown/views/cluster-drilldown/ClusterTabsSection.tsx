@@ -93,7 +93,7 @@ export function ClusterTabsSection({
   drillToPod,
   drillToEvents,
 }: ClusterTabsSectionProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation(["common", "cards"]);
 
   return (
     <div ref={resourceTreeRef} className="border-t border-border pt-4">
@@ -107,7 +107,7 @@ export function ClusterTabsSection({
             },
             {
               id: "resources" as ClusterTab,
-              label: "Resource Tree",
+              label: t("workloadMonitor.resourceTree", { ns: "cards" }),
               count: issueCounts.total > 0 ? issueCounts.total : undefined,
             },
           ].map((tab) => (

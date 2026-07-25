@@ -16,6 +16,21 @@ import {
   type ClusterInfo,
 } from "../../../../hooks/useMCP";
 import { LOADING_TIMEOUT_MS } from "../../../../lib/constants/network";
+import {
+  buildClusterLookupNames,
+  buildFilteredNamespaceStats,
+  buildGpuByType,
+  buildNamespaceResources,
+  buildNamespacesFromIssues,
+  computeIssueCounts,
+  filterClusterDeploymentIssues,
+  filterClusterGPUNodes,
+  filterDeploymentsForLens,
+  filterNodesForLens,
+  filterPVCsForLens,
+  filterServicesForLens,
+  sumGpuTotals,
+} from "./derivedData";
 import type { ClusterTab, TreeLens } from "./types";
 
 /** Scroll delay (ms) to let the DOM update after switching tabs */
@@ -125,13 +140,15 @@ export function useClusterDrillDown(data: Record<string, unknown>) {
     });
   };
 
-  const clusterLookupNames = useMemo(() => {
-    const names = new Set<string>();
-    if (clusterName) names.add(clusterName);
-    if (effectiveClusterName) names.add(effectiveClusterName);
-    (clusterInfo?.aliases || []).forEach((alias: string) => names.add(alias));
-    return names;
-  }, [clusterInfo?.aliases, clusterName, effectiveClusterName]);
+  const clusterLookupNames = useMemo(
+    () =>
+      buildClusterLookupNames(
+        clusterName,
+        effectiveClusterName,
+        clusterInfo?.aliases,
+      ),
+    [clusterInfo?.aliases, clusterName, effectiveClusterName],
+  );
   const clusterPrefix = useMemo(
     () => effectiveClusterName.split("/")[0],
     [effectiveClusterName],
@@ -141,196 +158,88 @@ export function useClusterDrillDown(data: Record<string, unknown>) {
     [searchFilter],
   );
 
-  const clusterGPUNodes = useMemo(() => {
-    if (!effectiveClusterName) return [];
-    return (allGPUNodes || []).filter(
-      (node) =>
-        clusterLookupNames.has(node.cluster) ||
-        node.cluster.includes(clusterPrefix),
-    );
-  }, [allGPUNodes, clusterLookupNames, effectiveClusterName, clusterPrefix]);
+  const clusterGPUNodes = useMemo(
+    () =>
+      filterClusterGPUNodes(
+        allGPUNodes,
+        effectiveClusterName,
+        clusterLookupNames,
+        clusterPrefix,
+      ),
+    [allGPUNodes, clusterLookupNames, effectiveClusterName, clusterPrefix],
+  );
 
-  const clusterDeploymentIssues = useMemo(() => {
-    if (!effectiveClusterName) return [];
-    return (deploymentIssues || []).filter(
-      (issue) =>
-        clusterLookupNames.has(issue.cluster || "") ||
-        issue.cluster?.includes(clusterPrefix),
-    );
-  }, [
-    clusterLookupNames,
-    effectiveClusterName,
-    clusterPrefix,
-    deploymentIssues,
-  ]);
+  const clusterDeploymentIssues = useMemo(
+    () =>
+      filterClusterDeploymentIssues(
+        deploymentIssues,
+        effectiveClusterName,
+        clusterLookupNames,
+        clusterPrefix,
+      ),
+    [clusterLookupNames, effectiveClusterName, clusterPrefix, deploymentIssues],
+  );
 
-  const namespaces = useMemo(() => {
-    const ns = new Set<string>();
-    podIssues.forEach((p) => ns.add(p.namespace));
-    clusterDeploymentIssues.forEach((d) => ns.add(d.namespace));
-    return Array.from(ns).sort();
-  }, [podIssues, clusterDeploymentIssues]);
+  const namespaces = useMemo(
+    () => buildNamespacesFromIssues(podIssues, clusterDeploymentIssues),
+    [podIssues, clusterDeploymentIssues],
+  );
 
-  const gpuByType = useMemo(() => {
-    const map: Record<
-      string,
-      { total: number; allocated: number; nodes: number }
-    > = {};
-    clusterGPUNodes.forEach((node) => {
-      const type = node.gpuType || "Unknown";
-      if (!map[type]) {
-        map[type] = { total: 0, allocated: 0, nodes: 0 };
-      }
-      map[type].total += node.gpuCount || 0;
-      map[type].allocated += node.gpuAllocated || 0;
-      map[type].nodes += 1;
-    });
-    return map;
-  }, [clusterGPUNodes]);
+  const gpuByType = useMemo(
+    () => buildGpuByType(clusterGPUNodes),
+    [clusterGPUNodes],
+  );
 
-  const filteredNodes = useMemo(() => {
-    let nodes = allNodes || [];
-    if (normalizedSearchFilter) {
-      nodes = nodes.filter((n) =>
-        n.name.toLowerCase().includes(normalizedSearchFilter),
-      );
-    }
-    if (activeLens === "issues") {
-      nodes = nodes.filter((n) => n.status !== "Ready");
-    }
-    if (activeLens === "nodes" || activeLens === "all") {
-      return nodes;
-    }
-    return activeLens === "issues" ? nodes : [];
-  }, [activeLens, allNodes, normalizedSearchFilter]);
+  const filteredNodes = useMemo(
+    () => filterNodesForLens(allNodes, normalizedSearchFilter, activeLens),
+    [activeLens, allNodes, normalizedSearchFilter],
+  );
 
-  const filteredNamespaceStats = useMemo(() => {
-    const statsByName = new Map(namespaceStats.map((ns) => [ns.name, ns]));
-    const mergedNamespaceNames = Array.from(
-      new Set([
-        ...namespaceStats.map((ns) => ns.name),
-        ...(allNamespaces || []),
-      ]),
-    );
-
-    let namespacesList = mergedNamespaceNames.map(
-      (name) =>
-        statsByName.get(name) || {
-          name,
-          podCount: 0,
-          runningPods: 0,
-          pendingPods: 0,
-          failedPods: 0,
-        },
-    );
-
-    if (normalizedSearchFilter) {
-      namespacesList = namespacesList.filter((ns) =>
-        ns.name.toLowerCase().includes(normalizedSearchFilter),
-      );
-    }
-
-    if (!normalizedSearchFilter) {
-      const nonSystemNs = namespacesList.filter(
-        (ns) => !ns.name.startsWith("kube-") && ns.name !== "default",
-      );
-      if (nonSystemNs.length > 0) {
-        namespacesList = nonSystemNs;
-      }
-    }
-
-    return namespacesList;
-  }, [allNamespaces, namespaceStats, normalizedSearchFilter]);
+  const filteredNamespaceStats = useMemo(
+    () =>
+      buildFilteredNamespaceStats(
+        namespaceStats,
+        allNamespaces,
+        normalizedSearchFilter,
+      ),
+    [allNamespaces, namespaceStats, normalizedSearchFilter],
+  );
 
   const filteredNamespaces = useMemo(
     () => filteredNamespaceStats.map((ns) => ns.name),
     [filteredNamespaceStats],
   );
 
-  const filteredDeployments = useMemo(() => {
-    let deps = allDeployments || [];
-    if (normalizedSearchFilter) {
-      deps = deps.filter(
-        (d) =>
-          d.name.toLowerCase().includes(normalizedSearchFilter) ||
-          d.namespace.toLowerCase().includes(normalizedSearchFilter),
-      );
-    }
-    if (activeLens === "issues") {
-      deps = deps.filter(
-        (d) => d.readyReplicas < d.replicas || d.status === "failed",
-      );
-    }
-    if (
-      activeLens === "workloads" ||
-      activeLens === "all" ||
-      activeLens === "issues"
-    ) {
-      return deps;
-    }
-    return [];
-  }, [activeLens, allDeployments, normalizedSearchFilter]);
+  const filteredDeployments = useMemo(
+    () =>
+      filterDeploymentsForLens(
+        allDeployments,
+        normalizedSearchFilter,
+        activeLens,
+      ),
+    [activeLens, allDeployments, normalizedSearchFilter],
+  );
 
-  const unhealthyDeployments = useMemo(() => {
-    return filteredDeployments.filter((d) => d.readyReplicas < d.replicas);
-  }, [filteredDeployments]);
+  const unhealthyDeployments = useMemo(
+    () => filteredDeployments.filter((d) => d.readyReplicas < d.replicas),
+    [filteredDeployments],
+  );
 
-  const filteredServices = useMemo(() => {
-    let svcs = allServices || [];
-    if (normalizedSearchFilter) {
-      svcs = svcs.filter(
-        (s) =>
-          s.name.toLowerCase().includes(normalizedSearchFilter) ||
-          s.namespace.toLowerCase().includes(normalizedSearchFilter),
-      );
-    }
-    if (activeLens === "network" || activeLens === "all") {
-      return svcs;
-    }
-    return [];
-  }, [activeLens, allServices, normalizedSearchFilter]);
+  const filteredServices = useMemo(
+    () =>
+      filterServicesForLens(allServices, normalizedSearchFilter, activeLens),
+    [activeLens, allServices, normalizedSearchFilter],
+  );
 
-  const filteredPVCs = useMemo(() => {
-    let pvcs = allPVCs || [];
-    if (normalizedSearchFilter) {
-      pvcs = pvcs.filter(
-        (p) =>
-          p.name.toLowerCase().includes(normalizedSearchFilter) ||
-          p.namespace.toLowerCase().includes(normalizedSearchFilter),
-      );
-    }
-    if (activeLens === "issues") {
-      pvcs = pvcs.filter((p) => p.status !== "Bound");
-    }
-    if (
-      activeLens === "storage" ||
-      activeLens === "all" ||
-      activeLens === "issues"
-    ) {
-      return pvcs;
-    }
-    return [];
-  }, [activeLens, allPVCs, normalizedSearchFilter]);
+  const filteredPVCs = useMemo(
+    () => filterPVCsForLens(allPVCs, normalizedSearchFilter, activeLens),
+    [activeLens, allPVCs, normalizedSearchFilter],
+  );
 
-  const namespaceResources = useMemo(() => {
-    const podIssueCounts: Record<string, number> = {};
-    const deploymentIssueCounts: Record<string, number> = {};
-
-    podIssues.forEach((issue) => {
-      podIssueCounts[issue.namespace] =
-        (podIssueCounts[issue.namespace] || 0) + 1;
-    });
-
-    clusterDeploymentIssues.forEach((issue) => {
-      deploymentIssueCounts[issue.namespace] =
-        (deploymentIssueCounts[issue.namespace] || 0) + 1;
-    });
-
-    return {
-      podIssueCounts,
-      deploymentIssueCounts,
-    };
-  }, [clusterDeploymentIssues, podIssues]);
+  const namespaceResources = useMemo(
+    () => buildNamespaceResources(podIssues, clusterDeploymentIssues),
+    [clusterDeploymentIssues, podIssues],
+  );
 
   const hasVisibleResourceData =
     filteredNodes.length > 0 ||
@@ -339,30 +248,12 @@ export function useClusterDrillDown(data: Record<string, unknown>) {
     filteredServices.length > 0 ||
     filteredPVCs.length > 0;
 
-  const issueCounts = useMemo(() => {
-    const nodes = (allNodes || []).filter((n) => n.status !== "Ready").length;
-    const deployments = (allDeployments || []).filter(
-      (d) => d.readyReplicas < d.replicas,
-    ).length;
-    const pods = podIssues.length;
-    const pvcs = (allPVCs || []).filter((p) => p.status !== "Bound").length;
-    return {
-      nodes,
-      deployments,
-      pods,
-      pvcs,
-      total: nodes + deployments + pods + pvcs,
-    };
-  }, [allDeployments, allNodes, allPVCs, podIssues]);
+  const issueCounts = useMemo(
+    () => computeIssueCounts(allNodes, allDeployments, podIssues, allPVCs),
+    [allDeployments, allNodes, allPVCs, podIssues],
+  );
 
-  const totalGPUs = clusterGPUNodes.reduce(
-    (sum, n) => sum + (n.gpuCount || 0),
-    0,
-  );
-  const allocatedGPUs = clusterGPUNodes.reduce(
-    (sum, n) => sum + (n.gpuAllocated || 0),
-    0,
-  );
+  const { totalGPUs, allocatedGPUs } = sumGpuTotals(clusterGPUNodes);
 
   return {
     clusterName,

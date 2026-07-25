@@ -29,7 +29,7 @@ export function ClusterEventsTab({
       </div>
       {eventsLoading ? (
         <div className="space-y-2 animate-pulse">
-          {[...Array(EVENT_SKELETON_COUNT)].map((i) => (
+          {[...Array(EVENT_SKELETON_COUNT)].map((_, i) => (
             <div
               key={i}
               className="p-3 rounded-lg bg-card/30 border border-border"

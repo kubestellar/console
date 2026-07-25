@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useClusterDrillDown } from "./cluster-drilldown/ClusterDrillDown.hooks";
 import { ClusterDrillDownSkeleton } from "./cluster-drilldown/ClusterDrillDownSkeleton";
 import {
@@ -16,12 +17,13 @@ interface Props {
 }
 
 export function ClusterDrillDown({ data }: Props) {
+  const { t } = useTranslation();
   const drillDown = useClusterDrillDown(data);
 
   if (!drillDown.clusterName) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground">
-        No cluster selected
+        {t("drilldown.empty.noClusterSelected")}
       </div>
     );
   }
