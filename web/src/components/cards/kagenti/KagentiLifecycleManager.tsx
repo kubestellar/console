@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import {
   Activity, ArrowRight, Bot, Hammer,
   Server,
+  type LucideIcon,
 } from 'lucide-react'
 import { useKagentiAgents, useKagentiBuilds } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
@@ -54,7 +55,7 @@ function LifecycleSummaryBar({
   colorMap,
 }: {
   label: string
-  icon: typeof Bot
+  icon: LucideIcon
   states: readonly string[]
   counts: Record<string, number>
   colorMap: Record<string, { bg: string; text: string; border: string }>
