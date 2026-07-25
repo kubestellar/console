@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { ClusterEvent } from "../../../../hooks/useMCP";
 import { StatusIndicator } from "../../../charts/StatusIndicator";
 
@@ -17,6 +18,8 @@ export function ClusterEventsTab({
   effectiveClusterName,
   onDrillToEvents,
 }: ClusterEventsTabProps) {
+  const { t } = useTranslation();
+
   return (
     <div>
       <div className="flex justify-end mb-3">
@@ -24,7 +27,7 @@ export function ClusterEventsTab({
           onClick={() => onDrillToEvents(effectiveClusterName)}
           className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
         >
-          View All →
+          {t("common.viewAll")} →
         </button>
       </div>
       {eventsLoading ? (
@@ -41,7 +44,7 @@ export function ClusterEventsTab({
         </div>
       ) : clusterEvents.length === 0 ? (
         <div className="p-4 rounded-lg bg-card/30 border border-border text-center text-muted-foreground text-sm">
-          No recent events
+          {t("drilldown.events.noRecentEvents")}
         </div>
       ) : (
         <div className="space-y-2">

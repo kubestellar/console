@@ -31,11 +31,11 @@ export function ClusterGPUTypeBreakdown({
           >
             <div className="text-sm font-medium text-purple-400">{type}</div>
             <div className="text-xl font-bold text-foreground mt-1">
-              {info.total} GPUs
+              {info.total} {t("common.gpus")}
             </div>
             <div className="text-xs text-muted-foreground">
-              {info.allocated} allocated • {info.nodes} node
-              {info.nodes !== 1 ? "s" : ""}
+              {info.allocated} {t("clusterDetail.allocated")} •{" "}
+              {t("clusterDetail.nodeCount", { count: info.nodes })}
             </div>
           </div>
         ))}
@@ -59,6 +59,8 @@ export function ClusterGPUNodesSection({
   effectiveClusterName,
   onDrillToGPUNode,
 }: ClusterGPUNodesSectionProps) {
+  const { t } = useTranslation();
+
   if (clusterGPUNodes.length === 0) {
     return null;
   }
@@ -66,7 +68,9 @@ export function ClusterGPUNodesSection({
   return (
     <div>
       <h3 className="text-lg font-semibold text-foreground mb-4">
-        GPU Nodes ({clusterGPUNodes.length})
+        {t("drilldown.cluster.gpuNodesCount", {
+          count: clusterGPUNodes.length,
+        })}
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {clusterGPUNodes.map((node, i) => (
@@ -88,7 +92,10 @@ export function ClusterGPUNodesSection({
             <div className="flex items-center gap-3 ml-4">
               <Gauge value={node.gpuAllocated} max={node.gpuCount} size="sm" />
               <div className="text-sm text-muted-foreground whitespace-nowrap">
-                {node.gpuAllocated}/{node.gpuCount} GPUs
+                {t("drilldown.cluster.gpuAllocatedSummary", {
+                  allocated: node.gpuAllocated,
+                  total: node.gpuCount,
+                })}
               </div>
             </div>
           </div>

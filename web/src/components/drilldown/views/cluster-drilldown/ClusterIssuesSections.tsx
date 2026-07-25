@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { DeploymentIssue, PodIssue } from "../../../../hooks/useMCP";
 import { StatusBadge } from "../../../ui/StatusBadge";
 
@@ -22,20 +23,24 @@ export function ClusterIssuesSection({
   onDrillToPod,
   onDrillToNamespace,
 }: ClusterIssuesSectionProps) {
-  if (podIssues.length === 0 && clusterDeploymentIssues.length === 0) {
+  const { t } = useTranslation();
+  const totalIssueCount =
+    podIssues.length + clusterDeploymentIssues.length;
+
+  if (totalIssueCount === 0) {
     return null;
   }
 
   return (
     <div>
       <h3 className="text-lg font-semibold text-foreground mb-4">
-        Issues ({podIssues.length + clusterDeploymentIssues.length})
+        {t("clusterDetail.issuesCount", { count: totalIssueCount })}
       </h3>
 
       {podIssues.length > 0 && (
         <div className="mb-4">
           <h4 className="text-sm font-medium text-muted-foreground mb-2">
-            Pod Issues
+            {t("drilldown.namespace.podIssues")}
           </h4>
           <div className="space-y-2">
             {podIssues.map((issue, i) => (
@@ -57,7 +62,8 @@ export function ClusterIssuesSection({
                       {issue.name}
                     </span>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {issue.namespace} • {issue.restarts} restarts
+                      {issue.namespace} •{" "}
+                      {t("clusterDetail.restarts", { count: issue.restarts })}
                     </div>
                     {(issue.issues || []).length > 0 && (
                       <div className="text-xs text-red-400 mt-1">
@@ -81,7 +87,7 @@ export function ClusterIssuesSection({
       {clusterDeploymentIssues.length > 0 && (
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-2">
-            Deployment Issues
+            {t("drilldown.namespace.deploymentIssues")}
           </h4>
           <div className="space-y-2">
             {clusterDeploymentIssues.map((issue, i) => (
@@ -108,7 +114,10 @@ export function ClusterIssuesSection({
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
                     <StatusBadge color="orange" size="xs">
-                      {issue.readyReplicas}/{issue.replicas} ready
+                      {t("cluster.readyReplicas", {
+                        ready: issue.readyReplicas,
+                        total: issue.replicas,
+                      })}
                     </StatusBadge>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </div>
@@ -137,6 +146,8 @@ export function ClusterNamespacesSection({
   effectiveClusterName,
   onDrillToNamespace,
 }: ClusterNamespacesSectionProps) {
+  const { t } = useTranslation();
+
   if (namespaces.length === 0) {
     return null;
   }
@@ -144,7 +155,7 @@ export function ClusterNamespacesSection({
   return (
     <div>
       <h3 className="text-lg font-semibold text-foreground mb-4">
-        Namespaces with Activity
+        {t("drilldown.cluster.namespacesWithActivity")}
       </h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {namespaces.map((ns) => {
@@ -162,7 +173,9 @@ export function ClusterNamespacesSection({
               </div>
               {nsIssues > 0 && (
                 <div className="text-xs text-red-400 mt-1">
-                  {nsIssues} issues
+                  {t("drilldown.cluster.namespaceIssueCount", {
+                    count: nsIssues,
+                  })}
                 </div>
               )}
             </button>

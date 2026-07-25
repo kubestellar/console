@@ -41,14 +41,14 @@ export function ClusterOverviewStats({
         </div>
         <div className="text-2xl font-bold text-foreground">
           {health?.reachable === false
-            ? t("common.offline", "Offline")
+            ? t("common.offline")
             : health?.nodeCount && health.nodeCount > 0
               ? health.readyNodes === health.nodeCount
-                ? t("common.healthy", "Healthy")
-                : t("common.degraded", "Degraded")
+                ? t("common.healthy")
+                : t("common.degraded")
               : health?.healthy
-                ? t("common.healthy", "Healthy")
-                : t("common.unknown", "Unknown")}
+                ? t("common.healthy")
+                : t("common.unknown")}
         </div>
       </div>
 
@@ -63,7 +63,7 @@ export function ClusterOverviewStats({
           {health?.nodeCount || 0}
         </div>
         <div className="text-xs text-green-400">
-          {health?.readyNodes || 0} ready
+          {health?.readyNodes || 0} {t("clusterDetail.ready")}
         </div>
       </button>
 
@@ -84,7 +84,9 @@ export function ClusterOverviewStats({
           {t("common.gpus")}
         </div>
         <div className="text-2xl font-bold text-foreground">{totalGPUs}</div>
-        <div className="text-xs text-yellow-400">{allocatedGPUs} allocated</div>
+        <div className="text-xs text-yellow-400">
+          {allocatedGPUs} {t("clusterDetail.allocated")}
+        </div>
       </div>
     </div>
   );
