@@ -5,7 +5,7 @@ import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } 
 
 const RESULT_TYPE_CHIP_CLASS = 'inline-flex shrink-0 items-center rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-foreground'
 
-const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Bot }> = {
+const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   page: { label: 'Dashboards', icon: (props) => <div {...props}>📊</div> },
   card: { label: 'Cards', icon: (props) => <div {...props}>🎴</div> },
   stat: { label: 'Stats', icon: (props) => <div {...props}>📈</div> },
