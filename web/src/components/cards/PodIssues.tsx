@@ -43,6 +43,7 @@ export function PodIssues() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    lastRefresh,
     error
   } = useCachedPodIssues()
 
@@ -57,6 +58,7 @@ export function PodIssues() {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
+    lastRefresh,
   })
   const { drillToPod } = useDrillDownActions()
 
