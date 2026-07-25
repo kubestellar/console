@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
 import { getDemoMode } from './useDemoMode'
@@ -10,120 +9,45 @@ import {
   TokenUsageUnauthenticatedError,
   type UserTokenUsageRecord,
 } from '../lib/tokenUsageApi'
+import {
+  type TokenCategory,
+  type TokenUsage,
+  type TokenUsageByCategory,
+  type TokenAlertLevel,
+} from './useTokenUsage.types'
+import {
+  getTokenAlertLevel,
+  reconcileUsageBreakdown,
+  getUsagePeriodKey,
+  getNextResetDate,
+  MAX_SINGLE_DELTA_TOKENS,
+  MIN_STOP_THRESHOLD,
+  LAST_KNOWN_USAGE_KEY,
+  AGENT_SESSION_KEY,
+  DEFAULT_CATEGORY,
+  TOKEN_USAGE_FLUSH_INTERVAL_MS,
+  TOKEN_USAGE_FLUSH_THRESHOLD,
+  DEFAULT_SETTINGS,
+  DEFAULT_BY_CATEGORY,
+  DEMO_TOKEN_USAGE,
+  DEMO_BY_CATEGORY,
+  __mathConstants,
+} from './useTokenUsage.math'
 
-/** Maximum token delta to attribute in a single poll cycle (prevents init spikes) */
-const MAX_SINGLE_DELTA_TOKENS = 50_000
+const SETTINGS_KEY = __mathConstants.SETTINGS_KEY
+const CATEGORY_KEY = __mathConstants.CATEGORY_KEY
+const PERIOD_KEY = __mathConstants.PERIOD_KEY
+const SETTINGS_CHANGED_EVENT = __mathConstants.SETTINGS_CHANGED_EVENT
+const POLL_INTERVAL_MS = __mathConstants.POLL_INTERVAL_MS
 
-/** Minimum valid stop threshold — prevents "AI Disabled" at 0% from corrupted localStorage */
-const MIN_STOP_THRESHOLD = 0.01
-
-/** localStorage key for the persisted last-known total token count (agent restart detection) */
-const LAST_KNOWN_USAGE_KEY = 'kc:tokenUsage:lastKnown'
-
-/** localStorage key for the persisted agent session marker (agent restart detection) */
-const AGENT_SESSION_KEY = 'kc:tokenUsage:agentSession'
-
-/** Default category used when a delta arrives with no active operation */
-const DEFAULT_CATEGORY: TokenCategory = 'other'
-
-/**
- * Maximum age (ms) of an unflushed pending delta before it MUST be sent to the
- * backend even if the threshold-based trigger has not fired. Keeping this short
- * means a logged-in user who closes the tab loses at most ~30s of attribution
- * if `sendBeacon` is unavailable.
- */
-const TOKEN_USAGE_FLUSH_INTERVAL_MS = 30_000
-
-/**
- * Minimum total tokens accumulated across pending deltas before triggering a
- * flush. Caps backend write traffic on heavy-usage sessions: ~1 POST per
- * `TOKEN_USAGE_FLUSH_THRESHOLD` tokens of activity, regardless of how many
- * individual deltas the local agent reports.
- */
-const TOKEN_USAGE_FLUSH_THRESHOLD = 100
-
-export type TokenCategory = 'missions' | 'diagnose' | 'insights' | 'predictions' | 'other'
-
-export interface TokenUsageByCategory {
-  missions: number
-  diagnose: number
-  insights: number
-  predictions: number
-  other: number
-}
-
-export interface TokenUsage {
-  used: number
-  limit: number
-  warningThreshold: number
-  criticalThreshold: number
-  stopThreshold: number
-  resetDate: string
-  byCategory: TokenUsageByCategory
-}
-
-export type TokenAlertLevel = 'normal' | 'warning' | 'critical' | 'stopped'
-
-export function getTokenAlertLevel(usage: Pick<TokenUsage, 'used' | 'limit' | 'warningThreshold' | 'criticalThreshold' | 'stopThreshold'>): TokenAlertLevel {
-  if (usage.limit <= 0) return 'normal'
-
-  const percentageUsed = usage.used / usage.limit
-  const stopThreshold = usage.stopThreshold > 0 ? usage.stopThreshold : DEFAULT_SETTINGS.stopThreshold
-
-  if (percentageUsed >= stopThreshold) return 'stopped'
-  if (percentageUsed >= usage.criticalThreshold) return 'critical'
-  if (percentageUsed >= usage.warningThreshold) return 'warning'
-  return 'normal'
-}
-
-const SETTINGS_KEY = 'kubestellar-token-settings'
-const CATEGORY_KEY = 'kubestellar-token-categories'
-const PERIOD_KEY = 'kubestellar-token-period'
-const SETTINGS_CHANGED_EVENT = 'kubestellar-token-settings-changed'
-const POLL_INTERVAL_MS = 30_000 // Poll every 30 seconds
-const LOCAL_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' })
-
-const DEFAULT_SETTINGS = {
-  limit: 500000000, // 500M tokens daily default
-  warningThreshold: 0.7, // 70%
-  criticalThreshold: 0.9, // 90%
-  stopThreshold: 1.0, // 100%
-}
-
-const NEXT_RESET_DAY_OFFSET = 1
-
-const DEFAULT_BY_CATEGORY: TokenUsageByCategory = {
-  missions: 0,
-  diagnose: 0,
-  insights: 0,
-  predictions: 0,
-  other: 0 }
-
-function reconcileUsageBreakdown(totalUsed: number, byCategory: TokenUsageByCategory): TokenUsageByCategory {
-  // If no tokens used, reset all categories to 0 (prevents stale demo/cached data from showing)
-  if (totalUsed === 0) {
-    return { ...DEFAULT_BY_CATEGORY }
-  }
-  const knownCategories = byCategory.missions + byCategory.diagnose + byCategory.insights + byCategory.predictions
-  const other = Math.max(totalUsed - knownCategories, 0)
-  return other === byCategory.other ? byCategory : { ...byCategory, other }
-}
-
-// Demo mode token usage - simulate realistic usage
-const DEMO_TOKEN_USAGE = 1247832 // ~25% of 5M limit
-const DEMO_BY_CATEGORY: TokenUsageByCategory = {
-  missions: 523000,
-  diagnose: 312000,
-  insights: 245832,
-  predictions: 167000,
-  other: 0 }
 
 // Singleton state - shared across all hook instances
 let sharedUsage: TokenUsage = {
   used: 0,
   ...DEFAULT_SETTINGS,
   resetDate: getNextResetDate(),
-  byCategory: { ...DEFAULT_BY_CATEGORY } }
+  byCategory: { ...DEFAULT_BY_CATEGORY },
+}
 let currentUsagePeriod = getUsagePeriodKey()
 let pollStarted = false
 let pollIntervalId: ReturnType<typeof setInterval> | null = null
@@ -207,9 +131,6 @@ function persistUsage(lastKnown: number, sessionId: string | null): void {
   }
 }
 
-function getUsagePeriodKey(now = new Date()): string {
-  return LOCAL_DATE_FORMATTER.format(now)
-}
 
 function resetUsagePeriodState(nextPeriod: string, forceNotify = false): void {
   currentUsagePeriod = nextPeriod
@@ -786,11 +707,6 @@ export function useTokenUsage() {
     isDemoData }
 }
 
-function getNextResetDate(): string {
-  const now = new Date()
-  const nextReset = new Date(now.getFullYear(), now.getMonth(), now.getDate() + NEXT_RESET_DAY_OFFSET)
-  return nextReset.toISOString()
-}
 
 /**
  * Global function to add category tokens without needing a hook.
@@ -825,4 +741,13 @@ export const __testables = {
   DEMO_BY_CATEGORY,
   PERIOD_KEY,
   getUsagePeriodKey,
+}
+
+// Re-export types and utilities for backward compatibility
+export type { TokenCategory, TokenUsageByCategory, TokenUsage, TokenAlertLevel }
+export {
+  getTokenAlertLevel,
+  reconcileUsageBreakdown,
+  getUsagePeriodKey as __getUsagePeriodKey,
+  getNextResetDate as __getNextResetDate,
 }
