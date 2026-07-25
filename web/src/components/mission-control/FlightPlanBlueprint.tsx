@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 /**
  * FlightPlanBlueprint — Phase 3: Master SVG blueprint.
  *
@@ -14,11 +13,6 @@
 import { useId, useMemo, useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Zap,
-  Network,
-  Shield,
-  Layout,
-  HardDrive,
   Info,
   ZoomIn,
   ZoomOut,
@@ -54,6 +48,7 @@ import type { PayloadProject } from './types'
 
 import { computeLayout } from './BlueprintLayout'
 import { exportFullReport, shortenClusterName } from './BlueprintReport'
+import { OVERLAYS, INFO_PANEL_MIN, INFO_PANEL_MAX, INFO_PANEL_DEFAULT, INFO_PANEL_LS_KEY, ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, MIN_LABEL_GAP, NODE_RADIUS, LABEL_OFFSET_Y, resolveKbPath } from './BlueprintConstants'
 import {
   ProjectInfoPanel,
   ClusterInfoPanel,

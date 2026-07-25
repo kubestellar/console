@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { GripVertical, Trash2, AlertTriangle } from 'lucide-react'
@@ -16,7 +15,7 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
+  
   rectSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useTranslation } from 'react-i18next'
@@ -28,6 +27,8 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
 import { CardWrapper } from '../cards/CardWrapper'
+import { SortableCard } from './SortableCard'
+import { DragPreviewCard } from './DragPreviewCard'
 import { CARD_COMPONENTS } from '../cards/cardRegistry'
 import { useCardCollapse } from '../../lib/cards/cardHooks'
 import { safeGetJSON, safeSetJSON, safeRemoveItem } from '../../lib/utils/localStorage'

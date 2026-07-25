@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 /**
  * BlueprintInfoPanels — right-hand info panels for FlightPlanBlueprint.
  *
@@ -24,6 +23,7 @@ import { fetchMissionContent } from '../../lib/missions/missionCache'
 import { fetchKubaraValues } from '../../lib/kubara'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
+import { GaugeRow } from './GaugeRow'
 
 // ---------------------------------------------------------------------------
 // Status display maps (shared with the main component)

@@ -1,17 +1,9 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect, useRef, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus, X, Save, Trash2, Activity, Sparkles,
   CheckCircle, GripVertical, Eye, EyeOff,
-  Maximize2, Minimize2,
-  Server, Database, Cpu, MemoryStick, HardDrive, Zap,
-  CheckCircle2, XCircle, AlertTriangle, BarChart3,
-  Layers, Box, Shield, Lock, Globe, Cloud, GitBranch,
-  Terminal, Code, Wifi, WifiOff, Clock, Users,
-  Gauge, TrendingUp, TrendingDown, ArrowUpRight, Flame,
-  HelpCircle,
-  type LucideIcon } from 'lucide-react'
+  Maximize2, Minimize2 } from 'lucide-react'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import {
@@ -25,6 +17,20 @@ import { InlineAIAssist } from './InlineAIAssist'
 import { STAT_BLOCK_SYSTEM_PROMPT, STAT_INLINE_ASSIST_PROMPT } from '../../lib/ai/prompts'
 import { useAIMode } from '../../hooks/useAIMode'
 import { StatusBadge } from '../ui/StatusBadge'
+import { getIcon } from './StatBlockIcons'
+import {
+  createStatBlockId,
+  AVAILABLE_COLORS,
+  POPULAR_ICONS,
+  VALUE_FORMATS,
+  createEmptyBlock,
+  getSmartDefault,
+  validateStatAssistResult,
+  validateStatBlockResult,
+  SAVE_MESSAGE_TIMEOUT_MS,
+  DEMO_STAT_VALUE,
+} from './StatBlockValidation'
+import { StatsPreview } from './StatsPreview'
 
 // Demo/preview constants
 const DEMO_STAT_VALUE = 42 // Placeholder value shown in stat block previews
