@@ -77,6 +77,7 @@ export function KagentAgentListCard({ config }: KagentAgentListCardProps) {
     isRefreshing,
     isDemoFallback,
     consecutiveFailures,
+    lastRefresh,
   } = useCachedKagentStatus()
 
   const hasAnyData = data.totalAgents > 0
@@ -87,6 +88,7 @@ export function KagentAgentListCard({ config }: KagentAgentListCardProps) {
     isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     isDemoData: isDemoFallback,
+    lastRefresh,
   })
 
   // Filter clusters if config specifies one
