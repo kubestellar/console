@@ -18,7 +18,7 @@ import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } 
 /** Result type chip styling — higher contrast and enough padding to read quickly. */
 const RESULT_TYPE_CHIP_CLASS = 'inline-flex shrink-0 items-center rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-foreground'
 
-const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Server }> = {
+const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   page: { label: 'Dashboards', icon: LayoutDashboard },
   card: { label: 'Cards', icon: LayoutGrid },
   stat: { label: 'Stats', icon: BarChart3 },
@@ -38,137 +38,99 @@ export function SearchResultsPanel({
   selectedIndex,
   onSelect,
   onAskAI,
-  resultsRef,
-  onResultsChange,
 }: {
   searchQuery: string
-  selectedIndex: number
-  onSelect: (item: SearchItem, index: number) => void
-  onAskAI: () => void
-  resultsRef: React.RefObject<HTMLDivElement | null>
-  onResultsChange: (flatResults: SearchItem[], totalCount: number) => void
+  selectedIndex: number | null
+  onSelect: (item: SearchItem) => void
+  onAskAI?: () => void
 }) {
   const { t } = useTranslation()
-  const { results, totalCount } = useSearchIndex(searchQuery)
+  const { items, index } = useSearchIndex()
 
-  const flatResults = useMemo(() => {
-    const flat: SearchItem[] = []
-    for (const cat of CATEGORY_ORDER) {
-      const items = results.get(cat)
-      if (items) flat.push(...items)
+  const groupedResults = useMemo(() => {
+    if (!searchQuery.trim()) return {}
+
+    const results: Record<SearchCategory, SearchItem[]> = {}
+
+    for (const category of CATEGORY_ORDER) {
+      results[category] = (index[category] ?? []).filter((item: SearchItem) =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false),
+      )
     }
-    return flat
-  }, [results])
+
+    return results
+  }, [searchQuery, index])
+
+  const flatResults = useMemo(
+    () => Object.values(groupedResults).flat(),
+    [groupedResults],
+  )
 
   useEffect(() => {
-    onResultsChange(flatResults, totalCount)
-  }, [flatResults, totalCount, onResultsChange])
+    if (flatResults.length === 0 && selectedIndex !== null) {
+      onSelect({} as SearchItem)
+    }
+  }, [flatResults.length, selectedIndex, onSelect])
 
-  const askAIIndex = flatResults.length
-
-  let flatIndex = 0
+  if (flatResults.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <div className="text-sm text-muted-foreground">{t('search.noResults')}</div>
+      </div>
+    )
+  }
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-xl overflow-hidden z-toast">
-      {flatResults.length > 0 ? (
-        <div ref={resultsRef} data-testid="global-search-results" className="py-1 max-h-96 overflow-y-auto">
-          {CATEGORY_ORDER.map(cat => {
-            const items = results.get(cat)
-            if (!items || items.length === 0) return null
-            const config = CATEGORY_CONFIG[cat]
-            const CategoryIcon = config.icon
+    <div className="flex flex-col gap-3 p-2">
+      {CATEGORY_ORDER.map((category) => {
+        const categoryItems = groupedResults[category]
 
-            return (
-              <div key={cat}>
-                <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
-                  <CategoryIcon className="w-3.5 h-3.5 text-muted-foreground/60" />
-                  <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
-                    {config.label}
-                  </span>
-                </div>
-                {items.map(item => {
-                  const currentIndex = flatIndex++
-                  const isSelected = currentIndex === selectedIndex
-                  return (
-                    <button
-                      key={item.id}
-                      data-testid="global-search-result-item"
-                      data-selected={isSelected}
-                      onClick={() => onSelect(item, currentIndex)}
-                      className={`w-full flex items-center gap-3 px-4 py-1.5 text-left transition-colors ${
-                        isSelected
-                          ? 'bg-purple-900 text-foreground'
-                          : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                      }`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{item.name}</p>
-                        {item.description && (
-                          <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                        )}
-                      </div>
-                      <span className={RESULT_TYPE_CHIP_CLASS}>
-                        {config.label.toLowerCase()}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            )
-          })}
-          {totalCount > flatResults.length && (
-            <div className="px-4 py-2 text-xs text-muted-foreground/50 text-center border-t border-border/50">
-              {t('layout.navbar.showingResults', { shown: flatResults.length, total: totalCount })}
+        if (!categoryItems || categoryItems.length === 0) return null
+
+        const { label, icon: Icon } = CATEGORY_CONFIG[category]
+
+        return (
+          <div key={category} className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 px-2 py-1">
+              <Icon className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+              <span className="ml-auto text-xs font-semibold uppercase tracking-wide text-muted-foreground">{categoryItems.length}</span>
             </div>
-          )}
+            {categoryItems.map((item, idx) => {
+              const globalIdx = flatResults.indexOf(item)
+              const isSelected = globalIdx === selectedIndex
 
-          <div className="border-t border-border/50">
-            <button
-              data-selected={selectedIndex === askAIIndex}
-              onClick={onAskAI}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                selectedIndex === askAIIndex
-                  ? 'bg-purple-900 text-foreground'
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-              }`}
-            >
-              <Bot className="w-4 h-4 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{t('layout.navbar.askAIAboutThis')}</p>
-                <p className="text-xs text-muted-foreground truncate">&quot;{searchQuery}&quot;</p>
-              </div>
-              <kbd className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
-                &crarr;
-              </kbd>
-            </button>
+              return (
+                <button
+                  key={idx}
+                  onClick={() => onSelect(item)}
+                  className={`flex flex-col items-start gap-0.5 rounded border px-3 py-2 text-left transition-colors ${
+                    isSelected
+                      ? 'border-accent bg-accent/20 text-accent'
+                      : 'border-transparent bg-secondary hover:border-border text-foreground'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={RESULT_TYPE_CHIP_CLASS}>{item.type}</span>
+                    {item.badge && <span className="text-xs text-muted-foreground">{item.badge}</span>}
+                  </div>
+                  <span className="text-sm font-medium">{item.title}</span>
+                  {item.description && <span className="text-xs text-muted-foreground">{item.description}</span>}
+                </button>
+              )
+            })}
           </div>
-        </div>
-      ) : (
-        <div className="py-4">
-          <div className="px-4 py-2 text-center mb-2">
-            <p className="text-muted-foreground text-sm">{t('layout.navbar.noResultsFor', { query: searchQuery })}</p>
-          </div>
-          <div className="border-t border-border/50">
-            <button
-              data-selected={selectedIndex === askAIIndex}
-              onClick={onAskAI}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                selectedIndex === askAIIndex
-                  ? 'bg-purple-900 text-foreground'
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-              }`}
-            >
-              <Bot className="w-5 h-5 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{t('layout.navbar.askAIInstead')}</p>
-                <p className="text-xs text-muted-foreground truncate">{t('layout.navbar.startMission', { query: searchQuery })}</p>
-              </div>
-              <kbd className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
-                &crarr;
-              </kbd>
-            </button>
-          </div>
-        </div>
+        )
+      })}
+      {onAskAI && (
+        <button
+          onClick={onAskAI}
+          className="mt-2 flex items-center justify-center gap-2 rounded border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
+        >
+          <Bot className="h-4 w-4" />
+          {t('search.askAI')}
+        </button>
       )}
     </div>
   )
