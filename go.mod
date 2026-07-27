@@ -11,9 +11,9 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/joho/godotenv v1.5.1
-	github.com/prometheus/client_golang v1.24.0
+	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.70.0
+	github.com/prometheus/common v0.70.1
 	github.com/stretchr/testify v1.11.1
 	github.com/valyala/fasthttp v1.72.0
 	go.uber.org/goleak v1.3.0
@@ -43,7 +43,7 @@ require (
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.19.0 // indirect
+	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
