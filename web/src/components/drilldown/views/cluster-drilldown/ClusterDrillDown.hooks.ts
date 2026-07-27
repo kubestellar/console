@@ -64,7 +64,7 @@ export function useClusterDrillDown(data: Record<string, unknown>) {
   const [searchFilter, setSearchFilter] = useState("");
   const [activeLens, setActiveLens] = useState<TreeLens>("all");
   const [activeTab, setActiveTab] = useState<ClusterTab>("events");
-  const resourceTreeRef = useRef<HTMLDivElement>(null);
+  const resourceTreeRef = useRef<HTMLDivElement | null>(null);
   const resourceTreeScrollTimeoutRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null);

@@ -53,8 +53,7 @@ export function ClusterDrillDown({ data }: Props) {
 
       <ClusterNamespacesSection
         namespaces={drillDown.namespaces}
-        podIssues={drillDown.podIssues}
-        clusterDeploymentIssues={drillDown.clusterDeploymentIssues}
+        namespaceResources={drillDown.namespaceResources}
         effectiveClusterName={drillDown.effectiveClusterName}
         onDrillToNamespace={drillDown.drillToNamespace}
       />

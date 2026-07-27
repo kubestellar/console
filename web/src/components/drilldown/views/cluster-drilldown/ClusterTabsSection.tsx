@@ -1,3 +1,4 @@
+import type { RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   ClusterEvent,
@@ -15,7 +16,7 @@ import { ClusterResourceTree } from "./ClusterResourceTree";
 import type { ClusterTab, TreeLens } from "./types";
 
 interface ClusterTabsSectionProps {
-  resourceTreeRef: React.RefObject<HTMLDivElement | null>;
+  resourceTreeRef: RefObject<HTMLDivElement | null>;
   activeTab: ClusterTab;
   setActiveTab: (tab: ClusterTab) => void;
   clusterEvents: ClusterEvent[];

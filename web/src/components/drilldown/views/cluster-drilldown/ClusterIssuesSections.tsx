@@ -24,8 +24,7 @@ export function ClusterIssuesSection({
   onDrillToNamespace,
 }: ClusterIssuesSectionProps) {
   const { t } = useTranslation();
-  const totalIssueCount =
-    podIssues.length + clusterDeploymentIssues.length;
+  const totalIssueCount = podIssues.length + clusterDeploymentIssues.length;
 
   if (totalIssueCount === 0) {
     return null;
@@ -43,9 +42,9 @@ export function ClusterIssuesSection({
             {t("drilldown.namespace.podIssues")}
           </h4>
           <div className="space-y-2">
-            {podIssues.map((issue, i) => (
+            {podIssues.map((issue) => (
               <div
-                key={i}
+                key={`${issue.namespace}/${issue.name}`}
                 onClick={() =>
                   onDrillToPod(
                     effectiveClusterName,
@@ -90,9 +89,9 @@ export function ClusterIssuesSection({
             {t("drilldown.namespace.deploymentIssues")}
           </h4>
           <div className="space-y-2">
-            {clusterDeploymentIssues.map((issue, i) => (
+            {clusterDeploymentIssues.map((issue) => (
               <div
-                key={i}
+                key={`${issue.namespace}/${issue.name}`}
                 onClick={() =>
                   onDrillToNamespace(effectiveClusterName, issue.namespace)
                 }
@@ -133,16 +132,17 @@ export function ClusterIssuesSection({
 
 interface ClusterNamespacesSectionProps {
   namespaces: string[];
-  podIssues: PodIssue[];
-  clusterDeploymentIssues: DeploymentIssue[];
+  namespaceResources: {
+    podIssueCounts: Record<string, number>;
+    deploymentIssueCounts: Record<string, number>;
+  };
   effectiveClusterName: string;
   onDrillToNamespace: (cluster: string, namespace: string) => void;
 }
 
 export function ClusterNamespacesSection({
   namespaces,
-  podIssues,
-  clusterDeploymentIssues,
+  namespaceResources,
   effectiveClusterName,
   onDrillToNamespace,
 }: ClusterNamespacesSectionProps) {
@@ -160,8 +160,8 @@ export function ClusterNamespacesSection({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {namespaces.map((ns) => {
           const nsIssues =
-            podIssues.filter((p) => p.namespace === ns).length +
-            clusterDeploymentIssues.filter((d) => d.namespace === ns).length;
+            (namespaceResources.podIssueCounts[ns] || 0) +
+            (namespaceResources.deploymentIssueCounts[ns] || 0);
           return (
             <button
               key={ns}
