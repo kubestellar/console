@@ -1,25 +1,37 @@
 import { useMemo, useEffect } from 'react'
-import { Bot } from 'lucide-react'
+import {
+  LayoutDashboard,
+  LayoutGrid,
+  BarChart3,
+  Settings,
+  Server,
+  FolderOpen,
+  Box,
+  Container,
+  Globe,
+  Bot,
+  Package,
+  HardDrive } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } from '../../../hooks/useSearchIndex'
 
+/** Result type chip styling — higher contrast and enough padding to read quickly. */
 const RESULT_TYPE_CHIP_CLASS = 'inline-flex shrink-0 items-center rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-foreground'
 
-const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Bot }> = {
-  page: { label: 'Dashboards', icon: (props) => <div {...props}>📊</div> },
-  card: { label: 'Cards', icon: (props) => <div {...props}>🎴</div> },
-  stat: { label: 'Stats', icon: (props) => <div {...props}>📈</div> },
-  setting: { label: 'Settings', icon: (props) => <div {...props}>⚙️</div> },
-  cluster: { label: 'Clusters', icon: (props) => <div {...props}>🖥️</div> },
-  namespace: { label: 'Namespaces', icon: (props) => <div {...props}>📁</div> },
-  deployment: { label: 'Deployments', icon: (props) => <div {...props}>📦</div> },
-  pod: { label: 'Pods', icon: (props) => <div {...props}>🐳</div> },
-  service: { label: 'Services', icon: (props) => <div {...props}>🌐</div> },
-  mission: { label: 'AI Missions', icon: (props) => <div {...props}>🤖</div> },
-  dashboard: { label: 'Custom Dashboards', icon: (props) => <div {...props}>📊</div> },
-  helm: { label: 'Helm Releases', icon: (props) => <div {...props}>⛵</div> },
-  node: { label: 'Nodes', icon: (props) => <div {...props}>💾</div> },
-}
+const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Server }> = {
+  page: { label: 'Dashboards', icon: LayoutDashboard },
+  card: { label: 'Cards', icon: LayoutGrid },
+  stat: { label: 'Stats', icon: BarChart3 },
+  setting: { label: 'Settings', icon: Settings },
+  cluster: { label: 'Clusters', icon: Server },
+  namespace: { label: 'Namespaces', icon: FolderOpen },
+  deployment: { label: 'Deployments', icon: Box },
+  pod: { label: 'Pods', icon: Container },
+  service: { label: 'Services', icon: Globe },
+  mission: { label: 'AI Missions', icon: Bot },
+  dashboard: { label: 'Custom Dashboards', icon: LayoutDashboard },
+  helm: { label: 'Helm Releases', icon: Package },
+  node: { label: 'Nodes', icon: HardDrive } }
 
 export function SearchResultsPanel({
   searchQuery,
