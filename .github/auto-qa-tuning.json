@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-07-25T04:01:47Z",
+  "last_updated": "2026-07-26T04:11:13Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -11,11 +11,11 @@
       "last_evaluated": "2026-07-19T04:08:33Z"
     },
     "security": {
-      "merged": 109,
+      "merged": 110,
       "closed": 71,
       "acceptance_rate": 0.61,
       "status": "normal",
-      "last_evaluated": "2026-07-24T04:02:13Z"
+      "last_evaluated": "2026-07-26T04:11:13Z"
     },
     "a11y": {
       "merged": 70,
@@ -25,11 +25,11 @@
       "last_evaluated": "2026-07-25T04:01:47Z"
     },
     "operator": {
-      "merged": 729,
+      "merged": 731,
       "closed": 268,
       "acceptance_rate": 0.73,
       "status": "normal",
-      "last_evaluated": "2026-07-25T04:01:47Z"
+      "last_evaluated": "2026-07-26T04:11:13Z"
     },
     "sre": {
       "merged": 452,
@@ -39,11 +39,11 @@
       "last_evaluated": "2026-07-25T04:01:47Z"
     },
     "features": {
-      "merged": 36,
+      "merged": 37,
       "closed": 10,
-      "acceptance_rate": 0.78,
+      "acceptance_rate": 0.79,
       "status": "normal",
-      "last_evaluated": "2026-07-25T04:01:47Z"
+      "last_evaluated": "2026-07-26T04:11:13Z"
     },
     "resilience": {
       "merged": 90,
@@ -65,26 +65,19 @@
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #21093: Closing as duplicate — the two test files added here are already present on `main` (merged via #21091, which addressed the same two advisory items). Advisory #20963 items covered by that PR are resolved. Remaining advisory items (if any) should be re-triaged in a fresh advisory report.",
-      "- PR #21084: <!-- test-coverage-check-report -->",
-      "## :white_check_mark: Test Coverage Check",
-      "- PR #20974: Closing this PR — 4 CI attempts have failed on `build-gate`. Root cause: `handlers.compliance.test.ts` uses `setupServer(...)` from `msw/node` with `onUnhandledRequest: 'error'`, which conflicts with the global MSW test setup wired into `src/test/setup.ts` under MSW v2's experimental network mode. Every intercepted request is being classified as unhandled and MSW throws `InternalError: Cannot bypass a request when using the \"error\" strategy`."
+      "- PR #21465: <!-- a11y-audit-comment -->",
+      "## ♿ Accessibility Audit (WCAG 2.1 AA)",
+      "- PR #21460: Superseded by #21468 (merged), which fixed the same `ReservationFormModal.test.tsx` mock more comprehensively. Closing to avoid conflicts.",
+      "- PR #21459: [APPROVALNOTIFIER] This PR is **NOT APPROVED**"
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-07-19"
+    "last_report_date": "2026-07-26"
   },
   "cncf_insights": {
     "last_scan_date": "2026-07-22",
     "suggested_checks": []
   },
   "history": [
-    {
-      "date": "2026-06-09",
-      "total_merged": 806,
-      "total_closed": 486,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-06-10",
       "total_merged": 853,
@@ -311,6 +304,15 @@
       "categories_boosted": [
         "sre"
       ]
+    },
+    {
+      "date": "2026-07-26",
+      "total_merged": 1538,
+      "total_closed": 571,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
     }
   ],
   "rotation_weights": {
@@ -319,7 +321,7 @@
     "a11y": 1.07,
     "operator": 1.1,
     "sre": 2.0,
-    "features": 1.17,
+    "features": 1.19,
     "resilience": 0.87,
     "consistency": 0.9
   },
