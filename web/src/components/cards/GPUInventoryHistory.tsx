@@ -466,7 +466,7 @@ export function GPUInventoryHistory() {
           onClick={() => refetch()}
           className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
         >
-          <RefreshCw className="w-3 h-3" />
+          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           {t('common.retry', 'Retry')}
         </Button>
       </div>

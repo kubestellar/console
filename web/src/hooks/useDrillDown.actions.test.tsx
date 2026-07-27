@@ -61,7 +61,7 @@ describe('useDrillDownActions', () => {
 
       act(() => { result.current.actions.drillToCluster('ctx/prod-cluster') })
 
-      expect(result.current.drillDown.state.isOpen).toBe(true)
+      expect(result.current.drillDown.state?.isOpen).toBe(true)
       expect(result.current.drillDown.state.currentView?.type).toBe('cluster')
       expect(result.current.drillDown.state.currentView?.title).toBe('prod-cluster')
       expect(result.current.drillDown.state.currentView?.data.cluster).toBe('ctx/prod-cluster')

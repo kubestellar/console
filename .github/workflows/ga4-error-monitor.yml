@@ -40,7 +40,7 @@ env:
 permissions: read-all  # default read; writes scoped to job below
 concurrency:
   group: ga4-error-monitor
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   monitor:

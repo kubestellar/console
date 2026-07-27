@@ -121,7 +121,7 @@ export function ContainerdStatus() {
           onClick={() => refetch()}
           className="flex items-center gap-2 px-4 py-2 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           {t('common.retry', 'Retry')}
         </button>
       </div>
