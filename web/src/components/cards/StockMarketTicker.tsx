@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react'
 import {
   TrendingUp, TrendingDown, Clock, BarChart3,
@@ -15,6 +14,8 @@ import { GREEN_500_BRIGHT, RED_500 } from '../../lib/theme/chartColors'
 import { useToast } from '../ui/Toast'
 import type { TFunction } from 'i18next'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
+import { StockSearch } from './stockMarketTicker/StockSearch'
+import { PortfolioSummary } from './stockMarketTicker/PortfolioSummary'
 
 const SEARCH_DEBOUNCE_MS = 300
 const SAVED_STOCKS_STORAGE_KEY = 'stock-ticker-saved-stocks'
@@ -758,80 +759,19 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       </div>
 
       {/* Search and add stock */}
-      <div className="mb-3 space-y-2">
-        <div className="relative">
-          <div className="flex items-center gap-2 p-2 border border-border/50 rounded-lg bg-card">
-            <SearchIcon className="w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={t('stockMarket.searchPlaceholder')}
-              value={stockSearchInput}
-              onChange={(e) => setStockSearchInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && stockSearchResults.length > 0) {
-                  e.preventDefault()
-                  addStock(stockSearchResults[0])
-                }
-              }}
-              className="flex-1 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground"
-            />
-            {isSearching && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-            {stockSearchInput && (
-              <button
-                onClick={() => {
-                  setStockSearchInput('')
-                  setShowStockDropdown(false)
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Search results dropdown */}
-          {showStockDropdown && stockSearchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-dropdown max-h-60 overflow-y-auto">
-              {stockSearchResults.map((result) => (
-                <button
-                  key={result.symbol}
-                  onClick={() => addStock(result)}
-                  className="w-full p-2 text-left hover:bg-accent transition-colors flex flex-wrap items-center justify-between gap-y-2"
-                  disabled={activeSymbols.includes(result.symbol)}
-                >
-                  <div>
-                    <div className="font-semibold text-sm">{result.symbol}</div>
-                    <div className="text-xs text-muted-foreground truncate">{result.name}</div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{result.region}</div>
-                  {activeSymbols.includes(result.symbol) && (
-                    <span className="text-xs text-green-500 ml-2">{t('stockMarket.added')}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-      </div>
+      <StockSearch
+        searchInput={stockSearchInput}
+        onSearchInputChange={setStockSearchInput}
+        searchResults={stockSearchResults}
+        onAddStock={addStock}
+        isSearching={isSearching}
+        activeSymbols={activeSymbols}
+        showDropdown={showStockDropdown}
+        onShowDropdown={setShowStockDropdown}
+      />
 
       {/* Portfolio summary */}
-      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3 p-2 bg-accent/30 rounded-lg text-xs">
-        <div className="text-center">
-          <div className="text-muted-foreground">{t('stockMarket.avgChange')}</div>
-          <div className={`font-semibold ${portfolioSummary.avgChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            {portfolioSummary.avgChange >= 0 ? '+' : ''}{portfolioSummary.avgChange.toFixed(2)}%
-          </div>
-        </div>
-        <div className="text-center border-l border-r border-border/30">
-          <div className="text-muted-foreground">{t('stockMarket.gainers')}</div>
-          <div className="font-semibold text-green-500">{portfolioSummary.gainers}</div>
-        </div>
-        <div className="text-center">
-          <div className="text-muted-foreground">{t('stockMarket.losers')}</div>
-          <div className="font-semibold text-red-500">{portfolioSummary.losers}</div>
-        </div>
-      </div>
+      <PortfolioSummary stockData={stockData} />
 
       {/* Stock list */}
       {isLoadingData && stockData.length === 0 ? (
