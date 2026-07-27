@@ -30,6 +30,7 @@ function loadFromStorage<T>(key: string, defaultValue: T, validator?: (value: un
     }
   } catch (e: unknown) {
     console.error(`Failed to load ${key} from localStorage:`, e)
+    // Silently fail - localStorage is optional for this hook
   }
   return defaultValue
 }
@@ -40,6 +41,7 @@ function saveToStorage<T>(key: string, value: T): void {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (e: unknown) {
     console.error(`Failed to save ${key} to localStorage:`, e)
+    // Silently fail - localStorage quota may be exceeded but functionality continues
   }
 }
 
