@@ -65,13 +65,13 @@
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #21093: Closing as duplicate — the two test files added here are already present on `main` (merged via #21091, which addressed the same two advisory items). Advisory #20963 items covered by that PR are resolved. Remaining advisory items (if any) should be re-triaged in a fresh advisory report.",
-      "- PR #21084: <!-- test-coverage-check-report -->",
-      "## :white_check_mark: Test Coverage Check",
-      "- PR #20974: Closing this PR — 4 CI attempts have failed on `build-gate`. Root cause: `handlers.compliance.test.ts` uses `setupServer(...)` from `msw/node` with `onUnhandledRequest: 'error'`, which conflicts with the global MSW test setup wired into `src/test/setup.ts` under MSW v2's experimental network mode. Every intercepted request is being classified as unhandled and MSW throws `InternalError: Cannot bypass a request when using the \"error\" strategy`."
+      "- PR #21465: <!-- a11y-audit-comment -->",
+      "## ♿ Accessibility Audit (WCAG 2.1 AA)",
+      "- PR #21460: Superseded by #21468 (merged), which fixed the same `ReservationFormModal.test.tsx` mock more comprehensively. Closing to avoid conflicts.",
+      "- PR #21459: [APPROVALNOTIFIER] This PR is **NOT APPROVED**"
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-07-19"
+    "last_report_date": "2026-07-26"
   },
   "cncf_insights": {
     "last_scan_date": "2026-07-22",
