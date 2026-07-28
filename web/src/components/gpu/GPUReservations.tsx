@@ -34,6 +34,7 @@ export function GPUReservations() {
 
   const handleConfirmDelete = async () => {
     const result = await data.handleDeleteReservation()
+    if (!result) return
     if (result.success) {
       showToast('GPU reservation deleted', 'success')
     } else {

@@ -1,7 +1,6 @@
 import { Cpu, HardDrive, CircuitBoard, Settings, Layers } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import { wrapAbbreviations } from '../../shared/TechnicalAcronym'
-import { NVIDIAOperatorStatus } from '../../../hooks/useMCP'
+import { wrapAbbreviations } from '../../../shared/TechnicalAcronym'
+import { NVIDIAOperatorStatus } from '../../../../hooks/useMCP'
 
 interface GPUSpecs {
   totalMemoryGB: number
@@ -17,8 +16,6 @@ interface DriverInfoPanelProps {
 }
 
 export function DriverInfoPanel({ gpuSpecs, operatorStatus }: DriverInfoPanelProps) {
-  const { t } = useTranslation()
-
   return (
     <>
       {/* GPU Specifications */}

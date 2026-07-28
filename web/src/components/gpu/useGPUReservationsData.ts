@@ -451,7 +451,7 @@ export function useGPUReservationsData() {
   }, [])
 
   const deleteConfirmReservation = deleteConfirmId
-    ? allReservations.find(r => r.id === deleteConfirmId)
+    ? (allReservations.find(r => r.id === deleteConfirmId) ?? null)
     : null
 
   const isLoading = nodesLoading && nodes.length === 0 && reservationsLoading

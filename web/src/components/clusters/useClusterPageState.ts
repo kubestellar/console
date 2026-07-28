@@ -9,6 +9,7 @@ import {
   STORAGE_KEY_CLUSTER_LAYOUT,
   STORAGE_KEY_CLUSTER_ORDER,
 } from '../../lib/constants'
+import type { TFunction } from 'i18next'
 import type { ClusterLayoutMode } from './components'
 
 type ClusterFilter = 'all' | 'healthy' | 'unhealthy' | 'unreachable'
@@ -17,7 +18,7 @@ type ClusterSortBy = 'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom
 interface UseClusterPageStateParams {
   refetch: () => void
   showToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void
-  t: (key: string, opts?: Record<string, unknown>) => string
+  t: TFunction
   isConnected: boolean
 }
 

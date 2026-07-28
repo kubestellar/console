@@ -1,7 +1,7 @@
 import { Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { GPUNode } from '../../../hooks/useMCP'
-import { StatusBadge } from '../../ui/StatusBadge'
+import { GPUNode } from '../../../../hooks/useMCP'
+import { StatusBadge } from '../../../ui/StatusBadge'
 
 const GPU_UTIL_HIGH = 90
 const GPU_UTIL_WARN = 70

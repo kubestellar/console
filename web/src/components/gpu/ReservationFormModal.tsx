@@ -16,9 +16,6 @@ import { handleReservationSave } from './reservationForm/handleReservationSave'
 /** Maximum length of the sanitized title segment in a generated quota name. */
 const QUOTA_NAME_TITLE_MAX_LEN = 40
 
-/** Default reservation duration in hours when the field is left blank. */
-const DEFAULT_RESERVATION_DURATION_HOURS = 24
-
 /**
  * Normalize any accepted start-date representation to the `YYYY-MM-DD`
  * format required by `<input type="date">`.

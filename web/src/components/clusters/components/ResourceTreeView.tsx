@@ -4,15 +4,15 @@ import { TechnicalAcronym } from '../../shared/TechnicalAcronym'
 import { useTranslation } from 'react-i18next'
 import type { ResourceKind } from './resourceHelpers'
 
-interface Pod { name: string; namespace: string; status: string; ready: string; restarts: number; node: string; age: string }
-interface Deployment { name: string; namespace: string; status: string; replicas: number; readyReplicas: number; image: string; age: string }
-interface Service { name: string; namespace: string; type: string; clusterIP: string; externalIP: string; ports: string[]; endpoints: string; lbStatus: string; age: string }
-interface Job { name: string; namespace: string; status: string; completions: string; duration: string; age: string }
-interface HPA { name: string; namespace: string; reference: string; minReplicas: number; maxReplicas: number; currentReplicas: number; targetCPU: string; currentCPU: string; age: string }
-interface ConfigMap { name: string; namespace: string; dataCount: number; age: string }
-interface Secret { name: string; namespace: string; type: string; dataCount: number; age: string }
-interface ServiceAccount { name: string; namespace: string; secrets?: string[]; imagePullSecrets?: string[]; age: string }
-interface PVC { name: string; namespace: string; status: string; storageClass: string; capacity: string; accessModes: string[]; volumeName: string; age: string }
+interface Pod { name: string; namespace: string; status: string; ready: string; restarts: number; node?: string; age: string }
+interface Deployment { name: string; namespace: string; status: string; replicas: number; readyReplicas: number; image?: string; age: string }
+interface Service { name: string; namespace: string; type: string; clusterIP?: string; externalIP: string; ports: string[]; endpoints: string; lbStatus: string; age: string }
+interface Job { name: string; namespace: string; status: string; completions: string; duration?: string; age: string }
+interface HPA { name: string; namespace: string; reference: string; minReplicas: number; maxReplicas: number; currentReplicas: number; targetCPU?: string; currentCPU: string; age: string }
+interface ConfigMap { name: string; namespace: string; dataCount: number; age?: string }
+interface Secret { name: string; namespace: string; type: string; dataCount: number; age?: string }
+interface ServiceAccount { name: string; namespace: string; secrets?: string[]; imagePullSecrets?: string[]; age?: string }
+interface PVC { name: string; namespace: string; status: string; storageClass?: string; capacity: string; accessModes: string[]; volumeName: string; age: string }
 
 interface PodsByDeployment {
   byDeployment: Record<string, Pod[]>
@@ -39,7 +39,7 @@ interface ResourceTreeViewProps {
 }
 
 export function ResourceTreeView({
-  deployments, pods, services, jobs, hpas,
+  deployments, services, jobs, hpas,
   configmaps, secrets, serviceAccounts, pvcs,
   podsByDeployment, expandedTypes, expandedItems,
   deploymentsLoading, toggleType, toggleItem, onResourceClick,

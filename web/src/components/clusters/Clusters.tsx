@@ -10,7 +10,7 @@ import {
   FilterTabs,
   ClusterGrid,
   GPUDetailModal,
-  type ClusterLayoutMode } from './components'
+} from './components'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
 import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'

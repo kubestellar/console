@@ -54,6 +54,8 @@ jobs:
         run: npm run test:card-registry
 
       - name: Build
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
         run: npm run build
 
       - name: Upload build artifacts
