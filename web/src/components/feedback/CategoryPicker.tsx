@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next'
 import { REWARD_ACTIONS } from '../../types/rewards'
 import type { RequestType, TargetRepo } from './FeatureRequestTypes'
 import { MIN_PARENT_ISSUE_NUMBER } from './submitTab.utils'
+import { Input } from '../ui/Input'
 
 interface CategoryPickerProps {
   requestType: RequestType
@@ -129,7 +130,7 @@ export function CategoryPicker({
                 <label htmlFor="feedback-parent-issue" className="block text-xs font-medium text-muted-foreground">
                   {t('feedback.parentIssueNumber', 'Parent issue number')}
                 </label>
-                <input
+                <Input
                   id="feedback-parent-issue"
                   type="number"
                   min={MIN_PARENT_ISSUE_NUMBER}
@@ -138,7 +139,7 @@ export function CategoryPicker({
                   onChange={e => setParentIssueNumber(e.target.value)}
                   disabled={inputsDisabled}
                   placeholder="12345"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-hidden transition-colors focus:border-purple-500 disabled:opacity-60"
+                  className="focus:border-purple-500"
                 />
                 <p className="text-2xs text-muted-foreground">
                   {t('feedback.parentIssueHelp', 'If provided, this report will be linked as a child issue after submission.')}

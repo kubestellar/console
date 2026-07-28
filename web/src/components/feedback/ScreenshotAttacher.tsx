@@ -1,6 +1,7 @@
 import { Check, Copy, Film, ImagePlus, Trash2 } from 'lucide-react'
 import type { DragEvent, RefObject } from 'react'
 import type { ScreenshotItem } from './FeatureRequestTypes'
+import { Input } from '../ui/Input'
 
 interface ScreenshotAttacherProps {
   screenshots: ScreenshotItem[]
@@ -53,7 +54,7 @@ export function ScreenshotAttacher({
         </div>
         <span className="text-xs text-muted-foreground text-center">Drop images or videos here, or click to browse</span>
         <span className="text-2xs text-muted-foreground/70">{attachmentHelpText}</span>
-        <input
+        <Input
           ref={fileInputRef}
           type="file"
           accept={acceptedMediaTypes}

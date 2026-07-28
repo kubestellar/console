@@ -15,6 +15,7 @@ import {
   preventModalScrollChaining,
 } from './submitTab.utils'
 import { SubmitTabAttachments } from './SubmitTabAttachments'
+import { TextArea } from '../ui/TextArea'
 
 interface ErrorDetails {
   message: string
@@ -106,7 +107,7 @@ export function SubmitFormFields({
           )}
         </div>
         {descriptionTab === 'write' ? (
-          <textarea
+          <TextArea
             value={description}
             onChange={e => setDescription(e.target.value)}
             onPaste={onPaste}
@@ -119,7 +120,7 @@ export function SubmitFormFields({
             }}
             placeholder={descriptionPlaceholder}
             className={cn(
-              'w-full overflow-y-auto px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm disabled:opacity-60 disabled:cursor-not-allowed',
+              'overflow-y-auto bg-secondary/50 font-mono',
               DESCRIPTION_EDITOR_HEIGHT_CLASS,
             )}
             disabled={inputsDisabled}

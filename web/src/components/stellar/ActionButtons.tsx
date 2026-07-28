@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { PendingAction } from './EventCard'
 import type { StellarNotification } from '../../types/stellar'
+import { TextArea } from '../ui/TextArea'
 
 const CONFIRMATION_TEXTAREA_ROWS = 4
 
@@ -157,11 +158,11 @@ function ConfirmationPanel({
         <div className="text-sm font-semibold">{title}</div>
         <div className="text-sm text-[var(--s-text-muted)]">{description}</div>
       </div>
-      <textarea
+      <TextArea
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={CONFIRMATION_TEXTAREA_ROWS}
-        className="w-full rounded border border-[var(--s-border)] bg-[var(--s-surface)] px-3 py-2 text-sm text-[var(--s-text)]"
+        className="rounded border-[var(--s-border)] bg-[var(--s-surface)] text-[var(--s-text)]"
         placeholder={placeholder}
       />
       <div className="flex flex-wrap gap-2">

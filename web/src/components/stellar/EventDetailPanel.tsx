@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { StellarNotification, StellarSolve } from '../../types/stellar'
 import { RawPayloadViewer } from './RawPayloadViewer'
+import { TextArea } from '../ui/TextArea'
 
 interface TimelineEntry {
   ts: string
@@ -71,11 +72,11 @@ export function EventDetailPanel({
   return (
     <div className="space-y-4">
       <Section title="Investigation summary">
-        <textarea
+        <TextArea
           value={investigationSummary}
           onChange={(event) => setInvestigationSummary(event.target.value)}
           rows={INVESTIGATION_TEXTAREA_ROWS}
-          className="w-full rounded border border-[var(--s-border)] bg-[var(--s-surface)] px-3 py-2 text-sm text-[var(--s-text)]"
+          className="rounded border-[var(--s-border)] bg-[var(--s-surface)] text-[var(--s-text)]"
           placeholder="Optional note for the team"
         />
       </Section>
