@@ -213,7 +213,13 @@ jobs:
     needs: merge
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: [self-hosted, kc, openshift]
-    timeout-minutes: 20
+    # 20m was too tight: deploy_helm retries up to MAX_ATTEMPTS=2 times, each
+    # bounded by `--timeout 10m` (=20m), plus recover_release (rollback
+    # --timeout 2m / uninstall --timeout 5m) and retry sleeps in between.
+    # That worst case exceeds 20m, causing the job to be cancelled by the
+    # runner before the retry loop can finish. Match deploy-pok-prod's 45m
+    # budget, which uses the same retry pattern.
+    timeout-minutes: 45
     environment: vllm-d
     concurrency:
       group: deploy-vllm-d
