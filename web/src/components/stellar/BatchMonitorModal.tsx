@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useMemo, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import type { StellarNotification, StellarSolve, StellarSolveProgress } from '../../types/stellar'
 import { isDemoMode } from '../../lib/demoMode'
 import {
   BATCH_UPDATE_INTERVAL_MS,

@@ -1,7 +1,6 @@
 import { Zap, Plus, Trash2, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { COMMON_RESOURCE_TYPES } from '../../hooks/useMCP'
-import type { GPUNode } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
 import { GPU_KEYS, type GPUClusterInfo } from './ReservationFormModal.utils'
 
