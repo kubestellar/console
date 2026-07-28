@@ -1,9 +1,6 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
-import { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import {
-  TrendingUp, TrendingDown, Clock, BarChart3,
-  ChevronDown, ChevronRight, Search as SearchIcon,
-  Star, X, Loader2
+  Clock, BarChart3, Loader2
 } from 'lucide-react'
 import { CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -11,91 +8,18 @@ import { useCardLoadingState } from './CardDataContext'
 import { useCache } from '../../lib/cache'
 import { useTranslation } from 'react-i18next'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants'
-import { GREEN_500_BRIGHT, RED_500 } from '../../lib/theme/chartColors'
 import { useToast } from '../ui/Toast'
 import type { TFunction } from 'i18next'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
+import { StockMarketTickerRow } from './StockMarketTickerRow'
+import { StockMarketSymbolSearch } from './StockMarketSymbolSearch'
+import type {
+  StockSearchResult, YahooSearchQuote, SavedStock, StockData, YahooQuoteResponse,
+  StockMarketTickerProps, SortByOption,
+} from './StockMarketTicker.types'
 
 const SEARCH_DEBOUNCE_MS = 300
 const SAVED_STOCKS_STORAGE_KEY = 'stock-ticker-saved-stocks'
-
-// Stock search result interface
-interface StockSearchResult {
-  symbol: string
-  name: string
-  type: string
-  region: string
-  currency: string
-}
-
-// Raw search result from Yahoo Finance API
-interface YahooSearchQuote {
-  symbol: string
-  longname?: string
-  shortname?: string
-  quoteType: string
-  exchDisp?: string
-  exchange?: string
-  currency?: string
-}
-
-// Saved stock interface
-interface SavedStock {
-  symbol: string
-  name: string
-  price: number
-  changePercent: number
-  favorite?: boolean
-}
-
-// Stock data interface
-interface StockData {
-  symbol: string
-  name: string
-  price: number
-  change: number
-  changePercent: number
-  dayOpen: number
-  dayHigh: number
-  dayLow: number
-  volume: number
-  marketCap: number
-  week52High: number
-  week52Low: number
-  sparklineData: number[]
-  lastUpdated: Date
-}
-
-// Raw stock data from Yahoo Finance API
-interface YahooQuoteResponse {
-  regularMarketPrice?: number
-  regularMarketChange?: number
-  regularMarketChangePercent?: number
-  regularMarketOpen?: number
-  regularMarketDayHigh?: number
-  regularMarketDayLow?: number
-  regularMarketVolume?: number
-  marketCap?: number
-  fiftyTwoWeekHigh?: number
-  fiftyTwoWeekLow?: number
-  displayName?: string
-  longName?: string
-  shortName?: string
-  symbol: string
-}
-
-// Config interface
-interface StockMarketTickerConfig {
-  symbols?: string[]
-  refreshInterval?: number // in seconds
-  dataSource?: string
-}
-
-interface StockMarketTickerProps {
-  config?: StockMarketTickerConfig
-}
-
-type SortByOption = 'symbol' | 'price' | 'change' | 'volume' | 'marketCap'
 
 const SORT_OPTIONS = [
   { value: 'symbol' as const, label: 'Name' },
@@ -348,177 +272,6 @@ function generateMockStockData(symbols: string[]): StockData[] {
   })
 }
 
-// Format large numbers (market cap, volume)
-function formatLargeNumber(num: number): string {
-  if (num >= 1000000000000) {
-    return `$${(num / 1000000000000).toFixed(2)}T`
-  } else if (num >= 1000000000) {
-    return `$${(num / 1000000000).toFixed(2)}B`
-  } else if (num >= 1000000) {
-    return `$${(num / 1000000).toFixed(2)}M`
-  }
-  return `$${num.toLocaleString()}`
-}
-
-// Format volume
-function formatVolume(num: number): string {
-  if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(2)}M`
-  } else if (num >= 1000) {
-    return `${(num / 1000).toFixed(2)}K`
-  }
-  return num.toLocaleString()
-}
-
-// Sparkline component
-function Sparkline({ data, isPositive }: { data: number[]; isPositive: boolean }) {
-  if (data.length < 2) return null
-
-  const min = Math.min(...data)
-  const max = Math.max(...data)
-  const range = max - min || 1
-
-  const points = data.map((value, index) => {
-    const x = (index / (data.length - 1)) * 100
-    const y = 100 - ((value - min) / range) * 100
-    return `${x},${y}`
-  }).join(' ')
-
-  return (
-    <svg
-      className="w-20 h-8"
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      role="img"
-      aria-label={`Price trend: ${isPositive ? 'rising' : 'falling'}`}
-    >
-      <polyline
-        points={points}
-        fill="none"
-        stroke={isPositive ? GREEN_500_BRIGHT : RED_500}
-        strokeWidth="2"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  )
-}
-
-// Stock row component — memoized to prevent re-renders of the full list
-// when only ticker/search state changes.
-const StockRow = memo(function StockRow({
-  stock,
-  expanded,
-  onToggle,
-  onToggleFavorite,
-  onRemove,
-  isFavorite,
-  canRemove
-}: {
-  stock: StockData
-  expanded: boolean
-  onToggle: () => void
-  onToggleFavorite: () => void
-  onRemove: () => void
-  isFavorite: boolean
-  canRemove: boolean
-}) {
-  const { t } = useTranslation(['cards', 'common'])
-  const isPositive = stock.change >= 0
-
-  return (
-    <div className="border-b border-border/30 last:border-0 relative">
-      {/* Action buttons - Left side */}
-      <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1">
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleFavorite()
-          }}
-          className="p-1 rounded hover:bg-accent transition-colors"
-          title={isFavorite ? t('stockMarket.unfavorite') : t('stockMarket.favorite')}
-        >
-          <Star
-            className={`w-3 h-3 ${isFavorite ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}
-          />
-        </button>
-        {canRemove && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onRemove()
-            }}
-            className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-            title={t('stockMarket.removeFromList')}
-          >
-            <X className="w-3 h-3" />
-          </button>
-        )}
-      </div>
-
-      {/* Main row */}
-      <div
-        className="flex items-center gap-3 p-3 pl-16 pr-4 hover:bg-accent/50 cursor-pointer transition-colors"
-        onClick={onToggle}
-      >
-        {/* Symbol and name */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-sm">{stock.symbol}</span>
-            {expanded ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
-          </div>
-          <div className="text-xs text-muted-foreground truncate">{stock.name}</div>
-        </div>
-
-        {/* Sparkline */}
-        <div className="hidden @sm:block shrink-0">
-          <Sparkline data={stock.sparklineData} isPositive={isPositive} />
-        </div>
-
-        {/* Price and change */}
-        <div className="text-right shrink-0">
-          <div className="font-semibold text-sm">${stock.price.toFixed(2)}</div>
-          <div className={`text-xs flex items-center justify-end gap-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-            {isPositive ? <TrendingUp className="w-3 h-3" aria-hidden="true" /> : <TrendingDown className="w-3 h-3" aria-hidden="true" />}
-            <span>{isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Expanded details */}
-      {expanded && (
-        <div className="px-3 pb-3 pt-1 bg-accent/30 border-t border-border/30">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.open')}:</span>
-              <span className="font-medium">${stock.dayOpen.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.high')}:</span>
-              <span className="font-medium">${stock.dayHigh.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.low')}:</span>
-              <span className="font-medium">${stock.dayLow.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.volume')}:</span>
-              <span className="font-medium">{formatVolume(stock.volume)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.mktCap')}:</span>
-              <span className="font-medium">{formatLargeNumber(stock.marketCap)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.fiftyTwoWeekRange')}:</span>
-              <span className="font-medium text-xs">${stock.week52Low.toFixed(0)} - ${stock.week52High.toFixed(0)}</span>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-})
-
 export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { showToast } = useToast()
@@ -757,63 +510,17 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
         />
       </div>
 
-      {/* Search and add stock */}
-      <div className="mb-3 space-y-2">
-        <div className="relative">
-          <div className="flex items-center gap-2 p-2 border border-border/50 rounded-lg bg-card">
-            <SearchIcon className="w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={t('stockMarket.searchPlaceholder')}
-              value={stockSearchInput}
-              onChange={(e) => setStockSearchInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && stockSearchResults.length > 0) {
-                  e.preventDefault()
-                  addStock(stockSearchResults[0])
-                }
-              }}
-              className="flex-1 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground"
-            />
-            {isSearching && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-            {stockSearchInput && (
-              <button
-                onClick={() => {
-                  setStockSearchInput('')
-                  setShowStockDropdown(false)
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Search results dropdown */}
-          {showStockDropdown && stockSearchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-dropdown max-h-60 overflow-y-auto">
-              {stockSearchResults.map((result) => (
-                <button
-                  key={result.symbol}
-                  onClick={() => addStock(result)}
-                  className="w-full p-2 text-left hover:bg-accent transition-colors flex flex-wrap items-center justify-between gap-y-2"
-                  disabled={activeSymbols.includes(result.symbol)}
-                >
-                  <div>
-                    <div className="font-semibold text-sm">{result.symbol}</div>
-                    <div className="text-xs text-muted-foreground truncate">{result.name}</div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{result.region}</div>
-                  {activeSymbols.includes(result.symbol) && (
-                    <span className="text-xs text-green-500 ml-2">{t('stockMarket.added')}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-      </div>
+      <StockMarketSymbolSearch
+        t={t}
+        stockSearchInput={stockSearchInput}
+        setStockSearchInput={setStockSearchInput}
+        stockSearchResults={stockSearchResults}
+        showStockDropdown={showStockDropdown}
+        setShowStockDropdown={setShowStockDropdown}
+        isSearching={isSearching}
+        addStock={addStock}
+        activeSymbols={activeSymbols}
+      />
 
       {/* Portfolio summary */}
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3 p-2 bg-accent/30 rounded-lg text-xs">
@@ -841,7 +548,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       ) : (
         <div ref={containerRef} className="flex-1 overflow-y-auto border border-border/30 rounded-lg" style={containerStyle}>
           {stocks.map(stock => (
-            <StockRow
+            <StockMarketTickerRow
               key={stock.symbol}
               stock={stock}
               expanded={expandedStocks.has(stock.symbol)}

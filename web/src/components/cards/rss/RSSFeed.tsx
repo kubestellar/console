@@ -1,34 +1,29 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
-// Modal safety: the filter/settings panels here are inline flyouts, not portal
-// modals — no backdrop to click. Any form state lives in local React state and
-// is only written on explicit save. Treat as closeOnBackdropClick={false}.
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { RefreshCw, Settings, Filter } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Filter, RefreshCw } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardLoadingState } from '../CardDataContext'
 import { useDemoMode } from '../../../hooks/useDemoMode'
-import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps, RSSItemRaw } from './types'
-import { PRESET_FEEDS, CORS_PROXIES } from './constants'
-import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
+import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps } from './types'
+import { loadSavedFeeds, saveFeeds, getCachedFeed } from './storage'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
-import {
-  parseRSSFeed, stripHTML, decodeHTMLEntities,
-  isValidThumbnail } from './RSSParser'
-import { formatTimeAgo } from '../../../lib/formatters'
-import { useTranslation } from 'react-i18next'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
 import { hostnameEndsWith } from '../../../lib/utils/urlHostname'
-import { FeedSelector, FeedPills } from './FeedSelector'
+import { FeedPills } from './FeedSelector'
 import { FeedFilterEditor } from './FeedFilterEditor'
 import { FeedSettingsPanel } from './FeedSettingsPanel'
-import { FeedItemsList } from './FeedItemsList'
 import { SourceFilterDropdown } from './SourceFilterDropdown'
-import { RSS_DEMO_FEEDS, getDemoRSSItems } from './demoData'
+import { RSS_DEMO_FEEDS } from './demoData'
 import { RSS_UI_STRINGS } from './strings'
+import { useTranslation } from 'react-i18next'
+import { useRSSFeedRefresh } from './RSSFeed.hooks'
+import { RSSFeedSelectorPanel } from './RSSFeedSelectorPanel'
+import { RSSFeedItemsList } from './RSSFeedItemsList'
 
-const MIN_VALID_FEED_LENGTH = 50
+// Modal safety: the filter/settings panels here are inline flyouts, not portal
+// modals — no backdrop to click. Any form state lives in local React state and
+// is only written on explicit save. Treat as closeOnBackdropClick={false}.
 
 type SortByOption = 'date' | 'title'
 
@@ -38,7 +33,8 @@ const SORT_COMPARATORS: Record<SortByOption, (a: FeedItem, b: FeedItem) => numbe
     const bTime = b.pubDate?.getTime() || 0
     return aTime - bTime
   },
-  title: commonComparators.string<FeedItem>('title') }
+  title: commonComparators.string<FeedItem>('title'),
+}
 
 function RSSFeedInternal({ config }: RSSFeedProps) {
   const { t } = useTranslation(['cards', 'common'])
@@ -53,7 +49,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   const [feeds, setFeeds] = useState<FeedConfig[]>(() => getInitialFeeds())
   const [activeFeedIndex, setActiveFeedIndex] = useState(0)
 
-  // Initialize with cached items immediately on mount
   const [items, setItems] = useState<FeedItem[]>(() => {
     const initialFeeds = getInitialFeeds()
     const firstFeed = initialFeeds[0]
@@ -101,21 +96,18 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   const [showFilterEditor, setShowFilterEditor] = useState(false)
   const [tempIncludeTerms, setTempIncludeTerms] = useState('')
   const [tempExcludeTerms, setTempExcludeTerms] = useState('')
-  // Aggregate feed creator/editor
   const [showAggregateCreator, setShowAggregateCreator] = useState(false)
   const [editingAggregateIndex, setEditingAggregateIndex] = useState<number | null>(null)
   const [aggregateName, setAggregateName] = useState('')
   const [selectedSourceUrls, setSelectedSourceUrls] = useState<string[]>([])
   const [aggregateIncludeTerms, setAggregateIncludeTerms] = useState('')
   const [aggregateExcludeTerms, setAggregateExcludeTerms] = useState('')
-  // Source feed filter for aggregate feeds
   const [sourceFilter, setSourceFilter] = useState<string[]>([])
   const [showSourceFilter, setShowSourceFilter] = useState(false)
 
   const hasData = items.length > 0
   useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode })
 
-  // Close overlay panels on Escape key
   useEffect(() => {
     const hasOpenOverlay = showSettings || showFeedSelector || showFilterEditor || showSourceFilter || showAggregateCreator
     if (!hasOpenOverlay) return
@@ -135,15 +127,12 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
   const activeFeed = feeds[activeFeedIndex] || feeds[0]
 
-  // Get cache key for current feed
   const currentCacheKey = activeFeed?.isAggregate
     ? `aggregate:${(activeFeed.sourceUrls ?? []).join(',')}:${activeFeed.name}`
     : activeFeed?.url
 
-  // Check if displayed items match the active feed
   const itemsMatchActiveFeed = itemsSourceUrl === currentCacheKey
 
-  // Get unique sources from items (for aggregate feed source filter)
   const availableSources = useMemo(() => {
     if (!activeFeed?.isAggregate) return []
     const sources = new Map<string, { url: string, name: string, icon: string }>()
@@ -152,22 +141,20 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         sources.set(item.sourceUrl, {
           url: item.sourceUrl,
           name: item.sourceName || 'Unknown',
-          icon: item.sourceIcon || '📰' })
+          icon: item.sourceIcon || '📰',
+        })
       }
     }
     return Array.from(sources.values()).sort((a, b) => a.name.localeCompare(b.name))
   }, [items, activeFeed?.isAggregate])
 
-  // Pre-filter: apply RSS-specific source filter and include/exclude filters
   const preFilteredItems = useMemo(() => {
     let result = [...items]
 
-    // Apply source filter (for aggregate feeds)
     if (sourceFilter.length > 0 && activeFeed?.isAggregate) {
       result = result.filter(item => item.sourceUrl && sourceFilter.includes(item.sourceUrl))
     }
 
-    // Apply feed-specific include/exclude filters
     const filter = activeFeed?.filter
     if (filter) {
       if (filter.includeTerms.length > 0) {
@@ -187,7 +174,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     return result
   }, [items, activeFeed?.filter, activeFeed?.isAggregate, sourceFilter])
 
-  // useCardData: handles search, sort, and pagination
   const {
     items: paginatedItems,
     totalItems,
@@ -200,7 +186,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle } = useCardData<FeedItem, SortByOption>(preFilteredItems, {
+    containerStyle,
+  } = useCardData<FeedItem, SortByOption>(preFilteredItems, {
     filter: {
       searchFields: ['title', 'description', 'author'] as (keyof FeedItem)[],
       customPredicate: (item, query) => {
@@ -208,237 +195,35 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         if (item.sourceName && item.sourceName.toLowerCase().includes(query)) return true
         return false
       },
-      storageKey: 'rss-feed' },
+      storageKey: 'rss-feed',
+    },
     sort: {
       defaultField: 'date',
       defaultDirection: 'desc',
-      comparators: SORT_COMPARATORS },
-    defaultLimit: 10 })
+      comparators: SORT_COMPARATORS,
+    },
+    defaultLimit: 10,
+  })
 
-  // Fetch with timeout helper
-  const fetchWithTimeout = useCallback(async (url: string, timeoutMs: number): Promise<Response> => {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-    try {
-      const response = await fetch(url, { signal: controller.signal })
-      return response
-    } finally {
-      clearTimeout(timeoutId)
-    }
-  }, [])
+  const { fetchFeed } = useRSSFeedRefresh({
+    activeFeed,
+    feeds,
+    isDemoMode,
+    failedToLoadText: t('rssFeed.failedToLoadFeed'),
+    setItems,
+    setItemsSourceUrl,
+    setIsLoading,
+    setIsRefreshing,
+    setError,
+    setLastRefresh,
+    setFetchSuccess,
+  })
 
-  // Helper: Fetch a single RSS feed URL
-  const fetchSingleFeed = useCallback(async (feedUrl: string): Promise<FeedItem[]> => {
-    const FETCH_TIMEOUT_MS = 10000
-
-    for (const proxy of CORS_PROXIES) {
-      try {
-        const proxyUrl = proxy.url + encodeURIComponent(feedUrl)
-        const response = await fetchWithTimeout(proxyUrl, FETCH_TIMEOUT_MS)
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`)
-        }
-
-        let items: FeedItem[] = []
-
-        if (proxy.type === 'json-rss2json') {
-          const data = await response.json()
-          if (data.status === 'ok' && data.items) {
-            items = data.items.map((item: RSSItemRaw, idx: number) => {
-              let thumb = item.thumbnail || item.enclosure?.thumbnail || item.enclosure?.link || ''
-              if (!isValidThumbnail(thumb)) thumb = ''
-              if (!thumb && (item.description || item.content)) {
-                const descOrContent = item.description || item.content
-                if (descOrContent) {
-                  const imgMatch = descOrContent.match(/<img[^>]+src=["']([^"']+)["']/)
-                  if (imgMatch && isValidThumbnail(imgMatch[1])) {
-                    thumb = imgMatch[1]
-                  }
-                }
-              }
-              return {
-                id: `${feedUrl}-${item.guid || item.link || idx}`,
-                title: decodeHTMLEntities(item.title || 'Untitled'),
-                link: item.link || '',
-                description: stripHTML(item.description || item.content || '').slice(0, 300),
-                pubDate: item.pubDate ? new Date(item.pubDate) : undefined,
-                author: item.author || '',
-                thumbnail: thumb,
-                subreddit: item.link?.match(/reddit\.com\/r\/([^/]+)/)?.[1] }
-            })
-          } else {
-            throw new Error(data.message || 'Invalid RSS feed')
-          }
-        } else if (proxy.type === 'json-contents') {
-          const data = await response.json()
-          if (data.contents) {
-            let contents = data.contents
-            if (contents.startsWith('data:') && contents.includes('base64,')) {
-              const base64Part = contents.split('base64,')[1]
-              contents = atob(base64Part)
-            }
-            if (contents.includes('<title>500') || contents.includes('Internal Server Error')) {
-              throw new Error('Proxy returned error page')
-            }
-            items = parseRSSFeed(contents, feedUrl)
-          } else {
-            throw new Error('No content in response')
-          }
-        } else {
-          const feedXml = await response.text()
-          if (!feedXml || feedXml.length < MIN_VALID_FEED_LENGTH) {
-            throw new Error('Empty response')
-          }
-          if (feedXml.includes('Internal Server Error') || feedXml.includes('<!DOCTYPE html>') && !feedXml.includes('<rss') && !feedXml.includes('<feed')) {
-            throw new Error('Received error page instead of feed')
-          }
-          items = parseRSSFeed(feedXml, feedUrl)
-        }
-
-        if (items.length > 0) {
-          return items
-        }
-        throw new Error('No items parsed from feed')
-      } catch {
-        continue
-      }
-    }
-    return []
-  }, [fetchWithTimeout])
-
-  // Fetch RSS feed (or aggregate) — uses demo data in demo mode
-  const fetchFeed = useCallback(async (isManualRefresh = false) => {
-    if (isDemoMode) {
-      const demoItems = getDemoRSSItems()
-      setItems(demoItems)
-      setItemsSourceUrl('demo')
-      setIsLoading(false)
-      setIsRefreshing(false)
-      setLastRefresh(new Date())
-      setError(null)
-      const cacheKey = activeFeed?.isAggregate
-        ? `aggregate:${(activeFeed.sourceUrls ?? []).join(',')}:${activeFeed.name}`
-        : activeFeed?.url
-      if (cacheKey) cacheFeed(cacheKey, demoItems)
-      return
-    }
-
-    if (!activeFeed?.url && !activeFeed?.isAggregate) return
-
-    const cacheKey = activeFeed.isAggregate
-      ? `aggregate:${(activeFeed.sourceUrls ?? []).join(',')}:${activeFeed.name}`
-      : activeFeed.url
-
-    const cached = getCachedFeed(cacheKey, true)
-    if (cached && cached.items.length > 0) {
-      setItems(cached.items)
-      setItemsSourceUrl(cacheKey)
-      setLastRefresh(new Date(cached.timestamp))
-      setError(null)
-      setIsLoading(false)
-
-      if (!cached.isStale && !isManualRefresh) {
-        setIsRefreshing(false)
-        return
-      }
-      setIsRefreshing(true)
-    } else {
-      if (isManualRefresh) {
-        setIsRefreshing(true)
-      } else {
-        setIsLoading(true)
-      }
-    }
-    setError(null)
-
-    try {
-      let feedItems: FeedItem[] = []
-
-      if (activeFeed.isAggregate && activeFeed.sourceUrls) {
-        const results = await Promise.all(
-          activeFeed.sourceUrls.map(async (url) => {
-            const items = await fetchSingleFeed(url)
-            const sourceFeed = feeds.find(f => f.url === url) || PRESET_FEEDS.find(p => p.url === url)
-            let sourceName: string
-            try {
-              sourceName = sourceFeed?.name || new URL(url).hostname
-            } catch {
-              sourceName = sourceFeed?.name || url
-            }
-            const sourceIcon = sourceFeed?.icon || '📰'
-            return items.map(item => ({
-              ...item,
-              sourceUrl: url,
-              sourceName,
-              sourceIcon }))
-          })
-        )
-        const seen = new Set<string>()
-        for (const items of results) {
-          for (const item of items) {
-            if (!seen.has(item.link)) {
-              seen.add(item.link)
-              feedItems.push(item)
-            }
-          }
-        }
-      } else {
-        feedItems = await fetchSingleFeed(activeFeed.url)
-      }
-
-      if (feedItems.length === 0) {
-        throw new Error(activeFeed.isAggregate ? 'No items found in any source feed' : 'No items found in feed')
-      }
-
-      setItems(feedItems)
-      setItemsSourceUrl(cacheKey)
-      setError(null)
-      setLastRefresh(new Date())
-      const sourceCount = activeFeed.isAggregate ? ` from ${activeFeed.sourceUrls?.length || 0} sources` : ''
-      setFetchSuccess(`Fetched ${feedItems.length} items${sourceCount}`)
-      cacheFeed(cacheKey, feedItems)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t('rssFeed.failedToLoadFeed')
-
-      const cached = getCachedFeed(cacheKey)
-      if (cached && cached.items.length > 0) {
-        setItems(cached.items)
-        setItemsSourceUrl(cacheKey)
-        setLastRefresh(new Date(cached.timestamp))
-        setError(null)
-      } else {
-        setItems([])
-        setItemsSourceUrl(cacheKey)
-        setError(message)
-      }
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }, [activeFeed?.url, activeFeed?.name, activeFeed?.isAggregate, activeFeed?.sourceUrls, isDemoMode, feeds, fetchSingleFeed])
-
-  // Fetch on mount — runs once. The fetch is async but the component is
-  // long-lived (dashboard card), so stale-setState risk is minimal.
-  const feedInitRef = useRef(false)
-  useEffect(() => {
-    if (feedInitRef.current) return
-    feedInitRef.current = true
-    fetchFeed()
-    return () => {
-      // Reset init flag on unmount so a remount re-fetches.
-      feedInitRef.current = false
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Reset source filter when feed changes
   useEffect(() => {
     setSourceFilter([])
     setShowSourceFilter(false)
   }, [activeFeedIndex])
 
-  // Keep demo mode usable even before any feeds have been configured.
   useEffect(() => {
     if (config?.feedUrl) return
 
@@ -455,7 +240,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     }
   }, [config?.feedUrl, feeds, isDemoMode])
 
-  // Clear success message after timeout
   useEffect(() => {
     if (fetchSuccess) {
       const timer = setTimeout(() => setFetchSuccess(null), TOAST_DISMISS_MS)
@@ -463,14 +247,11 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     }
   }, [fetchSuccess])
 
-  // Save feeds when changed
   useEffect(() => {
     if (config?.feedUrl) return
     if (feeds.length > 0 && feeds.every(feed => feed.url.startsWith('demo:'))) return
     saveFeeds(feeds)
   }, [feeds, config?.feedUrl])
-
-  // --- Callbacks for subcomponents ---
 
   const handleSelectFeed = useCallback((idx: number) => {
     if (idx !== activeFeedIndex) {
@@ -498,7 +279,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setShowSettings(prev => !prev)
   }, [])
 
-  // Feed pill selection (no close of selector needed)
   const handlePillSelect = useCallback((idx: number) => {
     if (idx !== activeFeedIndex) {
       setActiveFeedIndex(idx)
@@ -507,7 +287,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     }
   }, [activeFeedIndex])
 
-  // Filter editor
   const handleOpenFilterEditor = useCallback(() => {
     const filter = activeFeed?.filter
     setTempIncludeTerms((filter?.includeTerms ?? []).join(', '))
@@ -540,7 +319,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setShowFilterEditor(false)
   }, [])
 
-  // Source filter
   const handleToggleSourceFilter = useCallback(() => {
     setShowSourceFilter(prev => !prev)
   }, [])
@@ -549,7 +327,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setShowSourceFilter(false)
   }, [])
 
-  // Settings panel callbacks
   const normalizeUrl = useCallback((url: string): string => {
     let normalized = url.trim()
 
@@ -613,7 +390,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       addFeed({
         url,
         name: newFeedName || defaultName,
-        icon: hostnameEndsWith(url, 'reddit.com') ? '🔴' : '📰' })
+        icon: hostnameEndsWith(url, 'reddit.com') ? '🔴' : '📰',
+      })
     }
   }, [newFeedUrl, newFeedName, normalizeUrl, addFeed])
 
@@ -672,7 +450,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       sourceUrls: selectedSourceUrls,
       filter: includeTerms.length > 0 || excludeTerms.length > 0
         ? { includeTerms, excludeTerms }
-        : undefined }
+        : undefined,
+    }
 
     if (editingAggregateIndex !== null) {
       setFeeds(prev => prev.map((f, i) => i === editingAggregateIndex ? aggregate : f))
@@ -702,7 +481,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setAggregateExcludeTerms('')
   }, [])
 
-  // Feed items list callbacks
   const handleClearFilters = useCallback(() => {
     filters.setSearch('')
     if (activeFeed?.filter) {
@@ -738,43 +516,23 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden relative">
-      {/* Row 1: Header */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
-        <FeedSelector
-          feeds={feeds}
-          activeFeedIndex={activeFeedIndex}
-          showFeedSelector={showFeedSelector}
-          totalItems={totalItems}
-          onToggleSelector={handleToggleFeedSelector}
-          onSelectFeed={handleSelectFeed}
-          onOpenSettings={handleOpenSettings}
-        />
+      <RSSFeedSelectorPanel
+        feeds={feeds}
+        activeFeedIndex={activeFeedIndex}
+        showFeedSelector={showFeedSelector}
+        totalItems={totalItems}
+        isRefreshing={isRefreshing}
+        showSettings={showSettings}
+        lastRefresh={lastRefresh}
+        refreshLabel={t('common:common.refresh')}
+        settingsLabel={t('common:navigation.settings')}
+        onToggleSelector={handleToggleFeedSelector}
+        onSelectFeed={handleSelectFeed}
+        onOpenSettings={handleOpenSettings}
+        onRefresh={handleRefresh}
+        onToggleSettings={handleToggleSettings}
+      />
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="p-1.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            title={lastRefresh ? `Refresh (last: ${formatTimeAgo(lastRefresh, { compact: true, extended: true })})` : t('common:common.refresh')}
-          >
-            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
-          </button>
-          <button
-            onClick={handleToggleSettings}
-            className={cn(
-              'p-1.5 rounded transition-colors',
-              showSettings
-                ? 'bg-primary/20 text-primary'
-                : 'hover:bg-secondary/50 text-muted-foreground hover:text-foreground'
-            )}
-            title={t('common:navigation.settings')}
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Row 2: Search */}
       <div className="flex flex-col gap-2 mb-2 shrink-0">
         <CardSearchInput
           value={filters.search}
@@ -783,14 +541,12 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         />
       </div>
 
-      {/* Row 3: Feed Pills */}
       <FeedPills
         feeds={feeds}
         activeFeedIndex={activeFeedIndex}
         onSelectFeed={handlePillSelect}
       />
 
-      {/* Sort & Filter Controls */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <CardControlsRow
@@ -804,10 +560,10 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               ],
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
-              onSortDirectionChange: sorting.setSortDirection }}
+              onSortDirectionChange: sorting.setSortDirection,
+            }}
           />
 
-          {/* Filter button */}
           <button
             onClick={handleOpenFilterEditor}
             className={cn(
@@ -821,7 +577,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             {activeFeed?.filter ? t('cards:rssFeed.filtered') : t('common:common.filter')}
           </button>
 
-          {/* Source filter for aggregate feeds */}
           {activeFeed?.isAggregate && availableSources.length > 1 && (
             <SourceFilterDropdown
               availableSources={availableSources}
@@ -835,7 +590,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         </div>
       </div>
 
-      {/* Filter Editor */}
       {showFilterEditor && (
         <FeedFilterEditor
           activeFeed={activeFeed}
@@ -849,7 +603,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         />
       )}
 
-      {/* Settings Panel */}
       {showSettings && (
         <FeedSettingsPanel
           feeds={feeds}
@@ -880,7 +633,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         />
       )}
 
-      {/* Status area */}
       <div className="h-5 mb-1 shrink-0 flex items-center">
         {(isLoading || isRefreshing) && !error ? (
           <span className="text-2xs text-muted-foreground/60 flex items-center gap-1">
@@ -912,9 +664,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         ) : null}
       </div>
 
-      {/* Feed items */}
       <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2 min-h-0 scrollbar-thin" style={containerStyle}>
-        <FeedItemsList
+        <RSSFeedItemsList
           paginatedItems={paginatedItems}
           totalItems={totalItems}
           showListSkeleton={showListSkeleton}
@@ -925,7 +676,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         />
       </div>
 
-      {/* Pagination */}
       <div className="shrink-0">
         <CardPaginationFooter
           currentPage={currentPage}
