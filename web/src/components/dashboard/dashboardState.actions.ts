@@ -15,7 +15,7 @@ import { isLocalOnlyCard, mapVisualizationToCardType, getDefaultCardSize, getDem
 import { setDashboardCache, patchDashboardCache } from './persistence'
 import { saveDashboardCardsToStorage } from '../../lib/dashboards/dashboardCardStorage'
 import type { DashboardTemplate } from './templates'
-import type { DeployResultPayload } from '../../lib/cardEvents'
+import type { DeployResultPayload, CardEvent } from '../../lib/cardEvents'
 import type { TFunction } from 'i18next'
 import type { Dispatch, SetStateAction } from 'react'
 
@@ -444,7 +444,7 @@ export interface ConfirmDeployDeps {
     args: { workloadName: string; namespace: string; sourceCluster: string; targetClusters: string[] },
     callbacks: { onSuccess: (result: unknown) => void }
   ) => Promise<void>
-  publishCardEvent: (event: { type: string; payload: Record<string, unknown> }) => void
+  publishCardEvent: (event: CardEvent) => void
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void
   t: TFunction
 }
@@ -540,7 +540,7 @@ export async function exportDashboardAsFile(
 // ─── Drag helpers ────────────────────────────────────────────────────────────
 
 export interface MoveToDashboardDeps {
-  moveCardToDashboard: (cardId: string, dashboardId: string) => Promise<void>
+  moveCardToDashboard: (cardId: string, dashboardId: string) => Promise<unknown>
   createDashboard: (name: string) => Promise<{ id: string; name?: string } | undefined>
   snapshot: (cards: Card[]) => void
   localCards: Card[]
