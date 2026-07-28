@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useMissions } from '../../../../hooks/useMissions'
-import { useDrillDown } from '../../../../hooks/useDrillDown'
-import { useCanI } from '../../../../hooks/usePermissions'
-import { useToast } from '../../../ui/Toast'
+import { useMissions } from '../../../../../hooks/useMissions'
+import { useDrillDown } from '../../../../../hooks/useDrillDown'
+import { useCanI } from '../../../../../hooks/usePermissions'
+import { useToast } from '../../../../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import type { PodDeleteRepairActionProps } from './types'
 

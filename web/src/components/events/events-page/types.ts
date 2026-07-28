@@ -23,7 +23,7 @@ export interface EventsStatsCache {
 export interface EventsChartDatum {
   name: string
   value: number
-  color?: string
+  color: string
 }
 
 export interface EventsStats {

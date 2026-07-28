@@ -1,5 +1,5 @@
 import { AlertCircle, AlertTriangle, CheckCircle } from 'lucide-react'
-import type { ComponentType, SVGProps } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { DrillDownViewType } from '../../../../hooks/useDrillDown'
 import type { SummaryStats } from './types'
@@ -7,7 +7,7 @@ import { ClusterSummaryCard } from './ClusterSummaryCard'
 
 interface AggregatedMetricsChartProps {
   iconClassName: string
-  Icon: ComponentType<SVGProps<SVGSVGElement>>
+  Icon: LucideIcon
   stats: SummaryStats
   viewType: DrillDownViewType
 }

@@ -55,7 +55,7 @@ export const buildArgoAIContext = ({
     healthStatus.toLowerCase() === 'missing'
 
   const issues = hasIssues
-    ? [{ name: appName, message: `Sync: ${syncStatus}, Health: ${healthStatus}`, severity: healthStatus.toLowerCase() === 'degraded' ? 'critical' : 'warning' as const }]
+    ? [{ name: appName, message: `Sync: ${syncStatus}, Health: ${healthStatus}`, severity: (healthStatus.toLowerCase() === 'degraded' ? 'critical' : 'warning') as 'critical' | 'warning' }]
     : []
 
   return { resourceContext, issues }

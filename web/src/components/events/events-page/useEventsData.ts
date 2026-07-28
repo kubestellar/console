@@ -128,7 +128,7 @@ export function useEventsData({
       name, value, color: getChartColor((i % DONUT_COLOR_BUCKETS) + 1)
     }))
     const now = new Date()
-    const hourlyData: { name: string; value: number; color?: string }[] = []
+    const hourlyData: { name: string; value: number; color: string }[] = []
     // Single-pass: bucket events by hour instead of N×M filter scans
     const hourlyTotals = new Array(HOURS_IN_DAY).fill(0)
     const hourlyWarnings = new Array(HOURS_IN_DAY).fill(0)

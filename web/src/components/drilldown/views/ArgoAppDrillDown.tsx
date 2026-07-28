@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Box, GitCommit, History, Info, Loader2, RefreshCw, Stethoscope } from 'lucide-react'
+import { Box, GitCommit, History, Info, RefreshCw, Stethoscope } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'

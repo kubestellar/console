@@ -39,7 +39,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   const { pvcs: cachedPVCs } = useCachedPVCs()
 
   const cachedNodes = rawCachedNodes || []
-  const nodeClusterErrors = rawNodeClusterErrors || []
+  const nodeClusterErrors = [...(rawNodeClusterErrors ?? [])]
   const expectedNodeCountFromClusters = (clusters || []).reduce((sum, c) => sum + (c.nodeCount || 0), 0)
   const expectedPodCountFromClusters = (clusters || []).reduce((sum, c) => sum + (c.podCount || 0), 0)
   const nodesDataAge = nodesLastRefresh ? new Date(nodesLastRefresh).toISOString() : null
