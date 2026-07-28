@@ -27,10 +27,11 @@ import { NamespaceClusterGroup } from './NamespaceClusterGroup'
 import { NamespaceAccessPanel } from './NamespaceAccessPanel'
 import { useNamespaceFetch, namespaceCache, getCachedNamespacesForCluster } from './useNamespaceFetch'
 import type { NamespaceDetails } from './types'
+import { PageErrorBoundary } from '../PageErrorBoundary'
 
 type GroupByMode = 'cluster' | 'type'
 
-export function NamespaceManager() {
+function NamespaceManagerContent() {
   const { t } = useTranslation()
   const { showToast } = useToast()
   const { user } = useAuth()
@@ -347,5 +348,13 @@ export function NamespaceManager() {
         />
       )}
     </div>
+  )
+}
+
+export function NamespaceManager() {
+  return (
+    <PageErrorBoundary>
+      <NamespaceManagerContent />
+    </PageErrorBoundary>
   )
 }
