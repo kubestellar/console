@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "dev:coverage": "VITE_COVERAGE=true vite",
-    "build": "tsc -b && vite build",
+    "build": "NODE_OPTIONS=--max-old-space-size=8192 tsc -b && NODE_OPTIONS=--max-old-space-size=8192 vite build",
     "postbuild": "node scripts/check-vendor-safety.mjs",
     "lint": "eslint .",
     "lint:check": "node scripts/lint-baseline-check.mjs",
