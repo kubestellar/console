@@ -18,7 +18,7 @@ import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } 
 /** Result type chip styling — higher contrast and enough padding to read quickly. */
 const RESULT_TYPE_CHIP_CLASS = 'inline-flex shrink-0 items-center rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-foreground'
 
-const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Server }> = {
+const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   page: { label: 'Dashboards', icon: LayoutDashboard },
   card: { label: 'Cards', icon: LayoutGrid },
   stat: { label: 'Stats', icon: BarChart3 },
