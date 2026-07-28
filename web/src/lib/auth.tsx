@@ -11,6 +11,7 @@ import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
 import { clearAgentToken, setAgentToken } from '../hooks/mcp/agentFetch'
 import { DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE } from './constants'
 import { isLocalAgentSuppressed } from './constants/network'
+import { HTTP_UNAUTHORIZED, HTTP_FORBIDDEN } from './constants/http'
 import { safeGet, safeRemove, safeSet, safeSetJSON } from './safeLocalStorage'
 import { AUTH_TOKEN_SYNC_KEY, clearStoredAuthToken, getStoredAuthToken, getStoredAuthTokenSync, parseAuthTokenSyncEvent, setStoredAuthToken } from './authToken'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession, emitSessionRefreshFailure } from './analytics'
@@ -377,8 +378,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // #6930 — A 401/403 from /auth/refresh is a definitive signal that
             // the server session has expired. Clear the session hint so future
             // page loads don't keep hitting /auth/refresh in a loop.
-            const HTTP_UNAUTHORIZED = 401
-            const HTTP_FORBIDDEN = 403
             if (refreshResponse.status === HTTP_UNAUTHORIZED || refreshResponse.status === HTTP_FORBIDDEN) {
               localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
             }
@@ -668,8 +667,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else {
             // #6930 — A definitive auth failure from the banner refresh
             // should also clear the session hint to prevent stale loops.
-            const HTTP_UNAUTHORIZED = 401
-            const HTTP_FORBIDDEN = 403
             if (response.status === HTTP_UNAUTHORIZED || response.status === HTTP_FORBIDDEN) {
               localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
             }

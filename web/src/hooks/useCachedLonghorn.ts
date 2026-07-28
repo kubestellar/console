@@ -28,6 +28,7 @@ import {
   type LonghornVolumeRobustness,
   type LonghornVolumeState,
 } from '../lib/demo/longhorn'
+import { HTTP_NOT_FOUND } from '../lib/constants/http'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -35,9 +36,6 @@ import {
 
 const CACHE_KEY_LONGHORN = 'longhorn-status'
 const LONGHORN_STATUS_ENDPOINT = '/api/longhorn/status'
-
-// HTTP status sentinels
-const HTTP_NOT_FOUND = 404
 
 const INITIAL_DATA: LonghornStatusData = {
   health: 'not-installed',

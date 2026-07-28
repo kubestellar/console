@@ -7,6 +7,7 @@ import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
 import { STORAGE_KEY_FIRST_AGENT_CONNECT } from '../lib/constants/storage'
 import { triggerAllRefetches } from '../lib/modeTransition'
 import { agentFetch } from './mcp/shared'
+import { HTTP_UNAUTHORIZED, HTTP_FORBIDDEN } from '../lib/constants/http'
 
 export interface ProviderSummary {
   name: string
@@ -61,11 +62,9 @@ const FAILURE_THRESHOLD = 2 // Require 2 consecutive failures before disconnecti
 // Using the default 10s timeout causes false failures when the browser's
 // HTTP/1.1 connection pool (6 per origin) is saturated by concurrent requests.
 const AGENT_HEALTH_TIMEOUT_MS = 1_500 // Reduced for faster disconnect detection (#14192)
-const HTTP_UNAUTHORIZED_STATUS = 401
-const HTTP_FORBIDDEN_STATUS = 403
 const AUTH_ERROR_STATUS_CODES = new Set([
-  HTTP_UNAUTHORIZED_STATUS,
-  HTTP_FORBIDDEN_STATUS,
+  HTTP_UNAUTHORIZED,
+  HTTP_FORBIDDEN,
 ])
 const SUCCESS_THRESHOLD = 2 // Require 2 consecutive successes before reconnecting (prevents flicker)
 const AGGRESSIVE_POLL_INTERVAL = 1_000 // 1 second during aggressive detection burst
@@ -357,7 +356,7 @@ class AgentManager {
       }
 
       if (AUTH_ERROR_STATUS_CODES.has(authResponse.status)) {
-        const isUnauthorized = authResponse.status === HTTP_UNAUTHORIZED_STATUS
+        const isUnauthorized = authResponse.status === HTTP_UNAUTHORIZED
         const authErrorMessage = isUnauthorized
           ? 'Local agent reachable, but authentication failed'
           : 'Local agent reachable, but access is forbidden'

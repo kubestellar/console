@@ -25,6 +25,7 @@ import type {
   TopologyNode,
   TopologyEdge,
 } from '../types/topology'
+import { HTTP_SERVICE_UNAVAILABLE } from '../lib/constants/http'
 
 // ============================================================================
 // Constants
@@ -37,9 +38,6 @@ const CACHE_EXPIRY_MS = 300_000
 
 /** localStorage key for topology cache */
 const TOPOLOGY_CACHE_KEY = 'kc-topology-cache'
-
-/** HTTP status code returned when the backend has no k8s client */
-const STATUS_SERVICE_UNAVAILABLE = 503
 
 // ============================================================================
 // Demo fallback data
@@ -186,7 +184,7 @@ async function fetchTopology(): Promise<TopologyData> {
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
 
-  if (res.status === STATUS_SERVICE_UNAVAILABLE) {
+  if (res.status === HTTP_SERVICE_UNAVAILABLE) {
     console.warn('[useTopology] Backend returned 503, using demo data')
     return normalizeTopologyData(DEMO_RESPONSE, true)
   }
