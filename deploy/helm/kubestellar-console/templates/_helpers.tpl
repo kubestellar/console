@@ -65,6 +65,18 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
+Return a storage class only when the PVC is not RWX-backed.
+RWX claims must use the cluster default provisioner so they can bind
+on clusters like vllm-d even when a block-storage override is present.
+*/}}
+{{- define "kubestellar-console.storageClassName" -}}
+{{- $accessModes := .accessModes | default (list) -}}
+{{- if not (has "ReadWriteMany" $accessModes) -}}
+{{- .storageClass | default "" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Create the name of the kubeconfig Secret to use.
 */}}
 {{- define "kubestellar-console.kubeconfigSecretName" -}}
