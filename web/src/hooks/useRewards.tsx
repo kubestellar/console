@@ -151,21 +151,8 @@ function checkAchievements(userRewards: UserRewards): string[] {
 
 export function RewardsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  // Combine rewards + isLoading into one state so the hydrate function can
-  // update both in a single setState call, preventing consecutive-setState flicker.
-  const [{ rewards, isLoading }, setRewardsState] = useState<{ rewards: UserRewards | null; isLoading: boolean }>({
-    rewards: null,
-    isLoading: true,
-  })
-  const setRewards = useCallback(
-    (updater: UserRewards | null | ((prev: UserRewards | null) => UserRewards | null)) => {
-      setRewardsState(prev => ({
-        ...prev,
-        rewards: typeof updater === 'function' ? (updater as (prev: UserRewards | null) => UserRewards | null)(prev.rewards) : updater,
-      }))
-    },
-    [],
-  )
+  const [rewards, setRewards] = useState<UserRewards | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const { githubRewards, githubPoints, refresh: refreshGitHubRewards } = useGitHubRewards()
   const { bonusPoints } = useBonusPoints()
 
@@ -175,7 +162,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   const effectiveUserIdRef = useRef<string | null>(effectiveUserId)
   useEffect(() => {
     effectiveUserIdRef.current = effectiveUserId
-  }, [effectiveUserId, setRewards])
+  }, [effectiveUserId])
 
   // Ref for rewards so stable callbacks can read current state
   const rewardsRef = useRef<UserRewards | null>(rewards)
@@ -199,7 +186,8 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
 
     async function hydrate() {
       if (!effectiveUserId) {
-        setRewardsState({ rewards: null, isLoading: false })
+        setRewards(null)
+        setIsLoading(false)
         return
       }
 
@@ -208,7 +196,8 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
       const cached = loadRewards(effectiveUserId)
       const initial = cached ?? createInitialRewards(effectiveUserId)
       if (!cancelled) {
-        setRewardsState({ rewards: initial, isLoading: false })
+        setRewards(initial)
+        setIsLoading(false)
       }
       if (!cached) {
         saveRewards(effectiveUserId, initial)
@@ -244,7 +233,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [effectiveUserId, setRewards])
+  }, [effectiveUserId])
 
   // Cross-tab sync (issue #6014): when another tab mutates the rewards
   // localStorage key, mirror the change in this tab so the coin balance,
@@ -315,7 +304,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     const r = rewardsRef.current
     if (!r) return 0
     return r.events.filter(e => e.action === action).length
-  }, [setRewards])
+  }, [])
 
   // Award coins for an action.
   //
