@@ -1,6 +1,7 @@
 import { Bell, Trash2, Webhook, Siren, ShieldAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Slack } from '@/lib/icons'
+import { Input } from '../ui/Input'
 import type { AlertChannel } from '../../types/alerts'
 
 interface AlertRuleChannelsProps {
@@ -120,7 +121,7 @@ export function AlertRuleChannels({
                 <label htmlFor={`alertRuleSlackWebhookUrl-${index}`} className="sr-only">
                   {t('alerts.slackWebhookUrl')}
                 </label>
-                <input
+                <Input
                   id={`alertRuleSlackWebhookUrl-${index}`}
                   name={`alertRuleSlackWebhookUrl-${index}`}
                   type="text"
@@ -131,12 +132,12 @@ export function AlertRuleChannels({
                       config: { ...channel.config, slackWebhookUrl: e.target.value },
                     })
                   }
-                  className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                  className="focus:ring-purple-500"
                 />
                 <label htmlFor={`alertRuleSlackChannel-${index}`} className="sr-only">
                   {t('alerts.slackChannel')}
                 </label>
-                <input
+                <Input
                   id={`alertRuleSlackChannel-${index}`}
                   name={`alertRuleSlackChannel-${index}`}
                   type="text"
@@ -147,7 +148,7 @@ export function AlertRuleChannels({
                       config: { ...channel.config, slackChannel: e.target.value },
                     })
                   }
-                  className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                  className="focus:ring-purple-500"
                 />
               </div>
             )}
@@ -157,7 +158,7 @@ export function AlertRuleChannels({
                 <label htmlFor={`alertRuleWebhookUrl-${index}`} className="sr-only">
                   {t('alerts.webhookUrl')}
                 </label>
-                <input
+                <Input
                   id={`alertRuleWebhookUrl-${index}`}
                   name={`alertRuleWebhookUrl-${index}`}
                   type="text"
@@ -168,7 +169,7 @@ export function AlertRuleChannels({
                       config: { ...channel.config, webhookUrl: e.target.value },
                     })
                   }
-                  className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                  className="focus:ring-purple-500"
                 />
               </>
             )}
@@ -178,7 +179,7 @@ export function AlertRuleChannels({
                 <label htmlFor={`alertRulePagerdutyRoutingKey-${index}`} className="sr-only">
                   {t('alerts.pagerdutyRoutingKey')}
                 </label>
-                <input
+                <Input
                   id={`alertRulePagerdutyRoutingKey-${index}`}
                   name={`alertRulePagerdutyRoutingKey-${index}`}
                   type="password"
@@ -189,7 +190,7 @@ export function AlertRuleChannels({
                       config: { ...channel.config, pagerdutyRoutingKey: e.target.value },
                     })
                   }
-                  className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                  className="focus:ring-purple-500"
                 />
               </>
             )}
@@ -199,7 +200,7 @@ export function AlertRuleChannels({
                 <label htmlFor={`alertRuleOpsgenieApiKey-${index}`} className="sr-only">
                   {t('alerts.opsgenieApiKey')}
                 </label>
-                <input
+                <Input
                   id={`alertRuleOpsgenieApiKey-${index}`}
                   name={`alertRuleOpsgenieApiKey-${index}`}
                   type="password"
@@ -210,7 +211,7 @@ export function AlertRuleChannels({
                       config: { ...channel.config, opsgenieApiKey: e.target.value },
                     })
                   }
-                  className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                  className="focus:ring-purple-500"
                 />
               </>
             )}

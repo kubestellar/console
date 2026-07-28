@@ -1,6 +1,8 @@
 import { Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR } from '../../lib/constants/time'
+import { Input } from '../ui/Input'
+import { Select } from '../ui/Select'
 import type { AlertConditionType } from '../../types/alerts'
 
 type WeatherConditionType = 'severe_storm' | 'extreme_heat' | 'heavy_rain' | 'snow' | 'high_wind'
@@ -99,18 +101,19 @@ export function AlertRuleCondition({
             {t('alerts.thresholdPercent')}
           </label>
           <div className="flex items-center gap-2">
-            <input
-              id="alertRuleThreshold"
-              name="alertRuleThreshold"
-              type="number"
-              min={1}
-              max={100}
-              value={threshold}
-              onChange={e => onThresholdChange(Number(e.target.value))}
-              className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
-                errors.threshold ? 'border-red-500' : 'border-border'
-              }`}
-            />
+            <div className="w-24">
+              <Input
+                id="alertRuleThreshold"
+                name="alertRuleThreshold"
+                type="number"
+                min={1}
+                max={100}
+                value={threshold}
+                onChange={e => onThresholdChange(Number(e.target.value))}
+                error={Boolean(errors.threshold)}
+                className="focus:ring-purple-500"
+              />
+            </div>
             <span className="text-sm text-muted-foreground">%</span>
           </div>
           {errors.threshold && (
@@ -125,18 +128,19 @@ export function AlertRuleCondition({
             {t('alerts.restartCountThreshold')}
           </label>
           <div className="flex items-center gap-2">
-            <input
-              id="alertRuleRestartThreshold"
-              name="alertRuleRestartThreshold"
-              type="number"
-              min={1}
-              max={100}
-              value={threshold}
-              onChange={e => onThresholdChange(Number(e.target.value))}
-              className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
-                errors.threshold ? 'border-red-500' : 'border-border'
-              }`}
-            />
+            <div className="w-24">
+              <Input
+                id="alertRuleRestartThreshold"
+                name="alertRuleRestartThreshold"
+                type="number"
+                min={1}
+                max={100}
+                value={threshold}
+                onChange={e => onThresholdChange(Number(e.target.value))}
+                error={Boolean(errors.threshold)}
+                className="focus:ring-purple-500"
+              />
+            </div>
             <span className="text-sm text-muted-foreground">restarts</span>
           </div>
         </div>
@@ -148,19 +152,19 @@ export function AlertRuleCondition({
             <label htmlFor="alertRuleWeatherCondition" className="block text-xs text-muted-foreground mb-1">
               {t('alerts.weatherCondition')}
             </label>
-            <select
+            <Select
               id="alertRuleWeatherCondition"
               name="alertRuleWeatherCondition"
               value={weatherCondition}
               onChange={e => onWeatherConditionChange(e.target.value as WeatherConditionType)}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+              className="focus:ring-purple-500"
             >
               <option value="severe_storm">{t('alerts.weather.severeStorm')}</option>
               <option value="extreme_heat">{t('alerts.weather.extremeHeat')}</option>
               <option value="heavy_rain">{t('alerts.weather.heavyRain')}</option>
               <option value="snow">{t('alerts.weather.snow')}</option>
               <option value="high_wind">{t('alerts.weather.highWind')}</option>
-            </select>
+            </Select>
           </div>
 
           {weatherCondition === 'extreme_heat' && (
@@ -169,18 +173,19 @@ export function AlertRuleCondition({
                 {t('alerts.temperatureThreshold')}
               </label>
               <div className="flex items-center gap-2">
-                <input
-                  id="alertRuleTemperatureThreshold"
-                  name="alertRuleTemperatureThreshold"
-                  type="number"
-                  min={-50}
-                  max={150}
-                  value={temperatureThreshold}
-                  onChange={e => onTemperatureThresholdChange(Number(e.target.value))}
-                  className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
-                    errors.temperatureThreshold ? 'border-red-500' : 'border-border'
-                  }`}
-                />
+                <div className="w-24">
+                  <Input
+                    id="alertRuleTemperatureThreshold"
+                    name="alertRuleTemperatureThreshold"
+                    type="number"
+                    min={-50}
+                    max={150}
+                    value={temperatureThreshold}
+                    onChange={e => onTemperatureThresholdChange(Number(e.target.value))}
+                    error={Boolean(errors.temperatureThreshold)}
+                    className="focus:ring-purple-500"
+                  />
+                </div>
                 <span className="text-sm text-muted-foreground">°F</span>
               </div>
               {errors.temperatureThreshold && (
@@ -195,18 +200,19 @@ export function AlertRuleCondition({
                 {t('alerts.windSpeedThreshold')}
               </label>
               <div className="flex items-center gap-2">
-                <input
-                  id="alertRuleWindSpeedThreshold"
-                  name="alertRuleWindSpeedThreshold"
-                  type="number"
-                  min={1}
-                  max={200}
-                  value={windSpeedThreshold}
-                  onChange={e => onWindSpeedThresholdChange(Number(e.target.value))}
-                  className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
-                    errors.windSpeedThreshold ? 'border-red-500' : 'border-border'
-                  }`}
-                />
+                <div className="w-24">
+                  <Input
+                    id="alertRuleWindSpeedThreshold"
+                    name="alertRuleWindSpeedThreshold"
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={windSpeedThreshold}
+                    onChange={e => onWindSpeedThresholdChange(Number(e.target.value))}
+                    error={Boolean(errors.windSpeedThreshold)}
+                    className="focus:ring-purple-500"
+                  />
+                </div>
                 <span className="text-sm text-muted-foreground">mph</span>
               </div>
               {errors.windSpeedThreshold && (
@@ -236,16 +242,19 @@ export function AlertRuleCondition({
               {preset.label}
             </button>
           ))}
-          <input
-            id="alertRuleDuration"
-            name="alertRuleDuration"
-            type="number"
-            min={0}
-            max={3600}
-            value={duration}
-            onChange={e => onDurationChange(Number(e.target.value))}
-            className="w-20 px-2 py-1.5 text-xs rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
-          />
+          <div className="w-20">
+            <Input
+              id="alertRuleDuration"
+              name="alertRuleDuration"
+              type="number"
+              min={0}
+              max={3600}
+              value={duration}
+              onChange={e => onDurationChange(Number(e.target.value))}
+              inputSize="sm"
+              className="focus:ring-purple-500"
+            />
+          </div>
           <span className="text-xs text-muted-foreground">{t('alerts.durationHint')}</span>
         </div>
       </div>
