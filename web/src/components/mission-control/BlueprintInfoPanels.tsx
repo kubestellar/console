@@ -30,7 +30,7 @@ import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 // ---------------------------------------------------------------------------
 
 export const STATUS_COLORS: Record<string, string> = {
-  pending: 'text-slate-500 dark:text-slate-400',
+  pending: 'text-muted-foreground',
   running: 'text-amber-600 dark:text-amber-400',
   completed: 'text-green-600 dark:text-green-400',
   failed: 'text-red-600 dark:text-red-400',
@@ -58,15 +58,15 @@ export function GaugeRow({ label, value, max, unit }: {
     : max != null ? `— / ${max}${unit ?? ''}` : 'N/A'
   const barColorClass = pctVal != null
     ? pctVal >= 80 ? 'bg-red-500' : pctVal >= 50 ? 'bg-amber-500' : 'bg-green-500'
-    : 'bg-slate-700 dark:bg-slate-600'
+    : 'bg-muted-foreground'
 
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-slate-500 dark:text-slate-400 font-medium">{label}</span>
+        <span className="text-muted-foreground font-medium">{label}</span>
         <span className="text-foreground tabular-nums">{display}{pctVal != null ? ` (${pctVal}%)` : ''}</span>
       </div>
-      <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
         {pctVal != null && (
           <div className={cn('h-full rounded-full transition-all', barColorClass)} style={{ width: `${pctVal}%` }} />
         )}
@@ -232,7 +232,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
       <div>
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-foreground pr-2">{info.displayName}</h3>
-          <div className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap', info.installed ? 'text-green-600 dark:text-green-400 bg-green-500/10' : (STATUS_COLORS[info.status] ?? 'text-slate-500 dark:text-slate-400'))}>
+          <div className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap', info.installed ? 'text-green-600 dark:text-green-400 bg-green-500/10' : (STATUS_COLORS[info.status] ?? 'text-muted-foreground'))}>
             {info.installed ? 'INSTALLED' : (STATUS_LABELS[info.status] ?? info.status.toUpperCase())}
           </div>
         </div>
@@ -339,7 +339,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-foreground">{step.title || step.description?.slice(0, 60)}</p>
                   {step.command && (
-                    <pre className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5 overflow-x-auto whitespace-pre-wrap break-all">
+                    <pre className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 bg-muted rounded px-1.5 py-0.5 overflow-x-auto whitespace-pre-wrap break-all">
                       {step.command}
                     </pre>
                   )}
@@ -392,19 +392,19 @@ export function ClusterInfoPanel({ info }: { info: ClusterHoverInfo }) {
         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Capacity</h4>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
           <div className="flex justify-between">
-            <span className="text-slate-500 dark:text-slate-400"><TechnicalAcronym term="CPU">CPU</TechnicalAcronym></span>
+            <span className="text-muted-foreground"><TechnicalAcronym term="CPU">CPU</TechnicalAcronym></span>
             <span className="text-foreground tabular-nums">{fmtNum(info.cpuCores)} cores</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500 dark:text-slate-400">Memory</span>
+            <span className="text-muted-foreground">Memory</span>
             <span className="text-foreground tabular-nums">{fmtNum(info.memGB)} GB</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500 dark:text-slate-400">Storage</span>
+            <span className="text-muted-foreground">Storage</span>
             <span className="text-foreground tabular-nums">{fmtNum(info.storageGB)} GB</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500 dark:text-slate-400"><TechnicalAcronym term="PVC">PVC</TechnicalAcronym></span>
+            <span className="text-muted-foreground"><TechnicalAcronym term="PVC">PVC</TechnicalAcronym></span>
             <span className="text-foreground tabular-nums">{info.pvcBoundCount ?? '?'}/{info.pvcCount ?? '?'}</span>
           </div>
         </div>
@@ -668,7 +668,7 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
                             </span>
                           )}
                           {!installedProjects.has(proj.name) && (
-                            <span className="text-[9px] ml-1 px-1 py-0.5 rounded bg-slate-500/10 text-slate-500 dark:text-slate-400">
+                            <span className="text-[9px] ml-1 px-1 py-0.5 rounded bg-slate-500/10 text-muted-foreground">
                               deploy
                             </span>
                           )}
