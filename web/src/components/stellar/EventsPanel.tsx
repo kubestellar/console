@@ -1,48 +1,16 @@
-import { useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useRef, useState } from 'react'
 import type { StellarAction, StellarNotification, StellarSolve, StellarSolveProgress } from '../../types/stellar'
-import { EventCard, type PendingAction } from './EventCard'
+import { type PendingAction } from './EventCard'
 import { ApprovalCard } from './ApprovalCard'
 import { EventModal } from './EventModal'
-import { DigestCard } from './DigestCard'
-import { SolveProgressCard, SolveEscalatedCard } from './SolveCards'
 import { BatchMonitorModal } from './BatchMonitorModal'
-import { countSolveAttempts, getSolveStatus } from './lib/derive'
-
-interface GroupConfig {
-  key: 'critical' | 'warning' | 'info'
-  label: string
-  subtitle: string
-  color: string
-  background: string
-}
-
-const GROUP_CONFIGS: GroupConfig[] = [
-  {
-    key: 'critical',
-    label: 'Critical alerts',
-    subtitle: 'Auto-investigation in progress',
-    color: 'var(--s-critical)',
-    background: 'rgba(229,73,73,0.06)',
-  },
-  {
-    key: 'warning',
-    label: 'High priority',
-    subtitle: 'Investigation complete, awaiting input',
-    color: 'var(--s-warning)',
-    background: 'rgba(227,179,65,0.05)',
-  },
-  {
-    key: 'info',
-    label: 'Info',
-    subtitle: 'On-demand investigation',
-    color: 'var(--s-info)',
-    background: 'transparent',
-  },
-]
-
-const EVENTS_PANEL_LAYOUT_STYLE = { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 } as const
-const FLEX_SPACER_STYLE = { flex: 1 } as const
+import { getSolveStatus } from './lib/derive'
+import {
+  EVENTS_PANEL_LAYOUT_STYLE,
+  EventsPanelHeader,
+  EventsPanelList,
+  useEventsPanelData,
+} from './events-panel'
 
 interface EventsPanelProps {
   notifications: StellarNotification[]
@@ -78,7 +46,6 @@ export function EventsPanel({
   onRollback,
   onAction,
 }: EventsPanelProps) {
-  const { t } = useTranslation()
   const scrollRef = useRef<HTMLDivElement>(null)
   // Allow the parent (StellarPage) to control the modal so the activity log
   // can also open it. Fall back to internal state when uncontrolled.
@@ -90,142 +57,16 @@ export function EventsPanel({
   const [batchMonitorOpen, setBatchMonitorOpen] = useState(false)
   const [selectedBatchTimestamp, setSelectedBatchTimestamp] = useState<string | null>(null)
 
-  // Pull the latest digest notification (if any) so we can pin it at the top.
-  const digest = useMemo(() => {
-    return (notifications || []).find(n => n.type === 'digest' && !n.read) || null
-  }, [notifications])
-
-  // Stellar v2: derive escalated/exhausted solves that don't have a live
-  // progress entry — these are completed terminal states the operator needs
-  // to acknowledge.
-  const terminalSolves = useMemo(() => {
-    return (solves || []).filter(s => s.status === 'escalated' || s.status === 'exhausted')
-      .slice(0, 5)
-  }, [solves])
-
-  const activeProgress = useMemo(() => Object.values(solveProgress || {}), [solveProgress])
-
-  // Detect current batch being processed
-  const currentBatch = useMemo(() => {
-    if (activeProgress.length === 0) return null
-    
-    // Find the batch timestamp from events being solved
-    const batchTimestamps = new Set<string>()
-    for (const progress of activeProgress) {
-      const notification = (notifications || []).find(n => n.id === progress.eventId)
-      if (notification?.batchTimestamp) {
-        batchTimestamps.add(notification.batchTimestamp)
-      }
-    }
-    
-    // If we have exactly one batch being processed, show the banner
-    if (batchTimestamps.size === 1) {
-      const batchTimestamp = Array.from(batchTimestamps)[0]
-      const batchEvents = (notifications || []).filter(n => n.batchTimestamp === batchTimestamp)
-      const solving = batchEvents.filter(n => solveProgress[n.id]).length
-      
-      return {
-        timestamp: batchTimestamp,
-        totalEvents: batchEvents.length,
-        solvingCount: solving,
-      }
-    }
-    
-    return null
-  }, [activeProgress, notifications, solveProgress])
-
-  const { unread, groups, stellarResolved, hasAny } = useMemo(() => {
-    const unreadItems = notifications.filter(n => !n.read)
-    const readItems = notifications.filter(n => n.read)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
-    // Pull out "Stellar acted on its own" notifications — both unread and read —
-    // into a dedicated band so the user can see at a glance what Stellar did.
-    const isStellarResolution = (n: StellarNotification) =>
-      n.type === 'action' && (
-        n.title.startsWith('Stellar auto-fixed') ||
-        n.title.startsWith('Stellar auto-fix failed') ||
-        n.title.startsWith('Action completed')
-      )
-
-    const stellarActed: StellarNotification[] = []
-    const remainingUnread: StellarNotification[] = []
-    for (const n of unreadItems) {
-      if (isStellarResolution(n)) stellarActed.push(n)
-      else remainingUnread.push(n)
-    }
-    const remainingResolved: StellarNotification[] = []
-    for (const n of readItems) {
-      if (isStellarResolution(n)) stellarActed.push(n)
-      else remainingResolved.push(n)
-    }
-    stellarActed.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
-    const byKey: Record<string, StellarNotification[]> = { critical: [], warning: [], info: [] }
-    for (const n of remainingUnread) {
-      const key = byKey[n.severity] ? n.severity : 'info'
-      byKey[key].push(n)
-    }
-    for (const key of Object.keys(byKey)) {
-      byKey[key].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    }
-    void remainingResolved // user dismissed — gone from view; see note below
-    return {
-      unread: unreadItems,
-      groups: byKey as Record<'critical' | 'warning' | 'info', StellarNotification[]>,
-      stellarResolved: stellarActed,
-      hasAny: notifications.length > 0,
-    }
-  }, [notifications])
+  const { digest, terminalSolves, activeProgress, currentBatch, unread, groups, stellarResolved, hasAny } =
+    useEventsPanelData({ notifications, solves, solveProgress })
 
   return (
     <div style={EVENTS_PANEL_LAYOUT_STYLE}>
-      <div className="flex items-center gap-1.5 px-3 py-2" style={{
-        flexShrink: 0,
-        borderBottom: '1px solid var(--s-border)',
-      }}>
-        <span style={{
-          fontFamily: 'var(--s-mono)',
-          fontSize: 10,
-          fontWeight: 600,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          color: 'var(--s-text-muted)',
-        }}>
-          Events
-        </span>
-        {unread.length > 0 && (
-          <span className="px-1.5" style={{
-            fontFamily: 'var(--s-mono)',
-            fontSize: 10,
-            fontWeight: 700,
-            color: 'var(--s-warning)',
-            background: 'rgba(227,179,65,0.12)',
-            border: '1px solid rgba(227,179,65,0.3)',
-            borderRadius: 10,
-          }}>
-            {unread.length} new
-          </span>
-        )}
-        <div style={FLEX_SPACER_STYLE} />
-        {notifications.length > 0 && (
-          <button
-            onClick={() => {
-              void dismissAllNotifications()
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 10,
-              color: 'var(--s-text-dim)',
-              padding: 0,
-            }}
-          >
-            clear all
-          </button>
-        )}
-      </div>
+      <EventsPanelHeader
+        unreadCount={unread.length}
+        hasNotifications={notifications.length > 0}
+        onDismissAll={() => { void dismissAllNotifications() }}
+      />
 
       {pendingActions.length > 0 && (
         <div className="px-2.5 py-2" style={{
@@ -261,178 +102,27 @@ export function EventsPanel({
           overflowY: 'auto',
         }}
       >
-        {digest && (
-          <DigestCard
-            notification={digest}
-            solves={solves}
-            onDismiss={() => { void acknowledgeNotification(digest.id) }}
-          />
-        )}
-
-        {currentBatch && (
-          <button
-            onClick={() => {
-              setSelectedBatchTimestamp(currentBatch.timestamp)
-              setBatchMonitorOpen(true)
-            }}
-            className="mx-1 mb-2.5 mt-1.5 px-3 py-2.5"
-            style={{
-              borderLeft: '3px solid var(--s-info)',
-              background: 'rgba(99,150,237,0.08)',
-              border: '1px solid rgba(99,150,237,0.3)',
-              borderRadius: 'var(--s-r)',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              width: 'calc(100% - 8px)',
-              textAlign: 'left',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(99,150,237,0.12)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(99,150,237,0.08)'
-            }}
-          >
-            <div style={{
-              position: 'absolute', top: 0, left: 0, height: 2, width: '100%',
-              background: 'linear-gradient(90deg, transparent, var(--s-info), transparent)',
-              animation: 'stellar-pulse 1.6s linear infinite',
-            }} />
-            <div className="flex items-center gap-2">
-              <span style={{ fontSize: 14 }}>⊙</span>
-              <span
-                className="font-mono text-xs"
-                style={{
-                  fontWeight: 700,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: 'var(--s-info)',
-                }}
-              >{t('stellar.batch.processingBatch')}</span>
-              <div style={FLEX_SPACER_STYLE} />
-              <span style={{
-                fontFamily: 'var(--s-mono)',
-                fontSize: 10,
-                color: 'var(--s-text-muted)',
-              }}>
-                {currentBatch.solvingCount}/{currentBatch.totalEvents} solving
-              </span>
-              <span style={{ fontSize: 11, color: 'var(--s-text-dim)' }}>→</span>
-            </div>
-            <div className="mt-1 text-xs leading-normal" style={{ color: 'var(--s-text)' }}>
-              {t('stellar.batch.viewBatchMonitor')} — {currentBatch.solvingCount} event{currentBatch.solvingCount === 1 ? '' : 's'} actively solving
-            </div>
-          </button>
-        )}
-
-        {activeProgress.length > 0 && (
-          <div className="mx-1 mb-2 mt-1">
-            {activeProgress.map(p => (
-              <SolveProgressCard key={p.solveId + p.eventId} progress={p} />
-            ))}
-          </div>
-        )}
-
-        {terminalSolves.length > 0 && (
-          <div className="mx-1 mb-2">
-            {terminalSolves.map(s => (
-              <SolveEscalatedCard key={s.id} solve={s} />
-            ))}
-          </div>
-        )}
-
-        {!hasAny && activeProgress.length === 0 && terminalSolves.length === 0 && !digest && <EmptyState icon="✦" text="No events — all clear" />}
-
-        {GROUP_CONFIGS.map(group => {
-          const items = groups[group.key]
-          if (items.length === 0) return null
-          // Compute the per-group subtitle live so it stops lying. For critical
-          // events, the subtitle reflects how many auto-solves are actually
-          // running, paused, or already resolved — never the static "Auto-
-          // investigation in progress" we used to show even when nothing was
-          // happening.
-          let subtitle = group.subtitle
-          if (group.key === 'critical') {
-            let active = 0, resolved = 0, escalated = 0
-            for (const n of items) {
-              const status = getSolveStatus(n, solves, solveProgress)
-              if (!status) continue
-              if (status.isActive) active++
-              else if (status.phase === 'resolved') resolved++
-              else if (status.phase === 'escalated' || status.phase === 'exhausted') escalated++
-            }
-            const parts: string[] = []
-            if (active > 0) parts.push(`${active} solving`)
-            if (resolved > 0) parts.push(`${resolved} resolved`)
-            if (escalated > 0) parts.push(`${escalated} needs you`)
-            subtitle = parts.length > 0
-              ? parts.join(' · ')
-              : 'Awaiting Stellar pickup'
-          } else if (group.key === 'warning') {
-            subtitle = 'Click investigate or dismiss'
-          }
-          return (
-            <Group key={group.key} config={group} count={items.length} subtitle={subtitle}>
-              {items.map(notification => (
-                <EventCard
-                  key={notification.id}
-                  notification={notification}
-                  allNotifications={notifications}
-                  solveStatus={getSolveStatus(notification, solves, solveProgress)}
-                  attemptCount={countSolveAttempts(notification, solves)}
-                  onSolve={startSolve}
-                  onDismiss={() => { void acknowledgeNotification(notification.id) }}
-                  onRollback={onRollback}
-                  onAction={onAction}
-                  onOpenDetail={setDetailNotification}
-                />
-              ))}
-            </Group>
-          )
-        })}
-
-        {stellarResolved.length > 0 && (
-          <div className="mt-2 px-1">
-            <div className="mb-1 flex items-baseline gap-2 px-1.5 py-1" style={{
-              background: 'rgba(63,185,80,0.06)',
-              borderLeft: '3px solid var(--s-success)',
-              borderRadius: 'var(--s-rs)',
-            }}>
-              <span style={{
-                fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 700,
-                letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-success)',
-              }}>✦ Resolved by Stellar</span>
-              <span style={{
-                fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
-                color: 'var(--s-success)', opacity: 0.7,
-              }}>{stellarResolved.length}</span>
-              <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontStyle: 'italic' }}>
-                Fixed without waiting for approval
-              </span>
-            </div>
-            <div className="flex flex-col gap-1">
-              {stellarResolved.map(notification => (
-                <EventCard
-                  key={notification.id}
-                  notification={notification}
-                  allNotifications={notifications}
-                  onDismiss={() => { void acknowledgeNotification(notification.id) }}
-                  onRollback={onRollback}
-                  onAction={onAction}
-                  onOpenDetail={setDetailNotification}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Generic resolved tray removed intentionally: clicking Dismiss should
-            make a card disappear from view, full stop. Stellar's own resolutions
-            still surface in the "✦ Resolved by Stellar" band above. Anything
-            else dismissed by the user is gone — accessible later via the audit
-            log if needed. */}
+        <EventsPanelList
+          notifications={notifications}
+          solves={solves}
+          solveProgress={solveProgress}
+          digest={digest}
+          currentBatch={currentBatch}
+          activeProgress={activeProgress}
+          terminalSolves={terminalSolves}
+          hasAny={hasAny}
+          groups={groups}
+          stellarResolved={stellarResolved}
+          startSolve={startSolve}
+          acknowledgeNotification={acknowledgeNotification}
+          onRollback={onRollback}
+          onAction={onAction}
+          onOpenDetail={setDetailNotification}
+          onOpenBatchMonitor={(timestamp) => {
+            setSelectedBatchTimestamp(timestamp)
+            setBatchMonitorOpen(true)
+          }}
+        />
       </div>
 
       {detailNotification && (
@@ -459,42 +149,6 @@ export function EventsPanel({
           }}
         />
       )}
-    </div>
-  )
-}
-
-function Group({
-  config, count, subtitle, children,
-}: { config: GroupConfig; count: number; subtitle?: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-2.5 px-1">
-      <div className="mb-1 flex items-baseline gap-2 px-1.5 py-1" style={{
-        background: config.background,
-        borderLeft: `3px solid ${config.color}`,
-        borderRadius: 'var(--s-rs)',
-      }}>
-        <span style={{
-          fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 700,
-          letterSpacing: '0.08em', textTransform: 'uppercase', color: config.color,
-        }}>{config.label}</span>
-        <span style={{
-          fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
-          color: config.color, opacity: 0.7,
-        }}>{count}</span>
-        <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontStyle: 'italic' }}>{subtitle ?? config.subtitle}</span>
-      </div>
-      <div className="flex flex-col gap-1">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function EmptyState({ icon, text }: { icon: string; text: string }) {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2" style={{ color: 'var(--s-text-dim)' }}>
-      <span style={{ fontSize: 22, opacity: 0.4 }}>{icon}</span>
-      <span style={{ fontSize: 12 }}>{text}</span>
     </div>
   )
 }
