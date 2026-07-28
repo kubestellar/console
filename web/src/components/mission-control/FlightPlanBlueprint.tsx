@@ -5,9 +5,12 @@
  * populates the right panel with details. Overlays toggle resource views.
  *
  * Sub-modules:
- *  - BlueprintLayout.ts      — layout computation (computeLayout)
- *  - BlueprintReport.ts      — PDF/print export (exportFullReport)
- *  - BlueprintInfoPanels.tsx — ProjectInfoPanel, ClusterInfoPanel, DeployModeInfoPanel
+ *  - BlueprintLayout.ts           — layout computation (computeLayout)
+ *  - BlueprintReport.ts           — PDF/print export (exportFullReport)
+ *  - BlueprintInfoPanels.tsx      — ProjectInfoPanel, ClusterInfoPanel, DeployModeInfoPanel
+ *  - FlightPlanBlueprint.types.ts — prop/panel types
+ *  - FlightPlanBlueprint.constants.ts — panel, zoom and label constants
+ *  - FlightPlanBlueprint.utils.ts — resolveKbPath helper
  */
 
 import { useId, useMemo, useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react'
