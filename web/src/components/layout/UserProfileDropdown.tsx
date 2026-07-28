@@ -1,24 +1,9 @@
-import { useState, useRef, useEffect, Suspense, type RefObject } from 'react'
-import { safeLazy } from '../../lib/safeLazy'
-import { Tooltip } from '../ui/Tooltip'
+import { useRef, useEffect, type RefObject } from 'react'
 import { useModalState } from '../../lib/modals'
-import { useTranslation } from 'react-i18next'
 import { useKeyboardNav } from '../../hooks/useKeyboardNav'
-import { User, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
-import { Linkedin } from '@/lib/icons'
-import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
-import { getContributorLevel } from '../../types/rewards'
-import { useVersionCheck } from '../../hooks/useVersionCheck'
-import { LANGUAGE_STORAGE_KEY, languages } from '../../lib/i18n'
-import { isDemoModeForced } from '../../lib/demoMode'
-import { emitLinkedInShare, emitLanguageChanged } from '../../lib/analytics'
-import { checkOAuthConfigured } from '../../lib/api'
-import { safeSetItem } from '../../lib/utils/localStorage'
-import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
-import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
-import { ConfirmDialog } from '../../lib/modals/ConfirmDialog'
-// Lazy-load the feedback modal (~67 KB) — only needed when user opens it
-const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestModal'), 'FeatureRequestModal')
+import { User, ChevronDown } from 'lucide-react'
+import { ProfileCard } from './ProfileCard'
+
 const PROFILE_MENUITEM_SELECTOR = '[role="menuitem"]:not([disabled])'
 
 interface UserProfileDropdownProps {
@@ -33,28 +18,8 @@ interface UserProfileDropdownProps {
   onPreferences?: () => void
 }
 
-function resolveActiveLanguageCode(languageCode?: string): string {
-  if (!languageCode) return languages[0].code
-  if (languages.some(lang => lang.code === languageCode)) return languageCode
-
-  const baseLanguageCode = languageCode.split('-')[0]
-  return languages.find(lang => lang.code === baseLanguageCode)?.code || languages[0].code
-}
-
 export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfileDropdownProps) {
   const { isOpen, close: closeDropdown, toggle: toggleDropdown } = useModalState()
-  const [showLanguageSubmenu, setShowLanguageSubmenu] = useState(false)
-  const [showSetupDialog, setShowSetupDialog] = useState(false)
-  const [showDevSetupDialog, setShowDevSetupDialog] = useState(false)
-  const [showRewards, setShowRewards] = useState(false)
-  const { isOpen: showFeedbackModal, open: openFeedbackModal, close: closeFeedbackModal } = useModalState()
-  const [showDevPanel, setShowDevPanel] = useState(false)
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [oauthStatus, setOauthStatus] = useState<{ checked: boolean; configured: boolean; backendUp: boolean }>({
-    checked: false,
-    configured: false,
-    backendUp: false,
-  })
   const triggerButtonRef = useRef<HTMLButtonElement>(null)
   const dropdownContainerRef = useRef<HTMLDivElement>(null)
   const {
@@ -66,81 +31,13 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     orientation: 'vertical',
     onEscape: closeDropdown,
   })
-  const { totalCoins, githubPoints, localCoins, bonusPoints, awardCoins } = useRewards()
-  const { channel, installMethod } = useVersionCheck()
-  const { t, i18n } = useTranslation()
 
-  const activeLanguageCode = resolveActiveLanguageCode(i18n.resolvedLanguage || i18n.language)
-  const currentLanguage = languages.find(language => language.code === activeLanguageCode) || languages[0]
-  const contributorLevel = getContributorLevel(totalCoins).current
-
-  const handleLanguageChange = async (langCode: string) => {
-    await i18n.changeLanguage(langCode)
-    safeSetItem(LANGUAGE_STORAGE_KEY, langCode)
-    emitLanguageChanged(langCode)
-    setShowLanguageSubmenu(false)
-    // Issue 9284: close the outer profile dropdown after a language is picked
-    // so the user doesn't have to click again to dismiss it.
-    closeDropdown()
-  }
-
-  const handleLinkedInShare = () => {
-    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}`
-    window.open(linkedInUrl, '_blank', 'noopener,noreferrer,width=600,height=600')
-    emitLinkedInShare('profile_dropdown')
-    awardCoins('linkedin_share')
-    closeDropdown()
-  }
-
-  // Check OAuth status on mount, retrying until backend is fully up.
-  // Only mark checked=true when backendUp=true so we never flash "not configured"
-  // while the backend is still starting (it omits oauth_configured during startup).
-  useEffect(() => {
-    let cancelled = false
-    const OAUTH_RETRY_DELAY_MS = 2_000
-    const doCheck = () => {
-      checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
-        if (cancelled) return
-        if (backendUp) {
-          setOauthStatus({ checked: true, configured: oauthConfigured, backendUp: true })
-        } else {
-          setTimeout(doCheck, OAUTH_RETRY_DELAY_MS)
-        }
-      }).catch(() => { /* checkOAuthConfigured always resolves — defensive catch */ })
-    }
-    doCheck()
-    return () => { cancelled = true }
-  }, [])
-
-  // Re-check when dropdown opens (status may have changed since mount)
   useEffect(() => {
     if (isOpen) {
-      checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
-        if (backendUp) {
-          setOauthStatus({ checked: true, configured: oauthConfigured, backendUp: true })
-        }
-      }).catch(() => { /* checkOAuthConfigured always resolves — defensive catch */ })
+      focusMatchingItem({ fallbackSelector: PROFILE_MENUITEM_SELECTOR })
     }
-  }, [isOpen])
-
-  // Reset submenu expanded states whenever the dropdown closes so that
-  // reopening it always shows a clean collapsed state (#15457).
-  useEffect(() => {
-    if (!isOpen) {
-      setShowLanguageSubmenu(false)
-      setShowDevPanel(false)
-      return
-    }
-
-    focusMatchingItem({ fallbackSelector: PROFILE_MENUITEM_SELECTOR })
   }, [focusMatchingItem, isOpen])
 
-  // Close dropdown when clicking outside.
-  // Uses 'click' (not 'mousedown') so the event fires after React's onClick
-  // has already processed the toggle. Using 'mousedown' can race with the
-  // toggle on initial open: the document mousedown fires before React commits
-  // the isOpen=true state, so the target check can behave unexpectedly during
-  // concurrent re-renders triggered by auth/demo state changes at startup.
   useEffect(() => {
     if (!isOpen) return
     function handleClickOutside(event: MouseEvent) {
@@ -153,14 +50,11 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     return () => document.removeEventListener('click', handleClickOutside)
   }, [isOpen, closeDropdown])
 
-  // Escape handling is provided by useKeyboardNav via onEscape: closeDropdown
-
   if (!user) return null
   const profileMenuStateLabel = `profile menu, ${isOpen ? 'close' : 'open'}`
 
   return (
     <div className="relative" ref={dropdownContainerRef}>
-      {/* Trigger button */}
       <button
         ref={triggerButtonRef}
         type="button"
@@ -193,347 +87,15 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Dropdown menu */}
-      {isOpen && (
-        <div
-          ref={menuRef as RefObject<HTMLDivElement | null>}
-          id="profile-dropdown-menu"
-          data-testid="navbar-profile-dropdown"
-          role="menu"
-          onKeyDown={(event) => {
-            handleMenuKeyDown(event)
-            if (event.key === 'Escape') {
-              triggerButtonRef.current?.focus()
-            }
-          }}
-          className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-5rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden overflow-y-auto z-toast"
-        >
-          {/* Header with avatar and name */}
-          <div className="p-4 bg-secondary border-b border-border">
-            <div className="flex items-center gap-3">
-              {user.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user?.github_login || 'User avatar'}
-                  className="w-12 h-12 rounded-full"
-                  loading="lazy"
-                  width={48}
-                  height={48}
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-purple-900 flex items-center justify-center">
-                  <User className="w-6 h-6 text-purple-400" />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-foreground truncate">{user.github_login}</p>
-                <Tooltip content={user.email || t('profile.noEmail')}>
-                  <p className="text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">{user.email || t('profile.noEmail')}</p>
-                </Tooltip>
-              </div>
-            </div>
-          </div>
-
-          {/* User details section */}
-          <div className="p-3 space-y-2 border-b border-border">
-            <div className="flex items-center gap-3 px-2 py-1.5 text-sm min-w-0">
-              <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span className="text-muted-foreground shrink-0">{t('profile.slack')}</span>
-              <span className="text-foreground truncate">{user.slack_id || t('profile.notConnected')}</span>
-            </div>
-            <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
-              <Shield className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">{t('profile.role')}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${contributorLevel.bgClass} ${contributorLevel.textClass}`}>
-                {contributorLevel.name}
-              </span>
-            </div>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                closeDropdown()
-                setShowRewards(true)
-              }}
-              className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary rounded-lg transition-colors"
-            >
-              <Coins className="w-4 h-4 text-yellow-500" />
-              <span className="text-muted-foreground">{t('profile.coins')}</span>
-              <span
-                className="ml-auto text-yellow-400 font-medium"
-                title={[
-                  `Console activity: ${localCoins.toLocaleString()}`,
-                  githubPoints > 0 ? `GitHub contributions: ${githubPoints.toLocaleString()}` : null,
-                  bonusPoints > 0 ? `Bonus: ${bonusPoints.toLocaleString()}` : null,
-                  'Note: Docs leaderboard shows GitHub points only',
-                ].filter(Boolean).join('\n')}
-              >{totalCoins.toLocaleString()}</span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground -rotate-90" />
-            </button>
-            {/* Language selector */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowLanguageSubmenu(!showLanguageSubmenu)}
-                className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary rounded-lg transition-colors"
-              >
-                <Globe className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">{t('profile.language')}</span>
-                <span className="text-foreground flex items-center gap-1.5">
-                  <span>{currentLanguage.flag}</span>
-                  <span>{currentLanguage.name}</span>
-                </span>
-                <ChevronDown className={`w-3 h-3 ml-auto text-muted-foreground transition-transform ${showLanguageSubmenu ? 'rotate-180' : ''}`} />
-              </button>
-              {showLanguageSubmenu && (
-                <div className="mt-1 ml-6 space-y-0.5 border-l-2 border-border pl-3">
-                  {languages.map((lang) => (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      key={lang.code}
-                      onClick={() => handleLanguageChange(lang.code)}
-                      className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg transition-colors ${
-                        activeLanguageCode === lang.code
-                          ? 'bg-purple-900 text-foreground'
-                          : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                      }`}
-                    >
-                      <span>{lang.flag}</span>
-                      <span>{lang.name}</span>
-                      {activeLanguageCode === lang.code && (
-                        <Check className="w-3 h-3 ml-auto text-purple-400" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Developer panel — only on local/cluster installs */}
-          {!isDemoModeForced && (
-            <div className="border-b border-border">
-              <button
-                type="button"
-                onClick={() => setShowDevPanel(!showDevPanel)}
-                className="w-full flex items-center gap-3 px-5 py-2 text-sm hover:bg-secondary transition-colors"
-              >
-                <Code2 className="w-4 h-4 text-blue-400" />
-                <span className="text-foreground">{t('developer.title')}</span>
-                <ChevronDown className={`w-3 h-3 ml-auto text-muted-foreground transition-transform ${showDevPanel ? 'rotate-180' : ''}`} />
-              </button>
-              {showDevPanel && (
-                <div className="px-5 pb-3 space-y-2">
-                  {/* Version info */}
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className={`px-1.5 py-0.5 rounded text-2xs uppercase font-bold ${__DEV_MODE__ ? 'bg-yellow-900 text-yellow-400' : 'bg-green-900 text-green-400'}`}>
-                      {__DEV_MODE__ ? 'dev' : 'prod'}
-                    </span>
-                    <span className="text-muted-foreground font-mono">
-                      {__APP_VERSION__.startsWith('v') ? __APP_VERSION__ : `v${__APP_VERSION__}`} · {__COMMIT_HASH__.substring(0, 7)}
-                    </span>
-                  </div>
-
-                  {/* OAuth status */}
-                  <div className="flex items-center gap-2 text-xs">
-                    {oauthStatus.checked ? (
-                      oauthStatus.configured ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                          <span className="text-green-400">{t('developer.oauthConfigured')}</span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="w-3.5 h-3.5 text-yellow-400" />
-                          <span className="text-yellow-400">{t('developer.oauthNotConfigured')}</span>
-                        </>
-                      )
-                    ) : (
-                      <span className="text-muted-foreground">{t('developer.checkingOauth')}</span>
-                    )}
-                  </div>
-
-                  {/* Developer update channel indicator */}
-                  {installMethod === 'dev' && channel === 'developer' && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <GitBranch className="w-3.5 h-3.5 text-orange-400" />
-                      <span className="text-orange-400">
-                        {t('settings.updates.developer')}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Action buttons */}
-                  <div className="flex flex-col gap-1 pt-1">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        closeDropdown()
-                        if (installMethod === 'dev') {
-                          setShowDevSetupDialog(true)
-                        } else {
-                          setShowSetupDialog(true)
-                        }
-                      }}
-                      className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                    >
-                      <Rocket className="w-3.5 h-3.5" />
-                      {installMethod === 'dev' ? t('developer.devModeSetup') : t('developer.setupInstructions')}
-                    </button>
-                    {!oauthStatus.configured && oauthStatus.checked && (
-                      <a
-                        href="https://github.com/settings/developers"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                      >
-                        <KeyRound className="w-3.5 h-3.5" />
-                        {t('developer.configureOauth')}
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                    <a
-                      href="https://github.com/kubestellar/console"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      {t('developer.githubRepo')}
-                    </a>
-                    <a
-                      href="https://console-docs.kubestellar.io"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      {t('developer.docs')}
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="p-2 space-y-1">
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                closeDropdown()
-                openFeedbackModal()
-              }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
-            >
-              <Lightbulb className="w-4 h-4 text-yellow-500" />
-              <span>{t('feedback.feedback')}</span>
-              <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-900 text-yellow-400">{t('feedback.plusCoins')}</span>
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={handleLinkedInShare}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
-            >
-              <Linkedin className="w-4 h-4 text-linkedin" />
-              <span>{t('feedback.shareOnLinkedIn')}</span>
-              <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-900 text-yellow-400">+{REWARD_ACTIONS.linkedin_share.coins}</span>
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                closeDropdown()
-                onPreferences?.()
-              }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
-            >
-              <Settings className="w-4 h-4 text-muted-foreground" />
-              {t('settings.title')}
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                closeDropdown()
-                if (isDemoModeForced) {
-                  setShowSetupDialog(true)
-                } else {
-                  setShowLogoutConfirm(true)
-                }
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors ${
-                isDemoModeForced
-                  ? 'text-purple-400 hover:bg-purple-950'
-                  : 'text-red-400 hover:bg-red-950'
-              }`}
-            >
-              {isDemoModeForced ? (
-                <>
-                  <Download className="w-4 h-4" />
-                  {t('actions.getYourOwn')}
-                </>
-              ) : (
-                <>
-                  <LogOut className="w-4 h-4" />
-                  {t('actions.signOut')}
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Setup instructions dialog — shown when demo users click sign out */}
-      <SetupInstructionsDialog
-        isOpen={showSetupDialog}
-        onClose={() => setShowSetupDialog(false)}
-      />
-
-      {/* Developer setup dialog — dev-focused instructions with OAuth */}
-      <DeveloperSetupDialog
-        isOpen={showDevSetupDialog}
-        onClose={() => setShowDevSetupDialog(false)}
-      />
-
-      {/* Rewards panel — opens feedback dialog to GitHub contributions tab */}
-      {showRewards && (
-        <Suspense fallback={null}>
-          <FeatureRequestModal
-            isOpen={showRewards}
-            onClose={() => setShowRewards(false)}
-            initialTab="updates"
-          />
-        </Suspense>
-      )}
-
-      {/* Feedback modal — same as top navbar/card bug button */}
-      {showFeedbackModal && (
-        <Suspense fallback={null}>
-          <FeatureRequestModal
-            isOpen={showFeedbackModal}
-            onClose={closeFeedbackModal}
-            initialTab="submit"
-          />
-        </Suspense>
-      )}
-
-      {/* Logout confirmation dialog */}
-      <ConfirmDialog
-        isOpen={showLogoutConfirm}
-        onClose={() => setShowLogoutConfirm(false)}
-        onConfirm={() => {
-          setShowLogoutConfirm(false)
-          onLogout()
-        }}
-        title={t('confirmDialog.logoutTitle')}
-        message={t('confirmDialog.logoutMessage')}
-        confirmLabel={t('actions.logout', 'Log Out')}
-        variant="warning"
+      <ProfileCard
+        user={user}
+        isOpen={isOpen}
+        closeDropdown={closeDropdown}
+        onPreferences={onPreferences}
+        onLogout={onLogout}
+        menuRef={menuRef as RefObject<HTMLDivElement | null>}
+        onMenuKeyDown={handleMenuKeyDown}
+        triggerButtonRef={triggerButtonRef}
       />
     </div>
   )
