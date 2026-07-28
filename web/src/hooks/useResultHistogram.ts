@@ -4,6 +4,7 @@ import { useCache } from '../lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { isQuantumForcedToDemo } from '../lib/demoMode'
 import { subscribeToPatternChanges } from '../lib/quantum/patternChangeEmitter'
+import { HTTP_TOO_MANY_REQUESTS } from '../lib/constants/http'
 
 export type HistogramSort = 'count' | 'pattern'
 
@@ -44,7 +45,6 @@ interface UseResultHistogramResult {
 const HISTOGRAM_ENDPOINT = '/api/result/histogram'
 const DEFAULT_SORT: HistogramSort = 'count'
 const DEFAULT_POLL_MS = 5000
-const RATE_LIMIT_STATUS = 429
 const RATE_LIMIT_BACKOFF_BASE_MS = 100 // Base delay for exponential backoff (100ms, 200ms, 400ms...)
 
 const EMPTY_HISTOGRAM_DATA: HistogramData = {
@@ -131,14 +131,14 @@ async function fetchHistogramWithRetry(
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
 
-  if (response.status === RATE_LIMIT_STATUS) {
+  if (response.status === HTTP_TOO_MANY_REQUESTS) {
     if (attempt < maxAttempts - 1) {
       // Exponential backoff: 100ms, 200ms, 400ms
       const delayMs = RATE_LIMIT_BACKOFF_BASE_MS * Math.pow(2, attempt)
       await new Promise(resolve => setTimeout(resolve, delayMs))
       return fetchHistogramWithRetry(sortBy, attempt + 1, maxAttempts)
     }
-    throw new Error(`Failed to fetch histogram (${RATE_LIMIT_STATUS})`)
+    throw new Error(`Failed to fetch histogram (${HTTP_TOO_MANY_REQUESTS})`)
   }
 
   if (!response.ok) {

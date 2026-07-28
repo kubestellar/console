@@ -3,8 +3,7 @@ import { usePersistence } from './usePersistence'
 import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
 import { logger } from '@/lib/logger'
-
-const HTTP_NO_CONTENT = 204
+import { HTTP_NO_CONTENT } from '../lib/constants/http'
 
 // =============================================================================
 // Types
