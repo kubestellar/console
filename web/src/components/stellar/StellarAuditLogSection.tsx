@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { stellarApi } from '../../services/stellar'
 import type { StellarAuditEntry } from '../../types/stellar'
 import { cn } from '../../lib/cn'
+import { AuditLogRow, deriveAuditResult, getResourceLabel } from './AuditLogRow'
+import { AuditFilterChips } from './AuditFilterChips'
+import { AuditExportButton } from './AuditExportButton'
 
 const AUDIT_FETCH_LIMIT = 100
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
@@ -12,7 +15,6 @@ const DATE_RANGE_OPTIONS = [
   { value: '7d', windowMs: 7 * ONE_DAY_MS },
   { value: '30d', windowMs: 30 * ONE_DAY_MS },
 ] as const
-const EXPORT_FILENAME_PREFIX = 'stellar-audit-log'
 const TABLE_SORT_KEYS = {
   TIMESTAMP: 'ts',
   USER: 'userId',
@@ -26,89 +28,8 @@ type AuditResult = 'success' | 'warning' | 'error'
 type SortKey = (typeof TABLE_SORT_KEYS)[keyof typeof TABLE_SORT_KEYS]
 type SortDirection = 'asc' | 'desc'
 
-function formatTimestamp(value: string): string {
-  return new Date(value).toLocaleString()
-}
-
 function normalizeText(value?: string): string {
   return (value || '').trim().toLowerCase()
-}
-
-function deriveAuditResult(entry: StellarAuditEntry): AuditResult {
-  const text = `${entry.action} ${entry.detail}`.toLowerCase()
-  if (/(fail|error|reject|den(y|ied)|exhausted|rollback)/.test(text)) {
-    return 'error'
-  }
-  if (/(warn|approval|pending|review|snooze|escalat)/.test(text)) {
-    return 'warning'
-  }
-  return 'success'
-}
-
-function getResourceLabel(entry: StellarAuditEntry): string {
-  return `${entry.entityType}/${entry.entityId}`
-}
-
-function toCsvField(value: string): string {
-  return `"${value.replace(/"/g, '""')}"`
-}
-
-function buildCsv(
-  entries: StellarAuditEntry[],
-  columns: readonly string[],
-  getResultLabel: (result: AuditResult) => string,
-): string {
-  const header = (columns || []).join(',')
-  const rows = entries.map(entry => [
-    formatTimestamp(entry.ts),
-    entry.userId,
-    entry.action,
-    getResourceLabel(entry),
-    getResultLabel(deriveAuditResult(entry)),
-    entry.cluster || '—',
-    entry.detail,
-  ].map(value => toCsvField(value)).join(','))
-
-  return [header, ...rows].join('\n')
-}
-
-function exportEntries(
-  entries: StellarAuditEntry[],
-  columns: readonly string[],
-  getResultLabel: (result: AuditResult) => string,
-): void {
-  const blob = new Blob([buildCsv(entries, columns, getResultLabel)], { type: 'text/csv;charset=utf-8' })
-  const href = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  const stamp = new Date().toISOString().slice(0, 10)
-  link.href = href
-  link.download = `${EXPORT_FILENAME_PREFIX}-${stamp}.csv`
-  link.click()
-  URL.revokeObjectURL(href)
-}
-
-function getResultBadgeClassName(result: AuditResult): string {
-  switch (result) {
-    case 'error':
-      return 'border border-red-400/25 bg-red-500/10 text-red-300'
-    case 'warning':
-      return 'border border-yellow-400/25 bg-yellow-500/10 text-yellow-300'
-    case 'success':
-    default:
-      return 'border border-green-400/25 bg-green-500/10 text-green-300'
-  }
-}
-
-function getResultRowClassName(result: AuditResult): string {
-  switch (result) {
-    case 'error':
-      return 'bg-red-500/5'
-    case 'warning':
-      return 'bg-yellow-500/5'
-    case 'success':
-    default:
-      return 'bg-green-500/5'
-  }
 }
 
 interface StellarAuditLogSectionProps {
@@ -283,14 +204,12 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
               {t('stellar.auditLog.description')}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => exportEntries(sortedEntries, csvColumns, getResultLabel)}
-            disabled={sortedEntries.length === 0}
-            className="inline-flex items-center justify-center rounded-md border border-[var(--s-border)] bg-[var(--s-surface-2)] px-3 py-2 text-sm font-medium text-[var(--s-text)] transition hover:border-[var(--s-border-focus)] hover:text-[var(--s-text)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t('stellar.auditLog.exportCsv')}
-          </button>
+          <AuditExportButton
+            entries={sortedEntries}
+            csvColumns={csvColumns}
+            getResultLabel={getResultLabel}
+            label={t('stellar.auditLog.exportCsv')}
+          />
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
@@ -324,23 +243,11 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
 
           <div className="flex flex-col gap-2 text-xs text-[var(--s-text-muted)]">
             <span className="font-mono uppercase tracking-[0.12em]">{t('stellar.auditLog.filters.dateRange')}</span>
-            <div className="flex flex-wrap gap-2">
-              {dateRangeOptions.map(option => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setSelectedRange(option.value)}
-                  className={cn(
-                    'rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] transition',
-                    selectedRange === option.value
-                      ? 'border-[var(--s-border-focus)] bg-[var(--s-brand-dim)] text-[var(--s-brand)]'
-                      : 'border-[var(--s-border)] bg-[var(--s-surface-2)] text-[var(--s-text-muted)] hover:text-[var(--s-text)]',
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <AuditFilterChips
+              dateRangeOptions={dateRangeOptions}
+              selectedRange={selectedRange}
+              onSelect={setSelectedRange}
+            />
           </div>
         </div>
       </div>
@@ -387,39 +294,9 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
               </tr>
             </thead>
             <tbody>
-              {sortedEntries.map(entry => {
-                const result = deriveAuditResult(entry)
-                return (
-                  <tr
-                    key={entry.id}
-                    className={cn('align-top odd:bg-[var(--s-surface)] even:bg-[var(--s-surface-2)]/60', getResultRowClassName(result))}
-                  >
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 font-mono text-xs text-[var(--s-text-muted)]">
-                      <span className="whitespace-nowrap">{formatTimestamp(entry.ts)}</span>
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 text-sm text-[var(--s-text)]">
-                      <span className="line-clamp-1 break-all">{entry.userId}</span>
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 font-mono text-xs text-[var(--s-text)]">
-                      {entry.action}
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 font-mono text-xs text-[var(--s-text-muted)]">
-                      <span className="line-clamp-2 break-all">{getResourceLabel(entry)}</span>
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3">
-                      <span className={cn('inline-flex rounded-full px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em]', getResultBadgeClassName(result))}>
-                        {getResultLabel(result)}
-                      </span>
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 text-sm text-[var(--s-text-muted)]">
-                      {entry.cluster || '—'}
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 text-sm text-[var(--s-text-muted)]">
-                      <span className="line-clamp-2">{entry.detail}</span>
-                    </td>
-                  </tr>
-                )
-              })}
+              {sortedEntries.map(entry => (
+                <AuditLogRow key={entry.id} entry={entry} getResultLabel={getResultLabel} />
+              ))}
             </tbody>
           </table>
         )}

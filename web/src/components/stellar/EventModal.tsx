@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { StellarAction, StellarNotification, StellarSolve } from '../../types/stellar'
 import { useStellar } from '../../hooks/useStellar'
 import { useToast } from '../ui/Toast'
 import { BaseModal } from '../../lib/modals'
 import { copyToClipboard } from '../../lib/clipboard'
 import type { PendingAction } from './EventCard'
+import { Section, Timeline, ListBlock, formatAbsoluteUtc, type TimelineEntry } from './EventDetailPanel'
+import { RawPayloadViewer } from './RawPayloadViewer'
+import { ActionButton, ConfirmationPanel } from './EventModal.ActionButtons'
+import { severityColor, statusLabel, extractResourceName, buildInvestigatePrompt, matchesSolve, getErrorMessage, buildInvestigationCopyText, Badge } from './EventModal.utils'
+import { EventInvestigateView } from './EventInvestigateView'
 
 const RELATED_EVENT_LIMIT = 6
 const TIMELINE_ENTRY_LIMIT = 8
 const INVESTIGATION_ACTIVITY_LIMIT = 6
 const INVESTIGATION_TEXTAREA_ROWS = 3
-const CONFIRMATION_TEXTAREA_ROWS = 4
 
 interface EventModalProps {
   notification: StellarNotification
@@ -24,96 +28,6 @@ interface EventModalProps {
 
 type ModalView = 'overview' | 'investigate'
 type ConfirmAction = 'resolve' | 'dismiss' | null
-
-interface TimelineEntry {
-  ts: string
-  label: string
-  detail: string
-}
-
-function severityColor(severity: string): string {
-  if (severity === 'critical') return 'var(--s-critical)'
-  if (severity === 'warning') return 'var(--s-warning)'
-  return 'var(--s-info)'
-}
-
-function statusLabel(status?: string): string {
-  switch (status) {
-    case 'investigating':
-      return 'Investigating'
-    case 'resolved':
-      return 'Resolved'
-    case 'dismissed':
-      return 'Removed'
-    case 'exhausted':
-      return 'Paused'
-    case 'open':
-      return 'Open'
-    case 'escalated':
-    default:
-      return 'Escalated'
-  }
-}
-
-function extractResourceName(notification: StellarNotification): string {
-  if (!notification.dedupeKey) return ''
-  const parts = notification.dedupeKey.split(':')
-  const offset = parts[0] === 'ev' ? 1 : 0
-  if (parts.length >= offset + 3) {
-    return parts[offset + 2]
-  }
-  return ''
-}
-
-function formatAbsoluteUtc(value?: string): string {
-  if (!value) return 'Unavailable'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Unavailable'
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: 'UTC',
-  }) + ' UTC'
-}
-
-function formatRelative(value?: string): string {
-  if (!value) return 'just now'
-  const ms = Date.now() - new Date(value).getTime()
-  const minutes = Math.floor(ms / 60000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
-}
-
-function buildInvestigatePrompt(notification: StellarNotification): string {
-  const cluster = notification.cluster ? ` on cluster ${notification.cluster}` : ''
-  const namespace = notification.namespace ? ` in namespace ${notification.namespace}` : ''
-  return `Investigate ${notification.title}${cluster}${namespace}. Pull logs, related events, retry history, and summarize the likely root cause.`
-}
-
-function matchesSolve(notification: StellarNotification, solve: StellarSolve): boolean {
-  if ((notification.cluster || '') !== solve.cluster) return false
-  if ((notification.namespace || '') !== solve.namespace) return false
-  const resourceName = extractResourceName(notification)
-  if (!resourceName) return notification.id === solve.eventId
-  return resourceName.startsWith(solve.workload) || solve.workload === resourceName
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'object' && error && 'response' in error) {
-    const response = (error as { response?: { data?: { error?: string } } }).response
-    if (response?.data?.error) return response.data.error
-  }
-  if (error instanceof Error && error.message) return error.message
-  return fallback
-}
 
 export function EventModal({ notification, allNotifications, pendingActions, solveStatus, solves = [], onClose, onAction }: EventModalProps) {
   const {
@@ -234,27 +148,17 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
       .slice(0, TIMELINE_ENTRY_LIMIT)
   }, [liveNotification, matchingSolves, relatedEvents])
 
-  const investigationCopyText = useMemo(() => {
-    const pendingApprovalCount = (pendingActions || []).filter(action => action.cluster === liveNotification.cluster && action.namespace === liveNotification.namespace).length
-    const sections = [
-      `Event ID: ${liveNotification.id}`,
-      `Title: ${liveNotification.title}`,
-      `Status: ${statusLabel(liveNotification.status)}`,
-      `Severity: ${liveNotification.severity}`,
-      `Timestamp: ${formatAbsoluteUtc(liveNotification.updatedAt || liveNotification.createdAt)}`,
-      `Affected resource: ${affectedResource}`,
-      `Root cause: ${rootCause}`,
-      `Error message: ${errorMessage}`,
-      `Batch window: ${formatAbsoluteUtc(liveNotification.batchTimestamp || liveNotification.createdAt)}`,
-      `Auto-resolution: ${autoResolutionSummary.status} — ${autoResolutionSummary.detail}`,
-      `Pending approvals: ${pendingApprovalCount}`,
-      `Related events: ${(relatedEvents || []).map(item => `${formatAbsoluteUtc(item.createdAt)} — ${item.title}`).join('\n') || 'None'}`,
-      `Related activity: ${(relatedActivity || []).map(item => `${formatAbsoluteUtc(item.ts)} — ${item.title}: ${item.detail || ''}`).join('\n') || 'None'}`,
-      `Solve attempts: ${(matchingSolves || []).map(item => `${formatAbsoluteUtc(item.startedAt)} — ${item.status}: ${item.summary || item.error || 'No summary'}`).join('\n') || 'None'}`,
-      `Raw detail: ${liveNotification.body || 'None'}`,
-    ]
-    return (sections || []).join('\n\n')
-  }, [affectedResource, autoResolutionSummary.detail, autoResolutionSummary.status, errorMessage, liveNotification, matchingSolves, pendingActions, relatedActivity, relatedEvents, rootCause])
+  const investigationCopyText = useMemo(() => buildInvestigationCopyText({
+    liveNotification,
+    affectedResource,
+    rootCause,
+    errorMessage,
+    autoResolutionSummary,
+    pendingActions,
+    relatedEvents,
+    relatedActivity,
+    matchingSolves,
+  }), [affectedResource, autoResolutionSummary, errorMessage, liveNotification, matchingSolves, pendingActions, relatedActivity, relatedEvents, rootCause])
 
   const handleCopyDetails = async () => {
     const copied = await copyToClipboard(investigationCopyText)
@@ -340,50 +244,16 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
               <Section title="Batch metadata">Batch window: {formatAbsoluteUtc(liveNotification.batchTimestamp || liveNotification.createdAt)}</Section>
             </div>
           ) : (
-            <div className="space-y-4">
-              <Section title="Investigation summary">
-                <textarea
-                  value={investigationSummary}
-                  onChange={(event) => setInvestigationSummary(event.target.value)}
-                  rows={INVESTIGATION_TEXTAREA_ROWS}
-                  className="w-full rounded border border-[var(--s-border)] bg-[var(--s-surface)] px-3 py-2 text-sm text-[var(--s-text)]"
-                  placeholder="Optional note for the team"
-                />
-              </Section>
-              <Section title="Full event logs">
-                <pre className="whitespace-pre-wrap rounded border border-[var(--s-border)] bg-[var(--s-surface)] p-3 text-xs text-[var(--s-text-muted)]">{liveNotification.body || errorMessage}</pre>
-              </Section>
-              <Section title={`Related events (${relatedEvents.length})`}>
-                <ListBlock
-                  items={(relatedEvents || []).slice(0, RELATED_EVENT_LIMIT).map(item => ({
-                    id: item.id,
-                    title: item.title,
-                    subtitle: `${formatAbsoluteUtc(item.createdAt)} · ${statusLabel(item.status)}`,
-                  }))}
-                  emptyText="No related events found in the current feed."
-                />
-              </Section>
-              <Section title={`Retry history (${solveAttemptCount})`}>
-                <ListBlock
-                  items={(matchingSolves || []).map(item => ({
-                    id: item.id,
-                    title: `${statusLabel(item.status)} · ${item.actionsTaken} action(s)`,
-                    subtitle: `${formatAbsoluteUtc(item.startedAt)} · ${item.summary || item.error || 'No summary available'}`,
-                  }))}
-                  emptyText="No automatic retries recorded."
-                />
-              </Section>
-              <Section title={`Related activity (${relatedActivity.length})`}>
-                <ListBlock
-                  items={(relatedActivity || []).map(item => ({
-                    id: item.id,
-                    title: item.title,
-                    subtitle: `${formatAbsoluteUtc(item.ts)} · ${item.detail || 'No additional detail'}`,
-                  }))}
-                  emptyText="No related activity recorded yet."
-                />
-              </Section>
-            </div>
+            <EventInvestigateView
+              liveNotification={liveNotification}
+              investigationSummary={investigationSummary}
+              setInvestigationSummary={setInvestigationSummary}
+              errorMessage={errorMessage}
+              relatedEvents={relatedEvents}
+              relatedActivity={relatedActivity}
+              matchingSolves={matchingSolves}
+              solveAttemptCount={solveAttemptCount}
+            />
           )}
         </div>
 
@@ -455,123 +325,5 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
         </div>
       </div>
     </BaseModal>
-  )
-}
-
-function Badge({ color, children }: { color: string; children: ReactNode }) {
-  return (
-    <span className="px-2 py-0.5" style={{
-      border: `1px solid ${color}`,
-      color,
-      borderRadius: 999,
-      background: 'var(--s-surface-2)',
-    }}>
-      {children}
-    </span>
-  )
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section>
-      <div className="mb-2 text-[10px] font-mono uppercase tracking-[0.12em] text-[var(--s-text-muted)]">{title}</div>
-      <div className="rounded border border-[var(--s-border)] bg-[var(--s-surface)] p-3 text-sm leading-6 text-[var(--s-text)]">
-        {children}
-      </div>
-    </section>
-  )
-}
-
-function Timeline({ entries }: { entries: TimelineEntry[] }) {
-  if (entries.length === 0) {
-    return <div className="text-[var(--s-text-muted)]">No timeline entries recorded yet.</div>
-  }
-  return (
-    <div className="space-y-2">
-      {entries.map(entry => (
-        <div key={`${entry.label}-${entry.ts}`} className="border-l-2 border-[var(--s-border)] pl-3">
-          <div className="text-xs font-mono text-[var(--s-text-muted)]">{formatAbsoluteUtc(entry.ts)} · {formatRelative(entry.ts)}</div>
-          <div className="text-sm font-medium">{entry.label}</div>
-          <div className="text-sm text-[var(--s-text-muted)]">{entry.detail}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function ListBlock({ items, emptyText }: { items: { id: string; title: string; subtitle: string }[]; emptyText: string }) {
-  if (items.length === 0) {
-    return <div className="text-[var(--s-text-muted)]">{emptyText}</div>
-  }
-  return (
-    <div className="space-y-2">
-      {items.map(item => (
-        <div key={item.id} className="rounded border border-[var(--s-border)] bg-[var(--s-surface-2)] px-3 py-2">
-          <div className="text-sm font-medium">{item.title}</div>
-          <div className="text-xs text-[var(--s-text-muted)]">{item.subtitle}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function ActionButton({ children, color, disabled = false, onClick }: { children: ReactNode; color: string; disabled?: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        border: `1px solid ${color}`,
-        color,
-        background: 'var(--s-surface-2)',
-        borderRadius: 8,
-        opacity: disabled ? 0.5 : 1,
-      }}
-      className="px-3 py-1.5 text-sm font-medium"
-    >
-      {children}
-    </button>
-  )
-}
-
-function ConfirmationPanel({
-  title,
-  description,
-  value,
-  onChange,
-  placeholder,
-  onCancel,
-  onConfirm,
-  confirmLabel,
-  isSubmitting,
-}: {
-  title: string
-  description: string
-  value: string
-  onChange: (value: string) => void
-  placeholder: string
-  onCancel: () => void
-  onConfirm: () => void
-  confirmLabel: string
-  isSubmitting: boolean
-}) {
-  return (
-    <div className="space-y-3">
-      <div>
-        <div className="text-sm font-semibold">{title}</div>
-        <div className="text-sm text-[var(--s-text-muted)]">{description}</div>
-      </div>
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        rows={CONFIRMATION_TEXTAREA_ROWS}
-        className="w-full rounded border border-[var(--s-border)] bg-[var(--s-surface)] px-3 py-2 text-sm text-[var(--s-text)]"
-        placeholder={placeholder}
-      />
-      <div className="flex flex-wrap gap-2">
-        <ActionButton onClick={onCancel} color="var(--s-text-muted)">Cancel</ActionButton>
-        <ActionButton onClick={onConfirm} color="var(--s-warning)" disabled={isSubmitting}>{isSubmitting ? 'Working…' : confirmLabel}</ActionButton>
-      </div>
-    </div>
   )
 }

@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Rocket, Copy, Check, Terminal, ExternalLink, ChevronDown, ChevronRight, KeyRound, Server, Shield } from 'lucide-react'
+import { Rocket, Terminal, ExternalLink, KeyRound, Server, Shield } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { emitInstallCommandCopied } from '../../lib/analytics'
 import { copyToClipboard } from '../../lib/clipboard'
+import { CopyableCommand } from './CopyableCommand'
+import { InstructionStepCard } from './InstructionStepCard'
 
 interface SetupInstructionsDialogProps {
   isOpen: boolean
@@ -112,260 +114,150 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                 <p className="text-xs text-muted-foreground mb-2">
                   Downloads binaries, starts the backend + agent, and opens your browser — typically under 45 seconds
                 </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
-                    {QUICKSTART_CMD}
-                  </code>
-                  <button
-                    onClick={() => { handleCopy(QUICKSTART_CMD, 1); emitInstallCommandCopied('setup_quickstart', QUICKSTART_CMD) }}
-                    className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    title={t('drilldown.tooltips.copyCommand')}
-                  >
-                    {copiedStep === 1 ? (
-                      <Check className="w-3.5 h-3.5 text-green-400" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
+                <CopyableCommand
+                  command={QUICKSTART_CMD}
+                  stepKey={1}
+                  copiedStep={copiedStep}
+                  onCopy={(cmd, key) => { void handleCopy(cmd, key); emitInstallCommandCopied('setup_quickstart', cmd) }}
+                />
 
-                {/* Dev mode guide */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => setShowDevGuide(!showDevGuide)}
-                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    {showDevGuide ? (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    )}
-                    <Terminal className="w-3.5 h-3.5" />
-                    Or run from source (requires Go, Node.js)
-                  </button>
-                  {showDevGuide && (
-                    <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
-                          git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh
-                        </code>
-                        <button
-                          onClick={() => { const cmd = 'git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh'; handleCopy(cmd, 300); emitInstallCommandCopied('setup_dev_mode', cmd) }}
-                          className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                          title={t('drilldown.tooltips.copyCommand')}
-                        >
-                          {copiedStep === 300 ? (
-                            <Check className="w-3.5 h-3.5 text-green-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Requires Go 1.25+ and Node.js 20+. Compiles from source and starts a Vite dev server on port 5174.
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <InstructionStepCard
+                  icon={Terminal}
+                  label="Or run from source (requires Go, Node.js)"
+                  isOpen={showDevGuide}
+                  onToggle={() => setShowDevGuide(!showDevGuide)}
+                >
+                  <CopyableCommand
+                    command="git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh"
+                    stepKey={300}
+                    copiedStep={copiedStep}
+                    onCopy={(cmd, key) => { void handleCopy(cmd, key); emitInstallCommandCopied('setup_dev_mode', cmd) }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Requires Go 1.25+ and Node.js 20+. Compiles from source and starts a Vite dev server on port 5174.
+                  </p>
+                </InstructionStepCard>
 
-                {/* Kubernetes deploy guide */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => setShowK8sGuide(!showK8sGuide)}
-                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    {showK8sGuide ? (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    )}
-                    <Server className="w-3.5 h-3.5" />
-                    Or deploy to a Kubernetes cluster
-                  </button>
-                  {showK8sGuide && (
-                    <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        One command — requires <code className="font-mono text-foreground/70">helm</code> and <code className="font-mono text-foreground/70">kubectl</code>
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
-                          {K8S_DEPLOY_CMD}
-                        </code>
-                        <button
-                          onClick={() => { handleCopy(K8S_DEPLOY_CMD, 400); emitInstallCommandCopied('setup_k8s_deploy', K8S_DEPLOY_CMD) }}
-                          className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                          title={t('drilldown.tooltips.copyCommand')}
-                        >
-                          {copiedStep === 400 ? (
-                            <Check className="w-3.5 h-3.5 text-green-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Supports <code className="font-mono text-foreground/70">--context</code>, <code className="font-mono text-foreground/70">--openshift</code>, <code className="font-mono text-foreground/70">--ingress &lt;host&gt;</code>, and <code className="font-mono text-foreground/70">--github-oauth</code> flags.
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <InstructionStepCard
+                  icon={Server}
+                  label="Or deploy to a Kubernetes cluster"
+                  isOpen={showK8sGuide}
+                  onToggle={() => setShowK8sGuide(!showK8sGuide)}
+                >
+                  <p className="text-xs text-muted-foreground">
+                    One command — requires <code className="font-mono text-foreground/70">helm</code> and <code className="font-mono text-foreground/70">kubectl</code>
+                  </p>
+                  <CopyableCommand
+                    command={K8S_DEPLOY_CMD}
+                    stepKey={400}
+                    copiedStep={copiedStep}
+                    onCopy={(cmd, key) => { void handleCopy(cmd, key); emitInstallCommandCopied('setup_k8s_deploy', cmd) }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Supports <code className="font-mono text-foreground/70">--context</code>, <code className="font-mono text-foreground/70">--openshift</code>, <code className="font-mono text-foreground/70">--ingress &lt;host&gt;</code>, and <code className="font-mono text-foreground/70">--github-oauth</code> flags.
+                  </p>
+                </InstructionStepCard>
 
-                {/* Security guide */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => setShowSecurity(!showSecurity)}
-                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    {showSecurity ? (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    )}
-                    <Shield className="w-3.5 h-3.5" />
-                    Security posture — what runs where, what leaves your machine
-                  </button>
-                  {showSecurity && (
-                    <div className="mt-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 space-y-3 text-xs text-muted-foreground">
-                      <div>
-                        <p className="font-medium text-foreground mb-1">kc-agent runs on your machine, not ours</p>
-                        <p>
-                          kc-agent binds <code className="font-mono text-foreground/70">127.0.0.1:8585</code> only
-                          (hardcoded loopback, not configurable). It reads{' '}
-                          <code className="font-mono text-foreground/70">~/.kube/config</code> and executes every
-                          cluster operation as <em>you</em> — the apiserver enforces your real RBAC on every call.
-                          Set <code className="font-mono text-foreground/70">KC_AGENT_TOKEN</code> for an additional
-                          shared-secret gate against other local processes.
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground mb-1">AI keys never leave your machine</p>
-                        <p>
-                          API keys are stored at{' '}
-                          <code className="font-mono text-foreground/70">~/.kc/config.yaml</code> with mode{' '}
-                          <code className="font-mono text-foreground/70">0600</code>. The browser never holds the
-                          keys; kc-agent calls the provider directly. No API key reaches the console's servers or
-                          the hosted demo at console.kubestellar.io.
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground mb-1">What does leave your machine</p>
-                        <p>
-                          Your AI chat history and prompts are sent to whichever LLM provider you configured —
-                          cloud (Anthropic, OpenAI, Gemini) or self-hosted. Your kubeconfig, cluster tokens, and
-                          secrets are <em>not</em> auto-attached; only what you paste into the chat. Analytics
-                          (page views, feature-use events) can be opted out in Settings.
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground mb-1">Air-gapped / high-security environments</p>
-                        <p>
-                          Point kc-agent at a local LLM (Ollama, vLLM, LM Studio, corporate gateway) by overriding{' '}
-                          <code className="font-mono text-foreground/70">GROQ_BASE_URL</code>,{' '}
-                          <code className="font-mono text-foreground/70">OPENROUTER_BASE_URL</code>, or{' '}
-                          <code className="font-mono text-foreground/70">OPEN_WEBUI_URL</code>. AI traffic then
-                          never leaves your perimeter. The core cluster-management UX works with no AI at all.
-                        </p>
-                      </div>
-                      <div className="pt-1 flex flex-col gap-1">
-                        <a
-                          href={SECURITY_DOC_URL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
-                        >
-                          Read the full security model (kubestellar.io)
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                        <a
-                          href={SECURITY_AI_DOC_URL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
-                        >
-                          AI automation threat model (SECURITY-AI.md)
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                        <a
-                          href={SECURITY_DOC_REPO_URL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          Source-grounded version on GitHub
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <InstructionStepCard
+                  icon={Shield}
+                  label="Security posture — what runs where, what leaves your machine"
+                  isOpen={showSecurity}
+                  onToggle={() => setShowSecurity(!showSecurity)}
+                  containerClassName="mt-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 space-y-3 text-xs text-muted-foreground"
+                >
+                  <div>
+                    <p className="font-medium text-foreground mb-1">kc-agent runs on your machine, not ours</p>
+                    <p>
+                      kc-agent binds <code className="font-mono text-foreground/70">127.0.0.1:8585</code> only
+                      (hardcoded loopback, not configurable). It reads{' '}
+                      <code className="font-mono text-foreground/70">~/.kube/config</code> and executes every
+                      cluster operation as <em>you</em> — the apiserver enforces your real RBAC on every call.
+                      Set <code className="font-mono text-foreground/70">KC_AGENT_TOKEN</code> for an additional
+                      shared-secret gate against other local processes.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground mb-1">AI keys never leave your machine</p>
+                    <p>
+                      API keys are stored at{' '}
+                      <code className="font-mono text-foreground/70">~/.kc/config.yaml</code> with mode{' '}
+                      <code className="font-mono text-foreground/70">0600</code>. The browser never holds the
+                      keys; kc-agent calls the provider directly. No API key reaches the console's servers or
+                      the hosted demo at console.kubestellar.io.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground mb-1">What does leave your machine</p>
+                    <p>
+                      Your AI chat history and prompts are sent to whichever LLM provider you configured —
+                      cloud (Anthropic, OpenAI, Gemini) or self-hosted. Your kubeconfig, cluster tokens, and
+                      secrets are <em>not</em> auto-attached; only what you paste into the chat. Analytics
+                      (page views, feature-use events) can be opted out in Settings.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground mb-1">Air-gapped / high-security environments</p>
+                    <p>
+                      Point kc-agent at a local LLM (Ollama, vLLM, LM Studio, corporate gateway) by overriding{' '}
+                      <code className="font-mono text-foreground/70">GROQ_BASE_URL</code>,{' '}
+                      <code className="font-mono text-foreground/70">OPENROUTER_BASE_URL</code>, or{' '}
+                      <code className="font-mono text-foreground/70">OPEN_WEBUI_URL</code>. AI traffic then
+                      never leaves your perimeter. The core cluster-management UX works with no AI at all.
+                    </p>
+                  </div>
+                  <div className="pt-1 flex flex-col gap-1">
+                    <a href={SECURITY_DOC_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300">
+                      Read the full security model (kubestellar.io)<ExternalLink className="w-3 h-3" />
+                    </a>
+                    <a href={SECURITY_AI_DOC_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300">
+                      AI automation threat model (SECURITY-AI.md)<ExternalLink className="w-3 h-3" />
+                    </a>
+                    <a href={SECURITY_DOC_REPO_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                      Source-grounded version on GitHub<ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </InstructionStepCard>
 
-                {/* OAuth guide */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => setShowOAuthGuide(!showOAuthGuide)}
-                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    {showOAuthGuide ? (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    )}
-                    <KeyRound className="w-3.5 h-3.5" />
-                    Optional: Enable GitHub OAuth login
-                  </button>
-                  {showOAuthGuide && (
-                    <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
-                      {OAUTH_STEPS.map((oStep, idx) => (
-                        <div key={idx} className="text-xs">
-                          {oStep.link ? (
-                            <span className="text-muted-foreground">
-                              {idx + 1}. {oStep.label}{' '}
-                              <a
-                                href={oStep.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-purple-400 hover:text-purple-300 underline"
-                              >
-                                {oStep.linkText}
-                              </a>
-                            </span>
-                          ) : oStep.value ? (
-                            <div className="flex items-center gap-2 ml-4">
-                              <span className="text-muted-foreground shrink-0">{oStep.label}</span>
-                              <code className="rounded bg-muted px-2 py-0.5 font-mono text-foreground select-all">
-                                {oStep.value}
-                              </code>
-                            </div>
-                          ) : oStep.command ? (
-                            <div className="ml-4 mt-1">
-                              <span className="text-muted-foreground">{idx + 1}. {oStep.label}</span>
-                              <div className="flex items-center gap-2 mt-1">
-                                <pre className="flex-1 rounded bg-muted px-3 py-1.5 font-mono text-foreground select-all overflow-x-auto whitespace-pre">
-                                  {oStep.command}
-                                </pre>
-                                <button
-                                  onClick={() => { handleCopy(oStep.command, 200 + idx); emitInstallCommandCopied(idx === OAUTH_RESTART_STEP_IDX ? 'setup_oauth_restart' : 'setup_oauth_env', oStep.command) }}
-                                  className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors self-start"
-                                  title={t('common.copy')}
-                                >
-                                  {copiedStep === 200 + idx ? (
-                                    <Check className="w-3.5 h-3.5 text-green-400" />
-                                  ) : (
-                                    <Copy className="w-3.5 h-3.5" />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              {idx + 1}. {oStep.label}
-                            </span>
-                          )}
+                <InstructionStepCard
+                  icon={KeyRound}
+                  label="Optional: Enable GitHub OAuth login"
+                  isOpen={showOAuthGuide}
+                  onToggle={() => setShowOAuthGuide(!showOAuthGuide)}
+                >
+                  {OAUTH_STEPS.map((oStep, idx) => (
+                    <div key={idx} className="text-xs">
+                      {oStep.link ? (
+                        <span className="text-muted-foreground">
+                          {idx + 1}. {oStep.label}{' '}
+                          <a href={oStep.link} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline">
+                            {oStep.linkText}
+                          </a>
+                        </span>
+                      ) : oStep.value ? (
+                        <div className="flex items-center gap-2 ml-4">
+                          <span className="text-muted-foreground shrink-0">{oStep.label}</span>
+                          <code className="rounded bg-muted px-2 py-0.5 font-mono text-foreground select-all">{oStep.value}</code>
                         </div>
-                      ))}
+                      ) : oStep.command ? (
+                        <div className="ml-4 mt-1">
+                          <span className="text-muted-foreground">{idx + 1}. {oStep.label}</span>
+                          <div className="mt-1">
+                            <CopyableCommand
+                              command={oStep.command}
+                              stepKey={200 + idx}
+                              copiedStep={copiedStep}
+                              onCopy={(cmd, key) => { void handleCopy(cmd, key); emitInstallCommandCopied(idx === OAUTH_RESTART_STEP_IDX ? 'setup_oauth_restart' : 'setup_oauth_env', cmd) }}
+                              title={t('common.copy')}
+                              multiline
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">{idx + 1}. {oStep.label}</span>
+                      )}
                     </div>
-                  )}
-                </div>
+                  ))}
+                </InstructionStepCard>
               </div>
             </div>
           </div>
