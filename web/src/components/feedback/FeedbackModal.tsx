@@ -12,7 +12,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
-import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2, Film } from 'lucide-react'
+import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, AlertTriangle, Loader2 } from 'lucide-react'
 import { Linkedin } from '@/lib/icons'
 import { ConfirmDialog, useModalFocusTrap } from '../../lib/modals'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -37,9 +37,8 @@ import {
   isFeedbackRequestBodyLimitError,
 } from './FeatureRequestTypes'
 import { safeRemove, safeSetJSON } from '../../lib/safeLocalStorage'
-import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
-
-type FeedbackType = 'bug' | 'feature'
+import { FeedbackTabBar, type FeedbackType } from './FeedbackTabBar'
+import { ScreenshotAttacher } from './ScreenshotAttacher'
 
 interface FeedbackModalProps {
   isOpen: boolean
@@ -498,52 +497,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 </div>
               )}
 
-              {/* Type selector — radiogroup with arrow-key navigation (#21301) */}
-              <div
-                role="radiogroup"
-                aria-label={t('feedback.feedbackType', 'Feedback type')}
-                className="flex gap-2 mb-4"
-                onKeyDown={(e) => {
-                  const next = moveFocusByKey(e, { selector: '[role="radio"]:not([disabled])', orientation: 'horizontal' })
-                  const nextType = next?.dataset.radioValue as FeedbackType | undefined
-                  if (nextType) setType(nextType)
-                }}
-              >
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={type === 'bug'}
-                  tabIndex={type === 'bug' ? 0 : -1}
-                  data-radio-value="bug"
-                  onClick={() => setType('bug')}
-                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/70 ${
-                    type === 'bug'
-                      ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                      : 'bg-secondary/30 border-border text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Bug className="w-4 h-4" />
-                  <span className="text-sm font-medium">{t('feedback.bugReport', 'Bug Report')}</span>
-                  <StatusBadge color="yellow">+{REWARD_ACTIONS.bug_report.coins}</StatusBadge>
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={type === 'feature'}
-                  tabIndex={type === 'feature' ? 0 : -1}
-                  data-radio-value="feature"
-                  onClick={() => setType('feature')}
-                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/70 ${
-                    type === 'feature'
-                      ? 'bg-green-500/10 border-green-500/30 text-green-400'
-                      : 'bg-secondary/30 border-border text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Lightbulb className="w-4 h-4" />
-                  <span className="text-sm font-medium">{t('feedback.featureRequest', 'Feature Request')}</span>
-                  <StatusBadge color="yellow">+{REWARD_ACTIONS.feature_suggestion.coins}</StatusBadge>
-                </button>
-              </div>
+              <FeedbackTabBar type={type} setType={setType} t={t} />
 
               <form ref={formRef} onSubmit={handleSubmit}>
                 <div className="space-y-4">
@@ -589,87 +543,23 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                     )}
                   </div>
 
-                  {/* Screenshot Upload */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
-                      Screenshots <span className="text-muted-foreground font-normal text-xs">(optional)</span>
-                    </label>
-                    <div
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
-                        isDragOver
-                          ? 'border-purple-400 bg-purple-500/10'
-                          : 'border-border hover:border-muted-foreground'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <ImagePlus className="w-5 h-5 text-muted-foreground" />
-                        <Film className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                      <span className="text-xs text-muted-foreground text-center">Drop images or videos here, or click to browse</span>
-                      <span className="text-2xs text-muted-foreground/70">{ATTACHMENT_HELP_TEXT}</span>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept={ACCEPTED_MEDIA_TYPES}
-                        multiple
-                        onChange={e => {
-                          const files = e.target.files
-                          if (files && files.length > 0) emitScreenshotAttached('file_picker', files.length)
-                          handleScreenshotFiles(files)
-                        }}
-                        className="hidden"
-                      />
-                    </div>
-                    {screenshots.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {screenshots.map((s, i) => (
-                          <div key={i} className="relative group w-20 h-20 shrink-0">
-                            {s.mediaType === 'video' ? (
-                              <div className="w-20 h-20 rounded-lg border border-border bg-black flex items-center justify-center overflow-hidden">
-                                <video src={s.preview} className="w-full h-full object-cover" muted playsInline />
-                                <Film className="absolute w-5 h-5 text-white/80 drop-shadow-md" />
-                              </div>
-                            ) : (
-                              <img
-                                src={s.preview}
-                                alt={`Attachment ${i + 1}`}
-                                className="w-20 h-20 object-cover rounded-lg border border-border"
-                                loading="lazy"
-                                width={80}
-                                height={80}
-                              />
-                            )}
-                            <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 bg-black/60 rounded-lg transition-opacity">
-                              {s.mediaType !== 'video' && (
-                                <button
-                                  type="button"
-                                  onClick={e => { e.stopPropagation(); void copyScreenshotToClipboard(s.preview, i) }}
-                                  className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
-                                  title="Copy to clipboard"
-                                  aria-label="Copy screenshot to clipboard"
-                                >
-                                  {copiedIndex === i ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); removeScreenshot(i) }}
-                                className="p-1.5 rounded-md bg-secondary/80 text-red-400 hover:bg-red-500/20 transition-colors"
-                                title="Remove attachment"
-                                aria-label="Remove screenshot"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <ScreenshotAttacher
+                    screenshots={screenshots}
+                    isDragOver={isDragOver}
+                    copiedIndex={copiedIndex}
+                    attachmentHelpText={ATTACHMENT_HELP_TEXT}
+                    acceptedMediaTypes={ACCEPTED_MEDIA_TYPES}
+                    fileInputRef={fileInputRef}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onPickFiles={(files) => {
+                      if (files && files.length > 0) emitScreenshotAttached('file_picker', files.length)
+                      handleScreenshotFiles(files)
+                    }}
+                    onCopyScreenshot={(preview, index) => { void copyScreenshotToClipboard(preview, index) }}
+                    onRemoveScreenshot={removeScreenshot}
+                  />
 
                   {/* Error message */}
                   {submitError && (
