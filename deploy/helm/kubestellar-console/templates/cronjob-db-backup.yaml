@@ -98,7 +98,7 @@ metadata:
     "helm.sh/resource-policy": keep
 spec:
   accessModes:
-    - ReadWriteMany
+    {{- toYaml .Values.persistence.accessModes | nindent 4 }}
   resources:
     requests:
       storage: {{ .Values.backup.storageSize }}
