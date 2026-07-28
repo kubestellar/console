@@ -6,7 +6,7 @@ import type { DependencyEdge } from './types'
 import { fetchMissionContent } from '../../lib/missions/missionCache'
 import { fetchKubaraValues } from '../../lib/kubara'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
-import { STATUS_COLORS, STATUS_LABELS } from './BlueprintInfoPanelsShared'
+import { STATUS_COLORS, STATUS_LABELS } from './BlueprintInfoPanelsConstants'
 
 // ---------------------------------------------------------------------------
 // Kubara chart → install steps generator (#11881)
