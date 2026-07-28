@@ -24,7 +24,7 @@ import {
   getUtilizationColor,
 } from './gpu-constants'
 
-type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
+type TranslateFn = (key: string, defaultValueOrOptions?: string | Record<string, unknown>, options?: Record<string, unknown>) => string
 
 export interface GPUReservationsTabProps {
   filteredReservations: GPUReservation[]
