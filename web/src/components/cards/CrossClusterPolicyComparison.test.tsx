@@ -12,6 +12,7 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { BTN } from '../../test-utils/buttonLabels'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -68,7 +69,7 @@ vi.mock('./kyverno/KyvernoDetailModal', () => ({
   KyvernoDetailModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
     isOpen ? (
       <div data-testid="kyverno-modal">
-        <button onClick={onClose}>Close</button>
+        <button onClick={onClose}>{BTN.close}</button>
       </div>
     ) : null,
 }))
