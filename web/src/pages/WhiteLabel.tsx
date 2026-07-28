@@ -467,7 +467,7 @@ export function WhiteLabel() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white">
+    <div className="min-h-screen bg-slate-900 text-white">
       {/* ---- Hero Section ---- */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-linear-to-br from-purple-900/20 via-transparent to-blue-900/20 pointer-events-none" />

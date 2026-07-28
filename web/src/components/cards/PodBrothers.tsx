@@ -532,7 +532,7 @@ export function PodBrothers() {
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            className="border border-border rounded bg-[#5c94fc]"
+            className="border border-border rounded bg-blue-500"
             style={isExpanded ? { width: '100%', height: '100%', objectFit: 'contain' } : undefined}
             tabIndex={0}
           />

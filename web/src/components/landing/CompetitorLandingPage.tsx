@@ -10,7 +10,7 @@ import { ACCENT_CLASSES } from './styles'
 import { TabbedDeploySection } from './TabbedDeploySection'
 import type { CompetitorLandingPageProps } from './types'
 
-const LANDING_SURFACE_CLASS = 'bg-[#0f172a]'
+const LANDING_SURFACE_CLASS = 'bg-slate-900'
 
 export function CompetitorLandingPage({
   accentColor,
