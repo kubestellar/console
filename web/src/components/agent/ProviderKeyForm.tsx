@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next'
 import { cn } from '../../lib/cn'
 import { AgentIcon } from './AgentIcon'
 import { PROVIDER_INFO, providerToIconMap, type KeyStatus } from './apiKeySettingsTypes'
+import { Input } from '../ui/Input'
 
 interface ProviderKeyFormProps {
   keyStatus: KeyStatus
@@ -121,7 +122,7 @@ export function ProviderKeyForm({
       {editingProvider === keyStatus.provider ? (
         <div className="mt-3 space-y-2">
           <div className="relative">
-            <input
+            <Input
               type={showKey ? 'text' : 'password'}
               value={newKeyValue}
               onChange={(e) => {
@@ -129,13 +130,13 @@ export function ProviderKeyForm({
                 onSetEditError(null)
               }}
               placeholder={PROVIDER_INFO[keyStatus.provider]?.placeholder || t('agent.enterApiKey')}
-              className="w-full px-3 py-2 pr-10 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
+              className="px-3 py-2 pr-10 text-sm bg-background border-border focus:ring-1 focus:ring-primary"
               autoFocus
             />
             <button
               type="button"
               onClick={() => onSetShowKey(!showKey)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground z-10"
             >
               {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -216,13 +217,13 @@ export function ProviderKeyForm({
               <p className="text-xs text-muted-foreground">
                 {t('agent.baseUrlHint', 'Override the endpoint this provider talks to. Leave blank to use the compiled-in default. The {{env}} environment variable takes precedence when set.', { env: keyStatus.baseURLEnvVar })}
               </p>
-              <input
+              <Input
                 type="text"
                 value={baseURLDraft[keyStatus.provider] ?? ''}
                 onChange={(e) => onSetBaseURLDraft(keyStatus.provider, e.target.value)}
                 placeholder="http://<service>.<namespace>.svc.cluster.local:8080"
                 disabled={keyStatus.baseURLSource === 'env'}
-                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
+                className="px-3 py-2 text-sm bg-background border-border focus:ring-1 focus:ring-primary"
               />
               {baseURLError[keyStatus.provider] && (
                 <p className="text-xs text-destructive flex items-center gap-1">
