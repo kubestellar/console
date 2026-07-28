@@ -175,7 +175,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   const effectiveUserIdRef = useRef<string | null>(effectiveUserId)
   useEffect(() => {
     effectiveUserIdRef.current = effectiveUserId
-  }, [effectiveUserId])
+  }, [effectiveUserId, setRewards])
 
   // Ref for rewards so stable callbacks can read current state
   const rewardsRef = useRef<UserRewards | null>(rewards)
@@ -301,14 +301,14 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('storage', handleStorage)
     return () => window.removeEventListener('storage', handleStorage)
-  }, [])
+  }, [setRewards])
 
   // Check if action has been earned (for one-time rewards)
   const hasEarnedAction = useCallback((action: RewardActionType): boolean => {
     const r = rewardsRef.current
     if (!r) return false
     return r.events.some(e => e.action === action)
-  }, [])
+  }, [setRewards])
 
   // Get count of times an action has been performed
   const getActionCount = useCallback((action: RewardActionType): number => {
