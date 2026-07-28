@@ -1,6 +1,8 @@
 import { Bell, BellOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { AlertSeverity } from '../../types/alerts'
+import { Input } from '../ui/Input'
+import { TextArea } from '../ui/TextArea'
 
 interface SeverityOption {
   value: AlertSeverity
@@ -41,16 +43,15 @@ export function AlertRuleBasicInfo({
         <label htmlFor="alertRuleName" className="block text-sm font-medium text-foreground mb-1">
           {t('alerts.ruleName')} *
         </label>
-        <input
+        <Input
           id="alertRuleName"
           name="alertRuleName"
           type="text"
           value={name}
           onChange={e => onNameChange(e.target.value)}
           placeholder={t('alerts.ruleNamePlaceholder')}
-          className={`w-full px-3 py-2 rounded-lg bg-secondary border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
-            errors.name ? 'border-red-500' : 'border-border'
-          }`}
+          error={Boolean(errors.name)}
+          className="focus:ring-purple-500"
         />
         {errors.name && (
           <span className="block text-xs text-red-400 mt-1">{errors.name}</span>
@@ -61,14 +62,14 @@ export function AlertRuleBasicInfo({
         <label htmlFor="alertRuleDescription" className="block text-sm font-medium text-foreground mb-1">
           {t('alerts.description')}
         </label>
-        <textarea
+        <TextArea
           id="alertRuleDescription"
           name="alertRuleDescription"
           value={description}
           onChange={e => onDescriptionChange(e.target.value)}
           placeholder={t('alerts.descriptionPlaceholder')}
           rows={2}
-          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 resize-none"
+          className="focus:ring-purple-500"
         />
       </div>
 
