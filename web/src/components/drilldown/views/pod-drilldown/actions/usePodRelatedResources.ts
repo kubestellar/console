@@ -95,7 +95,7 @@ export function usePodRelatedResources({
 
       const K8S_NAME_PATTERN = '[a-z0-9][a-z0-9._-]*[a-z0-9]|[a-z0-9]'
       const pvcRefs = new Set<string>()
-      const pvcMatches = podYaml.matchAll(new RegExp(`claimName:\\s*\"?(${K8S_NAME_PATTERN})\"?`, 'g'))
+      const pvcMatches = podYaml.matchAll(new RegExp(`claimName:\\s*"?(${K8S_NAME_PATTERN})"?`, 'g'))
       for (const match of pvcMatches) {
         if (match[1]) pvcRefs.add(match[1])
       }

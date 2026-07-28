@@ -1,6 +1,8 @@
 import { Bell, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { ClusterBadge } from '../../ui/ClusterBadge'
+import { Input } from '../../ui/Input'
+import { Select } from '../../ui/Select'
 import { formatStat } from '../../../lib/formatStats'
 import type { ClusterEvent } from '../../../hooks/mcp/types'
 import { getTimeAgo, getEventIcon } from './helpers'
@@ -83,21 +85,21 @@ export function EventsListTab({
         <div className="flex flex-wrap items-center gap-4">
           <div>
             <label htmlFor="events-namespace-filter" className="block text-xs text-muted-foreground mb-1">{t('common.namespace')}</label>
-            <select id="events-namespace-filter" value={selectedNamespace} onChange={(e) => onNamespaceChange(e.target.value)} className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary">
+            <Select id="events-namespace-filter" value={selectedNamespace} onChange={(e) => onNamespaceChange(e.target.value)} className="bg-secondary">
               <option value="">{t('events.allNamespaces')}</option>
               {namespaces.map((ns) => <option key={ns} value={ns}>{ns}</option>)}
-            </select>
+            </Select>
           </div>
           <div>
             <label htmlFor="events-reason-filter" className="block text-xs text-muted-foreground mb-1">{t('common.reason')}</label>
-            <select id="events-reason-filter" value={selectedReason} onChange={(e) => onReasonChange(e.target.value)} className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary">
+            <Select id="events-reason-filter" value={selectedReason} onChange={(e) => onReasonChange(e.target.value)} className="bg-secondary">
               <option value="">{t('events.allReasons')}</option>
               {reasons.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
-            </select>
+            </Select>
           </div>
           <div className="flex-1 min-w-[200px]">
             <label htmlFor="events-search" className="block text-xs text-muted-foreground mb-1">{t('events.search')}</label>
-            <input type="text" id="events-search" placeholder={t('common.searchEvents')} value={searchQuery} onChange={(e) => onSearchQueryChange(e.target.value)} className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary" />
+            <Input type="text" id="events-search" placeholder={t('common.searchEvents')} value={searchQuery} onChange={(e) => onSearchQueryChange(e.target.value)} className="bg-secondary" />
           </div>
           {hasActiveFilters && (
             <div>
