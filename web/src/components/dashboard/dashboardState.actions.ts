@@ -8,14 +8,14 @@
  * useCallback for memoisation and wires up the deps.
  */
 import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
-import { emitCardAdded, emitCardRemoved, emitCardDragged, emitCardConfigured } from '../../lib/analytics'
+import { emitCardAdded, emitCardRemoved, emitCardConfigured } from '../../lib/analytics'
 import { safeRevokeObjectURL } from '../../lib/download'
 import type { Card, DashboardData } from './dashboardUtils'
 import { isLocalOnlyCard, mapVisualizationToCardType, getDefaultCardSize, getDemoCards } from './dashboardUtils'
 import { setDashboardCache, patchDashboardCache } from './persistence'
 import { saveDashboardCardsToStorage } from '../../lib/dashboards/dashboardCardStorage'
 import type { DashboardTemplate } from './templates'
-import type { DeployResultPayload } from '../../lib/cardEvents'
+import type { CardEvent, DeployResultPayload } from '../../lib/cardEvents'
 import type { TFunction } from 'i18next'
 import type { Dispatch, SetStateAction } from 'react'
 
@@ -71,7 +71,6 @@ export interface CardMutationDeps {
  */
 export async function loadDashboardData(
   isBackground: boolean,
-  storageKey: string,
   deps: LoadDashboardDeps,
 ): Promise<void> {
   const { setIsLoading, setDashboard, setLocalCards, showToast, t } = deps
@@ -444,7 +443,7 @@ export interface ConfirmDeployDeps {
     args: { workloadName: string; namespace: string; sourceCluster: string; targetClusters: string[] },
     callbacks: { onSuccess: (result: unknown) => void }
   ) => Promise<void>
-  publishCardEvent: (event: { type: string; payload: Record<string, unknown> }) => void
+  publishCardEvent: (event: CardEvent) => void
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void
   t: TFunction
 }
