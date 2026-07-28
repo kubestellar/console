@@ -1,24 +1,17 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Zap,
-  Calendar,
-  Plus,
-  Trash2,
-  Loader2 } from 'lucide-react'
+import { Calendar, Loader2 } from 'lucide-react'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
-import {
-  useNamespaces,
-  createOrUpdateResourceQuota,
-  deleteResourceQuota,
-  COMMON_RESOURCE_TYPES } from '../../hooks/useMCP'
 import type { GPUNode } from '../../hooks/useMCP'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
 import { normalizeGpuTypes } from '../../hooks/useGPUReservations'
-import { cn } from '../../lib/cn'
-
-// GPU resource keys used to identify GPU quotas
-const GPU_KEYS = ['nvidia.com/gpu', 'amd.com/gpu', 'gpu.intel.com/i915']
+import { ResourceRequestFields } from './reservationForm/ResourceRequestFields'
+import { ScheduleSelector } from './reservationForm/ScheduleSelector'
+import { ClusterPicker } from './reservationForm/ClusterPicker'
+import { BasicFormFields } from './reservationForm/BasicFormFields'
+import { ReservationPreview } from './reservationForm/ReservationPreview'
+import { useReservationData } from './reservationForm/useReservationData'
+import { handleReservationSave } from './reservationForm/handleReservationSave'
 
 /** Maximum length of the sanitized title segment in a generated quota name. */
 const QUOTA_NAME_TITLE_MAX_LEN = 40
@@ -28,45 +21,11 @@ const DEFAULT_RESERVATION_DURATION_HOURS = 24
 
 /**
  * Normalize any accepted start-date representation to the `YYYY-MM-DD`
- * format required by `<input type="date">`. Accepts either a bare date
- * (`2024-01-15`) or a full RFC 3339 timestamp (`2024-01-15T09:00:00Z`)
- * and returns just the date portion. Empty input returns an empty string.
+ * format required by `<input type="date">`.
  */
 function toDateInputValue(value: string | undefined | null): string {
   if (!value) return ''
-  // Both `YYYY-MM-DD` and `YYYY-MM-DDT...` share the same date prefix.
   return value.split('T')[0]
-}
-
-/**
- * Convert a `<input type="date">` value (`YYYY-MM-DD`) to an RFC 3339
- * timestamp representing local midnight with an explicit timezone offset
- * (`YYYY-MM-DDT00:00:00±HH:MM`). If the input is already an RFC 3339
- * timestamp, it is returned as-is.
- *
- * The local-offset form (rather than `Z`) prevents an off-by-one-day
- * display in calendar views: downstream code parses `start_date` with
- * `new Date(...)` and normalizes via `setHours(0, 0, 0, 0)`, which
- * shifts a hard-coded UTC midnight back a day for any user west of UTC
- * (e.g. Jan 15 00:00 UTC → Jan 14 in PST). Encoding the user's local
- * offset keeps the calendar day stable across the wire.
- */
-function toRFC3339StartDate(value: string): string {
-  if (!value) return ''
-  if (value.includes('T')) return value
-
-  // Date.getTimezoneOffset returns minutes WEST of UTC (positive for the
-  // Americas, negative for Europe/Asia), so flip the sign to get the
-  // signed offset that goes into the RFC 3339 string.
-  const offsetMinutesWestOfUTC = new Date().getTimezoneOffset()
-  const totalOffsetMinutes = -offsetMinutesWestOfUTC
-  const offsetSign = totalOffsetMinutes >= 0 ? '+' : '-'
-  const absoluteOffsetMinutes = Math.abs(totalOffsetMinutes)
-  const minutesPerHour = 60
-  const offsetHours = String(Math.floor(absoluteOffsetMinutes / minutesPerHour)).padStart(2, '0')
-  const offsetMinutes = String(absoluteOffsetMinutes % minutesPerHour).padStart(2, '0')
-
-  return `${value}T00:00:00${offsetSign}${offsetHours}:${offsetMinutes}`
 }
 
 /**
@@ -228,57 +187,21 @@ export function ReservationFormModal({
   }
 
   const {
-    namespaces: rawNamespaces,
-    isLoading: namespacesLoading,
-    error: namespacesError,
-    refetch: refetchNamespaces,
-  } = useNamespaces(cluster || undefined, forceLive)
-
-  // Union the hook result with namespaces from existing reservations on
-  // this cluster. Memoized to avoid re-allocating on every keystroke.
-  const mergedRawNamespaces = useMemo(() => {
-    const knownForCluster = (cluster && knownNamespacesByCluster?.[cluster]) || []
-    if (knownForCluster.length === 0) return rawNamespaces
-    return Array.from(new Set<string>([...rawNamespaces, ...knownForCluster])).sort()
-  }, [rawNamespaces, cluster, knownNamespacesByCluster])
-
-  // Filter out system namespaces from the dropdown
-  const FILTERED_NS_PREFIXES = ['openshift-', 'kube-']
-  const FILTERED_NS_EXACT = ['default', 'kube-system', 'kube-public', 'kube-node-lease']
-  const clusterNamespaces = mergedRawNamespaces.filter(ns =>
-      !FILTERED_NS_PREFIXES.some(prefix => ns.startsWith(prefix)) &&
-      !FILTERED_NS_EXACT.includes(ns)
-    )
-
-  // Get the selected cluster's GPU info
-  const selectedClusterInfo = gpuClusters.find(c => c.name === cluster)
-  const maxGPUs = selectedClusterInfo?.availableGPUs ?? 0
-
-  // Auto-detect GPU resource key from cluster's GPU types
-  const gpuResourceKey = (() => {
-    if (!cluster) return 'limits.nvidia.com/gpu'
-    const clusterNodes = allNodes.filter(n => n.cluster === cluster)
-    const hasAMD = clusterNodes.some(n => n.gpuType.toLowerCase().includes('amd') || n.manufacturer?.toLowerCase().includes('amd'))
-    const hasIntel = clusterNodes.some(n => n.gpuType.toLowerCase().includes('intel') || n.manufacturer?.toLowerCase().includes('intel'))
-    if (hasAMD) return 'limits.amd.com/gpu'
-    if (hasIntel) return 'gpu.intel.com/i915'
-    return 'limits.nvidia.com/gpu'
-  })()
-
-  // GPU types available on selected cluster with per-type counts
-  const clusterGPUTypes = (() => {
-    if (!cluster) return [] as Array<{ type: string; total: number; available: number }>
-    const typeMap: Record<string, { total: number; allocated: number }> = {}
-    for (const n of allNodes.filter(n => n.cluster === cluster)) {
-      if (!typeMap[n.gpuType]) typeMap[n.gpuType] = { total: 0, allocated: 0 }
-      typeMap[n.gpuType].total += n.gpuCount
-      typeMap[n.gpuType].allocated += n.gpuAllocated
-    }
-    return Object.entries(typeMap).map(([type, d]) => ({
-      type,
-      total: d.total,
-      available: d.total - d.allocated }))
-  })()
+    clusterNamespaces,
+    namespacesLoading,
+    namespacesError,
+    refetchNamespaces,
+    selectedClusterInfo,
+    maxGPUs,
+    gpuResourceKey,
+    clusterGPUTypes,
+  } = useReservationData({
+    cluster,
+    allNodes,
+    gpuClusters,
+    forceLive,
+    knownNamespacesByCluster,
+  })
 
   // Auto-generate quota name from title
   const quotaName = deriveQuotaName(title)
@@ -287,134 +210,42 @@ export function ReservationFormModal({
   const originalQuotaName = deriveQuotaName(editingReservation?.title || '')
 
   const handleSave = async () => {
-    const count = parseInt(gpuCount)
-    // For edits, capacity validation must account for the GPUs the current
-    // reservation already holds: max allowed = availableGPUs + originalCount.
-    // Without this, an edit could request more GPUs than the cluster has.
-    const originalCount = editingReservation?.gpu_count ?? 0
-    const sameClusterAsOriginal = editingReservation ? cluster === editingReservation.cluster : true
-    const capacityCeiling = editingReservation && sameClusterAsOriginal
-      ? maxGPUs + originalCount
-      : maxGPUs
-    const validationError = !cluster
-      ? t('gpuReservations.form.errors.selectCluster')
-      : !namespace
-      ? t('gpuReservations.form.errors.selectNamespace')
-      : !title
-      ? t('gpuReservations.form.errors.titleRequired')
-      : !count || count < 1
-      ? t('gpuReservations.form.errors.gpuCountMin')
-      : count > capacityCeiling
-      ? t('gpuReservations.form.errors.gpuCountMax', { max: capacityCeiling, cluster })
-      : null
-    setError(validationError)
-    if (validationError) return
-
+    setError(null)
     setIsSaving(true)
-    try {
-      let reservationId: string | void
-      // Backend requires RFC 3339; <input type="date"> only emits YYYY-MM-DD,
-      // so normalize to midnight UTC before sending.
-      const rfc3339StartDate = toRFC3339StartDate(startDate)
-      // Canonical list of accepted GPU types. An empty list is
-      // "no preference" (server-side: any GPU acceptable). If the user
-      // left every type toggled off but the cluster only has one type,
-      // fall back to that single type so the back-compat path with
-      // older clusters stays unchanged.
-      const gpuTypesList =
-        gpuPreferences.length > 0
-          ? gpuPreferences
-          : clusterGPUTypes.length === 1 && clusterGPUTypes[0]?.type
-          ? [clusterGPUTypes[0].type]
-          : []
-      // Legacy singular mirror — kept for pre-multitype clients still
-      // reading `gpu_type`. See CLAUDE.md back-compat rule.
-      const primaryGpuType = gpuTypesList[0] || ''
-      if (editingReservation) {
-        // Partial update
-        const input: UpdateGPUReservationInput = {
-          title,
-          description,
-          cluster,
-          namespace,
-          gpu_count: count,
-          gpu_type: primaryGpuType,
-          gpu_types: gpuTypesList,
-          start_date: rfc3339StartDate,
-          duration_hours: parseInt(durationHours) || DEFAULT_RESERVATION_DURATION_HOURS,
-          notes,
-          quota_enforced: enforceQuota,
-          quota_name: enforceQuota ? quotaName : '',
-          max_cluster_gpus: selectedClusterInfo?.totalGPUs }
-        reservationId = await onSave(input)
-      } else {
-        // Create
-        const input: CreateGPUReservationInput = {
-          title,
-          description,
-          cluster,
-          namespace,
-          gpu_count: count,
-          gpu_type: primaryGpuType,
-          gpu_types: gpuTypesList,
-          start_date: rfc3339StartDate,
-          duration_hours: parseInt(durationHours) || DEFAULT_RESERVATION_DURATION_HOURS,
-          notes,
-          quota_enforced: enforceQuota,
-          quota_name: enforceQuota ? quotaName : '',
-          max_cluster_gpus: selectedClusterInfo?.totalGPUs }
-        reservationId = await onSave(input)
-      }
 
-      // Create K8s ResourceQuota (auto-creates namespace if needed)
-      if (enforceQuota) {
-        try {
-          const hard: Record<string, string> = {
-            [gpuResourceKey]: String(count) }
-          for (const r of extraResources) {
-            if (r.key && r.value) hard[r.key] = r.value
-          }
-          // If the reservation was renamed, the quota name (which is
-          // derived from the title) will be different. Delete the old
-          // quota first so it does not linger orphaned in the namespace.
-          if (
-            editingReservation &&
-            originalQuotaName &&
-            originalQuotaName !== quotaName &&
-            editingReservation.cluster &&
-            editingReservation.namespace
-          ) {
-            try {
-              await deleteResourceQuota(
-                editingReservation.cluster,
-                editingReservation.namespace,
-                originalQuotaName,
-              )
-            } catch {
-              // Non-fatal: old quota may already be gone (e.g. 404).
-              // Proceed with creating the renamed quota regardless.
-            }
-          }
-          await createOrUpdateResourceQuota({ cluster, namespace, name: quotaName, hard, ensure_namespace: isNewNamespace })
-          // Quota enforced successfully — activate the reservation
-          const id = reservationId || editingReservation?.id
-          if (id) {
-            try { await onActivate(id) } catch { /* non-fatal */ }
-          }
-        } catch {
-          // Non-fatal: reservation is saved, but quota enforcement failed — stays pending
-          onError(t('gpuReservations.form.errors.quotaFailed'))
-        }
-      }
+    const result = await handleReservationSave({
+      editingReservation,
+      cluster,
+      namespace,
+      title,
+      description,
+      gpuCount,
+      gpuPreferences,
+      startDate,
+      durationHours,
+      notes,
+      enforceQuota,
+      quotaName,
+      originalQuotaName,
+      gpuResourceKey,
+      extraResources,
+      isNewNamespace,
+      maxGPUs,
+      selectedClusterInfo,
+      clusterGPUTypes,
+      onSave,
+      onActivate,
+      onSaved,
+      onError,
+      t,
+    })
 
-      onSaved()
+    setIsSaving(false)
+
+    if (result.success) {
       onClose()
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t('gpuReservations.form.errors.saveFailed')
-      setError(msg)
-      onError(msg)
-    } finally {
-      setIsSaving(false)
+    } else if (result.error) {
+      setError(result.error)
     }
   }
 
@@ -443,275 +274,71 @@ export function ReservationFormModal({
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>
           )}
 
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('gpuReservations.form.fields.titleLabel')}</label>
-            <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-              placeholder={t('gpuReservations.form.fields.titlePlaceholder')}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground" />
-          </div>
+          <BasicFormFields
+            title={title}
+            onTitleChange={setTitle}
+            description={description}
+            onDescriptionChange={setDescription}
+            notes={notes}
+            onNotesChange={setNotes}
+            user={user}
+          />
 
-          {/* User info (read-only from auth) */}
-          {user && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">{t('gpuReservations.form.fields.userName')}</label>
-                <input type="text" value={user.email || user.github_login} readOnly
-                  className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-muted-foreground" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">{t('gpuReservations.form.fields.githubHandle')}</label>
-                <input type="text" value={user.github_login} readOnly
-                  className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-muted-foreground" />
-              </div>
-            </div>
-          )}
+          <ClusterPicker
+            cluster={cluster}
+            onClusterChange={value => {
+              setCluster(value)
+              setNsField({ value: '', isNew: false })
+              setGpuPreferences([])
+            }}
+            gpuClusters={gpuClusters}
+            namespace={namespace}
+            onNamespaceChange={(value, isNew) => {
+              if (isNew) {
+                setNsField({ value, isNew: true })
+              } else {
+                setNsField(prev => ({ ...prev, value }))
+              }
+            }}
+            isNewNamespace={isNewNamespace}
+            clusterNamespaces={clusterNamespaces}
+            namespacesLoading={namespacesLoading}
+            namespacesError={namespacesError}
+            refetchNamespaces={refetchNamespaces}
+            editingReservation={!!editingReservation}
+          />
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common:common.description')}</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
-              placeholder={t('gpuReservations.form.fields.descriptionPlaceholder')}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground" />
-          </div>
+          <ResourceRequestFields
+            gpuCount={gpuCount}
+            onGpuCountChange={setGpuCount}
+            gpuPreferences={gpuPreferences}
+            onGpuPreferencesChange={setGpuPreferences}
+            clusterGPUTypes={clusterGPUTypes}
+            maxGPUs={maxGPUs}
+            selectedClusterInfo={selectedClusterInfo}
+            enforceQuota={enforceQuota}
+            extraResources={extraResources}
+            onExtraResourcesChange={setExtraResources}
+          />
 
-          {/* Cluster (GPU-only, with counts) */}
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('gpuReservations.form.fields.clusterLabel')}</label>
-            <select value={cluster} onChange={e => { setCluster(e.target.value); setNsField({ value: '', isNew: false }); setGpuPreferences([]) }}
-              disabled={!!editingReservation}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50">
-              <option value="">{t('gpuReservations.form.fields.selectCluster')}</option>
-              {gpuClusters.map(c => (
-                <option key={c.name} value={c.name}>
-                  {t('gpuReservations.form.fields.clusterOption', { name: c.name, available: c.availableGPUs, total: c.totalGPUs })}
-                </option>
-              ))}
-            </select>
-            {gpuClusters.length === 0 && (
-              <div className="text-xs text-yellow-400 mt-1">{t('gpuReservations.form.fields.noClustersWithGpus')}</div>
-            )}
-          </div>
+          <ScheduleSelector
+            startDate={startDate}
+            onStartDateChange={setStartDate}
+            durationHours={durationHours}
+            onDurationHoursChange={setDurationHours}
+          />
 
-          {/* Namespace */}
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('gpuReservations.form.fields.namespaceLabel')}</label>
-            {!isNewNamespace ? (
-              <select
-                value={namespace}
-                onChange={e => {
-                  if (e.target.value === '__new__' || e.target.value === '__new_bottom__') {
-                    setNsField({ value: '', isNew: true })
-                    setTimeout(() => document.getElementById('new-ns-input')?.focus(), 0)
-                  } else {
-                    setNsField(prev => ({ ...prev, value: e.target.value }))
-                  }
-                }}
-                disabled={!!editingReservation || !cluster || (namespacesLoading && clusterNamespaces.length === 0)}
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50"
-              >
-                <option value="">{t('gpuReservations.form.fields.selectNamespace')}</option>
-                <option value="__new__">{t('gpuReservations.form.fields.newNamespace')}</option>
-                {clusterNamespaces.map(ns => (
-                  <option key={ns} value={ns}>{ns}</option>
-                ))}
-                {clusterNamespaces.length > 0 && (
-                  <option value="__new_bottom__">{t('gpuReservations.form.fields.newNamespace')}</option>
-                )}
-              </select>
-            ) : (
-              <div className="flex gap-2">
-                <input
-                  id="new-ns-input"
-                  type="text"
-                  value={namespace}
-                  onChange={e => setNsField(prev => ({ ...prev, value: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
-                  placeholder={t('gpuReservations.form.fields.enterNamespace')}
-                  disabled={!!editingReservation}
-                  className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground disabled:opacity-50"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setNsField({ value: '', isNew: false })}
-                  className="px-3 py-2 rounded-lg bg-secondary border border-border text-muted-foreground hover:text-foreground"
-                  title={t('gpuReservations.form.fields.backToList')}
-                  aria-label={t('gpuReservations.form.fields.backToList')}
-                >
-                  &times;
-                </button>
-              </div>
-            )}
-            {cluster && !isNewNamespace && namespacesLoading && (
-              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span>{t('common:status.loadingNamespaces')}</span>
-              </div>
-            )}
-            {cluster && !isNewNamespace && namespacesError && !namespacesLoading && (
-              <div className="mt-2 flex items-center gap-2 text-xs text-red-400">
-                <span>{namespacesError}</span>
-                <button
-                  type="button"
-                  onClick={() => void refetchNamespaces()}
-                  className="font-medium underline underline-offset-2 hover:text-red-300"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* GPU Count */}
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">
-              {t('gpuReservations.form.fields.gpuCountLabel')}
-              {selectedClusterInfo && (
-                <span className="text-xs text-green-400 ml-2">
-                  {t('gpuReservations.form.fields.maxAvailable', { count: selectedClusterInfo.availableGPUs })}
-                </span>
-              )}
-            </label>
-            <input type="number" value={gpuCount} onChange={e => setGpuCount(e.target.value)}
-              min="1" max={maxGPUs || undefined}
-              placeholder={t('gpuReservations.form.fields.gpuCountPlaceholder')}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground" />
-          </div>
-
-          {/* GPU Type Selection — multi-select. Toggling a type
-              adds or removes it from the accepted-types list. Selecting
-              none means "no preference" (server accepts any type);
-              selecting two or more lets a developer reserve "any
-              sufficiently powerful GPU". */}
-          {clusterGPUTypes.length > 1 && (
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">{t('gpuReservations.form.fields.gpuTypeLabel')}</label>
-              <div className="flex flex-wrap gap-2">
-                {clusterGPUTypes.map(gt => {
-                  const isSelected = gpuPreferences.includes(gt.type)
-                  return (
-                    <button
-                      key={gt.type}
-                      type="button"
-                      aria-pressed={isSelected}
-                      onClick={() => {
-                        setGpuPreferences(prev =>
-                          prev.includes(gt.type)
-                            ? prev.filter(t => t !== gt.type)
-                            : [...prev, gt.type],
-                        )
-                      }}
-                      className={cn(
-                        'flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors',
-                        isSelected
-                          ? 'border-purple-500 bg-purple-500/10 text-purple-400'
-                          : 'border-border bg-secondary text-muted-foreground hover:text-foreground',
-                      )}
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      {gt.type}
-                      <span className="text-xs opacity-70">{t('gpuReservations.form.fields.gpuTypeAvailability', { available: gt.available, total: gt.total })}</span>
-                    </button>
-                  )
-                })}
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                {/* Helper copy for the multi-type selector.
-                    Kept as plain English for now — a follow-up PR
-                    will add i18n keys to all locale bundles once the
-                    base feature lands and the UX is approved. */}
-                {gpuPreferences.length === 0
-                  ? 'No type selected — any GPU will be accepted.'
-                  : gpuPreferences.length === 1
-                  ? '1 type accepted'
-                  : `${gpuPreferences.length} types accepted`}
-              </div>
-            </div>
-          )}
-          {/* Single GPU type — show as info */}
-          {clusterGPUTypes.length === 1 && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Zap className="w-3.5 h-3.5 text-purple-400" />
-              {clusterGPUTypes[0].type}
-              <span className="text-xs">{t('gpuReservations.form.fields.singleGpuType', { available: clusterGPUTypes[0].available, total: clusterGPUTypes[0].total })}</span>
-            </div>
-          )}
-
-          {/* Start Date and Duration */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">{t('gpuReservations.form.fields.startDateLabel')}</label>
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">{t('gpuReservations.form.fields.durationLabel')}</label>
-              <input type="number" value={durationHours} onChange={e => setDurationHours(e.target.value)}
-                min="1" placeholder={t('gpuReservations.form.fields.durationPlaceholder')}
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground" />
-            </div>
-          </div>
-
-          {/* Additional Resource Limits */}
-          {enforceQuota && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-muted-foreground">{t('gpuReservations.form.fields.additionalLimits')}</label>
-                <button onClick={() => setExtraResources([...extraResources, { key: '', value: '' }])}
-                  className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30">
-                  <Plus className="w-3 h-3" /> {t('gpuReservations.form.fields.add')}
-                </button>
-              </div>
-              {extraResources.map((r, i) => (
-                <div key={i} className="flex items-center gap-2 mb-2">
-                  <select value={r.key} onChange={e => {
-                    const updated = [...extraResources]
-                    updated[i].key = e.target.value
-                    setExtraResources(updated)
-                  }} className="flex-1 px-2 py-1.5 rounded bg-secondary border border-border text-sm text-foreground">
-                    <option value="">{t('gpuReservations.form.fields.selectResource')}</option>
-                    {COMMON_RESOURCE_TYPES.filter(rt => !GPU_KEYS.some(gk => rt.key.includes(gk))).map(rt => (
-                      <option key={rt.key} value={rt.key}>{rt.label}</option>
-                    ))}
-                  </select>
-                  <input type="text" value={r.value} onChange={e => {
-                    const updated = [...extraResources]
-                    updated[i].value = e.target.value
-                    setExtraResources(updated)
-                  }} placeholder={t('gpuReservations.form.fields.resourcePlaceholder')} className="w-24 px-2 py-1.5 rounded bg-secondary border border-border text-sm text-foreground" />
-                  <button onClick={() => setExtraResources(extraResources.filter((_, j) => j !== i))}
-                    className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-red-400"
-                    aria-label="Remove resource limit">
-                    <Trash2 className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('gpuReservations.form.fields.notesLabel')}</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
-              placeholder={t('gpuReservations.form.fields.notesPlaceholder')}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground" />
-          </div>
-
-          {/* Preview */}
-          <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
-            <div className="text-xs font-medium text-purple-400 mb-1">{t('gpuReservations.form.fields.preview')}</div>
-            <div className="text-xs text-muted-foreground space-y-0.5">
-              <div>{t('gpuReservations.form.fields.previewFields.title')} <span className="text-foreground">{title || '...'}</span></div>
-              <div>{t('gpuReservations.form.fields.previewFields.cluster')} <span className="text-foreground">{cluster || '...'}</span></div>
-              <div>{t('gpuReservations.form.fields.previewFields.namespace')} <span className="text-foreground">{namespace || '...'}</span></div>
-              <div>{t('gpuReservations.form.fields.previewFields.gpus')} <span className="text-foreground">{gpuCount || '...'}</span></div>
-              <div>{t('gpuReservations.form.fields.previewFields.start')} <span className="text-foreground">{startDate || '...'}</span></div>
-              <div>{t('gpuReservations.form.fields.previewFields.duration')} <span className="text-foreground">{durationHours || '24'}h</span></div>
-              {enforceQuota && (
-                <div>{t('gpuReservations.form.fields.previewFields.k8sQuota')} <span className="text-foreground">{quotaName || '...'} ({gpuResourceKey})</span></div>
-              )}
-            </div>
-          </div>
+          <ReservationPreview
+            title={title}
+            cluster={cluster}
+            namespace={namespace}
+            gpuCount={gpuCount}
+            startDate={startDate}
+            durationHours={durationHours}
+            enforceQuota={enforceQuota}
+            quotaName={quotaName}
+            gpuResourceKey={gpuResourceKey}
+          />
         </div>
       </BaseModal.Content>
 
