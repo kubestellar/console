@@ -52,7 +52,11 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
 
   // Save collapsed state to localStorage
   useEffect(() => {
-    localStorage.setItem(collapsedKey, JSON.stringify(isCollapsed))
+    try {
+      localStorage.setItem(collapsedKey, JSON.stringify(isCollapsed))
+    } catch (err) {
+      console.error(`[useDashboardCards] Failed to persist collapsed state for ${collapsedKey}`, err)
+    }
   }, [isCollapsed, collapsedKey])
 
   const toggleCollapsed = () => {

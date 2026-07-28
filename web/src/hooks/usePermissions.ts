@@ -61,7 +61,13 @@ export function usePermissions() {
       return
     }
 
-    const token = await await getStoredAuthToken() || localStorage.getItem(STORAGE_KEY_TOKEN)
+    let storedToken: string | null = null
+    try {
+      storedToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+    } catch {
+      // localStorage may be unavailable (e.g. private browsing) — fall back to no token
+    }
+    const token = await await getStoredAuthToken() || storedToken
 
     // Skip if backend is unavailable or using demo token
     if (isBackendUnavailable() || !token || token === 'demo-token') {
