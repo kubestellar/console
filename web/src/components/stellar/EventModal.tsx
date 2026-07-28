@@ -5,12 +5,11 @@ import { useToast } from '../ui/Toast'
 import { BaseModal } from '../../lib/modals'
 import { copyToClipboard } from '../../lib/clipboard'
 import type { PendingAction } from './EventCard'
+import { EventDetailPanel } from './EventDetailPanel'
+import { ActionButtons } from './ActionButtons'
 
-const RELATED_EVENT_LIMIT = 6
 const TIMELINE_ENTRY_LIMIT = 8
 const INVESTIGATION_ACTIVITY_LIMIT = 6
-const INVESTIGATION_TEXTAREA_ROWS = 3
-const CONFIRMATION_TEXTAREA_ROWS = 4
 
 interface EventModalProps {
   notification: StellarNotification
@@ -300,8 +299,6 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
   }
 
   const color = severityColor(liveNotification.severity)
-  const solveAttemptCount = matchingSolves.length
-
   return (
     <BaseModal isOpen onClose={onClose} size="lg" closeOnBackdrop={false} testId="stellar-event-modal">
       <div className="flex min-h-0 flex-col bg-[var(--s-bg)] text-[var(--s-text)]">
@@ -323,135 +320,45 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
         </BaseModal.Header>
 
         <div className="s-scroll flex-1 overflow-y-auto px-5 py-4">
-          {view === 'overview' ? (
-            <div className="space-y-4">
-              <Section title="Root cause">{rootCause}</Section>
-              <Section title="Affected resource">{affectedResource}</Section>
-              <Section title="Error message">{errorMessage}</Section>
-              <Section title="Event history">
-                <Timeline entries={timelineEntries} />
-              </Section>
-              <Section title="Auto-resolution attempt">
-                <div className="text-sm">
-                  <div className="mb-1 font-medium">Status: {autoResolutionSummary.status}</div>
-                  <div className="text-[var(--s-text-muted)]">{autoResolutionSummary.detail}</div>
-                </div>
-              </Section>
-              <Section title="Batch metadata">Batch window: {formatAbsoluteUtc(liveNotification.batchTimestamp || liveNotification.createdAt)}</Section>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <Section title="Investigation summary">
-                <textarea
-                  value={investigationSummary}
-                  onChange={(event) => setInvestigationSummary(event.target.value)}
-                  rows={INVESTIGATION_TEXTAREA_ROWS}
-                  className="w-full rounded border border-[var(--s-border)] bg-[var(--s-surface)] px-3 py-2 text-sm text-[var(--s-text)]"
-                  placeholder="Optional note for the team"
-                />
-              </Section>
-              <Section title="Full event logs">
-                <pre className="whitespace-pre-wrap rounded border border-[var(--s-border)] bg-[var(--s-surface)] p-3 text-xs text-[var(--s-text-muted)]">{liveNotification.body || errorMessage}</pre>
-              </Section>
-              <Section title={`Related events (${relatedEvents.length})`}>
-                <ListBlock
-                  items={(relatedEvents || []).slice(0, RELATED_EVENT_LIMIT).map(item => ({
-                    id: item.id,
-                    title: item.title,
-                    subtitle: `${formatAbsoluteUtc(item.createdAt)} · ${statusLabel(item.status)}`,
-                  }))}
-                  emptyText="No related events found in the current feed."
-                />
-              </Section>
-              <Section title={`Retry history (${solveAttemptCount})`}>
-                <ListBlock
-                  items={(matchingSolves || []).map(item => ({
-                    id: item.id,
-                    title: `${statusLabel(item.status)} · ${item.actionsTaken} action(s)`,
-                    subtitle: `${formatAbsoluteUtc(item.startedAt)} · ${item.summary || item.error || 'No summary available'}`,
-                  }))}
-                  emptyText="No automatic retries recorded."
-                />
-              </Section>
-              <Section title={`Related activity (${relatedActivity.length})`}>
-                <ListBlock
-                  items={(relatedActivity || []).map(item => ({
-                    id: item.id,
-                    title: item.title,
-                    subtitle: `${formatAbsoluteUtc(item.ts)} · ${item.detail || 'No additional detail'}`,
-                  }))}
-                  emptyText="No related activity recorded yet."
-                />
-              </Section>
-            </div>
-          )}
+          <EventDetailPanel
+            view={view}
+            rootCause={rootCause}
+            affectedResource={affectedResource}
+            errorMessage={errorMessage}
+            timelineEntries={timelineEntries}
+            autoResolutionSummary={autoResolutionSummary}
+            batchWindow={formatAbsoluteUtc(liveNotification.batchTimestamp || liveNotification.createdAt)}
+            investigationSummary={investigationSummary}
+            setInvestigationSummary={setInvestigationSummary}
+            relatedEvents={relatedEvents}
+            matchingSolves={matchingSolves}
+            relatedActivity={relatedActivity}
+            formatAbsoluteUtc={formatAbsoluteUtc}
+            formatRelative={formatRelative}
+            statusLabel={statusLabel}
+            rawPayload={liveNotification.body || errorMessage}
+          />
         </div>
 
         <div className="border-t border-[var(--s-border)] px-5 py-4">
-          {confirmAction === 'resolve' && (
-            <ConfirmationPanel
-              title="Start AI mission"
-              description="This will trigger an AI mission to autonomously fix this event."
-              value=""
-              onChange={() => {}}
-              placeholder=""
-              onCancel={() => setConfirmAction(null)}
-              onConfirm={() => { void handleResolve() }}
-              confirmLabel="Start Mission"
-              isSubmitting={isSubmitting}
-            />
-          )}
-          {confirmAction === 'dismiss' && (
-            <ConfirmationPanel
-              title="Confirm removal"
-              description="This event will be removed from the escalated list."
-              value={dismissalReason}
-              onChange={setDismissalReason}
-              placeholder="Dismissal reason (optional)"
-              onCancel={() => setConfirmAction(null)}
-              onConfirm={() => { void handleDismiss() }}
-              confirmLabel="Remove"
-              isSubmitting={isSubmitting}
-            />
-          )}
-
-          {confirmAction === null && view === 'overview' && (
-            <div className="flex flex-wrap gap-2">
-              <ActionButton onClick={() => setView('investigate')} color="var(--s-info)">Investigate</ActionButton>
-              <ActionButton onClick={() => setConfirmAction('resolve')} color="var(--s-success)">Solve</ActionButton>
-              <ActionButton onClick={() => setConfirmAction('dismiss')} color="var(--s-critical)">Remove</ActionButton>
-            </div>
-          )}
-
-          {confirmAction === null && view === 'investigate' && (
-            <div className="flex flex-wrap gap-2">
-              <ActionButton onClick={() => setView('overview')} color="var(--s-text-muted)">Back</ActionButton>
-              <ActionButton onClick={() => { void handleCopyDetails() }} color="var(--s-text-muted)">Copy Details</ActionButton>
-              {onAction && (
-                <ActionButton
-                  onClick={() => onAction(buildInvestigatePrompt(liveNotification), {
-                    prompt: buildInvestigatePrompt(liveNotification),
-                    actionType: 'investigate',
-                    cluster: liveNotification.cluster || '',
-                    namespace: liveNotification.namespace || '',
-                    name: resourceName,
-                  })}
-                  color="var(--s-warning)"
-                >
-                  Open in Chat
-                </ActionButton>
-              )}
-              <ActionButton onClick={() => { void handleMarkInvestigating() }} color="var(--s-info)" disabled={isSubmitting}>
-                Mark as Investigating
-              </ActionButton>
-            </div>
-          )}
-
-          {solveStatus && view === 'overview' && confirmAction === null && (
-            <div className="mt-3 text-xs text-[var(--s-text-muted)]">
-              Stellar status: <span style={{ color: solveStatus.color }}>{solveStatus.label}</span>
-            </div>
-          )}
+          <ActionButtons
+            view={view}
+            confirmAction={confirmAction}
+            isSubmitting={isSubmitting}
+            dismissalReason={dismissalReason}
+            setDismissalReason={setDismissalReason}
+            solveStatus={solveStatus || null}
+            liveNotification={liveNotification}
+            resourceName={resourceName}
+            buildInvestigatePrompt={buildInvestigatePrompt}
+            onAction={onAction}
+            onSetView={setView}
+            onSetConfirmAction={setConfirmAction}
+            onResolve={() => { void handleResolve() }}
+            onDismiss={() => { void handleDismiss() }}
+            onCopyDetails={() => { void handleCopyDetails() }}
+            onMarkInvestigating={() => { void handleMarkInvestigating() }}
+          />
         </div>
       </div>
     </BaseModal>
@@ -468,110 +375,5 @@ function Badge({ color, children }: { color: string; children: ReactNode }) {
     }}>
       {children}
     </span>
-  )
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section>
-      <div className="mb-2 text-[10px] font-mono uppercase tracking-[0.12em] text-[var(--s-text-muted)]">{title}</div>
-      <div className="rounded border border-[var(--s-border)] bg-[var(--s-surface)] p-3 text-sm leading-6 text-[var(--s-text)]">
-        {children}
-      </div>
-    </section>
-  )
-}
-
-function Timeline({ entries }: { entries: TimelineEntry[] }) {
-  if (entries.length === 0) {
-    return <div className="text-[var(--s-text-muted)]">No timeline entries recorded yet.</div>
-  }
-  return (
-    <div className="space-y-2">
-      {entries.map(entry => (
-        <div key={`${entry.label}-${entry.ts}`} className="border-l-2 border-[var(--s-border)] pl-3">
-          <div className="text-xs font-mono text-[var(--s-text-muted)]">{formatAbsoluteUtc(entry.ts)} · {formatRelative(entry.ts)}</div>
-          <div className="text-sm font-medium">{entry.label}</div>
-          <div className="text-sm text-[var(--s-text-muted)]">{entry.detail}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function ListBlock({ items, emptyText }: { items: { id: string; title: string; subtitle: string }[]; emptyText: string }) {
-  if (items.length === 0) {
-    return <div className="text-[var(--s-text-muted)]">{emptyText}</div>
-  }
-  return (
-    <div className="space-y-2">
-      {items.map(item => (
-        <div key={item.id} className="rounded border border-[var(--s-border)] bg-[var(--s-surface-2)] px-3 py-2">
-          <div className="text-sm font-medium">{item.title}</div>
-          <div className="text-xs text-[var(--s-text-muted)]">{item.subtitle}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function ActionButton({ children, color, disabled = false, onClick }: { children: ReactNode; color: string; disabled?: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        border: `1px solid ${color}`,
-        color,
-        background: 'var(--s-surface-2)',
-        borderRadius: 8,
-        opacity: disabled ? 0.5 : 1,
-      }}
-      className="px-3 py-1.5 text-sm font-medium"
-    >
-      {children}
-    </button>
-  )
-}
-
-function ConfirmationPanel({
-  title,
-  description,
-  value,
-  onChange,
-  placeholder,
-  onCancel,
-  onConfirm,
-  confirmLabel,
-  isSubmitting,
-}: {
-  title: string
-  description: string
-  value: string
-  onChange: (value: string) => void
-  placeholder: string
-  onCancel: () => void
-  onConfirm: () => void
-  confirmLabel: string
-  isSubmitting: boolean
-}) {
-  return (
-    <div className="space-y-3">
-      <div>
-        <div className="text-sm font-semibold">{title}</div>
-        <div className="text-sm text-[var(--s-text-muted)]">{description}</div>
-      </div>
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        rows={CONFIRMATION_TEXTAREA_ROWS}
-        className="w-full rounded border border-[var(--s-border)] bg-[var(--s-surface)] px-3 py-2 text-sm text-[var(--s-text)]"
-        placeholder={placeholder}
-      />
-      <div className="flex flex-wrap gap-2">
-        <ActionButton onClick={onCancel} color="var(--s-text-muted)">Cancel</ActionButton>
-        <ActionButton onClick={onConfirm} color="var(--s-warning)" disabled={isSubmitting}>{isSubmitting ? 'Working…' : confirmLabel}</ActionButton>
-      </div>
-    </div>
   )
 }
