@@ -18,6 +18,7 @@ import {
   CHART_AXIS_FONT_SIZE,
   CHART_BODY_FONT_SIZE,
   CHART_TEXT_MUTED } from '../../lib/constants'
+import { getChartColor } from '../../lib/chartColors'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ResourcePoint {
@@ -202,18 +203,18 @@ export const ResourceTrend = memo(function ResourceTrend() {
     switch (view) {
       case 'compute':
         return [
-          { dataKey: 'cpuCores', color: '#3b82f6', name: 'CPU Cores' },
-          { dataKey: 'memoryGB', color: '#22c55e', name: 'Memory (GB)' },
+          { dataKey: 'cpuCores', color: getChartColor(2), name: 'CPU Cores' },
+          { dataKey: 'memoryGB', color: getChartColor(3), name: 'Memory (GB)' },
         ]
       case 'workloads':
         return [
-          { dataKey: 'pods', color: '#9333ea', name: 'Pods' },
-          { dataKey: 'nodes', color: '#f59e0b', name: 'Nodes' },
+          { dataKey: 'pods', color: getChartColor(1), name: 'Pods' },
+          { dataKey: 'nodes', color: getChartColor(4), name: 'Nodes' },
         ]
       default:
         return [
-          { dataKey: 'cpuCores', color: '#3b82f6', name: 'CPU' },
-          { dataKey: 'pods', color: '#9333ea', name: 'Pods' },
+          { dataKey: 'cpuCores', color: getChartColor(2), name: 'CPU' },
+          { dataKey: 'pods', color: getChartColor(1), name: 'Pods' },
         ]
     }
   }, [view])
