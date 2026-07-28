@@ -233,13 +233,15 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                   <label className="text-xs text-muted-foreground font-medium">
                     {t('dashboard.statFactory.statBlocks', { count: blocks.length })}
                   </label>
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={addBlock}
-                    className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                    className="min-h-11"
+                    icon={<Plus className="w-3 h-3" />}
                   >
-                    <Plus className="w-3 h-3" />
                     {t('dashboard.statFactory.addBlock')}
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="space-y-2 max-h-[35vh] overflow-y-auto">
@@ -257,7 +259,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                             <button
                               onClick={() => moveBlock(idx, 'up')}
                               disabled={idx === 0}
-                              className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
+                              className="p-0.5 min-h-11 min-w-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20"
                               title={t('dashboard.statFactory.moveBlockUp')}
                               aria-label={t('dashboard.statFactory.moveBlockUp')}
                             >

@@ -1,6 +1,7 @@
 import type { AutoUpdateStatus, UpdateChannel } from '../../types/updates'
 import { authFetch } from '../../lib/api'
 import { FETCH_DEFAULT_TIMEOUT_MS, isLocalAgentSuppressed } from '../../lib/constants/network'
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from '../../lib/constants/http'
 import {
   CANCEL_UPDATE_TIMEOUT_MS,
   safeJsonParse,
@@ -87,7 +88,7 @@ export async function triggerUpdate(channel: UpdateChannel): Promise<AutoUpdateM
 
     return {
       success: false,
-      error: response.status === 404
+      error: response.status === HTTP_NOT_FOUND
         ? 'kc-agent does not support auto-update yet — restart with latest code'
         : `kc-agent returned ${response.status}`,
     }
@@ -112,13 +113,13 @@ export async function cancelUpdate(): Promise<AutoUpdateMutationResult> {
       return { success: true }
     }
 
-    if (response.status === 409) {
+    if (response.status === HTTP_CONFLICT) {
       return { success: false, error: 'No update in progress' }
     }
 
     return {
       success: false,
-      error: response.status === 404
+      error: response.status === HTTP_NOT_FOUND
         ? 'kc-agent does not support cancel yet — restart with latest code'
         : `kc-agent returned ${response.status}`,
     }

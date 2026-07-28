@@ -18,6 +18,7 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type { ServiceExport } from '../types/mcs'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
+import { HTTP_SERVICE_UNAVAILABLE } from '../lib/constants/http'
 
 // ============================================================================
 // Constants
@@ -33,9 +34,6 @@ const FAILURE_THRESHOLD = 3
 
 /** localStorage key for ServiceExport cache */
 const CACHE_KEY = 'kc-service-exports-cache'
-
-/** HTTP status code returned when the backend has no k8s client */
-const STATUS_SERVICE_UNAVAILABLE = 503
 
 // ============================================================================
 // Types
@@ -97,7 +95,6 @@ function saveToCache(data: ServiceExport[], isDemoData: boolean): void {
 // ============================================================================
 // Demo Data Generator
 // ============================================================================
-
 
 function getDemoServiceExports(clusterNames: string[]): ServiceExport[] {
   const exports: ServiceExport[] = []
@@ -180,7 +177,7 @@ export function useServiceExports(): UseServiceExportsResult {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
-      if (res.status === STATUS_SERVICE_UNAVAILABLE) {
+      if (res.status === HTTP_SERVICE_UNAVAILABLE) {
         throw new Error('Service unavailable')
       }
 

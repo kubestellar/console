@@ -247,7 +247,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
                       role="option"
                       aria-selected={activeSuggestionIndex === index}
                       onClick={() => selectSubject(name)}
-                      className={`w-full px-3 py-2 text-left text-sm text-white hover:bg-secondary/50 transition-colors ${activeSuggestionIndex === index ? 'bg-secondary/50' : ''}`}
+                      className={`flex w-full items-center min-h-11 px-3 py-2 text-left text-sm text-white hover:bg-secondary/50 transition-colors ${activeSuggestionIndex === index ? 'bg-secondary/50' : ''}`}
                     >
                       {name}
                     </button>
@@ -258,7 +258,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
                       role="option"
                       aria-selected={activeSuggestionIndex === filteredSubjects.length}
                       onClick={() => selectSubject(subjectName)}
-                      className={`w-full px-3 py-2 text-left text-sm text-blue-400 hover:bg-secondary/50 transition-colors border-t border-border ${activeSuggestionIndex === filteredSubjects.length ? 'bg-secondary/50' : ''}`}
+                      className={`flex w-full items-center min-h-11 px-3 py-2 text-left text-sm text-blue-400 hover:bg-secondary/50 transition-colors border-t border-border ${activeSuggestionIndex === filteredSubjects.length ? 'bg-secondary/50' : ''}`}
                     >
                       Use &quot;{subjectName}&quot;
                     </button>

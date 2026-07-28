@@ -19,6 +19,7 @@ import {
 } from '../lib/llmd/benchmarkMockData'
 import { getStoredAuthTokenSync } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { HTTP_SERVICE_UNAVAILABLE } from '../lib/constants/http'
 
 function authHeaders(): Record<string, string> {
   const token = getStoredAuthTokenSync()
@@ -26,7 +27,6 @@ function authHeaders(): Record<string, string> {
 }
 
 const DEMO_REPORTS = generateBenchmarkReports()
-const HTTP_SERVICE_UNAVAILABLE = 503
 
 // ---------------------------------------------------------------------------
 // Module-level SSE singleton — shared across all card hook instances

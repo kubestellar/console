@@ -311,7 +311,7 @@ export function ACMMFeedbackLoops() {
             type="button"
             onClick={() => scan.forceRefetch()}
             disabled={scan.isLoading || scan.isRefreshing}
-            className="p-1 rounded hover:bg-muted/50 text-muted-foreground transition-colors disabled:opacity-50"
+            className="p-1 min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-muted/50 text-muted-foreground transition-colors disabled:opacity-50"
             title="Re-scan current repo (bypasses server cache)"
           >
             <RefreshCw

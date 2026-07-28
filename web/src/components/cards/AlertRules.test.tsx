@@ -4,6 +4,7 @@ import { render, screen, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AlertRulesCard } from './AlertRules'
 import type { AlertRule } from '../../types/alerts'
+import { BTN } from '../../test-utils/buttonLabels'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -53,7 +54,7 @@ vi.mock('../alerts/AlertRuleEditor', () => ({
     mockAlertRuleEditor(props)
     return (
       <div data-testid="alert-rule-editor">
-        <button onClick={() => props.onCancel()}>Cancel</button>
+        <button onClick={() => props.onCancel()}>{BTN.cancel}</button>
         <button
           onClick={() =>
             props.onSave({
@@ -91,7 +92,7 @@ vi.mock('../../lib/cards/CardComponents', () => ({
   }) =>
     needsPagination ? (
       <div data-testid="pagination" data-page={currentPage} data-total={totalPages}>
-        <button onClick={() => onPageChange(currentPage + 1)}>Next</button>
+        <button onClick={() => onPageChange(currentPage + 1)}>{BTN.next}</button>
       </div>
     ) : null,
 }))
@@ -371,7 +372,7 @@ describe('AlertRulesCard', () => {
       render(<AlertRulesCard />)
 
       await userEvent.click(screen.getByTitle('editRule'))
-      await userEvent.click(screen.getByText('Cancel'))
+      await userEvent.click(screen.getByText(BTN.cancel))
 
       expect(mockUpdateRule).not.toHaveBeenCalled()
       expect(screen.queryByTestId('alert-rule-editor')).not.toBeInTheDocument()
