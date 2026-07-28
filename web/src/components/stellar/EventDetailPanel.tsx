@@ -97,7 +97,7 @@ export function EventDetailPanel({
           items={(matchingSolves || []).map(item => ({
             id: item.id,
             title: `${statusLabel(item.status)} · ${item.actionsTaken} action(s)`,
-            subtitle: `${formatAbsoluteUtc(item.       ${item.summary || item.error || 'No summary available'}`,startedAt)} 
+            subtitle: `${formatAbsoluteUtc(item.startedAt)} · ${item.summary || item.error || 'No summary available'}`,
           }))}
           emptyText="No automatic retries recorded."
         />
