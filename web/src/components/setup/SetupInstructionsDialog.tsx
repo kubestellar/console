@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Rocket, Copy, Check, Terminal, ExternalLink, ChevronDown, ChevronRight, KeyRound, Server, Shield } from 'lucide-react'
+import { Rocket, Terminal, ExternalLink, KeyRound, Server, Shield } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { emitInstallCommandCopied } from '../../lib/analytics'
 import { copyToClipboard } from '../../lib/clipboard'
+import { CopyableCommand } from './CopyableCommand'
+import { InstructionStepCard } from './InstructionStepCard'
 
 interface SetupInstructionsDialogProps {
   isOpen: boolean
@@ -112,119 +114,63 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                 <p className="text-xs text-muted-foreground mb-2">
                   Downloads binaries, starts the backend + agent, and opens your browser — typically under 45 seconds
                 </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
-                    {QUICKSTART_CMD}
-                  </code>
-                  <button
-                    onClick={() => { handleCopy(QUICKSTART_CMD, 1); emitInstallCommandCopied('setup_quickstart', QUICKSTART_CMD) }}
-                    className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    title={t('drilldown.tooltips.copyCommand')}
-                  >
-                    {copiedStep === 1 ? (
-                      <Check className="w-3.5 h-3.5 text-green-400" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
+                <CopyableCommand
+                  command={QUICKSTART_CMD}
+                  copied={copiedStep === 1}
+                  onCopy={() => { handleCopy(QUICKSTART_CMD, 1); emitInstallCommandCopied('setup_quickstart', QUICKSTART_CMD) }}
+                  title={t('drilldown.tooltips.copyCommand')}
+                />
 
                 {/* Dev mode guide */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => setShowDevGuide(!showDevGuide)}
-                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    {showDevGuide ? (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    )}
-                    <Terminal className="w-3.5 h-3.5" />
-                    Or run from source (requires Go, Node.js)
-                  </button>
-                  {showDevGuide && (
+                <InstructionStepCard
+                  isOpen={showDevGuide}
+                  onToggle={() => setShowDevGuide(!showDevGuide)}
+                  icon={<Terminal className="w-3.5 h-3.5" />}
+                  title="Or run from source (requires Go, Node.js)"
+                >
                     <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
-                          git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh
-                        </code>
-                        <button
-                          onClick={() => { const cmd = 'git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh'; handleCopy(cmd, 300); emitInstallCommandCopied('setup_dev_mode', cmd) }}
-                          className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                          title={t('drilldown.tooltips.copyCommand')}
-                        >
-                          {copiedStep === 300 ? (
-                            <Check className="w-3.5 h-3.5 text-green-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      </div>
+                      <CopyableCommand
+                        command="git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh"
+                        copied={copiedStep === 300}
+                        onCopy={() => { const cmd = 'git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh'; handleCopy(cmd, 300); emitInstallCommandCopied('setup_dev_mode', cmd) }}
+                        title={t('drilldown.tooltips.copyCommand')}
+                      />
                       <p className="text-xs text-muted-foreground">
                         Requires Go 1.25+ and Node.js 20+. Compiles from source and starts a Vite dev server on port 5174.
                       </p>
                     </div>
-                  )}
-                </div>
+                </InstructionStepCard>
 
                 {/* Kubernetes deploy guide */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => setShowK8sGuide(!showK8sGuide)}
-                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    {showK8sGuide ? (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    )}
-                    <Server className="w-3.5 h-3.5" />
-                    Or deploy to a Kubernetes cluster
-                  </button>
-                  {showK8sGuide && (
+                <InstructionStepCard
+                  isOpen={showK8sGuide}
+                  onToggle={() => setShowK8sGuide(!showK8sGuide)}
+                  icon={<Server className="w-3.5 h-3.5" />}
+                  title="Or deploy to a Kubernetes cluster"
+                >
                     <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
                       <p className="text-xs text-muted-foreground">
                         One command — requires <code className="font-mono text-foreground/70">helm</code> and <code className="font-mono text-foreground/70">kubectl</code>
                       </p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
-                          {K8S_DEPLOY_CMD}
-                        </code>
-                        <button
-                          onClick={() => { handleCopy(K8S_DEPLOY_CMD, 400); emitInstallCommandCopied('setup_k8s_deploy', K8S_DEPLOY_CMD) }}
-                          className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                          title={t('drilldown.tooltips.copyCommand')}
-                        >
-                          {copiedStep === 400 ? (
-                            <Check className="w-3.5 h-3.5 text-green-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      </div>
+                      <CopyableCommand
+                        command={K8S_DEPLOY_CMD}
+                        copied={copiedStep === 400}
+                        onCopy={() => { handleCopy(K8S_DEPLOY_CMD, 400); emitInstallCommandCopied('setup_k8s_deploy', K8S_DEPLOY_CMD) }}
+                        title={t('drilldown.tooltips.copyCommand')}
+                      />
                       <p className="text-xs text-muted-foreground">
                         Supports <code className="font-mono text-foreground/70">--context</code>, <code className="font-mono text-foreground/70">--openshift</code>, <code className="font-mono text-foreground/70">--ingress &lt;host&gt;</code>, and <code className="font-mono text-foreground/70">--github-oauth</code> flags.
                       </p>
                     </div>
-                  )}
-                </div>
+                </InstructionStepCard>
 
                 {/* Security guide */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => setShowSecurity(!showSecurity)}
-                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    {showSecurity ? (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    )}
-                    <Shield className="w-3.5 h-3.5" />
-                    Security posture — what runs where, what leaves your machine
-                  </button>
-                  {showSecurity && (
+                <InstructionStepCard
+                  isOpen={showSecurity}
+                  onToggle={() => setShowSecurity(!showSecurity)}
+                  icon={<Shield className="w-3.5 h-3.5" />}
+                  title="Security posture — what runs where, what leaves your machine"
+                >
                     <div className="mt-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 space-y-3 text-xs text-muted-foreground">
                       <div>
                         <p className="font-medium text-foreground mb-1">kc-agent runs on your machine, not ours</p>
@@ -296,24 +242,15 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                         </a>
                       </div>
                     </div>
-                  )}
-                </div>
+                </InstructionStepCard>
 
                 {/* OAuth guide */}
-                <div className="mt-2">
-                  <button
-                    onClick={() => setShowOAuthGuide(!showOAuthGuide)}
-                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    {showOAuthGuide ? (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    )}
-                    <KeyRound className="w-3.5 h-3.5" />
-                    Optional: Enable GitHub OAuth login
-                  </button>
-                  {showOAuthGuide && (
+                <InstructionStepCard
+                  isOpen={showOAuthGuide}
+                  onToggle={() => setShowOAuthGuide(!showOAuthGuide)}
+                  icon={<KeyRound className="w-3.5 h-3.5" />}
+                  title="Optional: Enable GitHub OAuth login"
+                >
                     <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
                       {OAUTH_STEPS.map((oStep, idx) => (
                         <div key={idx} className="text-xs">
@@ -339,22 +276,14 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                           ) : oStep.command ? (
                             <div className="ml-4 mt-1">
                               <span className="text-muted-foreground">{idx + 1}. {oStep.label}</span>
-                              <div className="flex items-center gap-2 mt-1">
-                                <pre className="flex-1 rounded bg-muted px-3 py-1.5 font-mono text-foreground select-all overflow-x-auto whitespace-pre">
-                                  {oStep.command}
-                                </pre>
-                                <button
-                                  onClick={() => { handleCopy(oStep.command, 200 + idx); emitInstallCommandCopied(idx === OAUTH_RESTART_STEP_IDX ? 'setup_oauth_restart' : 'setup_oauth_env', oStep.command) }}
-                                  className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors self-start"
-                                  title={t('common.copy')}
-                                >
-                                  {copiedStep === 200 + idx ? (
-                                    <Check className="w-3.5 h-3.5 text-green-400" />
-                                  ) : (
-                                    <Copy className="w-3.5 h-3.5" />
-                                  )}
-                                </button>
-                              </div>
+                              <CopyableCommand
+                                command={oStep.command}
+                                preformatted
+                                copied={copiedStep === 200 + idx}
+                                onCopy={() => { handleCopy(oStep.command, 200 + idx); emitInstallCommandCopied(idx === OAUTH_RESTART_STEP_IDX ? 'setup_oauth_restart' : 'setup_oauth_env', oStep.command) }}
+                                title={t('common.copy')}
+                                className="flex items-center gap-2 mt-1"
+                              />
                             </div>
                           ) : (
                             <span className="text-muted-foreground">
@@ -364,8 +293,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
+                </InstructionStepCard>
               </div>
             </div>
           </div>
