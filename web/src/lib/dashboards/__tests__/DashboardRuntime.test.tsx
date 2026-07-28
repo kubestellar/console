@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { BTN } from '../../../test-utils/buttonLabels'
 
 /**
  * Dashboard runtime tests.
@@ -117,7 +118,7 @@ vi.mock('../../../components/dashboard/TemplatesModal', () => ({
         >
           Apply
         </button>
-        <button data-testid="templates-close" onClick={onClose}>Close</button>
+        <button data-testid="templates-close" onClick={onClose}>{BTN.close}</button>
       </div>
     ) : null
   ),
