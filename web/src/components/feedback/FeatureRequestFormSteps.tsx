@@ -4,6 +4,7 @@ import { SuccessView } from './SuccessView'
 import { FeatureRequestDescriptionEditor } from './FeatureRequestDescriptionEditor'
 import type { FeedbackDraft } from '../../hooks/useFeedbackDrafts'
 import type { CloseRequestInput, FeatureRequest, ReopenRequestInput } from '../../hooks/useFeatureRequests'
+import type { GitHubRewardsResponse } from '../../types/rewards'
 import type { SubmitFormProps } from './submitTab.types'
 import type { ScreenshotItem, SuccessState, TabType } from './FeatureRequestTypes'
 
@@ -22,7 +23,7 @@ interface FeatureRequestFormStepsProps {
   isInDemoMode: boolean
   canPerformActions: boolean
   currentGitHubLogin: string
-  githubRewards: number
+  githubRewards: GitHubRewardsResponse | null
   githubPoints: number
   token: string | null
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void

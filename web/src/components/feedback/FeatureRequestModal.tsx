@@ -482,9 +482,12 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
           onRefreshNotifications={refreshNotifications}
           onRefreshGitHub={handleRefreshGitHub}
           isGitHubRefreshing={isGitHubRefreshing}
-          onRequestUpdate={requestUpdate}
-          onCloseRequest={closeRequest}
-          onReopenRequest={reopenRequest}
+          onRequestUpdate={async (requestId) => { await requestUpdate(requestId) }}
+          onCloseRequest={async (requestId, input) => {
+            await closeRequest(requestId, input)
+            return true
+          }}
+          onReopenRequest={async (requestId, input) => { await reopenRequest(requestId, input) }}
           getUnreadCountForRequest={getUnreadCountForRequest}
           markRequestNotificationsAsRead={markRequestNotificationsAsRead}
           onShowLoginPrompt={() => setShowLoginPrompt(true)}

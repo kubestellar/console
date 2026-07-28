@@ -18,7 +18,6 @@ import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import type { CreateFeatureRequestInput } from '../../hooks/useFeatureRequests'
-import type { RequestType } from './FeatureRequestTypes'
 import type { SubmitFormProps } from './submitTab.types'
 import {
   MIN_TITLE_LENGTH,
