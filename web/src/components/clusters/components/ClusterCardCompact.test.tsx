@@ -2,6 +2,7 @@ import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, fireEvent } from '@testing-library/react'
 import type { ClusterInfo } from '../../../hooks/useMCP'
+import { BTN } from '../../../test-utils/buttonLabels'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -33,7 +34,7 @@ vi.mock('../../ui/StatusBadge', () => ({
 }))
 
 vi.mock('./ClusterGrid.common', () => ({
-  RemoveClusterButton: () => <button data-testid="remove-cluster-button">Remove</button>,
+  RemoveClusterButton: () => <button data-testid="remove-cluster-button">{BTN.remove}</button>,
   handleCardKeyDown: (callback: () => void) => (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
