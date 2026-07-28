@@ -93,7 +93,15 @@ describe('KubecostOverview', () => {
     expect(links.some(l => l.getAttribute('href')?.includes('kubecost'))).toBe(true)
   })
 
-  // 6. Snapshot
+  // 6. Cost health status indicator
+  it('renders efficiency health status indicator', () => {
+    render(<KubecostOverview />)
+    // DEMO_COST_SUMMARY.efficiency (72) falls in the "moderate" health band
+    expect(screen.getByText(/healthStatusModerate/i)).toBeInTheDocument()
+    expect(screen.getByText(/efficiencyLabel/i)).toBeInTheDocument()
+  })
+
+  // 7. Snapshot
   it('matches snapshot', () => {
     const { asFragment } = render(<KubecostOverview />)
     expect(asFragment()).toMatchSnapshot()
