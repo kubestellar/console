@@ -12,8 +12,9 @@
  *  - getDependencyNotes — human-readable integration notes for a project set
  */
 
-export { STATUS_COLORS, STATUS_LABELS, GaugeRow } from './BlueprintInfoPanelsShared'
+export { STATUS_COLORS, STATUS_LABELS } from './BlueprintInfoPanelsConstants'
+export { GaugeRow } from './BlueprintInfoPanelsShared'
 export { ProjectInfoPanel } from './ProjectInfoPanel'
 export { ClusterInfoPanel } from './ClusterInfoPanel'
-export { getDependencyNotes, generateDefaultPhases, DeployModeInfoPanel } from './DeployModeInfoPanel'
-
+export { getDependencyNotes, generateDefaultPhases } from './DeployModeInfoPanelUtils'
+export { DeployModeInfoPanel } from './DeployModeInfoPanel'
