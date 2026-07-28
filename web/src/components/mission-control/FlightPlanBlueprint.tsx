@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 /**
  * FlightPlanBlueprint — Phase 3: Master SVG blueprint.
  *
@@ -6,9 +5,12 @@
  * populates the right panel with details. Overlays toggle resource views.
  *
  * Sub-modules:
- *  - BlueprintLayout.ts      — layout computation (computeLayout)
- *  - BlueprintReport.ts      — PDF/print export (exportFullReport)
- *  - BlueprintInfoPanels.tsx — ProjectInfoPanel, ClusterInfoPanel, DeployModeInfoPanel
+ *  - BlueprintLayout.ts           — layout computation (computeLayout)
+ *  - BlueprintReport.ts           — PDF/print export (exportFullReport)
+ *  - BlueprintInfoPanels.tsx      — ProjectInfoPanel, ClusterInfoPanel, DeployModeInfoPanel
+ *  - FlightPlanBlueprint.types.ts — prop/panel types
+ *  - FlightPlanBlueprint.constants.ts — panel, zoom and label constants
+ *  - FlightPlanBlueprint.utils.ts — resolveKbPath helper
  */
 
 import { useId, useMemo, useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react'
@@ -41,9 +43,7 @@ import { ProjectNode } from './svg/ProjectNode'
 import type { ProjectHoverInfo } from './svg/ProjectNode'
 import { DependencyPath, DependencyLabel, computeEdgeMidpoint } from './svg/DependencyPath'
 import { PhaseTimeline } from './svg/PhaseTimeline'
-import type {
-  MissionControlState,
-  OverlayMode } from './types'
+import type { MissionControlState, OverlayMode } from './types'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { detectCloudProvider } from '../ui/CloudProviderIcon'
 import { fetchMissionContent } from '../../lib/missions/missionCache'
@@ -60,22 +60,20 @@ import {
   DeployModeInfoPanel,
   generateDefaultPhases,
 } from './BlueprintInfoPanels'
-
-/** Resolve kbPath for a project — tries explicit kbPath, then convention-based lookup */
-function resolveKbPath(proj: PayloadProject): string | undefined {
-  if (proj.kbPath) return proj.kbPath
-  // Convention: fixes/cncf-install/install-{name}.json
-  const slug = proj.name.toLowerCase().replace(/\s+/g, '-')
-  return `fixes/cncf-install/install-${slug}.json`
-}
-
-interface FlightPlanBlueprintProps {
-  state: MissionControlState
-  onOverlayChange: (overlay: OverlayMode) => void
-  onDeployModeChange: (mode: 'phased' | 'yolo') => void
-  onMoveProject?: (projectName: string, fromCluster: string, toCluster: string) => void
-  installedProjects?: Set<string>
-}
+import type { FlightPlanBlueprintProps, InfoPanelData } from './FlightPlanBlueprint.types'
+import {
+  INFO_PANEL_MIN,
+  INFO_PANEL_MAX,
+  INFO_PANEL_DEFAULT,
+  INFO_PANEL_LS_KEY,
+  ZOOM_MIN,
+  ZOOM_MAX,
+  ZOOM_STEP,
+  MIN_LABEL_GAP,
+  NODE_RADIUS,
+  LABEL_OFFSET_Y,
+} from './FlightPlanBlueprint.constants'
+import { resolveKbPath } from './FlightPlanBlueprint.utils'
 
 // ---------------------------------------------------------------------------
 // Overlay buttons
@@ -88,47 +86,6 @@ const OVERLAYS: { key: OverlayMode; icon: React.ReactNode; label: string }[] = [
   { key: 'network', icon: <Network className="w-3.5 h-3.5" />, label: 'Network' },
   { key: 'security', icon: <Shield className="w-3.5 h-3.5" />, label: 'Security' },
 ]
-
-// ---------------------------------------------------------------------------
-// Info panel type
-// ---------------------------------------------------------------------------
-
-type InfoPanelData =
-  | { kind: 'project'; info: ProjectHoverInfo }
-  | { kind: 'cluster'; info: ClusterHoverInfo }
-  | { kind: 'deployMode'; mode: 'phased' | 'yolo'; phases: MissionControlState['phases'] }
-
-// ---------------------------------------------------------------------------
-// Panel resize constants
-// ---------------------------------------------------------------------------
-
-/** Minimum info-panel width (px) */
-const INFO_PANEL_MIN = 280
-/** Maximum info-panel width (px) */
-const INFO_PANEL_MAX = 600
-/** Default info-panel width (px) — 26rem */
-const INFO_PANEL_DEFAULT = 416
-/** localStorage key for persisted panel width */
-const INFO_PANEL_LS_KEY = 'mission-control-info-panel-width'
-
-// ---------------------------------------------------------------------------
-// Zoom constants
-// ---------------------------------------------------------------------------
-
-const ZOOM_MIN = 0.3
-const ZOOM_MAX = 3
-const ZOOM_STEP = 0.2
-
-// ---------------------------------------------------------------------------
-// Dependency-label layout constants
-// ---------------------------------------------------------------------------
-
-/** Minimum gap (SVG units) between two label slots to avoid overlap */
-const MIN_LABEL_GAP = 14
-/** Radius (SVG units) of a project node — used to push labels clear of nodes */
-const NODE_RADIUS = 18
-/** Vertical offset (SVG units) to place the label above the edge midpoint */
-const LABEL_OFFSET_Y = 12
 
 // ---------------------------------------------------------------------------
 // Component
