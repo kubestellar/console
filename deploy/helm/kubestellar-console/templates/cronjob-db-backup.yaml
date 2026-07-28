@@ -102,10 +102,9 @@ spec:
   resources:
     requests:
       storage: {{ .Values.backup.storageSize }}
-  {{- if .Values.backup.storageClass }}
-  storageClassName: {{ .Values.backup.storageClass | quote }}
-  {{- else if .Values.persistence.storageClass }}
-  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- $storageClassName := include "kubestellar-console.storageClassName" (dict "accessModes" (list "ReadWriteMany") "storageClass" (coalesce .Values.backup.storageClass .Values.persistence.storageClass)) -}}
+  {{- if $storageClassName }}
+  storageClassName: {{ $storageClassName | quote }}
   {{- end }}
 {{- end }}
 {{- end }}
