@@ -21,6 +21,7 @@ export interface EventsStatsCache {
 }
 
 export interface EventsChartDatum {
+  [key: string]: string | number
   name: string
   value: number
   color: string
