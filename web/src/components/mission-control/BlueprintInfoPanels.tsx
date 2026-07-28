@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 /**
  * BlueprintInfoPanels — right-hand info panels for FlightPlanBlueprint.
  *
