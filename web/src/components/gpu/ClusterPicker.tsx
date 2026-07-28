@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react'
-import type { TFunction } from 'i18next'
 import type { GPUClusterInfo } from './ReservationFormModal'
+
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 
 interface NsField {
   value: string
@@ -8,7 +9,7 @@ interface NsField {
 }
 
 interface ClusterPickerProps {
-  t: TFunction
+  t: TranslateFn
   cluster: string
   setCluster: (cluster: string) => void
   namespace: string

@@ -1,7 +1,7 @@
-import type { TFunction } from 'i18next'
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 
 interface ScheduleSelectorProps {
-  t: TFunction
+  t: TranslateFn
   startDate: string
   setStartDate: (value: string) => void
   durationHours: string

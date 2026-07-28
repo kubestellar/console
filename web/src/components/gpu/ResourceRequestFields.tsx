@@ -1,7 +1,8 @@
 import { Zap, Plus, Trash2 } from 'lucide-react'
-import type { TFunction } from 'i18next'
 import { cn } from '../../lib/cn'
 import { COMMON_RESOURCE_TYPES } from '../../hooks/useMCP'
+
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 
 interface ClusterGpuType {
   type: string
@@ -15,7 +16,7 @@ interface ExtraResource {
 }
 
 interface ResourceRequestFieldsProps {
-  t: TFunction
+  t: TranslateFn
   gpuCount: string
   setGpuCount: (value: string) => void
   maxGPUs: number
