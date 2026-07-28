@@ -418,11 +418,11 @@ export function useDashboardState() {
   }>) => {
     await addCardsToBoard(suggestions, insertAtIndex, { ...cardMutationBase, recordCardAdded })
     setInsertAtIndex(null)
-  }, [cardMutationBase, insertAtIndex])
+  }, [cardMutationBase, insertAtIndex, recordCardAdded])
 
   const handleRemoveCard = useCallback(async (cardId: string) => {
     await removeCardFromBoard(cardId, { ...cardMutationBase, recordCardRemoved })
-  }, [cardMutationBase])
+  }, [cardMutationBase, recordCardRemoved])
 
   const handleConfigureCard = useCallback((card: Card) => {
     setSelectedCard(card)
