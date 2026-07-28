@@ -90,18 +90,13 @@ export function useDashboardState() {
   const { isOpen: isWidgetExportOpen, open: openWidgetExport, close: closeWidgetExport } = useModalState()
 
   const {
-    isAddCardModalOpen,
-    closeAddCardModal,
-    openAddCardModal,
-    studioInitialSection,
-    studioWidgetCardType,
-    pendingOpenAddCardModal,
-    setPendingOpenAddCardModal,
+    isAddCardModalOpen, closeAddCardModal, openAddCardModal,
+    studioInitialSection, studioWidgetCardType,
+    pendingOpenAddCardModal, setPendingOpenAddCardModal,
     isTemplatesModalOpen: _isTemplatesModalOpen,
     closeTemplatesModal: _closeTemplatesModal,
     openTemplatesModal: _openTemplatesModal,
-    pendingRestoreCard,
-    clearPendingRestoreCard,
+    pendingRestoreCard, clearPendingRestoreCard,
   } = useDashboardContext()
 
   const { openSidebar: openMissionSidebar, startMission } = useMissions()
@@ -109,38 +104,20 @@ export function useDashboardState() {
   const { showToast } = useToast()
   const { t } = useTranslation()
   const { recordCardRemoved, recordCardAdded, recordCardConfigured } = useCardHistory()
-  const {
-    deduplicatedClusters: clusters,
-    isRefreshing: dataRefreshing,
-    lastUpdated,
-    refetch,
-    isLoading: isClustersLoading,
-    error: clustersError,
-  } = useClusters()
+  const { deduplicatedClusters: clusters, isRefreshing: dataRefreshing, lastUpdated, refetch, isLoading: isClustersLoading, error: clustersError } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isClustersLoading || isRefreshing || showIndicator
   const { drillToAllClusters, drillToAllPods, drillToAllNodes } = useDrillDownActions()
 
-  const { reset, isCustomized } = useDashboardReset({
-    storageKey: DASHBOARD_STORAGE_KEY,
-    defaultCards: DEFAULT_DASHBOARD_CARDS,
-    setCards: setLocalCards,
-    cards: localCards,
-  })
+  const { reset, isCustomized } = useDashboardReset({ storageKey: DASHBOARD_STORAGE_KEY, defaultCards: DEFAULT_DASHBOARD_CARDS, setCards: setLocalCards, cards: localCards })
 
   const localCardsRef = useRef(localCards)
   localCardsRef.current = localCards
-  const { snapshot, undo, redo, canUndo, canRedo } = useDashboardUndoRedo<Card>(
-    setLocalCards,
-    () => localCardsRef.current,
-    isActiveDashboard,
-  )
-
+  const { snapshot, undo, redo, canUndo, canRedo } = useDashboardUndoRedo<Card>(setLocalCards, () => localCardsRef.current, isActiveDashboard)
   const { activeNudge, showDragHint, dismissNudge, actionNudge, recordVisit } = useContextualNudges(isCustomized)
 
   useDashboardScrollTracking()
-
   useEffect(() => { recordVisit() }, [recordVisit])
 
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -148,7 +125,7 @@ export function useDashboardState() {
   const { mutate: deployWorkload } = useDeployWorkload()
   const [pendingDeploy, setPendingDeploy] = useState<PendingDeploy | null>(null)
 
-  // ── Selectors ────────────────────────────────────────────────────────────
+  // ── Selectors ────────────────────────────────────────────────────────────────────────────
 
   const filteredClusters = useMemo(
     () => computeFilteredClusters(clusters || [], globalSelectedClusters, isAllClustersSelected),
@@ -176,7 +153,7 @@ export function useDashboardState() {
 
   const getStatValue = getDashboardStatValue
 
-  // ── Auto-refresh ─────────────────────────────────────────────────────────
+  // ── Auto-refresh ──────────────────────────────────────────────────────────────────────
 
   const [autoRefresh, setAutoRefresh] = useState(() => {
     const stored = safeGetItem(STORAGE_KEY_DASHBOARD_AUTO_REFRESH)
@@ -187,9 +164,7 @@ export function useDashboardState() {
   useEffect(() => {
     safeSetItem(STORAGE_KEY_DASHBOARD_AUTO_REFRESH, String(autoRefresh))
     setAutoRefreshPaused(!autoRefresh)
-    return () => {
-      setAutoRefreshPaused(false)
-    }
+    return () => { setAutoRefreshPaused(false) }
   }, [autoRefresh])
 
   const isLoadingRef = useRef(isLoading)
@@ -197,407 +172,276 @@ export function useDashboardState() {
 
   useEffect(() => {
     if (!autoRefresh) return
-    autoRefreshIntervalRef.current = setInterval(() => {
-      if (!isLoadingRef.current) {
-        refetch()
-      }
-    }, AUTO_REFRESH_INTERVAL_MS)
-    return () => {
-      if (autoRefreshIntervalRef.current) {
-        clearInterval(autoRefreshIntervalRef.current)
-        autoRefreshIntervalRef.current = null
-      }
-    }
+    autoRefreshIntervalRef.current = setInterval(() => { if (!isLoadingRef.current) refetch() }, AUTO_REFRESH_INTERVAL_MS)
+    return () => { if (autoRefreshIntervalRef.current) { clearInterval(autoRefreshIntervalRef.current); autoRefreshIntervalRef.current = null } }
   }, [autoRefresh, refetch])
 
-  // ── Card grid navigation ─────────────────────────────────────────────────
+  // ── Card grid navigation ────────────────────────────────────────────────────────────
 
   const expandTriggersRef = useRef<Map<string, () => void>>(new Map())
-  const handleExpandCard = (cardId: string) => {
-    expandTriggersRef.current.get(cardId)?.()
-  }
-  const { registerCardRef, handleGridKeyDown } = useCardGridNavigation({
-    cards: localCards,
-    onExpandCard: handleExpandCard,
-  })
-
-  const handleRegisterExpandTrigger = useCallback((cardId: string, expand: () => void) => {
-    expandTriggersRef.current.set(cardId, expand)
-  }, [])
+  const handleExpandCard = (cardId: string) => { expandTriggersRef.current.get(cardId)?.() }
+  const { registerCardRef, handleGridKeyDown } = useCardGridNavigation({ cards: localCards, onExpandCard: handleExpandCard })
+  const handleRegisterExpandTrigger = useCallback((cardId: string, expand: () => void) => { expandTriggersRef.current.set(cardId, expand) }, [])
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: POINTER_SENSOR_ACTIVATION_DISTANCE,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    useSensor(PointerSensor, { activationConstraint: { distance: POINTER_SENSOR_ACTIVATION_DISTANCE } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  const collisionDetection = dashboardCollisionDetection
+  // ── Drag handlers ──────────────────────────────────────────────────────────────────────
 
-  // ── Drag handlers ────────────────────────────────────────────────────────
-
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const id = event.active.id as string
-    const data = event.active.data.current as Record<string, unknown> | null
-    setActiveId(id)
-    setActiveDragData(data)
+  const handleDragStart = useCallback(({ active }: DragStartEvent) => {
+    setActiveId(active.id as string)
+    setActiveDragData(active.data.current as Record<string, unknown> || null)
     setIsDragging(true)
   }, [])
 
-  const handleDragOver = useCallback((event: DragOverEvent) => {
-    const { over } = event
-    if (over && (String(over.id).startsWith('dashboard-drop-') || String(over.id) === 'create-new-dashboard')) {
-      const dashboardId = over.data?.current?.dashboardId
-      setDragOverDashboard(dashboardId || null)
-      return
-    }
-    setDragOverDashboard(null)
+  const handleDragOver = useCallback(({ over }: DragOverEvent) => {
+    setDragOverDashboard(over?.id as string | null)
   }, [])
 
-  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-    const { active, over } = event
+  const handleDragEnd = useCallback(async ({ active, over }: DragEndEvent) => {
+    setIsDragging(false)
     setActiveId(null)
     setActiveDragData(null)
-    setIsDragging(false)
     setDragOverDashboard(null)
 
     if (!over) return
 
-    if (
-      active.data.current?.type === 'workload' &&
-      String(over.id).startsWith('cluster-group-')
-    ) {
-      const workloadData = active.data.current.workload as {
-        name: string
-        namespace: string
-        sourceCluster: string
-        currentClusters: string[]
-      }
-      const groupData = over.data.current as {
-        groupName: string
-        clusters: string[]
-      }
+    const activeIdStr = active.id as string
+    const overIdStr = over.id as string
 
-      if (groupData?.clusters?.length > 0) {
-        setPendingDeploy({
-          workloadName: workloadData.name,
-          namespace: workloadData.namespace,
-          sourceCluster: workloadData.sourceCluster,
-          targetClusters: groupData.clusters,
-          groupName: groupData.groupName,
-        })
-      }
+    const targetDashboardId = activeDragData?.targetDashboardId as string | undefined
+    const targetDashboardName = activeDragData?.targetDashboardName as string | undefined
+
+    if (targetDashboardId) {
+      await moveCardToDashboardAction(active.id as string, targetDashboardId, targetDashboardName, moveDeps)
       return
     }
 
-    const moveDeps = { moveCardToDashboard, createDashboard, snapshot, localCards, setLocalCards, showToast, t }
-
-    if (String(over.id).startsWith('dashboard-drop-')) {
-      const targetDashboardId = over.data?.current?.dashboardId
-      const targetDashboardName = over.data?.current?.dashboardName
-      if (targetDashboardId && active.id) {
-        await moveCardToDashboardAction(active.id as string, targetDashboardId, targetDashboardName, moveDeps)
-      }
-      return
-    }
-
-    if (String(over.id) === 'create-new-dashboard') {
+    if (overIdStr === 'new-dashboard-drop-zone') {
       await moveCardToNewDashboardAction(active.id as string, moveDeps)
       return
     }
 
-    if (active.id !== over.id) {
-      const draggedCard = localCards.find(card => card.id === active.id)
-      if (draggedCard) emitCardDragged(draggedCard.card_type)
-      snapshot(localCards)
-      setLocalCards(items => {
-        const oldIndex = items.findIndex(item => item.id === active.id)
-        const newIndex = items.findIndex(item => item.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
+    if (activeIdStr !== overIdStr) {
+      setLocalCards(cards => {
+        const oldIndex = cards.findIndex(c => c.id === activeIdStr)
+        const newIndex = cards.findIndex(c => c.id === overIdStr)
+        if (oldIndex === -1 || newIndex === -1) return cards
+        const reordered = arrayMove(cards, oldIndex, newIndex)
+        emitCardDragged({ cardId: activeIdStr, fromIndex: oldIndex, toIndex: newIndex })
+        return reordered
       })
     }
-  }, [createDashboard, localCards, moveCardToDashboard, showToast, snapshot, t])
 
-  const handleDragCancel = useCallback(() => {
-    setActiveId(null)
-    setActiveDragData(null)
-    setIsDragging(false)
-    setDragOverDashboard(null)
-  }, [])
+    setInsertAtIndex(null)
+  }, [activeDragData, moveDeps, moveCardToDashboardAction, moveCardToNewDashboardAction])
 
-  // ── Card action handlers ─────────────────────────────────────────────────
+  // ── Card mutation callbacks ──────────────────────────────────────────────────────
+
+  const cardMutationBase = useMemo(() => ({
+    localCards,
+    dashboard,
+    snapshot,
+    setLocalCards,
+    showToast,
+    t,
+  }), [localCards, dashboard, snapshot, showToast, t])
+
+  const moveDeps = useMemo(() => ({
+    localCards,
+    dashboard,
+    dashboards,
+    moveCardToDashboard,
+    createDashboard,
+    setLocalCards,
+    snapshot,
+    showToast,
+    t,
+  }), [localCards, dashboard, dashboards, moveCardToDashboard, createDashboard, snapshot, showToast, t])
 
   const handleConfirmDeploy = useCallback(async () => {
-    if (!pendingDeploy) return
-    setPendingDeploy(null)
     await confirmDeployAction({ pendingDeploy, deployWorkload, publishCardEvent, showToast, t })
-  }, [deployWorkload, pendingDeploy, publishCardEvent, showToast, t])
+    setPendingDeploy(null)
+  }, [pendingDeploy, deployWorkload, publishCardEvent, showToast, t])
 
-  const handleCreateDashboard = useCallback(() => {
-    openAddCardModal('dashboards')
-  }, [openAddCardModal])
-
-  const loadDashboard = useCallback(async (isBackground: boolean = false) => {
-    await loadDashboardData(isBackground, { setIsLoading, setDashboard, setLocalCards, showToast, t })
-  }, [showToast, t])
-
-  useEffect(() => {
-    const isHomeDashboard = location.pathname === '/' || location.pathname === ''
-    if (!isHomeDashboard) return
-
-    const hasCachedOrLocalCards =
-      ((dashboardCache?.cards?.length ?? 0) > 0) || localCards.length > 0
-    const isWarmRefresh = hasCachedOrLocalCards
-
-    loadDashboard(isWarmRefresh)
-  }, [location.key, location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    persistLocalCards(DASHBOARD_STORAGE_KEY, localCards)
-  }, [localCards])
-
-  useEffect(() => {
-    if (pendingRestoreCard && !isLoading) {
-      const size = getDefaultCardSize(pendingRestoreCard.cardType)
-      const newCard: Card = {
-        id: `restored-${Date.now()}`,
-        card_type: pendingRestoreCard.cardType,
-        config: pendingRestoreCard.config || {},
-        position: { x: 0, y: 0, ...size },
-        title: pendingRestoreCard.cardTitle,
-      }
-      recordCardAdded(
-        newCard.id,
-        newCard.card_type,
-        newCard.title,
-        newCard.config,
-        dashboard?.id,
-        dashboard?.name,
-      )
-      snapshot(localCards)
-      setLocalCards(prev => [newCard, ...prev])
-      clearPendingRestoreCard()
-      showToast(t('dashboard.toast.cardRestored', 'Restored "{{name}}" card', { name: pendingRestoreCard.cardTitle || pendingRestoreCard.cardType }), 'success')
-    }
-  }, [pendingRestoreCard, isLoading, dashboard, recordCardAdded, clearPendingRestoreCard, showToast, localCards, snapshot, t])
-
-  useEffect(() => {
-    if (pendingOpenAddCardModal && !isLoading) {
-      openAddCardModal()
-      setPendingOpenAddCardModal(false)
-    }
-  }, [pendingOpenAddCardModal, isLoading, openAddCardModal, setPendingOpenAddCardModal])
-
-  const [addCardSearch, setAddCardSearch] = useState('')
-  useEffect(() => {
-    if (location.pathname !== '/' && location.pathname !== '') return
-    if (searchParams.get('addCard') === 'true') {
-      setAddCardSearch(searchParams.get('cardSearch') || '')
-      openAddCardModal()
-      const cleaned = new URLSearchParams(searchParams)
-      cleaned.delete('addCard')
-      cleaned.delete('cardSearch')
-      setSearchParams(cleaned, { replace: true })
-    }
-  }, [searchParams, setSearchParams, openAddCardModal, location.pathname])
-
-  const cardMutationBase = useMemo(
-    () => ({ localCards, dashboard, snapshot, setLocalCards, showToast, t, recordCardAdded, recordCardRemoved, recordCardConfigured, closeConfigureCard }),
-    [localCards, dashboard, snapshot, setLocalCards, showToast, t, recordCardAdded, recordCardRemoved, recordCardConfigured, closeConfigureCard],
-  )
-
-  const handleAddCards = useCallback(async (suggestions: Array<{
-    type: string
-    title: string
-    visualization: string
-    config: Record<string, unknown>
-  }>) => {
+  const handleAddCards = useCallback(async (suggestions: Card[]) => {
+    prefetchCardChunks(suggestions.map(c => c.card_type))
     await addCardsToBoard(suggestions, insertAtIndex, { ...cardMutationBase, recordCardAdded })
-    setInsertAtIndex(null)
   }, [cardMutationBase, insertAtIndex, recordCardAdded])
 
   const handleRemoveCard = useCallback(async (cardId: string) => {
     await removeCardFromBoard(cardId, { ...cardMutationBase, recordCardRemoved })
   }, [cardMutationBase, recordCardRemoved])
 
-  const handleConfigureCard = useCallback((card: Card) => {
-    setSelectedCard(card)
-    openConfigureCard()
-  }, [openConfigureCard])
-
-  const handleWidthChange = useCallback(async (cardId: string, newWidth: number) => {
+  const handleUpdateCardWidth = useCallback(async (cardId: string, newWidth: number) => {
     await updateCardWidth(cardId, newWidth, cardMutationBase)
   }, [cardMutationBase])
 
-  const handleHeightChange = useCallback(async (cardId: string, newHeight: number) => {
+  const handleUpdateCardHeight = useCallback(async (cardId: string, newHeight: number) => {
     await updateCardHeight(cardId, newHeight, cardMutationBase)
   }, [cardMutationBase])
 
-  const handleCardConfigured = useCallback(async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
+  const handleConfigureCard = useCallback(async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
     await updateCardConfig(cardId, newConfig, newTitle, { ...cardMutationBase, closeConfigureCard })
-    setSelectedCard(null)
   }, [cardMutationBase, closeConfigureCard])
 
   const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>, title?: string) => {
     addRecommendedCard(cardType, config, title, cardMutationBase)
   }, [cardMutationBase])
 
-  const handleCreateCardFromAI = useCallback((cardType: string, config: Record<string, unknown>, title?: string) => {
-    addCardFromAI(cardType, config, title, { ...cardMutationBase, closeConfigureCard })
-    setSelectedCard(null)
-  }, [cardMutationBase, closeConfigureCard])
-
-  const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
-    applyDashboardTemplate(template, cardMutationBase)
+  const handleAddCardFromAI = useCallback((cardType: string, config?: Record<string, unknown>, title?: string) => {
+    addCardFromAI(cardType, config, title, cardMutationBase)
   }, [cardMutationBase])
 
-  const handleAddSingleCard = useCallback((cardType: string) => {
-    addSingleCard(cardType, cardMutationBase)
+  const handleApplyTemplate = useCallback(async (template: DashboardTemplate) => {
+    await applyDashboardTemplate(template, cardMutationBase)
   }, [cardMutationBase])
+
+  const handleAddSingleCard = useCallback(async (cardType: string) => {
+    await addSingleCard(cardType, insertAtIndex, { ...cardMutationBase, recordCardAdded })
+  }, [cardMutationBase, insertAtIndex, recordCardAdded])
 
   const handleNudgeAction = useCallback(() => {
-    if (activeNudge === 'customize') {
-      openAddCardModal()
-    } else if (activeNudge === 'pwa-install') {
-      openWidgetExport()
-    }
     actionNudge()
-  }, [actionNudge, activeNudge, openAddCardModal, openWidgetExport])
+    openAddCardModal()
+  }, [actionNudge, openAddCardModal])
+
+  const handleOpenDashboardCatalog = useCallback((insertIdx?: number) => {
+    setInsertAtIndex(insertIdx ?? null)
+    openAddCardModal()
+  }, [openAddCardModal])
+
+  const handleExportDashboard = useCallback(async () => {
+    if (!dashboard?.id) return
+    await exportDashboardAsFile(dashboard.id, dashboard.name || 'dashboard', exportDashboard, showToast, t)
+  }, [dashboard?.id, dashboard?.name, exportDashboard, showToast, t])
+
+  const handleOpenConfigureCard = useCallback((card: Card) => {
+    setSelectedCard(card)
+    openConfigureCard()
+  }, [openConfigureCard])
+
+  // ── Effects ───────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    void loadDashboardData(false, { setIsLoading, setDashboard, setLocalCards, showToast, t })
+  }, [showToast, t])
+
+  useEffect(() => {
+    if (pendingRestoreCard) {
+      handleAddCards([pendingRestoreCard])
+      clearPendingRestoreCard()
+    }
+  }, [pendingRestoreCard, clearPendingRestoreCard, handleAddCards])
+
+  useEffect(() => {
+    if (!pendingOpenAddCardModal) return
+    openAddCardModal(studioInitialSection)
+    setPendingOpenAddCardModal(false)
+  }, [pendingOpenAddCardModal, openAddCardModal, setPendingOpenAddCardModal, studioInitialSection])
+
+  const isRefreshingRef = useRef(isRefreshing)
+  isRefreshingRef.current = isRefreshing
+
+  const prevIsRefreshingRef = useRef(isRefreshing)
+  const cardsOnMountRef = useRef<Card[] | null>(null)
+
+  useEffect(() => {
+    if (isRefreshing && !prevIsRefreshingRef.current) {
+      cardsOnMountRef.current = localCardsRef.current
+    }
+    if (!isRefreshing && prevIsRefreshingRef.current) {
+      void loadDashboardData(true, { setIsLoading, setDashboard, setLocalCards, showToast, t })
+      cardsOnMountRef.current = null
+    }
+    prevIsRefreshingRef.current = isRefreshing
+  }, [isRefreshing, showToast, t])
+
+  useEffect(() => {
+    persistLocalCards(DASHBOARD_STORAGE_KEY, localCards)
+  }, [localCards])
+
+  // ── Computed state ─────────────────────────────────────────────────────────────────
 
   const currentCardTypes = useMemo(() => computeCurrentCardTypes(localCards), [localCards])
 
-  useEffect(() => {
-    prefetchCardChunks(localCards.map(card => card.card_type))
-  }, [localCards])
+  const isCardOnDashboard = useCallback((cardType: string) => currentCardTypes.includes(cardType), [currentCardTypes])
 
-  const handleInsertBefore = useCallback((index: number) => {
-    setInsertAtIndex(index)
-    openAddCardModal()
-  }, [openAddCardModal])
-
-  const handleInsertAfter = useCallback((index: number) => {
-    setInsertAtIndex(index + 1)
-    openAddCardModal()
-  }, [openAddCardModal])
-
-  const handleCloseCustomizer = useCallback(() => {
-    closeAddCardModal()
-    setAddCardSearch('')
-    setInsertAtIndex(null)
-  }, [closeAddCardModal])
-
-  const handleCloseConfigureCard = useCallback(() => {
-    closeConfigureCard()
-    setSelectedCard(null)
-  }, [closeConfigureCard])
-
-  const handleCloseWidgetExport = useCallback(() => {
-    closeWidgetExport()
-  }, [closeWidgetExport])
-
-  const handleSetPendingDeploy = useCallback((deploy: PendingDeploy | null) => {
-    setPendingDeploy(deploy)
-  }, [])
-
-  const handleOpenDashboardCatalog = useCallback(() => {
-    openAddCardModal('dashboards')
-  }, [openAddCardModal])
-
-  const handleRunHealthCheck = useCallback(() => {
-    startMission({
-      title: 'Cluster Health Check',
-      description: 'AI-powered audit of your connected clusters',
-      type: 'custom',
-      initialPrompt: 'Run a comprehensive health check on all my connected clusters. Check for pod issues, resource constraints, and security concerns.',
-    })
-  }, [startMission])
-
-  const handleExportDashboard = useMemo(() => {
-    if (!dashboard?.id) return undefined
-    return async () => {
-      await exportDashboardAsFile(dashboard.id, dashboard.name || 'dashboard', exportDashboard, showToast, t)
-    }
-  }, [dashboard?.id, dashboard?.name, exportDashboard, showToast, t])
+  // ── Return value ───────────────────────────────────────────────────────────────────
 
   return {
-    activeDragData,
-    activeId,
-    activeNudge,
-    addCardSearch,
-    autoRefresh,
-    canRedo,
-    canUndo,
-    clusters,
-    clustersError,
-    collisionDetection,
-    currentCardTypes,
+    // State
     dashboard,
-    dashboards,
-    dismissNudge,
-    getStatValue,
-    handleAddCards,
-    handleAddRecommendedCard,
-    handleAddSingleCard,
-    handleApplyTemplate,
-    handleCardConfigured,
-    handleCloseConfigureCard,
-    handleCloseCustomizer,
-    handleCloseWidgetExport,
-    handleConfirmDeploy,
-    handleConfigureCard,
-    handleCreateCardFromAI,
-    handleCreateDashboard,
-    handleDragCancel,
-    handleDragEnd,
-    handleDragOver,
-    handleDragStart,
-    handleExportDashboard,
-    handleGridKeyDown,
-    handleHeightChange,
-    handleInsertAfter,
-    handleInsertBefore,
-    handleNudgeAction,
-    handleOpenDashboardCatalog,
-    handleRegisterExpandTrigger,
-    handleRemoveCard,
-    handleRunHealthCheck,
-    handleSetPendingDeploy,
-    handleWidthChange,
-    isAddCardModalOpen,
-    isClustersLoading,
-    isConfigureCardOpen,
-    isCustomized,
-    isDragging,
-    isFetching,
     isLoading,
-    isRefreshing,
-    isWidgetExportOpen,
-    lastUpdated,
     localCards,
-    navigate,
-    openAddCardModal,
-    openMissionSidebar,
-    pendingDeploy,
-    redo,
-    refetch,
-    registerCardRef,
-    reset,
+    activeId,
+    activeDragData,
+    isDragging,
+    isRefreshing,
+    isFetching,
+    isClustersLoading,
+    clustersError,
+    lastUpdated,
     selectedCard,
-    sensors,
-    setAutoRefresh,
-    showDragHint,
+    isConfigureCardOpen,
+    autoRefresh,
+    canUndo,
+    canRedo,
+    pendingDeploy,
+    isWidgetExportOpen,
+    // Modal state
+    isAddCardModalOpen,
     studioInitialSection,
     studioWidgetCardType,
-    triggerRefresh,
+    // Nudge state
+    activeNudge,
+    showDragHint,
+    // Actions
+    setAutoRefresh,
+    handleAddCards,
+    handleRemoveCard,
+    handleUpdateCardWidth,
+    handleUpdateCardHeight,
+    handleConfigureCard,
+    handleAddRecommendedCard,
+    handleAddCardFromAI,
+    handleApplyTemplate,
+    handleAddSingleCard,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    handleOpenDashboardCatalog,
+    handleNudgeAction,
+    dismissNudge,
+    handleExportDashboard,
+    handleOpenConfigureCard,
+    openConfigureCard,
+    closeConfigureCard,
+    openAddCardModal,
+    closeAddCardModal,
+    openWidgetExport,
+    closeWidgetExport,
+    reset,
     undo,
+    redo,
+    getStatValue,
+    isCardOnDashboard,
+    handleGridKeyDown,
+    registerCardRef,
+    handleRegisterExpandTrigger,
+    sensors,
+    triggerRefresh,
+    handleConfirmDeploy,
+    setPendingDeploy,
+    insertAtIndex,
+    setInsertAtIndex,
+    prefetchCardChunks,
+    openMissionSidebar,
+    startMission,
   }
 }
-
-export type DashboardState = ReturnType<typeof useDashboardState>
 
 // Re-export types from sub-modules so consumers can import them from here if needed
 export type { ClusterStats, StatValueDeps } from './dashboardState.selectors'

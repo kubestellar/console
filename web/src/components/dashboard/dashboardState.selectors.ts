@@ -13,7 +13,7 @@ import type { Card } from './dashboardUtils'
 import { isClusterHealthy } from '../clusters/utils'
 import { ROUTES } from '../../config/routes'
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────────────
 
 export interface ClusterStats {
   clusterCount: number
@@ -32,7 +32,7 @@ export interface StatValueDeps extends ClusterStats {
   navigate: NavigateFunction
 }
 
-// ─── Selectors ───────────────────────────────────────────────────────────────
+// ─── Selectors ────────────────────────────────────────────────────────────────────────────
 
 /**
  * Filter the full cluster list down to only the globally-selected clusters.
