@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { stellarApi } from '../../services/stellar'
 import type { StellarAuditEntry } from '../../types/stellar'
 import { cn } from '../../lib/cn'
+import { AuditExportButton } from './AuditExportButton'
+import { AuditFilterChips } from './AuditFilterChips'
+import { AuditLogRow } from './AuditLogRow'
 
 const AUDIT_FETCH_LIMIT = 100
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
@@ -283,14 +286,11 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
               {t('stellar.auditLog.description')}
             </p>
           </div>
-          <button
-            type="button"
+          <AuditExportButton
             onClick={() => exportEntries(sortedEntries, csvColumns, getResultLabel)}
             disabled={sortedEntries.length === 0}
-            className="inline-flex items-center justify-center rounded-md border border-[var(--s-border)] bg-[var(--s-surface-2)] px-3 py-2 text-sm font-medium text-[var(--s-text)] transition hover:border-[var(--s-border-focus)] hover:text-[var(--s-text)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t('stellar.auditLog.exportCsv')}
-          </button>
+            label={t('stellar.auditLog.exportCsv')}
+          />
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
@@ -324,23 +324,11 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
 
           <div className="flex flex-col gap-2 text-xs text-[var(--s-text-muted)]">
             <span className="font-mono uppercase tracking-[0.12em]">{t('stellar.auditLog.filters.dateRange')}</span>
-            <div className="flex flex-wrap gap-2">
-              {dateRangeOptions.map(option => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setSelectedRange(option.value)}
-                  className={cn(
-                    'rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] transition',
-                    selectedRange === option.value
-                      ? 'border-[var(--s-border-focus)] bg-[var(--s-brand-dim)] text-[var(--s-brand)]'
-                      : 'border-[var(--s-border)] bg-[var(--s-surface-2)] text-[var(--s-text-muted)] hover:text-[var(--s-text)]',
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <AuditFilterChips
+              options={dateRangeOptions}
+              selectedRange={selectedRange}
+              onSelect={(value) => setSelectedRange(value as DateRangeValue)}
+            />
           </div>
         </div>
       </div>
@@ -390,34 +378,18 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
               {sortedEntries.map(entry => {
                 const result = deriveAuditResult(entry)
                 return (
-                  <tr
+                  <AuditLogRow
                     key={entry.id}
-                    className={cn('align-top odd:bg-[var(--s-surface)] even:bg-[var(--s-surface-2)]/60', getResultRowClassName(result))}
-                  >
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 font-mono text-xs text-[var(--s-text-muted)]">
-                      <span className="whitespace-nowrap">{formatTimestamp(entry.ts)}</span>
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 text-sm text-[var(--s-text)]">
-                      <span className="line-clamp-1 break-all">{entry.userId}</span>
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 font-mono text-xs text-[var(--s-text)]">
-                      {entry.action}
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 font-mono text-xs text-[var(--s-text-muted)]">
-                      <span className="line-clamp-2 break-all">{getResourceLabel(entry)}</span>
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3">
-                      <span className={cn('inline-flex rounded-full px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em]', getResultBadgeClassName(result))}>
-                        {getResultLabel(result)}
-                      </span>
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 text-sm text-[var(--s-text-muted)]">
-                      {entry.cluster || '—'}
-                    </td>
-                    <td className="border-b border-[var(--s-border)] px-4 py-3 text-sm text-[var(--s-text-muted)]">
-                      <span className="line-clamp-2">{entry.detail}</span>
-                    </td>
-                  </tr>
+                    timestamp={formatTimestamp(entry.ts)}
+                    userId={entry.userId}
+                    action={entry.action}
+                    resourceLabel={getResourceLabel(entry)}
+                    resultLabel={getResultLabel(result)}
+                    resultBadgeClassName={getResultBadgeClassName(result)}
+                    resultRowClassName={getResultRowClassName(result)}
+                    cluster={entry.cluster || '—'}
+                    detail={entry.detail}
+                  />
                 )
               })}
             </tbody>
