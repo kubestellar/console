@@ -1,6 +1,5 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect, useRef } from 'react'
-import { Box, Server, Crown, RotateCcw, Trophy, Play, Loader2 } from 'lucide-react'
+import { Box, Server, RotateCcw, Loader2 } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState, useCardDemoState } from './CardDataContext'
@@ -8,394 +7,25 @@ import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { safeGet, safeGetJSON, safeSetJSON, safeRemove } from '../../lib/safeLocalStorage'
 import { Select } from '../ui/Select'
+import { CheckerBoard } from './checkers/CheckerBoard'
+import { ResultSummary } from './checkers/ResultSummary'
+import {
+  type Board,
+  type Difficulty,
+  type Move,
+  type Player,
+  type Position,
+  DIFFICULTY_DEPTH,
+  applyMove,
+  countPieces,
+  createInitialBoard,
+  getAllMoves,
+  getChainJumps,
+  minimax,
+} from './checkers/gameLogic'
 
 /** localStorage key for Checkers win/loss score tracking */
 const SCORE_STORAGE_KEY = 'checkers-score'
-
-// Board is 8x8, pieces only on dark squares
-const BOARD_SIZE = 8
-
-type Player = 'pods' | 'nodes'
-type PieceType = 'normal' | 'king'
-
-interface Piece {
-  player: Player
-  type: PieceType
-}
-
-interface Position {
-  row: number
-  col: number
-}
-
-interface Move {
-  from: Position
-  to: Position
-  captures: Position[]
-  isJump: boolean
-}
-
-type Board = (Piece | null)[][]
-
-type Difficulty = 'easy' | 'medium' | 'hard'
-
-const DIFFICULTY_DEPTH: Record<Difficulty, number> = {
-  easy: 1,
-  medium: 2,
-  hard: 3 }
-
-// Pirate jokes for the AI to say while waiting
-const PIRATE_TAUNTS = [
-  "Arrr, take yer time, landlubber! Me ship ain't goin' nowhere!",
-  "Shiver me timbers! Is that the best move ye got?",
-  "Yo ho ho! I've seen barnacles make faster moves!",
-  "Blimey! Even me parrot could play better than this!",
-  "Avast ye scallywag! Me treasure chest is getting dusty waitin'!",
-  "Arrr, while ye think, I'll be countin' me doubloons!",
-  "Walk the plank if ye can't decide soon!",
-  "Ahoy! The seven seas will dry up before ye move!",
-  "Ye fight like a dairy farmer! ...Oh wait, wrong game.",
-  "Me wooden leg is fallin' asleep waitin' for ye!",
-  "Arrr, I've pillaged whole villages faster than this!",
-  "By Davy Jones' locker, make yer move already!",
-  "Yo ho! Is the rum gone? I need somethin' to pass the time!",
-  "Arrr, even a kraken shows more hustle!",
-  "Shiver me circuits! Me nodes are gettin' restless!",
-]
-
-// Combat taunts when AI captures a piece
-const CAPTURE_TAUNTS = [
-  "Arrr! Another one walks the plank!",
-  "Yo ho ho! That pod be swimmin' with the fishes now!",
-  "Shiver me timbers! Got ye, ye scurvy pod!",
-  "Avast! Down to Davy Jones with ye!",
-  "Arrr! Me cannons sink another one!",
-  "Blimey! That'll teach ye to cross Captain Node!",
-]
-
-// Pre-game taunts before the player starts
-const PRE_GAME_TAUNTS = [
-  "Arrr! Ye dare challenge Captain Node? Step right up!",
-  "Ahoy! Another scallywag approaches me checkerboard!",
-  "Yo ho ho! Fresh meat! Press that button if ye dare!",
-  "Shiver me timbers! Ye think ye can outwit a pirate?",
-  "Avast! Welcome aboard, ye bilge rat! Make yer move!",
-]
-
-const PRE_GAME_TAUNT_DELAY_MS = 2_000
-const TAUNT_DISPLAY_MS = 3_000
-const INITIAL_TAUNT_DELAY_MS = 3_000
-const TAUNT_CYCLE_INTERVAL_MS = 8_000
-const AI_MOVE_DELAY_MS = 1_000
-const COMBAT_ANIMATION_MS = 500
-
-// Initialize board with starting positions
-function createInitialBoard(): Board {
-  const board: Board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null))
-
-  // Nodes (AI) on top 3 rows
-  for (let row = 0; row < 3; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      if ((row + col) % 2 === 1) {
-        board[row][col] = { player: 'nodes', type: 'normal' }
-      }
-    }
-  }
-
-  // Pods (player) on bottom 3 rows
-  for (let row = 5; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      if ((row + col) % 2 === 1) {
-        board[row][col] = { player: 'pods', type: 'normal' }
-      }
-    }
-  }
-
-  return board
-}
-
-// Deep clone board
-function cloneBoard(board: Board): Board {
-  return board.map(row => row.map(cell => cell ? { ...cell } : null))
-}
-
-// Get all valid moves for a piece
-function getValidMoves(board: Board, pos: Position, mustJump: boolean = false): Move[] {
-  const piece = board[pos.row][pos.col]
-  if (!piece) return []
-
-  const moves: Move[] = []
-  const directions: number[] = []
-
-  // Normal pieces move forward only, kings move both ways
-  if (piece.type === 'king') {
-    directions.push(-1, 1)
-  } else {
-    directions.push(piece.player === 'pods' ? -1 : 1)
-  }
-
-  // Check jumps first (captures)
-  for (const dRow of directions) {
-    for (const dCol of [-1, 1]) {
-      const jumpRow = pos.row + dRow * 2
-      const jumpCol = pos.col + dCol * 2
-      const midRow = pos.row + dRow
-      const midCol = pos.col + dCol
-
-      if (jumpRow >= 0 && jumpRow < BOARD_SIZE && jumpCol >= 0 && jumpCol < BOARD_SIZE) {
-        const midPiece = board[midRow][midCol]
-        const destPiece = board[jumpRow][jumpCol]
-
-        if (midPiece && midPiece.player !== piece.player && !destPiece) {
-          moves.push({
-            from: pos,
-            to: { row: jumpRow, col: jumpCol },
-            captures: [{ row: midRow, col: midCol }],
-            isJump: true })
-        }
-      }
-    }
-  }
-
-  // If there are jumps or mustJump is set, only return jumps
-  if (moves.length > 0 || mustJump) {
-    return moves
-  }
-
-  // Simple moves (no capture)
-  for (const dRow of directions) {
-    for (const dCol of [-1, 1]) {
-      const newRow = pos.row + dRow
-      const newCol = pos.col + dCol
-
-      if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE) {
-        if (!board[newRow][newCol]) {
-          moves.push({
-            from: pos,
-            to: { row: newRow, col: newCol },
-            captures: [],
-            isJump: false })
-        }
-      }
-    }
-  }
-
-  return moves
-}
-
-// Get all valid moves for a player
-function getAllMoves(board: Board, player: Player): Move[] {
-  const allMoves: Move[] = []
-  let hasJump = false
-
-  // First pass: find all moves and check if any jumps exist
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      const piece = board[row][col]
-      if (piece && piece.player === player) {
-        const moves = getValidMoves(board, { row, col })
-        for (const move of moves) {
-          if (move.isJump) hasJump = true
-          allMoves.push(move)
-        }
-      }
-    }
-  }
-
-  // If any jump exists, filter to only jumps (mandatory capture)
-  if (hasJump) {
-    return allMoves.filter(m => m.isJump)
-  }
-
-  return allMoves
-}
-
-// Apply a move to the board
-function applyMove(board: Board, move: Move): Board {
-  const newBoard = cloneBoard(board)
-  const piece = newBoard[move.from.row][move.from.col]!
-
-  // Move piece
-  newBoard[move.to.row][move.to.col] = piece
-  newBoard[move.from.row][move.from.col] = null
-
-  // Remove captured pieces
-  for (const cap of move.captures) {
-    newBoard[cap.row][cap.col] = null
-  }
-
-  // Promote to king
-  if (piece.type === 'normal') {
-    if ((piece.player === 'pods' && move.to.row === 0) ||
-        (piece.player === 'nodes' && move.to.row === BOARD_SIZE - 1)) {
-      newBoard[move.to.row][move.to.col] = { ...piece, type: 'king' }
-    }
-  }
-
-  return newBoard
-}
-
-// Check for additional jumps after a capture
-function getChainJumps(board: Board, pos: Position): Move[] {
-  return getValidMoves(board, pos, true)
-}
-
-// Count pieces for evaluation
-function countPieces(board: Board): { pods: number; nodes: number; podKings: number; nodeKings: number } {
-  let pods = 0, nodes = 0, podKings = 0, nodeKings = 0
-
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      const piece = board[row][col]
-      if (piece) {
-        if (piece.player === 'pods') {
-          pods++
-          if (piece.type === 'king') podKings++
-        } else {
-          nodes++
-          if (piece.type === 'king') nodeKings++
-        }
-      }
-    }
-  }
-
-  return { pods, nodes, podKings, nodeKings }
-}
-
-// Evaluate board position (positive = good for nodes/AI)
-function evaluateBoard(board: Board): number {
-  const counts = countPieces(board)
-
-  // Check for game over
-  const podMoves = getAllMoves(board, 'pods')
-  const nodeMoves = getAllMoves(board, 'nodes')
-
-  if (counts.pods === 0 || podMoves.length === 0) return 1000 // AI wins
-  if (counts.nodes === 0 || nodeMoves.length === 0) return -1000 // Player wins
-
-  // Material value (kings worth 1.5x)
-  const nodeValue = counts.nodes + counts.nodeKings * 0.5
-  const podValue = counts.pods + counts.podKings * 0.5
-
-  // Position bonus (center control, advancement)
-  let positionScore = 0
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      const piece = board[row][col]
-      if (piece) {
-        const centerBonus = (3.5 - Math.abs(col - 3.5)) * 0.1
-        if (piece.player === 'nodes') {
-          positionScore += row * 0.1 + centerBonus // Advance bonus
-        } else {
-          positionScore -= (7 - row) * 0.1 + centerBonus
-        }
-      }
-    }
-  }
-
-  return (nodeValue - podValue) * 10 + positionScore
-}
-
-// Minimax with alpha-beta pruning
-function minimax(
-  board: Board,
-  depth: number,
-  alpha: number,
-  beta: number,
-  maximizing: boolean
-): { score: number; move: Move | null } {
-  const player = maximizing ? 'nodes' : 'pods'
-  const moves = getAllMoves(board, player)
-
-  // Terminal conditions
-  if (depth === 0 || moves.length === 0) {
-    return { score: evaluateBoard(board), move: null }
-  }
-
-  let bestMove: Move | null = null
-
-  if (maximizing) {
-    let maxScore = -Infinity
-    for (const move of moves) {
-      let newBoard = applyMove(board, move)
-
-      // Handle chain jumps
-      if (move.isJump) {
-        let chainMoves = getChainJumps(newBoard, move.to)
-        while (chainMoves.length > 0) {
-          // For AI, pick the best chain jump
-          const chainMove = chainMoves[0]
-          newBoard = applyMove(newBoard, chainMove)
-          chainMoves = getChainJumps(newBoard, chainMove.to)
-        }
-      }
-
-      const result = minimax(newBoard, depth - 1, alpha, beta, false)
-      if (result.score > maxScore) {
-        maxScore = result.score
-        bestMove = move
-      }
-      alpha = Math.max(alpha, result.score)
-      if (beta <= alpha) break
-    }
-    return { score: maxScore, move: bestMove }
-  } else {
-    let minScore = Infinity
-    for (const move of moves) {
-      let newBoard = applyMove(board, move)
-
-      if (move.isJump) {
-        let chainMoves = getChainJumps(newBoard, move.to)
-        while (chainMoves.length > 0) {
-          const chainMove = chainMoves[0]
-          newBoard = applyMove(newBoard, chainMove)
-          chainMoves = getChainJumps(newBoard, chainMove.to)
-        }
-      }
-
-      const result = minimax(newBoard, depth - 1, alpha, beta, true)
-      if (result.score < minScore) {
-        minScore = result.score
-        bestMove = move
-      }
-      beta = Math.min(beta, result.score)
-      if (beta <= alpha) break
-    }
-    return { score: minScore, move: bestMove }
-  }
-}
-
-// Piece component
-function PieceComponent({
-  piece,
-  isSelected,
-  isSmall }: {
-  piece: Piece
-  isSelected: boolean
-  isSmall: boolean
-}) {
-  const isPod = piece.player === 'pods'
-  const isKing = piece.type === 'king'
-
-  return (
-    <div
-      className={`
-        ${isSmall ? 'w-6 h-6' : 'w-10 h-10'} rounded-full flex items-center justify-center
-        ${isPod ? 'bg-blue-500' : 'bg-orange-500'}
-        ${isSelected ? 'ring-2 ring-yellow-400 ring-offset-1 ring-offset-background' : ''}
-        shadow-md transition-all
-      `}
-    >
-      {isKing ? (
-        <Crown className={`${isSmall ? 'w-3 h-3' : 'w-5 h-5'} text-yellow-300`} />
-      ) : isPod ? (
-        <Box className={`${isSmall ? 'w-3 h-3' : 'w-5 h-5'} text-blue-100`} />
-      ) : (
-        <Server className={`${isSmall ? 'w-3 h-3' : 'w-5 h-5'} text-orange-100`} />
-      )}
-    </div>
-  )
-}
 
 // Storage key for game state
 const STORAGE_KEY = 'checkers-game-state'
@@ -737,7 +367,6 @@ export function Checkers(_props: CardComponentProps) {
           </button>
         </div>
       </div>
-
       {/* Status */}
       <div className="text-center text-xs mb-2">
         {isThinking ? (
@@ -758,55 +387,16 @@ export function Checkers(_props: CardComponentProps) {
         )}
       </div>
 
-      {/* Board */}
-      <div className="flex-1 flex items-center justify-center min-h-0">
-        <div className="inline-block border border-border rounded overflow-hidden">
-          {board.map((row, rowIdx) => (
-            <div key={rowIdx} className="flex shrink-0">
-              {row.map((piece, colIdx) => {
-                const isDark = (rowIdx + colIdx) % 2 === 1
-                const isSelected = selectedPos?.row === rowIdx && selectedPos?.col === colIdx
-                const isValidMove = validMoves.some(m => m.to.row === rowIdx && m.to.col === colIdx)
-                const isCapture = validMoves.some(m =>
-                  m.to.row === rowIdx && m.to.col === colIdx && m.isJump
-                )
-                const isCombatCell = showCombat && combatCell?.row === rowIdx && combatCell?.col === colIdx
-
-                return (
-                  <div
-                    key={colIdx}
-                    onClick={() => handleCellClick(rowIdx, colIdx)}
-                    className={`
-                      ${cellSize} shrink-0 flex items-center justify-center cursor-pointer transition-colors relative
-                      ${isDark ? 'bg-green-800' : 'bg-green-200'}
-                      ${isValidMove && !isCapture ? 'ring-2 ring-inset ring-green-400' : ''}
-                      ${isCapture ? 'ring-2 ring-inset ring-red-400 bg-red-500/30' : ''}
-                      ${isSelected ? 'bg-yellow-500/30' : ''}
-                      ${isCombatCell ? 'animate-pulse bg-red-600' : ''}
-                    `}>
-                    {/* Combat explosion effect */}
-                    {isCombatCell && (
-                      <div className="absolute inset-0 flex items-center justify-center z-10">
-                        <span className="text-2xl animate-bounce">💥</span>
-                      </div>
-                    )}
-                    {piece && (
-                      <PieceComponent
-                        piece={piece}
-                        isSelected={isSelected}
-                        isSmall={isSmall}
-                      />
-                    )}
-                    {isValidMove && !piece && (
-                      <div className={`${isSmall ? 'w-2 h-2' : 'w-3 h-3'} rounded-full ${isCapture ? 'bg-red-400' : 'bg-green-400'} opacity-60`} />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
+      <CheckerBoard
+        board={board}
+        selectedPos={selectedPos}
+        validMoves={validMoves}
+        showCombat={showCombat}
+        combatCell={combatCell}
+        isSmall={isSmall}
+        cellSize={cellSize}
+        handleCellClick={handleCellClick}
+      />
 
       {/* Pirate Taunt — below board, no overlap */}
       {pirateTaunt && (
@@ -822,27 +412,12 @@ export function Checkers(_props: CardComponentProps) {
         </div>
       )}
 
-      {/* Game over overlay */}
-      {gameOver && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-          <div className="text-center p-6 bg-card rounded-xl border border-border shadow-lg">
-            <Trophy className={`w-12 h-12 mx-auto mb-3 ${gameOver === 'pods' ? 'text-blue-400' : 'text-orange-400'}`} />
-            <h3 className="text-xl font-bold text-foreground mb-2">
-              {gameOver === 'pods' ? t('checkers.youWon') : t('checkers.aiWinsExclaim')}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {moveCount} {t('checkers.movesPlayed')}
-            </p>
-            <button
-              onClick={newGame}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg mx-auto hover:bg-purple-500/30"
-            >
-              <Play className="w-4 h-4" />
-              {t('checkers.playAgain')}
-            </button>
-          </div>
-        </div>
-      )}
+      <ResultSummary
+        t={t}
+        gameOver={gameOver}
+        moveCount={moveCount}
+        newGame={newGame}
+      />
     </div>
   )
 }

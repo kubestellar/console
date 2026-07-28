@@ -1,19 +1,21 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useMemo, useState, useEffect, useCallback, memo } from 'react'
-import { Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, ChevronRight } from 'lucide-react'
+import { TrendingUp, ExternalLink, ChevronDown, Sparkles, Settings2 } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
-import { CloudProviderIcon, type CloudProvider as IconProvider } from '../ui/CloudProviderIcon'
+import { CardSearchInput, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { type CloudProvider as IconProvider } from '../ui/CloudProviderIcon'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { safeGetJSON, safeRemoveItem, safeSetJSON } from '../../lib/utils/localStorage'
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
+import { FilterBar } from './clusterCosts/FilterBar'
+import { CostChart } from './clusterCosts/CostChart'
+import { BreakdownTable } from './clusterCosts/BreakdownTable'
 
 type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
 
@@ -383,49 +385,23 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">
-            {t('cards:clusterCosts.clusterCount', { count: totalItems })}
-          </span>
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClustersForFilter.length}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <CardControlsRow
-            clusterFilter={{
-              availableClusters: availableClustersForFilter,
-              selectedClusters: localClusterFilter,
-              onToggle: toggleClusterFilter,
-              onClear: clearClusterFilter,
-              isOpen: showClusterFilter,
-              setIsOpen: setShowClusterFilter,
-              containerRef: clusterFilterRef,
-              minClusters: 1 }}
-            cardControls={{
-              limit: itemsPerPage,
-              onLimitChange: setItemsPerPage,
-              sortBy: sorting.sortBy,
-              sortOptions: sortOptions,
-              onSortChange: (v) => sorting.setSortBy(v as SortByOption),
-              sortDirection: sorting.sortDirection,
-              onSortDirectionChange: sorting.setSortDirection }}
-          />
-          {/* Info button */}
-          <button
-            onClick={() => setShowRatesInfo(!showRatesInfo)}
-            className={`p-1 rounded transition-colors ${showRatesInfo ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-muted-foreground'}`}
-            title={t('cards:clusterCosts.viewPricingRates')}
-          >
-            <Info className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+      <FilterBar
+        t={t}
+        totalItems={totalItems}
+        localClusterFilter={localClusterFilter}
+        availableClustersForFilter={availableClustersForFilter}
+        toggleClusterFilter={toggleClusterFilter}
+        clearClusterFilter={clearClusterFilter}
+        showClusterFilter={showClusterFilter}
+        setShowClusterFilter={setShowClusterFilter}
+        clusterFilterRef={clusterFilterRef}
+        itemsPerPage={itemsPerPage}
+        setItemsPerPage={setItemsPerPage}
+        sorting={sorting}
+        sortOptions={sortOptions}
+        showRatesInfo={showRatesInfo}
+        setShowRatesInfo={setShowRatesInfo}
+      />
 
       {/* Pricing Mode and Provider Selector */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-3">
@@ -664,125 +640,26 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
         className="mb-3"
       />
 
-      {/* Total costs */}
-      <div className="p-4 rounded-lg bg-linear-to-r from-green-500/20 to-green-500/20 border border-green-500/30 mb-4">
-        <div className="flex flex-wrap items-center justify-between gap-y-2">
-          <div>
-            <p className="text-xs text-green-400 mb-1">{t('cards:clusterCosts.estimatedMonthly')}</p>
-            <p className="text-2xl font-bold text-foreground">${totalMonthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground mb-1">{t('cards:clusterCosts.daily')}</p>
-            <p className="text-lg font-medium text-foreground">${totalDaily.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-          </div>
-        </div>
-      </div>
+      <CostChart
+        t={t}
+        totalMonthly={totalMonthly}
+        totalDaily={totalDaily}
+      />
 
-      {/* Per-cluster breakdown */}
-      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
-        {clusterCosts.map((cluster) => {
-          const percent = totalMonthly > 0 ? (cluster.monthly / totalMonthly) * 100 : 0
-          const providerIcon = PROVIDER_ICONS[cluster.provider]
-          const providerPricing = CLOUD_PRICING[cluster.provider]
-          const isOverridden = clusterProviderOverrides[cluster.name] !== undefined
-          return (
-            <div
-              key={cluster.name}
-              onClick={() => drillToCost(cluster.name, {
-                cpus: cluster.cpus,
-                memory: cluster.memory,
-                gpus: cluster.gpus,
-                hourly: cluster.hourly,
-                daily: cluster.daily,
-                monthly: cluster.monthly,
-                provider: cluster.provider })}
-              className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors group cursor-pointer"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {/* 1. Server icon */}
-                  <Server className="w-4 h-4 text-muted-foreground shrink-0" />
-                  {/* 2. Vendor logo icon */}
-                  <div className="shrink-0" title={providerPricing.name}>
-                    <CloudProviderIcon provider={mapProviderToIconProvider(cluster.provider)} size={16} />
-                  </div>
-                  {/* 3. Text badge (clickable to change) - styled as obvious dropdown button */}
-                  <button
-                    className={`group/badge px-1.5 py-0.5 text-[9px] font-medium rounded shrink-0 flex items-center gap-0.5 ${providerIcon.bg} ${providerIcon.color} ${
-                      isOverridden
-                        ? 'ring-1 ring-purple-500/50'
-                        : ''
-                    } hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-xs hover:shadow-sm`}
-                    title={`${providerPricing.name}${isOverridden ? ` (${t('cards:clusterCosts.manuallySet')})` : pricingMode === 'per-cluster' ? ` (${t('cards:clusterCosts.autoDetected')})` : ''}\n${t('cards:clusterCosts.clickToChange')}`}
-                    aria-label={t('cards:clusterCosts.changeProviderPricing', { cluster: cluster.name, provider: providerPricing.name })}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      // Cycle through providers
-                      const providers: CloudProvider[] = ['estimate', 'aws', 'gcp', 'azure', 'oci', 'openshift']
-                      const currentIdx = providers.indexOf(cluster.provider)
-                      const nextProvider = providers[(currentIdx + 1) % providers.length]
-                      setClusterProviderOverrides(prev => ({
-                        ...prev,
-                        [cluster.name]: nextProvider
-                      }))
-                    }}
-                    onContextMenu={(e) => {
-                      e.preventDefault()
-                      // Right-click to clear override and use auto-detection
-                      if (clusterProviderOverrides[cluster.name]) {
-                        setClusterProviderOverrides(prev => {
-                          const next = { ...prev }
-                          delete next[cluster.name]
-                          return next
-                        })
-                      }
-                    }}
-                  >
-                    {providerIcon.short}
-                    <ChevronDown className="w-2.5 h-2.5 opacity-60 group-hover/badge:opacity-100 transition-opacity" />
-                  </button>
-                  {/* 4. Cluster name */}
-                  <span className="text-sm font-medium text-foreground truncate min-w-0">{cluster.name}</span>
-                  {/* 5. Health dot */}
-                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${cluster.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-medium text-green-400 shrink-0">
-                    ${cluster.monthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                </div>
-              </div>
-
-              {/* Cost bar */}
-              <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
-                <div
-                  className="h-full bg-linear-to-r from-green-500 to-green-500 rounded-full transition-all"
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-
-              {/* Resource breakdown */}
-              <div className="flex gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Cpu className="w-3 h-3" />
-                  {t('cards:clusterCosts.cpuCount', { count: cluster.cpus })}
-                </span>
-                <span className="flex items-center gap-1">
-                  <HardDrive className="w-3 h-3" />
-                  {t('cards:clusterCosts.memoryGB', { value: cluster.memory })}
-                </span>
-                {cluster.gpus > 0 && (
-                  <span className="flex items-center gap-1 text-purple-400">
-                    <Cpu className="w-3 h-3" />
-                    {t('cards:clusterCosts.gpuCount', { count: cluster.gpus })}
-                  </span>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+      <BreakdownTable
+        t={t}
+        clusterCosts={clusterCosts}
+        totalMonthly={totalMonthly}
+        containerRef={containerRef}
+        containerStyle={containerStyle}
+        drillToCost={drillToCost}
+        clusterProviderOverrides={clusterProviderOverrides}
+        setClusterProviderOverrides={setClusterProviderOverrides}
+        pricingMode={pricingMode}
+        mapProviderToIconProvider={mapProviderToIconProvider}
+        providerIcons={PROVIDER_ICONS}
+        cloudPricing={CLOUD_PRICING}
+      />
 
       {/* Pagination */}
       <CardPaginationFooter

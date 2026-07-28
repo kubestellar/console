@@ -1,17 +1,10 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect, useRef, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus, X, Save, Trash2, Activity, Sparkles,
-  CheckCircle, GripVertical, Eye, EyeOff,
+  CheckCircle2, AlertTriangle, CheckCircle, GripVertical, Eye, EyeOff,
   Maximize2, Minimize2,
-  Server, Database, Cpu, MemoryStick, HardDrive, Zap,
-  CheckCircle2, XCircle, AlertTriangle, BarChart3,
-  Layers, Box, Shield, Lock, Globe, Cloud, GitBranch,
-  Terminal, Code, Wifi, WifiOff, Clock, Users,
-  Gauge, TrendingUp, TrendingDown, ArrowUpRight, Flame,
-  HelpCircle,
-  type LucideIcon } from 'lucide-react'
+  Server } from 'lucide-react'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import {
@@ -25,227 +18,27 @@ import { InlineAIAssist } from './InlineAIAssist'
 import { STAT_BLOCK_SYSTEM_PROMPT, STAT_INLINE_ASSIST_PROMPT } from '../../lib/ai/prompts'
 import { useAIMode } from '../../hooks/useAIMode'
 import { StatusBadge } from '../ui/StatusBadge'
-
-// Demo/preview constants
-const DEMO_STAT_VALUE = 42 // Placeholder value shown in stat block previews
-const SAVE_MESSAGE_TIMEOUT_MS = 3000 // Duration to display save/error messages before auto-clearing
-const STAT_BLOCK_ID_PREFIX = 'stat-block'
-
-function createStatBlockId(): string {
-  const randomId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? crypto.randomUUID()
-    : `${Date.now()}-${String(Math.random()).replace('0.', '')}`
-
-  return `${STAT_BLOCK_ID_PREFIX}-${randomId}`
-}
-
-interface StatBlockFactoryModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onStatsCreated?: (type: string) => void
-  /** When true, renders content inline without BaseModal wrapper (used by Console Studio) */
-  embedded?: boolean
-}
-
-type Tab = 'builder' | 'ai' | 'manage'
-
-const AVAILABLE_COLORS: StatBlockColor[] = [
-  'purple', 'blue', 'green', 'yellow', 'orange', 'red', 'cyan', 'gray',
-]
-
-const POPULAR_ICONS = [
-  'Server', 'Database', 'Cpu', 'MemoryStick', 'HardDrive', 'Zap',
-  'CheckCircle2', 'XCircle', 'AlertTriangle', 'Activity', 'BarChart3',
-  'Layers', 'Box', 'Shield', 'Lock', 'Globe', 'Cloud', 'GitBranch',
-  'Terminal', 'Code', 'Wifi', 'WifiOff', 'Clock', 'Users',
-  'Gauge', 'TrendingUp', 'TrendingDown', 'ArrowUpRight', 'Flame',
-]
-
-const VALUE_FORMATS = [
-  { value: '', label: 'None' },
-  { value: 'number', label: 'Number (K/M)' },
-  { value: 'percent', label: 'Percent' },
-  { value: 'bytes', label: 'Bytes' },
-  { value: 'currency', label: 'Currency' },
-  { value: 'duration', label: 'Duration' },
-]
-
-interface BlockEditorItem {
-  id: string
-  label: string
-  icon: string
-  color: StatBlockColor
-  field: string
-  format: string
-  tooltip: string
-}
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  Server, Database, Cpu, MemoryStick, HardDrive, Zap,
-  CheckCircle2, XCircle, AlertTriangle, Activity, BarChart3,
-  Layers, Box, Shield, Lock, Globe, Cloud, GitBranch,
-  Terminal, Code, Wifi, WifiOff, Clock, Users,
-  Gauge, TrendingUp, TrendingDown, ArrowUpRight, Flame,
-  HelpCircle }
-
-function getIcon(name: string): LucideIcon {
-  return ICON_MAP[name] ?? HelpCircle
-}
-
-function createEmptyBlock(): BlockEditorItem {
-  return {
-    id: createStatBlockId(),
-    label: '',
-    icon: 'Activity',
-    color: 'purple',
-    field: '',
-    format: '',
-    tooltip: '' }
-}
-
-// ============================================================================
-// Smart Defaults — suggest icon and color based on label
-// ============================================================================
-
-interface SmartDefault {
-  icon: string
-  color: StatBlockColor
-}
-
-const SMART_DEFAULTS: { pattern: RegExp; defaults: SmartDefault }[] = [
-  { pattern: /^(healthy|running|active|up|online|success)$/i, defaults: { icon: 'CheckCircle2', color: 'green' } },
-  { pattern: /^(error|failed|down|offline|critical)$/i, defaults: { icon: 'XCircle', color: 'red' } },
-  { pattern: /^(warning|pending|degraded|issue|alert)$/i, defaults: { icon: 'AlertTriangle', color: 'yellow' } },
-  { pattern: /^(total|count|all|sum|instances?)$/i, defaults: { icon: 'Server', color: 'purple' } },
-  { pattern: /^cpu/i, defaults: { icon: 'Cpu', color: 'blue' } },
-  { pattern: /^mem/i, defaults: { icon: 'MemoryStick', color: 'cyan' } },
-  { pattern: /^(disk|storage)/i, defaults: { icon: 'HardDrive', color: 'orange' } },
-  { pattern: /^(network|traffic|bandwidth)/i, defaults: { icon: 'Wifi', color: 'blue' } },
-  { pattern: /^(latency|response|time)/i, defaults: { icon: 'Clock', color: 'yellow' } },
-  { pattern: /^(user|session)/i, defaults: { icon: 'Users', color: 'blue' } },
-  { pattern: /^(security|auth|permission)/i, defaults: { icon: 'Shield', color: 'red' } },
-  { pattern: /^(deploy|release|version)/i, defaults: { icon: 'GitBranch', color: 'purple' } },
-  { pattern: /^(node|cluster|server)/i, defaults: { icon: 'Server', color: 'blue' } },
-  { pattern: /^(pod|container)/i, defaults: { icon: 'Box', color: 'cyan' } },
-  { pattern: /^(namespace|scope)/i, defaults: { icon: 'Layers', color: 'blue' } },
-]
-
-function getSmartDefault(label: string): SmartDefault | null {
-  const trimmed = label.trim()
-  if (!trimmed) return null
-  for (const { pattern, defaults } of SMART_DEFAULTS) {
-    if (pattern.test(trimmed)) return defaults
-  }
-  return null
-}
-
-// ============================================================================
-// Inline AI assist result type
-// ============================================================================
-
-interface StatAssistResult {
-  title?: string
-  blocks?: {
-    label: string
-    icon: string
-    color: string
-    field: string
-    format?: string
-    tooltip?: string
-  }[]
-}
-
-function validateStatAssistResult(data: unknown): { valid: true; result: StatAssistResult } | { valid: false; error: string } {
-  const obj = data as Record<string, unknown>
-  if (!obj.blocks && !obj.title) return { valid: false, error: 'Response must include title or blocks' }
-  return { valid: true, result: obj as StatAssistResult }
-}
-
-// ============================================================================
-// Live preview of stat blocks matching the StatsRuntime look
-// ============================================================================
-
-function StatsPreview({ title, blocks }: { title: string; blocks: BlockEditorItem[] }) {
-  const visibleBlocks = blocks.filter(b => b.label.trim())
-  if (visibleBlocks.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-6 text-muted-foreground/40">
-        <Activity className="w-6 h-6 mr-2" />
-        <span className="text-sm">Add blocks to see preview</span>
-      </div>
-    )
-  }
-
-  const gridCols =
-    visibleBlocks.length <= 4 ? 'grid-cols-2 md:grid-cols-4' :
-    visibleBlocks.length <= 6 ? 'grid-cols-3 md:grid-cols-6' :
-    'grid-cols-4 lg:grid-cols-8'
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <Activity className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm font-medium text-muted-foreground">{title || 'Stats Overview'}</span>
-      </div>
-      <div className={`grid ${gridCols} gap-4`}>
-        {visibleBlocks.map(block => {
-          const IconComponent = getIcon(block.icon)
-          const colorClass = COLOR_CLASSES[block.color] || 'text-foreground'
-          return (
-            <div key={block.id} className="glass p-4 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <IconComponent className={`w-5 h-5 shrink-0 ${colorClass}`} />
-                <span className="text-sm text-muted-foreground truncate">{block.label}</span>
-              </div>
-              <div className="text-3xl font-bold text-foreground">{DEMO_STAT_VALUE}</div>
-              {block.field && (
-                <div className="text-xs text-muted-foreground">{block.field}</div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// AI generation result schema
-interface AiStatBlockResult {
-  title: string
-  type: string
-  blocks: {
-    id: string
-    label: string
-    icon: string
-    color: string
-    field: string
-    format: string
-    tooltip: string
-  }[]
-}
-
-const VALID_COLORS = new Set(AVAILABLE_COLORS)
-
-function validateStatBlockResult(
-  data: unknown,
-): { valid: true; result: AiStatBlockResult } | { valid: false; error: string } {
-  const obj = data as Record<string, unknown>
-  if (!obj.title || typeof obj.title !== 'string') {
-    return { valid: false, error: 'Missing or invalid "title"' }
-  }
-  if (!obj.blocks || !Array.isArray(obj.blocks) || obj.blocks.length === 0) {
-    return { valid: false, error: 'Missing or empty "blocks" array' }
-  }
-
-  // Auto-correct invalid colors to 'purple'
-  for (const block of obj.blocks as Record<string, unknown>[]) {
-    if (!block.color || !VALID_COLORS.has(block.color as StatBlockColor)) {
-      block.color = 'purple'
-    }
-  }
-
-  return { valid: true, result: obj as unknown as AiStatBlockResult }
-}
+import type {
+  AiStatBlockResult,
+  BlockEditorItem,
+  SmartDefault,
+  StatAssistResult,
+  StatBlockFactoryModalProps,
+  Tab,
+} from './statBlockFactoryModal/types'
+import {
+  AVAILABLE_COLORS,
+  POPULAR_ICONS,
+  SAVE_MESSAGE_TIMEOUT_MS,
+  VALUE_FORMATS,
+  createEmptyBlock,
+  createStatBlockId,
+  getIcon,
+  getSmartDefault,
+  validateStatAssistResult,
+  validateStatBlockResult,
+} from './statBlockFactoryModal/utils'
+import { StatsPreview } from './statBlockFactoryModal/StatsPreview'
 
 // ============================================================================
 // Main Component

@@ -1,7 +1,6 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { GripVertical, Trash2, AlertTriangle } from 'lucide-react'
+import { Trash2, AlertTriangle } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -16,9 +15,7 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   rectSortingStrategy } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { useTranslation } from 'react-i18next'
 import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
 import { useDashboards, Dashboard } from '../../hooks/useDashboards'
@@ -27,15 +24,10 @@ import { useClusters } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
-import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS } from '../cards/cardRegistry'
-import { useCardCollapse } from '../../lib/cards/cardHooks'
 import { safeGetJSON, safeSetJSON, safeRemoveItem } from '../../lib/utils/localStorage'
 import { ROUTES } from '../../config/routes'
 import { AddCardModal } from './AddCardModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
-import { CardRecommendations } from './CardRecommendations'
-import { MissionSuggestions } from './MissionSuggestions'
 import { TemplatesModal } from './TemplatesModal'
 import { FloatingDashboardActions } from './FloatingDashboardActions'
 import { POLL_INTERVAL_MS } from '../../lib/constants/network'
@@ -43,192 +35,15 @@ import { DashboardTemplate } from './templates'
 import { BaseModal } from '../../lib/modals'
 import { useModalState } from '../../lib/modals'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { type StatBlockValue } from '../ui/StatsOverview'
 import { getClusterHealthState, isClusterUnreachable } from '../clusters/utils'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
-import { DashboardHeader } from '../shared/DashboardHeader'
-import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 import { useDashboardUndoRedo } from '../../hooks/useUndoRedo'
 import { setAutoRefreshPaused } from '../../lib/cache'
-
-interface Card {
-  id: string
-  card_type: string
-  config: Record<string, unknown>
-  position: { x: number; y: number; w: number; h: number }
-  title?: string
-}
-
-/** Clamp small cards in the md–lg range (768–1023px) for readability */
-const NARROW_MIN = 768
-const NARROW_MAX = 1023
-
-/** Minimum card column span at narrow viewports */
-const MIN_NARROW_COLS = 6
-
-/**
- * Minimum pixel height contributed by ONE row of card span. Effective
- * min-height = posH × this constant, so the "Resize height" menu has a
- * visible effect on `auto-rows-min` grids (#8289, #8298). Mirrors the
- * legacy `auto-rows-[minmax(180px,auto)]` baseline (180px per row).
- */
-const EXPANDED_CARD_ROW_MIN_HEIGHT_PX = 180
-
-/** Default row span when a card has no persisted position.h */
-const DEFAULT_CARD_ROW_SPAN = 2
-
-// Sortable card component
-interface SortableCardProps {
-  card: Card
-  onConfigure: () => void
-  onRemove: () => void
-  onWidthChange: (newWidth: number) => void
-  onHeightChange: (newHeight: number) => void
-  isDragging?: boolean
-  isRefreshing?: boolean
-  onRefresh?: () => void
-  lastUpdated?: Date | null
-  onInsertBefore?: () => void
-  onInsertAfter?: () => void
-}
-
-function SortableCard({ card, onConfigure, onRemove, onWidthChange, onHeightChange, isDragging, isRefreshing, onRefresh, lastUpdated, onInsertBefore: _onInsertBefore, onInsertAfter }: SortableCardProps) {
-  const { t } = useTranslation()
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id })
-
-  // In the md–lg range (768–1023px), clamp small cards to min 6 cols
-  // so we get max 2 cards per row instead of cramped 3-up layout.
-  // Below 768px CSS already switches to a 1-column grid, so no clamping needed there.
-  const [isNarrowRange, setIsNarrowRange] = useState(() =>
-    typeof window !== 'undefined' &&
-    window.innerWidth >= NARROW_MIN &&
-    window.innerWidth <= NARROW_MAX
-  )
-  useEffect(() => {
-    const mq = window.matchMedia(`(min-width: ${NARROW_MIN}px) and (max-width: ${NARROW_MAX}px)`)
-    const handler = (e: MediaQueryListEvent) => setIsNarrowRange(e.matches)
-    if (mq.matches !== isNarrowRange) setIsNarrowRange(mq.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const effectiveW = isNarrowRange && (card.position?.w || 4) < MIN_NARROW_COLS ? MIN_NARROW_COLS : (card.position?.w || 4)
-  const posH = card.position?.h || DEFAULT_CARD_ROW_SPAN
-
-  // Read collapse state so the cell can drop its minimum height when the
-  // card is collapsed (#6072). Without this, the grid leaves dead space
-  // under collapsed cards because every cell is forced to the expanded
-  // baseline height.
-  const { isCollapsed } = useCardCollapse(card.id)
-  const effectiveRowSpan = isCollapsed ? 1 : posH
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    gridColumn: `span ${effectiveW}`,
-    gridRow: `span ${effectiveRowSpan}`,
-    // Scale min-height by posH so the "Resize height" menu actually changes
-    // the card's visual height on an auto-rows-min grid (#8289, #8298).
-    minHeight: isCollapsed ? undefined : `${posH * EXPANDED_CARD_ROW_MIN_HEIGHT_PX}px`,
-    opacity: isDragging ? 0.5 : 1 }
-
-  const CardComponent = CARD_COMPONENTS[card.card_type]
-
-  if (!CardComponent) {
-    return (
-      <div ref={setNodeRef} style={style} className="relative group/card">
-        {onInsertAfter && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
-            className="absolute top-1/2 -translate-y-1/2 right-2 z-20 opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
-            aria-label="Add card"
-            title="Add card here"
-          >
-            +
-          </button>
-        )}
-        <CardWrapper
-          cardId={card.id}
-          cardType={card.card_type}
-          title={formatCardTitle(card.card_type)}
-          onConfigure={onConfigure}
-          onRemove={onRemove}
-          onWidthChange={onWidthChange}
-          onHeightChange={onHeightChange}
-          cardWidth={effectiveW}
-          cardHeight={card.position?.h || 2}
-          isRefreshing={isRefreshing}
-          onRefresh={onRefresh}
-          lastUpdated={lastUpdated}
-        >
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            {t('drilldown.unknownViewType')}: {card.card_type}
-          </div>
-        </CardWrapper>
-      </div>
-    )
-  }
-
-  return (
-    <div ref={setNodeRef} style={style} className="relative group/card">
-      {onInsertAfter && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
-          className="absolute top-1/2 -translate-y-1/2 right-2 z-20 opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
-          aria-label="Add card"
-          title="Add card here"
-        >
-          +
-        </button>
-      )}
-      {/* Drag handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded cursor-grab active:cursor-grabbing opacity-0 hover:opacity-100 transition-opacity bg-secondary/80"
-      >
-        <GripVertical className="w-4 h-4 text-muted-foreground" />
-      </div>
-      <CardWrapper
-        cardId={card.id}
-        cardType={card.card_type}
-        title={card.title || formatCardTitle(card.card_type)}
-        onConfigure={onConfigure}
-        onRemove={onRemove}
-        onWidthChange={onWidthChange}
-        onHeightChange={onHeightChange}
-        cardWidth={effectiveW}
-        cardHeight={card.position?.h || 2}
-        isRefreshing={isRefreshing}
-        onRefresh={onRefresh}
-        lastUpdated={lastUpdated}
-      >
-        <CardComponent config={card.config ?? {}} />
-      </CardWrapper>
-    </div>
-  )
-}
-
-// Drag preview card
-function DragPreviewCard({ card }: { card: Card }) {
-  const CardComponent = CARD_COMPONENTS[card.card_type]
-
-  return (
-    <div
-      className="rounded-lg border border-purple-500 bg-card shadow-lg"
-      style={{ width: `${(card.position?.w || 4) * 80}px`, height: '200px' }}
-    >
-      <CardWrapper
-        cardId={card.id}
-        cardType={card.card_type}
-        title={card.title || formatCardTitle(card.card_type)}
-        cardWidth={card.position?.w || 4}
-      >
-        {CardComponent ? <CardComponent config={card.config ?? {}} /> : null}
-      </CardWrapper>
-    </div>
-  )
-}
+import { SortableDashboardCard, DragPreviewCard } from './customDashboard/SortableDashboardCard'
+import { CustomDashboardEmptyState } from './customDashboard/CustomDashboardEmptyState'
+import { CustomDashboardToolbar } from './customDashboard/CustomDashboardToolbar'
+import type { Card } from './customDashboard/types'
 
 export function CustomDashboard() {
   const { id } = useParams<{ id: string }>()
@@ -625,8 +440,7 @@ export function CustomDashboard() {
 
   return (
     <div className="pt-16">
-      {/* Header - name from sidebar item takes priority for consistency */}
-      <DashboardHeader
+      <CustomDashboardToolbar
         title={sidebarItem?.name || dashboard?.name || 'Custom Dashboard'}
         subtitle={sidebarItem?.description || (cards.length === 0
           ? 'Add cards to start monitoring your clusters'
@@ -637,8 +451,6 @@ export function CustomDashboard() {
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}
         lastUpdated={lastUpdated}
-        showTimestamp={false}
-        afterTitle={<DashboardHealthIndicator />}
         rightExtra={
           <button
             onClick={() => openDeleteConfirm()}
@@ -648,54 +460,20 @@ export function CustomDashboard() {
             <Trash2 className="w-4 h-4" />
           </button>
         }
-      />
-
-      {/* Stats Overview */}
-      <StatsOverview
-        dashboardType="dashboard"
         getStatValue={getStatValue}
-        hasData={deduplicatedClusters.length > 0}
-        isLoading={isClustersLoading && deduplicatedClusters.length === 0}
-        lastUpdated={lastUpdated}
-        collapsedStorageKey={`kubestellar-custom-${id}-stats-collapsed`}
-      />
-
-      {/* AI Recommendations - always shown to help users add relevant cards */}
-      <CardRecommendations
+        hasClusterData={deduplicatedClusters.length > 0}
+        isStatsLoading={isClustersLoading && deduplicatedClusters.length === 0}
+        statsCollapsedStorageKey={`kubestellar-custom-${id}-stats-collapsed`}
         currentCardTypes={currentCardTypes}
-        onAddCard={handleAddRecommendedCard}
+        onAddRecommendedCard={handleAddRecommendedCard}
       />
-
-      {/* Mission Suggestions */}
-      <MissionSuggestions />
 
       {/* Empty state */}
       {cards.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-            </svg>
-          </div>
-          <h2 className="text-lg font-medium text-foreground mb-2">{t('dashboard.empty.noCardsYet')}</h2>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            {t('dashboard.empty.emptyDescription')}
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => openAddCard()}
-              className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
-            >
-              {t('dashboard.empty.addCards')}
-            </button>
-            <button
-              onClick={() => openTemplates()}
-              className="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
-            >
-              {t('dashboard.empty.startWithTemplate')}
-            </button>
-          </div>
-        </div>
+        <CustomDashboardEmptyState
+          onAddCards={() => openAddCard()}
+          onOpenTemplates={() => openTemplates()}
+        />
       ) : (
         /* Card grid with drag and drop */
         <DndContext
@@ -707,7 +485,7 @@ export function CustomDashboard() {
           <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-2 auto-rows-min grid-flow-dense">
               {cards.map((card, index) => (
-                <SortableCard
+                 <SortableDashboardCard
                   key={card.id}
                   card={card}
                   onConfigure={() => handleConfigureCard(card)}

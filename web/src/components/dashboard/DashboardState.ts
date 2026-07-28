@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -14,7 +13,7 @@ import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useTranslation } from 'react-i18next'
 import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
 import { safeRevokeObjectURL } from '../../lib/download'
-import { emitCardAdded, emitCardRemoved, emitCardDragged, emitCardConfigured } from '../../lib/analytics'
+import { emitCardDragged } from '../../lib/analytics'
 import { useDashboards } from '../../hooks/useDashboards'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardHistory } from '../../hooks/useCardHistory'
@@ -22,28 +21,26 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useDashboardContext } from '../../hooks/useDashboardContext'
 import { useToast } from '../ui/Toast'
 import { prefetchCardChunks } from '../cards/cardRegistry'
-import { ROUTES } from '../../config/routes'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { STORAGE_KEY_DASHBOARD_AUTO_REFRESH } from '../../lib/constants'
 import { saveDashboardCardsToStorage } from '../../lib/dashboards/dashboardCardStorage'
 import { useMissions } from '../../hooks/useMissions'
 import type { Card, DashboardData } from './dashboardUtils'
-import { isLocalOnlyCard, mapVisualizationToCardType, getDefaultCardSize, getDemoCards } from './dashboardUtils'
+import { isLocalOnlyCard, getDefaultCardSize, getDemoCards } from './dashboardUtils'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { useDashboardUndoRedo } from '../../hooks/useUndoRedo'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useContextualNudges } from '../../hooks/useContextualNudges'
 import { useDashboardScrollTracking } from '../../hooks/useDashboardScrollTracking'
-import { type StatBlockValue } from '../ui/StatsOverview'
 import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
 import { useCardGridNavigation } from '../../hooks/useCardGridNavigation'
 import { useModalState } from '../../lib/modals'
 import { setAutoRefreshPaused } from '../../lib/cache'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { isClusterHealthy } from '../clusters/utils'
-import type { DashboardTemplate } from './templates'
 import { dashboardCollisionDetection, POINTER_SENSOR_ACTIVATION_DISTANCE } from './layout'
+import { createDashboardStatValueGetter, buildClusterStats } from './dashboardState/selectors'
+import { useDashboardCardActions } from './dashboardState/actions'
 import {
   AUTO_REFRESH_INTERVAL_MS,
   DASHBOARD_STORAGE_KEY,
@@ -146,50 +143,21 @@ export function useDashboardState() {
     totalPods,
     totalNamespaces,
     totalNodes,
-  } = useMemo(() => {
-    return filteredClusters.reduce((stats, cluster) => {
-      stats.clusterCount += 1
-      if (isClusterHealthy(cluster)) {
-        stats.healthyClusters += 1
-        stats.healthyNodes += cluster.nodeCount || 0
-      } else {
-        stats.unhealthyClusters += 1
-      }
-      stats.totalPods += cluster.podCount || 0
-      stats.totalNamespaces += cluster.namespaces?.length || 0
-      stats.totalNodes += cluster.nodeCount || 0
-      return stats
-    }, {
-      clusterCount: 0,
-      healthyClusters: 0,
-      unhealthyClusters: 0,
-      healthyNodes: 0,
-      totalPods: 0,
-      totalNamespaces: 0,
-      totalNodes: 0,
-    })
-  }, [filteredClusters])
+  } = useMemo(() => buildClusterStats(filteredClusters), [filteredClusters])
 
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
-    switch (blockId) {
-      case 'clusters':
-        return { value: clusterCount, groundtruthField: 'dashboard-clusters-total', sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: clusterCount > 0 }
-      case 'healthy':
-        return { value: healthyClusters, groundtruthField: 'dashboard-healthy-clusters', sublabel: 'healthy', onClick: () => drillToAllClusters('healthy'), isClickable: healthyClusters > 0 }
-      case 'warnings':
-        return { value: 0, sublabel: 'warnings', isClickable: false }
-      case 'errors':
-        return { value: unhealthyClusters, groundtruthField: 'dashboard-error-clusters', sublabel: 'unhealthy', onClick: () => drillToAllClusters('unhealthy'), isClickable: unhealthyClusters > 0 }
-      case 'namespaces':
-        return { value: totalNamespaces, groundtruthField: 'dashboard-namespaces-total', sublabel: 'namespaces', onClick: () => navigate(ROUTES.NAMESPACES), isClickable: totalNamespaces > 0 }
-      case 'nodes':
-        return { value: totalNodes, groundtruthField: 'dashboard-nodes-total', progressValue: healthyNodes, max: totalNodes, sublabel: 'total nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
-      case 'pods':
-        return { value: totalPods, groundtruthField: 'dashboard-pods-total', sublabel: 'pods', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
-      default:
-        return { value: '-' }
-    }
-  }, [clusterCount, drillToAllClusters, drillToAllNodes, drillToAllPods, healthyClusters, healthyNodes, navigate, totalNamespaces, totalNodes, totalPods, unhealthyClusters])
+  const getDashboardStatValue = useCallback(createDashboardStatValueGetter({
+    clusterCount,
+    healthyClusters,
+    unhealthyClusters,
+    healthyNodes,
+    totalPods,
+    totalNamespaces,
+    totalNodes,
+    drillToAllClusters,
+    drillToAllNodes,
+    drillToAllPods,
+    navigate,
+  }), [clusterCount, drillToAllClusters, drillToAllNodes, drillToAllPods, healthyClusters, healthyNodes, navigate, totalNamespaces, totalNodes, totalPods, unhealthyClusters])
 
   const getStatValue = getDashboardStatValue
 
@@ -550,228 +518,34 @@ export function useDashboardState() {
     }
   }, [searchParams, setSearchParams, openAddCardModal, location.pathname])
 
-  const handleAddCards = useCallback(async (suggestions: Array<{
-    type: string
-    title: string
-    visualization: string
-    config: Record<string, unknown>
-  }>) => {
-    const newCards: Card[] = suggestions.map((suggestion, index) => {
-      const cardType = mapVisualizationToCardType(suggestion.visualization, suggestion.type)
-      const size = getDefaultCardSize(cardType)
-      return {
-        id: `new-${Date.now()}-${index}`,
-        card_type: cardType,
-        config: suggestion.config,
-        position: { x: 0, y: 0, ...size },
-        title: suggestion.title,
-      }
-    })
-    newCards.forEach(card => {
-      recordCardAdded(card.id, card.card_type, card.title, card.config, dashboard?.id, dashboard?.name)
-      emitCardAdded(card.card_type, 'add_modal')
-    })
-    snapshot(localCards)
-    if (insertAtIndex !== null) {
-      setLocalCards(prev => [...prev.slice(0, insertAtIndex), ...newCards, ...prev.slice(insertAtIndex)])
-      setInsertAtIndex(null)
-    } else {
-      setLocalCards(prev => [...newCards, ...prev])
-    }
-
-    if (dashboard?.id) {
-      for (const card of newCards) {
-        try {
-          await api.post(`/api/dashboards/${dashboard.id}/cards`, card)
-        } catch (error: unknown) {
-          console.error('Failed to persist card:', error)
-          showToast(t('dashboard.toast.persistFailed', 'Failed to persist card to backend'), 'error')
-        }
-      }
-    }
-  }, [dashboard?.id, dashboard?.name, insertAtIndex, localCards, recordCardAdded, showToast, snapshot, t])
-
-  const handleRemoveCard = useCallback(async (cardId: string) => {
-    const cardToRemove = localCards.find(card => card.id === cardId)
-    if (cardToRemove) {
-      emitCardRemoved(cardToRemove.card_type)
-      recordCardRemoved(
-        cardToRemove.id,
-        cardToRemove.card_type,
-        cardToRemove.title,
-        cardToRemove.config,
-        dashboard?.id,
-        dashboard?.name,
-      )
-    }
-    snapshot(localCards)
-    setLocalCards(prev => prev.filter(card => card.id !== cardId))
-
-    if (dashboard?.id) {
-      try {
-        await api.delete(`/api/cards/${cardId}`)
-      } catch (error: unknown) {
-        console.debug('Backend card deletion failed (card already removed from UI):', error)
-      }
-    }
-  }, [dashboard?.id, dashboard?.name, localCards, recordCardRemoved, snapshot])
-
-  const handleConfigureCard = useCallback((card: Card) => {
-    setSelectedCard(card)
-    openConfigureCard()
-  }, [openConfigureCard])
-
-  const handleWidthChange = useCallback(async (cardId: string, newWidth: number) => {
-    snapshot(localCards)
-    setLocalCards(prev =>
-      prev.map(card =>
-        card.id === cardId
-          ? { ...card, position: { ...(card.position || { w: 4, h: 2 }), w: newWidth } }
-          : card,
-      ),
-    )
-
-    if (dashboard?.id && !isLocalOnlyCard(cardId)) {
-      try {
-        const card = localCards.find(item => item.id === cardId)
-        if (card) {
-          await api.put(`/api/cards/${cardId}`, {
-            position: { ...(card.position || { w: 4, h: 2 }), w: newWidth },
-          })
-        }
-      } catch (error: unknown) {
-        console.error('Failed to update card width:', error)
-        showToast(t('dashboard.toast.updateWidthFailed', 'Failed to update card width'), 'error')
-      }
-    }
-  }, [dashboard?.id, localCards, showToast, snapshot, t])
-
-  const handleHeightChange = useCallback(async (cardId: string, newHeight: number) => {
-    snapshot(localCards)
-    setLocalCards(prev =>
-      prev.map(card =>
-        card.id === cardId
-          ? { ...card, position: { ...(card.position || { x: 0, y: 0, w: 4, h: 2 }), h: newHeight } }
-          : card,
-      ),
-    )
-
-    if (dashboard?.id && !isLocalOnlyCard(cardId)) {
-      try {
-        const card = localCards.find(item => item.id === cardId)
-        if (card) {
-          await api.put(`/api/cards/${cardId}`, {
-            position: { ...(card.position || { x: 0, y: 0, w: 4, h: 2 }), h: newHeight },
-          })
-        }
-      } catch (error: unknown) {
-        console.error('Failed to update card height:', error)
-        showToast(t('dashboard.toast.updateHeightFailed', 'Failed to update card height'), 'error')
-      }
-    }
-  }, [dashboard?.id, localCards, showToast, snapshot, t])
-
-  const handleCardConfigured = useCallback(async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
-    const card = localCards.find(item => item.id === cardId)
-    if (card) {
-      emitCardConfigured(card.card_type)
-      recordCardConfigured(
-        cardId,
-        card.card_type,
-        newTitle || card.title,
-        newConfig,
-        dashboard?.id,
-        dashboard?.name,
-      )
-    }
-    snapshot(localCards)
-    setLocalCards(prev =>
-      prev.map(item =>
-        item.id === cardId
-          ? { ...item, config: newConfig, title: newTitle || item.title }
-          : item,
-      ),
-    )
-    closeConfigureCard()
-    setSelectedCard(null)
-
-    if (dashboard?.id && !isLocalOnlyCard(cardId)) {
-      try {
-        await api.put(`/api/cards/${cardId}`, { config: newConfig, title: newTitle })
-      } catch (error: unknown) {
-        console.error('Failed to update card configuration:', error)
-        showToast(t('dashboard.toast.updateConfigFailed', 'Failed to update card configuration'), 'error')
-      }
-    }
-  }, [closeConfigureCard, dashboard?.id, dashboard?.name, localCards, recordCardConfigured, showToast, snapshot, t])
-
-  const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>, title?: string) => {
-    snapshot(localCards)
-    setLocalCards(prev => {
-      const existingIndex = prev.findIndex(card => card.card_type === cardType)
-      if (existingIndex !== -1) {
-        const existingCard = prev[existingIndex]
-        const remaining = prev.filter((_, index) => index !== existingIndex)
-        return [existingCard, ...remaining]
-      }
-      const size = getDefaultCardSize(cardType)
-      const newCard: Card = {
-        id: `rec-${Date.now()}`,
-        card_type: cardType,
-        config: config || {},
-        position: { x: 0, y: 0, ...size },
-        title,
-      }
-      recordCardAdded(newCard.id, cardType, title, config, dashboard?.id, dashboard?.name)
-      return [newCard, ...prev]
-    })
-  }, [dashboard?.id, dashboard?.name, localCards, recordCardAdded, snapshot])
-
-  const handleCreateCardFromAI = useCallback((cardType: string, config: Record<string, unknown>, title?: string) => {
-    const size = getDefaultCardSize(cardType)
-    const newCard: Card = {
-      id: `ai-${Date.now()}`,
-      card_type: cardType,
-      config: config || {},
-      position: { x: 0, y: 0, ...size },
-      title,
-    }
-    recordCardAdded(newCard.id, cardType, title, config, dashboard?.id, dashboard?.name)
-    snapshot(localCards)
-    setLocalCards(prev => [newCard, ...prev])
-    closeConfigureCard()
-    setSelectedCard(null)
-  }, [closeConfigureCard, dashboard?.id, dashboard?.name, localCards, recordCardAdded, snapshot])
-
-  const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards: Card[] = template.cards.map((templateCard, index) => ({
-      id: `template-${Date.now()}-${index}`,
-      card_type: templateCard.card_type,
-      config: templateCard.config || {},
-      position: { x: 0, y: 0, w: templateCard.position?.w || 4, h: templateCard.position?.h || 2 },
-      title: templateCard.title,
-    }))
-    newCards.forEach(card => {
-      recordCardAdded(card.id, card.card_type, card.title, card.config, dashboard?.id, dashboard?.name)
-    })
-    snapshot(localCards)
-    setLocalCards(prev => [...newCards, ...prev])
-    showToast(t('dashboard.toast.templateApplied', 'Applied "{{name}}" template with {{count}} cards', { name: template.name, count: newCards.length }), 'success')
-  }, [dashboard?.id, dashboard?.name, localCards, recordCardAdded, showToast, snapshot, t])
-
-  const handleAddSingleCard = useCallback((cardType: string) => {
-    const size = getDefaultCardSize(cardType)
-    const newCard: Card = {
-      id: `rec-${Date.now()}`,
-      card_type: cardType,
-      config: {},
-      position: { x: 0, y: 0, ...size },
-    }
-    recordCardAdded(newCard.id, cardType, undefined, {}, dashboard?.id, dashboard?.name)
-    emitCardAdded(cardType, 'smart_suggestion')
-    snapshot(localCards)
-    setLocalCards(prev => [newCard, ...prev])
-  }, [dashboard?.id, dashboard?.name, localCards, recordCardAdded, snapshot])
+  const {
+    handleAddCards,
+    handleRemoveCard,
+    handleConfigureCard,
+    handleWidthChange,
+    handleHeightChange,
+    handleCardConfigured,
+    handleAddRecommendedCard,
+    handleCreateCardFromAI,
+    handleApplyTemplate,
+    handleAddSingleCard,
+  } = useDashboardCardActions({
+    dashboardId: dashboard?.id,
+    dashboardName: dashboard?.name,
+    localCards,
+    insertAtIndex,
+    setInsertAtIndex,
+    setLocalCards,
+    setSelectedCard,
+    openConfigureCard,
+    closeConfigureCard,
+    snapshot,
+    showToast,
+    t,
+    recordCardRemoved,
+    recordCardAdded,
+    recordCardConfigured,
+  })
 
   const handleNudgeAction = useCallback(() => {
     if (activeNudge === 'customize') {

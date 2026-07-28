@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, memo, createContext, use, ComponentType, Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { Maximize2 } from 'lucide-react'
@@ -6,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 import { CARD_ICONS } from './cardIcons'
 import { BaseModal } from '../../lib/modals'
-import { MS_PER_HOUR } from '../../lib/constants/time'
 import { cn } from '@/lib/cn'
 import { useCardCollapse } from '../../lib/cards/cardHooks'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
@@ -21,66 +19,28 @@ import { emitCardExpanded, emitCardRefreshed } from '../../lib/analytics'
 import { useMissions } from '../../hooks/useMissions'
 import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
 import { useTimeoutFlag, useConditionalTimeout } from '../../hooks/useTimeoutFlag'
-import { CardErrorFallback, CardFailureBanner } from './CardErrorFallback'
+import { CardFailureBanner } from './CardErrorFallback'
 import { CardLoadingState } from './CardLoadingState'
-import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
-import { CardMeta } from './CardMeta'
-import { CardToolbar } from './CardToolbar'
-import { InfoTooltip } from './card-wrapper/InfoTooltip'
-import { PendingSwapNotification } from './card-wrapper/PendingSwapNotification'
+import { CardHeader } from './cardWrapper/CardHeader'
+import { CardFooter } from './cardWrapper/CardFooter'
+import { CardExpandedErrorBoundary } from './cardWrapper/CardExpandedErrorBoundary'
+import { useLazyMount } from './cardWrapper/useLazyMount'
+import {
+  MIN_SPIN_DURATION,
+  COLLAPSED_CARDS_STORAGE_KEY,
+  CONTAINER_QUERY_STYLE,
+  DEFAULT_SNOOZE_MS,
+  LAST_UPDATED_TICK_MS,
+  COLLAPSE_DELAY_MS,
+  LARGE_EXPANDED_CARDS,
+  FULLSCREEN_EXPANDED_CARDS,
+} from './cardWrapper/config'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = safeLazy(() => import('../widgets/WidgetExportModal'), 'WidgetExportModal')
 // Lazy-load the feedback modal (~67 KB) — only loaded when user clicks bug report
 const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestModal'), 'FeatureRequestModal')
 
 
-// Minimum duration to show spin animation (ensures at least one full rotation)
-const CARD_REFRESH_SPINNER_MAX_AGE_MS = 500
-const MIN_SPIN_DURATION = CARD_REFRESH_SPINNER_MAX_AGE_MS
-const COLLAPSED_CARDS_STORAGE_KEY = 'kubestellar-collapsed-cards'
-
-/** CSS container query style for card content responsive breakpoints */
-const CONTAINER_QUERY_STYLE = { containerType: 'inline-size' } as const
-
-/** Default snooze duration for card swaps */
-const DEFAULT_SNOOZE_MS = MS_PER_HOUR
-
-// ---------------------------------------------------------------------------
-// Relative-time formatting for the card header "last updated" label.
-// ---------------------------------------------------------------------------
-/**
- * Re-render interval for the "last updated" label in ms. When SSE refresh
- * fails, the card's lastUpdated prop is frozen at the last successful fetch,
- * so without this ticker the label would render "5d ago" forever (#9104).
- * One minute is enough resolution for an "Xm/Xh/Xd" label and is cheap.
- */
-const LAST_UPDATED_TICK_MS = 60_000
-const COLLAPSE_DELAY_MS = 300
-
-// Cards that need extra-large expanded modal (for maps, complex visualizations, etc.)
-// These use 95vh height and 7xl width instead of the default 80vh/4xl
-const LARGE_EXPANDED_CARDS = new Set([
-  'cluster_comparison',
-  'cluster_resource_tree',
-  // AI-ML cards that need more space when expanded
-  'kvcache_monitor',
-  'pd_disaggregation',
-  'llmd_ai_insights',
-])
-
-// Cards that should be nearly fullscreen when expanded (maps, large visualizations, games)
-const FULLSCREEN_EXPANDED_CARDS = new Set([
-  'cluster_locations',
-  'mobile_browser', // Shows iPad view when expanded
-  // AI-ML visualization cards benefit from full viewport
-  'llmd_flow', 'epp_routing',
-  // All arcade games need fullscreen to fill the entire screen
-  'sudoku_game', 'container_tetris', 'node_invaders', 'kube_snake',
-  'flappy_pod', 'kube_pong', 'kube_kong', 'game_2048', 'kube_man',
-  'kube_galaga', 'kube_chess', 'checkers', 'pod_crosser', 'pod_brothers',
-  'pod_pitfall', 'match_game', 'solitaire', 'kubedle', 'pod_sweeper',
-  'kube_doom', 'kube_kart',
-])
 
 /** Dimensions of the card's content container (updated via ResizeObserver) */
 export interface CardContainerSize {
@@ -111,32 +71,6 @@ const CardTypeContext = createContext<string>('')
 /** Hook for shared UI components to read the cardType of their parent CardWrapper */
 export function useCardType() {
   return use(CardTypeContext)
-}
-
-// Note: Lazy mounting and eager mount scheduling have been removed.
-// Cards now render immediately to show cached data without delay.
-// This trades some initial render performance for better UX with cached data.
-
-/**
- * Hook for lazy mounting - only renders content when visible in viewport.
- *
- * IMPORTANT: Cards start visible (isVisible=true) to show cached data immediately.
- * IntersectionObserver is only used for off-screen cards that scroll into view later.
- * This prevents the "empty cards on page load" issue when cached data is available.
- */
-function useLazyMount(_rootMargin = '100px') {
-  // Start visible - show cached content immediately on page load.
-  // This is intentional: we prioritize showing cached data over lazy loading performance.
-  const [isVisible] = useState(true)
-  const ref = useRef<HTMLDivElement>(null)
-
-  // No lazy mounting - all cards render immediately.
-  // The eager mount and IntersectionObserver logic has been removed because:
-  // 1. It caused "empty cards" flash on page load even with cached data
-  // 2. With only 4-8 cards visible at once, the performance impact is minimal
-  // 3. Cached data should be shown instantly for good UX
-
-  return { ref, isVisible }
 }
 
 /** Flash type for significant data changes */
@@ -690,47 +624,43 @@ export const CardWrapper = memo(function CardWrapper({
             onMouseEnter={() => setShowSummary(true)}
             onMouseLeave={() => setShowSummary(false)}
           >
-            {/* Header */}
-            <div data-tour="card-header" className="flex flex-wrap items-center justify-between gap-y-2 border-b border-border/50 px-4 py-3">
-              <div className="flex min-w-0 items-center gap-2">
-                {dragHandle}
-                {ResolvedIcon && <ResolvedIcon className={cn('h-4 w-4 shrink-0', resolvedIconColor)} />}
-                <h2 className="truncate text-sm font-medium text-foreground">{title}</h2>
-                <InfoTooltip text={description || t('messages.descriptionComingSoon', { title })} />
-                <CardMeta
-                  showDemoIndicator={showDemoIndicator}
-                  isDemoData={effectiveIsDemoData}
-                  isLive={isLive}
-                  isFailed={effectiveIsFailed}
-                  consecutiveFailures={effectiveConsecutiveFailures}
-                  showRefreshIndicator={showHeaderRefreshIndicator}
-                  isLoading={effectiveIsLoading}
-                  isVisuallySpinning={isVisuallySpinning}
-                  lastUpdated={effectiveLastUpdated}
-                />
-              </div>
-              <CardToolbar
-                title={title}
-                isCollapsed={isCollapsed}
-                onToggleCollapse={handleToggleCollapse}
-                onRefresh={onRefresh ? handleRefresh : undefined}
-                isRefreshDisabled={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
-                isRefreshSpinning={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
-                isFailed={effectiveIsFailed}
-                consecutiveFailures={effectiveConsecutiveFailures}
-                onExpandFullscreen={handleExpandFullscreen}
-                onOpenBugReport={handleOpenBugReport}
-                cardId={cardId}
-                cardType={cardType}
-                cardWidth={cardWidth}
-                cardHeight={cardHeight}
-                onConfigure={onConfigure}
-                onRemove={onRemove}
-                onWidthChange={onWidthChange}
-                onHeightChange={onHeightChange}
-                onShowWidgetExport={openWidgetExport}
-              />
-            </div>
+            <CardHeader
+              dragHandle={dragHandle}
+              ResolvedIcon={ResolvedIcon}
+              resolvedIconColor={resolvedIconColor}
+              title={title}
+              description={description}
+              showDemoIndicator={showDemoIndicator}
+              effectiveIsDemoData={effectiveIsDemoData}
+              isLive={isLive}
+              effectiveIsFailed={effectiveIsFailed}
+              effectiveConsecutiveFailures={effectiveConsecutiveFailures}
+              showHeaderRefreshIndicator={showHeaderRefreshIndicator}
+              effectiveIsLoading={effectiveIsLoading}
+              isVisuallySpinning={isVisuallySpinning}
+              effectiveLastUpdated={effectiveLastUpdated}
+              toolbarProps={{
+                title,
+                isCollapsed,
+                onToggleCollapse: handleToggleCollapse,
+                onRefresh: onRefresh ? handleRefresh : undefined,
+                isRefreshDisabled: isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline,
+                isRefreshSpinning: isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline,
+                isFailed: effectiveIsFailed,
+                consecutiveFailures: effectiveConsecutiveFailures,
+                onExpandFullscreen: handleExpandFullscreen,
+                onOpenBugReport: handleOpenBugReport,
+                cardId,
+                cardType,
+                cardWidth,
+                cardHeight,
+                onConfigure,
+                onRemove,
+                onWidthChange,
+                onHeightChange,
+                onShowWidgetExport: openWidgetExport,
+              }}
+            />
 
             <CardFailureBanner
               cardType={cardType}
@@ -775,36 +705,21 @@ export const CardWrapper = memo(function CardWrapper({
               </div>
             )}
 
-            {/* Demo-mode install CTA — rendered OUTSIDE the scroll container
-                so it is a pinned card footer on every card. Inside the
-                scroller it sat at the flex-box boundary, which put it
-                mid-card whenever content overflowed (min-h-card) and made
-                it scroll with the data on some cards but not others. */}
-            {!isCollapsed && showInstallCta && (
-              <div className="shrink-0 px-4 pb-2">
-                <InstallCTAFlow cardType={cardType} title={title} />
-              </div>
-            )}
-
-            {/* Pending swap notification - hidden when collapsed */}
-            {!isCollapsed && pendingSwap && (
-              <PendingSwapNotification
-                pendingSwap={pendingSwap}
-                newTitle={newTitle}
-                onSnooze={handleSnooze}
-                onSwapNow={handleSwapNow}
-                onCancel={() => onSwapCancel?.()}
-                defaultSnoozeDurationMs={DEFAULT_SNOOZE_MS}
-              />
-            )}
-
-            {/* Hover summary */}
-            {showSummary && lastSummary && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 mx-4 p-3 glass rounded-lg text-sm animate-fade-in-up">
-                <p className="text-xs text-muted-foreground mb-1">{t('common:labels.sinceFocus')}</p>
-                <p className="text-foreground">{lastSummary}</p>
-              </div>
-            )}
+            <CardFooter
+              isCollapsed={isCollapsed}
+              showInstallCta={showInstallCta}
+              cardType={cardType}
+              title={title}
+              pendingSwap={pendingSwap}
+              newTitle={newTitle}
+              onSnooze={handleSnooze}
+              onSwapNow={handleSwapNow}
+              onSwapCancel={onSwapCancel}
+              defaultSnoozeDurationMs={DEFAULT_SNOOZE_MS}
+              showSummary={showSummary}
+              lastSummary={lastSummary}
+              sinceFocusLabel={t('common:labels.sinceFocus')}
+            />
           </div>
           </div>{/* Close outer wrapper for demo corner brackets */}
 
@@ -835,9 +750,9 @@ export const CardWrapper = memo(function CardWrapper({
             )}>
               {/* Wrapper ensures children fill available space in expanded mode */}
               <div ref={expandedContentRef} className="flex flex-1 min-h-0 flex-col">
-                <CardErrorFallback cardId={cardId || cardType}>
+                <CardExpandedErrorBoundary cardId={cardId || cardType}>
                   {children}
-                </CardErrorFallback>
+                </CardExpandedErrorBoundary>
               </div>
             </BaseModal.Content>
           </BaseModal>
