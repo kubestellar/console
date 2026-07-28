@@ -16,7 +16,7 @@ import { useGPUTaintFilter, GPUTaintFilterControl } from '../cards/GPUTaintFilte
 import { useRef } from 'react'
 import { useModal } from '../../hooks/useModal'
 
-type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
+type TranslateFn = (key: string, defaultValueOrOptions?: string | Record<string, unknown>, options?: Record<string, unknown>) => string
 
 export interface GPUInventoryTabProps {
   gpuClusters: GPUClusterInfo[]
