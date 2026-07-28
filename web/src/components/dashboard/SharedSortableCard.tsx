@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { GripVertical } from 'lucide-react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -108,6 +108,24 @@ export const SortableCard = memo(function SortableCard({ card, index, isDragging
   const { isCollapsed } = useCardCollapse(card.id)
   const effectiveRowSpan = isCollapsed ? COLLAPSED_CARD_ROW_SPAN : posH
 
+  // Memoize per-card callbacks so the memoized CardWrapper below doesn't
+  // re-render on every SortableCard render just because a new function
+  // reference was created (#21551 — inline arrow functions defeat React.memo).
+  const onConfigure = useCallback(() => handleConfigureCard(card), [handleConfigureCard, card])
+  const onRemove = useCallback(() => handleRemoveCard(card.id), [handleRemoveCard, card.id])
+  const onWidthChange = useCallback(
+    (newWidth: number) => handleWidthChange(card.id, newWidth),
+    [handleWidthChange, card.id],
+  )
+  const onHeightChange = useCallback(
+    (newHeight: number) => handleHeightChange(card.id, newHeight),
+    [handleHeightChange, card.id],
+  )
+  const onRegisterExpandTrigger = useCallback(
+    (expand: () => void) => registerExpandTrigger?.(card.id, expand),
+    [registerExpandTrigger, card.id],
+  )
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -190,11 +208,11 @@ export const SortableCard = memo(function SortableCard({ card, index, isDragging
           isRefreshing={isRefreshing}
           onRefresh={triggerRefresh}
           lastUpdated={lastUpdated}
-          onConfigure={() => handleConfigureCard(card)}
-          onRemove={() => handleRemoveCard(card.id)}
-          onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
-          onHeightChange={(newHeight) => handleHeightChange(card.id, newHeight)}
-          registerExpandTrigger={(expand) => registerExpandTrigger?.(card.id, expand)}
+          onConfigure={onConfigure}
+          onRemove={onRemove}
+          onWidthChange={onWidthChange}
+          onHeightChange={onHeightChange}
+          registerExpandTrigger={onRegisterExpandTrigger}
           dragHandle={
             <button
               ref={setActivatorNodeRef}

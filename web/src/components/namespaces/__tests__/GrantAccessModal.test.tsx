@@ -180,8 +180,7 @@ describe('GrantAccessModal', () => {
       />
     )
 
-    const inputs = screen.getAllByRole('textbox')
-    const subjectInput = inputs[0]
+    const subjectInput = screen.getByPlaceholderText(/Select or type a user/i)
     const grantBtn = screen.getByRole('button', { name: /grant/i })
 
     await user.type(subjectInput, 'developer@example.com')
