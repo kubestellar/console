@@ -24,9 +24,10 @@ import type { FeedbackDraft } from '../../hooks/useFeedbackDrafts'
 import type { FeatureRequestModalProps, TabType, ScreenshotItem, SuccessState } from './FeatureRequestTypes'
 import { MIN_DRAFT_LENGTH, SUCCESS_DISPLAY_MS, EMPTY_FILE_SIZE_BYTES } from './FeatureRequestTypes'
 import { DiscardConfirmDialog, LoginPromptDialog, FullscreenPreview, ScreenshotPreviewOverlay } from './FeedbackDialogs'
-import { DraftsTab } from './DraftsTab'
-import { UpdatesTab } from './UpdatesTab'
-import { SubmitForm, SuccessView, SubmitFooter } from './SubmitTab'
+import { SubmitFooter } from './SubmitTab'
+import { FeatureRequestCategorySelector } from './FeatureRequestCategorySelector'
+import { FeatureRequestFormSteps } from './FeatureRequestFormSteps'
+import type { SubmitFormProps } from './submitTab.types'
 
 const DRAFT_ATTACHMENT_INDEX_OFFSET = 1
 const FIRST_CHARACTER_INDEX = 0
@@ -432,49 +433,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-border shrink-0">
-            <button
-              onClick={() => handleTabChange('submit')}
-              className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
-                activeTab === 'submit'
-                  ? 'text-foreground border-b-2 border-purple-500'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {t('feedback.submit')}
-            </button>
-            <button
-              onClick={() => handleTabChange('drafts')}
-              className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                activeTab === 'drafts'
-                  ? 'text-foreground border-b-2 border-purple-500'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Drafts
-              {draftCount > 0 && (
-                <span className="min-w-5 h-5 px-1 text-xs rounded-full bg-orange-500 text-white flex items-center justify-center">
-                  {draftCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => handleTabChange('updates')}
-              className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                activeTab === 'updates'
-                  ? 'text-foreground border-b-2 border-purple-500'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {t('feedback.updates')}
-              {(requests || []).length > 0 && (
-                <span className="min-w-5 h-5 px-1 text-xs rounded-full bg-purple-500 text-white flex items-center justify-center">
-                  {(requests || []).length}
-                </span>
-              )}
-            </button>
-          </div>
+      <FeatureRequestCategorySelector
+        activeTab={activeTab}
+        draftCount={draftCount}
+        requestCount={(requests || []).length}
+        onTabChange={handleTabChange}
+        submitLabel={t('feedback.submit')}
+        updatesLabel={t('feedback.updates')}
+      />
 
       {/* Login banner for demo/unauthenticated users */}
       {!canPerformActions && (
@@ -493,87 +459,78 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
 
       {/* Content - scrollable area with fixed flex layout */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {activeTab === 'drafts' ? (
-          <DraftsTab
-            drafts={drafts}
-            draftCount={draftCount}
-            recentlyDeletedDrafts={recentlyDeletedDrafts}
-            recentlyDeletedCount={recentlyDeletedCount}
-            editingDraftId={editingDraftId}
-            confirmDeleteDraft={confirmDeleteDraft}
-            showClearAllDrafts={showClearAllDrafts}
-            onSetActiveTab={handleTabChange}
-            onRestoreDraft={handleRestoreDraft}
-            onDeleteDraft={handleDeleteDraft}
-            onPermanentlyDeleteDraft={permanentlyDeleteDraft}
-            onRestoreDeletedDraft={restoreDeletedDraft}
-            onEmptyRecentlyDeleted={emptyRecentlyDeleted}
-            onSetConfirmDeleteDraft={setConfirmDeleteDraft}
-            onSetShowClearAllDrafts={setShowClearAllDrafts}
-            onClearAllDrafts={clearAllDrafts}
-            showToast={showToast}
-          />
-        ) : activeTab === 'updates' ? (
-          <UpdatesTab
-            requests={requests}
-            requestsLoading={requestsLoading}
-            isRefreshing={isRefreshing}
-            isInDemoMode={isInDemoMode}
-            canPerformActions={canPerformActions}
-            currentGitHubLogin={currentGitHubLogin}
-            githubRewards={githubRewards}
-            githubPoints={githubPoints}
-            token={token}
-            showToast={showToast}
-            onRefreshRequests={refreshRequests}
-            onRefreshNotifications={refreshNotifications}
-            onRefreshGitHub={handleRefreshGitHub}
-            isGitHubRefreshing={isGitHubRefreshing}
-            onRequestUpdate={requestUpdate}
-            onCloseRequest={closeRequest}
-            onReopenRequest={reopenRequest}
-            getUnreadCountForRequest={getUnreadCountForRequest}
-            markRequestNotificationsAsRead={markRequestNotificationsAsRead}
-            onShowLoginPrompt={() => setShowLoginPrompt(true)}
-          />
-        ) : success ? (
-          <SuccessView
-            success={success}
-            screenshots={screenshots}
-            onViewUpdates={() => {
-              setSuccess(null)
-              setActiveTab('updates')
-              refreshNotifications()
-            }}
-          />
-        ) : (
-          <SubmitForm
-            description={description}
-            setDescription={setDescription}
-            requestType={requestType}
-            setRequestType={setRequestType}
-            targetRepo={targetRepo}
-            setTargetRepo={setTargetRepo}
-            screenshots={screenshots}
-            setScreenshots={setScreenshots}
-            isSubmitting={isSubmitting}
-            canPerformActions={canPerformActions}
-            feedbackTokenMissing={feedbackTokenMissing}
-            editingDraftId={editingDraftId}
-            setEditingDraftId={setEditingDraftId}
-            initialRequestType={initialRequestType}
-            error={error}
-            setError={setError}
-            isPreviewFullscreen={isPreviewFullscreen}
-            setIsPreviewFullscreen={setIsPreviewFullscreen}
-            setPreviewImageSrc={setPreviewImageSrc}
-            onSubmit={createRequest}
-            onSuccess={handleSubmitSuccess}
-            onShowSetupDialog={() => setShowSetupDialog(true)}
-            onShowLoginPrompt={() => setShowLoginPrompt(true)}
-            onReauthenticate={handleLoginRedirect}
-          />
-        )}
+        <FeatureRequestFormSteps
+          activeTab={activeTab}
+          drafts={drafts}
+          draftCount={draftCount}
+          recentlyDeletedDrafts={recentlyDeletedDrafts}
+          recentlyDeletedCount={recentlyDeletedCount}
+          editingDraftId={editingDraftId}
+          confirmDeleteDraft={confirmDeleteDraft}
+          showClearAllDrafts={showClearAllDrafts}
+          requests={requests}
+          requestsLoading={requestsLoading}
+          isRefreshing={isRefreshing}
+          isInDemoMode={isInDemoMode}
+          canPerformActions={canPerformActions}
+          currentGitHubLogin={currentGitHubLogin}
+          githubRewards={githubRewards}
+          githubPoints={githubPoints}
+          token={token}
+          showToast={showToast}
+          onRefreshRequests={refreshRequests}
+          onRefreshNotifications={refreshNotifications}
+          onRefreshGitHub={handleRefreshGitHub}
+          isGitHubRefreshing={isGitHubRefreshing}
+          onRequestUpdate={requestUpdate}
+          onCloseRequest={closeRequest}
+          onReopenRequest={reopenRequest}
+          getUnreadCountForRequest={getUnreadCountForRequest}
+          markRequestNotificationsAsRead={markRequestNotificationsAsRead}
+          onShowLoginPrompt={() => setShowLoginPrompt(true)}
+          success={success}
+          screenshots={screenshots}
+          onViewUpdates={() => {
+            setSuccess(null)
+            setActiveTab('updates')
+            refreshNotifications()
+          }}
+          submitFormProps={{
+            description,
+            setDescription,
+            requestType,
+            setRequestType,
+            targetRepo,
+            setTargetRepo,
+            screenshots,
+            setScreenshots,
+            isSubmitting,
+            canPerformActions,
+            feedbackTokenMissing,
+            editingDraftId,
+            setEditingDraftId,
+            initialRequestType,
+            error,
+            setError,
+            isPreviewFullscreen,
+            setIsPreviewFullscreen,
+            setPreviewImageSrc,
+            onSubmit: createRequest,
+            onSuccess: handleSubmitSuccess,
+            onShowSetupDialog: () => setShowSetupDialog(true),
+            onShowLoginPrompt: () => setShowLoginPrompt(true),
+            onReauthenticate: handleLoginRedirect,
+          } as SubmitFormProps}
+          onSetActiveTab={handleTabChange}
+          onRestoreDraft={handleRestoreDraft}
+          onDeleteDraft={handleDeleteDraft}
+          onPermanentlyDeleteDraft={permanentlyDeleteDraft}
+          onRestoreDeletedDraft={restoreDeletedDraft}
+          onEmptyRecentlyDeleted={emptyRecentlyDeleted}
+          onSetConfirmDeleteDraft={setConfirmDeleteDraft}
+          onSetShowClearAllDrafts={setShowClearAllDrafts}
+          onClearAllDrafts={clearAllDrafts}
+        />
       </div>
 
       {/* Footer - always visible */}
