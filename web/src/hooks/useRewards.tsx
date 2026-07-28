@@ -244,7 +244,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [effectiveUserId])
+  }, [effectiveUserId, setRewards])
 
   // Cross-tab sync (issue #6014): when another tab mutates the rewards
   // localStorage key, mirror the change in this tab so the coin balance,
@@ -301,21 +301,21 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('storage', handleStorage)
     return () => window.removeEventListener('storage', handleStorage)
-  }, [setRewards])
+  }, [])
 
   // Check if action has been earned (for one-time rewards)
   const hasEarnedAction = useCallback((action: RewardActionType): boolean => {
     const r = rewardsRef.current
     if (!r) return false
     return r.events.some(e => e.action === action)
-  }, [setRewards])
+  }, [])
 
   // Get count of times an action has been performed
   const getActionCount = useCallback((action: RewardActionType): number => {
     const r = rewardsRef.current
     if (!r) return 0
     return r.events.filter(e => e.action === action).length
-  }, [])
+  }, [setRewards])
 
   // Award coins for an action.
   //
