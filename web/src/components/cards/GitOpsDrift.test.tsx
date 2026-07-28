@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
+import { BTN } from '../../test-utils/buttonLabels'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -88,7 +89,7 @@ vi.mock('./deploy/GitOpsDriftDetailModal', () => ({
   GitOpsDriftDetailModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
     isOpen ? (
       <div data-testid="drift-modal">
-        <button onClick={onClose}>Close</button>
+        <button onClick={onClose}>{BTN.close}</button>
       </div>
     ) : null,
 }))
@@ -265,7 +266,7 @@ describe('GitOpsDrift', () => {
       const { GitOpsDrift } = await import('./GitOpsDrift')
       render(<GitOpsDrift />)
       await userEvent.click(screen.getByText('Deployment/app'))
-      await userEvent.click(screen.getByText('Close'))
+      await userEvent.click(screen.getByText(BTN.close))
       expect(screen.queryByTestId('drift-modal')).not.toBeInTheDocument()
     })
   })

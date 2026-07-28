@@ -4,6 +4,7 @@ import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DynamicCard, Tier1CardRuntime, Tier2CardRuntime } from '../DynamicCard'
 import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../../lib/dynamic-cards/types'
+import { BTN } from '../../../test-utils/buttonLabels'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -83,7 +84,7 @@ vi.mock('../../ui/Pagination', () => ({
   }) => (
     <div data-testid="pagination">
       <span>Page {currentPage} of {totalPages}</span>
-      <button onClick={() => onPageChange(currentPage + 1)}>Next</button>
+      <button onClick={() => onPageChange(currentPage + 1)}>{BTN.next}</button>
     </div>
   ),
 }))
