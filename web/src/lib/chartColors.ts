@@ -51,6 +51,25 @@ export function getChartColor(index: number): string {
 }
 
 /**
+ * Get a chart color by index (1-8) as an `rgba()` string with the given alpha.
+ *
+ * ECharts gradient `colorStops` need a color with an alpha channel, which the
+ * `--chart-color-*` tokens don't carry. This resolves the token and applies the
+ * alpha so gradients stay in sync with the theme instead of duplicating literal
+ * `rgba(...)` values in components.
+ */
+export function getChartColorRgba(index: number, alpha: number): string {
+  const color = getChartColor(index)
+  const hex = color.replace('#', '')
+  const expanded = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return color
+  const r = parseInt(expanded.slice(0, 2), 16)
+  const g = parseInt(expanded.slice(2, 4), 16)
+  const b = parseInt(expanded.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
+/**
  * Get chart color by semantic name
  */
 export function getChartColorByName(name: 'warning' | 'success' | 'error' | 'info' | 'primary'): string {

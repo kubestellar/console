@@ -78,7 +78,28 @@ export const CHART_THEME = {
   emphasis: {
     shadow: getCSSVar('--chart-emphasis-shadow') || 'rgba(0,0,0,0.5)',
   },
+  /**
+   * Series palette — mirrors the `--chart-color-1..8` design tokens in
+   * index.css (also overridden per-theme by ThemeContext).
+   *
+   * Prefer `getChartColor(n)` from `lib/chartColors` inside component render
+   * paths: it re-reads the CSS variable on each call so a theme switch is
+   * picked up, whereas this array is resolved once at module load.
+   */
+  series: [
+    getCSSVar('--chart-color-1') || '#9333ea',
+    getCSSVar('--chart-color-2') || '#3b82f6',
+    getCSSVar('--chart-color-3') || '#10b981',
+    getCSSVar('--chart-color-4') || '#f59e0b',
+    getCSSVar('--chart-color-5') || '#ef4444',
+    getCSSVar('--chart-color-6') || '#06b6d4',
+    getCSSVar('--chart-color-7') || '#8b5cf6',
+    getCSSVar('--chart-color-8') || '#14b8a6',
+  ],
 } as const
+
+/** Default ECharts series palette, sourced from the `--chart-color-*` tokens */
+export const CHART_SERIES_COLORS = CHART_THEME.series
 
 // ── Legacy exports (backward compatibility) ─────────────────────────────
 export const CHART_TOOLTIP_BG = CHART_THEME.tooltip.bg
