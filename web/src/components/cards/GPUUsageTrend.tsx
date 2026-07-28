@@ -22,6 +22,7 @@ import {
   CHART_AXIS_FONT_SIZE,
   CHART_BODY_FONT_SIZE,
   CHART_TEXT_MUTED } from '../../lib/constants'
+import { getChartColor, getChartColorRgba } from '../../lib/chartColors'
 import { MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/constants/time'
 
 /**
@@ -370,11 +371,11 @@ const GPUUsageTrend = memo(function GPUUsageTrend() {
         stack: 'total',
         step: 'end' as const,
         data: history.map(d => d.allocated),
-        lineStyle: { color: '#9333ea', width: 2 },
-        itemStyle: { color: '#9333ea' },
+        lineStyle: { color: getChartColor(1), width: 2 },
+        itemStyle: { color: getChartColor(1) },
         areaStyle: {
           color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [{ offset: 0, color: 'rgba(147,51,234,0.6)' }, { offset: 1, color: 'rgba(147,51,234,0.1)' }] },
+            colorStops: [{ offset: 0, color: getChartColorRgba(1, 0.6) }, { offset: 1, color: getChartColorRgba(1, 0.1) }] },
         },
         showSymbol: false,
       },
@@ -384,11 +385,11 @@ const GPUUsageTrend = memo(function GPUUsageTrend() {
         stack: 'total',
         step: 'end' as const,
         data: history.map(d => d.free),
-        lineStyle: { color: '#22c55e', width: 2 },
-        itemStyle: { color: '#22c55e' },
+        lineStyle: { color: getChartColor(3), width: 2 },
+        itemStyle: { color: getChartColor(3) },
         areaStyle: {
           color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [{ offset: 0, color: 'rgba(34,197,94,0.6)' }, { offset: 1, color: 'rgba(34,197,94,0.1)' }] },
+            colorStops: [{ offset: 0, color: getChartColorRgba(3, 0.6) }, { offset: 1, color: getChartColorRgba(3, 0.1) }] },
         },
         showSymbol: false,
       },

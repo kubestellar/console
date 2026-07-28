@@ -9,6 +9,7 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR, CHART_HEIGHT_LG, CHART_TOOLTIP_TEXT_COLOR, CHART_AXIS_FONT_SIZE } from '../../../lib/constants/ui'
+import { getChartColor } from '../../../lib/chartColors'
 
 const GRID_LEFT_PX = 105
 const GRID_RIGHT_PX = 20
@@ -55,7 +56,7 @@ export function ResourceImbalanceDetector() {
         name: name.length > CHART_LABEL_MAX_LEN ? name.slice(0, CHART_LABEL_TRUNCATE_LEN) + '...' : name,
         fullName: name,
         value,
-        fill: value > OVERLOADED_THRESHOLD_PCT ? '#ef4444' : value < UNDERLOADED_THRESHOLD_PCT ? '#3b82f6' : '#22c55e' }))
+        fill: value > OVERLOADED_THRESHOLD_PCT ? getChartColor(5) : value < UNDERLOADED_THRESHOLD_PCT ? getChartColor(2) : getChartColor(3) }))
       .sort((a, b) => b.value - a.value)
   }, [imbalanceInsights, selectedClusters])
 
@@ -102,8 +103,8 @@ export function ResourceImbalanceDetector() {
           symbol: 'none',
           data: [{
             xAxis: avgValue,
-            label: { formatter: `Avg ${avgValue}%`, position: 'start', color: '#fbbf24', fontSize: CHART_AXIS_FONT_SIZE },
-            lineStyle: { color: '#fbbf24', type: 'dashed' },
+            label: { formatter: `Avg ${avgValue}%`, position: 'start', color: getChartColor(4), fontSize: CHART_AXIS_FONT_SIZE },
+            lineStyle: { color: getChartColor(4), type: 'dashed' },
           }],
         },
       }],
