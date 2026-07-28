@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, useReducer } from 'react'
 import type {
   UpdateChannel,
   ParsedRelease,
@@ -77,8 +77,15 @@ export function useVersionCheckCore() {
     },
   )
   const [releases, setReleases] = useState<ParsedRelease[]>([])
-  const [isChecking, setIsChecking] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+
+  // Combine isChecking, error, and lastCheckResult into one reducer so that
+  // forceCheck can update all three in a single dispatch (no consecutive setState).
+  type CheckProgressState = { isChecking: boolean; error: string | null; lastCheckResult: 'success' | 'error' | null }
+  const [checkProgress, dispatchCheckProgress] = useReducer(
+    (s: CheckProgressState, patch: Partial<CheckProgressState>): CheckProgressState => ({ ...s, ...patch }),
+    { isChecking: false, error: null, lastCheckResult: null },
+  )
+  const { isChecking, error, lastCheckResult } = checkProgress
   const [lastChecked, setLastChecked] = usePersistedState<number | null>(
     UPDATE_STORAGE_KEYS.LAST_CHECK,
     null,
@@ -97,7 +104,6 @@ export function useVersionCheckCore() {
       removeWhen: (value) => value.length === 0,
     },
   )
-  const [lastCheckResult, setLastCheckResult] = useState<'success' | 'error' | null>(null)
   const [autoUpdateEnabled, setAutoUpdateEnabledState] = usePersistedState<boolean>(
     UPDATE_STORAGE_KEYS.AUTO_UPDATE_ENABLED,
     loadAutoUpdateEnabled,
@@ -145,13 +151,13 @@ export function useVersionCheckCore() {
 
   const clearFailures = useCallback(() => {
     consecutiveFailuresRef.current = 0
-    setError(null)
+    dispatchCheckProgress({ error: null })
   }, [])
 
   const registerFailure = useCallback((message: string, displayImmediately = false) => {
     consecutiveFailuresRef.current += 1
     if (displayImmediately || consecutiveFailuresRef.current >= ERROR_DISPLAY_THRESHOLD) {
-      setError(message)
+      dispatchCheckProgress({ error: message })
     }
   }, [])
 
@@ -194,7 +200,7 @@ export function useVersionCheckCore() {
 
     if (result.rateLimited && result.errorMessage) {
       console.debug('[version-check] GitHub API rate-limited')
-      setError(result.errorMessage)
+      dispatchCheckProgress({ error: result.errorMessage })
     } else if (result.errorMessage) {
       console.debug('[version-check] Failed to fetch main SHA:', result.errorMessage)
     }
@@ -262,20 +268,19 @@ export function useVersionCheckCore() {
       return
     }
 
-    setIsChecking(true)
+    dispatchCheckProgress({ isChecking: true })
     try {
       await runReleaseCheck()
     } finally {
-      setIsChecking(false)
+      dispatchCheckProgress({ isChecking: false })
     }
   }, [agentSupportsAutoUpdate, channel, lastChecked, runAutoUpdateStatusCheck, runLatestMainSHACheck, runReleaseCheck])
 
   const forceCheck = useCallback(async (): Promise<void> => {
     console.debug('[version-check] Force check — channel:', channel, 'agentSupportsAutoUpdate:', agentSupportsAutoUpdate)
-    setIsChecking(true)
-    setLastCheckResult(null)
+    // Batch the reset into a single dispatch to avoid consecutive setState calls.
+    dispatchCheckProgress({ isChecking: true, lastCheckResult: null, error: null })
     consecutiveFailuresRef.current = 0
-    setError(null)
     refreshAgent()
 
     let checkResult: CheckAttemptResult = { success: false, errorMessage: 'Failed to check for updates' }
@@ -294,14 +299,12 @@ export function useVersionCheckCore() {
         checkResult = await runReleaseCheck(true)
       }
     } finally {
-      setIsChecking(false)
       updateLastCheckedTimestamp()
-
+      // Batch the final status into a single dispatch to avoid consecutive setState calls.
       if (checkResult.success) {
-        setLastCheckResult('success')
+        dispatchCheckProgress({ isChecking: false, lastCheckResult: 'success' })
       } else {
-        setLastCheckResult('error')
-        setError(checkResult.errorMessage ?? 'Failed to check for updates')
+        dispatchCheckProgress({ isChecking: false, lastCheckResult: 'error', error: checkResult.errorMessage ?? 'Failed to check for updates' })
       }
     }
   }, [agentSupportsAutoUpdate, channel, refreshAgent, runAutoUpdateStatusCheck, runLatestMainSHACheck, runReleaseCheck, updateLastCheckedTimestamp])
@@ -441,7 +444,7 @@ export function useVersionCheckCore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel])
 
-  const clearLastCheckResult = useCallback(() => setLastCheckResult(null), [])
+  const clearLastCheckResult = useCallback(() => dispatchCheckProgress({ lastCheckResult: null }), [])
 
   return {
     currentVersion,
