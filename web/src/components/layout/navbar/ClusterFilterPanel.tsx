@@ -1,97 +1,22 @@
-import { useState, useRef, useEffect, useLayoutEffect, useCallback, ReactNode } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, Server, Activity, Filter, Check, AlertTriangle, Save, X, Trash2, WifiOff, Globe } from 'lucide-react'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Activity, Filter, AlertTriangle } from 'lucide-react'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../../hooks/useGlobalFilters'
 import { useModalState } from '../../../lib/modals'
 import { cn } from '../../../lib/cn'
 import { NAVBAR_FILTER_PANEL_GAP_PX, NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR } from '../../../lib/constants/ui'
 import { Tooltip } from '../../ui/Tooltip'
-import { Input } from '../../ui/Input'
+import { FilterSection } from './FilterSection'
+import { ClusterCheckboxList } from './ClusterCheckboxList'
+import { DistributionFilterSection } from './DistributionFilterSection'
+import { NamespaceFilterRow } from './NamespaceFilterRow'
+import { SaveFilterSection } from './SaveFilterSection'
+import { SavedFilterChips } from './SavedFilterChips'
 
-/** Color palette for saved filter sets */
 const FILTER_SET_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899']
 const FILTER_PANEL_ID = 'navbar-cluster-filter-panel'
 const CUSTOM_FILTER_INPUT_ID = 'navbar-cluster-filter-input'
 const SAVE_FILTER_NAME_INPUT_ID = 'navbar-save-filter-name'
-
-interface FilterSectionConfig {
-  label: string
-  color: string
-  bgColor: string
-}
-
-function FilterSection<T extends string>({
-  icon,
-  title,
-  levels,
-  configMap,
-  selectedItems,
-  isAllSelected,
-  onToggle,
-  onSelectAll,
-  onDeselectAll,
-}: {
-  icon: ReactNode
-  title: string
-  levels: T[]
-  configMap: Record<T, FilterSectionConfig>
-  selectedItems: T[]
-  isAllSelected: boolean
-  onToggle: (item: T) => void
-  onSelectAll: () => void
-  onDeselectAll: () => void
-}) {
-  const { t } = useTranslation()
-  return (
-    <div className="p-3 border-b border-border">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          {icon}
-          <span className="text-sm font-medium text-foreground">{title}</span>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={onSelectAll}
-            className="text-xs text-purple-400 hover:text-purple-300"
-            aria-label={t('common:filters.selectAllInSection', { defaultValue: `Select all ${title}` })}
-          >
-            {t('common.all')}
-          </button>
-          <button
-            onClick={onDeselectAll}
-            className="text-xs text-muted-foreground hover:text-foreground"
-            aria-label={t('common:filters.clearSection', { defaultValue: `Clear ${title}` })}
-          >
-            {t('common.none')}
-          </button>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {levels.map((item) => {
-          const config = configMap[item]
-          const isSelected = isAllSelected || selectedItems.includes(item)
-          return (
-            <button
-              key={item}
-              onClick={() => onToggle(item)}
-              aria-pressed={isSelected}
-              className={cn(
-                'flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors',
-                isSelected
-                  ? `${config.bgColor} ${config.color}`
-                  : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {isSelected && <Check className="w-3 h-3" />}
-              {config.label}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 interface ClusterFilterPanelProps {
   /** Force label text to be visible (used in overflow menu) */
@@ -145,7 +70,6 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
   const panelRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
-  // Helper to get cluster status tooltip
   const getClusterStatusTooltip = (clusterName: string) => {
     const info = clusterInfoMap[clusterName]
     if (!info) return t('layout.navbar.unknownStatus')
@@ -177,7 +101,6 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
     triggerRef.current?.focus()
   }, [closeDropdown])
 
-  // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
     if (!showDropdown) return
 
@@ -201,7 +124,6 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
     }
   }, [showDropdown, closePanelAndRestoreFocus])
 
-  // Get active filter set for the indicator
   const activeSet = activeFilterSetId
     ? savedFilterSets.find(fs => fs.id === activeFilterSetId)
     : null
@@ -240,8 +162,6 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
 
   return (
     <>
-      {/* Filter icon button — isolate creates a stacking context to prevent
-           the glow shadow from bleeding into adjacent header controls (#4380) */}
       <div className="relative isolate" ref={dropdownRef}>
         <Tooltip content={t('help.globalClusterFilter')} side="bottom">
           <button
@@ -264,7 +184,6 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
             {showLabel && (
               <span className="text-sm font-medium">{t('navbar.clusterFilter')}</span>
             )}
-            {/* Color dot from active filter set, or generic purple dot */}
             {isFiltered && (
               <span
                 className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-card"
@@ -274,7 +193,6 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
           </button>
         </Tooltip>
 
-        {/* Filter dropdown */}
         {showDropdown && (
           <div
             id={FILTER_PANEL_ID}
@@ -290,8 +208,6 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
               }
             }}
           >
-
-            {/* Clear All — shown at top when filters are active */}
             {isFiltered && (
               <div className="px-3 py-2 border-b border-border flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">
@@ -307,86 +223,9 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
               </div>
             )}
 
-            {/* Saved Filter Sets */}
-            {savedFilterSets.length > 0 && (
-              <div className="p-3 border-b border-border">
-                <div className="flex items-center gap-2 mb-2">
-                  <Save className="w-4 h-4 text-purple-400" />
-                  <span className="text-sm font-medium text-foreground">
-                    {t('common:filters.savedFilters', 'Saved Filters')}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {savedFilterSets.map(fs => {
-                    const isActive = activeFilterSetId === fs.id
-                    return (
-                      <div key={fs.id} className="flex items-center group/fs">
-                        <button
-                          onClick={() => applySavedFilterSet(fs.id)}
-                          aria-pressed={isActive}
-                          aria-label={t('common:filters.applyFilterSet', { defaultValue: `Apply filter set ${fs.name}`, name: fs.name })}
-                          className={cn(
-                            'flex items-center gap-1.5 px-2 py-1 rounded-l text-xs font-medium transition-colors',
-                            isActive
-                              ? 'bg-purple-500/20 text-purple-400'
-                              : 'bg-secondary/50 text-muted-foreground hover:text-foreground',
-                          )}
-                        >
-                          <span
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: fs.color }}
-                          />
-                          <span className="max-w-[100px] truncate">{fs.name}</span>
-                          {isActive && <Check className="w-3 h-3" />}
-                        </button>
-                        <button
-                          onClick={() => deleteSavedFilterSet(fs.id)}
-                          aria-label={t('common:filters.deleteFilter', { defaultValue: `Delete filter set ${fs.name}`, name: fs.name })}
-                          className={cn(
-                            'flex items-center justify-center px-1 py-1 rounded-r text-muted-foreground transition-all',
-                            isActive
-                              ? 'bg-purple-500/20 hover:text-red-400'
-                              : 'bg-secondary/50 opacity-0 group-hover/fs:opacity-100 hover:text-red-400',
-                          )}
-                          title={t('common:filters.deleteFilter', 'Delete filter set')}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+            <SavedFilterChips savedFilterSets={savedFilterSets} activeFilterSetId={activeFilterSetId} applySavedFilterSet={applySavedFilterSet} deleteSavedFilterSet={deleteSavedFilterSet} />
+            <NamespaceFilterRow inputId={CUSTOM_FILTER_INPUT_ID} customFilter={customFilter} setCustomFilter={setCustomFilter} hasCustomFilter={hasCustomFilter} clearCustomFilter={clearCustomFilter} />
 
-            {/* Custom Text Filter */}
-            <div className="p-3 border-b border-border">
-              <div className="flex items-center gap-2 mb-2">
-                <Search className="w-4 h-4 text-purple-400" />
-                <span className="text-sm font-medium text-foreground">{t('common:filters.customFilter', 'Custom Filter')}</span>
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  id={CUSTOM_FILTER_INPUT_ID}
-                  type="text"
-                  value={customFilter}
-                  onChange={(e) => setCustomFilter(e.target.value)}
-                  placeholder={t('common:filters.customFilterPlaceholder', 'Filter by name, namespace...')}
-                  className="flex-1 bg-secondary/50"
-                />
-                {hasCustomFilter && (
-                  <button
-                    onClick={clearCustomFilter}
-                    className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label={t('common:filters.clearCustomFilter', 'Clear custom filter')}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Severity Filter Section */}
             <FilterSection
               icon={<AlertTriangle className="w-4 h-4 text-orange-400" />}
               title={t('common:filters.severity', 'Severity')}
@@ -399,7 +238,6 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
               onDeselectAll={deselectAllSeverities}
             />
 
-            {/* Status Filter Section */}
             <FilterSection
               icon={<Activity className="w-4 h-4 text-green-400" />}
               title={t('common:filters.status', 'Status')}
@@ -412,194 +250,11 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
               onDeselectAll={deselectAllStatuses}
             />
 
-            {/* Distribution Filter Section */}
-            {availableDistributions.length > 0 && (
-              <div className="p-3 border-b border-border">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm font-medium text-foreground">{t('common:filters.distribution', 'Distribution')}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={selectAllDistributions}
-                      className="text-xs text-purple-400 hover:text-purple-300"
-                      aria-label={t('common:filters.selectAllInSection', { defaultValue: 'Select all distributions' })}
-                    >
-                      {t('common.all')}
-                    </button>
-                    <button
-                      onClick={deselectAllDistributions}
-                      className="text-xs text-muted-foreground hover:text-foreground"
-                      aria-label={t('common:filters.clearSection', { defaultValue: 'Clear distributions' })}
-                    >
-                      {t('common.none')}
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {availableDistributions.map((dist) => {
-                    const isSelected = isAllDistributionsSelected || selectedDistributions.includes(dist)
-                    return (
-                      <button
-                        key={dist}
-                        onClick={() => toggleDistribution(dist)}
-                        aria-pressed={isSelected}
-                        className={cn(
-                          'flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors capitalize',
-                          isSelected
-                            ? 'bg-blue-500/20 text-blue-400'
-                            : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
-                        )}
-                      >
-                        {isSelected && <Check className="w-3 h-3" />}
-                        {dist}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+            <DistributionFilterSection availableDistributions={availableDistributions} selectedDistributions={selectedDistributions} isAllDistributionsSelected={isAllDistributionsSelected} selectAllDistributions={selectAllDistributions} deselectAllDistributions={deselectAllDistributions} toggleDistribution={toggleDistribution} />
 
-            {/* Cluster Filter Section */}
-            <div className="p-3 border-b border-border">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Server className="w-4 h-4 text-green-400" />
-                  <span className="text-sm font-medium text-foreground">{t('common:filters.clusters', 'Clusters')}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={selectAllClusters}
-                    className="text-xs text-purple-400 hover:text-purple-300"
-                    aria-label={t('common:filters.selectAllInSection', { defaultValue: 'Select all clusters' })}
-                  >
-                    {t('common.all')}
-                  </button>
-                  <button
-                    onClick={deselectAllClusters}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                    aria-label={t('common:filters.clearSection', { defaultValue: 'Clear clusters' })}
-                  >
-                    {t('common.none')}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-1 max-h-48 overflow-y-auto">
-                {availableClusters.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">
-                    {t('common:filters.noClusters', 'No clusters available')}
-                  </p>
-                ) : (
-                  availableClusters.map((cluster) => {
-                    const isSelected = isAllClustersSelected || selectedClusters.includes(cluster)
-                    const info = clusterInfoMap[cluster]
-                    const isHealthy = info?.healthy === true
-                    const statusTooltip = getClusterStatusTooltip(cluster)
-                    const isUnreachable = info
-                      ? (info.reachable === false ||
-                         (!info.nodeCount || info.nodeCount === 0) ||
-                         (info.errorType && ['timeout', 'network', 'certificate'].includes(info.errorType)))
-                      : false
-                    const isLoading = !info || (info.nodeCount === undefined && info.reachable === undefined)
-                    return (
-                      <button
-                        key={cluster}
-                        onClick={() => toggleCluster(cluster)}
-                        aria-pressed={isSelected}
-                        className={cn(
-                          'w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors',
-                          isSelected
-                            ? 'bg-purple-500/20 text-foreground'
-                            : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                        )}
-                        title={statusTooltip}
-                      >
-                        <div className={cn(
-                          'w-4 h-4 rounded border flex items-center justify-center shrink-0',
-                          isSelected
-                            ? 'bg-purple-500 border-purple-500'
-                            : 'border-muted-foreground'
-                        )}>
-                          {isSelected && <Check className="w-3 h-3 text-white" />}
-                        </div>
-                        {isLoading ? (
-                          <div className="w-3 h-3 border border-muted-foreground/50 border-t-transparent rounded-full animate-spin shrink-0" />
-                        ) : isUnreachable ? (
-                          <WifiOff className="w-3 h-3 text-yellow-400 shrink-0" />
-                        ) : isHealthy ? (
-                          <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
-                        ) : (
-                          <AlertCircle className="w-3 h-3 text-orange-400 shrink-0" />
-                        )}
-                        <span className={cn('text-sm truncate', isUnreachable ? 'text-yellow-400' : !isHealthy && !isLoading && 'text-orange-400')}>{cluster}</span>
-                      </button>
-                    )
-                  })
-                )}
-              </div>
-            </div>
+            <ClusterCheckboxList availableClusters={availableClusters} selectedClusters={selectedClusters} isAllClustersSelected={isAllClustersSelected} clusterInfoMap={clusterInfoMap} selectAllClusters={selectAllClusters} deselectAllClusters={deselectAllClusters} toggleCluster={toggleCluster} getClusterStatusTooltip={getClusterStatusTooltip} />
 
-            {/* Save Current Filters */}
-            <div className="p-3">
-              {showSaveForm ? (
-                <div className="space-y-2 p-2 bg-secondary/20 rounded">
-                  <Input
-                    id={SAVE_FILTER_NAME_INPUT_ID}
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder={t('common:filters.filterSetName', 'Filter set name...')}
-                    className="bg-secondary/50"
-                    autoFocus
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleSave() }}
-                  />
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {t('common:filters.color', 'Color:')}
-                    </span>
-                    {FILTER_SET_COLORS.map(c => (
-                      <button
-                        key={c}
-                        onClick={() => setNewColor(c)}
-                        aria-label={t('common:filters.colorOption', { defaultValue: `Select color ${c}`, color: c })}
-                        aria-pressed={newColor === c}
-                        className={cn(
-                          'w-5 h-5 rounded-full border-2 transition-all',
-                          newColor === c ? 'border-foreground scale-110' : 'border-transparent',
-                        )}
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={handleSave}
-                      disabled={!newName.trim()}
-                      className="flex-1 px-2 py-1 text-xs font-medium bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {t('common:filters.save', 'Save')}
-                    </button>
-                    <button
-                      onClick={() => { closeSaveForm(); setNewName('') }}
-                      className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {t('common:filters.cancel', 'Cancel')}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => openSaveForm()}
-                  disabled={!isFiltered}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-secondary/30 hover:bg-secondary/50 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  aria-label={t('common:filters.saveCurrentFilters', 'Save Current Filters')}
-                >
-                  <Save className="w-3 h-3" />
-                  {t('common:filters.saveCurrentFilters', 'Save Current Filters')}
-                </button>
-              )}
-            </div>
+            <SaveFilterSection showSaveForm={showSaveForm} saveNameInputId={SAVE_FILTER_NAME_INPUT_ID} newName={newName} setNewName={setNewName} newColor={newColor} setNewColor={setNewColor} handleSave={handleSave} closeSaveForm={closeSaveForm} openSaveForm={openSaveForm} isFiltered={isFiltered} colors={FILTER_SET_COLORS} />
           </div>
         )}
       </div>
