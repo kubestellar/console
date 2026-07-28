@@ -24,6 +24,7 @@ import {
   type SpireStatusData,
   type SpireSummary,
 } from '../lib/demo/spire'
+import { HTTP_NOT_FOUND } from '../lib/constants/http'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -33,8 +34,6 @@ const CACHE_KEY_SPIRE = 'spire-status'
 const SPIRE_STATUS_ENDPOINT = '/api/spire/status'
 const DEFAULT_VERSION = 'unknown'
 const DEFAULT_TRUST_DOMAIN = ''
-
-const NOT_FOUND_STATUS = 404
 
 const INITIAL_SUMMARY: SpireSummary = {
   registrationEntries: 0,
@@ -152,7 +151,7 @@ async function fetchSpireStatus(): Promise<SpireStatusData> {
   })
 
   if (!resp.ok) {
-    if (resp.status === NOT_FOUND_STATUS) {
+    if (resp.status === HTTP_NOT_FOUND) {
       // Endpoint not yet wired — surface "not-installed" so the cache layer
       // will fall back to demo data instead of flagging a hard failure.
       return buildSpireStatus(DEFAULT_VERSION, DEFAULT_TRUST_DOMAIN, [], null, {})

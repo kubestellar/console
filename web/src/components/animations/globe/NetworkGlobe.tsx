@@ -134,26 +134,29 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
     })
 
     // Add some cross-cluster connections with specific types
-    // Production to Edge (workload distribution)
-    flows.push({
-      path: [clusters[2].position, clusters[1].position],
-      id: clusters.length + 1,
-      type: "workload",
-    })
+    // Guard: indices 0–3 must exist before accessing them directly
+    if (clusters.length >= 4) {
+      // Production to Edge (workload distribution)
+      flows.push({
+        path: [clusters[2].position, clusters[1].position],
+        id: clusters.length + 1,
+        type: "workload",
+      })
 
-    // Development to Edge (control commands)
-    flows.push({
-      path: [clusters[0].position, clusters[1].position],
-      id: clusters.length + 2,
-      type: "control",
-    })
+      // Development to Edge (control commands)
+      flows.push({
+        path: [clusters[0].position, clusters[1].position],
+        id: clusters.length + 2,
+        type: "control",
+      })
 
-    // Test to Production (deployment pipeline)
-    flows.push({
-      path: [clusters[3].position, clusters[2].position],
-      id: clusters.length + 3,
-      type: "deploy",
-    })
+      // Test to Production (deployment pipeline)
+      flows.push({
+        path: [clusters[3].position, clusters[2].position],
+        id: clusters.length + 3,
+        type: "deploy",
+      })
+    }
 
     // Add some other cross-cluster connections
     for (let i = 0; i < clusters.length; i++) {

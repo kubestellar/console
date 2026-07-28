@@ -1,6 +1,7 @@
 /**
  * Constants barrel export
  */
+export * from './http'
 export * from './network'
 export * from './storage'
 export {

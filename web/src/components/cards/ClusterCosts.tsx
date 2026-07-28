@@ -1,177 +1,36 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useMemo, useState, useEffect, useCallback, memo } from 'react'
-import { Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, ChevronRight } from 'lucide-react'
+import { Server, Info, ExternalLink, ChevronDown, Sparkles, Settings2 } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
-import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { useCardData } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
-import { CloudProviderIcon, type CloudProvider as IconProvider } from '../ui/CloudProviderIcon'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import { safeGetJSON, safeRemoveItem, safeSetJSON } from '../../lib/utils/localStorage'
+import { safeRemoveItem, safeSetJSON } from '../../lib/utils/localStorage'
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
+import { ClusterCostsRatesPanel } from './ClusterCostsRatesPanel'
+import { ClusterCostsRow } from './ClusterCostsRow'
+import { ClusterCostsFooter } from './ClusterCostsFooter'
+import {
+  CLOUD_PRICING,
+  PROVIDER_ICONS,
+  KNOWN_CLUSTER_PROVIDERS,
+  PROVIDER_OVERRIDES_KEY,
+  SORT_COMPARATORS,
+  SORT_OPTIONS_KEYS,
+  detectClusterProvider,
+  loadPersistedOverrides,
+  type CloudProvider,
+  type ClusterCostItem,
+  type ClusterCostsProps,
+  type PricingMode,
+  type SortByOption,
+} from './ClusterCosts.constants'
 
-type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
-
-// Map ClusterCosts provider type to CloudProviderIcon provider type
-const mapProviderToIconProvider = (provider: CloudProvider): IconProvider => {
-  switch (provider) {
-    case 'aws': return 'eks'
-    case 'gcp': return 'gke'
-    case 'azure': return 'aks'
-    case 'openshift': return 'openshift'
-    case 'oci': return 'oci'
-    case 'estimate':
-    default:
-      return 'kubernetes'
-  }
-}
-
-// LocalStorage key for persisting provider overrides (moved outside component)
-const PROVIDER_OVERRIDES_KEY = 'kubestellar-cluster-provider-overrides'
-
-// Load persisted overrides from localStorage (moved outside component)
-const loadPersistedOverrides = (configOverrides?: Record<string, CloudProvider>): Record<string, CloudProvider> => {
-  if (typeof window === 'undefined') return configOverrides || {}
-  return safeGetJSON<Record<string, CloudProvider>>(PROVIDER_OVERRIDES_KEY) || configOverrides || {}
-}
-type PricingMode = 'uniform' | 'per-cluster'
-type SortByOption = 'cost' | 'name' | 'cpus'
-type SortTranslationKey = 'cards:clusterCosts.sortCost' | 'cards:clusterCosts.sortName' | 'cards:clusterCosts.sortCPUs'
-
-// Labels are set at render time via t() — see getSortOptions()
-const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
-  { value: 'cost' as const, labelKey: 'cards:clusterCosts.sortCost' },
-  { value: 'name' as const, labelKey: 'cards:clusterCosts.sortName' },
-  { value: 'cpus' as const, labelKey: 'cards:clusterCosts.sortCPUs' },
-]
-
-// Cloud provider icons (simple text badges for now, could be SVG logos)
-const PROVIDER_ICONS: Record<CloudProvider, { color: string; bg: string; short: string }> = {
-  estimate: { color: 'text-muted-foreground', bg: 'bg-gray-500/20 dark:bg-gray-400/15', short: 'EST' },
-  aws: { color: 'text-orange-400', bg: 'bg-orange-500/20', short: 'AWS' },
-  gcp: { color: 'text-blue-400', bg: 'bg-blue-500/20', short: 'GCP' },
-  azure: { color: 'text-blue-400', bg: 'bg-blue-500/20', short: 'AZR' },
-  oci: { color: 'text-red-400', bg: 'bg-red-500/20', short: 'OCI' },
-  openshift: { color: 'text-red-500', bg: 'bg-red-600/20', short: 'OCP' } }
-
-interface CloudPricing {
-  name: string
-  cpu: number      // per vCPU per hour
-  memory: number   // per GB per hour
-  gpu: number      // per NVIDIA GPU per hour (rough average)
-  pricingUrl: string
-  notes: string
-}
-
-// Cloud provider pricing (approximate, varies by region and instance type)
-// These are ballpark figures for reference - actual costs depend on instance types, commitments, etc.
-const CLOUD_PRICING: Record<CloudProvider, CloudPricing> = {
-  estimate: {
-    name: 'Estimate',
-    cpu: 0.05,
-    memory: 0.01,
-    gpu: 2.50,
-    pricingUrl: '',
-    notes: 'Generic estimates for rough cost calculation' },
-  aws: {
-    name: 'AWS',
-    cpu: 0.048,      // Based on m5.large ($0.096/hr for 2 vCPU)
-    memory: 0.012,   // Based on m5.large pricing
-    gpu: 3.06,       // Based on p3.2xlarge (V100)
-    pricingUrl: 'https://aws.amazon.com/ec2/pricing/on-demand/',
-    notes: 'Based on US East on-demand pricing' },
-  gcp: {
-    name: 'GCP',
-    cpu: 0.0475,     // n2-standard pricing
-    memory: 0.0064,  // n2-standard pricing
-    gpu: 2.48,       // NVIDIA V100
-    pricingUrl: 'https://cloud.google.com/compute/pricing',
-    notes: 'Based on us-central1 on-demand pricing' },
-  azure: {
-    name: 'Azure',
-    cpu: 0.05,       // D-series pricing
-    memory: 0.011,   // D-series pricing
-    gpu: 2.07,       // NC6 (K80) pricing
-    pricingUrl: 'https://azure.microsoft.com/en-us/pricing/details/virtual-machines/',
-    notes: 'Based on East US on-demand pricing' },
-  oci: {
-    name: 'OCI',
-    cpu: 0.025,      // VM.Standard.E4.Flex
-    memory: 0.0015,  // VM.Standard.E4.Flex
-    gpu: 2.95,       // GPU.A10
-    pricingUrl: 'https://www.oracle.com/cloud/price-list/',
-    notes: 'Based on Flex shapes pricing' },
-  openshift: {
-    name: 'OpenShift',
-    cpu: 0.048,      // Based on ROSA (Red Hat OpenShift on AWS) pricing
-    memory: 0.012,   // Based on ROSA pricing
-    gpu: 3.00,       // GPU node pricing estimate
-    pricingUrl: 'https://www.redhat.com/en/technologies/cloud-computing/openshift/aws/pricing',
-    notes: 'Based on Red Hat OpenShift on AWS (ROSA) pricing' } }
-
-interface ClusterCostsProps {
-  config?: {
-    cpuCostPerHour?: number
-    memoryCostPerGBHour?: number
-    gpuCostPerHour?: number
-    provider?: CloudProvider
-    pricingMode?: PricingMode
-    /** Per-cluster provider overrides: { clusterName: provider } */
-    clusterProviders?: Record<string, CloudProvider>
-  }
-}
-
-// Known cluster name to provider mappings (for clusters without provider keywords in name)
-const KNOWN_CLUSTER_PROVIDERS: Record<string, CloudProvider> = {
-  'prow': 'oci',  // Prow CI cluster runs on OCI
-}
-
-/** Detect cloud provider from a single cluster name/context */
-function detectClusterProvider(name: string, context?: string): CloudProvider {
-  const searchStr = `${name} ${context || ''}`.toLowerCase()
-  const clusterName = name.toLowerCase()
-
-  // Check known cluster mappings first
-  if (KNOWN_CLUSTER_PROVIDERS[clusterName]) {
-    return KNOWN_CLUSTER_PROVIDERS[clusterName]
-  }
-
-  // OpenShift detection (check before other providers as OCP can run on any cloud)
-  if (searchStr.includes('openshift') || searchStr.includes('ocp') || searchStr.includes('rosa') || searchStr.includes('aro')) return 'openshift'
-
-  // Cloud provider detection
-  if (searchStr.includes('eks') || searchStr.includes('aws') || searchStr.includes('amazon')) return 'aws'
-  if (searchStr.includes('gke') || searchStr.includes('gcp') || searchStr.includes('google')) return 'gcp'
-  if (searchStr.includes('aks') || searchStr.includes('azure') || searchStr.includes('microsoft')) return 'azure'
-  if (searchStr.includes('oke') || searchStr.includes('oci') || searchStr.includes('oracle')) return 'oci'
-
-  return 'estimate'
-}
-
-/** Computed cost data for a single cluster */
-interface ClusterCostItem {
-  cluster: string   // matches name; used by global filterByCluster
-  name: string
-  healthy: boolean
-  cpus: number
-  memory: number
-  gpus: number
-  hourly: number
-  daily: number
-  monthly: number
-  provider: CloudProvider
-  context?: string
-}
-
-const SORT_COMPARATORS = {
-  cost: commonComparators.number<ClusterCostItem>('monthly'),
-  name: commonComparators.string<ClusterCostItem>('name'),
-  cpus: commonComparators.number<ClusterCostItem>('cpus') }
 
 export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsProps) {
   const { t } = useTranslation(['cards', 'common'])
@@ -572,89 +431,16 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
       </div>
 
       {/* Rates Info Panel */}
-      {showRatesInfo && (
-        <div className="mb-3 p-3 rounded-lg bg-secondary/30 border border-border/50 text-xs">
-          {pricingMode === 'uniform' ? (
-            // Uniform mode - show single provider rates
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
-                <span className="font-medium text-foreground">{t('cards:clusterCosts.pricingRates', { provider: pricing.name })}</span>
-                {pricing.pricingUrl && (
-                  <a
-                    href={sanitizeUrl(pricing.pricingUrl)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    <span>{t('cards:clusterCosts.viewPricing')}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
-              </div>
-              <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-2">
-                <div className="p-2 rounded bg-secondary/50">
-                  <p className="text-muted-foreground mb-0.5">{t('common:common.cpu')}</p>
-                  <p className="text-foreground font-medium">${cpuCost.toFixed(3)}/hr</p>
-                  <p className="text-2xs text-muted-foreground">{t('cards:clusterCosts.perVCPU')}</p>
-                </div>
-                <div className="p-2 rounded bg-secondary/50">
-                  <p className="text-muted-foreground mb-0.5">{t('common:common.memory')}</p>
-                  <p className="text-foreground font-medium">${memoryCost.toFixed(4)}/hr</p>
-                  <p className="text-2xs text-muted-foreground">{t('cards:clusterCosts.perGB')}</p>
-                </div>
-                <div className="p-2 rounded bg-secondary/50">
-                  <p className="text-muted-foreground mb-0.5">{t('cards:clusterCosts.gpu')}</p>
-                  <p className="text-foreground font-medium">${gpuCost.toFixed(2)}/hr</p>
-                  <p className="text-2xs text-muted-foreground">{t('cards:clusterCosts.perGPU')}</p>
-                </div>
-              </div>
-              <p className="text-muted-foreground italic">{t(`cards:clusterCosts.notes.${selectedProvider}`, { defaultValue: pricing.notes })}</p>
-            </>
-          ) : (
-            // Per-cluster mode - show all providers' rates
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
-                <span className="font-medium text-foreground">{t('cards:clusterCosts.perClusterPricingRates')}</span>
-                <span className="text-muted-foreground">{t('cards:clusterCosts.clickBadgesToChange')}</span>
-              </div>
-              <div className="space-y-2">
-                {(Object.keys(CLOUD_PRICING) as CloudProvider[]).filter(p => p !== 'estimate').map(provider => {
-                  const p = CLOUD_PRICING[provider]
-                  const icon = PROVIDER_ICONS[provider]
-                  const count = providerBreakdown[provider] || 0
-                  if (count === 0 && !showRatesInfo) return null
-                  return (
-                    <div key={provider} className={`flex items-center gap-2 p-1.5 rounded ${count > 0 ? 'bg-secondary/50' : 'opacity-50'}`}>
-                      <span className={`px-1.5 py-0.5 text-[9px] font-medium rounded ${icon.bg} ${icon.color}`}>
-                        {icon.short}
-                      </span>
-                      <span className="flex-1 text-foreground">{p.name}</span>
-                      <span className="text-muted-foreground">
-                        {t('common:common.cpu')} ${p.cpu.toFixed(3)} • {t('common:common.memory')} ${p.memory.toFixed(4)} • {t('cards:clusterCosts.gpu')} ${p.gpu.toFixed(2)}
-                      </span>
-                      {count > 0 && (
-                        <StatusBadge color="purple" size="xs">
-                          {count}
-                        </StatusBadge>
-                      )}
-                      {p.pricingUrl && (
-                        <a
-                          href={sanitizeUrl(p.pricingUrl)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-purple-400 hover:text-purple-300"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      <ClusterCostsRatesPanel
+        showRatesInfo={showRatesInfo}
+        pricingMode={pricingMode}
+        pricing={pricing}
+        selectedProvider={selectedProvider}
+        cpuCost={cpuCost}
+        memoryCost={memoryCost}
+        gpuCost={gpuCost}
+        providerBreakdown={providerBreakdown}
+      />
 
       {/* Local Search */}
       <CardSearchInput
@@ -680,108 +466,38 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
 
       {/* Per-cluster breakdown */}
       <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
-        {clusterCosts.map((cluster) => {
-          const percent = totalMonthly > 0 ? (cluster.monthly / totalMonthly) * 100 : 0
-          const providerIcon = PROVIDER_ICONS[cluster.provider]
-          const providerPricing = CLOUD_PRICING[cluster.provider]
-          const isOverridden = clusterProviderOverrides[cluster.name] !== undefined
-          return (
-            <div
-              key={cluster.name}
-              onClick={() => drillToCost(cluster.name, {
-                cpus: cluster.cpus,
-                memory: cluster.memory,
-                gpus: cluster.gpus,
-                hourly: cluster.hourly,
-                daily: cluster.daily,
-                monthly: cluster.monthly,
-                provider: cluster.provider })}
-              className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors group cursor-pointer"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {/* 1. Server icon */}
-                  <Server className="w-4 h-4 text-muted-foreground shrink-0" />
-                  {/* 2. Vendor logo icon */}
-                  <div className="shrink-0" title={providerPricing.name}>
-                    <CloudProviderIcon provider={mapProviderToIconProvider(cluster.provider)} size={16} />
-                  </div>
-                  {/* 3. Text badge (clickable to change) - styled as obvious dropdown button */}
-                  <button
-                    className={`group/badge px-1.5 py-0.5 text-[9px] font-medium rounded shrink-0 flex items-center gap-0.5 ${providerIcon.bg} ${providerIcon.color} ${
-                      isOverridden
-                        ? 'ring-1 ring-purple-500/50'
-                        : ''
-                    } hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-xs hover:shadow-sm`}
-                    title={`${providerPricing.name}${isOverridden ? ` (${t('cards:clusterCosts.manuallySet')})` : pricingMode === 'per-cluster' ? ` (${t('cards:clusterCosts.autoDetected')})` : ''}\n${t('cards:clusterCosts.clickToChange')}`}
-                    aria-label={t('cards:clusterCosts.changeProviderPricing', { cluster: cluster.name, provider: providerPricing.name })}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      // Cycle through providers
-                      const providers: CloudProvider[] = ['estimate', 'aws', 'gcp', 'azure', 'oci', 'openshift']
-                      const currentIdx = providers.indexOf(cluster.provider)
-                      const nextProvider = providers[(currentIdx + 1) % providers.length]
-                      setClusterProviderOverrides(prev => ({
-                        ...prev,
-                        [cluster.name]: nextProvider
-                      }))
-                    }}
-                    onContextMenu={(e) => {
-                      e.preventDefault()
-                      // Right-click to clear override and use auto-detection
-                      if (clusterProviderOverrides[cluster.name]) {
-                        setClusterProviderOverrides(prev => {
-                          const next = { ...prev }
-                          delete next[cluster.name]
-                          return next
-                        })
-                      }
-                    }}
-                  >
-                    {providerIcon.short}
-                    <ChevronDown className="w-2.5 h-2.5 opacity-60 group-hover/badge:opacity-100 transition-opacity" />
-                  </button>
-                  {/* 4. Cluster name */}
-                  <span className="text-sm font-medium text-foreground truncate min-w-0">{cluster.name}</span>
-                  {/* 5. Health dot */}
-                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${cluster.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-medium text-green-400 shrink-0">
-                    ${cluster.monthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                </div>
-              </div>
-
-              {/* Cost bar */}
-              <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
-                <div
-                  className="h-full bg-linear-to-r from-green-500 to-green-500 rounded-full transition-all"
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-
-              {/* Resource breakdown */}
-              <div className="flex gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Cpu className="w-3 h-3" />
-                  {t('cards:clusterCosts.cpuCount', { count: cluster.cpus })}
-                </span>
-                <span className="flex items-center gap-1">
-                  <HardDrive className="w-3 h-3" />
-                  {t('cards:clusterCosts.memoryGB', { value: cluster.memory })}
-                </span>
-                {cluster.gpus > 0 && (
-                  <span className="flex items-center gap-1 text-purple-400">
-                    <Cpu className="w-3 h-3" />
-                    {t('cards:clusterCosts.gpuCount', { count: cluster.gpus })}
-                  </span>
-                )}
-              </div>
-            </div>
-          )
-        })}
+        {clusterCosts.map((cluster) => (
+          <ClusterCostsRow
+            key={cluster.name}
+            cluster={cluster}
+            totalMonthly={totalMonthly}
+            pricingMode={pricingMode}
+            isOverridden={clusterProviderOverrides[cluster.name] !== undefined}
+            onDrillDown={(c) => drillToCost(c.name, {
+              cpus: c.cpus,
+              memory: c.memory,
+              gpus: c.gpus,
+              hourly: c.hourly,
+              daily: c.daily,
+              monthly: c.monthly,
+              provider: c.provider })}
+            onCycleProvider={(clusterName, nextProvider) => {
+              setClusterProviderOverrides(prev => ({
+                ...prev,
+                [clusterName]: nextProvider
+              }))
+            }}
+            onClearOverride={(clusterName) => {
+              if (clusterProviderOverrides[clusterName]) {
+                setClusterProviderOverrides(prev => {
+                  const next = { ...prev }
+                  delete next[clusterName]
+                  return next
+                })
+              }
+            }}
+          />
+        ))}
       </div>
 
       {/* Pagination */}
@@ -795,82 +511,13 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
       />
 
       {/* Footer */}
-      <div className="mt-4 pt-3 border-t border-border/50 space-y-2 text-xs text-muted-foreground">
-        <div className="flex flex-wrap items-center justify-between gap-y-2">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {pricingMode === 'uniform' ? (
-              <>
-                <span>{t('cards:clusterCosts.basedOnRates', { provider: pricing.name })}</span>
-                {pricing.pricingUrl && (
-                  <a
-                    href={sanitizeUrl(pricing.pricingUrl)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-purple-400 hover:text-purple-300 transition-colors"
-                    title={t('cards:clusterCosts.viewOfficialPricing')}
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
-              </>
-            ) : (
-              <>
-                <span>{t('cards:clusterCosts.mixedPricing')}</span>
-                {/* Show unique providers used */}
-                {uniqueProviders.map(provider => {
-                  const count = providerBreakdown[provider] || 0
-                  const icon = PROVIDER_ICONS[provider]
-                  return (
-                    <span
-                      key={provider}
-                      className={`px-1.5 py-0.5 text-[9px] font-medium rounded ${icon.bg} ${icon.color}`}
-                      title={t('cards:clusterCosts.clustersUsingProvider', { count, provider: CLOUD_PRICING[provider].name })}
-                    >
-                      {icon.short} ({count})
-                    </span>
-                  )
-                })}
-              </>
-            )}
-          </div>
-          <span className="flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" aria-hidden="true" />
-            {t('cards:clusterCosts.clusterCount', { count: totalItems })}
-          </span>
-        </div>
-        {/* Estimation methodology links */}
-        <div className="flex items-center justify-center gap-3 pt-1 text-2xs">
-          <a
-            href="https://www.finops.org/introduction/what-is-finops/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground/70 hover:text-purple-400 transition-colors"
-            title={t('cards:clusterCosts.cloudCostMgmt')}
-          >
-            {t('cards:clusterCosts.finOpsFoundation')}
-          </a>
-          <span className="text-muted-foreground/30">•</span>
-          <a
-            href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground/70 hover:text-purple-400 transition-colors"
-            title={t('cards:clusterCosts.k8sResourceMgmt')}
-          >
-            {t('cards:clusterCosts.k8sResourceMgmtLink')}
-          </a>
-          <span className="text-muted-foreground/30">•</span>
-          <a
-            href="https://www.opencost.io/docs/specification"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground/70 hover:text-purple-400 transition-colors"
-            title={t('cards:clusterCosts.openCostSpec')}
-          >
-            {t('cards:clusterCosts.openCostSpecLink')}
-          </a>
-        </div>
-      </div>
+      <ClusterCostsFooter
+        pricingMode={pricingMode}
+        pricing={pricing}
+        uniqueProviders={uniqueProviders}
+        providerBreakdown={providerBreakdown}
+        totalItems={totalItems}
+      />
     </div>
   )
 })

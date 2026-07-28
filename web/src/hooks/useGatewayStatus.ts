@@ -18,6 +18,7 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { registerRefetch } from '../lib/modeTransition'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
+import { HTTP_SERVICE_UNAVAILABLE } from '../lib/constants/http'
 
 // ============================================================================
 // Constants
@@ -33,9 +34,6 @@ const FAILURE_THRESHOLD = 3
 
 /** localStorage key for Gateway status cache */
 const CACHE_KEY = 'kc-gateway-status-cache'
-
-/** HTTP status code returned when the backend has no k8s client */
-const STATUS_SERVICE_UNAVAILABLE = 503
 
 // ============================================================================
 // Types
@@ -119,7 +117,6 @@ function saveToCache(data: Gateway[], isDemoData: boolean): void {
 // ============================================================================
 // Demo Data Generator
 // ============================================================================
-
 
 function getDemoGateways(clusterNames: string[]): Gateway[] {
   const gateways: Gateway[] = []
@@ -247,7 +244,7 @@ export function useGatewayStatus(): UseGatewayStatusResult {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
-      if (res.status === STATUS_SERVICE_UNAVAILABLE) {
+      if (res.status === HTTP_SERVICE_UNAVAILABLE) {
         throw new Error('Service unavailable')
       }
 

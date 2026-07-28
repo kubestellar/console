@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
 import { getDemoMode } from './useDemoMode'
@@ -10,6 +9,18 @@ import {
   TokenUsageUnauthenticatedError,
   type UserTokenUsageRecord,
 } from '../lib/tokenUsageApi'
+import type { TokenCategory, TokenUsageByCategory, TokenUsage, TokenAlertLevel } from './useTokenUsage.types'
+import {
+  DEFAULT_SETTINGS,
+  DEFAULT_BY_CATEGORY,
+  getTokenAlertLevel,
+  reconcileUsageBreakdown,
+  getUsagePeriodKey,
+  getNextResetDate,
+} from './useTokenUsage.math'
+
+export type { TokenCategory, TokenUsageByCategory, TokenUsage, TokenAlertLevel } from './useTokenUsage.types'
+export { getTokenAlertLevel } from './useTokenUsage.math'
 
 /** Maximum token delta to attribute in a single poll cycle (prevents init spikes) */
 const MAX_SINGLE_DELTA_TOKENS = 50_000
@@ -42,72 +53,11 @@ const TOKEN_USAGE_FLUSH_INTERVAL_MS = 30_000
  */
 const TOKEN_USAGE_FLUSH_THRESHOLD = 100
 
-export type TokenCategory = 'missions' | 'diagnose' | 'insights' | 'predictions' | 'other'
-
-export interface TokenUsageByCategory {
-  missions: number
-  diagnose: number
-  insights: number
-  predictions: number
-  other: number
-}
-
-export interface TokenUsage {
-  used: number
-  limit: number
-  warningThreshold: number
-  criticalThreshold: number
-  stopThreshold: number
-  resetDate: string
-  byCategory: TokenUsageByCategory
-}
-
-export type TokenAlertLevel = 'normal' | 'warning' | 'critical' | 'stopped'
-
-export function getTokenAlertLevel(usage: Pick<TokenUsage, 'used' | 'limit' | 'warningThreshold' | 'criticalThreshold' | 'stopThreshold'>): TokenAlertLevel {
-  if (usage.limit <= 0) return 'normal'
-
-  const percentageUsed = usage.used / usage.limit
-  const stopThreshold = usage.stopThreshold > 0 ? usage.stopThreshold : DEFAULT_SETTINGS.stopThreshold
-
-  if (percentageUsed >= stopThreshold) return 'stopped'
-  if (percentageUsed >= usage.criticalThreshold) return 'critical'
-  if (percentageUsed >= usage.warningThreshold) return 'warning'
-  return 'normal'
-}
-
 const SETTINGS_KEY = 'kubestellar-token-settings'
 const CATEGORY_KEY = 'kubestellar-token-categories'
 const PERIOD_KEY = 'kubestellar-token-period'
 const SETTINGS_CHANGED_EVENT = 'kubestellar-token-settings-changed'
 const POLL_INTERVAL_MS = 30_000 // Poll every 30 seconds
-const LOCAL_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' })
-
-const DEFAULT_SETTINGS = {
-  limit: 500000000, // 500M tokens daily default
-  warningThreshold: 0.7, // 70%
-  criticalThreshold: 0.9, // 90%
-  stopThreshold: 1.0, // 100%
-}
-
-const NEXT_RESET_DAY_OFFSET = 1
-
-const DEFAULT_BY_CATEGORY: TokenUsageByCategory = {
-  missions: 0,
-  diagnose: 0,
-  insights: 0,
-  predictions: 0,
-  other: 0 }
-
-function reconcileUsageBreakdown(totalUsed: number, byCategory: TokenUsageByCategory): TokenUsageByCategory {
-  // If no tokens used, reset all categories to 0 (prevents stale demo/cached data from showing)
-  if (totalUsed === 0) {
-    return { ...DEFAULT_BY_CATEGORY }
-  }
-  const knownCategories = byCategory.missions + byCategory.diagnose + byCategory.insights + byCategory.predictions
-  const other = Math.max(totalUsed - knownCategories, 0)
-  return other === byCategory.other ? byCategory : { ...byCategory, other }
-}
 
 // Demo mode token usage - simulate realistic usage
 const DEMO_TOKEN_USAGE = 1247832 // ~25% of 5M limit
@@ -205,10 +155,6 @@ function persistUsage(lastKnown: number, sessionId: string | null): void {
   } catch {
     // Quota exceeded / private mode — ignore, this is best-effort.
   }
-}
-
-function getUsagePeriodKey(now = new Date()): string {
-  return LOCAL_DATE_FORMATTER.format(now)
 }
 
 function resetUsagePeriodState(nextPeriod: string, forceNotify = false): void {
@@ -784,12 +730,6 @@ export function useTokenUsage() {
     resetUsage,
     isAIDisabled,
     isDemoData }
-}
-
-function getNextResetDate(): string {
-  const now = new Date()
-  const nextReset = new Date(now.getFullYear(), now.getMonth(), now.getDate() + NEXT_RESET_DAY_OFFSET)
-  return nextReset.toISOString()
 }
 
 /**

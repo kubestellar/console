@@ -2,8 +2,7 @@ import { getStoredAuthTokenSync } from '../lib/authToken'
 import { MS_PER_MINUTE } from '../lib/constants/time'
 
 /** HTTP status codes that indicate authentication/authorization failure */
-export const HTTP_UNAUTHORIZED = 401
-export const HTTP_FORBIDDEN = 403
+export { HTTP_UNAUTHORIZED, HTTP_FORBIDDEN } from '../lib/constants/http'
 
 export type DeployMissionStatus = 'launching' | 'deploying' | 'orbit' | 'abort' | 'partial'
 
