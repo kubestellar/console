@@ -405,7 +405,10 @@ export function useDashboardState() {
     }
   }, [searchParams, setSearchParams, openAddCardModal, location.pathname])
 
-  const cardMutationBase = { localCards, dashboard, snapshot, setLocalCards, showToast, t, recordCardAdded, recordCardRemoved, recordCardConfigured, closeConfigureCard }
+  const cardMutationBase = useMemo(
+    () => ({ localCards, dashboard, snapshot, setLocalCards, showToast, t, recordCardAdded, recordCardRemoved, recordCardConfigured, closeConfigureCard }),
+    [localCards, dashboard, snapshot, setLocalCards, showToast, t, recordCardAdded, recordCardRemoved, recordCardConfigured, closeConfigureCard],
+  )
 
   const handleAddCards = useCallback(async (suggestions: Array<{
     type: string
@@ -415,11 +418,11 @@ export function useDashboardState() {
   }>) => {
     await addCardsToBoard(suggestions, insertAtIndex, { ...cardMutationBase, recordCardAdded })
     setInsertAtIndex(null)
-  }, [cardMutationBase, insertAtIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cardMutationBase, insertAtIndex])
 
   const handleRemoveCard = useCallback(async (cardId: string) => {
     await removeCardFromBoard(cardId, { ...cardMutationBase, recordCardRemoved })
-  }, [cardMutationBase]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cardMutationBase])
 
   const handleConfigureCard = useCallback((card: Card) => {
     setSelectedCard(card)
@@ -428,33 +431,33 @@ export function useDashboardState() {
 
   const handleWidthChange = useCallback(async (cardId: string, newWidth: number) => {
     await updateCardWidth(cardId, newWidth, cardMutationBase)
-  }, [cardMutationBase]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cardMutationBase])
 
   const handleHeightChange = useCallback(async (cardId: string, newHeight: number) => {
     await updateCardHeight(cardId, newHeight, cardMutationBase)
-  }, [cardMutationBase]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cardMutationBase])
 
   const handleCardConfigured = useCallback(async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
     await updateCardConfig(cardId, newConfig, newTitle, { ...cardMutationBase, closeConfigureCard })
     setSelectedCard(null)
-  }, [cardMutationBase, closeConfigureCard]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cardMutationBase, closeConfigureCard])
 
   const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>, title?: string) => {
     addRecommendedCard(cardType, config, title, cardMutationBase)
-  }, [cardMutationBase]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cardMutationBase])
 
   const handleCreateCardFromAI = useCallback((cardType: string, config: Record<string, unknown>, title?: string) => {
     addCardFromAI(cardType, config, title, { ...cardMutationBase, closeConfigureCard })
     setSelectedCard(null)
-  }, [cardMutationBase, closeConfigureCard]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cardMutationBase, closeConfigureCard])
 
   const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
     applyDashboardTemplate(template, cardMutationBase)
-  }, [cardMutationBase]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cardMutationBase])
 
   const handleAddSingleCard = useCallback((cardType: string) => {
     addSingleCard(cardType, cardMutationBase)
-  }, [cardMutationBase]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cardMutationBase])
 
   const handleNudgeAction = useCallback(() => {
     if (activeNudge === 'customize') {
