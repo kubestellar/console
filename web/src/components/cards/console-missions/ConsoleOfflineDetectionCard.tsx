@@ -1,9 +1,8 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 // Modal safety: the ApiKeyPromptModal used here is the shared BaseModal-based
 // prompt that already guards its own close behavior; no form state on this
 // card can be lost to a backdrop click. Treat as closeOnBackdropClick={false}.
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
-import { TrendingUp, RefreshCw, Info, Sparkles, Layers, List } from 'lucide-react'
+import { Layers, List } from 'lucide-react'
 import { useCardDemoState } from '../CardDataContext'
 import { useMissions } from '../../../hooks/useMissions'
 import { useClusters } from '../../../hooks/useMCP'
@@ -47,7 +46,8 @@ import {
 import { UnifiedItemsList } from './UnifiedItemsList'
 import { RootCauseAnalyzer } from './RootCauseAnalyzer'
 import { AIAnalysisPanel } from './AIAnalysisPanel'
-import { buildAnalysisMissionConfig } from './offlineAnalysis'
+import { useOfflineDetection } from './useOfflineDetection'
+import { OfflineStatusDisplay } from './OfflineStatusDisplay'
 import {
   getNodesCache,
   subscribeToNodes,
@@ -657,27 +657,28 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     (m.title.includes('Analysis') || m.title.includes('Diagnose')) && m.status === 'running'
   )
 
-  const doStartAnalysis = () => {
-    const missionConfig = buildAnalysisMissionConfig({
-      unifiedItems,
-      categorizedItems: {
-        offline: categorizedItems.offline,
-        gpu: categorizedItems.gpu,
-        prediction: categorizedItems.prediction,
-      },
-      gpuIssues,
-      predictedRisks,
-      filteredTotalIssues,
-      filteredTotalPredicted,
-      filteredCriticalPredicted,
-      isFiltered,
-    })
-    startMission(missionConfig)
-  }
+  const {
+    currentClusterIssueCount,
+    firstCurrentIssueCluster,
+    analysisMissionConfig,
+  } = useOfflineDetection({
+    offlineNodes,
+    clusterHealthIssues,
+    gpuIssues,
+    predictedRisks,
+    unifiedItems,
+    categorizedItems: {
+      offline: categorizedItems.offline,
+      gpu: categorizedItems.gpu,
+      prediction: categorizedItems.prediction,
+    },
+    filteredTotalIssues,
+    filteredTotalPredicted,
+    filteredCriticalPredicted,
+    isFiltered,
+  })
 
-  const handleStartAnalysis = () => checkKeyAndRun(doStartAnalysis)
-  const currentClusterIssueCount = offlineNodes.length + clusterHealthIssues.length
-  const firstCurrentIssueCluster = offlineNodes[0]?.cluster || clusterHealthIssues[0]?.cluster || null
+  const handleStartAnalysis = () => checkKeyAndRun(() => startMission(analysisMissionConfig))
 
   return (
     <div className="h-full flex flex-col relative">
@@ -691,92 +692,23 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       <div className="flex items-center justify-end mb-4">
       </div>
 
-      {/* Status Summary */}
-      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
-        <div
-          className={cn(
-            'p-2 rounded-lg border',
-            currentClusterIssueCount > 0
-              ? 'bg-red-500/10 border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors'
-              : 'bg-green-500/10 border-green-500/20 cursor-default'
-          )}
-          onClick={() => {
-            if (firstCurrentIssueCluster) {
-              drillToCluster(firstCurrentIssueCluster)
-            }
-          }}
-          title={currentClusterIssueCount > 0
-            ? t('common:healthCheck.issuesTooltip', { count: currentClusterIssueCount })
-            : t('cards:consoleOfflineDetection.allHealthy')}
-        >
-          <div className="text-xl font-bold text-foreground">{currentClusterIssueCount}</div>
-          <div className={cn('text-2xs', currentClusterIssueCount > 0 ? 'text-red-400' : 'text-green-400')}>
-            {t('common:common.issues', { defaultValue: 'Issues' })}
-          </div>
-        </div>
-        <div
-          className={cn(
-            'p-2 rounded-lg border',
-            gpuIssues.length > 0
-              ? 'bg-yellow-500/10 border-yellow-500/20 cursor-pointer hover:bg-yellow-500/20 transition-colors'
-              : 'bg-green-500/10 border-green-500/20 cursor-default'
-          )}
-          onClick={() => {
-            if (gpuIssues.length > 0 && gpuIssues[0]) {
-              drillToCluster(gpuIssues[0].cluster)
-            }
-          }}
-          title={gpuIssues.length > 0 ? `${gpuIssues.length} GPU issue${gpuIssues.length !== 1 ? 's' : ''} - Click to view` : 'All GPUs available'}
-        >
-          <div className="text-xl font-bold text-foreground">{gpuIssues.length}</div>
-          <div className={cn('text-2xs', gpuIssues.length > 0 ? 'text-yellow-400' : 'text-green-400')}>
-            {t('cards:consoleOfflineDetection.gpuIssues')}
-          </div>
-        </div>
-        <div
-          className={cn(
-            'p-2 rounded-lg border',
-            totalPredicted > 0 && aiEnabled && !isAnalyzing
-              ? 'bg-blue-500/10 border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-colors'
-              : totalPredicted > 0
-                ? 'bg-blue-500/10 border-blue-500/20 cursor-default'
-                : 'bg-green-500/10 border-green-500/20 cursor-default'
-          )}
-          onClick={aiEnabled && !isAnalyzing ? () => triggerAIAnalysis() : undefined}
-          title={`Predictive Failure Detection:
-
-Heuristic Rules (instant):
- Pods with ${THRESHOLDS.highRestartCount}+ restarts → likely to crash
- Clusters with >${THRESHOLDS.cpuPressure}% CPU → throttling risk
- Clusters with >${THRESHOLDS.memoryPressure}% memory → OOM risk
- GPU nodes at full capacity → no headroom
-
-AI Analysis (${aiEnabled ? `every ${predictionSettings.interval}m` : 'disabled'}):
-${aiEnabled ? '• Trend detection over time\n• Correlated failure patterns\n• Anomaly detection' : '• Enable in Settings > Predictions'}
-
-${totalPredicted > 0 ? `Current: ${heuristicPredictionCount} heuristic, ${aiPredictionCount} AI${criticalPredicted > 0 ? ` (${criticalPredicted} critical)` : ''}` : 'No predicted risks detected'}
-${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
-        >
-          <div className="flex items-center gap-1">
-            {aiPredictionCount > 0 ? (
-              <Sparkles className="w-3 h-3 text-blue-400" />
-            ) : (
-              <TrendingUp className={cn('w-3 h-3', totalPredicted > 0 ? 'text-blue-400' : 'text-green-400')} />
-            )}
-            <span className="text-xl font-bold text-foreground">{totalPredicted}</span>
-            {isAnalyzing && (
-              <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
-            )}
-          </div>
-          <div className={cn(
-            'text-2xs flex items-center gap-1',
-            totalPredicted > 0 ? 'text-blue-400' : 'text-green-400'
-          )}>
-            {t('cards:consoleOfflineDetection.predicted')}
-            <Info className="w-3 h-3 opacity-60" />
-          </div>
-        </div>
-      </div>
+      <OfflineStatusDisplay
+        currentClusterIssueCount={currentClusterIssueCount}
+        firstCurrentIssueCluster={firstCurrentIssueCluster}
+        gpuIssueCount={gpuIssues.length}
+        firstGpuIssueCluster={gpuIssues[0]?.cluster || null}
+        totalPredicted={totalPredicted}
+        aiEnabled={aiEnabled}
+        isAnalyzing={isAnalyzing}
+        aiPredictionCount={aiPredictionCount}
+        criticalPredicted={criticalPredicted}
+        heuristicPredictionCount={heuristicPredictionCount}
+        thresholds={THRESHOLDS}
+        predictionIntervalMinutes={predictionSettings.interval}
+        onDrillToCluster={drillToCluster}
+        onTriggerAnalysis={triggerAIAnalysis}
+        t={t}
+      />
 
       {/* Card Controls: Search, Cluster Filter, Sort */}
       <CardControlsRow
