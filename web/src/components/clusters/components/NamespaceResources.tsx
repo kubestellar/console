@@ -4,24 +4,31 @@ import { usePods, useDeployments, useServices, useJobs, useHPAs, useConfigMaps, 
 import { useCachedPVCs } from '../../../hooks/useCachedData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useTranslation } from 'react-i18next'
-import { StatusBadge } from '../../ui/StatusBadge'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
-import {
-  LB_PROVISIONING_LABEL,
-  LB_STATUS_PROVISIONING,
-} from '../../../lib/constants/network'
 import { TechnicalAcronym } from '../../shared/TechnicalAcronym'
-
-/** Service type string emitted by the backend for LoadBalancer services.
- * Defined as a constant to avoid magic strings. */
-const SERVICE_TYPE_LOAD_BALANCER = 'LoadBalancer'
-
-type ResourceKind = 'Pod' | 'Deployment' | 'Service' | 'Job' | 'HPA' | 'ConfigMap' | 'Secret' | 'ServiceAccount' | 'PVC'
+import { ResourceTypeAccordion } from './ResourceTypeAccordion'
+import { SimpleResourceRow } from './SimpleResourceRow'
+import { buildAllResources, getStatusBgColor, type ResourceKind } from './namespaceResourceUtils'
 
 interface NamespaceResourcesProps {
   clusterName: string
   namespace: string
   onClose?: () => void
+}
+
+/** Resource kind icon mapping for the list view. */
+function getKindIcon(kind: ResourceKind) {
+  switch (kind) {
+    case 'Pod': return <Box className="w-3.5 h-3.5 text-blue-400" />
+    case 'Deployment': return <Layers className="w-3.5 h-3.5 text-purple-400" />
+    case 'Service': return <Network className="w-3.5 h-3.5 text-cyan-400" />
+    case 'Job': return <Briefcase className="w-3.5 h-3.5 text-yellow-400" />
+    case 'HPA': return <Activity className="w-3.5 h-3.5 text-purple-400" />
+    case 'ConfigMap': return <Settings className="w-3.5 h-3.5 text-orange-400" />
+    case 'Secret': return <Lock className="w-3.5 h-3.5 text-purple-400" />
+    case 'ServiceAccount': return <User className="w-3.5 h-3.5 text-cyan-400" />
+    case 'PVC': return <HardDrive className="w-3.5 h-3.5 text-green-400" />
+  }
 }
 
 export function NamespaceResources({ clusterName, namespace, onClose }: NamespaceResourcesProps) {
@@ -103,156 +110,10 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
   })()
 
   // Build flat list of all resources for list view
-  const allResources = useMemo(() => {
-    const resources: Array<{
-      kind: ResourceKind
-      name: string
-      namespace?: string
-      status?: string
-      statusColor: string
-      detail?: string
-      data?: Record<string, unknown>
-    }> = []
-
-    deployments.forEach(dep => resources.push({
-      kind: 'Deployment',
-      name: dep.name,
-      namespace: dep.namespace,
-      status: dep.status,
-      statusColor: dep.status === 'running' ? 'green' : dep.status === 'deploying' ? 'blue' : 'red',
-      detail: `${dep.readyReplicas}/${dep.replicas}`,
-      data: { replicas: dep.replicas, readyReplicas: dep.readyReplicas, image: dep.image, status: dep.status, age: dep.age }
-    }))
-
-    pods.forEach(pod => resources.push({
-      kind: 'Pod',
-      name: pod.name,
-      namespace: pod.namespace,
-      status: pod.status,
-      statusColor: pod.status === 'Running' ? 'green' : pod.status === 'Pending' ? 'yellow' : 'red',
-      detail: pod.ready,
-      data: { status: pod.status, ready: pod.ready, restarts: pod.restarts, node: pod.node, age: pod.age }
-    }))
-
-    services.forEach(svc => {
-      // Issue #6153: for LoadBalancer services with no ingress IP/
-      // hostname assigned yet, display 'Provisioning' instead of an
-      // empty string. We treat either the explicit lbStatus flag from
-      // the backend OR a LoadBalancer type with a missing externalIP
-      // (for older backends that do not set lbStatus) as provisioning.
-      const isPendingLB =
-        svc.type === SERVICE_TYPE_LOAD_BALANCER &&
-        (svc.lbStatus === LB_STATUS_PROVISIONING || !svc.externalIP)
-      const externalIPDisplay = isPendingLB
-        ? LB_PROVISIONING_LABEL
-        : svc.externalIP
-      resources.push({
-        kind: 'Service',
-        name: svc.name,
-        namespace: svc.namespace,
-        status: svc.type,
-        statusColor: 'cyan',
-        detail: (svc.ports ?? []).slice(0, 2).join(', '),
-        data: {
-          type: svc.type,
-          clusterIP: svc.clusterIP,
-          externalIP: externalIPDisplay,
-          endpoints: svc.endpoints,
-          lbStatus: svc.lbStatus,
-          ports: svc.ports,
-          age: svc.age,
-        },
-      })
-    })
-
-    jobs.forEach(job => resources.push({
-      kind: 'Job',
-      name: job.name,
-      namespace: job.namespace,
-      status: job.status,
-      statusColor: job.status === 'Complete' ? 'green' : job.status === 'Running' ? 'green' : 'red',
-      detail: job.completions,
-      data: { status: job.status, completions: job.completions, duration: job.duration, age: job.age }
-    }))
-
-    hpas.forEach(hpa => resources.push({
-      kind: 'HPA',
-      name: hpa.name,
-      namespace: hpa.namespace,
-      status: `${hpa.currentReplicas}/${hpa.minReplicas}-${hpa.maxReplicas}`,
-      statusColor: 'purple',
-      detail: hpa.reference,
-      data: { reference: hpa.reference, minReplicas: hpa.minReplicas, maxReplicas: hpa.maxReplicas, currentReplicas: hpa.currentReplicas, targetCPU: hpa.targetCPU, currentCPU: hpa.currentCPU, age: hpa.age }
-    }))
-
-    configmaps.forEach(cm => resources.push({
-      kind: 'ConfigMap',
-      name: cm.name,
-      namespace: cm.namespace,
-      status: `${cm.dataCount} keys`,
-      statusColor: 'orange',
-      data: { dataCount: cm.dataCount, age: cm.age }
-    }))
-
-    secrets.forEach(secret => resources.push({
-      kind: 'Secret',
-      name: secret.name,
-      namespace: secret.namespace,
-      status: secret.type,
-      statusColor: 'purple',
-      detail: `${secret.dataCount} keys`,
-      data: { type: secret.type, dataCount: secret.dataCount, age: secret.age }
-    }))
-
-    serviceAccounts.forEach(sa => resources.push({
-      kind: 'ServiceAccount',
-      name: sa.name,
-      namespace: sa.namespace,
-      status: `${sa.secrets?.length || 0} secrets`,
-      statusColor: 'cyan',
-      data: { secrets: sa.secrets, imagePullSecrets: sa.imagePullSecrets, age: sa.age }
-    }))
-
-    pvcs.forEach(pvc => resources.push({
-      kind: 'PVC',
-      name: pvc.name,
-      namespace: pvc.namespace,
-      status: pvc.status,
-      statusColor: pvc.status === 'Bound' ? 'green' : pvc.status === 'Pending' ? 'yellow' : 'red',
-      detail: pvc.capacity,
-      data: { status: pvc.status, storageClass: pvc.storageClass, capacity: pvc.capacity, accessModes: pvc.accessModes, volumeName: pvc.volumeName, age: pvc.age }
-    }))
-
-    return resources
-  }, [deployments, pods, services, jobs, hpas, configmaps, secrets, serviceAccounts, pvcs])
-
-  // Resource kind icon mapping
-  const getKindIcon = (kind: ResourceKind) => {
-    switch (kind) {
-      case 'Pod': return <Box className="w-3.5 h-3.5 text-blue-400" />
-      case 'Deployment': return <Layers className="w-3.5 h-3.5 text-purple-400" />
-      case 'Service': return <Network className="w-3.5 h-3.5 text-cyan-400" />
-      case 'Job': return <Briefcase className="w-3.5 h-3.5 text-yellow-400" />
-      case 'HPA': return <Activity className="w-3.5 h-3.5 text-purple-400" />
-      case 'ConfigMap': return <Settings className="w-3.5 h-3.5 text-orange-400" />
-      case 'Secret': return <Lock className="w-3.5 h-3.5 text-purple-400" />
-      case 'ServiceAccount': return <User className="w-3.5 h-3.5 text-cyan-400" />
-      case 'PVC': return <HardDrive className="w-3.5 h-3.5 text-green-400" />
-    }
-  }
-
-  const getStatusBgColor = (color: string) => {
-    switch (color) {
-      case 'green': return 'bg-green-500/20 text-green-400'
-      case 'blue': return 'bg-blue-500/20 text-blue-400'
-      case 'yellow': return 'bg-yellow-500/20 text-yellow-400'
-      case 'red': return 'bg-red-500/20 text-red-400'
-      case 'cyan': return 'bg-cyan-500/20 text-cyan-400'
-      case 'purple': return 'bg-purple-500/20 text-purple-400'
-      case 'orange': return 'bg-orange-500/20 text-orange-400'
-      default: return 'bg-gray-500/20 text-muted-foreground dark:bg-gray-400/20'
-    }
-  }
+  const allResources = useMemo(
+    () => buildAllResources({ deployments, pods, services, jobs, hpas, configmaps, secrets, serviceAccounts, pvcs }),
+    [deployments, pods, services, jobs, hpas, configmaps, secrets, serviceAccounts, pvcs],
+  )
 
   const handleResourceClick = (kind: ResourceKind, name: string, ns: string, data?: Record<string, unknown>) => {
     switch (kind) {
@@ -377,274 +238,246 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
         <div className="font-mono text-xs max-h-[300px] overflow-y-auto">
           <div className="border-l border-border/50 pl-2">
             {deployments.length > 0 && (
-              <div className="mb-1">
-                <button onClick={() => toggleType('deployments')} disabled={deploymentsLoading} className="flex min-w-11 items-center gap-1.5 p-3 hover:bg-card/30 rounded w-full text-left min-h-11 disabled:opacity-50 disabled:cursor-not-allowed">
-                  {expandedTypes.has('deployments') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <StatusBadge color="purple" icon={<Layers className="w-3 h-3" />}>Deploy</StatusBadge>
-                  <span className="text-muted-foreground">({deployments.length})</span>
-                </button>
-                {expandedTypes.has('deployments') && (
-                  <div className="ml-4 border-l border-border/30 pl-2">
-                    {deployments.map((dep) => {
-                      const depPods = podsByDeployment.byDeployment[dep.name] || []
-                      const isExpanded = expandedItems.has(`dep-${dep.name}`)
-                      return (
-                        <div key={dep.name} className="mb-0.5">
-                          <div className="flex items-center gap-2 min-h-11 px-1 rounded hover:bg-card/30">
-                            <button onClick={() => depPods.length > 0 && toggleItem(`dep-${dep.name}`)} className="min-h-11 min-w-[44px] flex items-center justify-center">
-                              {depPods.length > 0 ? (isExpanded ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />) : <span className="w-3" />}
-                            </button>
-                            <button
-                              onClick={() => handleResourceClick('Deployment', dep.name, dep.namespace, { replicas: dep.replicas, readyReplicas: dep.readyReplicas, status: dep.status })}
-                              className="flex items-center gap-2 flex-1 min-h-11"
-                            >
-                              <span className="text-foreground">{dep.name}</span>
-                              <span className={`text-xs ${dep.readyReplicas === dep.replicas ? 'text-green-400' : 'text-orange-400'}`}>{dep.readyReplicas}/{dep.replicas}</span>
-                              {depPods.length > 0 && <span className="text-xs text-muted-foreground">({depPods.length} pods)</span>}
-                              <ChevronRight className="w-3 h-3 text-primary ml-auto" />
-                            </button>
-                          </div>
-                          {isExpanded && depPods.length > 0 && (
-                            <div className="ml-4 border-l border-border/30 pl-2">
-                              {depPods.slice(0, 10).map(pod => (
-                                <div
-                                  key={pod.name}
-                                  className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
-                                  onClick={() => handleResourceClick('Pod', pod.name, pod.namespace, { status: pod.status, restarts: pod.restarts })}
-                                >
-                                  <Box className="w-3 h-3 text-blue-400" />
-                                  <span className="text-foreground truncate max-w-[200px]" title={pod.name}>{pod.name}</span>
-                                  <span className={pod.status === 'Running' ? 'text-green-400' : pod.status === 'Pending' ? 'text-yellow-400' : 'text-red-400'}>{pod.status}</span>
-                                  <ChevronRight className="w-3 h-3 text-primary ml-auto" />
-                                </div>
-                              ))}
-                              {depPods.length > 10 && <div className="text-xs text-muted-foreground pl-5">+{depPods.length - 10} more</div>}
-                            </div>
-                          )}
+              <ResourceTypeAccordion
+                typeKey="deployments"
+                isExpanded={expandedTypes.has('deployments')}
+                onToggle={toggleType}
+                disabled={deploymentsLoading}
+                badgeColor="purple"
+                badgeIcon={<Layers className="w-3 h-3" />}
+                label="Deploy"
+                countLabel={`(${deployments.length})`}
+              >
+                {deployments.map((dep) => {
+                  const depPods = podsByDeployment.byDeployment[dep.name] || []
+                  const isExpanded = expandedItems.has(`dep-${dep.name}`)
+                  return (
+                    <div key={dep.name} className="mb-0.5">
+                      <div className="flex items-center gap-2 min-h-11 px-1 rounded hover:bg-card/30">
+                        <button onClick={() => depPods.length > 0 && toggleItem(`dep-${dep.name}`)} className="min-h-11 min-w-[44px] flex items-center justify-center">
+                          {depPods.length > 0 ? (isExpanded ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />) : <span className="w-3" />}
+                        </button>
+                        <button
+                          onClick={() => handleResourceClick('Deployment', dep.name, dep.namespace, { replicas: dep.replicas, readyReplicas: dep.readyReplicas, status: dep.status })}
+                          className="flex items-center gap-2 flex-1 min-h-11"
+                        >
+                          <span className="text-foreground">{dep.name}</span>
+                          <span className={`text-xs ${dep.readyReplicas === dep.replicas ? 'text-green-400' : 'text-orange-400'}`}>{dep.readyReplicas}/{dep.replicas}</span>
+                          {depPods.length > 0 && <span className="text-xs text-muted-foreground">({depPods.length} pods)</span>}
+                          <ChevronRight className="w-3 h-3 text-primary ml-auto" />
+                        </button>
+                      </div>
+                      {isExpanded && depPods.length > 0 && (
+                        <div className="ml-4 border-l border-border/30 pl-2">
+                          {depPods.slice(0, 10).map(pod => (
+                            <SimpleResourceRow
+                              key={pod.name}
+                              icon={<Box className="w-3 h-3 text-blue-400" />}
+                              name={pod.name}
+                              primaryText={pod.status}
+                              primaryClassName={pod.status === 'Running' ? 'text-green-400' : pod.status === 'Pending' ? 'text-yellow-400' : 'text-red-400'}
+                              onClick={() => handleResourceClick('Pod', pod.name, pod.namespace, { status: pod.status, restarts: pod.restarts })}
+                            />
+                          ))}
+                          {depPods.length > 10 && <div className="text-xs text-muted-foreground pl-5">+{depPods.length - 10} more</div>}
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </ResourceTypeAccordion>
             )}
 
             {podsByDeployment.standalone.length > 0 && (
-              <div className="mb-1">
-                <button onClick={() => toggleType('pods')} className="flex min-w-11 items-center gap-1.5 p-3 hover:bg-card/30 rounded w-full text-left min-h-11">
-                  {expandedTypes.has('pods') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <StatusBadge color="blue" icon={<Box className="w-3 h-3" />}>{t('common.pod')}</StatusBadge>
-                  <span className="text-muted-foreground">Standalone ({podsByDeployment.standalone.length})</span>
-                </button>
-                {expandedTypes.has('pods') && (
-                  <div className="ml-4 border-l border-border/30 pl-2">
-                    {podsByDeployment.standalone.slice(0, 20).map(pod => (
-                      <div
-                        key={pod.name}
-                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
-                        onClick={() => handleResourceClick('Pod', pod.name, pod.namespace, { status: pod.status, restarts: pod.restarts })}
-                      >
-                        <Box className="w-3 h-3 text-blue-400" />
-                        <span className="text-foreground truncate max-w-[200px]" title={pod.name}>{pod.name}</span>
-                        <span className={pod.status === 'Running' ? 'text-green-400' : pod.status === 'Pending' ? 'text-yellow-400' : 'text-red-400'}>{pod.status}</span>
-                        <ChevronRight className="w-3 h-3 text-primary ml-auto" />
-                      </div>
-                    ))}
-                    {podsByDeployment.standalone.length > 20 && <div className="text-xs text-muted-foreground pl-5">+{podsByDeployment.standalone.length - 20} more</div>}
-                  </div>
-                )}
-              </div>
+              <ResourceTypeAccordion
+                typeKey="pods"
+                isExpanded={expandedTypes.has('pods')}
+                onToggle={toggleType}
+                badgeColor="blue"
+                badgeIcon={<Box className="w-3 h-3" />}
+                label={t('common.pod')}
+                countLabel={`Standalone (${podsByDeployment.standalone.length})`}
+              >
+                {podsByDeployment.standalone.slice(0, 20).map(pod => (
+                  <SimpleResourceRow
+                    key={pod.name}
+                    icon={<Box className="w-3 h-3 text-blue-400" />}
+                    name={pod.name}
+                    primaryText={pod.status}
+                    primaryClassName={pod.status === 'Running' ? 'text-green-400' : pod.status === 'Pending' ? 'text-yellow-400' : 'text-red-400'}
+                    onClick={() => handleResourceClick('Pod', pod.name, pod.namespace, { status: pod.status, restarts: pod.restarts })}
+                  />
+                ))}
+                {podsByDeployment.standalone.length > 20 && <div className="text-xs text-muted-foreground pl-5">+{podsByDeployment.standalone.length - 20} more</div>}
+              </ResourceTypeAccordion>
             )}
 
             {services.length > 0 && (
-              <div className="mb-1">
-                <button onClick={() => toggleType('services')} className="flex min-w-11 items-center gap-1.5 p-3 hover:bg-card/30 rounded w-full text-left min-h-11">
-                  {expandedTypes.has('services') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <StatusBadge color="cyan" icon={<Network className="w-3 h-3" />}>Svc</StatusBadge>
-                  <span className="text-muted-foreground">({services.length})</span>
-                </button>
-                {expandedTypes.has('services') && (
-                  <div className="ml-4 border-l border-border/30 pl-2">
-                    {services.map(svc => (
-                      <div
-                        key={svc.name}
-                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
-                        onClick={() => handleResourceClick('Service', svc.name, svc.namespace, { type: svc.type, clusterIP: svc.clusterIP, ports: svc.ports })}
-                      >
-                        <Network className="w-3 h-3 text-cyan-400" />
-                        <span className="text-foreground truncate max-w-[200px]" title={svc.name}>{svc.name}</span>
-                        <span className="text-cyan-400">{svc.type}</span>
-                        {svc.ports && svc.ports.length > 0 && <span className="text-muted-foreground">{svc.ports[0]}</span>}
-                        <ChevronRight className="w-3 h-3 text-primary ml-auto" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <ResourceTypeAccordion
+                typeKey="services"
+                isExpanded={expandedTypes.has('services')}
+                onToggle={toggleType}
+                badgeColor="cyan"
+                badgeIcon={<Network className="w-3 h-3" />}
+                label="Svc"
+                countLabel={`(${services.length})`}
+              >
+                {services.map(svc => (
+                  <SimpleResourceRow
+                    key={svc.name}
+                    icon={<Network className="w-3 h-3 text-cyan-400" />}
+                    name={svc.name}
+                    primaryText={svc.type}
+                    primaryClassName="text-cyan-400"
+                    secondaryText={svc.ports && svc.ports.length > 0 ? svc.ports[0] : undefined}
+                    onClick={() => handleResourceClick('Service', svc.name, svc.namespace, { type: svc.type, clusterIP: svc.clusterIP, ports: svc.ports })}
+                  />
+                ))}
+              </ResourceTypeAccordion>
             )}
 
             {jobs.length > 0 && (
-              <div className="mb-1">
-                <button onClick={() => toggleType('jobs')} className="flex min-w-11 items-center gap-1.5 p-3 hover:bg-card/30 rounded w-full text-left min-h-11">
-                  {expandedTypes.has('jobs') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <StatusBadge color="yellow" icon={<Briefcase className="w-3 h-3" />}>Job</StatusBadge>
-                  <span className="text-muted-foreground">({jobs.length})</span>
-                </button>
-                {expandedTypes.has('jobs') && (
-                  <div className="ml-4 border-l border-border/30 pl-2">
-                    {jobs.map(job => (
-                      <div
-                        key={job.name}
-                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
-                        onClick={() => handleResourceClick('Job', job.name, job.namespace, { status: job.status, completions: job.completions })}
-                      >
-                        <Briefcase className="w-3 h-3 text-yellow-400" />
-                        <span className="text-foreground truncate max-w-[200px]" title={job.name}>{job.name}</span>
-                        <span className={job.status === 'Complete' ? 'text-green-400' : job.status === 'Running' ? 'text-green-400' : 'text-red-400'}>{job.status}</span>
-                        <span className="text-muted-foreground">{job.completions}</span>
-                        <ChevronRight className="w-3 h-3 text-primary ml-auto" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <ResourceTypeAccordion
+                typeKey="jobs"
+                isExpanded={expandedTypes.has('jobs')}
+                onToggle={toggleType}
+                badgeColor="yellow"
+                badgeIcon={<Briefcase className="w-3 h-3" />}
+                label="Job"
+                countLabel={`(${jobs.length})`}
+              >
+                {jobs.map(job => (
+                  <SimpleResourceRow
+                    key={job.name}
+                    icon={<Briefcase className="w-3 h-3 text-yellow-400" />}
+                    name={job.name}
+                    primaryText={job.status}
+                    primaryClassName={job.status === 'Complete' ? 'text-green-400' : job.status === 'Running' ? 'text-green-400' : 'text-red-400'}
+                    secondaryText={job.completions}
+                    onClick={() => handleResourceClick('Job', job.name, job.namespace, { status: job.status, completions: job.completions })}
+                  />
+                ))}
+              </ResourceTypeAccordion>
             )}
 
             {hpas.length > 0 && (
-              <div className="mb-1">
-                <button onClick={() => toggleType('hpas')} className="flex min-w-11 items-center gap-1.5 p-3 hover:bg-card/30 rounded w-full text-left min-h-11">
-                  {expandedTypes.has('hpas') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <StatusBadge color="purple" icon={<Activity className="w-3 h-3" />}><TechnicalAcronym term="HPA">HPA</TechnicalAcronym></StatusBadge>
-                  <span className="text-muted-foreground">({hpas.length})</span>
-                </button>
-                {expandedTypes.has('hpas') && (
-                  <div className="ml-4 border-l border-border/30 pl-2">
-                    {hpas.map(hpa => (
-                      <div
-                        key={hpa.name}
-                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
-                        onClick={() => handleResourceClick('HPA', hpa.name, hpa.namespace, { reference: hpa.reference, minReplicas: hpa.minReplicas, maxReplicas: hpa.maxReplicas })}
-                      >
-                        <Activity className="w-3 h-3 text-purple-400" />
-                        <span className="text-foreground truncate max-w-[200px]" title={hpa.name}>{hpa.name}</span>
-                        <span className="text-purple-400">{hpa.currentReplicas}/{hpa.minReplicas}-{hpa.maxReplicas}</span>
-                        <span className="text-muted-foreground">→ {hpa.reference}</span>
-                        <ChevronRight className="w-3 h-3 text-primary ml-auto" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <ResourceTypeAccordion
+                typeKey="hpas"
+                isExpanded={expandedTypes.has('hpas')}
+                onToggle={toggleType}
+                badgeColor="purple"
+                badgeIcon={<Activity className="w-3 h-3" />}
+                label={<TechnicalAcronym term="HPA">HPA</TechnicalAcronym>}
+                countLabel={`(${hpas.length})`}
+              >
+                {hpas.map(hpa => (
+                  <SimpleResourceRow
+                    key={hpa.name}
+                    icon={<Activity className="w-3 h-3 text-purple-400" />}
+                    name={hpa.name}
+                    primaryText={`${hpa.currentReplicas}/${hpa.minReplicas}-${hpa.maxReplicas}`}
+                    primaryClassName="text-purple-400"
+                    secondaryText={`→ ${hpa.reference}`}
+                    onClick={() => handleResourceClick('HPA', hpa.name, hpa.namespace, { reference: hpa.reference, minReplicas: hpa.minReplicas, maxReplicas: hpa.maxReplicas })}
+                  />
+                ))}
+              </ResourceTypeAccordion>
             )}
 
             {serviceAccounts.length > 0 && (
-              <div className="mb-1">
-                <button onClick={() => toggleType('serviceaccounts')} className="flex min-w-11 items-center gap-1.5 p-3 hover:bg-card/30 rounded w-full text-left min-h-11">
-                  {expandedTypes.has('serviceaccounts') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <StatusBadge color="cyan" icon={<User className="w-3 h-3" />}>SA</StatusBadge>
-                  <span className="text-muted-foreground">({serviceAccounts.length})</span>
-                </button>
-                {expandedTypes.has('serviceaccounts') && (
-                  <div className="ml-4 border-l border-border/30 pl-2">
-                    {serviceAccounts.slice(0, 20).map(sa => (
-                      <div
-                        key={sa.name}
-                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
-                        onClick={() => handleResourceClick('ServiceAccount', sa.name, sa.namespace, { secrets: sa.secrets, imagePullSecrets: sa.imagePullSecrets })}
-                      >
-                        <User className="w-3 h-3 text-cyan-400" />
-                        <span className="text-foreground truncate max-w-[200px]" title={sa.name}>{sa.name}</span>
-                        <span className="text-muted-foreground">{sa.secrets?.length || 0} secrets</span>
-                        <ChevronRight className="w-3 h-3 text-primary ml-auto" />
-                      </div>
-                    ))}
-                    {serviceAccounts.length > 20 && <div className="text-xs text-muted-foreground pl-5">+{serviceAccounts.length - 20} more</div>}
-                  </div>
-                )}
-              </div>
+              <ResourceTypeAccordion
+                typeKey="serviceaccounts"
+                isExpanded={expandedTypes.has('serviceaccounts')}
+                onToggle={toggleType}
+                badgeColor="cyan"
+                badgeIcon={<User className="w-3 h-3" />}
+                label="SA"
+                countLabel={`(${serviceAccounts.length})`}
+              >
+                {serviceAccounts.slice(0, 20).map(sa => (
+                  <SimpleResourceRow
+                    key={sa.name}
+                    icon={<User className="w-3 h-3 text-cyan-400" />}
+                    name={sa.name}
+                    secondaryText={`${sa.secrets?.length || 0} secrets`}
+                    onClick={() => handleResourceClick('ServiceAccount', sa.name, sa.namespace, { secrets: sa.secrets, imagePullSecrets: sa.imagePullSecrets })}
+                  />
+                ))}
+                {serviceAccounts.length > 20 && <div className="text-xs text-muted-foreground pl-5">+{serviceAccounts.length - 20} more</div>}
+              </ResourceTypeAccordion>
             )}
 
             {pvcs.length > 0 && (
-              <div className="mb-1">
-                <button onClick={() => toggleType('pvcs')} className="flex min-w-11 items-center gap-1.5 p-3 hover:bg-card/30 rounded w-full text-left min-h-11">
-                  {expandedTypes.has('pvcs') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <StatusBadge color="green" icon={<HardDrive className="w-3 h-3" />}><TechnicalAcronym term="PVC">PVC</TechnicalAcronym></StatusBadge>
-                  <span className="text-muted-foreground">({pvcs.length})</span>
-                </button>
-                {expandedTypes.has('pvcs') && (
-                  <div className="ml-4 border-l border-border/30 pl-2">
-                    {pvcs.slice(0, 20).map(pvc => (
-                      <div
-                        key={pvc.name}
-                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
-                        onClick={() => handleResourceClick('PVC', pvc.name, pvc.namespace, { status: pvc.status, storageClass: pvc.storageClass, capacity: pvc.capacity })}
-                      >
-                        <HardDrive className="w-3 h-3 text-green-400" />
-                        <span className="text-foreground truncate max-w-[200px]" title={pvc.name}>{pvc.name}</span>
-                        <span className={pvc.status === 'Bound' ? 'text-green-400' : pvc.status === 'Pending' ? 'text-yellow-400' : 'text-red-400'}>{pvc.status}</span>
-                        {pvc.capacity && <span className="text-muted-foreground">{pvc.capacity}</span>}
-                        <ChevronRight className="w-3 h-3 text-primary ml-auto" />
-                      </div>
-                    ))}
-                    {pvcs.length > 20 && <div className="text-xs text-muted-foreground pl-5">+{pvcs.length - 20} more</div>}
-                  </div>
-                )}
-              </div>
+              <ResourceTypeAccordion
+                typeKey="pvcs"
+                isExpanded={expandedTypes.has('pvcs')}
+                onToggle={toggleType}
+                badgeColor="green"
+                badgeIcon={<HardDrive className="w-3 h-3" />}
+                label={<TechnicalAcronym term="PVC">PVC</TechnicalAcronym>}
+                countLabel={`(${pvcs.length})`}
+              >
+                {pvcs.slice(0, 20).map(pvc => (
+                  <SimpleResourceRow
+                    key={pvc.name}
+                    icon={<HardDrive className="w-3 h-3 text-green-400" />}
+                    name={pvc.name}
+                    primaryText={pvc.status}
+                    primaryClassName={pvc.status === 'Bound' ? 'text-green-400' : pvc.status === 'Pending' ? 'text-yellow-400' : 'text-red-400'}
+                    secondaryText={pvc.capacity}
+                    onClick={() => handleResourceClick('PVC', pvc.name, pvc.namespace, { status: pvc.status, storageClass: pvc.storageClass, capacity: pvc.capacity })}
+                  />
+                ))}
+                {pvcs.length > 20 && <div className="text-xs text-muted-foreground pl-5">+{pvcs.length - 20} more</div>}
+              </ResourceTypeAccordion>
             )}
 
             {configmaps.length > 0 && (
-              <div className="mb-1">
-                <button onClick={() => toggleType('configmaps')} className="flex min-w-11 items-center gap-1.5 p-3 hover:bg-card/30 rounded w-full text-left min-h-11">
-                  {expandedTypes.has('configmaps') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <StatusBadge color="orange" icon={<Settings className="w-3 h-3" />}>CM</StatusBadge>
-                  <span className="text-muted-foreground">({configmaps.length})</span>
-                </button>
-                {expandedTypes.has('configmaps') && (
-                  <div className="ml-4 border-l border-border/30 pl-2">
-                    {configmaps.slice(0, 20).map(cm => (
-                      <div
-                        key={cm.name}
-                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
-                        onClick={() => handleResourceClick('ConfigMap', cm.name, cm.namespace, { dataCount: cm.dataCount })}
-                      >
-                        <Settings className="w-3 h-3 text-orange-400" />
-                        <span className="text-foreground truncate max-w-[200px]" title={cm.name}>{cm.name}</span>
-                        <span className="text-muted-foreground">{cm.dataCount} keys</span>
-                        <ChevronRight className="w-3 h-3 text-primary ml-auto" />
-                      </div>
-                    ))}
-                    {configmaps.length > 20 && <div className="text-xs text-muted-foreground pl-5">+{configmaps.length - 20} more</div>}
-                  </div>
-                )}
-              </div>
+              <ResourceTypeAccordion
+                typeKey="configmaps"
+                isExpanded={expandedTypes.has('configmaps')}
+                onToggle={toggleType}
+                badgeColor="orange"
+                badgeIcon={<Settings className="w-3 h-3" />}
+                label="CM"
+                countLabel={`(${configmaps.length})`}
+              >
+                {configmaps.slice(0, 20).map(cm => (
+                  <SimpleResourceRow
+                    key={cm.name}
+                    icon={<Settings className="w-3 h-3 text-orange-400" />}
+                    name={cm.name}
+                    secondaryText={`${cm.dataCount} keys`}
+                    onClick={() => handleResourceClick('ConfigMap', cm.name, cm.namespace, { dataCount: cm.dataCount })}
+                  />
+                ))}
+                {configmaps.length > 20 && <div className="text-xs text-muted-foreground pl-5">+{configmaps.length - 20} more</div>}
+              </ResourceTypeAccordion>
             )}
 
             {secrets.length > 0 && (
-              <div className="mb-1">
-                <button onClick={() => toggleType('secrets')} className="flex min-w-11 items-center gap-1.5 p-3 hover:bg-card/30 rounded w-full text-left min-h-11">
-                  {expandedTypes.has('secrets') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <StatusBadge color="purple" icon={<Lock className="w-3 h-3" />}>Secret</StatusBadge>
-                  <span className="text-muted-foreground">({secrets.length})</span>
-                </button>
-                {expandedTypes.has('secrets') && (
-                  <div className="ml-4 border-l border-border/30 pl-2">
-                    {secrets.slice(0, 20).map(secret => (
-                      <div
-                        key={secret.name}
-                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
-                        onClick={() => handleResourceClick('Secret', secret.name, secret.namespace, { type: secret.type, dataCount: secret.dataCount })}
-                      >
-                        <Lock className="w-3 h-3 text-purple-400" />
-                        <span className="text-foreground truncate max-w-[200px]" title={secret.name}>{secret.name}</span>
-                        <span className="text-purple-400">{secret.type}</span>
-                        <span className="text-muted-foreground">{secret.dataCount} keys</span>
-                        <ChevronRight className="w-3 h-3 text-primary ml-auto" />
-                      </div>
-                    ))}
-                    {secrets.length > 20 && <div className="text-xs text-muted-foreground pl-5">+{secrets.length - 20} more</div>}
-                  </div>
-                )}
-              </div>
+              <ResourceTypeAccordion
+                typeKey="secrets"
+                isExpanded={expandedTypes.has('secrets')}
+                onToggle={toggleType}
+                badgeColor="purple"
+                badgeIcon={<Lock className="w-3 h-3" />}
+                label="Secret"
+                countLabel={`(${secrets.length})`}
+              >
+                {secrets.slice(0, 20).map(secret => (
+                  <SimpleResourceRow
+                    key={secret.name}
+                    icon={<Lock className="w-3 h-3 text-purple-400" />}
+                    name={secret.name}
+                    primaryText={secret.type}
+                    primaryClassName="text-purple-400"
+                    secondaryText={`${secret.dataCount} keys`}
+                    onClick={() => handleResourceClick('Secret', secret.name, secret.namespace, { type: secret.type, dataCount: secret.dataCount })}
+                  />
+                ))}
+                {secrets.length > 20 && <div className="text-xs text-muted-foreground pl-5">+{secrets.length - 20} more</div>}
+              </ResourceTypeAccordion>
             )}
           </div>
         </div>
@@ -658,3 +491,4 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
     </div>
   )
 }
+

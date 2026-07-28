@@ -7,6 +7,8 @@ import {
 import { cn } from '../../lib/cn'
 import type { GPUReservation } from '../../hooks/useGPUReservations'
 
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
+
 export interface CalendarBar {
   reservation: GPUReservation
   startCol: number // 0-6 column in this week
@@ -49,7 +51,8 @@ export function GPUCalendarTab({
   onAddReservation,
   getGPUCountForDay,
 }: GPUCalendarTabProps) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t: tTyped } = useTranslation(['cards', 'common'])
+  const t = tTyped as unknown as TranslateFn
 
   return (
     <div className="space-y-6">
