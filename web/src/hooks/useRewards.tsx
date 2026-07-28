@@ -301,7 +301,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('storage', handleStorage)
     return () => window.removeEventListener('storage', handleStorage)
-  }, [])
+  }, [setRewards])
 
   // Check if action has been earned (for one-time rewards)
   const hasEarnedAction = useCallback((action: RewardActionType): boolean => {
@@ -315,7 +315,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     const r = rewardsRef.current
     if (!r) return 0
     return r.events.filter(e => e.action === action).length
-  }, [setRewards])
+  }, [])
 
   // Award coins for an action.
   //
@@ -378,7 +378,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     }
 
     return true
-  }, [])
+  }, [setRewards])
 
   // Get earned achievements as full objects
   const earnedAchievements = useMemo(() => {
