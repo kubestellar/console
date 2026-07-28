@@ -26,7 +26,13 @@ vi.mock('../NamespaceCard', () => ({
     onSelect: () => void
     onDelete?: () => void
   }) => (
-    <div data-testid="namespace-card" onClick={onSelect}>
+    <div
+      data-testid="namespace-card"
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect() } }}
+    >
       <span>{namespace.name}</span>
       {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete() }} aria-label="Delete namespace" />}
     </div>
