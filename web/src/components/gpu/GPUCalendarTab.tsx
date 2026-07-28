@@ -34,6 +34,7 @@ export interface GPUCalendarTabProps {
 }
 
 const MAX_VISIBLE_ROWS = 4
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
 
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
@@ -49,7 +50,8 @@ export function GPUCalendarTab({
   onAddReservation,
   getGPUCountForDay,
 }: GPUCalendarTabProps) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t: tTyped } = useTranslation(['cards', 'common'])
+  const t = tTyped as unknown as TranslateFn
 
   return (
     <div className="space-y-6">

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Calendar,
@@ -13,26 +13,17 @@ import {
   User,
   LayoutDashboard } from 'lucide-react'
 import { BaseModal, useModalState } from '../../lib/modals'
-import {
-  useGPUNodes,
-  useResourceQuotas,
-  useClusters } from '../../hooks/useMCP'
-import { ReservationFormModal, type GPUClusterInfo } from './ReservationFormModal'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useDemoMode } from '../../hooks/useDemoMode'
-import { useBackendHealth } from '../../hooks/useBackendHealth'
+import { ReservationFormModal } from './ReservationFormModal'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../ui/Toast'
 import { cn } from '../../lib/cn'
 import { Input } from '../ui/Input'
 import { useGPUReservations } from '../../hooks/useGPUReservations'
-import { useGPUUtilizations } from '../../hooks/useGPUUtilizations'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
 import { getDefaultCardWidth } from '../cards/cardRegistry'
 import { StatusBadge } from '../ui/StatusBadge'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
-import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import {
   KeyboardSensor,
   PointerSensor,
@@ -44,7 +35,6 @@ import {
   sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 
 // Extracted sub-components and constants
-import { GPU_KEYS } from './gpu-constants'
 import type { GpuDashCard } from './SortableGpuCard'
 import { DEFAULT_GPU_CARDS } from './SortableGpuCard'
 import { GPUOverviewTab } from './GPUOverviewTab'
@@ -53,43 +43,16 @@ import type { CalendarBar } from './GPUCalendarTab'
 import { GPUReservationsTab } from './GPUReservationsTab'
 import { GPUInventoryTab } from './GPUInventoryTab'
 import { GPUDashboardTab } from './GPUDashboardTab'
-import { computeGPUOverviewStats } from './gpuOverviewStats'
 import { CompactErrorBoundary } from '../CompactErrorBoundary'
+import { useGPUReservationsView, useGPUCalendarLogic } from '../../hooks/gpu/useGPUReservationsView'
 
 type ViewTab = 'overview' | 'calendar' | 'quotas' | 'inventory' | 'dashboard'
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
 
 export function GPUReservations() {
-  const { t } = useTranslation(['cards', 'common'])
-  const { nodes: rawNodes, isLoading: nodesLoading, refetch: refetchGPUNodes } = useGPUNodes()
-  const { refetch: refetchClusters } = useClusters()
-
-  // Refresh indicator for dashboard tab — refreshes GPU nodes + clusters
-  const refetchAll = () => {
-    refetchGPUNodes()
-    refetchClusters()
-  }
-  const { showIndicator: isRefreshingDashboard, triggerRefresh } = useRefreshIndicator(refetchAll)
-  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const { isDemoMode: demoMode } = useDemoMode()
-  const { isInClusterMode } = useBackendHealth()
-  const { user, isAuthenticated } = useAuth()
-
-  // GPU Reservations bypasses demo mode when running in-cluster with a real OAuth token.
-  // Other pages can remain in demo mode — this exception ensures authenticated users
-  // on cluster deployments always get live GPU reservation data.
-  const [gpuLiveMode, setGpuLiveMode] = useState(false)
-  const effectiveDemoMode = demoMode && !gpuLiveMode
-
-  useEffect(() => {
-    async function checkGpuLiveMode() {
-      const { hasRealToken } = await import('@/lib/demoMode')
-      const hasReal = await hasRealToken()
-      setGpuLiveMode(isInClusterMode && isAuthenticated && hasReal)
-    }
-    checkGpuLiveMode()
-  }, [isInClusterMode, isAuthenticated])
-
-  const { resourceQuotas } = useResourceQuotas(undefined, undefined, gpuLiveMode)
+  const { t: tTyped } = useTranslation(['cards', 'common'])
+  const t = tTyped as unknown as TranslateFn
+  const { user } = useAuth()
   const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -102,6 +65,29 @@ export function GPUReservations() {
   const [searchTerm, setSearchTerm] = useState('')
   const [prefillDate, setPrefillDate] = useState<string | null>(null)
   const { isOpen: showAddCardModal, open: openAddCardModal, close: closeAddCardModal } = useModalState()
+
+  // Use the extracted data view hook
+  const {
+    nodes,
+    rawNodes,
+    gpuQuotas,
+    gpuClusters,
+    filteredReservations,
+    allReservations,
+    utilizations,
+    knownNamespacesByCluster,
+    stats,
+    nodesLoading,
+    reservationsLoading,
+    isLoading,
+    isRefreshingDashboard,
+    effectiveDemoMode,
+    gpuLiveMode,
+    triggerRefresh,
+  } = useGPUReservationsView(showOnlyMine, searchTerm, user)
+
+  // Use the extracted calendar logic hook
+  const { daysInMonth, startingDay, getReservationDayRange, getGPUCountForDay } = useGPUCalendarLogic(currentMonth)
 
   // Dashboard tab: customizable GPU cards persisted to localStorage
   const GPU_DASHBOARD_STORAGE_KEY = 'gpu-dashboard-tab-cards'
@@ -160,164 +146,11 @@ export function GPUReservations() {
     }
   }
 
-
   // API-backed reservations
   const {
-    reservations: allReservations,
-    isLoading: reservationsLoading,
     createReservation: apiCreateReservation,
     updateReservation: apiUpdateReservation,
     deleteReservation: apiDeleteReservation } = useGPUReservations()
-
-  // Filter nodes by global cluster selection
-  const nodes = (() => {
-    if (isAllClustersSelected) return rawNodes || []
-    return (rawNodes || []).filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
-  })()
-
-  // GPU quotas from K8s (for overview stats only)
-  const gpuQuotas = (() => {
-    const filtered = (resourceQuotas || []).filter(q =>
-      Object.keys(q.hard || {}).some(k => GPU_KEYS.some(gk => k.includes(gk)))
-    )
-    if (isAllClustersSelected) return filtered
-    return filtered.filter(q => q.cluster && selectedClusters.some(c => q.cluster!.startsWith(c)))
-  })()
-
-  // Filtered reservations respecting "My Reservations" toggle, cluster selection, and keyword search
-  const filteredReservations = useMemo(() => {
-    let filtered = allReservations || []
-    // Filter by cluster selection
-    if (!isAllClustersSelected) {
-      filtered = filtered.filter(r => selectedClusters.some(c => r.cluster.startsWith(c)))
-    }
-    // Filter by user
-    if (showOnlyMine && user) {
-      const login = user.github_login?.toLowerCase()
-      filtered = filtered.filter(r => r.user_name.toLowerCase() === login)
-    }
-    // Filter by keyword search
-    if (searchTerm.trim()) {
-      const term = searchTerm.trim().toLowerCase()
-      filtered = filtered.filter(r =>
-        (r.title ?? '').toLowerCase().includes(term) ||
-        (r.namespace ?? '').toLowerCase().includes(term) ||
-        (r.user_name ?? '').toLowerCase().includes(term) ||
-        (r.cluster ?? '').toLowerCase().includes(term) ||
-        (r.status ?? '').toLowerCase().includes(term) ||
-        (r.gpu_type && r.gpu_type.toLowerCase().includes(term)) ||
-        // Match against any accepted GPU type so searching
-        // for "H100" finds multi-type reservations that list H100
-        // among their acceptable alternatives.
-        (r.gpu_types && r.gpu_types.some(t => t.toLowerCase().includes(term))) ||
-        (r.description && r.description.toLowerCase().includes(term)) ||
-        (r.notes && r.notes.toLowerCase().includes(term))
-      )
-    }
-    return filtered
-  }, [allReservations, showOnlyMine, user, selectedClusters, isAllClustersSelected, searchTerm])
-
-  // Fetch utilization data for visible reservations
-  const visibleReservationIds = (filteredReservations || []).map(r => r.id)
-  const { utilizations } = useGPUUtilizations(visibleReservationIds)
-
-  // Clusters with GPU info for the dropdown
-  const gpuClusters = (() => {
-    const clusterMap: Record<string, GPUClusterInfo> = {}
-    for (const node of (rawNodes || [])) {
-      if (!clusterMap[node.cluster]) {
-        clusterMap[node.cluster] = {
-          name: node.cluster,
-          totalGPUs: 0,
-          allocatedGPUs: 0,
-          availableGPUs: 0,
-          gpuTypes: [] }
-      }
-      const c = clusterMap[node.cluster]
-      c.totalGPUs += node.gpuCount
-      c.allocatedGPUs += node.gpuAllocated
-      c.availableGPUs = c.totalGPUs - c.allocatedGPUs
-      if (!c.gpuTypes.includes(node.gpuType)) {
-        c.gpuTypes.push(node.gpuType)
-      }
-    }
-    return Object.values(clusterMap).filter(c => c.totalGPUs > 0)
-  })()
-
-  // Namespaces known to have existing reservations, grouped by cluster.
-  // Fallback source for the Create Reservation dropdown when useNamespaces()
-  // can't surface a namespace (e.g. user lacks cluster-wide list RBAC AND
-  // the namespace has no running pods, so neither health-check discovery
-  // nor the /api/mcp/pods-based REST fallback sees it).
-  const knownNamespacesByCluster = useMemo(() => {
-    // Use a Map<string, Set<string>> to dedupe in O(1) per entry.
-    const byCluster = new Map<string, Set<string>>()
-    for (const r of (allReservations || [])) {
-      if (!r.cluster || !r.namespace) continue
-      let set = byCluster.get(r.cluster)
-      if (!set) {
-        set = new Set<string>()
-        byCluster.set(r.cluster, set)
-      }
-      set.add(r.namespace)
-    }
-    const out: Record<string, string[]> = {}
-    byCluster.forEach((set, cluster) => {
-      out[cluster] = Array.from(set)
-    })
-    return out
-  }, [allReservations])
-
-  // GPU stats
-  const stats = useMemo(() => computeGPUOverviewStats({
-    nodes,
-    reservations: filteredReservations,
-    gpuQuotas,
-    gpuClusters,
-  }), [nodes, gpuQuotas, gpuClusters, filteredReservations])
-
-  // Calendar helpers
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const daysInMonth = lastDay.getDate()
-    const startingDay = firstDay.getDay()
-    return { daysInMonth, startingDay }
-  }
-
-  const { daysInMonth, startingDay } = getDaysInMonth(currentMonth)
-
-  // Get the start/end day index (0-based from month start) for a reservation within the visible month.
-  // Duration is added to the ORIGINAL start time first, then day boundaries are derived.
-  const getReservationDayRange = useCallback((r: GPUReservation) => {
-    if (!r.start_date) return null
-    const MS_PER_HOUR = 3_600_000
-    const DEFAULT_DURATION_HOURS = 24
-
-    const originalStart = new Date(r.start_date)
-    const durationHours = r.duration_hours || DEFAULT_DURATION_HOURS
-    // Compute end from the exact original timestamp, not a midnight-normalized one
-    const exactEnd = new Date(originalStart.getTime() + durationHours * MS_PER_HOUR)
-
-    // Normalize to day boundaries for calendar range display
-    const start = new Date(originalStart)
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(exactEnd)
-    end.setHours(23, 59, 59, 999)
-
-    const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
-    monthStart.setHours(0, 0, 0, 0)
-    const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
-    monthEnd.setHours(23, 59, 59, 999)
-
-    if (end < monthStart || start > monthEnd) return null
-
-    const clampedStart = start < monthStart ? 1 : start.getDate()
-    const clampedEnd = end > monthEnd ? daysInMonth : end.getDate()
-    return { startDay: clampedStart, endDay: clampedEnd }
-  }, [currentMonth, daysInMonth])
 
   // Compute spanning reservation rows per calendar week
   const calendarWeeks = useMemo(() => {
@@ -395,30 +228,6 @@ export function GPUReservations() {
 
     return weeks
   }, [filteredReservations, startingDay, daysInMonth, getReservationDayRange])
-
-  // Get GPU count reserved on a specific day
-  const getGPUCountForDay = (day: number) => {
-    const MS_PER_HOUR = 3_600_000
-    const DEFAULT_DURATION_HOURS = 24
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
-    date.setHours(0, 0, 0, 0)
-    let total = 0
-    for (const r of filteredReservations) {
-      if (!r.start_date) continue
-      const originalStart = new Date(r.start_date)
-      const durationHours = r.duration_hours || DEFAULT_DURATION_HOURS
-      // Compute end from the exact original timestamp, then normalize to day boundaries
-      const exactEnd = new Date(originalStart.getTime() + durationHours * MS_PER_HOUR)
-      const start = new Date(originalStart)
-      start.setHours(0, 0, 0, 0)
-      const end = new Date(exactEnd)
-      end.setHours(23, 59, 59, 999)
-      if (date >= start && date <= end) {
-        total += r.gpu_count
-      }
-    }
-    return total
-  }
 
   const prevMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
@@ -611,7 +420,7 @@ export function GPUReservations() {
           onPrevMonth={prevMonth}
           onNextMonth={nextMonth}
           onAddReservation={openCreateFormForDate}
-          getGPUCountForDay={getGPUCountForDay}
+          getGPUCountForDay={(day) => getGPUCountForDay(day, filteredReservations)}
         />
         </CompactErrorBoundary>
       )}

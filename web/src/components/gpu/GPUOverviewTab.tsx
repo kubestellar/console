@@ -35,6 +35,8 @@ export interface GPUOverviewTabProps {
   onSelectReservation?: (id: string) => void
 }
 
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
+
 export function GPUOverviewTab({
   stats,
   filteredReservations,
@@ -43,7 +45,8 @@ export function GPUOverviewTab({
   showOnlyMine,
   onSelectReservation,
 }: GPUOverviewTabProps) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t: tTyped } = useTranslation(['cards', 'common'])
+  const t = tTyped as unknown as TranslateFn
   const isInteractive = Boolean(onSelectReservation)
 
   return (

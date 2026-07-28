@@ -25,6 +25,7 @@ const QUOTA_NAME_TITLE_MAX_LEN = 40
 
 /** Default reservation duration in hours when the field is left blank. */
 const DEFAULT_RESERVATION_DURATION_HOURS = 24
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
 
 /**
  * Normalize any accepted start-date representation to the `YYYY-MM-DD`
@@ -130,7 +131,8 @@ export function ReservationFormModal({
   onSaved: () => void
   onError: (msg: string) => void
 }) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t: tTyped } = useTranslation(['cards', 'common'])
+  const t = tTyped as unknown as TranslateFn
   const [cluster, setCluster] = useState(editingReservation?.cluster || '')
   // namespace value and "create new" toggle always change together → merged into
   // a single state object so each user interaction causes only one re-render.

@@ -43,6 +43,8 @@ export interface GPUReservationsTabProps {
   onCreateReservation: () => void
 }
 
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
+
 export function GPUReservationsTab({
   filteredReservations,
   utilizations,
@@ -61,7 +63,8 @@ export function GPUReservationsTab({
   onDeleteReservation,
   onCreateReservation,
 }: GPUReservationsTabProps) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t: tTyped } = useTranslation(['cards', 'common'])
+  const t = tTyped as unknown as TranslateFn
 
   return (
     <div className="space-y-6">

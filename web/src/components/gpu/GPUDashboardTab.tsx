@@ -28,6 +28,8 @@ export interface GPUDashboardTabProps {
   onShowAddCardModal: () => void
 }
 
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
+
 export function GPUDashboardTab({
   dashboardCards,
   dashCardIds,
@@ -39,7 +41,8 @@ export function GPUDashboardTab({
   onDashCardWidthChange,
   onTriggerRefresh,
   onShowAddCardModal }: GPUDashboardTabProps) {
-  const { t } = useTranslation(['cards', 'common'])
+    const { t: tTyped } = useTranslation(['cards', 'common'])
+    const t = tTyped as unknown as TranslateFn
   const { deduplicatedClusters: clusters } = useClusters()
 
   const clusterHealth = (() => {
