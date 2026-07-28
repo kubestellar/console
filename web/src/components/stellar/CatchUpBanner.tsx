@@ -9,13 +9,11 @@ interface Props {
 
 const BANNER_MARGIN = '8px 10px 0'
 const BANNER_PADDING = '10px 12px'
-const BANNER_GAP_PX = 8
 const TITLE_MARGIN_BOTTOM_PX = 4
 const TITLE_LETTER_SPACING_EM = '0.08em'
 const SUMMARY_LINE_HEIGHT = 1.55
 const HIGHLIGHT_MARGIN_TOP_PX = 8
 const HIGHLIGHT_PADDING_LEFT_PX = 18
-const HIGHLIGHT_GAP_PX = 6
 const SUMMARY_SPLIT_LIMIT = 4
 
 function splitSummaryIntoLines(summary: string): string[] {
@@ -49,7 +47,7 @@ export function CatchUpBanner({ catchUp, onDismiss }: Props) {
       border: `1px solid ${isClean ? 'rgba(63,185,80,0.25)' : 'rgba(56,139,253,0.25)'}`,
       borderRadius: 'var(--s-r)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: BANNER_GAP_PX }}>
+      <div className="flex items-start gap-2">
         <span className="text-sm" style={{ flexShrink: 0 }}>{isClean ? '✦' : '◉'}</span>
         <div style={{ flex: 1 }}>
           <div
@@ -71,14 +69,12 @@ export function CatchUpBanner({ catchUp, onDismiss }: Props) {
           )}
           {details.length > 0 && (
             <ul
-              className="text-xs"
+              className="text-xs grid gap-1.5"
               style={{
                 color: 'var(--s-text-muted)',
                 lineHeight: SUMMARY_LINE_HEIGHT,
                 marginTop: HIGHLIGHT_MARGIN_TOP_PX,
                 paddingLeft: HIGHLIGHT_PADDING_LEFT_PX,
-                display: 'grid',
-                gap: HIGHLIGHT_GAP_PX,
               }}
             >
               {details.map(item => (
