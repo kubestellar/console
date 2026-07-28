@@ -23,6 +23,7 @@ import {
   type CustodianSeverityCounts,
   type CustodianTopResource,
 } from '../lib/demo/cloud-custodian'
+import { HTTP_NOT_FOUND } from '../lib/constants/http'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -31,8 +32,6 @@ import {
 const CACHE_KEY_CLOUD_CUSTODIAN = 'cloud-custodian-status'
 const CLOUD_CUSTODIAN_STATUS_ENDPOINT = '/api/cloud-custodian/status'
 const DEFAULT_CUSTODIAN_VERSION = 'unknown'
-
-const NOT_FOUND_STATUS = 404
 
 const EMPTY_SEVERITY_COUNTS: CustodianSeverityCounts = {
   critical: 0,
@@ -140,7 +139,7 @@ async function fetchCloudCustodianStatus(): Promise<CloudCustodianStatusData> {
   })
 
   if (!resp.ok) {
-    if (resp.status === NOT_FOUND_STATUS) {
+    if (resp.status === HTTP_NOT_FOUND) {
       // Endpoint not yet wired — surface "not-installed" so the cache layer
       // will fall back to demo data instead of flagging a hard failure.
       return buildCloudCustodianStatus(
