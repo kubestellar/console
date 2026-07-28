@@ -62,16 +62,9 @@ import {
 } from './BlueprintInfoPanels'
 import type { FlightPlanBlueprintProps, InfoPanelData } from './FlightPlanBlueprint.types'
 import {
-  INFO_PANEL_MIN,
-  INFO_PANEL_MAX,
-  INFO_PANEL_DEFAULT,
-  INFO_PANEL_LS_KEY,
-  ZOOM_MIN,
-  ZOOM_MAX,
-  ZOOM_STEP,
-  MIN_LABEL_GAP,
-  NODE_RADIUS,
-  LABEL_OFFSET_Y,
+  INFO_PANEL_MIN, INFO_PANEL_MAX, INFO_PANEL_DEFAULT, INFO_PANEL_LS_KEY,
+  ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
+  MIN_LABEL_GAP, NODE_RADIUS, LABEL_OFFSET_Y,
 } from './FlightPlanBlueprint.constants'
 import { resolveKbPath } from './FlightPlanBlueprint.utils'
 

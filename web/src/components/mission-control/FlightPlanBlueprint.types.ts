@@ -1,7 +1,6 @@
 import type { MissionControlState, OverlayMode } from './types'
-import type { ClusterHoverInfo } from './svg/ClusterZone'
 import type { ProjectHoverInfo } from './svg/ProjectNode'
-
+import type { ClusterHoverInfo } from './svg/ClusterZone'
 
 export interface FlightPlanBlueprintProps {
   state: MissionControlState
