@@ -11,12 +11,11 @@ import {
   Globe,
   Bot,
   Package,
-  HardDrive } from 'lucide-react'
+  HardDrive,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } from '../../../hooks/useSearchIndex'
-
-/** Result type chip styling — higher contrast and enough padding to read quickly. */
-const RESULT_TYPE_CHIP_CLASS = 'inline-flex shrink-0 items-center rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-foreground'
+import { SearchResultsGroup } from './SearchResultsGroup'
 
 const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   page: { label: 'Dashboards', icon: LayoutDashboard },
@@ -31,7 +30,8 @@ const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: React.Compo
   mission: { label: 'AI Missions', icon: Bot },
   dashboard: { label: 'Custom Dashboards', icon: LayoutDashboard },
   helm: { label: 'Helm Releases', icon: Package },
-  node: { label: 'Nodes', icon: HardDrive } }
+  node: { label: 'Nodes', icon: HardDrive },
+}
 
 export function SearchResultsPanel({
   searchQuery,
@@ -65,7 +65,6 @@ export function SearchResultsPanel({
   }, [flatResults, totalCount, onResultsChange])
 
   const askAIIndex = flatResults.length
-
   let flatIndex = 0
 
   return (
@@ -75,47 +74,24 @@ export function SearchResultsPanel({
           {CATEGORY_ORDER.map(cat => {
             const items = results.get(cat)
             if (!items || items.length === 0) return null
+
             const config = CATEGORY_CONFIG[cat]
-            const CategoryIcon = config.icon
+            const startIndex = flatIndex
+            flatIndex += items.length
 
             return (
-              <div key={cat}>
-                <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
-                  <CategoryIcon className="w-3.5 h-3.5 text-muted-foreground/60" />
-                  <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
-                    {config.label}
-                  </span>
-                </div>
-                {items.map(item => {
-                  const currentIndex = flatIndex++
-                  const isSelected = currentIndex === selectedIndex
-                  return (
-                    <button
-                      key={item.id}
-                      data-testid="global-search-result-item"
-                      data-selected={isSelected}
-                      onClick={() => onSelect(item, currentIndex)}
-                      className={`w-full flex items-center gap-3 px-4 py-1.5 text-left transition-colors ${
-                        isSelected
-                          ? 'bg-purple-900 text-foreground'
-                          : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                      }`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{item.name}</p>
-                        {item.description && (
-                          <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                        )}
-                      </div>
-                      <span className={RESULT_TYPE_CHIP_CLASS}>
-                        {config.label.toLowerCase()}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+              <SearchResultsGroup
+                key={cat}
+                categoryLabel={config.label}
+                CategoryIcon={config.icon}
+                items={items}
+                startIndex={startIndex}
+                selectedIndex={selectedIndex}
+                onSelect={onSelect}
+              />
             )
           })}
+
           {totalCount > flatResults.length && (
             <div className="px-4 py-2 text-xs text-muted-foreground/50 text-center border-t border-border/50">
               {t('layout.navbar.showingResults', { shown: flatResults.length, total: totalCount })}
