@@ -24,6 +24,8 @@ import {
   getUtilizationColor,
 } from './gpu-constants'
 
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
+
 export interface GPUReservationsTabProps {
   filteredReservations: GPUReservation[]
   utilizations: Record<string, GPUUtilizationSnapshot[]> | null
@@ -61,7 +63,8 @@ export function GPUReservationsTab({
   onDeleteReservation,
   onCreateReservation,
 }: GPUReservationsTabProps) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t: tTyped } = useTranslation(['cards', 'common'])
+  const t = tTyped as unknown as TranslateFn
 
   return (
     <div className="space-y-6">

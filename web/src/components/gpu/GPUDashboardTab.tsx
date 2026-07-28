@@ -15,6 +15,8 @@ import {
 import { useClusters } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
 
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
+
 export interface GPUDashboardTabProps {
   dashboardCards: GpuDashCard[]
   dashCardIds: string[]
@@ -39,7 +41,8 @@ export function GPUDashboardTab({
   onDashCardWidthChange,
   onTriggerRefresh,
   onShowAddCardModal }: GPUDashboardTabProps) {
-  const { t } = useTranslation(['cards', 'common'])
+    const { t: tTyped } = useTranslation(['cards', 'common'])
+    const t = tTyped as unknown as TranslateFn
   const { deduplicatedClusters: clusters } = useClusters()
 
   const clusterHealth = (() => {

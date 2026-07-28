@@ -10,6 +10,8 @@ import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInp
 import { normalizeGpuTypes } from '../../hooks/useGPUReservations'
 import type { GPUClusterInfo } from './ReservationFormModal'
 
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
+
 // GPU resource keys used to identify GPU quotas
 const GPU_KEYS = ['nvidia.com/gpu', 'amd.com/gpu', 'gpu.intel.com/i915']
 
@@ -113,7 +115,8 @@ export function useReservationFormState({
   onError,
   onClose,
 }: UseReservationFormStateOptions) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t: tTyped } = useTranslation(['cards', 'common'])
+  const t = tTyped as unknown as TranslateFn
   const [cluster, setCluster] = useState(editingReservation?.cluster || '')
   // namespace value and "create new" toggle always change together → merged into
   // a single state object so each user interaction causes only one re-render.

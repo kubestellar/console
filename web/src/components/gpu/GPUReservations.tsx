@@ -46,9 +46,11 @@ import { useGPUCalendarState } from './useGPUCalendarState'
 import { useGPUReservationForm } from './useGPUReservationForm'
 
 type ViewTab = 'overview' | 'calendar' | 'quotas' | 'inventory' | 'dashboard'
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
 
 export function GPUReservations() {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t: tTyped } = useTranslation(['cards', 'common'])
+  const t = tTyped as unknown as TranslateFn
   const { nodes: rawNodes, isLoading: nodesLoading, refetch: refetchGPUNodes } = useGPUNodes()
   const { refetch: refetchClusters } = useClusters()
 

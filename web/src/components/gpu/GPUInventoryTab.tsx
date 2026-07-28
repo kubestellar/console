@@ -16,6 +16,8 @@ import { useGPUTaintFilter, GPUTaintFilterControl } from '../cards/GPUTaintFilte
 import { useRef } from 'react'
 import { useModal } from '../../hooks/useModal'
 
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
+
 export interface GPUInventoryTabProps {
   gpuClusters: GPUClusterInfo[]
   nodes: GPUNode[]
@@ -29,7 +31,8 @@ export function GPUInventoryTab({
   nodesLoading,
   effectiveDemoMode,
 }: GPUInventoryTabProps) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t: tTyped } = useTranslation(['cards', 'common'])
+  const t = tTyped as unknown as TranslateFn
   const { distinctTaints, toleratedKeys, toggle, clear, isVisible, hiddenGPUCount } = useGPUTaintFilter(nodes)
   const { isOpen: isFilterOpen, setIsOpen: setIsFilterOpen } = useModal()
   const filterRef = useRef<HTMLDivElement>(null)

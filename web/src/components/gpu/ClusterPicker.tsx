@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react'
 import type { GPUClusterInfo } from './ReservationFormModal'
 
-type TranslateFn = (key: string, options?: Record<string, unknown>) => string
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
 
 interface NsField {
   value: string

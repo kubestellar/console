@@ -2,7 +2,7 @@ import { Zap, Plus, Trash2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { COMMON_RESOURCE_TYPES } from '../../hooks/useMCP'
 
-type TranslateFn = (key: string, options?: Record<string, unknown>) => string
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
 
 interface ClusterGpuType {
   type: string

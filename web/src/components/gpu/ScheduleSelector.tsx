@@ -1,4 +1,4 @@
-type TranslateFn = (key: string, options?: Record<string, unknown>) => string
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
 
 interface ScheduleSelectorProps {
   t: TranslateFn
