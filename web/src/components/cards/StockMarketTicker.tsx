@@ -1,8 +1,7 @@
-import { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   TrendingUp, TrendingDown, Clock, BarChart3,
-  ChevronDown, ChevronRight, Search as SearchIcon,
-  Star, X, Loader2
+  Loader2
 } from 'lucide-react'
 import { CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -10,35 +9,11 @@ import { useCardLoadingState } from './CardDataContext'
 import { useCache } from '../../lib/cache'
 import { useTranslation } from 'react-i18next'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants'
-import { GREEN_500_BRIGHT, RED_500 } from '../../lib/theme/chartColors'
-import { useToast } from '../ui/Toast'
-import type { TFunction } from 'i18next'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
-import { StockSearch } from './stockMarketTicker/StockSearch'
-import { PortfolioSummary } from './stockMarketTicker/PortfolioSummary'
+import { StockRow } from './stockMarketTicker/StockRow'
+import { SymbolSearch, type StockSearchResult } from './stockMarketTicker/SymbolSearch'
 
-const SEARCH_DEBOUNCE_MS = 300
 const SAVED_STOCKS_STORAGE_KEY = 'stock-ticker-saved-stocks'
-
-// Stock search result interface
-interface StockSearchResult {
-  symbol: string
-  name: string
-  type: string
-  region: string
-  currency: string
-}
-
-// Raw search result from Yahoo Finance API
-interface YahooSearchQuote {
-  symbol: string
-  longname?: string
-  shortname?: string
-  quoteType: string
-  exchDisp?: string
-  exchange?: string
-  currency?: string
-}
 
 // Saved stock interface
 interface SavedStock {
@@ -174,84 +149,8 @@ async function fetchRealStockData(symbols: string[]): Promise<StockData[]> {
   }
 }
 
-// Common stock symbols database for fallback search
-const COMMON_STOCKS: StockSearchResult[] = [
-  { symbol: 'AAPL', name: 'Apple Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'GOOGL', name: 'Alphabet Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'MSFT', name: 'Microsoft Corporation', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'AMZN', name: 'Amazon.com Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'TSLA', name: 'Tesla Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'META', name: 'Meta Platforms Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'NVDA', name: 'NVIDIA Corporation', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'NFLX', name: 'Netflix Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'AMD', name: 'Advanced Micro Devices Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'INTC', name: 'Intel Corporation', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'ORCL', name: 'Oracle Corporation', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'IBM', name: 'International Business Machines', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'DIS', name: 'The Walt Disney Company', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'BABA', name: 'Alibaba Group Holding Ltd', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'V', name: 'Visa Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'MA', name: 'Mastercard Incorporated', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'JPM', name: 'JPMorgan Chase & Co.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'BAC', name: 'Bank of America Corporation', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'WMT', name: 'Walmart Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'JNJ', name: 'Johnson & Johnson', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'PG', name: 'Procter & Gamble Company', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'UNH', name: 'UnitedHealth Group Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'HD', name: 'The Home Depot Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'PYPL', name: 'PayPal Holdings Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'ADBE', name: 'Adobe Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'CRM', name: 'Salesforce Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'CSCO', name: 'Cisco Systems Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'PEP', name: 'PepsiCo Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'KO', name: 'The Coca-Cola Company', type: 'EQUITY', region: 'US', currency: 'USD' },
-  { symbol: 'NKE', name: 'NIKE Inc.', type: 'EQUITY', region: 'US', currency: 'USD' },
-]
-
-// Search for stocks by symbol or company name
-async function searchStocks(query: string): Promise<StockSearchResult[]> {
-  if (!query || query.length < 1) {
-    return []
-  }
-
-  try {
-    // Using Yahoo Finance search API via CORS proxy
-    const yahooSearchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`
-    const response = await fetch(
-      `${CORS_PROXY}${encodeURIComponent(yahooSearchUrl)}`,
-      { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }
-    )
-
-    if (!response.ok) {
-      throw new Error('Failed to search stocks')
-    }
-
-    const data = await response.json()
-    const quotes = data.quotes || []
-
-    return quotes
-      .filter((q: YahooSearchQuote) => q.quoteType === 'EQUITY' || q.quoteType === 'ETF')
-      .map((q: YahooSearchQuote) => ({
-        symbol: q.symbol,
-        name: q.longname || q.shortname || q.symbol,
-        type: q.quoteType,
-        region: q.exchDisp || q.exchange || 'US',
-        currency: q.currency || 'USD' }))
-      .slice(0, 10)
-  } catch {
-    // Fallback to local search when API fails (e.g., CORS issues) — #8816
-    const queryLower = query.toLowerCase()
-    return COMMON_STOCKS.filter(stock =>
-      stock.symbol.toLowerCase().includes(queryLower) ||
-      stock.name.toLowerCase().includes(queryLower)
-    ).slice(0, 10)
-  }
-}
-
-// Default stock symbols to track (keeping for backwards compatibility)
-
 // Market status
-function getMarketStatus(t: TFunction<readonly ['cards', 'common']>): { isOpen: boolean; statusText: string } {
+function getMarketStatus(t: (key: string) => string): { isOpen: boolean; statusText: string } {
   const now = new Date()
   const hour = now.getHours()
   const minutes = now.getMinutes()
@@ -349,180 +248,9 @@ function generateMockStockData(symbols: string[]): StockData[] {
   })
 }
 
-// Format large numbers (market cap, volume)
-function formatLargeNumber(num: number): string {
-  if (num >= 1000000000000) {
-    return `$${(num / 1000000000000).toFixed(2)}T`
-  } else if (num >= 1000000000) {
-    return `$${(num / 1000000000).toFixed(2)}B`
-  } else if (num >= 1000000) {
-    return `$${(num / 1000000).toFixed(2)}M`
-  }
-  return `$${num.toLocaleString()}`
-}
-
-// Format volume
-function formatVolume(num: number): string {
-  if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(2)}M`
-  } else if (num >= 1000) {
-    return `${(num / 1000).toFixed(2)}K`
-  }
-  return num.toLocaleString()
-}
-
-// Sparkline component
-function Sparkline({ data, isPositive }: { data: number[]; isPositive: boolean }) {
-  if (data.length < 2) return null
-
-  const min = Math.min(...data)
-  const max = Math.max(...data)
-  const range = max - min || 1
-
-  const points = data.map((value, index) => {
-    const x = (index / (data.length - 1)) * 100
-    const y = 100 - ((value - min) / range) * 100
-    return `${x},${y}`
-  }).join(' ')
-
-  return (
-    <svg
-      className="w-20 h-8"
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      role="img"
-      aria-label={`Price trend: ${isPositive ? 'rising' : 'falling'}`}
-    >
-      <polyline
-        points={points}
-        fill="none"
-        stroke={isPositive ? GREEN_500_BRIGHT : RED_500}
-        strokeWidth="2"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  )
-}
-
-// Stock row component — memoized to prevent re-renders of the full list
-// when only ticker/search state changes.
-const StockRow = memo(function StockRow({
-  stock,
-  expanded,
-  onToggle,
-  onToggleFavorite,
-  onRemove,
-  isFavorite,
-  canRemove
-}: {
-  stock: StockData
-  expanded: boolean
-  onToggle: () => void
-  onToggleFavorite: () => void
-  onRemove: () => void
-  isFavorite: boolean
-  canRemove: boolean
-}) {
-  const { t } = useTranslation(['cards', 'common'])
-  const isPositive = stock.change >= 0
-
-  return (
-    <div className="border-b border-border/30 last:border-0 relative">
-      {/* Action buttons - Left side */}
-      <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1">
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleFavorite()
-          }}
-          className="p-1 rounded hover:bg-accent transition-colors"
-          title={isFavorite ? t('stockMarket.unfavorite') : t('stockMarket.favorite')}
-        >
-          <Star
-            className={`w-3 h-3 ${isFavorite ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}
-          />
-        </button>
-        {canRemove && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onRemove()
-            }}
-            className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-            title={t('stockMarket.removeFromList')}
-          >
-            <X className="w-3 h-3" />
-          </button>
-        )}
-      </div>
-
-      {/* Main row */}
-      <div
-        className="flex items-center gap-3 p-3 pl-16 pr-4 hover:bg-accent/50 cursor-pointer transition-colors"
-        onClick={onToggle}
-      >
-        {/* Symbol and name */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-sm">{stock.symbol}</span>
-            {expanded ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
-          </div>
-          <div className="text-xs text-muted-foreground truncate">{stock.name}</div>
-        </div>
-
-        {/* Sparkline */}
-        <div className="hidden @sm:block shrink-0">
-          <Sparkline data={stock.sparklineData} isPositive={isPositive} />
-        </div>
-
-        {/* Price and change */}
-        <div className="text-right shrink-0">
-          <div className="font-semibold text-sm">${stock.price.toFixed(2)}</div>
-          <div className={`text-xs flex items-center justify-end gap-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-            {isPositive ? <TrendingUp className="w-3 h-3" aria-hidden="true" /> : <TrendingDown className="w-3 h-3" aria-hidden="true" />}
-            <span>{isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Expanded details */}
-      {expanded && (
-        <div className="px-3 pb-3 pt-1 bg-accent/30 border-t border-border/30">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.open')}:</span>
-              <span className="font-medium">${stock.dayOpen.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.high')}:</span>
-              <span className="font-medium">${stock.dayHigh.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.low')}:</span>
-              <span className="font-medium">${stock.dayLow.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.volume')}:</span>
-              <span className="font-medium">{formatVolume(stock.volume)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.mktCap')}:</span>
-              <span className="font-medium">{formatLargeNumber(stock.marketCap)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('stockMarket.fiftyTwoWeekRange')}:</span>
-              <span className="font-medium text-xs">${stock.week52Low.toFixed(0)} - ${stock.week52High.toFixed(0)}</span>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-})
 
 export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { showToast } = useToast()
   const symbols = config?.symbols || DEFAULT_SYMBOLS
   const dataSource = config?.dataSource || 'Yahoo Finance'
 
@@ -530,17 +258,10 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   // Default to demo mode - live data uses CORS proxy which may have rate limits
   const [useLiveData, setUseLiveData] = useState(false)
 
-  // Search and saved stocks state
-  const [stockSearchInput, setStockSearchInput] = useState('')
-  const [stockSearchResults, setStockSearchResults] = useState<StockSearchResult[]>([])
-  const [showStockDropdown, setShowStockDropdown] = useState(false)
-  const [isSearching, setIsSearching] = useState(false)
   const [savedStocks, setSavedStocks] = useState<SavedStock[]>(
     () => safeGetJSON<SavedStock[]>(SAVED_STOCKS_STORAGE_KEY) || []
   )
   const [activeSymbols, setActiveSymbols] = useState<string[]>(symbols)
-
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Save stocks to localStorage whenever they change
   useEffect(() => {
@@ -607,60 +328,10 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       comparators: SORT_COMPARATORS },
     defaultLimit: 10 })
 
-  // Search for stocks
-  const performStockSearch = useCallback(async (query: string) => {
-    if (!query || query.length < 1) {
-      setStockSearchResults([])
-      setShowStockDropdown(false)
-      return
-    }
-
-    setIsSearching(true)
-    try {
-      const results = await searchStocks(query)
-      setStockSearchResults(results)
-      if (results.length > 0) {
-        setShowStockDropdown(true)
-      }
-    } catch {
-      // User-visible toast already surfaces the failure (#8816)
-      showToast(t('cards:stockMarket.searchFailed', 'Stock search failed. Please try again.'), 'error')
-      setStockSearchResults([])
-      setShowStockDropdown(false)
-    } finally {
-      setIsSearching(false)
-    }
-  }, [showToast, t])
-
-  // Debounced stock search — uses a cancelled flag to prevent stale
-  // setState calls after the component unmounts or the input changes.
-  useEffect(() => {
-    let cancelled = false
-
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      if (!cancelled) {
-        performStockSearch(stockSearchInput)
-      }
-    }, SEARCH_DEBOUNCE_MS)
-
-    return () => {
-      cancelled = true
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-    }
-  }, [stockSearchInput, performStockSearch])
-
   // Add stock from search results
   const addStock = useCallback((stock: StockSearchResult) => {
     if (!activeSymbols.includes(stock.symbol)) {
       setActiveSymbols(prev => [...prev, stock.symbol])
-
-      // Add to saved stocks if not already there
       if (!savedStocks.find(s => s.symbol === stock.symbol)) {
         setSavedStocks(prev => [...prev, {
           symbol: stock.symbol,
@@ -670,9 +341,6 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
           favorite: true }])
       }
     }
-    setStockSearchInput('')
-    setShowStockDropdown(false)
-    setStockSearchResults([])
   }, [activeSymbols, savedStocks])
 
   // Remove stock from active list
@@ -759,19 +427,25 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       </div>
 
       {/* Search and add stock */}
-      <StockSearch
-        searchInput={stockSearchInput}
-        onSearchInputChange={setStockSearchInput}
-        searchResults={stockSearchResults}
-        onAddStock={addStock}
-        isSearching={isSearching}
-        activeSymbols={activeSymbols}
-        showDropdown={showStockDropdown}
-        onShowDropdown={setShowStockDropdown}
-      />
+      <SymbolSearch activeSymbols={activeSymbols} onAddStock={addStock} />
 
       {/* Portfolio summary */}
-      <PortfolioSummary stockData={stockData} />
+      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3 p-2 bg-accent/30 rounded-lg text-xs">
+        <div className="text-center">
+          <div className="text-muted-foreground">{t('stockMarket.avgChange')}</div>
+          <div className={`font-semibold ${portfolioSummary.avgChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            {portfolioSummary.avgChange >= 0 ? '+' : ''}{portfolioSummary.avgChange.toFixed(2)}%
+          </div>
+        </div>
+        <div className="text-center border-l border-r border-border/30">
+          <div className="text-muted-foreground">{t('stockMarket.gainers')}</div>
+          <div className="font-semibold text-green-500">{portfolioSummary.gainers}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-muted-foreground">{t('stockMarket.losers')}</div>
+          <div className="font-semibold text-red-500">{portfolioSummary.losers}</div>
+        </div>
+      </div>
 
       {/* Stock list */}
       {isLoadingData && stockData.length === 0 ? (

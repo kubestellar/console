@@ -1,6 +1,5 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect, useRef } from 'react'
-import { Box, Server, Crown, RotateCcw, Trophy, Play, Loader2 } from 'lucide-react'
+import { Box, Server, RotateCcw, Loader2 } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState, useCardDemoState } from './CardDataContext'
@@ -8,8 +7,9 @@ import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { safeGet, safeGetJSON, safeSetJSON, safeRemove } from '../../lib/safeLocalStorage'
 import { Select } from '../ui/Select'
+import { PieceComponent } from './checkers/CheckerPiece'
+import { ResultSummary } from './checkers/ResultSummary'
 
-/** localStorage key for Checkers win/loss score tracking */
 const SCORE_STORAGE_KEY = 'checkers-score'
 
 // Board is 8x8, pieces only on dark squares
@@ -295,8 +295,6 @@ function evaluateBoard(board: Board): number {
 
   return (nodeValue - podValue) * 10 + positionScore
 }
-
-// Minimax with alpha-beta pruning
 function minimax(
   board: Board,
   depth: number,
@@ -365,41 +363,6 @@ function minimax(
   }
 }
 
-// Piece component
-function PieceComponent({
-  piece,
-  isSelected,
-  isSmall }: {
-  piece: Piece
-  isSelected: boolean
-  isSmall: boolean
-}) {
-  const isPod = piece.player === 'pods'
-  const isKing = piece.type === 'king'
-
-  return (
-    <div
-      className={`
-        ${isSmall ? 'w-6 h-6' : 'w-10 h-10'} rounded-full flex items-center justify-center
-        ${isPod ? 'bg-blue-500' : 'bg-orange-500'}
-        ${isSelected ? 'ring-2 ring-yellow-400 ring-offset-1 ring-offset-background' : ''}
-        shadow-md transition-all
-      `}
-    >
-      {isKing ? (
-        <Crown className={`${isSmall ? 'w-3 h-3' : 'w-5 h-5'} text-yellow-300`} />
-      ) : isPod ? (
-        <Box className={`${isSmall ? 'w-3 h-3' : 'w-5 h-5'} text-blue-100`} />
-      ) : (
-        <Server className={`${isSmall ? 'w-3 h-3' : 'w-5 h-5'} text-orange-100`} />
-      )}
-    </div>
-  )
-}
-
-// Storage key for game state
-const STORAGE_KEY = 'checkers-game-state'
-
 interface SavedGameState {
   board: Board
   currentPlayer: Player
@@ -407,6 +370,8 @@ interface SavedGameState {
   moveCount: number
   gameOver: Player | 'draw' | null
 }
+
+const STORAGE_KEY = 'checkers-game-state'
 
 function loadGameState(): SavedGameState | null {
   const stored = safeGet(STORAGE_KEY)
@@ -822,27 +787,7 @@ export function Checkers(_props: CardComponentProps) {
         </div>
       )}
 
-      {/* Game over overlay */}
-      {gameOver && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-          <div className="text-center p-6 bg-card rounded-xl border border-border shadow-lg">
-            <Trophy className={`w-12 h-12 mx-auto mb-3 ${gameOver === 'pods' ? 'text-blue-400' : 'text-orange-400'}`} />
-            <h3 className="text-xl font-bold text-foreground mb-2">
-              {gameOver === 'pods' ? t('checkers.youWon') : t('checkers.aiWinsExclaim')}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {moveCount} {t('checkers.movesPlayed')}
-            </p>
-            <button
-              onClick={newGame}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg mx-auto hover:bg-purple-500/30"
-            >
-              <Play className="w-4 h-4" />
-              {t('checkers.playAgain')}
-            </button>
-          </div>
-        </div>
-      )}
+      <ResultSummary gameOver={gameOver} moveCount={moveCount} onNewGame={newGame} />
     </div>
   )
 }

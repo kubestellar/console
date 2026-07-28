@@ -1,14 +1,11 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 // Modal safety: the ApiKeyPromptModal imported here uses BaseModal with its own
 // close controls, and the cluster-filter dropdown is an anchored flyout (not a
 // backdrop modal). closeOnBackdropClick={false} semantics apply to the inline
 // inputs — no unsaved-changes risk from accidental backdrop clicks.
-import { useMemo, useState, useRef, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { useMemo, useState } from 'react'
 import {
   Cpu, Network, Activity, Layers, Server,
-  RefreshCw, ChevronDown, ChevronRight, Filter,
-  AlertTriangle
+  RefreshCw, AlertTriangle
 } from 'lucide-react'
 import { ALERT_SEVERITY_ORDER } from '../../../types/alerts'
 import { Skeleton } from '../../ui/Skeleton'
@@ -23,11 +20,12 @@ import { cn } from '../../../lib/cn'
 // WorkloadMonitorAlerts replaced with inline issue cards in Issues tab
 import { useLLMdClusters } from '../workload-detection/shared'
 import { useClusters } from '../../../hooks/useMCP'
-import { ClusterStatusDot, getClusterState } from '../../ui/ClusterStatusBadge'
-import { StatusBadge } from '../../ui/StatusBadge'
 import { useCardLoadingState } from '../CardDataContext'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
+import { ComponentsList } from './llmdStackMonitor/ComponentsList'
+import { IssuesList } from './llmdStackMonitor/IssuesList'
+import { ClusterFilter } from './llmdStackMonitor/ClusterFilter'
 
 type SortField = 'name' | 'status' | 'type' | 'cluster'
 type StatusFilter = 'all' | 'healthy' | 'degraded' | 'unhealthy'
@@ -71,7 +69,6 @@ interface LLMdStackMonitorProps {
   config?: Record<string, unknown>
 }
 
-
 interface ComponentItem {
   name: string
   status: 'healthy' | 'degraded' | 'unhealthy' | 'unknown'
@@ -80,16 +77,6 @@ interface ComponentItem {
   detail?: string
   cluster?: string
 }
-
-const STATUS_DOT: Record<string, string> = {
-  healthy: 'bg-green-400',
-  degraded: 'bg-yellow-400',
-  unhealthy: 'bg-red-400',
-  unknown: 'bg-gray-400',
-  running: 'bg-green-400',
-  scaling: 'bg-yellow-400',
-  stopped: 'bg-red-400',
-  error: 'bg-red-400' }
 
 const STATUS_BADGE: Record<string, string> = {
   healthy: 'bg-green-500/20 text-green-400',
@@ -111,10 +98,6 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Model Serving', 'EPP', 'Gateway', 'Autoscaler']))
   const [search, setSearch] = useState('')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
-  const clusterFilterBtnRef = useRef<HTMLButtonElement>(null)
-  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left: number } | null>(null)
 
   // Unified controls state - Components tab
   const [sortBy, setSortBy] = useState<SortField>('status')
@@ -130,44 +113,6 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
   const [issueItemsPerPage, setIssueItemsPerPage] = useState<number | 'unlimited'>(5)
   const [issueCurrentPage, setIssueCurrentPage] = useState(1)
-
-  // Compute dropdown position
-  useEffect(() => {
-    if (showClusterFilter && clusterFilterBtnRef.current) {
-      const rect = clusterFilterBtnRef.current.getBoundingClientRect()
-      setDropdownStyle({
-        top: rect.bottom + 4,
-        left: Math.max(8, rect.right - 192) })
-    } else {
-      setDropdownStyle(null)
-    }
-  }, [showClusterFilter])
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Close dropdown on Escape key
-  useEffect(() => {
-    if (!showClusterFilter) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        setShowClusterFilter(false)
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [showClusterFilter])
 
   // Filter servers by search and cluster
   const filteredServers = (() => {
@@ -189,12 +134,16 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
 
   const availableClusters = deduplicatedClusters.filter(c => c.reachable !== false)
 
-  const toggleClusterFilter = (cluster: string) => {
+  const handleToggleCluster = (cluster: string) => {
     if (localClusterFilter.includes(cluster)) {
       setLocalClusterFilter(localClusterFilter.filter(c => c !== cluster))
     } else {
       setLocalClusterFilter([...localClusterFilter, cluster])
     }
+  }
+
+  const handleClearClusterFilter = () => {
+    setLocalClusterFilter([])
   }
 
   // Use workload monitor for the primary llm-d namespace
@@ -515,78 +464,12 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           {stackHealth}
         </span>
         {/* Cluster filter */}
-        {availableClusters.length >= 1 && (
-          <div ref={clusterFilterRef} className="relative">
-            <button
-              ref={clusterFilterBtnRef}
-              onClick={() => setShowClusterFilter(!showClusterFilter)}
-              className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                localClusterFilter.length > 0
-                  ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                  : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-              }`}
-              title="Filter by cluster"
-            >
-              <Filter className="w-3 h-3" />
-              {localClusterFilter.length > 0 && (
-                <span className="flex items-center gap-1">
-                  <Server className="w-3 h-3" />
-                  {localClusterFilter.length}/{availableClusters.length}
-                </span>
-              )}
-              <ChevronDown className="w-3 h-3" />
-            </button>
-            {showClusterFilter && dropdownStyle && createPortal(
-              <div
-                className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
-                style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
-                onMouseDown={e => e.stopPropagation()}
-              >
-                <div className="p-1">
-                  <button
-                    onClick={() => setLocalClusterFilter([])}
-                    className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                      localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                    }`}
-                  >
-                    All clusters
-                  </button>
-                  {availableClusters.map(cluster => {
-                    const clusterState = getClusterState(
-                      cluster.healthy,
-                      cluster.reachable,
-                      cluster.nodeCount,
-                      undefined,
-                      cluster.errorType
-                    )
-                    const stateLabel = clusterState === 'healthy' ? '' :
-                      clusterState === 'degraded' ? 'degraded' :
-                      clusterState === 'unreachable-auth' ? 'needs auth' :
-                      clusterState === 'unreachable-timeout' ? 'offline' :
-                      'offline'
-                    return (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors flex items-center gap-2 ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                        title={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}
-                      >
-                        <ClusterStatusDot state={clusterState} size="sm" />
-                        <span className="flex-1 truncate">{cluster.name}</span>
-                        {stateLabel && (
-                          <span className="text-2xs text-muted-foreground shrink-0">{stateLabel}</span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>,
-              document.body
-            )}
-          </div>
-        )}
+        <ClusterFilter
+          availableClusters={availableClusters}
+          localClusterFilter={localClusterFilter}
+          onToggleCluster={handleToggleCluster}
+          onClearFilter={handleClearClusterFilter}
+        />
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
@@ -675,72 +558,12 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           />
 
           {/* Component sections */}
-          <div className="flex-1 overflow-y-auto space-y-0.5">
-            {sections.map(section => {
-              const SectionIcon = section.icon
-              const isExpanded = expandedSections.has(section.label)
-              const sectionHealthy = section.items.filter(i => i.status === 'healthy').length
-              const allHealthy = sectionHealthy === section.items.length
-
-              return (
-                <div key={section.label} className="border-b border-border/30 last:border-0">
-                  <button
-                    onClick={() => toggleSection(section.label)}
-                    className="w-full flex items-center gap-2 py-1.5 px-1 text-left hover:bg-card/30 rounded transition-colors"
-                  >
-                    {isExpanded
-                      ? <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" />
-                      : <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />}
-                    <SectionIcon className={cn('w-3.5 h-3.5 shrink-0', section.color)} />
-                    <span className="text-sm text-foreground flex-1">{section.label}</span>
-                    <span
-                      className={cn(
-                        'text-xs px-1.5 py-0.5 rounded cursor-default',
-                        allHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400',
-                      )}
-                      title={`${sectionHealthy} healthy out of ${section.items.length} total ${section.label} components`}
-                    >
-                      {sectionHealthy}/{section.items.length}
-                    </span>
-                  </button>
-                  {isExpanded && (
-                    <div className="ml-8 mb-1.5 space-y-0.5">
-                      {section.items.map((item, idx) => (
-                        <div key={`${section.label}-${idx}-${item.name}`} className="flex items-center gap-2 py-0.5 px-1 rounded hover:bg-card/30 transition-colors group">
-                          <div className={cn('w-1.5 h-1.5 rounded-full shrink-0', STATUS_DOT[item.status] || 'bg-gray-400')} />
-                          <span className="text-xs text-foreground truncate flex-1">{item.name}</span>
-                          {item.namespace && (
-                            <StatusBadge color="purple" size="xs" className="shrink-0">
-                              {item.namespace}
-                            </StatusBadge>
-                          )}
-                          {item.detail && (
-                            <span className="text-2xs text-muted-foreground shrink-0 truncate max-w-[150px]">
-                              {item.detail}
-                            </span>
-                          )}
-                          {item.cluster && (
-                            <span className="text-2xs px-1 py-0.5 rounded bg-secondary text-muted-foreground shrink-0">
-                              {item.cluster}
-                            </span>
-                          )}
-                          {/* Diag icon - show for non-healthy items */}
-                          {item.status !== 'healthy' && (
-                            <CardAIActions
-                              resource={{ kind: 'Deployment', name: item.name, namespace: item.namespace, cluster: item.cluster, status: item.status }}
-                              issues={item.detail ? [{ name: item.status, message: item.detail }] : []}
-                              showRepair={false}
-                              onDiagnose={(e) => { e.stopPropagation(); handleItemDiagnose(item) }}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+          <ComponentsList
+            sections={sections}
+            expandedSections={expandedSections}
+            onToggleSection={toggleSection}
+            onItemDiagnose={handleItemDiagnose}
+          />
 
           {/* Pagination */}
           {needsPagination && (
@@ -793,65 +616,11 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           />
 
           {/* Issues list */}
-          <div className="flex-1 overflow-y-auto space-y-2">
-            {paginatedIssues.length > 0 ? (
-              paginatedIssues.map(issue => {
-                const severityConfig = {
-                  critical: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', badge: 'bg-red-500/20 text-red-400', icon: 'text-red-400' },
-                  warning: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', badge: 'bg-yellow-500/20 text-yellow-400', icon: 'text-yellow-400' },
-                  info: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', badge: 'bg-blue-500/20 text-blue-400', icon: 'text-blue-400' } }
-                const config = severityConfig[issue.severity as keyof typeof severityConfig] || severityConfig.info
-
-                return (
-                  <div
-                    key={issue.id}
-                    className={cn('rounded-lg p-3 border', config.bg, config.border)}
-                  >
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className={cn('w-4 h-4 mt-0.5 shrink-0', config.icon)} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={cn('text-sm font-medium', config.text)}>{issue.title}</span>
-                          <span className={cn('text-2xs px-1.5 py-0.5 rounded', config.badge)}>{issue.severity}</span>
-                        </div>
-                        {issue.description && (
-                          <p className="text-xs text-muted-foreground mt-1">{issue.description}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2 flex-wrap">
-                          {issue.resource?.namespace && (
-                            <StatusBadge color="purple" size="xs">
-                              {issue.resource.namespace}
-                            </StatusBadge>
-                          )}
-                          {issue.resource?.cluster && (
-                            <span className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                              {issue.resource.cluster}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <CardAIActions
-                        resource={{ kind: issue.resource?.kind || 'Resource', name: issue.resource?.name || issue.title, namespace: issue.resource?.namespace, cluster: issue.resource?.cluster, status: issue.severity }}
-                        issues={[{ name: issue.title, message: issue.description || '' }]}
-                        showRepair={false}
-                        onDiagnose={() => handleItemDiagnose({
-                          name: issue.resource?.name || issue.title,
-                          status: issue.severity === 'critical' ? 'unhealthy' : 'degraded',
-                          namespace: issue.resource?.namespace,
-                          cluster: issue.resource?.cluster })}
-                      />
-                    </div>
-                  </div>
-                )
-              })
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                <AlertTriangle className="w-8 h-8 opacity-30 mb-2" />
-                <p className="text-sm">{issueSearch ? 'No issues match your search' : 'No issues detected'}</p>
-                {!issueSearch && <p className="text-xs opacity-70 mt-1">All components are healthy</p>}
-              </div>
-            )}
-          </div>
+          <IssuesList
+            issues={paginatedIssues}
+            issueSearch={issueSearch}
+            onItemDiagnose={handleItemDiagnose}
+          />
 
           {/* Pagination */}
           {needsIssuePagination && (
