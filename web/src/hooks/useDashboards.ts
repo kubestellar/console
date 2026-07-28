@@ -61,10 +61,9 @@ export function useDashboards() {
     emitDashboardDeleted()
   }, [])
 
-  const moveCardToDashboard = useCallback(async (cardId: string, targetDashboardId: string) => {
-    const { data } = await api.post(`/api/cards/${cardId}/move`, {
+  const moveCardToDashboard = useCallback(async (cardId: string, targetDashboardId: string): Promise<void> => {
+    await api.post(`/api/cards/${cardId}/move`, {
       target_dashboard_id: targetDashboardId })
-    return data
   }, [])
 
   const getDashboardWithCards = useCallback(async (dashboardId: string): Promise<Dashboard | null> => {
