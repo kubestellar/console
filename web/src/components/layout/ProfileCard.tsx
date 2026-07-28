@@ -34,7 +34,7 @@ interface ProfileCardProps {
   onPreferences?: () => void
   onLogout: () => void
   menuRef: RefObject<HTMLDivElement | null>
-  onMenuKeyDown: (event: KeyboardEvent) => void
+  onMenuKeyDown: (event: KeyboardEvent<HTMLElement>) => void
   triggerButtonRef: RefObject<HTMLButtonElement | null>
 }
 

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, type RefObject } from 'react'
 import { useModalState } from '../../lib/modals'
 import { useKeyboardNav } from '../../hooks/useKeyboardNav'
 import { User, ChevronDown } from 'lucide-react'
@@ -93,7 +93,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
         closeDropdown={closeDropdown}
         onPreferences={onPreferences}
         onLogout={onLogout}
-        menuRef={menuRef}
+        menuRef={menuRef as RefObject<HTMLDivElement | null>}
         onMenuKeyDown={handleMenuKeyDown}
         triggerButtonRef={triggerButtonRef}
       />

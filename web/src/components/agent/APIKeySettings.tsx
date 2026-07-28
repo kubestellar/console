@@ -97,7 +97,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
             copied={copied}
             onCopyInstallCommand={copyInstallCommand}
             onRetryConnection={fetchKeysStatus}
-            t={t}
+            t={t as (key: string) => string}
           />
         ) : filteredKeys.length === 0 ? (
           <TestConnectionPanel
@@ -106,7 +106,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
             copied={copied}
             onCopyInstallCommand={copyInstallCommand}
             onRetryConnection={fetchKeysStatus}
-            t={t}
+            t={t as (key: string) => string}
           />
         ) : (
           <SavedKeysTable

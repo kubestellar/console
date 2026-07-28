@@ -23,7 +23,7 @@ interface SidebarFooterProps {
   hasUpdate: boolean
   channel: string
   isUpgrading: boolean
-  latestMainSHA: string
+  latestMainSHA: string | null
   footer?: React.ReactNode
   handleApplySwap: (swap: SnoozedSwap) => void
   handleApplyRecommendation: (recommendation: SnoozedRecommendation) => void
