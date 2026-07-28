@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, AlertTriangle, CheckCircle, ChevronRight, ChevronDown, Server, Scissors } from 'lucide-react'
 import { useClusters, useGPUNodes, useNVIDIAOperators, refreshSingleCluster } from '../../hooks/useMCP'
-import { agentFetch } from '../../hooks/mcp/shared'
 import { ClusterDetailModal } from './ClusterDetailModal'
 import { AddClusterDialog } from './AddClusterDialog'
 import { EmptyClusterState } from './EmptyClusterState'
@@ -11,16 +10,13 @@ import {
   RemoveClusterDialog,
   FilterTabs,
   ClusterGrid,
-  GPUDetailModal,
-  type ClusterLayoutMode } from './components'
+  GPUDetailModal } from './components'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
 import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
-import { emitClusterStatsDrillDown } from '../../lib/analytics'
-import { ROUTES } from '../../config/routes'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -28,16 +24,16 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { ClusterCardSkeleton } from '../ui/ClusterCardSkeleton'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useTranslation } from 'react-i18next'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, STORAGE_KEY_CLUSTER_ORDER, FETCH_DEFAULT_TIMEOUT_MS, isLocalAgentSuppressed } from '../../lib/constants'
-import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
+import { isLocalAgentSuppressed } from '../../lib/constants'
 import { useModalState } from '../../lib/modals'
-import { useToast } from '../ui/Toast'
 import type { StatBlockValue } from '../ui/StatsOverview'
-import { formatMemoryStat } from '../../lib/formatStats'
 import { RotatingTip } from '../ui/RotatingTip'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useClusterFiltering } from './useClusterFiltering'
 import { useClusterStats } from './useClusterStats'
+import { useClusterViewState } from './useClusterViewState'
+import { useClusterMutations } from './useClusterMutations'
+import { getClusterDashboardStatValue } from './clusterStatValues'
 import { ClusterGroupsSection } from './ClusterGroupsSection'
 
 // Storage key for cluster page cards
@@ -64,7 +60,6 @@ export function Clusters() {
   const { startMission, openSidebar } = useMissions()
   const { showKeyPrompt: pruneShowKeyPrompt, checkKeyAndRun: pruneCheckKeyAndRun, goToSettings: pruneGoToSettings, dismissPrompt: pruneDismissPrompt } = useApiKeyCheck()
   const { showKeyPrompt: createShowKeyPrompt, checkKeyAndRun: createCheckKeyAndRun, goToSettings: createGoToSettings, dismissPrompt: createDismissPrompt } = useApiKeyCheck()
-  const { showToast } = useToast()
 
   // When demo mode is OFF and agent is not connected, force skeleton display
   // Also show skeleton during mode switching for smooth transitions
@@ -81,67 +76,24 @@ export function Clusters() {
     selectClusterGroup,
     selectedDistributions,
     isAllDistributionsSelected } = useGlobalFilters()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const searchParamsTuple = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
 
-  // Read filter from URL, default to 'all'
-  const urlStatus = searchParams.get('status')
-  const validFilter = (urlStatus === 'healthy' || urlStatus === 'unhealthy' || urlStatus === 'unreachable') ? urlStatus : 'all'
-  const [filter, setFilterState] = useState<'all' | 'healthy' | 'unhealthy' | 'unreachable'>(validFilter)
+  const {
+    filter,
+    setFilter,
+    sortBy,
+    setSortBy,
+    sortAsc,
+    setSortAsc,
+    customOrder,
+    layoutMode,
+    setLayoutMode,
+    handleReorder,
+  } = useClusterViewState(searchParamsTuple)
 
-  // Sync filter state with URL changes (e.g., when navigating from sidebar)
-  useEffect(() => {
-    const newFilter = (urlStatus === 'healthy' || urlStatus === 'unhealthy' || urlStatus === 'unreachable') ? urlStatus : 'all'
-    if (newFilter !== filter) {
-      setFilterState(newFilter)
-    }
-  }, [urlStatus, filter])
-
-  // Update URL when filter changes programmatically
-  const setFilter = (newFilter: 'all' | 'healthy' | 'unhealthy' | 'unreachable') => {
-    setFilterState(newFilter)
-    if (newFilter === 'all') {
-      searchParams.delete('status')
-    } else {
-      searchParams.set('status', newFilter)
-    }
-    setSearchParams(searchParams, { replace: true })
-  }
-  const [sortState, setSortState] = useState<{ by: 'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom'; customOrder: string[] }>(() => {
-    try {
-      const savedOrder = safeGetItem(STORAGE_KEY_CLUSTER_ORDER)
-      return {
-        by: savedOrder ? 'custom' : 'name',
-        customOrder: savedOrder ? JSON.parse(savedOrder) : [] }
-    } catch {
-      return { by: 'name', customOrder: [] }
-    }
-  })
-  const [sortAsc, setSortAsc] = useState(true)
-
-  // Notify user if saved cluster sort configuration was corrupt and had to be reset
-  useEffect(() => {
-    const savedOrder = safeGetItem(STORAGE_KEY_CLUSTER_ORDER)
-    if (savedOrder) {
-      try {
-        JSON.parse(savedOrder)
-      } catch {
-        showToast(t('cluster.sortPreferencesCorrupted'), 'warning')
-      }
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Convenience aliases so downstream code stays unchanged
-  const sortBy = sortState.by
-  const customOrder = sortState.customOrder
-  const setSortBy = (by: 'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom') =>
-      setSortState(prev => ({ ...prev, by }))
-  const [layoutMode, setLayoutMode] = useState<ClusterLayoutMode>(() => {
-    const stored = safeGetItem(STORAGE_KEY_CLUSTER_LAYOUT)
-    return (stored as ClusterLayoutMode) || 'grid'
-  })
   const [renamingCluster, setRenamingCluster] = useState<string | null>(null)
   const [removingCluster, setRemovingCluster] = useState<string | null>(null)
 
@@ -155,67 +107,7 @@ export function Clusters() {
     refetch()
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleRenameContext = async (oldName: string, newName: string) => {
-    if (!isConnected) throw new Error(t('cluster.renameNoAgent'))
-    // Use agentFetch so the Authorization: Bearer <KC_AGENT_TOKEN> header
-    // is injected — plain fetch() is rejected with 401 when the agent has
-    // a token configured (#6133).
-    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/rename-context`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ oldName, newName }),
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({})) as { error?: string; message?: string }
-      // Fall back to HTTP status so users see e.g. "HTTP 401: Unauthorized"
-      // instead of a silent generic error when the body has no message.
-      const fallback = `HTTP ${response.status}: ${response.statusText || 'Failed to rename context'}`
-      throw new Error(data.error || data.message || fallback)
-    }
-    refetch()
-  }
-
-  /**
-   * Remove an offline cluster's kubeconfig context (#5901).
-   * Backend: `RemoveContext` in pkg/k8s/client.go (added in #5658). The agent
-   * exposes it at POST /kubeconfig/remove on the localhost-only HTTP server.
-   *
-   * Uses agentFetch() to inject the KC_AGENT_TOKEN Authorization header;
-   * without this the kc-agent rejects the request with 401 Unauthorized
-   * whenever a token is configured, which manifested as a silent "Failed
-   * to remove cluster from kubeconfig" in the UI (#6133).
-   */
-  const handleRemoveCluster = async (contextName: string) => {
-    if (!isConnected) throw new Error(t('cluster.removeClusterNoAgent'))
-    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/remove`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ context: contextName }),
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-    if (!response.ok) {
-      // #6293: check for the 404-means-stale-agent case BEFORE attempting
-      // to parse the body. An old kc-agent returns a plain-text Go
-      // default 404 ("404 page not found") which is not JSON — reading
-      // it first would be a wasted round-trip. Same reason #6288 added
-      // the status-specific branch in the first place.
-      if (response.status === 404) {
-        throw new Error(t('cluster.removeClusterAgentTooOld'))
-      }
-      const data = await response.json().catch(() => ({})) as { error?: string; message?: string }
-      // Always surface the HTTP status if the body has no structured error,
-      // so the user sees "HTTP 401: Unauthorized" instead of the generic
-      // fallback — this was the root cause of #6133 being unactionable.
-      const fallback = `HTTP ${response.status}: ${response.statusText || t('cluster.removeClusterError')}`
-      throw new Error(data.error || data.message || fallback)
-    }
-    showToast(t('cluster.removeClusterSuccess', { name: contextName }), 'success')
-    refetch()
-  }
-
-  const handleReorder = (newOrder: string[]) => {
-    setSortState({ by: 'custom', customOrder: newOrder })
-    safeSetItem(STORAGE_KEY_CLUSTER_ORDER, JSON.stringify(newOrder))
-  }
+  const { handleRenameContext, handleRemoveCluster } = useClusterMutations({ isConnected, refetch })
 
   const { filteredClusters, globalFilteredClusters } = useClusterFiltering({
     clusters,
@@ -272,93 +164,16 @@ export function Clusters() {
   const showSkeletonContent = (isLoading && (clusters || []).length === 0) || forceSkeletonForOffline || isModeSwitching
 
   // Stats value getter for DashboardPage's configurable StatsOverview
-  const getDashboardStatValue = (blockId: string): StatBlockValue => {
-    const hasData = stats.hasResourceData || stats.total > 0
-    switch (blockId) {
-      case 'clusters':
-        return {
-          value: stats.total,
-          groundtruthField: 'clusters-total',
-          sublabel: 'total clusters',
-          onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('all'); setShowClusterGrid(true) },
-          isClickable: stats.total > 0 }
-      case 'healthy':
-        return {
-          value: stats.healthy,
-          groundtruthField: 'clusters-healthy',
-          sublabel: 'healthy',
-          max: clusterStatusProgressMax,
-          onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('healthy'); setShowClusterGrid(true) },
-          isClickable: stats.healthy > 0 }
-      case 'unhealthy':
-        return {
-          value: stats.unhealthy,
-          sublabel: 'unhealthy',
-          max: clusterStatusProgressMax,
-          onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('unhealthy'); setShowClusterGrid(true) },
-          isClickable: stats.unhealthy > 0 }
-      case 'unreachable':
-        return {
-          value: stats.unreachable,
-          sublabel: 'offline',
-          max: clusterStatusProgressMax,
-          onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('unreachable'); setShowClusterGrid(true) },
-          isClickable: stats.unreachable > 0 }
-      case 'nodes':
-        return {
-          value: hasData ? stats.totalNodes : '-',
-          groundtruthFields: {
-            'nodes-total': hasData ? stats.totalNodes : '-',
-            'nodes-ready': stats.healthyNodes,
-          },
-          progressValue: stats.healthyNodes,
-          max: stats.totalNodes,
-          sublabel: 'total nodes',
-          onClick: () => { emitClusterStatsDrillDown('nodes'); navigate(ROUTES.COMPUTE) },
-          isClickable: hasData }
-      case 'cpus':
-        return {
-          value: hasData ? stats.totalCPUs : '-',
-          sublabel: 'cores allocatable',
-          onClick: () => { emitClusterStatsDrillDown('cpu'); navigate(ROUTES.COMPUTE) },
-          isClickable: hasData }
-      case 'memory':
-        return {
-          value: hasData ? formatMemoryStat(stats.totalMemoryGB) : '-',
-          sublabel: 'allocatable',
-          onClick: () => { emitClusterStatsDrillDown('memory'); navigate(ROUTES.COMPUTE) },
-          isClickable: hasData }
-      case 'storage':
-        return {
-          value: hasData ? formatMemoryStat(stats.totalStorageGB) : '-',
-          sublabel: 'storage',
-          onClick: () => { emitClusterStatsDrillDown('storage'); navigate(ROUTES.STORAGE) },
-          isClickable: hasData }
-      case 'gpus':
-        return {
-          value: hasData ? stats.totalGPUs : '-',
-          sublabel: 'total GPUs',
-          onClick: () => { emitClusterStatsDrillDown('gpu'); openGPUModal() },
-          isClickable: hasData && stats.totalGPUs > 0 }
-      case 'pods':
-        return {
-          value: hasData ? stats.totalPods : '-',
-          groundtruthFields: {
-            'pods-total': hasData ? stats.totalPods : '-',
-            'pods-running': hasData ? stats.totalPods : '-',
-            'pods-pending': 0,
-            'pods-crashloop': 0,
-          },
-          sublabel: 'running pods',
-          onClick: () => { emitClusterStatsDrillDown('pods'); navigate(ROUTES.WORKLOADS) },
-          isClickable: hasData }
-      default:
-        return { value: '-', sublabel: '' }
-    }
-  }
-
-  const getStatValue = getDashboardStatValue
   const clusterStatusProgressMax = Math.max(stats.total, MIN_CLUSTER_PROGRESS_TOTAL)
+  const getStatValue = (blockId: string): StatBlockValue =>
+    getClusterDashboardStatValue(
+      blockId,
+      stats,
+      stats.hasResourceData || stats.total > 0,
+      clusterStatusProgressMax,
+      { navigate, setFilter, setShowClusterGrid, openGPUModal },
+    )
+
   const clusterGroundtruthFields: Record<string, number> = {
     'clusters-total': stats.total,
     'clusters-healthy': stats.healthy,
@@ -448,10 +263,7 @@ export function Clusters() {
                 sortAsc={sortAsc}
                 onSortAscChange={setSortAsc}
                 layoutMode={layoutMode}
-                onLayoutModeChange={(mode) => {
-                  setLayoutMode(mode)
-                  safeSetItem(STORAGE_KEY_CLUSTER_LAYOUT, mode)
-                }}
+                onLayoutModeChange={setLayoutMode}
                 onAddCluster={() => setShowAddCluster(true)}
                 onCreateClusterWithAI={() => {
                   createCheckKeyAndRun(async () => {
