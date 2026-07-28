@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState, useMemo, useCallback, useId } from 'react'
+import { useEffect, useRef, useState, useMemo, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import type { StellarNotification, StellarSolve, StellarSolveProgress } from '../../types/stellar'
 import { isDemoMode } from '../../lib/demoMode'
+import { BatchProgressBar } from './BatchProgressBar'
+import { BatchItemRow } from './BatchItemRow'
+import { BatchSummary } from './BatchSummary'
 
 const BATCH_UPDATE_INTERVAL_MS = 2000
 const SECONDS_PER_MINUTE = 60
@@ -13,12 +16,6 @@ const BATCH_START_OFFSET_MS = 5_000
 const BATCH_WINDOW_MS = 30_000
 
 const FLEX_MIN_WIDTH_STYLE = { flex: 1, minWidth: 0 } as const
-const BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS = 'flex items-center gap-2'
-const BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE = {
-  fontFamily: 'var(--s-mono)',
-  fontSize: 11,
-  color: 'var(--s-text)',
-} as const
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -214,199 +211,11 @@ function buildResolutionStepsFromProgress(progress?: StellarSolveProgress): Reso
   })
 }
 
-function getStatusIcon(status: BatchEvent['status']): string {
-  switch (status) {
-    case 'pending': return '⏳'
-    case 'in_progress': return '⊙'
-    case 'resolved': return '✓'
-    case 'failed': return '✗'
-    case 'skipped': return '–'
-    default: return '•'
-  }
-}
-
-function getStatusColor(status: BatchEvent['status']): string {
-  switch (status) {
-    case 'pending': return 'var(--s-text-dim)'
-    case 'in_progress': return 'var(--s-info)'
-    case 'resolved': return 'var(--s-success)'
-    case 'failed': return 'var(--s-critical)'
-    case 'skipped': return 'var(--s-text-muted)'
-    default: return 'var(--s-text)'
-  }
-}
-
 function formatElapsedSeconds(seconds: number): string {
   if (seconds < SECONDS_PER_MINUTE) return `${seconds}s`
   const minutes = Math.floor(seconds / SECONDS_PER_MINUTE)
   const secs = seconds % SECONDS_PER_MINUTE
   return `${minutes}m ${secs}s`
-}
-
-// ── EventRow ─────────────────────────────────────────────────────────────
-
-function EventRow({ event }: { event: BatchEvent }) {
-  const [expanded, setExpanded] = useState(false)
-  const { t } = useTranslation()
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      if (event.steps.length > 0) setExpanded(x => !x)
-    }
-  }, [event.steps.length])
-
-  const hasSteps = event.steps.length > 0
-
-  return (
-    <div
-      style={{
-        border: '1px solid var(--s-border)',
-        borderRadius: 'var(--s-rs)',
-        background: event.status === 'in_progress' ? 'rgba(99,150,237,0.05)' : 'var(--s-surface-1)',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Main row */}
-      <div
-        role={hasSteps ? 'button' : undefined}
-        tabIndex={hasSteps ? 0 : undefined}
-        aria-expanded={hasSteps ? expanded : undefined}
-        onClick={hasSteps ? () => setExpanded(x => !x) : undefined}
-        onKeyDown={hasSteps ? handleKeyDown : undefined}
-        className="flex items-center gap-2.5 px-3 py-2.5"
-        style={{
-          cursor: hasSteps ? 'pointer' : 'default',
-          userSelect: 'none',
-        }}
-      >
-        <span
-          aria-hidden="true"
-          style={{
-            fontSize: 14,
-            color: getStatusColor(event.status),
-            flexShrink: 0,
-          }}
-        >
-          {getStatusIcon(event.status)}
-        </span>
-
-        <div style={FLEX_MIN_WIDTH_STYLE}>
-          <div className="mb-0.5" style={{
-            fontSize: 12,
-            fontWeight: 500,
-            color: 'var(--s-text)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {event.name}
-          </div>
-          {event.step && (
-            <div style={{
-              fontFamily: 'var(--s-mono)',
-              fontSize: 10,
-              color: 'var(--s-text-muted)',
-            }}>
-              {event.step}
-            </div>
-          )}
-          {event.failureReason && (
-            <div className="mt-0.5" style={{ fontSize: 10, color: 'var(--s-critical)' }}>
-              {event.failureReason}
-            </div>
-          )}
-        </div>
-
-        <div style={{
-          fontFamily: 'var(--s-mono)',
-          fontSize: 10,
-          color: 'var(--s-text-dim)',
-          flexShrink: 0,
-        }}>
-          {formatElapsedSeconds(event.durationSeconds)}
-        </div>
-
-        {hasSteps && (
-          <span
-            aria-hidden="true"
-            style={{
-              fontSize: 10,
-              color: 'var(--s-text-dim)',
-              flexShrink: 0,
-              transition: 'transform 0.15s',
-              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-            }}
-          >
-            ▾
-          </span>
-        )}
-      </div>
-
-      {/* Expanded steps */}
-      {expanded && hasSteps && (
-        <div className="flex flex-col gap-2 px-3 pb-3 pl-6 pt-2.5" style={{
-          borderTop: '1px solid var(--s-border)',
-        }}>
-          <div className="mb-1" style={{
-            fontFamily: 'var(--s-mono)',
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'var(--s-text-muted)',
-          }}>
-            {t('stellar.batch.resolutionSteps')}
-          </div>
-          {event.steps.map((step, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <span className="mt-px" style={{
-                fontSize: 12,
-                flexShrink: 0,
-                color: step.status === 'completed' ? 'var(--s-success)'
-                  : step.status === 'failed' ? 'var(--s-critical)'
-                  : step.status === 'in_progress' ? 'var(--s-info)'
-                  : 'var(--s-text-dim)',
-              }}>
-                {step.status === 'completed' ? '✓'
-                  : step.status === 'failed' ? '✗'
-                  : step.status === 'in_progress' ? '⊙'
-                  : '○'}
-              </span>
-              <div style={FLEX_MIN_WIDTH_STYLE}>
-                <div style={{
-                  fontSize: 11,
-                  color: step.status === 'pending' ? 'var(--s-text-dim)' : 'var(--s-text)',
-                  fontWeight: step.status === 'in_progress' ? 600 : 400,
-                }}>
-                  {step.name}
-                </div>
-                {step.output && (
-                  <div className="mt-0.5" style={{
-                    fontFamily: 'var(--s-mono)',
-                    fontSize: 10,
-                    color: 'var(--s-text-muted)',
-                    wordBreak: 'break-all',
-                  }}>
-                    {step.output}
-                  </div>
-                )}
-                {step.error && (
-                  <div className="mt-0.5" style={{
-                    fontFamily: 'var(--s-mono)',
-                    fontSize: 10,
-                    color: 'var(--s-critical)',
-                  }}>
-                    {step.error}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
 }
 
 // ── BatchMonitorModal ─────────────────────────────────────────────────────────
@@ -646,76 +455,28 @@ export function BatchMonitorModal({
           borderBottom: '1px solid var(--s-border)',
           background: 'var(--s-surface-1)', flexShrink: 0,
         }}>
-          <div className="mb-3 flex items-center gap-4">
-            <span style={{
-              fontFamily: 'var(--s-mono)', fontSize: 11, fontWeight: 600,
-              color: 'var(--s-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase',
-            }}>
-              {t('stellar.batch.summary')}
-            </span>
-            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-text)' }}>
-              {batch.totalEvents} {t('stellar.batch.events', { count: batch.totalEvents })}
-            </span>
-          </div>
-
-          {/* Progress bar */}
-          <div
-            role="progressbar"
-            aria-valuenow={progressPercent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={t('stellar.batch.progressAriaLabel', { percent: progressPercent })}
-            className="mb-3"
-            style={{
-              width: '100%', height: 8,
-              background: 'var(--s-surface-2)',
-              borderRadius: 4, overflow: 'hidden',
+          <BatchSummary
+            totalEvents={batch.totalEvents}
+            resolved={batch.summary.resolved}
+            failed={batch.summary.failed}
+            skipped={batch.summary.skipped}
+            inProgress={batch.summary.inProgress}
+            labels={{
+              summary: t('stellar.batch.summary'),
+              events: t('stellar.batch.events', { count: batch.totalEvents }),
+              resolved: t('stellar.batch.resolved'),
+              failed: t('stellar.batch.failed'),
+              skipped: t('stellar.batch.skipped'),
+              inProgress: t('stellar.batch.inProgress'),
             }}
           >
-            <div style={{
-              width: `${progressPercent}%`, height: '100%',
-              background: batch.status === 'completed' && batch.summary.failed === 0
-                ? 'var(--s-success)'
-                : batch.summary.failed > 0 ? 'var(--s-warning)' : 'var(--s-info)',
-              transition: 'width 0.3s ease',
-            }} />
-          </div>
-
-          {/* Breakdown */}
-          <div className="flex flex-wrap gap-4">
-            {batch.summary.resolved > 0 && (
-              <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
-                <span aria-hidden="true" style={{ color: 'var(--s-success)', fontSize: 14 }}>✓</span>
-                <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
-                  {batch.summary.resolved} {t('stellar.batch.resolved')}
-                </span>
-              </div>
-            )}
-            {batch.summary.failed > 0 && (
-              <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
-                <span aria-hidden="true" style={{ color: 'var(--s-critical)', fontSize: 14 }}>✗</span>
-                <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
-                  {batch.summary.failed} {t('stellar.batch.failed')}
-                </span>
-              </div>
-            )}
-            {batch.summary.skipped > 0 && (
-              <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
-                <span aria-hidden="true" style={{ color: 'var(--s-text-muted)', fontSize: 14 }}>–</span>
-                <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
-                  {batch.summary.skipped} {t('stellar.batch.skipped')}
-                </span>
-              </div>
-            )}
-            {batch.summary.inProgress > 0 && (
-              <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
-                <span aria-hidden="true" style={{ color: 'var(--s-info)', fontSize: 14 }}>⊙</span>
-                <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
-                  {batch.summary.inProgress} {t('stellar.batch.inProgress')}
-                </span>
-              </div>
-            )}
-          </div>
+            <BatchProgressBar
+              progressPercent={progressPercent}
+              progressLabel={t('stellar.batch.progressAriaLabel', { percent: progressPercent })}
+              isCompletedWithoutFailures={batch.status === 'completed' && batch.summary.failed === 0}
+              hasFailures={batch.summary.failed > 0}
+            />
+          </BatchSummary>
         </div>
 
         {/* Event list */}
@@ -736,7 +497,7 @@ export function BatchMonitorModal({
             >
               {batch.events.map(event => (
                 <div key={event.id} role="listitem">
-                  <EventRow event={event} />
+                  <BatchItemRow event={event} />
                 </div>
               ))}
             </div>
