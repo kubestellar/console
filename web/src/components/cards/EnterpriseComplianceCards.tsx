@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { authFetch, safeJson } from '../../lib/api'
 import { useCache } from '../../lib/cache'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
 // ── Shared helpers ────────────────────────────────────────────────────────
@@ -91,18 +92,21 @@ function MiniStat({ label, value, color = 'text-foreground' }: { label: string; 
 
 export function HIPAACard() {
   const { t } = useTranslation('errors')
+  const { isDemoMode } = useDemoMode()
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(!isDemoMode)
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
+    if (isDemoMode) { setIsLoading(false); return }
     setIsLoading(true)
     authFetch('/api/compliance/hipaa/summary')
       .then(r => r.ok ? safeJson<Record<string, number>>(r) : null)
       .then(setData)
       .catch((err: unknown) => { setError(err instanceof Error ? err.message : t('messages.failedToLoad')); console.error(err) })
       .finally(() => setIsLoading(false))
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDemoMode])
   return (
     <CardShell title="HIPAA Compliance" icon={Shield} onClick={() => nav('/hipaa')}>
       {error ? (
@@ -130,18 +134,21 @@ export function HIPAACard() {
 
 export function GxPCard() {
   const { t } = useTranslation('errors')
+  const { isDemoMode } = useDemoMode()
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, unknown> | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(!isDemoMode)
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
+    if (isDemoMode) { setIsLoading(false); return }
     setIsLoading(true)
     authFetch('/api/compliance/gxp/summary')
       .then(r => r.ok ? safeJson<Record<string, unknown>>(r) : null)
       .then(setData)
       .catch((err: unknown) => { setError(err instanceof Error ? err.message : t('messages.failedToLoad')); console.error(err) })
       .finally(() => setIsLoading(false))
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDemoMode])
   return (
     <CardShell title="GxP Validation (21 CFR 11)" icon={FileText} onClick={() => nav('/gxp')}>
       {error ? (
@@ -173,18 +180,21 @@ export function GxPCard() {
 
 export function BAACard() {
   const { t } = useTranslation('errors')
+  const { isDemoMode } = useDemoMode()
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(!isDemoMode)
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
+    if (isDemoMode) { setIsLoading(false); return }
     setIsLoading(true)
     authFetch('/api/compliance/baa/summary')
       .then(r => r.ok ? safeJson<Record<string, number>>(r) : null)
       .then(setData)
       .catch((err: unknown) => { setError(err instanceof Error ? err.message : t('messages.failedToLoad')); console.error(err) })
       .finally(() => setIsLoading(false))
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDemoMode])
   return (
     <CardShell title="BAA Tracker" icon={FileText} onClick={() => nav('/baa')}>
       {error ? (
