@@ -7,7 +7,7 @@ import React from 'react'
  * Closes #21103
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CommandHistoryPanel } from './KubectlHistoryPanel'
@@ -44,6 +44,18 @@ const makeItem = (overrides: Partial<CommandHistoryItem> = {}): CommandHistoryIt
 
 describe('CommandHistoryPanel', () => {
   const onSelectCommand = vi.fn()
+  // Timestamps render via toLocaleTimeString(), which is timezone-dependent.
+  // Pin the runner's timezone so the snapshot/text assertions are
+  // deterministic regardless of the CI or local machine's local timezone.
+  const originalTZ = process.env.TZ
+
+  beforeAll(() => {
+    process.env.TZ = 'UTC'
+  })
+
+  afterAll(() => {
+    process.env.TZ = originalTZ
+  })
 
   beforeEach(() => {
     vi.clearAllMocks()
