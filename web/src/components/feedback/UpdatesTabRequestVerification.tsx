@@ -1,6 +1,7 @@
 import { Check, ExternalLink, GitPullRequest } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { FeatureRequest } from '../../hooks/useFeatureRequests'
+import { TextArea } from '../ui/TextArea'
 import { ExternalLinkRow } from './UpdatesTabRequestLinks'
 
 const REOPEN_COMMENT_ROWS = 3
@@ -112,12 +113,11 @@ export function FixVerificationPrompt({
       </div>
       {isReopenFormVisible && (
         <div className="mt-3 space-y-2">
-          <textarea
+          <TextArea
             value={reopenComment}
             onChange={(event) => onReopenCommentChange(event.target.value.slice(0, REOPEN_COMMENT_MAX_LENGTH))}
             rows={REOPEN_COMMENT_ROWS}
             maxLength={REOPEN_COMMENT_MAX_LENGTH}
-            className="w-full rounded-md border border-border bg-background/70 px-3 py-2 text-sm text-foreground outline-none focus:border-blue-400"
             placeholder={t('feedback.stillBrokenPlaceholder')}
           />
           <div className="flex flex-wrap items-center gap-2">
