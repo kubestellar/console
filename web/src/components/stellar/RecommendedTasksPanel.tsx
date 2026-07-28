@@ -35,9 +35,6 @@ const PANEL_TITLE_FONT_SIZE_PX = 10
 const PANEL_TITLE_FONT_WEIGHT = 600
 const PANEL_BADGE_RADIUS_PX = 10
 const PANEL_BADGE_PADDING_X_PX = 5
-const PANEL_LIST_PADDING_X_PX = 8
-const PANEL_LIST_PADDING_BOTTOM_PX = 8
-const PANEL_LIST_GAP_PX = 4
 const CARD_PADDING_Y_PX = 7
 const CARD_PADDING_X_PX = 10
 const SUGGESTION_ICON_SIZE_PX = 16
@@ -51,8 +48,6 @@ const BLURB_LINE_HEIGHT = 1.4
 const CATEGORY_TEXT_SIZE_PX = 9
 const CATEGORY_MARGIN_TOP_PX = 4
 const CATEGORY_LETTER_SPACING_EM = 0.05
-const EXPANDED_SECTION_MARGIN_TOP_PX = 8
-const EXPANDED_SECTION_PADDING_TOP_PX = 8
 const ACTION_BUTTON_PADDING_Y_PX = 2
 const ACTION_BUTTON_PADDING_X_PX = 8
 const ACTION_BUTTON_OPACITY = 0.5
@@ -269,12 +264,7 @@ export function RecommendedTasksPanel({ createTask }: Props) {
       </div>
 
       {!collapsed && (
-        <div style={{
-          padding: `0 ${PANEL_LIST_PADDING_X_PX}px ${PANEL_LIST_PADDING_BOTTOM_PX}px`,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: PANEL_LIST_GAP_PX,
-        }}>
+        <div className="flex flex-col gap-1 px-2 pb-2">
           {RECOMMENDATIONS.map(rec => {
             const Icon = rec.icon
             const isExpanded = expandedId === rec.id
@@ -334,13 +324,8 @@ export function RecommendedTasksPanel({ createTask }: Props) {
                     </div>
 
                     {isExpanded && !isScheduled && (
-                      <div style={{
-                        marginTop: EXPANDED_SECTION_MARGIN_TOP_PX,
-                        paddingTop: EXPANDED_SECTION_PADDING_TOP_PX,
+                      <div className="mt-2 pt-2 flex flex-wrap gap-1" style={{
                         borderTop: '1px dashed var(--s-border)',
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: PANEL_LIST_GAP_PX,
                       }}>
                         {SCHEDULE_CHOICES.map(choice => (
                           <button
