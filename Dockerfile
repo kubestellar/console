@@ -63,7 +63,13 @@ ARG COMMIT_HASH=unknown
 # package.json / package-lock.json are unchanged, even if other source files
 # differ. This is especially valuable for QEMU arm64 builds.
 COPY web/package.json web/package-lock.json ./
-RUN npm ci --legacy-peer-deps
+RUN for attempt in 1 2 3; do \
+      npm ci --legacy-peer-deps && exit 0; \
+      echo "npm ci failed on attempt ${attempt}; retrying..." >&2; \
+      sleep $((attempt * 5)); \
+    done; \
+    echo "npm ci failed after 3 attempts" >&2; \
+    exit 1
 
 # Copy the rest of the frontend source.
 # WARNING (local builds): if web/dist/ is present in your working tree from a
