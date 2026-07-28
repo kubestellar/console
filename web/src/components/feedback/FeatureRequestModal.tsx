@@ -279,7 +279,9 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
             targetRepo={form.targetRepo}
             setTargetRepo={form.setTargetRepo}
             screenshots={form.screenshots}
-            setScreenshots={form.setScreenshots}
+            setScreenshots={next => {
+              form.setScreenshots(typeof next === 'function' ? next(form.screenshots) : next)
+            }}
             isSubmitting={isSubmitting}
             canPerformActions={canPerformActions}
             feedbackTokenMissing={feedbackTokenMissing}
