@@ -342,7 +342,7 @@ export function useDashboardState() {
   }, [openAddCardModal])
 
   const loadDashboard = useCallback(async (isBackground: boolean = false) => {
-    await loadDashboardData(isBackground, DASHBOARD_STORAGE_KEY, { setIsLoading, setDashboard, setLocalCards, showToast, t })
+    await loadDashboardData(isBackground, { setIsLoading, setDashboard, setLocalCards, showToast, t })
   }, [showToast, t])
 
   useEffect(() => {
