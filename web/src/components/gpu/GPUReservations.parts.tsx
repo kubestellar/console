@@ -7,6 +7,7 @@ import { AddCardModal } from '../dashboard/AddCardModal'
 import { ReservationFormModal, type GPUClusterInfo } from './ReservationFormModal'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
 import type { GPUNode } from '../../hooks/useMCP'
+import type { User as AuthUser } from '../../lib/auth/types'
 import type { ViewTab, TranslateFn } from './useGPUReservationsState'
 
 export interface GPUReservationsHeaderProps {
@@ -139,8 +140,8 @@ export interface GPUReservationsModalsProps {
   closeReservationForm: () => void
   editingReservation: GPUReservation | null
   gpuClusters: GPUClusterInfo[]
-  rawNodes: GPUNode[] | null | undefined
-  user: { github_login?: string } | null
+  rawNodes: GPUNode[]
+  user: AuthUser | null
   prefillDate: string | null
   gpuLiveMode: boolean
   knownNamespacesByCluster: Record<string, string[]>
