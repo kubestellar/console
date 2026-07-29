@@ -46,7 +46,7 @@ export interface ClustersViewState {
   showSkeletonContent: boolean
   // Permissions
   permissionsLoading: boolean
-  isClusterAdmin: boolean
+  isClusterAdmin: (clusterName: string) => boolean
   // View state
   filter: ClusterHealthFilter
   setFilter: (f: ClusterHealthFilter) => void
@@ -213,6 +213,7 @@ export function useClustersView(): ClustersViewState {
     gpuNodes: gpuNodes || [],
     gpuLoading,
     gpuError,
+    gpuRefetch,
     nvidiaOperators,
     isConnected,
     isDegraded,

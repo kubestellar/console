@@ -36,46 +36,48 @@ export type SettingsNavGroup = {
   items: SettingsNavItem[]
 }
 
-export const SETTINGS_NAV: SettingsNavGroup[] = [
+// Labels use i18n keys resolved at render time. `as const` on each key keeps the
+// literal string type so it satisfies the typed i18next `t()` signature.
+export const SETTINGS_NAV = [
   {
-    groupKey: 'settings.groups.aiIntelligence',
+    groupKey: 'settings.groups.aiIntelligence' as const,
     items: [
-      { id: 'ai-mode-settings', labelKey: 'settings.nav.aiMode', icon: Cpu },
-      { id: 'prediction-settings', labelKey: 'settings.nav.predictions', icon: TrendingUp },
-      { id: 'agent-settings', labelKey: 'settings.nav.localAgent', icon: Plug },
-      { id: 'token-usage-settings', labelKey: 'settings.nav.tokenUsage', icon: Coins },
+      { id: 'ai-mode-settings', labelKey: 'settings.nav.aiMode' as const, icon: Cpu },
+      { id: 'prediction-settings', labelKey: 'settings.nav.predictions' as const, icon: TrendingUp },
+      { id: 'agent-settings', labelKey: 'settings.nav.localAgent' as const, icon: Plug },
+      { id: 'token-usage-settings', labelKey: 'settings.nav.tokenUsage' as const, icon: Coins },
     ],
   },
   {
-    groupKey: 'settings.groups.integrations',
+    groupKey: 'settings.groups.integrations' as const,
     items: [
-      { id: 'github-token-settings', labelKey: 'settings.nav.github', icon: Github },
-      { id: 'widget-settings', labelKey: 'settings.nav.desktopWidget', icon: LayoutGrid },
-      { id: 'persistence-settings', labelKey: 'settings.nav.deployPersistence', icon: Database },
+      { id: 'github-token-settings', labelKey: 'settings.nav.github' as const, icon: Github },
+      { id: 'widget-settings', labelKey: 'settings.nav.desktopWidget' as const, icon: LayoutGrid },
+      { id: 'persistence-settings', labelKey: 'settings.nav.deployPersistence' as const, icon: Database },
     ],
   },
   {
-    groupKey: 'settings.groups.userAlerts',
+    groupKey: 'settings.groups.userAlerts' as const,
     items: [
-      { id: 'profile-settings', labelKey: 'settings.nav.profile', icon: User },
-      { id: 'notifications-settings', labelKey: 'settings.nav.notifications', icon: Bell },
+      { id: 'profile-settings', labelKey: 'settings.nav.profile' as const, icon: User },
+      { id: 'notifications-settings', labelKey: 'settings.nav.notifications' as const, icon: Bell },
     ],
   },
   {
-    groupKey: 'settings.groups.appearance',
+    groupKey: 'settings.groups.appearance' as const,
     items: [
-      { id: 'theme-settings', labelKey: 'settings.nav.theme', icon: Palette },
-      { id: 'accessibility-settings', labelKey: 'settings.nav.accessibility', icon: Eye },
+      { id: 'theme-settings', labelKey: 'settings.nav.theme' as const, icon: Palette },
+      { id: 'accessibility-settings', labelKey: 'settings.nav.accessibility' as const, icon: Eye },
     ],
   },
   {
-    groupKey: 'settings.groups.utilities',
+    groupKey: 'settings.groups.utilities' as const,
     items: [
-      { id: 'settings-backup', labelKey: 'settings.nav.backupSync', icon: HardDrive },
-      { id: 'local-clusters-settings', labelKey: 'settings.nav.localClusters', icon: Container },
-      { id: 'permissions-settings', labelKey: 'settings.nav.permissions', icon: Shield },
-      { id: 'analytics-settings', labelKey: 'settings.nav.analytics', icon: BarChart3 },
-      { id: 'system-updates-settings', labelKey: 'settings.nav.updates', icon: Download },
+      { id: 'settings-backup', labelKey: 'settings.nav.backupSync' as const, icon: HardDrive },
+      { id: 'local-clusters-settings', labelKey: 'settings.nav.localClusters' as const, icon: Container },
+      { id: 'permissions-settings', labelKey: 'settings.nav.permissions' as const, icon: Shield },
+      { id: 'analytics-settings', labelKey: 'settings.nav.analytics' as const, icon: BarChart3 },
+      { id: 'system-updates-settings', labelKey: 'settings.nav.updates' as const, icon: Download },
     ],
   },
 ]

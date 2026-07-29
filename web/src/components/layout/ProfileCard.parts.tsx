@@ -9,6 +9,7 @@ import { Linkedin } from '@/lib/icons'
 import { Tooltip } from '../ui/Tooltip'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { REWARD_ACTIONS } from '../../hooks/useRewards'
+import type { RewardActionType } from '../../types/rewards'
 import { checkOAuthConfigured } from '../../lib/api'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { LANGUAGE_STORAGE_KEY, languages } from '../../lib/i18n'
@@ -332,7 +333,7 @@ export function ProfileDevPanel({
 interface ProfileActionMenuProps {
   closeDropdown: () => void
   openFeedbackModal: () => void
-  awardCoins: (action: string) => void
+  awardCoins: (action: RewardActionType, metadata?: Record<string, unknown>) => boolean
   onShowSetupDialog: () => void
   onPreferences?: () => void
   onShowLogoutConfirm: () => void

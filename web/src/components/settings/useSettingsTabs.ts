@@ -9,10 +9,7 @@ import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useAccessibility } from '../../hooks/useAccessibility'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { usePredictionSettings } from '../../hooks/usePredictionSettings'
-import {
-  usePersistedSettings,
-  type SyncStatus,
-} from '../../hooks/usePersistedSettings'
+import { usePersistedSettings } from '../../hooks/usePersistedSettings'
 import {
   BANNER_DISMISS_MS,
   UI_FEEDBACK_TIMEOUT_MS,
