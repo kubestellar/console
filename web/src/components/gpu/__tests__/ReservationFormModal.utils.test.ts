@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   toDateInputValue,
   toRFC3339StartDate,
@@ -59,14 +59,19 @@ describe('toRFC3339StartDate', () => {
   })
 
   it('produces an offset consistent with Date#getTimezoneOffset()', () => {
+    // Capture timezone offset once to avoid DST transition race conditions
+    const expectedOffsetMinutes = new Date().getTimezoneOffset()
+
     const out = toRFC3339StartDate('2026-05-01')
     const match = out.match(/T00:00:00([+-])(\d{2}):(\d{2})$/)
     expect(match).not.toBeNull()
 
     const [, sign, hh, mm] = match!
-    const signedMinutes = (sign === '+' ? 1 : -1) * (Number(hh) * 60 + Number(mm))
-    // toRFC3339StartDate flips the sign of getTimezoneOffset() (minutes-west-of-UTC → offset-east-of-UTC)
-    expect(signedMinutes).toBe(-new Date().getTimezoneOffset())
+    // toRFC3339StartDate produces an RFC 3339 offset which is the negative of getTimezoneOffset()
+    // getTimezoneOffset() returns minutes west of UTC (positive for west)
+    // RFC 3339 offset represents the offset east of UTC
+    const offsetMinutesFromResult = (sign === '+' ? 1 : -1) * (Number(hh) * 60 + Number(mm))
+    expect(offsetMinutesFromResult).toBe(-expectedOffsetMinutes)
   })
 
   it('zero-pads single-digit hour and minute components of the offset', () => {
