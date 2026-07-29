@@ -621,7 +621,8 @@ export const CardWrapper = memo(function CardWrapper({
   // (TS2322) because of its complex overloaded/generic call signature. Wrap it
   // in a simple function that matches CardHeader's expected shape.
   const headerT = useCallback(
-    (key: string, options?: Record<string, unknown>) => t(key, options),
+    (key: string, options?: Record<string, unknown>) =>
+      (t as (key: string, options?: Record<string, unknown>) => string)(key, options),
     [t]
   )
 
