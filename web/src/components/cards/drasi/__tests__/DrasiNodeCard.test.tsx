@@ -22,29 +22,29 @@ vi.mock('framer-motion', () => ({
 describe('StatusDot', () => {
   it('renders a green dot for ready status when not stopped', () => {
     const { container } = render(<StatusDot status="ready" isStopped={false} />)
-    expect(container.querySelector('.bg-green-500')).not.toBeNull()
+    expect(container.querySelector('.bg-status-success')).not.toBeNull()
   })
 
   it('renders a red dot for error status when not stopped', () => {
     const { container } = render(<StatusDot status="error" isStopped={false} />)
-    expect(container.querySelector('.bg-red-500')).not.toBeNull()
+    expect(container.querySelector('.bg-status-error')).not.toBeNull()
   })
 
   it('renders a yellow dot for pending status when not stopped', () => {
     const { container } = render(<StatusDot status="pending" isStopped={false} />)
-    expect(container.querySelector('.bg-yellow-500')).not.toBeNull()
+    expect(container.querySelector('.bg-status-warning')).not.toBeNull()
   })
 
   it('renders a slate dot when isStopped overrides any status', () => {
     const { container } = render(<StatusDot status="ready" isStopped={true} />)
     expect(container.querySelector('.bg-slate-500')).not.toBeNull()
-    expect(container.querySelector('.bg-green-500')).toBeNull()
+    expect(container.querySelector('.bg-status-success')).toBeNull()
   })
 
   it('renders a slate dot for error status when stopped', () => {
     const { container } = render(<StatusDot status="error" isStopped={true} />)
     expect(container.querySelector('.bg-slate-500')).not.toBeNull()
-    expect(container.querySelector('.bg-red-500')).toBeNull()
+    expect(container.querySelector('.bg-status-error')).toBeNull()
   })
 })
 

@@ -7,7 +7,7 @@ import type { KVCacheStats } from '../../../lib/llmd/mockData'
 export type MetricType = 'util' | 'hitRate'
 export type AggregationMode = 'aggregated' | 'disaggregated'
 export type ViewMode = 'gauges' | 'horseshoe' | 'heatmap'
-export type CardsCommonTFunction = TFunction<readonly ['cards', 'common']>
+export type CardsCommonTFunction = TFunction<['cards', 'common']>
 
 export interface PodMetricHistory {
   util: number[]
