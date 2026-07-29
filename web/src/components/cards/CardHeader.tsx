@@ -1,5 +1,4 @@
 import type { ComponentType, ReactNode } from 'react'
-import type { TFunction } from 'i18next'
 import { cn } from '@/lib/cn'
 import { InfoTooltip } from './card-wrapper/InfoTooltip'
 import { CardMeta } from './CardMeta'
@@ -11,7 +10,7 @@ interface CardHeaderProps {
   resolvedIconColor: string
   title: string
   description: string
-  t: TFunction
+  t: (key: string, options?: Record<string, unknown>) => string
   showDemoIndicator: boolean
   effectiveIsDemoData: boolean
   isLive?: boolean

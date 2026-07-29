@@ -1,6 +1,6 @@
 import { Info, RefreshCw, Sparkles, TrendingUp } from 'lucide-react'
 import { cn } from '../../../lib/cn'
-import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 
 interface OfflineStatusDisplayProps {
   currentClusterIssueCount: number
@@ -21,7 +21,6 @@ interface OfflineStatusDisplayProps {
   predictionIntervalMinutes: number
   onDrillToCluster: (cluster: string) => void
   onTriggerAnalysis: () => void
-  t: TFunction
 }
 
 export function OfflineStatusDisplay({
@@ -39,8 +38,9 @@ export function OfflineStatusDisplay({
   predictionIntervalMinutes,
   onDrillToCluster,
   onTriggerAnalysis,
-  t,
 }: OfflineStatusDisplayProps) {
+  const { t: tCards } = useTranslation('cards')
+  const { t: tCommon } = useTranslation('common')
   return (
     <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
       <div
@@ -56,12 +56,12 @@ export function OfflineStatusDisplay({
           }
         }}
         title={currentClusterIssueCount > 0
-          ? t('common:healthCheck.issuesTooltip', { count: currentClusterIssueCount })
-          : t('cards:consoleOfflineDetection.allHealthy')}
+          ? tCommon('healthCheck.issuesTooltip', { count: currentClusterIssueCount })
+          : tCards('consoleOfflineDetection.allHealthy')}
       >
         <div className="text-xl font-bold text-foreground">{currentClusterIssueCount}</div>
         <div className={cn('text-2xs', currentClusterIssueCount > 0 ? 'text-red-400' : 'text-green-400')}>
-          {t('common:common.issues', { defaultValue: 'Issues' })}
+          {tCommon('common.issues', { defaultValue: 'Issues' })}
         </div>
       </div>
       <div
@@ -80,7 +80,7 @@ export function OfflineStatusDisplay({
       >
         <div className="text-xl font-bold text-foreground">{gpuIssueCount}</div>
         <div className={cn('text-2xs', gpuIssueCount > 0 ? 'text-yellow-400' : 'text-green-400')}>
-          {t('cards:consoleOfflineDetection.gpuIssues')}
+          {tCards('consoleOfflineDetection.gpuIssues')}
         </div>
       </div>
       <div
@@ -122,7 +122,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
           'text-2xs flex items-center gap-1',
           totalPredicted > 0 ? 'text-blue-400' : 'text-green-400'
         )}>
-          {t('cards:consoleOfflineDetection.predicted')}
+          {tCards('consoleOfflineDetection.predicted')}
           <Info className="w-3 h-3 opacity-60" />
         </div>
       </div>

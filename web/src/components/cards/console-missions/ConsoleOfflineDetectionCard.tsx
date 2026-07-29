@@ -678,7 +678,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     isFiltered,
   })
 
-  const handleStartAnalysis = () => checkKeyAndRun(() => startMission(analysisMissionConfig))
+  const handleStartAnalysis = () => checkKeyAndRun(() => { startMission(analysisMissionConfig) })
 
   return (
     <div className="h-full flex flex-col relative">
@@ -707,7 +707,6 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
         predictionIntervalMinutes={predictionSettings.interval}
         onDrillToCluster={drillToCluster}
         onTriggerAnalysis={triggerAIAnalysis}
-        t={t}
       />
 
       {/* Card Controls: Search, Cluster Filter, Sort */}
