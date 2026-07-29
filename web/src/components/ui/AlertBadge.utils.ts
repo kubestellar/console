@@ -1,6 +1,5 @@
 import { ALERT_SEVERITY_ORDER } from '../../types/alerts'
-import type { AlertSeverity } from '../../types/alerts'
-import type { GroupedAlert } from '../../lib/alerts/groupAlertsForDisplay'
+import type { Alert, AlertSeverity } from '../../types/alerts'
 
 /**
  * Pure filter + sort logic for the alert badge dropdown, extracted from AlertBadge.tsx
@@ -9,12 +8,15 @@ import type { GroupedAlert } from '../../lib/alerts/groupAlertsForDisplay'
  * Filters alerts by a case-insensitive search query (matching rule name, message, or
  * cluster) and by severity, then sorts by severity (most severe first) and recency
  * (most recent first).
+ *
+ * Operates on the raw `Alert[]` returned by `useAlerts()` *before* grouping via
+ * `groupAlertsForDisplay`, so the param/return type is `Alert`, not `GroupedAlert`.
  */
-export function filterAndSortAlerts(
-  alerts: GroupedAlert[],
+export function filterAndSortAlerts<T extends Alert>(
+  alerts: T[],
   searchQuery: string,
   severityFilter: AlertSeverity | 'all'
-): GroupedAlert[] {
+): T[] {
   let result = [...alerts]
 
   const trimmedQuery = searchQuery.trim()
