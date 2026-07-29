@@ -1,6 +1,10 @@
 import { Info, RefreshCw, Sparkles, TrendingUp } from 'lucide-react'
 import { cn } from '../../../lib/cn'
-import type { TFunction } from 'i18next'
+
+// Plain translator shape rather than the full i18next TFunction, which has an
+// overloaded/generic call signature that doesn't match the specific namespaced
+// keys used here and triggers TS2345/TS2741 errors.
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 
 interface OfflineStatusDisplayProps {
   currentClusterIssueCount: number
@@ -21,7 +25,7 @@ interface OfflineStatusDisplayProps {
   predictionIntervalMinutes: number
   onDrillToCluster: (cluster: string) => void
   onTriggerAnalysis: () => void
-  t: TFunction
+  t: TranslateFn
 }
 
 export function OfflineStatusDisplay({

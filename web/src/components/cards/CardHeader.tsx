@@ -1,9 +1,13 @@
 import type { ComponentType, ReactNode } from 'react'
-import type { TFunction } from 'i18next'
 import { cn } from '@/lib/cn'
 import { InfoTooltip } from './card-wrapper/InfoTooltip'
 import { CardMeta } from './CardMeta'
 import { CardToolbar } from './CardToolbar'
+
+// Plain translator shape (matches the wrapped `headerT` passed from CardWrapper)
+// rather than the full i18next TFunction, which has an overloaded/generic call
+// signature that triggers excessively deep type instantiation here.
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 
 interface CardHeaderProps {
   dragHandle?: ReactNode
@@ -11,7 +15,7 @@ interface CardHeaderProps {
   resolvedIconColor: string
   title: string
   description: string
-  t: TFunction
+  t: TranslateFn
   showDemoIndicator: boolean
   effectiveIsDemoData: boolean
   isLive?: boolean
