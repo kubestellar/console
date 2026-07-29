@@ -27,36 +27,35 @@ export function MissionDetailTabNav({
   onSelectTab: (id: TabId) => void
 }) {
   return (
-        {/* Tab navigation */}
-        <div className="border-b border-border">
-          <nav className="flex gap-0 -mb-px">
-            {tabs.map((tab) => {
-              const Icon = tab.icon
-              const hasContent = tab.steps.length > 0
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => onSelectTab(tab.id)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
-                    activeTab === tab.id
-                      ? 'border-purple-500 text-foreground'
-                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-                    !hasContent && 'opacity-50'
-                  )}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                  {hasContent && (
-                    <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-secondary">
-                      {tab.steps.length}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </nav>
-        </div>
+    <div className="border-b border-border">
+      <nav className="flex gap-0 -mb-px">
+        {tabs.map((tab) => {
+          const Icon = tab.icon
+          const hasContent = tab.steps.length > 0
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onSelectTab(tab.id)}
+              className={cn(
+                'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
+                activeTab === tab.id
+                  ? 'border-purple-500 text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+                !hasContent && 'opacity-50'
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+              {hasContent && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-secondary">
+                  {tab.steps.length}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </nav>
+    </div>
   )
 }
 
