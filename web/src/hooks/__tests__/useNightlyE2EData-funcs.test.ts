@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { __testables } from '../useNightlyE2EData'
+import { __testables, type NightlyE2EData } from '../useNightlyE2EData'
 
 const {
   loadCachedData,
@@ -120,10 +120,10 @@ describe('saveCachedData', () => {
   })
 
   it('overwrites previously cached data', () => {
-    const first = { guides: [{ guide: 'first' }], isDemo: false }
-    const second = { guides: [{ guide: 'second' }], isDemo: false }
-    saveCachedData(first as any)
-    saveCachedData(second as any)
+    const first = { guides: [{ guide: 'first' }], isDemo: false } as unknown as NightlyE2EData
+    const second = { guides: [{ guide: 'second' }], isDemo: false } as unknown as NightlyE2EData
+    saveCachedData(first)
+    saveCachedData(second)
     const stored = JSON.parse(localStorage.getItem(LS_CACHE_KEY)!)
     expect(stored.guides[0].guide).toBe('second')
   })
@@ -136,7 +136,7 @@ describe('saveCachedData', () => {
   })
 
   it('saves data with isDemo=true', () => {
-    const data = { guides: [{ guide: 'demo' }], isDemo: true } as any
+    const data = { guides: [{ guide: 'demo' }], isDemo: true } as unknown as NightlyE2EData
     saveCachedData(data)
     const stored = JSON.parse(localStorage.getItem(LS_CACHE_KEY)!)
     expect(stored.isDemo).toBe(true)
