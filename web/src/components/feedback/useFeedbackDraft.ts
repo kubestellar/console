@@ -290,7 +290,7 @@ export function useFeedbackDraft({ isOpen, onClose, initialType }: UseFeedbackDr
     }
   }
 
-  const forceClose = () => {
+  const forceClose = useCallback(() => {
     setShowDiscardConfirm(false)
     safeRemove(DRAFT_KEY)
     setSuccess(null)
@@ -300,7 +300,7 @@ export function useFeedbackDraft({ isOpen, onClose, initialType }: UseFeedbackDr
     setDescription('')
     setScreenshots([])
     onClose()
-  }
+  }, [onClose])
 
   // Use refs for dirty check so handleClose doesn't change on every keystroke
   const titleRef = useRef(title)
