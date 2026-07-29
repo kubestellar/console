@@ -1,5 +1,4 @@
 import type { ComponentType, ReactNode } from 'react'
-import type { TFunction } from 'i18next'
 import { cn } from '@/lib/cn'
 import { InfoTooltip } from './card-wrapper/InfoTooltip'
 import { CardMeta } from './CardMeta'
@@ -11,7 +10,12 @@ interface CardHeaderProps {
   resolvedIconColor: string
   title: string
   description: string
-  t: TFunction
+  // #21775 — Callers pass translators from different i18next namespace
+  // combinations (e.g. TFunction<['cards','common']>). The branded
+  // `TFunction` type's deeply overloaded call signature can't unify across
+  // those namespace variants without triggering TS2589/TS2322/TS2741. A
+  // plain callable shape is all this component actually needs.
+  t: (key: string, options?: Record<string, unknown>) => string
   showDemoIndicator: boolean
   effectiveIsDemoData: boolean
   isLive?: boolean

@@ -615,14 +615,17 @@ export const CardWrapper = memo(function CardWrapper({
   )
   const forceLiveValue = useMemo(() => !!forceLive, [forceLive])
 
-  // #21775 — CardHeader expects a plain `(key, options?) => string` translator.
-  // Passing the raw i18next TFunction<['cards','common']> directly triggers an
-  // excessively deep type instantiation (TS2589) and a signature mismatch
-  // (TS2322) because of its complex overloaded/generic call signature. Wrap it
-  // in a simple function that matches CardHeader's expected shape.
+  // #21775 — CardHeader (and OfflineStatusDisplay) expect a plain
+  // `(key, options?) => string` translator. Passing the raw i18next
+  // TFunction<['cards','common']> directly triggers an excessively deep type
+  // instantiation (TS2589) and signature mismatches (TS2322/TS2741) because of
+  // its complex overloaded/generic call signature. Wrap it in a simple
+  // function that matches the expected shape; the cast on the inner call
+  // sidesteps the same overload-resolution issue for the wrapped `t` itself.
+  const plainT = t as (key: string, options?: Record<string, unknown>) => string
   const headerT = useCallback(
-    (key: string, options?: Record<string, unknown>) => t(key, options),
-    [t]
+    (key: string, options?: Record<string, unknown>) => plainT(key, options),
+    [plainT]
   )
 
   return (

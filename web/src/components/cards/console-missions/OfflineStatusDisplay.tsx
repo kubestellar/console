@@ -1,6 +1,5 @@
 import { Info, RefreshCw, Sparkles, TrendingUp } from 'lucide-react'
 import { cn } from '../../../lib/cn'
-import type { TFunction } from 'i18next'
 
 interface OfflineStatusDisplayProps {
   currentClusterIssueCount: number
@@ -21,7 +20,9 @@ interface OfflineStatusDisplayProps {
   predictionIntervalMinutes: number
   onDrillToCluster: (cluster: string) => void
   onTriggerAnalysis: () => void
-  t: TFunction
+  // #21775 — plain callable shape avoids TFunction namespace-brand mismatches
+  // (see CardHeader.tsx for the same pattern).
+  t: (key: string, options?: Record<string, unknown>) => string
 }
 
 export function OfflineStatusDisplay({
