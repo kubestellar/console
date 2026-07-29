@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useLocalAgent } from './useLocalAgent'
 import { useAuth } from '../lib/auth'
 import { authFetch } from '../lib/api'
 import { FETCH_DEFAULT_TIMEOUT_MS, POLL_INTERVAL_MS } from '../lib/constants/network'
+import { useToast } from '../components/ui/Toast'
 
 // =============================================================================
 // Types
@@ -59,6 +61,8 @@ const DEFAULT_STATUS: PersistenceStatus = {
 export function usePersistence() {
   const { status: agentStatus } = useLocalAgent()
   const { token } = useAuth()
+  const { showToast } = useToast()
+  const { t } = useTranslation()
   const [config, setConfig] = useState<PersistenceConfig>(DEFAULT_CONFIG)
   const [status, setStatus] = useState<PersistenceStatus>(DEFAULT_STATUS)
   const [loading, setLoading] = useState(true)
@@ -181,6 +185,10 @@ export function usePersistence() {
       }
     } catch (err: unknown) {
       console.error('[usePersistence] Failed to test connection:', err)
+      showToast(
+        t('settings.persistence.connectionFailedFor', 'Failed to test connection to {{cluster}}', { cluster }),
+        'error'
+      )
     }
 
     return { cluster, health: 'unknown', success: false }

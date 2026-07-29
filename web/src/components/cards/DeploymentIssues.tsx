@@ -59,7 +59,7 @@ const CARD_SKELETON_ROWS = 3
 const CARD_SKELETON_ROW_HEIGHT = 100
 const REFRESH_STALE_THRESHOLD_MINUTES = 5
 
-const getIssueIcon = (status: string, t: TFunction<readonly ['cards', 'common']>): { icon: typeof AlertCircle; tooltip: string } => {
+const getIssueIcon = (status: string, t: TFunction<['cards', 'common']>): { icon: typeof AlertCircle; tooltip: string } => {
   if (status.includes('Unavailable')) return { icon: AlertCircle, tooltip: t('deploymentIssues.tooltipUnavailable') }
   if (status.includes('Progressing')) return { icon: Clock, tooltip: t('deploymentIssues.tooltipProgressing') }
   if (status.includes('ReplicaFailure')) return { icon: Scale, tooltip: t('deploymentIssues.tooltipReplicaFailure') }

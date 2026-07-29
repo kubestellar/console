@@ -143,7 +143,10 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
   const cachedData = useRef(loadFromCache())
   const cachedSnapshot = cachedData.current
   const [webhooks, setWebhooks] = useState<WebhookData[]>(cachedSnapshot?.data || [])
-  const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
+  // Start as false (show loading skeleton) when there is no cached snapshot;
+  // the refetch will flip this to true if the first fetch fails (demo fallback).
+  // Matches the CLAUDE.md card-cache pattern: isDemoFallback must be false while isLoading is true.
+  const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? false)
   const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
