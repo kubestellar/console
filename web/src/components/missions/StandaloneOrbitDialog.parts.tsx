@@ -88,6 +88,7 @@ export function ClusterScopeSection({ clusterName, value, onChange }: ClusterSco
                   <div className="flex flex-wrap gap-1.5">
                     {kinds.map(k => (
                       <label key={k.kind} className="flex items-center gap-1 cursor-pointer">
+                        {/* eslint-disable-next-line no-restricted-syntax -- no Checkbox component exists yet */}
                         <input
                           type="checkbox"
                           checked={isKindChecked(k.kind)}
@@ -117,6 +118,7 @@ export function ClusterScopeSection({ clusterName, value, onChange }: ClusterSco
                     {kinds.map(k => (
                       <div key={k.kind}>
                         <label className="flex items-center gap-1 cursor-pointer">
+                          {/* eslint-disable-next-line no-restricted-syntax -- no Checkbox component exists yet */}
                           <input
                             type="checkbox"
                             checked={isKindChecked(k.kind)}

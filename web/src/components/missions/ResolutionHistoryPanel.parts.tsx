@@ -63,6 +63,7 @@ export function ResolutionCard({
       isSelected && "ring-2 ring-primary/50"
     )}>
       <div className="flex items-start gap-2 p-2.5">
+        {/* eslint-disable-next-line no-restricted-syntax -- no Checkbox component exists yet */}
         <input
           type="checkbox"
           checked={isSelected}
