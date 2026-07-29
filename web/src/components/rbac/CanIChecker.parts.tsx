@@ -1,17 +1,12 @@
 import type { ReactNode } from 'react'
-import { Check, X, AlertCircle, ChevronDown } from 'lucide-react'
+import { Check, X, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../ui/Button'
+import { Select } from '../ui/Select'
+import { Input } from '../ui/Input'
 import type { CanIResponse } from '../../hooks/usePermissions'
 import type { CheckedSnapshot } from './CanIChecker.state'
 import { COMMON_USER_GROUPS } from './CanIChecker.constants'
-
-const SELECT_CLASS =
-  'w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500 appearance-none pr-8'
-const INPUT_CLASS =
-  'w-full p-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500'
-const CHEVRON_CLASS =
-  'absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none'
 
 interface LabeledSelectProps {
   id: string
@@ -29,18 +24,14 @@ export function LabeledSelect({ id, label, value, onChange, testId, children }: 
       <label htmlFor={id} className="block text-sm font-medium text-foreground mb-1">
         {label}
       </label>
-      <div className="relative">
-        <select
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={SELECT_CLASS}
-          data-testid={testId}
-        >
-          {children}
-        </select>
-        <ChevronDown className={CHEVRON_CLASS} />
-      </div>
+      <Select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        data-testid={testId}
+      >
+        {children}
+      </Select>
     </div>
   )
 }
@@ -55,12 +46,12 @@ interface CustomValueInputProps {
 /** Free-text override shown when the matching dropdown is set to `custom`. */
 export function CustomValueInput({ value, onChange, placeholder, testId }: CustomValueInputProps) {
   return (
-    <input
+    <Input
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`mt-2 ${INPUT_CLASS}`}
+      className="mt-2"
       data-testid={testId}
     />
   )
@@ -113,28 +104,24 @@ export function UserGroupsField({
       )}
 
       {/* Common groups dropdown */}
-      <div className="relative">
-        <select
-          value=""
-          onChange={(e) => {
-            if (e.target.value && !selectedUserGroups.includes(e.target.value)) {
-              onToggleGroup(e.target.value)
-            }
-          }}
-          className={SELECT_CLASS}
-          data-testid="can-i-user-groups"
-        >
-          <option value="">{t('rbac.selectCommonGroups')}</option>
-          {COMMON_USER_GROUPS.filter(g => !selectedUserGroups.includes(g.value)).map((group) => (
-            <option key={group.value} value={group.value}>{group.label}</option>
-          ))}
-        </select>
-        <ChevronDown className={CHEVRON_CLASS} />
-      </div>
+      <Select
+        value=""
+        onChange={(e) => {
+          if (e.target.value && !selectedUserGroups.includes(e.target.value)) {
+            onToggleGroup(e.target.value)
+          }
+        }}
+        data-testid="can-i-user-groups"
+      >
+        <option value="">{t('rbac.selectCommonGroups')}</option>
+        {COMMON_USER_GROUPS.filter(g => !selectedUserGroups.includes(g.value)).map((group) => (
+          <option key={group.value} value={group.value}>{group.label}</option>
+        ))}
+      </Select>
 
       {/* Custom group input */}
       <div className="mt-2 flex gap-2">
-        <input
+        <Input
           type="text"
           value={customUserGroup}
           onChange={(e) => onCustomGroupChange(e.target.value)}
@@ -145,7 +132,7 @@ export function UserGroupsField({
             }
           }}
           placeholder={t('rbac.addCustomGroupPlaceholder')}
-          className="flex-1 p-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+          className="flex-1"
         />
         <Button
           variant="primary"
