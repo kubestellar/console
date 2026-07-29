@@ -66,6 +66,28 @@ import type { Workload } from './useWorkloads'
 // Private: Security kubectl scanner
 // ============================================================================
 
+/** Minimal shape of a pod's securityContext as returned by `kubectl get pods -o json` */
+interface RawPodSecurityContext {
+  privileged?: boolean
+  runAsUser?: number
+  runAsNonRoot?: boolean
+  readOnlyRootFilesystem?: boolean
+  allowPrivilegeEscalation?: boolean
+  capabilities?: { add?: string[]; drop?: string[] }
+}
+
+/** Minimal shape of a pod as returned by `kubectl get pods -o json` (only fields we read) */
+interface RawKubectlPod {
+  metadata?: { name?: string; namespace?: string }
+  spec?: {
+    containers?: Array<{ securityContext?: RawPodSecurityContext }>
+    securityContext?: RawPodSecurityContext
+    hostNetwork?: boolean
+    hostPID?: boolean
+    hostIPC?: boolean
+  }
+}
+
 /**
  * Fetch security issues via kubectlProxy — scans pods for security misconfigurations
  */
@@ -89,8 +111,7 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
 
       if (response.exitCode !== 0) return []
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let data: { items?: any[] }
+      let data: { items?: RawKubectlPod[] }
       try {
         data = JSON.parse(response.output)
       } catch {
