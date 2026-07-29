@@ -5,435 +5,94 @@
  * Progressive Web App (PWA) for desktop monitoring.
  *
  * Install: Click browser menu → "Install app" or "Add to Desktop"
+ *
+ * State/effect logic lives in `./useMiniDashboard`.
+ * Presentational subcomponents live in `./MiniDashboard.parts`.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { RefreshCw, Maximize2, Download } from 'lucide-react'
-import { useClusters, useGPUNodes, usePodIssues } from '../../hooks/useMCP'
-import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
-import { Button } from '../ui/Button'
-import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
-import { ROUTES } from '../../config/routes'
-import { agentFetch } from '../../hooks/mcp/shared'
-import { POLL_INTERVAL_MS } from '../../lib/constants/network'
-import { emitWidgetLoaded, emitWidgetNavigation, emitWidgetInstalled } from '../../lib/analytics'
-import { sendNotificationWithDeepLink } from '../../hooks/useDeepLink'
-
-/** UTM params appended to click-through URLs for GA4 widget campaign attribution */
-const WIDGET_UTM_PARAMS = 'utm_source=widget&utm_medium=pwa&utm_campaign=widget-usage'
-
-// Node data type from agent
-interface NodeData {
-  name: string
-  cluster?: string
-  status: string
-  roles: string[]
-  unschedulable?: boolean
-}
-
-// Stat card component - non-interactive status display
-function StatCard({
-  label,
-  value,
-  color,
-  subValue }: {
-  label: string
-  value: string | number
-  color: string
-  subValue?: string
-}) {
-  return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center p-3 rounded-lg',
-        'bg-secondary/50 border border-border/50'
-      )}
-    >
-      <span className={cn('text-2xl font-bold', color)}>{value}</span>
-      <span className="text-xs text-muted-foreground mt-1">{label}</span>
-      {subValue && <span className="text-2xs text-muted-foreground">{subValue}</span>}
-    </div>
-  )
-}
-
-// Status indicator
-function StatusDot({ status }: { status: 'healthy' | 'warning' | 'error' }) {
-  const colors = {
-    healthy: 'bg-green-500',
-    warning: 'bg-yellow-500',
-    error: 'bg-red-500' }
-  return (
-    <span className={cn('w-2 h-2 rounded-full inline-block animate-pulse', colors[status])} />
-  )
-}
-
-// Detect Safari browser
-function isSafari(): boolean {
-  const ua = navigator.userAgent
-  return ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Chromium')
-}
-
-// Detect if running as standalone (installed PWA or Add to Dock)
-function isStandalone(): boolean {
-  return window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
-}
+import { useMiniDashboard } from './useMiniDashboard'
+import {
+  DashboardHeader,
+  StatsGrid,
+  IssuesList,
+  InstallFooter,
+} from './MiniDashboard.parts'
 
 export function MiniDashboard() {
   const { t } = useTranslation()
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [isInstalled, setIsInstalled] = useState(() => isStandalone())
-  const [isSafariBrowser] = useState(() => isSafari())
-
-  // Fetch data from MCP hooks
-  const { deduplicatedClusters: clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
-  const { nodes: gpuNodes, isLoading: gpuLoading, refetch: refetchGPU } = useGPUNodes()
-
-  // Fetch nodes from local agent for offline detection
-  const [allNodes, setAllNodes] = useState<NodeData[]>([])
-  const [nodesLoading, setNodesLoading] = useState(true)
-
-  const fetchNodes = useCallback(async () => {
-    try {
-      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/nodes`, {
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-      if (response.ok) {
-        const data = await response.json()
-        setAllNodes(data.nodes || [])
-      }
-    } catch {
-      // Agent might not be running - that's ok for widget
-    } finally {
-      setNodesLoading(false)
-    }
-  }, [])
-
-  // Initial fetch and subscribe to updates
-  useEffect(() => {
-    fetchNodes()
-    const interval = setInterval(fetchNodes, POLL_INTERVAL_MS)
-    return () => clearInterval(interval)
-  }, [fetchNodes])
-
-  // Calculate offline nodes (not Ready or unschedulable)
-  const offlineNodes = allNodes.filter(n => n.status !== 'Ready' || n.unschedulable === true)
-  const { issues: podIssues, isLoading: issuesLoading, refetch: refetchIssues } = usePodIssues()
-
-  const isLoading = clustersLoading || gpuLoading || issuesLoading || nodesLoading
-
-  // Calculate stats
-  const totalClusters = clusters?.length || 0
-  const healthyClusters = clusters?.filter((c) => c.healthy).length || 0
-  const totalGPUs = gpuNodes?.reduce((sum, n) => sum + (n.gpuCount || 0), 0) || 0
-  const allocatedGPUs = gpuNodes?.reduce((sum, n) => sum + (n.gpuAllocated || 0), 0) || 0
-  const totalIssues = podIssues?.length || 0
-  const offlineCount = offlineNodes.length
-  // Critical issues are those with CrashLoopBackOff, OOMKilled, or Error status
-  const criticalIssues = podIssues?.filter((i) =>
-    i.status === 'CrashLoopBackOff' || i.status === 'OOMKilled' || i.status === 'Error'
-  ).length || 0
-
-  // Overall health status - include offline nodes
-  const overallStatus: 'healthy' | 'warning' | 'error' =
-    offlineCount > 0 || criticalIssues > 0 ? 'error' : totalIssues > 3 ? 'warning' : 'healthy'
-
-  // Track previous offline count for notifications
-  const prevOfflineCountRef = useRef<number>(0)
-
-  // Track widget load in GA4 and request notification permission
-  useEffect(() => {
-    emitWidgetLoaded(isStandalone() ? 'standalone' : 'browser')
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
-  }, [])
-
-  // Send notification when new offline nodes detected (with deep link support)
-  useEffect(() => {
-    if (offlineCount > prevOfflineCountRef.current && prevOfflineCountRef.current >= 0) {
-      const newOffline = offlineCount - prevOfflineCountRef.current
-      if ('Notification' in window && Notification.permission === 'granted' && newOffline > 0) {
-        const firstOfflineNode = offlineNodes[0]
-        const nodeNames = (offlineNodes || []).slice(0, 3).map(n => n.name).join(', ')
-
-        sendNotificationWithDeepLink(
-          'KubeStellar: Nodes Offline',
-          `${newOffline} node${newOffline > 1 ? 's' : ''} went offline: ${nodeNames}${offlineCount > 3 ? '...' : ''}`,
-          {
-            drilldown: 'node',
-            cluster: firstOfflineNode?.cluster || 'unknown',
-            node: firstOfflineNode?.name || 'unknown',
-            issue: 'Node went offline' },
-          { tag: 'node-offline' }
-        )
-      }
-    }
-    prevOfflineCountRef.current = offlineCount
-  }, [offlineCount, offlineNodes])
-
-  // Manual refresh
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true)
-    await Promise.all([refetchClusters?.(), refetchGPU?.(), refetchIssues?.(), fetchNodes()])
-    setLastUpdated(new Date())
-    setIsRefreshing(false)
-  }, [refetchClusters, refetchGPU, refetchIssues, fetchNodes])
-
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(handleRefresh, POLL_INTERVAL_MS)
-    return () => clearInterval(interval)
-  }, [handleRefresh])
-
-  // Update lastUpdated when data loads
-  useEffect(() => {
-    if (!isLoading && !lastUpdated) {
-      setLastUpdated(new Date())
-    }
-  }, [isLoading, lastUpdated])
-
-  // PWA install prompt
-  useEffect(() => {
-    // If already in standalone mode, don't set up install prompt
-    if (isStandalone()) {
-      setIsInstalled(true)
-      setInstallPrompt(null)
-      return
-    }
-
-    const handler = (e: BeforeInstallPromptEvent) => {
-      e.preventDefault()
-      setInstallPrompt(e)
-    }
-    window.addEventListener('beforeinstallprompt', handler as EventListener)
-
-    // Listen for display mode changes (in case user installs while viewing)
-    const mediaQuery = window.matchMedia('(display-mode: standalone)')
-    const handleDisplayModeChange = (e: MediaQueryListEvent) => {
-      if (e.matches) {
-        setIsInstalled(true)
-        setInstallPrompt(null)
-      }
-    }
-    mediaQuery.addEventListener('change', handleDisplayModeChange)
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler as EventListener)
-      mediaQuery.removeEventListener('change', handleDisplayModeChange)
-    }
-  }, [])
-
-  const handleInstall = async () => {
-    if (!installPrompt) return
-    await installPrompt.prompt()
-    const result = await installPrompt.userChoice
-    if (result.outcome === 'accepted') {
-      emitWidgetInstalled('pwa-prompt')
-      setIsInstalled(true)
-      setInstallPrompt(null)
-    }
-  }
-
-  // Open URL in system browser (not in PWA) with GA4 widget campaign attribution.
-  // Swaps localhost <-> 127.0.0.1 to force Chrome to open in a browser window.
-  const openInBrowser = (path: string) => {
-    emitWidgetNavigation(path)
-    const currentHost = window.location.host
-    let targetOrigin = window.location.origin
-
-    if (currentHost.includes('localhost')) {
-      targetOrigin = window.location.origin.replace('localhost', '127.0.0.1')
-    } else if (currentHost.includes('127.0.0.1')) {
-      targetOrigin = window.location.origin.replace('127.0.0.1', 'localhost')
-    }
-
-    const separator = path.includes('?') ? '&' : '?'
-    window.open(`${targetOrigin}${path}${separator}${WIDGET_UTM_PARAMS}`, '_blank', 'noopener,noreferrer')
-  }
-
-  // Open full dashboard in new window
-  const openFullDashboard = () => {
-    openInBrowser(ROUTES.HOME)
-  }
-
-  // Try to resize window to widget size when running as standalone PWA
-  useEffect(() => {
-    if (isStandalone() && window.resizeTo) {
-      // Target size: 540x360 (wider, less tall)
-      try {
-        window.resizeTo(540, 360)
-      } catch {
-        // Browser may not allow resizing - that's ok
-      }
-    }
-  }, [])
+  const {
+    totalClusters,
+    healthyClusters,
+    totalGPUs,
+    allocatedGPUs,
+    totalIssues,
+    offlineCount,
+    criticalIssues,
+    allNodes,
+    podIssues,
+    overallStatus,
+    isRefreshing,
+    lastUpdated,
+    isInstalled,
+    isSafariBrowser,
+    installPrompt,
+    handleRefresh,
+    handleInstall,
+    openInBrowser,
+    openFullDashboard,
+  } = useMiniDashboard()
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-900 via-gray-900 to-gray-800 text-white flex items-center justify-center p-2">
       {/* Fixed-size widget container */}
       <div className="w-[520px] h-[320px] flex flex-col bg-background/50 rounded-xl border border-border/50 overflow-hidden">
         <div className="flex-1 p-4 overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <StatusDot status={overallStatus} />
-          <h1 className="text-lg font-semibold">Nodes</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground">
-              {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-          <Button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            variant="ghost"
-            size="sm"
-            icon={<RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />}
-            title={t('common.refresh')}
-            aria-label={t('common.refresh')}
+          <DashboardHeader
+            overallStatus={overallStatus}
+            lastUpdated={lastUpdated}
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            onOpenFullDashboard={openFullDashboard}
+            t={t}
           />
-          <Button
-            onClick={openFullDashboard}
-            variant="ghost"
-            size="sm"
-            icon={<Maximize2 className="w-4 h-4" />}
-            title="Open full dashboard"
-            aria-label="Open full dashboard"
+
+          {/* Stats Grid – 3 columns × 2 rows, status display only */}
+          <StatsGrid
+            totalClusters={totalClusters}
+            healthyClusters={healthyClusters}
+            allocatedGPUs={allocatedGPUs}
+            totalGPUs={totalGPUs}
+            offlineCount={offlineCount}
+            totalIssues={totalIssues}
+            criticalIssues={criticalIssues}
+            allNodes={allNodes}
+            overallStatus={overallStatus}
           />
-        </div>
-      </div>
 
-      {/* Stats Grid - 3 columns for 6 stats - status display only */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <StatCard
-          label="Clusters"
-          value={totalClusters}
-          color="text-purple-400"
-          subValue={`${healthyClusters} healthy`}
-        />
-        <StatCard
-          label="GPUs"
-          value={`${allocatedGPUs}/${totalGPUs}`}
-          color="text-green-400"
-          subValue="allocated/total"
-        />
-        <StatCard
-          label="Nodes Offline"
-          value={offlineCount}
-          color={offlineCount > 0 ? 'text-red-400' : 'text-green-400'}
-          subValue={offlineCount > 0 ? 'needs attention' : 'all online'}
-        />
-        <StatCard
-          label="Pod Issues"
-          value={totalIssues}
-          color={totalIssues > 0 ? 'text-orange-400' : 'text-muted-foreground'}
-          subValue={criticalIssues > 0 ? `${criticalIssues} critical` : undefined}
-        />
-        <StatCard
-          label="Nodes"
-          value={allNodes.length}
-          color="text-blue-400"
-          subValue={`${allNodes.length - offlineCount} ready`}
-        />
-        <StatCard
-          label="Status"
-          value={overallStatus === 'healthy' ? 'OK' : overallStatus === 'warning' ? 'Warn' : 'Alert'}
-          color={
-            overallStatus === 'healthy'
-              ? 'text-green-400'
-              : overallStatus === 'warning'
-              ? 'text-yellow-400'
-              : 'text-red-400'
-          }
-        />
-      </div>
-
-      {/* Issues List (if any) */}
-      {totalIssues > 0 && (
-        <div className="mb-4">
-          <h2 className="text-xs font-medium text-muted-foreground mb-2">Recent Issues</h2>
-          <div className="space-y-1 max-h-32 overflow-hidden">
-            {podIssues?.slice(0, 5).map((issue, i) => {
-              const isCritical = issue.status === 'CrashLoopBackOff' || issue.status === 'OOMKilled' || issue.status === 'Error'
-              return (
-                <Button
-                  key={i}
-                  onClick={() => openInBrowser(`/pods?search=${encodeURIComponent(issue.name)}`)}
-                  variant="secondary"
-                  size="sm"
-                  fullWidth
-                  className="justify-start border border-border/30 hover:border-border"
-                >
-                  <span
-                    className={cn(
-                      'w-1.5 h-1.5 rounded-full shrink-0',
-                      isCritical ? 'bg-red-500' : 'bg-orange-500'
-                    )}
-                  />
-                  <span className="truncate text-foreground">{issue.name}</span>
-                  <span className="text-muted-foreground ml-auto shrink-0">{issue.reason || issue.status}</span>
-                </Button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
+          <IssuesList
+            totalIssues={totalIssues}
+            podIssues={podIssues}
+            onOpenIssue={(podName) =>
+              openInBrowser(`/pods?search=${encodeURIComponent(podName)}`)
+            }
+          />
         </div>{/* End scrollable content */}
 
         {/* Footer / Install Prompt */}
         <div className="p-3 bg-background/90 border-t border-border/50 shrink-0">
-        {!isInstalled && installPrompt ? (
-          <Button
-            onClick={handleInstall}
-            variant="accent"
-            size="md"
-            fullWidth
-            icon={<Download className="w-4 h-4" />}
-          >
-            Install as Desktop Widget
-          </Button>
-        ) : !isInstalled ? (
-          <div className="text-center text-xs text-muted-foreground space-y-1">
-            {isSafariBrowser ? (
-              <div>{t('miniDashboard.safariInstall')}</div>
-            ) : (
-              <>
-                <div className="text-yellow-500/80">⚠️ {t('miniDashboard.installFromThisPage')}</div>
-                <div>{t('miniDashboard.installInstruction')}</div>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{t('miniDashboard.nodesWidget')}</span>
-            <Button
-              onClick={openFullDashboard}
-              variant="ghost"
-              size="sm"
-              icon={<Maximize2 className="w-3 h-3" />}
-              className="h-auto p-0"
-            >
-              {t('miniDashboard.openFullDashboard')}
-            </Button>
-          </div>
-        )}
-      </div>
-
-        </div>{/* End fixed-size container */}
+          <InstallFooter
+            isInstalled={isInstalled}
+            isSafariBrowser={isSafariBrowser}
+            installPrompt={installPrompt}
+            onInstall={handleInstall}
+            onOpenFullDashboard={openFullDashboard}
+            t={t}
+          />
+        </div>
+      </div>{/* End fixed-size container */}
     </div>
   )
-}
-
-// TypeScript type for the install prompt event
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
 export default MiniDashboard
