@@ -9,11 +9,11 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Shield, CheckCircle, XCircle, AlertCircle, Info,
+  Shield,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
   ChevronsLeft, ChevronsRight,
   Search, X, Filter } from 'lucide-react'
-import { useTrestle, type OscalControlResult } from '../../../hooks/useTrestle'
+import { useTrestle } from '../../../hooks/useTrestle'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { useDrillDown } from '../../../hooks/useDrillDown'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -21,76 +21,20 @@ import { Input } from '../../ui/Input'
 import { Select } from '../../ui/Select'
 import { cn } from '../../../lib/cn'
 import { TOUCH_TARGET_HEIGHT_CLASS, TOUCH_TARGET_SIZE_CLASS } from '../../../lib/constants/ui'
-
-interface Props {
-  data: Record<string, unknown>
-}
-
-type SortField = 'controlId' | 'severity' | 'status' | 'cluster' | 'profile'
-type SortDir = 'asc' | 'desc'
-
-/** Controls per page */
-const PAGE_SIZE = 25
-
-const SEVERITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
-const STATUS_ORDER: Record<string, number> = { fail: 0, other: 1, 'not-applicable': 2, pass: 3 }
-
-function normalizeComplianceStatus(status?: string): string {
-  switch (status) {
-    case 'passing':
-      return 'pass'
-    case 'failing':
-      return 'fail'
-    case 'warning':
-    case 'skipped':
-      return 'other'
-    default:
-      return status || ''
-  }
-}
-
-function parseCount(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : null
-  }
-  return null
-}
-
-function severityColor(s?: string): string {
-  switch (s) {
-    case 'critical': return 'text-red-400 bg-red-500/15 border-red-500/30'
-    case 'high': return 'text-orange-400 bg-orange-500/15 border-orange-500/30'
-    case 'medium': return 'text-yellow-400 bg-yellow-500/15 border-yellow-500/30'
-    case 'low': return 'text-blue-400 bg-blue-500/15 border-blue-500/30'
-    default: return 'text-muted-foreground bg-secondary border-border'
-  }
-}
-
-function statusIcon(status: string) {
-  switch (status) {
-    case 'pass': return <CheckCircle className="w-4 h-4 text-green-400" />
-    case 'fail': return <XCircle className="w-4 h-4 text-red-400" />
-    case 'other': return <AlertCircle className="w-4 h-4 text-yellow-400" />
-    case 'not-applicable': return <Info className="w-4 h-4 text-muted-foreground" />
-    default: return <AlertCircle className="w-4 h-4 text-muted-foreground" />
-  }
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case 'pass': return 'Pass'
-    case 'fail': return 'Fail'
-    case 'other': return 'Other'
-    case 'not-applicable': return 'N/A'
-    default: return status
-  }
-}
-
-interface ControlRow extends OscalControlResult {
-  cluster: string
-}
+import {
+  type Props,
+  type SortField,
+  type SortDir,
+  type ControlRow,
+  PAGE_SIZE,
+  SEVERITY_ORDER,
+  STATUS_ORDER,
+  normalizeComplianceStatus,
+  severityColor,
+  statusIcon,
+  statusLabel,
+  computeSummaryCounts,
+} from './compliance-drilldown'
 
 export function ComplianceDrillDown({ data }: Props) {
   const { t } = useTranslation()
@@ -99,25 +43,7 @@ export function ComplianceDrillDown({ data }: Props) {
   const { selectedClusters } = useGlobalFilters()
   const { state, pop } = useDrillDown()
 
-  const summaryCounts = useMemo(() => {
-    const passing = parseCount(data.passing)
-    const failing = parseCount(data.failing)
-    const providedOther = parseCount(data.warning)
-    const totalChecks = parseCount(data.totalChecks)
-    const hasProvidedSummary = passing !== null || failing !== null || providedOther !== null || totalChecks !== null
-    const other = providedOther ?? (totalChecks !== null
-      ? Math.max(0, totalChecks - (passing ?? 0) - (failing ?? 0))
-      : null)
-    const total = totalChecks ?? ((passing ?? 0) + (failing ?? 0) + (other ?? 0))
-
-    return {
-      hasProvidedSummary,
-      passing: passing ?? 0,
-      failing: failing ?? 0,
-      other: other ?? 0,
-      total,
-    }
-  }, [data.failing, data.passing, data.totalChecks, data.warning])
+  const summaryCounts = useMemo(() => computeSummaryCounts(data), [data])
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>(filterStatus)
