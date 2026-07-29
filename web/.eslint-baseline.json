@@ -19535,5 +19535,285 @@
     "line": 91,
     "column": 36,
     "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "src/components/alerts/ConditionBuilder.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 97,
+    "column": 13,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/alerts/ConditionBuilder.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 123,
+    "column": 13,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/alerts/ConditionBuilder.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 146,
+    "column": 13,
+    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
+  },
+  {
+    "file": "src/components/alerts/ConditionBuilder.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 167,
+    "column": 17,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/alerts/ConditionBuilder.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 193,
+    "column": 17,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/alerts/ConditionBuilder.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 234,
+    "column": 11,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/alerts/NotificationChannelSelector.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 117,
+    "column": 17,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/alerts/NotificationChannelSelector.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 133,
+    "column": 17,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/alerts/NotificationChannelSelector.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 152,
+    "column": 17,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/alerts/NotificationChannelSelector.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 171,
+    "column": 17,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/alerts/NotificationChannelSelector.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 190,
+    "column": 17,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/feedback/FeedbackModal.parts.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 104,
+    "column": 9,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/gpu/ClusterPicker.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 52,
+    "column": 9,
+    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
+  },
+  {
+    "file": "src/components/gpu/ClusterPicker.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 71,
+    "column": 11,
+    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
+  },
+  {
+    "file": "src/components/gpu/ClusterPicker.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 95,
+    "column": 13,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/gpu/ReservationFormModal.parts.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 20,
+    "column": 7,
+    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
+  },
+  {
+    "file": "src/components/gpu/ReservationFormModal.parts.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 63,
+    "column": 9,
+    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
+  },
+  {
+    "file": "src/components/gpu/ReservationFormModal.parts.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 87,
+    "column": 11,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/gpu/ReservationFormModal.parts.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 164,
+    "column": 9,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/gpu/ReservationFormModal.parts.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 230,
+    "column": 15,
+    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
+  },
+  {
+    "file": "src/components/gpu/ReservationFormModal.parts.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 238,
+    "column": 15,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/gpu/ReservationFormModal.parts.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 254,
+    "column": 9,
+    "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
+  },
+  {
+    "file": "src/components/gpu/ReservationFormModal.parts.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 275,
+    "column": 9,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/gpu/ReservationFormModal.parts.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 280,
+    "column": 9,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/gpu/ReservationFormModal.tsx",
+    "rule": "prefer-const",
+    "line": 171,
+    "column": 7,
+    "message": "'reservationId' is never reassigned. Use 'const' instead."
+  },
+  {
+    "file": "src/components/gpu/ResourceRequestFields.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 64,
+    "column": 9,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/gpu/ResourceRequestFields.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 141,
+    "column": 15,
+    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
+  },
+  {
+    "file": "src/components/gpu/ResourceRequestFields.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 151,
+    "column": 15,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/gpu/ScheduleSelector.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 21,
+    "column": 9,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/gpu/ScheduleSelector.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 26,
+    "column": 9,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/gpu/useReservationFormState.ts",
+    "rule": "prefer-const",
+    "line": 331,
+    "column": 7,
+    "message": "'reservationId' is never reassigned. Use 'const' instead."
+  },
+  {
+    "file": "src/components/missions/ConflictList.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 33,
+    "column": 13,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/missions/ResolutionForm.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 97,
+    "column": 11,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/missions/ResolutionForm.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 113,
+    "column": 13,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/missions/ResolutionForm.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 126,
+    "column": 13,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/missions/ResolutionForm.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 141,
+    "column": 11,
+    "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
+  },
+  {
+    "file": "src/components/missions/ResolutionForm.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 166,
+    "column": 11,
+    "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
+  },
+  {
+    "file": "src/components/settings/sections/AddClusterForm.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 51,
+    "column": 9,
+    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
+  },
+  {
+    "file": "src/components/settings/sections/AddClusterForm.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 64,
+    "column": 9,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/stellar/EventModal.parts.tsx",
+    "rule": "no-restricted-syntax",
+    "line": 107,
+    "column": 7,
+    "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
   }
 ]

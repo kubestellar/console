@@ -35,16 +35,6 @@ function loadFromStorage<T>(key: string, defaultValue: T, validator?: (value: un
   return defaultValue
 }
 
-// Save to localStorage
-function saveToStorage<T>(key: string, value: T): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (e: unknown) {
-    console.error(`Failed to save ${key} to localStorage:`, e)
-    // Silently fail - localStorage quota may be exceeded but functionality continues
-  }
-}
-
 // Default empty stats returned when AlertsProvider is absent
 const _defaultAlertStats: AlertStats = { total: 0, firing: 0, resolved: 0, critical: 0, warning: 0, info: 0, acknowledged: 0 }
 
