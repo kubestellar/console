@@ -141,9 +141,9 @@ function NamespaceManagerContent() {
       <div className="min-h-full flex flex-col items-center justify-center p-6" data-live-route-state="partial" data-live-source="k8s">
         <RefreshCw className="w-16 h-16 text-blue-400 mb-4 animate-spin" />
         <h2 className="text-xl font-semibold text-white mb-2">Loading Clusters...</h2>
-        <p className="text-muted-foreground text-center max-w-md">
+        <div className="text-muted-foreground text-center max-w-md">
           Discovering available clusters.
-        </p>
+        </div>
       </div>
     )
   }
@@ -153,9 +153,9 @@ function NamespaceManagerContent() {
       <div className="min-h-full flex flex-col items-center justify-center p-6" data-live-route-state="empty" data-live-source="k8s">
         <AlertTriangle className="w-16 h-16 text-yellow-400 mb-4" />
         <h2 className="text-xl font-semibold text-white mb-2">No Clusters Selected</h2>
-        <p className="text-muted-foreground text-center max-w-md">
+        <div className="text-muted-foreground text-center max-w-md">
           Select one or more clusters using the filter in the navigation bar to manage namespaces.
-        </p>
+        </div>
       </div>
     )
   }
