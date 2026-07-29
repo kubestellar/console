@@ -7,30 +7,8 @@ import type { ConnectStep, CloudProvider } from './types'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { TextArea } from '../../ui/TextArea'
+import { CLOUD_IAM_COMMANDS, getCloudIAMProviderKey } from './ConnectTab.constants'
 
-// Cloud provider IAM auth commands — two steps: authenticate, then register cluster
-const CLOUD_IAM_COMMANDS: Record<CloudProvider, { auth: string; register: string; cliName: string }> = {
-  eks: {
-    cliName: 'aws',
-    auth: 'aws sso login',
-    register: 'aws eks update-kubeconfig --name <CLUSTER> --region <REGION>',
-  },
-  gke: {
-    cliName: 'gcloud',
-    auth: 'gcloud auth login',
-    register: 'gcloud container clusters get-credentials <CLUSTER> --zone <ZONE> --project <PROJECT>',
-  },
-  aks: {
-    cliName: 'az',
-    auth: 'az login',
-    register: 'az aks get-credentials --resource-group <RG> --name <CLUSTER>',
-  },
-  openshift: {
-    cliName: 'oc',
-    auth: 'oc login <API_SERVER_URL>',
-    register: '', // oc login already sets up kubeconfig
-  },
-}
 
 export function ConnectTab() {
   const { t } = useTranslation()
@@ -224,7 +202,7 @@ export function ConnectTab() {
                         key={p}
                         onClick={() => setSelectedCloudProvider(p)}
                         aria-label={t('actions.selectCloudProviderAria', {
-                          provider: t(`cluster.cloudIAMProvider${p.toUpperCase() === 'EKS' ? 'AWS' : p.toUpperCase() === 'GKE' ? 'GKE' : p.toUpperCase() === 'AKS' ? 'AKS' : 'OpenShift'}`),
+                          provider: t(`cluster.cloudIAMProvider${getCloudIAMProviderKey(p)}`),
                         })}
                         variant="ghost"
                         className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-xs transition-colors ${
@@ -234,7 +212,7 @@ export function ConnectTab() {
                         }`}
                       >
                         <CloudProviderIcon provider={p} size={20} />
-                        {t(`cluster.cloudIAMProvider${p.toUpperCase() === 'EKS' ? 'AWS' : p.toUpperCase() === 'GKE' ? 'GKE' : p.toUpperCase() === 'AKS' ? 'AKS' : 'OpenShift'}`)}
+                        {t(`cluster.cloudIAMProvider${getCloudIAMProviderKey(p)}`)}
                       </Button>
                     ))}
                   </div>

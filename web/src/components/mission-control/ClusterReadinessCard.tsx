@@ -104,7 +104,7 @@ export function ClusterReadinessCard({
             <span
               className={cn(
                 'w-2 h-2 rounded-full shrink-0',
-                cluster.healthy ? 'bg-green-500' : 'bg-red-500'
+                cluster.healthy ? 'bg-status-success' : 'bg-status-error'
               )}
               title={cluster.healthy ? 'Healthy' : 'Unhealthy'}
             />
