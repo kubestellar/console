@@ -106,7 +106,7 @@ export function ClusterReadinessCard({
                 'w-2 h-2 rounded-full shrink-0',
                 cluster.healthy ? 'bg-status-success' : 'bg-status-error'
               )}
-              title={cluster.healthy ? 'Healthy' : 'Unhealthy'}
+              title={cluster.healthy ? t('labels.healthy', 'Healthy') : t('labels.unhealthy', 'Unhealthy')}
             />
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
