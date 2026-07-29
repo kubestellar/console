@@ -18,7 +18,7 @@ import { emitOrbitMissionCreated } from '../../lib/analytics'
 import { isDemoMode } from '../../lib/demoMode'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { ConfirmDialog } from '../../lib/modals'
-import type { OrbitType, OrbitConfig, OrbitResourceFilter } from '../../lib/missions/types'
+import type { OrbitType, OrbitConfig, OrbitResourceFilter, OrbitCadence } from '../../lib/missions/types'
 import { CADENCE_OPTIONS, buildScopeString, type StandaloneOrbitDialogProps } from './StandaloneOrbitDialog.helpers'
 import { ClusterScopeSection } from './StandaloneOrbitDialog.parts'
 

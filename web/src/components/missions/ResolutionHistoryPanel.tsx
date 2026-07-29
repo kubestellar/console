@@ -16,7 +16,6 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { useResolutions, type Resolution } from '../../hooks/useResolutions'
-import { cn } from '../../lib/cn'
 import { ShareMissionDialog } from './ShareMissionDialog'
 import { SubmitToKBDialog } from './SubmitToKBDialog'
 import { useTranslation } from 'react-i18next'
