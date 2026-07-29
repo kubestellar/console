@@ -1,7 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import type { WheelEvent } from 'react'
 import {
   splitDraftForIssue,
   getSubmitErrorDetails,
+  buildDirectIssueUrl,
+  preventModalScrollChaining,
   MIN_PARENT_ISSUE_NUMBER,
   MAX_AGENT_CONNECTION_LOG_LINES,
   ALL_CLUSTERS_CONTEXT_LABEL,
@@ -267,5 +270,113 @@ describe('getStatusInfo', () => {
   it('returns purple for feasibility_study', () => {
     const result = getStatusInfo('feasibility_study')
     expect(result.color).toContain('purple')
+  })
+})
+buildDirectIssueUrl // ─── ──────────────────────────
+
+describe('buildDirectIssueUrl', () => {
+  it('targets kubestellar/console when targetRepo is not docs', () => {
+    const url = buildDirectIssueUrl('console', 'My title\nSome body')
+    expect(url).toContain('github.com/kubestellar/console/issues/new')
+  })
+
+  it('targets kubestellar/docs when targetRepo is docs', () => {
+    const url = buildDirectIssueUrl('docs', 'Docs title\nDocs body')
+    expect(url).toContain('github.com/kubestellar/docs/issues/new')
+  })
+
+  it('URL-encodes the title from the first line of the draft', () => {
+    const url = new URL(buildDirectIssueUrl('console', 'Hello world\nBody paragraph'))
+    expect(url.searchParams.get('title')).toBe('Hello world')
+    expect(url.searchParams.get('body')).toBe('Body paragraph')
+  })
+
+  it('omits title/body params for empty description', () => {
+    const url = new URL(buildDirectIssueUrl('console', ''))
+    // URLSearchParams from empty query has no title/body keys
+    expect(url.searchParams.get('title')).toBeNull()
+    expect(url.searchParams.get('body')).toBeNull()
+  })
+
+  it('produces empty body when only one line is supplied', () => {
+    const url = new URL(buildDirectIssueUrl('console', 'Only a title'))
+    expect(url.searchParams.get('title')).toBe('Only a title')
+    expect(url.searchParams.get('body')).toBeNull()
+  })
+})
+
+preventModalScrollChaining // ─── ─────────────────────────────
+
+function makeWheelEvent(opts: {
+  deltaY: number
+  scrollTop: number
+  scrollHeight: number
+  clientHeight: number
+}): WheelEvent<HTMLElement> & { _stopped: boolean } {
+  const stopPropagation = vi.fn()
+  const target = {
+    scrollTop: opts.scrollTop,
+    scrollHeight: opts.scrollHeight,
+    clientHeight: opts.clientHeight,
+  } as HTMLElement
+  return {
+    deltaY: opts.deltaY,
+    currentTarget: target,
+    stopPropagation,
+    get _stopped() {
+      return stopPropagation.mock.calls.length > 0
+    },
+  } as unknown as WheelEvent<HTMLElement> & { _stopped: boolean }
+}
+
+describe('preventModalScrollChaining', () => {
+  it('is a no-op when content fits (scrollHeight <= clientHeight)', () => {
+    const ev = makeWheelEvent({ deltaY: 100, scrollTop: 0, scrollHeight: 200, clientHeight: 200 })
+    preventModalScrollChaining(ev)
+    expect(ev._stopped).toBe(false)
+  })
+
+  it('stops propagation when scrolling down and not at the bottom', () => {
+    const ev = makeWheelEvent({ deltaY: 50, scrollTop: 100, scrollHeight: 1000, clientHeight: 400 })
+    preventModalScrollChaining(ev)
+    expect(ev._stopped).toBe(true)
+  })
+
+  it('does NOT stop propagation when scrolling down and already at the bottom (edge tolerance)', () => {
+    const ev = makeWheelEvent({ deltaY: 50, scrollTop: 599, scrollHeight: 1000, clientHeight: 400 })
+    preventModalScrollChaining(ev)
+    expect(ev._stopped).toBe(false)
+  })
+
+  it('stops propagation when scrolling up and not at the top', () => {
+    const ev = makeWheelEvent({ deltaY: -50, scrollTop: 300, scrollHeight: 1000, clientHeight: 400 })
+    preventModalScrollChaining(ev)
+    expect(ev._stopped).toBe(true)
+  })
+
+  it('does NOT stop propagation when scrolling up and already at the top (edge tolerance)', () => {
+    const ev = makeWheelEvent({ deltaY: -50, scrollTop: 1, scrollHeight: 1000, clientHeight: 400 })
+    preventModalScrollChaining(ev)
+    expect(ev._stopped).toBe(false)
+  })
+
+  it('respects SCROLL_EDGE_TOLERANCE_PX at the top boundary', () => {
+    const withinTolerance = makeWheelEvent({
+      deltaY: -1,
+      scrollTop: SCROLL_EDGE_TOLERANCE_PX,
+      scrollHeight: 1000,
+      clientHeight: 400,
+    })
+    preventModalScrollChaining(withinTolerance)
+    expect(withinTolerance._stopped).toBe(false)
+
+    const outsideTolerance = makeWheelEvent({
+      deltaY: -1,
+      scrollTop: SCROLL_EDGE_TOLERANCE_PX + 1,
+      scrollHeight: 1000,
+      clientHeight: 400,
+    })
+    preventModalScrollChaining(outsideTolerance)
+    expect(outsideTolerance._stopped).toBe(true)
   })
 })
