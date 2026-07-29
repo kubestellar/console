@@ -1,65 +1,42 @@
 import { useCallback, useMemo, useState } from 'react'
-import { AlertTriangle, ChevronRight, Plus, RefreshCw, Trash2, Terminal } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
-import { getClusterDisplayName } from '../../utils/clusterNames'
-import { StatusIndicator, type Status } from '../charts/StatusIndicator'
-import { ClusterBadge } from '../ui/ClusterBadge'
-import { Skeleton } from '../ui/Skeleton'
-import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
 import { useTranslation } from 'react-i18next'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useToast } from '../ui/Toast'
-import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 import { WorkloadImportDialog } from '../cards/WorkloadImportDialog'
 import { ConfirmDialog } from '../../lib/modals'
 import type { Workload } from '../cards/WorkloadDeployment'
 import { isLocalAgentSuppressed } from '../../lib/constants'
+import {
+  ClustersOverviewSection,
+  WorkloadsErrorBanner,
+  WorkloadsList,
+} from './Workloads.parts'
+import {
+  useWorkloadsFilters,
+  type WorkloadDeployment,
+} from './useWorkloadsFilters'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 const IMPORTED_WORKLOAD_CLUSTER = 'Imported'
-
-// Default cards for the workloads dashboard
 const DEFAULT_WORKLOAD_CARDS = getDefaultCards('workloads')
 
-// Pod issues severity threshold - namespaces with more than this many issues are marked as error
-const POD_ISSUES_ERROR_THRESHOLD = 3
-
-// Number of skeleton placeholder items to display while loading workload data
-const WORKLOAD_SKELETON_COUNT = 5
-
-interface AppSummary {
-  namespace: string
+interface PendingDelete {
   cluster: string
-  deploymentCount: number
-  podIssues: number
-  deploymentIssues: number
-  status: 'healthy' | 'warning' | 'error'
-  type: 'namespace'
-}
-
-interface DeploymentSummary {
+  namespace: string
   name: string
-  namespace: string
-  cluster: string
-  status: 'running' | 'deploying' | 'failed'
-  replicas: number
-  readyReplicas: number
-  type: 'deployment'
-  image?: string
 }
 
-type WorkloadItem = AppSummary | DeploymentSummary
-
-function mapImportedWorkload(workload: Workload): DeploymentSummary {
+function mapImportedWorkload(workload: Workload): WorkloadDeployment {
   return {
     name: workload.name,
     namespace: workload.namespace,
@@ -67,59 +44,183 @@ function mapImportedWorkload(workload: Workload): DeploymentSummary {
     status: 'deploying',
     replicas: workload.replicas,
     readyReplicas: workload.readyReplicas,
-    type: 'deployment',
     image: workload.image,
   }
 }
 
-export function Workloads() {
-  const { t } = useTranslation()
-  // Data fetching
-  const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, error: podIssuesError, lastUpdated: podLastUpdated, refetch: refetchPodIssues } = usePodIssues()
-  const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, error: deploymentIssuesError, lastUpdated: deploymentLastUpdated, refetch: refetchDeploymentIssues } = useDeploymentIssues()
-  const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, error: deploymentsError, lastUpdated: deploymentsLastUpdated, refetch: refetchDeployments } = useDeployments()
-  const { deduplicatedClusters: clusters, isLoading: clustersLoading, error: clustersError, lastUpdated: clustersLastUpdated, refetch: refetchClusters } = useClusters()
-
-  // Combine lastUpdated from all sources - use the most recent one
-  const lastUpdated = useMemo(() => {
-    const timestamps = [podLastUpdated, deploymentLastUpdated, deploymentsLastUpdated, clustersLastUpdated].filter(
-      (t): t is Date => t !== null && t !== undefined
-    )
-    if (timestamps.length === 0) return null
-    return timestamps.reduce((latest, current) => (current > latest ? current : latest))
-  }, [podLastUpdated, deploymentLastUpdated, deploymentsLastUpdated, clustersLastUpdated])
-  const { status: agentStatus } = useLocalAgent()
-  const { isDemoMode } = useDemoMode()
-  const isModeSwitching = useIsModeSwitching()
-
-  const { drillToNamespace, drillToAllNamespaces, drillToAllDeployments, drillToAllPods, drillToDeployment } = useDrillDownActions()
-  const { showToast } = useToast()
-  const [pendingDelete, setPendingDelete] = useState<{ cluster: string; namespace: string; name: string } | null>(null)
+function useWorkloadImportState(onImportSuccess: () => void) {
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [importedWorkloads, setImportedWorkloads] = useState<Workload[]>([])
 
   const handleImportWorkloads = useCallback((newWorkloads: Workload[]) => {
-    setImportedWorkloads(prev => [...prev, ...newWorkloads])
-    showToast(t('workloads.importSuccess', 'Workload added to the list'), 'success')
-  }, [showToast, t])
+    setImportedWorkloads((prev) => [...prev, ...newWorkloads])
+    onImportSuccess()
+  }, [onImportSuccess])
+
+  return {
+    showImportDialog,
+    setShowImportDialog,
+    importedWorkloads,
+    handleImportWorkloads,
+  }
+}
+
+function useWorkloadsData(importedWorkloads: Workload[]) {
+  const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, error: podIssuesError, lastUpdated: podLastUpdated, refetch: refetchPodIssues } = usePodIssues()
+  const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, error: deploymentIssuesError, lastUpdated: deploymentLastUpdated, refetch: refetchDeploymentIssues } = useDeploymentIssues()
+  const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, error: deploymentsError, lastUpdated: deploymentsLastUpdated, refetch: refetchDeployments } = useDeployments()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, error: clustersError, lastUpdated: clustersLastUpdated, refetch: refetchClusters } = useClusters()
+  const { status: agentStatus } = useLocalAgent()
+  const { isDemoMode } = useDemoMode()
+  const isModeSwitching = useIsModeSwitching()
 
   const deployments = useMemo(
     () => [...allDeployments, ...importedWorkloads.map(mapImportedWorkload)],
     [allDeployments, importedWorkloads],
   )
 
-  // Combined states
+  const lastUpdated = useMemo(() => {
+    const timestamps = [podLastUpdated, deploymentLastUpdated, deploymentsLastUpdated, clustersLastUpdated].filter(
+      (timestamp): timestamp is Date => timestamp !== null && timestamp !== undefined,
+    )
+    if (timestamps.length === 0) return null
+    return timestamps.reduce((latest, current) => (current > latest ? current : latest))
+  }, [podLastUpdated, deploymentLastUpdated, deploymentsLastUpdated, clustersLastUpdated])
+
   const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
   const isRefreshing = podIssuesRefreshing || deploymentIssuesRefreshing || deploymentsRefreshing
   const loadError = podIssuesError || deploymentIssuesError || deploymentsError || clustersError
-  // Show skeletons when loading with no data OR when agent is offline and demo mode is OFF OR mode switching
+
   const isAgentOffline = agentStatus === 'disconnected'
   const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !isLocalAgentSuppressed() && !wasAgentEverConnected()
   const showSkeletons = ((deployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading) || forceSkeletonForOffline || isModeSwitching
 
-  // Combined refresh
+  return {
+    podIssues,
+    deploymentIssues,
+    deployments,
+    clusters,
+    refetchPodIssues,
+    refetchDeploymentIssues,
+    refetchDeployments,
+    refetchClusters,
+    isLoading,
+    isRefreshing,
+    loadError,
+    showSkeletons,
+    forceSkeletonForOffline,
+    lastUpdated,
+  }
+}
+
+function useDeploymentActions({
+  refetchDeployments,
+  showToast,
+  t,
+}: {
+  refetchDeployments: () => void
+  showToast: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void
+  t: (key: string, fallback?: string, options?: Record<string, unknown>) => string
+}) {
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
+
+  const handleRestartDeployment = useCallback(async (event: React.MouseEvent, cluster: string, namespace: string, name: string) => {
+    event.stopPropagation()
+    try {
+      showToast(t('workloads.restarting', 'Restarting deployment...'), 'info')
+      await kubectlProxy.exec(['rollout', 'restart', 'deployment', name, '-n', namespace], { context: cluster })
+      showToast(t('workloads.restartSuccess', 'Restart triggered'), 'success')
+      refetchDeployments()
+    } catch {
+      showToast(t('workloads.restartError', 'Failed to restart deployment'), 'error')
+    }
+  }, [refetchDeployments, showToast, t])
+
+  const handleDeleteDeployment = useCallback((event: React.MouseEvent, cluster: string, namespace: string, name: string) => {
+    event.stopPropagation()
+    setPendingDelete({ cluster, namespace, name })
+  }, [])
+
+  const confirmDeleteDeployment = useCallback(async () => {
+    if (!pendingDelete) return
+
+    const { cluster, namespace, name } = pendingDelete
+    setPendingDelete(null)
+
+    try {
+      showToast(t('workloads.deleting', 'Deleting deployment...'), 'info')
+      await kubectlProxy.exec(['delete', 'deployment', name, '-n', namespace], { context: cluster })
+      showToast(t('workloads.deleteSuccess', 'Deployment deleted'), 'success')
+      refetchDeployments()
+    } catch {
+      showToast(t('workloads.deleteError', 'Failed to delete deployment'), 'error')
+    }
+  }, [pendingDelete, refetchDeployments, showToast, t])
+
+  return {
+    pendingDelete,
+    setPendingDelete,
+    handleRestartDeployment,
+    handleDeleteDeployment,
+    confirmDeleteDeployment,
+  }
+}
+
+export function Workloads() {
+  const { t } = useTranslation()
+  const { showToast } = useToast()
+  const { drillToNamespace, drillToAllNamespaces, drillToAllDeployments, drillToAllPods, drillToDeployment } = useDrillDownActions()
+
+  const {
+    showImportDialog,
+    setShowImportDialog,
+    importedWorkloads,
+    handleImportWorkloads,
+  } = useWorkloadImportState(() => {
+    showToast(t('workloads.importSuccess', 'Workload added to the list'), 'success')
+  })
+
+  const {
+    podIssues,
+    deploymentIssues,
+    deployments,
+    clusters,
+    refetchPodIssues,
+    refetchDeploymentIssues,
+    refetchDeployments,
+    refetchClusters,
+    isLoading,
+    isRefreshing,
+    loadError,
+    showSkeletons,
+    forceSkeletonForOffline,
+    lastUpdated,
+  } = useWorkloadsData(importedWorkloads)
+
+  const {
+    apps,
+    stats,
+    selectedClusters,
+    isAllClustersSelected,
+  } = useWorkloadsFilters({
+    deployments,
+    podIssues,
+    deploymentIssues,
+  })
+
+  const {
+    pendingDelete,
+    setPendingDelete,
+    handleRestartDeployment,
+    handleDeleteDeployment,
+    confirmDeleteDeployment,
+  } = useDeploymentActions({
+    refetchDeployments,
+    showToast,
+    t,
+  })
+
   const handleRefresh = () => {
-    // Guard against multiple concurrent refresh attempts
     if (isRefreshing) return
     refetchPodIssues()
     refetchDeploymentIssues()
@@ -127,182 +228,12 @@ export function Workloads() {
     refetchClusters()
   }
 
-  const handleRestartDeployment = async (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
-    e.stopPropagation()
-    try {
-      showToast(t('workloads.restarting', 'Restarting deployment...'), 'info')
-      await kubectlProxy.exec(['rollout', 'restart', 'deployment', name, '-n', namespace], { context: cluster })
-      showToast(t('workloads.restartSuccess', 'Restart triggered'), 'success')
-      refetchDeployments()
-    } catch (err: unknown) {
-      showToast(t('workloads.restartError', 'Failed to restart deployment'), 'error')
-    }
-  }
-
-  const handleDeleteDeployment = (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
-    e.stopPropagation()
-    setPendingDelete({ cluster, namespace, name })
-  }
-
-  const confirmDeleteDeployment = async () => {
-    if (!pendingDelete) return
-    const { cluster, namespace, name } = pendingDelete
-    setPendingDelete(null)
-    try {
-      showToast(t('workloads.deleting', 'Deleting deployment...'), 'info')
-      await kubectlProxy.exec(['delete', 'deployment', name, '-n', namespace], { context: cluster })
-      showToast(t('workloads.deleteSuccess', 'Deployment deleted'), 'success')
-      refetchDeployments()
-    } catch (err: unknown) {
-      showToast(t('workloads.deleteError', 'Failed to delete deployment'), 'error')
-    }
-  }
-
-  const handleShowLogs = (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
-    e.stopPropagation()
+  const handleShowLogs = (event: React.MouseEvent, cluster: string, namespace: string, name: string) => {
+    event.stopPropagation()
     drillToDeployment(cluster, namespace, name, { tab: 'pods' })
   }
 
-  const {
-    selectedClusters: globalSelectedClusters,
-    isAllClustersSelected,
-    customFilter } = useGlobalFilters()
-
-  // Group applications by namespace with global filter applied
-  const apps = useMemo(() => {
-    let filteredDeployments = deployments
-    let filteredPodIssues = podIssues
-    let filteredDeploymentIssues = deploymentIssues
-
-    if (!isAllClustersSelected) {
-      filteredDeployments = filteredDeployments.filter(d =>
-        d.cluster && globalSelectedClusters.includes(d.cluster)
-      )
-      filteredPodIssues = filteredPodIssues.filter(issue =>
-        issue.cluster && globalSelectedClusters.includes(issue.cluster)
-      )
-      filteredDeploymentIssues = filteredDeploymentIssues.filter(issue =>
-        issue.cluster && globalSelectedClusters.includes(issue.cluster)
-      )
-    }
-
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      filteredDeployments = filteredDeployments.filter(d =>
-        d.name.toLowerCase().includes(query) ||
-        d.namespace.toLowerCase().includes(query) ||
-        (d.cluster && d.cluster.toLowerCase().includes(query))
-      )
-      filteredPodIssues = filteredPodIssues.filter(issue =>
-        issue.name.toLowerCase().includes(query) ||
-        issue.namespace.toLowerCase().includes(query) ||
-        (issue.cluster && issue.cluster.toLowerCase().includes(query))
-      )
-      filteredDeploymentIssues = filteredDeploymentIssues.filter(issue =>
-        issue.name.toLowerCase().includes(query) ||
-        issue.namespace.toLowerCase().includes(query) ||
-        (issue.cluster && issue.cluster.toLowerCase().includes(query))
-      )
-    }
-
-    // If we have a filter, show individual deployments that match
-    if (customFilter.trim() || !isAllClustersSelected) {
-      return (filteredDeployments.map(d => ({
-        ...d,
-        type: 'deployment' as const
-      })) as WorkloadItem[]).sort((a, b) => {
-        const aName = a.type === 'deployment' ? a.name : a.namespace
-        const bName = b.type === 'deployment' ? b.name : b.namespace
-        return aName.localeCompare(bName)
-      })
-    }
-
-    const appMap = new Map<string, AppSummary>()
-    // ... (rest of namespace grouping logic)
-    filteredDeployments.forEach(deployment => {
-      const key = `${deployment.cluster}/${deployment.namespace}`
-      if (!appMap.has(key)) {
-        appMap.set(key, {
-          namespace: deployment.namespace,
-          cluster: deployment.cluster || 'unknown',
-          deploymentCount: 0,
-          podIssues: 0,
-          deploymentIssues: 0,
-          status: 'healthy',
-          type: 'namespace'
-        })
-      }
-      const app = appMap.get(key)!
-      app.deploymentCount++
-    })
-
-    filteredPodIssues.forEach(issue => {
-      const key = `${issue.cluster}/${issue.namespace}`
-      if (!appMap.has(key)) {
-        appMap.set(key, {
-          namespace: issue.namespace,
-          cluster: issue.cluster || 'unknown',
-          deploymentCount: 0,
-          podIssues: 0,
-          deploymentIssues: 0,
-          status: 'healthy',
-          type: 'namespace'
-        })
-      }
-      const app = appMap.get(key)!
-      app.podIssues++
-      app.status = app.podIssues > POD_ISSUES_ERROR_THRESHOLD ? 'error' : 'warning'
-    })
-
-    filteredDeploymentIssues.forEach(issue => {
-      const key = `${issue.cluster}/${issue.namespace}`
-      if (!appMap.has(key)) {
-        appMap.set(key, {
-          namespace: issue.namespace,
-          cluster: issue.cluster || 'unknown',
-          deploymentCount: 0,
-          podIssues: 0,
-          deploymentIssues: 0,
-          status: 'healthy',
-          type: 'namespace'
-        })
-      }
-      const app = appMap.get(key)!
-      app.deploymentIssues++
-      // Allow deployment issues to escalate namespace to error (matching pod issue threshold)
-      if (app.deploymentIssues > 3) {
-        app.status = 'error'
-      } else if (app.status === 'healthy') {
-        app.status = 'warning'
-      }
-    })
-
-    return (Array.from(appMap.values()) as WorkloadItem[]).sort((a, b) => {
-      const aStats = a as AppSummary
-      const bStats = b as AppSummary
-      const statusOrder: Record<string, number> = { error: 0, critical: 0, warning: 1, healthy: 2 }
-      if (statusOrder[aStats.status] !== statusOrder[bStats.status]) {
-        return statusOrder[aStats.status] - statusOrder[bStats.status]
-      }
-      return bStats.deploymentCount - aStats.deploymentCount
-    })
-  }, [deployments, podIssues, deploymentIssues, globalSelectedClusters, isAllClustersSelected, customFilter])
-
-  const stats = useMemo(() => {
-    const namespaceApps = apps.filter(a => a.type === 'namespace') as AppSummary[]
-    return {
-      total: namespaceApps.length || apps.length,
-      healthy: namespaceApps.filter(a => a.status === 'healthy').length,
-      warning: namespaceApps.filter(a => a.status === 'warning').length,
-      critical: namespaceApps.filter(a => a.status === 'error').length,
-      totalDeployments: deployments.length,
-      totalPodIssues: podIssues.length,
-      totalDeploymentIssues: deploymentIssues.length
-    }
-  }, [apps, deployments, podIssues, deploymentIssues])
-
-  // Dashboard-specific stats value getter
-  const getDashboardStatValue = (blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string) => {
     switch (blockId) {
       case 'namespaces':
         return { value: stats.total, sublabel: t('workloads.activeNamespaces'), onClick: () => drillToAllNamespaces(), isClickable: apps.length > 0 }
@@ -328,7 +259,7 @@ export function Workloads() {
       title={t('workloads.title')}
       subtitle={t('workloads.subtitle')}
       icon="Box"
-      rightExtra={
+      rightExtra={(
         <div className="flex items-center gap-2">
           <button
             data-testid="add-workload-btn"
@@ -341,7 +272,7 @@ export function Workloads() {
           </button>
           <RotatingTip page="workloads" />
         </div>
-      }
+      )}
       storageKey={WORKLOADS_CARDS_KEY}
       defaultCards={DEFAULT_WORKLOAD_CARDS}
       statsType="workloads"
@@ -353,209 +284,38 @@ export function Workloads() {
       hasData={apps.length > 0 || !showSkeletons}
       emptyState={{
         title: t('workloads.dashboardTitle'),
-        description: t('workloads.emptyDescription')
+        description: t('workloads.emptyDescription'),
       }}
     >
       {loadError && (
-        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-red-400">{t('workloads.errorLoading', 'Could not load workload data')}</p>
-              <p className="text-xs text-muted-foreground mt-1">{loadError}</p>
-              <button
-                type="button"
-                onClick={handleRefresh}
-                className="mt-3 inline-flex items-center rounded-lg bg-red-500/15 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/25"
-              >
-                {t('common.retry', 'Retry')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Workloads List */}
-      {showSkeletons ? (
-        <div data-testid="workloads-loading-state" className="space-y-3">
-          {Array.from({ length: WORKLOAD_SKELETON_COUNT }, (_, i) => (
-            <div key={i} data-testid="workload-row-skeleton" className="glass p-4 rounded-lg border-l-4 border-l-gray-500/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Skeleton variant="circular" width={24} height={24} />
-                  <div>
-                    <Skeleton variant="text" width={150} height={20} className="mb-1" />
-                    <Skeleton variant="rounded" width={80} height={18} />
-                  </div>
-                </div>
-                <Skeleton variant="text" width={100} height={20} />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : apps.length === 0 ? (
-        <div data-testid="workloads-empty-state" className="text-center py-12">
-          <div className="text-6xl mb-4">📦</div>
-          <p className="text-lg text-foreground">{t('workloads.noWorkloadsTitle', 'No workloads found')}</p>
-          <p className="text-sm text-muted-foreground mb-6">{t('workloads.noWorkloadsDesc', 'No deployments detected across your clusters')}</p>
-          <button
-            data-testid="empty-state-deploy-workload-btn"
-            onClick={() => setShowImportDialog(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            {t('workloads.deployWorkload', 'Create a Workload')}
-          </button>
-        </div>
-      ) : (
-        <div data-testid="workloads-list" className="space-y-3">
-          {apps.map((item, i) => {
-            const isDeployment = item.type === 'deployment'
-            const app = item as AppSummary
-            const deploy = item as DeploymentSummary
-
-            const status = isDeployment
-              ? (deploy.status === 'failed' ? 'error' : deploy.status === 'deploying' ? 'warning' : 'healthy')
-              : app.status
-
-            return (
-              <div
-                key={i}
-                data-testid="workload-row"
-                onClick={() => isDeployment
-                  ? drillToDeployment(deploy.cluster, deploy.namespace, deploy.name)
-                  : drillToNamespace(app.cluster, app.namespace)
-                }
-                className={`glass p-4 rounded-lg cursor-pointer transition-all hover:scale-[1.01] border-l-4 ${status === 'error' ? 'border-l-red-500' :
-                  status === 'warning' ? 'border-l-yellow-500' :
-                    'border-l-green-500'
-                  }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <StatusIndicator status={status as Status} size="lg" />
-                    <div>
-                      <h3 className="font-semibold text-foreground">{isDeployment ? deploy.name : app.namespace}</h3>
-                      <div className="flex items-center gap-2">
-                        <ClusterBadge cluster={getClusterDisplayName(item.cluster)} size="sm" />
-                        {isDeployment && <span className="text-xs text-muted-foreground">{deploy.namespace}</span>}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-6">
-                    {isDeployment ? (
-                      <>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-foreground">{deploy.readyReplicas}/{deploy.replicas}</div>
-                          <div className="text-xs text-muted-foreground">{t('common.ready')}</div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <PortalTooltip content={t('common.restart', 'Restart')}>
-                            <button
-                              data-testid="action-btn-restart"
-                              onClick={(e) => handleRestartDeployment(e, deploy.cluster, deploy.namespace, deploy.name)}
-                              className="p-1.5 hover:bg-secondary/50 rounded-md text-muted-foreground hover:text-blue-400 transition-colors"
-                              aria-label="Restart deployment"
-                            >
-                              <RefreshCw className="w-4 h-4" />
-                            </button>
-                          </PortalTooltip>
-
-                          <PortalTooltip content={t('common.logs', 'Logs')}>
-                            <button
-                              data-testid="action-btn-logs"
-                              onClick={(e) => handleShowLogs(e, deploy.cluster, deploy.namespace, deploy.name)}
-                              className="p-1.5 hover:bg-secondary/50 rounded-md text-muted-foreground hover:text-purple-400 transition-colors"
-                              aria-label="View logs"
-                            >
-                              <Terminal className="w-4 h-4" />
-                            </button>
-                          </PortalTooltip>
-
-                          <PortalTooltip content={t('common.delete', 'Delete')}>
-                            <button
-                              data-testid="action-btn-delete"
-                              onClick={(e) => handleDeleteDeployment(e, deploy.cluster, deploy.namespace, deploy.name)}
-                              className="p-1.5 hover:bg-secondary/50 rounded-md text-muted-foreground hover:text-red-400 transition-colors"
-                              aria-label="Delete deployment"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </PortalTooltip>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-foreground">{app.deploymentCount}</div>
-                          <div className="text-xs text-muted-foreground">{t('common.deployments')}</div>
-                        </div>
-                        {app.deploymentIssues > 0 && (
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-orange-400">{app.deploymentIssues}</div>
-                            <div className="text-xs text-muted-foreground">Issues</div>
-                          </div>
-                        )}
-                        {app.podIssues > 0 && (
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-red-400">{app.podIssues}</div>
-                            <div className="text-xs text-muted-foreground">Pod Issues</div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <WorkloadsErrorBanner loadError={loadError} onRetry={handleRefresh} t={t} />
       )}
 
-      {/* Clusters Summary */}
-      <div data-testid="clusters-overview-section" className="mt-8">
-        <h2 data-testid="clusters-overview-heading" className="text-lg font-semibold text-foreground mb-4">Clusters Overview</h2>
-        <div data-testid="clusters-overview-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {forceSkeletonForOffline ? (
-            // Show skeleton when agent is offline and demo mode is OFF
-            Array.from({ length: WORKLOAD_SKELETON_COUNT }, (_, i) => (
-              <div key={i} className="glass p-3 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Skeleton variant="circular" width={16} height={16} />
-                  <Skeleton variant="text" width={100} height={16} />
-                </div>
-                <Skeleton variant="text" width={80} height={12} />
-              </div>
-            ))
-          ) : (
-            clusters
-              .filter(cluster => isAllClustersSelected || globalSelectedClusters.includes(cluster.name))
-              .map((cluster) => (
-                <div key={cluster.name} data-testid="cluster-card" className="glass p-3 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <StatusIndicator
-                      status={cluster.reachable === false ? 'unreachable' : cluster.healthy ? 'healthy' : 'error'}
-                      size="sm"
-                    />
-                    <span className="font-medium text-foreground text-sm truncate">
-                      {cluster.context || getClusterDisplayName(cluster.name)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {cluster.reachable !== false ? (cluster.podCount ?? '-') : '-'} pods • {cluster.reachable !== false ? (cluster.nodeCount ?? '-') : '-'} nodes
-                  </div>
-                </div>
-              ))
-          )}
-        </div>
-      </div>
+      <WorkloadsList
+        apps={apps}
+        showSkeletons={showSkeletons}
+        onOpenImportDialog={() => setShowImportDialog(true)}
+        onNamespaceClick={drillToNamespace}
+        onDeploymentClick={(cluster, namespace, name) => drillToDeployment(cluster, namespace, name)}
+        onRestartDeployment={handleRestartDeployment}
+        onShowLogs={handleShowLogs}
+        onDeleteDeployment={handleDeleteDeployment}
+        t={t}
+      />
+
+      <ClustersOverviewSection
+        clusters={clusters}
+        forceSkeletonForOffline={forceSkeletonForOffline}
+        isAllClustersSelected={isAllClustersSelected}
+        selectedClusters={selectedClusters}
+      />
 
       <WorkloadImportDialog
         isOpen={showImportDialog}
         onClose={() => setShowImportDialog(false)}
         onImport={handleImportWorkloads}
       />
+
       <ConfirmDialog
         isOpen={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
