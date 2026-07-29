@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -12,8 +11,10 @@ import { useMissions } from '../../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../cards/console-missions/shared'
 import { useClusters } from '../../../hooks/mcp/clusters'
 import { ConfirmDialog } from '../../../lib/modals'
-import { ClusterProgressBanner } from './ClusterProgressBanner'
 import { VClusterActionBanner } from './VClusterActionBanner'
+import { ClusterRow } from './ClusterRow'
+import { AddClusterForm } from './AddClusterForm'
+import { ImportWizard } from './ImportWizard'
 
 /** Default namespace for new vCluster instances */
 const VCLUSTER_DEFAULT_NAMESPACE = 'vcluster'
@@ -301,22 +302,7 @@ After installation, ask:
       )}
 
       {/* Connected or Demo - No Tools Found */}
-      {(isConnected || isDemoMode) && installedTools.length === 0 && (
-        <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20">
-          <div className="flex items-center gap-2 text-orange-400">
-            <AlertCircle className="w-5 h-5" />
-            <span className="font-medium">{t('settings.localClusters.noToolsDetected')}</span>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {t('settings.localClusters.installTools')}
-          </p>
-          <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-            <li><code className="px-1 bg-secondary rounded">brew install kind</code> - Kubernetes in Docker</li>
-            <li><code className="px-1 bg-secondary rounded">brew install k3d</code> - k3s in Docker</li>
-            <li><code className="px-1 bg-secondary rounded">brew install minikube</code> - Local VM/container clusters</li>
-          </ul>
-        </div>
-      )}
+      {(isConnected || isDemoMode) && installedTools.length === 0 && <ImportWizard t={t} />}
 
       {/* Connected or Demo - Tools Available */}
       {(isConnected || isDemoMode) && installedTools.length > 0 && (
@@ -342,61 +328,21 @@ After installation, ask:
             </div>
           </div>
 
-          {/* Create Cluster Form */}
-          <div className="mb-6 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
-            <h3 className="text-sm font-medium text-purple-400 mb-3 flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              {t('settings.localClusters.createNew')}
-            </h3>
-            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 w-full">
-              <select
-                aria-label={t('settings.localClusters.selectTool')}
-                value={selectedTool}
-                onChange={(e) => setSelectedTool(e.target.value)}
-                className="min-w-0 sm:w-auto sm:max-w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 truncate"
-              >
-                <option value="">{t('settings.localClusters.selectTool')}</option>
-                {localClusterTools.map((tool) => (
-                  <option key={tool.name} value={tool.name}>
-                    {getToolIcon(tool.name)} {tool.name} - {getToolDescription(tool.name)}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                aria-label={t('settings.localClusters.clusterName', 'Cluster name')}
-                value={clusterName}
-                onChange={(e) => setClusterName(e.target.value)}
-                placeholder="Cluster name"
-                className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
-              />
-              <button
-                onClick={handleCreate}
-                disabled={!selectedTool || !clusterName.trim() || isCreating}
-                className="shrink-0 whitespace-nowrap flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {t('settings.localClusters.creating')}
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4" />
-                    {t('settings.localClusters.create')}
-                  </>
-                )}
-              </button>
-            </div>
-            {/* Real-time progress banner (replaces static createMessage) */}
-            <div className="mt-3">
-              <ClusterProgressBanner
-                progress={clusterProgress}
-                onDismiss={dismissProgress}
-                isStale={clusterProgressIsStale}
-              />
-            </div>
-          </div>
+          <AddClusterForm
+            localClusterTools={localClusterTools}
+            selectedTool={selectedTool}
+            clusterName={clusterName}
+            isCreating={isCreating}
+            clusterProgress={clusterProgress}
+            clusterProgressIsStale={clusterProgressIsStale}
+            getToolIcon={getToolIcon}
+            getToolDescription={getToolDescription}
+            onSelectedToolChange={setSelectedTool}
+            onClusterNameChange={setClusterName}
+            onCreate={handleCreate}
+            onDismissProgress={dismissProgress}
+            t={t}
+          />
 
           {/* Existing Clusters */}
           <div>
@@ -409,55 +355,16 @@ After installation, ask:
               </p>
             ) : (
               <div className="space-y-2">
-                {clusters.map((cluster) => {
-                  const isRunning = cluster.status === 'running'
-                  const isStopped = cluster.status === 'stopped'
-
-                  return (
-                    <div
-                      key={`${cluster.tool}-${cluster.name}`}
-                      className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">{getToolIcon(cluster.tool)}</span>
-                        <div>
-                          <p className="font-medium text-foreground">{cluster.name}</p>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-muted-foreground">{cluster.tool}</span>
-                            <span className="text-muted-foreground">•</span>
-                            <div className="flex items-center gap-1.5">
-                              <div className={`w-1.5 h-1.5 rounded-full ${
-                                isRunning ? 'bg-green-500' :
-                                isStopped ? 'bg-muted-foreground' :
-                                'bg-orange-500'
-                              }`} />
-                              <span className={
-                                isRunning ? 'text-green-400' :
-                                isStopped ? 'text-muted-foreground' :
-                                'text-orange-400'
-                              }>
-                                {cluster.status}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setDeleteClusterConfirm({ tool: cluster.tool, name: cluster.name })}
-                        disabled={isDeleting === cluster.name}
-                        aria-label={t('settings.localClusters.deleteCluster', { name: cluster.name, defaultValue: `Delete cluster ${cluster.name}` })}
-                        className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-50"
-                        title="Delete cluster"
-                      >
-                        {isDeleting === cluster.name ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  )
-                })}
+                {clusters.map((cluster) => (
+                  <ClusterRow
+                    key={`${cluster.tool}-${cluster.name}`}
+                    cluster={cluster}
+                    isDeleting={isDeleting}
+                    getToolIcon={getToolIcon}
+                    onDeleteRequest={setDeleteClusterConfirm}
+                    t={t}
+                  />
+                ))}
               </div>
             )}
           </div>
