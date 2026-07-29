@@ -216,7 +216,7 @@ export function MobileHeader({ syncStatus }: MobileHeaderProps) {
 }
 
 interface SectionGroupHeaderProps {
-  labelKey: string
+  labelKey: (typeof SETTINGS_NAV)[number]['groupKey']
 }
 
 export function SectionGroupHeader({ labelKey }: SectionGroupHeaderProps) {
