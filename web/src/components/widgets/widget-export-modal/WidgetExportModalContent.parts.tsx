@@ -296,7 +296,7 @@ export function WidgetExportModalParts({
             {activeTab === 'templates' && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Pre-built widget layouts combining multiple cards
+                  {t('widgets.prebuiltLayouts')}
                 </p>
                 {Object.values(WIDGET_TEMPLATES).map((template) => (
                   <TemplateCard
@@ -312,7 +312,7 @@ export function WidgetExportModalParts({
             {activeTab === 'card' && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Export a single card as a standalone widget
+                  {t('widgets.exportSingleCard')}
                 </p>
                 {Object.values(WIDGET_CARDS).map((card) => (
                   <CardItem
@@ -328,7 +328,7 @@ export function WidgetExportModalParts({
             {activeTab === 'stats' && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Select stats to include in your widget (select multiple)
+                  {t('widgets.selectStats')}
                 </p>
                 {Object.values(WIDGET_STATS).map((stat) => (
                   <StatItem
@@ -501,8 +501,8 @@ export function WidgetExportModalParts({
               className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 rounded flex items-center gap-2 disabled:opacity-50"
               aria-label={
                 copied
-                  ? t('widgets.copied', 'Copied!')
-                  : t('widgets.copyCode', 'Copy Code')
+                  ? t('common.copied')
+                  : t('widgets.copyCode')
               }
             >
               {copied ? (
@@ -510,7 +510,7 @@ export function WidgetExportModalParts({
               ) : (
                 <Copy className="w-4 h-4" />
               )}
-              {copied ? 'Copied!' : 'Copy Code'}
+              {copied ? t('common.copied') : t('widgets.copyCode')}
             </button>
             <button
               onClick={handleDownload}
