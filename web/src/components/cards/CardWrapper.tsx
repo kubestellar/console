@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback, useRef, useMemo, memo, createContext, use, Suspense } from 'react'
+import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, memo, createContext, use, ComponentType, Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { Maximize2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 import { CARD_ICONS } from './cardIcons'
 import { BaseModal } from '../../lib/modals'
+import { MS_PER_HOUR } from '../../lib/constants/time'
 import { cn } from '@/lib/cn'
 import { useCardCollapse } from '../../lib/cards/cardHooks'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
@@ -13,34 +14,78 @@ import { useModal } from '../../hooks/useModal'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { CardDataReportContext, ForceLiveContext, type CardDataState } from './CardDataContext'
-import { type ChatMessage } from './CardChat'
+import { ChatMessage } from './CardChat'
+import type { CardSkeletonProps } from '@/lib/cards/CardComponents'
 import { emitCardExpanded, emitCardRefreshed } from '../../lib/analytics'
 import { useMissions } from '../../hooks/useMissions'
 import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
 import { useTimeoutFlag, useConditionalTimeout } from '../../hooks/useTimeoutFlag'
-import { CardErrorFallback, CardFailureBanner } from './CardErrorFallback'
+import { CardFailureBanner } from './CardErrorFallback'
 import { CardLoadingState } from './CardLoadingState'
-import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
-import { CardMeta } from './CardMeta'
-import { CardToolbar } from './CardToolbar'
-import { InfoTooltip } from './card-wrapper/InfoTooltip'
-import { PendingSwapNotification } from './card-wrapper/PendingSwapNotification'
-import type { CardContainerSize, CardExpandedContextType, CardWrapperProps } from './CardWrapper.types'
-import {
-  MIN_SPIN_DURATION,
-  COLLAPSED_CARDS_STORAGE_KEY,
-  CONTAINER_QUERY_STYLE,
-  DEFAULT_SNOOZE_MS,
-  LAST_UPDATED_TICK_MS,
-  COLLAPSE_DELAY_MS,
-  LARGE_EXPANDED_CARDS,
-  FULLSCREEN_EXPANDED_CARDS,
-} from './CardWrapper.constants'
+import { CardHeader } from './CardHeader'
+import { CardFooter } from './CardFooter'
+import { CardErrorBoundary } from './CardErrorBoundary'
+import { useResizeHandle, type CardContainerSize } from './ResizeHandle'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = safeLazy(() => import('../widgets/WidgetExportModal'), 'WidgetExportModal')
 // Lazy-load the feedback modal (~67 KB) — only loaded when user clicks bug report
 const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestModal'), 'FeatureRequestModal')
 
+
+// Minimum duration to show spin animation (ensures at least one full rotation)
+const CARD_REFRESH_SPINNER_MAX_AGE_MS = 500
+const MIN_SPIN_DURATION = CARD_REFRESH_SPINNER_MAX_AGE_MS
+const COLLAPSED_CARDS_STORAGE_KEY = 'kubestellar-collapsed-cards'
+
+/** CSS container query style for card content responsive breakpoints */
+const CONTAINER_QUERY_STYLE = { containerType: 'inline-size' } as const
+
+/** Default snooze duration for card swaps */
+const DEFAULT_SNOOZE_MS = MS_PER_HOUR
+
+// ---------------------------------------------------------------------------
+// Relative-time formatting for the card header "last updated" label.
+// ---------------------------------------------------------------------------
+/**
+ * Re-render interval for the "last updated" label in ms. When SSE refresh
+ * fails, the card's lastUpdated prop is frozen at the last successful fetch,
+ * so without this ticker the label would render "5d ago" forever (#9104).
+ * One minute is enough resolution for an "Xm/Xh/Xd" label and is cheap.
+ */
+const LAST_UPDATED_TICK_MS = 60_000
+const COLLAPSE_DELAY_MS = 300
+
+// Cards that need extra-large expanded modal (for maps, complex visualizations, etc.)
+// These use 95vh height and 7xl width instead of the default 80vh/4xl
+const LARGE_EXPANDED_CARDS = new Set([
+  'cluster_comparison',
+  'cluster_resource_tree',
+  // AI-ML cards that need more space when expanded
+  'kvcache_monitor',
+  'pd_disaggregation',
+  'llmd_ai_insights',
+])
+
+// Cards that should be nearly fullscreen when expanded (maps, large visualizations, games)
+const FULLSCREEN_EXPANDED_CARDS = new Set([
+  'cluster_locations',
+  'mobile_browser', // Shows iPad view when expanded
+  // AI-ML visualization cards benefit from full viewport
+  'llmd_flow', 'epp_routing',
+  // All arcade games need fullscreen to fill the entire screen
+  'sudoku_game', 'container_tetris', 'node_invaders', 'kube_snake',
+  'flappy_pod', 'kube_pong', 'kube_kong', 'game_2048', 'kube_man',
+  'kube_galaga', 'kube_chess', 'checkers', 'pod_crosser', 'pod_brothers',
+  'pod_pitfall', 'match_game', 'solitaire', 'kubedle', 'pod_sweeper',
+  'kube_doom', 'kube_kart',
+])
+
+// Context to expose card expanded state to children
+interface CardExpandedContextType {
+  isExpanded: boolean
+  /** Live dimensions of the expanded modal content container (0x0 when collapsed) */
+  containerSize: CardContainerSize
+}
 const CardExpandedContext = createContext<CardExpandedContextType>({
   isExpanded: false,
   containerSize: { width: 0, height: 0 } })
@@ -86,10 +131,75 @@ function useLazyMount(_rootMargin = '100px') {
   return { ref, isVisible }
 }
 
+/** Flash type for significant data changes */
+export type CardFlashType = 'none' | 'info' | 'warning' | 'error'
+
+interface PendingSwap {
+  newType: string
+  newTitle?: string
+  reason: string
+  swapAt: Date
+}
+
+interface CardWrapperProps {
+  cardId?: string
+  cardType: string
+  title?: string
+  /** Icon to display next to the card title */
+  icon?: ComponentType<{ className?: string }>
+  /** Icon color class (e.g., 'text-purple-400') - defaults to title color */
+  iconColor?: string
+  lastSummary?: string
+  pendingSwap?: PendingSwap
+  chatMessages?: ChatMessage[]
+  dragHandle?: ReactNode
+  /** Whether the card is currently refreshing data */
+  isRefreshing?: boolean
+  /** Last time the card data was updated */
+  lastUpdated?: Date | null
+  /** Whether this card uses demo/mock data instead of real data */
+  isDemoData?: boolean
+  /** Whether this card is showing live/real-time data (for time-series/trend cards) */
+  isLive?: boolean
+  /** Force live mode — suppress demo badge even when global demo mode is on.
+   *  Used by GPU Reservations when running in-cluster with OAuth. */
+  forceLive?: boolean
+  /** Whether data refresh has failed 3+ times consecutively */
+  isFailed?: boolean
+  /** Number of consecutive refresh failures */
+  consecutiveFailures?: number
+  /** Current card width in grid columns (1-12) */
+  cardWidth?: number
+  /** Whether the card is collapsed (showing only header) */
+  isCollapsed?: boolean
+  /** Flash animation type when significant data changes occur */
+  flashType?: CardFlashType
+  /** Callback when collapsed state changes */
+  onCollapsedChange?: (collapsed: boolean) => void
+  onSwap?: (newType: string) => void
+  onSwapCancel?: () => void
+  onConfigure?: () => void
+  onRemove?: () => void
+  onRefresh?: () => void
+  /** Callback when card width is changed */
+  onWidthChange?: (newWidth: number) => void
+  /** Current card height in grid row spans */
+  cardHeight?: number
+  /** Callback when card height is changed */
+  onHeightChange?: (newHeight: number) => void
+  onChatMessage?: (message: string) => Promise<ChatMessage>
+  onChatMessagesChange?: (messages: ChatMessage[]) => void
+  /** Skeleton type to show when loading with no cached data */
+  skeletonType?: CardSkeletonProps['type']
+  /** Number of skeleton rows to show */
+  skeletonRows?: number
+  /** Register a callback to expand the card programmatically (keyboard nav) */
+  registerExpandTrigger?: (expand: () => void) => void
+  children: ReactNode
+}
+
 // Re-export for backwards compatibility — data now lives in cardMetadata.ts and cardIcons.ts
 export { CARD_TITLES, CARD_DESCRIPTIONS } from './cardMetadata'
-// Re-export types so existing importers of CardWrapper don't need to change
-export type { CardContainerSize, CardFlashType } from './CardWrapper.types'
 
 export const CardWrapper = memo(function CardWrapper({
   cardId,
@@ -129,27 +239,7 @@ export const CardWrapper = memo(function CardWrapper({
   const { t } = useTranslation(['cards', 'common'])
   const { setFullScreen } = useMissions()
   const [isExpanded, setIsExpanded] = useState(false)
-  /** Live container dimensions for expanded modal — games use this to scale their boards */
-  const [containerSize, setContainerSize] = useState<CardContainerSize>({ width: 0, height: 0 })
-  const expandedContentRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!isExpanded) {
-      setContainerSize({ width: 0, height: 0 })
-      return
-    }
-    const el = expandedContentRef.current
-    if (!el) return
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const w = Math.round(entry.contentRect.width)
-        const h = Math.round(entry.contentRect.height)
-        // Only update when dimensions actually change to avoid unnecessary rerenders
-        setContainerSize(prev => (prev.width === w && prev.height === h) ? prev : { width: w, height: h })
-      }
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [isExpanded])
+  const { containerSize, expandedContentRef } = useResizeHandle(isExpanded)
   const { isOpen: showBugReport, open: openBugReport, close: closeBugReport } = useModal()
   const { isOpen: showWidgetExport, open: openWidgetExport, close: closeWidgetExport } = useModal()
 
@@ -572,47 +662,39 @@ export const CardWrapper = memo(function CardWrapper({
             onMouseEnter={() => setShowSummary(true)}
             onMouseLeave={() => setShowSummary(false)}
           >
-            {/* Header */}
-            <div data-tour="card-header" className="flex flex-wrap items-center justify-between gap-y-2 border-b border-border/50 px-4 py-3">
-              <div className="flex min-w-0 items-center gap-2">
-                {dragHandle}
-                {ResolvedIcon && <ResolvedIcon className={cn('h-4 w-4 shrink-0', resolvedIconColor)} />}
-                <h2 className="truncate text-sm font-medium text-foreground">{title}</h2>
-                <InfoTooltip text={description || t('messages.descriptionComingSoon', { title })} />
-                <CardMeta
-                  showDemoIndicator={showDemoIndicator}
-                  isDemoData={effectiveIsDemoData}
-                  isLive={isLive}
-                  isFailed={effectiveIsFailed}
-                  consecutiveFailures={effectiveConsecutiveFailures}
-                  showRefreshIndicator={showHeaderRefreshIndicator}
-                  isLoading={effectiveIsLoading}
-                  isVisuallySpinning={isVisuallySpinning}
-                  lastUpdated={effectiveLastUpdated}
-                />
-              </div>
-              <CardToolbar
-                title={title}
-                isCollapsed={isCollapsed}
-                onToggleCollapse={handleToggleCollapse}
-                onRefresh={onRefresh ? handleRefresh : undefined}
-                isRefreshDisabled={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
-                isRefreshSpinning={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
-                isFailed={effectiveIsFailed}
-                consecutiveFailures={effectiveConsecutiveFailures}
-                onExpandFullscreen={handleExpandFullscreen}
-                onOpenBugReport={handleOpenBugReport}
-                cardId={cardId}
-                cardType={cardType}
-                cardWidth={cardWidth}
-                cardHeight={cardHeight}
-                onConfigure={onConfigure}
-                onRemove={onRemove}
-                onWidthChange={onWidthChange}
-                onHeightChange={onHeightChange}
-                onShowWidgetExport={openWidgetExport}
-              />
-            </div>
+            <CardHeader
+              dragHandle={dragHandle}
+              resolvedIcon={ResolvedIcon}
+              resolvedIconColor={resolvedIconColor}
+              title={title}
+              description={description}
+              t={t}
+              showDemoIndicator={showDemoIndicator}
+              effectiveIsDemoData={effectiveIsDemoData}
+              isLive={isLive}
+              effectiveIsFailed={effectiveIsFailed}
+              effectiveConsecutiveFailures={effectiveConsecutiveFailures}
+              showHeaderRefreshIndicator={showHeaderRefreshIndicator}
+              effectiveIsLoading={effectiveIsLoading}
+              isVisuallySpinning={isVisuallySpinning}
+              effectiveLastUpdated={effectiveLastUpdated}
+              isCollapsed={isCollapsed}
+              onToggleCollapse={handleToggleCollapse}
+              onRefresh={onRefresh ? handleRefresh : undefined}
+              isRefreshDisabled={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
+              isRefreshSpinning={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
+              onExpandFullscreen={handleExpandFullscreen}
+              onOpenBugReport={handleOpenBugReport}
+              cardId={cardId}
+              cardType={cardType}
+              cardWidth={cardWidth}
+              cardHeight={cardHeight}
+              onConfigure={onConfigure}
+              onRemove={onRemove}
+              onWidthChange={onWidthChange}
+              onHeightChange={onHeightChange}
+              onShowWidgetExport={openWidgetExport}
+            />
 
             <CardFailureBanner
               cardType={cardType}
@@ -657,36 +739,21 @@ export const CardWrapper = memo(function CardWrapper({
               </div>
             )}
 
-            {/* Demo-mode install CTA — rendered OUTSIDE the scroll container
-                so it is a pinned card footer on every card. Inside the
-                scroller it sat at the flex-box boundary, which put it
-                mid-card whenever content overflowed (min-h-card) and made
-                it scroll with the data on some cards but not others. */}
-            {!isCollapsed && showInstallCta && (
-              <div className="shrink-0 px-4 pb-2">
-                <InstallCTAFlow cardType={cardType} title={title} />
-              </div>
-            )}
-
-            {/* Pending swap notification - hidden when collapsed */}
-            {!isCollapsed && pendingSwap && (
-              <PendingSwapNotification
-                pendingSwap={pendingSwap}
-                newTitle={newTitle}
-                onSnooze={handleSnooze}
-                onSwapNow={handleSwapNow}
-                onCancel={() => onSwapCancel?.()}
-                defaultSnoozeDurationMs={DEFAULT_SNOOZE_MS}
-              />
-            )}
-
-            {/* Hover summary */}
-            {showSummary && lastSummary && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 mx-4 p-3 glass rounded-lg text-sm animate-fade-in-up">
-                <p className="text-xs text-muted-foreground mb-1">{t('common:labels.sinceFocus')}</p>
-                <p className="text-foreground">{lastSummary}</p>
-              </div>
-            )}
+            <CardFooter
+              isCollapsed={isCollapsed}
+              showInstallCta={showInstallCta}
+              cardType={cardType}
+              title={title}
+              pendingSwap={pendingSwap}
+              newTitle={newTitle}
+              defaultSnoozeDurationMs={DEFAULT_SNOOZE_MS}
+              onSnooze={handleSnooze}
+              onSwapNow={handleSwapNow}
+              onSwapCancel={onSwapCancel}
+              showSummary={showSummary}
+              lastSummary={lastSummary}
+              summaryLabel={t('common:labels.sinceFocus')}
+            />
           </div>
           </div>{/* Close outer wrapper for demo corner brackets */}
 
@@ -716,11 +783,9 @@ export const CardWrapper = memo(function CardWrapper({
                   : 'max-h-[calc(80vh-80px)]'
             )}>
               {/* Wrapper ensures children fill available space in expanded mode */}
-              <div ref={expandedContentRef} className="flex flex-1 min-h-0 flex-col">
-                <CardErrorFallback cardId={cardId || cardType}>
-                  {children}
-                </CardErrorFallback>
-              </div>
+              <CardErrorBoundary containerRef={expandedContentRef} cardId={cardId || cardType}>
+                {children}
+              </CardErrorBoundary>
             </BaseModal.Content>
           </BaseModal>
 
