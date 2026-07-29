@@ -1,1 +1,238 @@
-aW1wb3J0IHsgQWxlcnRUcmlhbmdsZSwgQ2hldnJvbkRvd24sIENoZXZyb25SaWdodCwgU2Npc3NvcnMsIFNlcnZlciB9IGZyb20gJ2x1Y2lkZS1yZWFjdCcKaW1wb3J0IHR5cGUgeyBURnVuY3Rpb24gfSBmcm9tICdpMThuZXh0JwppbXBvcnQgeyBsb2FkTWlzc2lvblByb21wdCB9IGZyb20gJy4uL2NhcmRzL211bHRpLXRlbmFuY3kvbWlzc2lvbkxvYWRlcicKaW1wb3J0IHsgRmlsdGVyVGFicywgQ2x1c3RlckdyaWQgfSBmcm9tICcuL2NvbXBvbmVudHMnCmltcG9ydCB7IEVtcHR5Q2x1c3RlclN0YXRlIH0gZnJvbSAnLi9FbXB0eUNsdXN0ZXJTdGF0ZScKaW1wb3J0IHsgQ2x1c3Rlckdyb3Vwc1NlY3Rpb24gfSBmcm9tICcuL0NsdXN0ZXJHcm91cHNTZWN0aW9uJwppbXBvcnQgeyBDbHVzdGVyQ2FyZFNrZWxldG9uIH0gZnJvbSAnLi4vdWkvQ2x1c3RlckNhcmRTa2VsZXRvbicKaW1wb3J0IHsgcmVmcmVzaFNpbmdsZUNsdXN0ZXIgfSBmcm9tICcuLi8uLi9ob29rcy91c2VNQ1AnCmltcG9ydCB7IGlzSW5DbHVzdGVyTW9kZSB9IGZyb20gJy4uLy4uL2hvb2tzL3VzZUJhY2tlbmRIZWFsdGgnCmltcG9ydCB0eXBlIHsgQ2x1c3RlckluZm8gfSBmcm9tICcuLi8uLi9ob29rcy9tY3AvdHlwZXMnCmltcG9ydCB0eXBlIHsgR1BVQnlDbHVzdGVyLCBDbHVzdGVyU3RhdHMgfSBmcm9tICcuL3VzZUNsdXN0ZXJTdGF0cycKaW1wb3J0IHR5cGUgeyBDbHVzdGVySGVhbHRoRmlsdGVyLCBDbHVzdGVyU29ydEZpZWxkIH0gZnJvbSAnLi91c2VDbHVzdGVyVmlld1N0YXRlJwppbXBvcnQgdHlwZSB7IENsdXN0ZXJMYXlvdXRNb2RlIH0gZnJvbSAnLi9jb21wb25lbnRzJwppbXBvcnQgdHlwZSB7IENsdXN0ZXJHcm91cCB9IGZyb20gJy4uLy4uL2hvb2tzL3VzZUdsb2JhbEZpbHRlcnMnCmltcG9ydCB0eXBlIHsgU3RhcnRNaXNzaW9uUGFyYW1zIH0gZnJvbSAnLi4vLi4vaG9va3MvdXNlTWlzc2lvbnMudHlwZXMnCgpjb25zdCBBSV9DTFVTVEVSX0NSRUFUSU9OX0NPTlRFWFQgPSB7CiAgYWxsb3dNaXNzaW5nTG9jYWxUb29sczogdHJ1ZSwKICBza2lwQ2x1c3RlclByZWZsaWdodDogdHJ1ZSwKICBtaXNzaW9uRmxvdzogJ2NsdXN0ZXItY3JlYXRpb24nLAp9CgpleHBvcnQgaW50ZXJmYWNlIENsdXN0ZXJzQmVmb3JlQ2FyZHNQcm9wcyB7CiAgY2x1c3RlcnM6IENsdXN0ZXJJbmZvW10KICBmaWx0ZXJlZENsdXN0ZXJzOiBDbHVzdGVySW5mb1tdCiAgc3RhdHM6IENsdXN0ZXJTdGF0cwogIGNsdXN0ZXJHcm91bmR0cnV0aEZpZWxkczogUmVjb3JkPHN0cmluZywgbnVtYmVyPgogIHNob3dDbHVzdGVyR3JpZDogYm9vbGVhbgogIHNldFNob3dDbHVzdGVyR3JpZDogKHY6IGJvb2xlYW4pID0+IHZvaWQKICBzaG93U2tlbGV0b25Db250ZW50OiBib29sZWFuCiAgZmlsdGVyOiBDbHVzdGVySGVhbHRoRmlsdGVyCiAgc2V0RmlsdGVyOiAoZjogQ2x1c3RlckhlYWx0aEZpbHRlcikgPT4gdm9pZAogIHNvcnRCeTogQ2x1c3RlclNvcnRGaWVsZAogIHNldFNvcnRCeTogKHM6IENsdXN0ZXJTb3J0RmllbGQpID0+IHZvaWQKICBzb3J0QXNjOiBib29sZWFuCiAgc2V0U29ydEFzYzogKHY6IGJvb2xlYW4pID0+IHZvaWQKICBsYXlvdXRNb2RlOiBDbHVzdGVyTGF5b3V0TW9kZQogIHNldExheW91dE1vZGU6IChtOiBDbHVzdGVyTGF5b3V0TW9kZSkgPT4gdm9pZAogIGdwdUJ5Q2x1c3RlcjogR1BVQnlDbHVzdGVyCiAgaXNDb25uZWN0ZWQ6IGJvb2xlYW4KICBpc0RlZ3JhZGVkOiBib29sZWFuCiAgaXNMb2FkaW5nOiBib29sZWFuCiAgcGVybWlzc2lvbnNMb2FkaW5nOiBib29sZWFuCiAgaXNDbHVzdGVyQWRtaW46IChjbHVzdGVyTmFtZTogc3RyaW5nKSA9PiBib29sZWFuCiAgY2x1c3Rlckdyb3VwczogQ2x1c3Rlckdyb3VwW10KICBhZGRDbHVzdGVyR3JvdXA6IChncm91cDogT21pdDxDbHVzdGVyR3JvdXAsICdpZCc+KSA9PiB2b2lkCiAgZGVsZXRlQ2x1c3Rlckdyb3VwOiAoaWQ6IHN0cmluZykgPT4gdm9pZAogIHNlbGVjdENsdXN0ZXJHcm91cDogKGdyb3VwSWQ6IHN0cmluZykgPT4gdm9pZAogIHNldFNlbGVjdGVkQ2x1c3RlcjogKGM6IHN0cmluZyB8IG51bGwpID0+IHZvaWQKICBzZXRSZW5hbWluZ0NsdXN0ZXI6IChjOiBzdHJpbmcgfCBudWxsKSA9PiB2b2lkCiAgc2V0UmVtb3ZpbmdDbHVzdGVyOiAoYzogc3RyaW5nIHwgbnVsbCkgPT4gdm9pZAogIGhhbmRsZVJlb3JkZXI6IChvcmRlcjogc3RyaW5nW10pID0+IHZvaWQKICBzZXRTaG93QWRkQ2x1c3RlcjogKHY6IGJvb2xlYW4pID0+IHZvaWQKICBwcnVuZUNoZWNrS2V5QW5kUnVuOiAoZm46ICgpID0+IHZvaWQgfCBQcm9taXNlPHZvaWQ+KSA9PiB2b2lkCiAgY3JlYXRlQ2hlY2tLZXlBbmRSdW46IChmbjogKCkgPT4gdm9pZCB8IFByb21pc2U8dm9pZD4pID0+IHZvaWQKICBzdGFydE1pc3Npb246IChwYXJhbXM6IFN0YXJ0TWlzc2lvblBhcmFtcykgPT4gc3RyaW5nCiAgb3BlblNpZGViYXI6ICgpID0+IHZvaWQKICB0OiBURnVuY3Rpb24KfQoKLyoqCiAqIFJlbmRlcnMgdGhlICJiZWZvcmUgY2FyZHMiIHJlZ2lvbiBvZiB0aGUgQ2x1c3RlcnMgcGFnZToKICogIC0gQWNjZXNzaWJpbGl0eSBncm91bmR0cnV0aCBmaWVsZHMKICogIC0gU3RhbGUga3ViZWNvbmZpZyBjb250ZXh0cyB3YXJuaW5nIGJhbm5lcgogKiAgLSBDb2xsYXBzaWJsZSBjbHVzdGVyIGluZm8gY2FyZHMgc2VjdGlvbiAoRmlsdGVyVGFicyArIENsdXN0ZXJHcmlkIC8gRW1wdHlTdGF0ZSAvIHNrZWxldG9uKQogKiAgLSBDbHVzdGVyIGdyb3VwcyBzZWN0aW9uCiAqCiAqIEV4dHJhY3RlZCBmcm9tIENsdXN0ZXJzLnRzeCAoIzIxODg2KSB0byByZWR1Y2UgdGhlIGNvbXBvbmVudCdzIGxpbmUgY291bnQuCiAqIEFsbCBsb2dpYyBsaXZlcyBpbiB1c2VDbHVzdGVyc1ZpZXc7IHRoaXMgY29tcG9uZW50IGlzIHB1cmVseSBwcmVzZW50YXRpb25hbC4KICovCmV4cG9ydCBmdW5jdGlvbiBDbHVzdGVyc0JlZm9yZUNhcmRzKHsKICBjbHVzdGVycywKICBmaWx0ZXJlZENsdXN0ZXJzLAogIHN0YXRzLAogIGNsdXN0ZXJHcm91bmR0cnV0aEZpZWxkcywKICBzaG93Q2x1c3RlckdyaWQsCiAgc2V0U2hvd0NsdXN0ZXJHcmlkLAogIHNob3dTa2VsZXRvbkNvbnRlbnQsCiAgZmlsdGVyLAogIHNldEZpbHRlciwKICBzb3J0QnksCiAgc2V0U29ydEJ5LAogIHNvcnRBc2MsCiAgc2V0U29ydEFzYywKICBsYXlvdXRNb2RlLAogIHNldExheW91dE1vZGUsCiAgZ3B1QnlDbHVzdGVyLAogIGlzQ29ubmVjdGVkLAogIGlzRGVncmFkZWQsCiAgaXNMb2FkaW5nLAogIHBlcm1pc3Npb25zTG9hZGluZywKICBpc0NsdXN0ZXJBZG1pbiwKICBjbHVzdGVyR3JvdXBzLAogIGFkZENsdXN0ZXJHcm91cCwKICBkZWxldGVDbHVzdGVyR3JvdXAsCiAgc2VsZWN0Q2x1c3Rlckdyb3VwLAogIHNldFNlbGVjdGVkQ2x1c3RlciwKICBzZXRSZW5hbWluZ0NsdXN0ZXIsCiAgc2V0UmVtb3ZpbmdDbHVzdGVyLAogIGhhbmRsZVJlb3JkZXIsCiAgc2V0U2hvd0FkZENsdXN0ZXIsCiAgcHJ1bmVDaGVja0tleUFuZFJ1biwKICBjcmVhdGVDaGVja0tleUFuZFJ1biwKICBzdGFydE1pc3Npb24sCiAgb3BlblNpZGViYXIsCiAgdCwKfTogQ2x1c3RlcnNCZWZvcmVDYXJkc1Byb3BzKSB7CiAgcmV0dXJuICgKICAgIDw+CiAgICAgIHtPYmplY3QuZW50cmllcyhjbHVzdGVyR3JvdW5kdHJ1dGhGaWVsZHMpLm1hcCgoW2ZpZWxkLCB2YWx1ZV0pID0+ICgKICAgICAgICA8c3BhbiBrZXk9e2ZpZWxkfSBjbGFzc05hbWU9InNyLW9ubHkiIGRhdGEtZ3JvdW5kdHJ1dGgtZmllbGQ9e2ZpZWxkfT4KICAgICAgICAgIHt2YWx1ZX0KICAgICAgICA8L3NwYW4+CiAgICAgICkpfQoKICAgICAgey8qIFN0YWxlIEt1YmVjb25maWcgQ29udGV4dHMgQmFubmVyICovfQogICAgICB7c3RhdHMuc3RhbGVDb250ZXh0cyA+IDAgJiYgKAogICAgICAgIDxkaXYgY2xhc3NOYW1lPSJtYi00IGZsZXggaXRlbXMtY2VudGVyIGdhcC0zIHB4LTQgcHktMyByb3VuZGVkLWxnIGJvcmRlciBiZy15ZWxsb3ctNTAwLzEwIGJvcmRlci15ZWxsb3ctNTAwLzIwIHRleHQteWVsbG93LTMwMCI+CiAgICAgICAgICA8QWxlcnRUcmlhbmdsZSBjbGFzc05hbWU9InctNCBoLTQgc2hyaW5rLTAiIC8+CiAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9InRleHQtc20gZmxleC0xIj4KICAgICAgICAgICAge3N0YXRzLnN0YWxlQ29udGV4dHN9IGt1YmVjb25maWcgY29udGV4dHtzdGF0cy5zdGFsZUNvbnRleHRzID4gMSA/ICdzJyA6ICcnfSBuZXZlciBjb25uZWN0ZWQg4oCUIHRoZXNlIG1heSBiZSBkZWxldGVkIGNsdXN0ZXJzLgogICAgICAgICAgPC9zcGFuPgogICAgICAgICAgPGJ1dHRvbgogICAgICAgICAgICBvbkNsaWNrPXsoKSA9PiB7CiAgICAgICAgICAgICAgcHJ1bmVDaGVja0tleUFuZFJ1bihhc3luYyAoKSA9PiB7CiAgICAgICAgICAgICAgICBjb25zdCBwcm9tcHQgPSBhd2FpdCBsb2FkTWlzc2lvblByb21wdCgKICAgICAgICAgICAgICAgICAgJ2t1YmVjb25maWctcHJ1bmUnLAogICAgICAgICAgICAgICAgICAnQmFjayB1cCBteSBrdWJlY29uZmlnIHRvIGEgdGltZXN0YW1wZWQgZmlsZSwgdGVzdCBlYWNoIGNvbnRleHQgZm9yIHJlYWNoYWJpbGl0eSwgc2hvdyBtZSB3aGljaCBhcmUgc3RhbGUsIGFzayBmb3IgY29uZmlybWF0aW9uLCB0aGVuIHJlbW92ZSB0aGUgc3RhbGUgb25lcy4gVGVsbCBtZSB0aGUgYmFja3VwIGZpbGUgcGF0aC4nLAogICAgICAgICAgICAgICAgKQogICAgICAgICAgICAgICAgc3RhcnRNaXNzaW9uKHsKICAgICAgICAgICAgICAgICAgdGl0bGU6ICdQcnVuZSBTdGFsZSBLdWJlY29uZmlnIENvbnRleHRzJywKICAgICAgICAgICAgICAgICAgZGVzY3JpcHRpb246ICdTYWZlbHkgY2xlYW4gdXAga3ViZWNvbmZpZyBieSByZW1vdmluZyBlbnRyaWVzIGZvciBjbHVzdGVycyB0aGF0IG5vIGxvbmdlciBleGlzdCcsCiAgICAgICAgICAgICAgICAgIHR5cGU6ICdyZXBhaXInLAogICAgICAgICAgICAgICAgICBpbml0aWFsUHJvbXB0OiBwcm9tcHQsCiAgICAgICAgICAgICAgICB9KQogICAgICAgICAgICAgIH0pCiAgICAgICAgICAgIH19CiAgICAgICAgICAgIGNsYXNzTmFtZT0iZmxleCBpdGVtcy1jZW50ZXIgZ2FwLTEuNSBweC0zIHB5LTEuNSByb3VuZGVkLWxnIGJnLXllbGxvdy01MDAvMjAgdGV4dC15ZWxsb3ctMzAwIHRleHQteHMgZm9udC1tZWRpdW0gaG92ZXI6YmcteWVsbG93LTUwMC8zMCB0cmFuc2l0aW9uLWNvbG9ycyB3aGl0ZXNwYWNlLW5vd3JhcCIKICAgICAgICAgID4KICAgICAgICAgICAgPFNjaXNzb3JzIGNsYXNzTmFtZT0idy0zLjUgaC0zLjUiIC8+CiAgICAgICAgICAgIFBydW5lIEt1YmVjb25maWcKICAgICAgICAgIDwvYnV0dG9uPgogICAgICAgIDwvZGl2PgogICAgICApfQoKICAgICAgey8qIENsdXN0ZXIgSW5mbyBDYXJkcyDigJQgY29sbGFwc2libGUgKi99CiAgICAgIDxkaXYgY2xhc3NOYW1lPSJtYi02Ij4KICAgICAgICA8YnV0dG9uCiAgICAgICAgICBvbkNsaWNrPXsoKSA9PiBzZXRTaG93Q2x1c3RlckdyaWQoIXNob3dDbHVzdGVyR3JpZCl9CiAgICAgICAgICBjbGFzc05hbWU9ImZsZXggaXRlbXMtY2VudGVyIGdhcC0yIHRleHQtc20gZm9udC1tZWRpdW0gdGV4dC1tdXRlZC1mb3JlZ3JvdW5kIGhvdmVyOnRleHQtZm9yZWdyb3VuZCB0cmFuc2l0aW9uLWNvbG9ycyBtYi0zIgogICAgICAgID4KICAgICAgICAgIDxTZXJ2ZXIgY2xhc3NOYW1lPSJ3LTQgaC00IiAvPgogICAgICAgICAgPHNwYW4+Q2x1c3RlciBJbmZvIENhcmRzIHtzaG93U2tlbGV0b25Db250ZW50ID8gJycgOiBgKCR7ZmlsdGVyZWRDbHVzdGVycy5sZW5ndGh9KWB9PC9zcGFuPgogICAgICAgICAge3Nob3dDbHVzdGVyR3JpZCA/IDxDaGV2cm9uRG93biBjbGFzc05hbWU9InctNCBoLTQiIC8+IDogPENoZXZyb25SaWdodCBjbGFzc05hbWU9InctNCBoLTQiIC8+fQogICAgICAgIDwvYnV0dG9uPgoKICAgICAgICB7c2hvd0NsdXN0ZXJHcmlkICYmICgKICAgICAgICAgIHNob3dTa2VsZXRvbkNvbnRlbnQgPyAoCiAgICAgICAgICAgIDw+CiAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9ImZsZXggZ2FwLTIgbWItNCI+CiAgICAgICAgICAgICAgICB7Wy4uLkFycmF5KDQpXS5tYXAoKF8sIGkpID0+ICgKICAgICAgICAgICAgICAgICAgPGRpdiBrZXk9e2l9IGNsYXNzTmFtZT0iaC04IHctMjQgYmctc2Vjb25kYXJ5LzYwIHJvdW5kZWQtbGcgYW5pbWF0ZS1wdWxzZSIgLz4KICAgICAgICAgICAgICAgICkpfQogICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPSJncmlkIGdyaWQtY29scy0xIG1kOmdyaWQtY29scy0yIGxnOmdyaWQtY29scy0zIGdhcC00Ij4KICAgICAgICAgICAgICAgIHtbLi4uQXJyYXkoMyldLm1hcCgoXywgaSkgPT4gKAogICAgICAgICAgICAgICAgICA8Q2x1c3RlckNhcmRTa2VsZXRvbiBrZXk9e2l9IC8+CiAgICAgICAgICAgICAgICApKX0KICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgPC8+CiAgICAgICAgICApIDogKAogICAgICAgICAgICA8PgogICAgICAgICAgICAgIDxGaWx0ZXJUYWJzCiAgICAgICAgICAgICAgICBzdGF0cz17c3RhdHN9CiAgICAgICAgICAgICAgICBmaWx0ZXI9e2ZpbHRlcn0KICAgICAgICAgICAgICAgIG9uRmlsdGVyQ2hhbmdlPXtzZXRGaWx0ZXJ9CiAgICAgICAgICAgICAgICBzb3J0Qnk9e3NvcnRCeX0KICAgICAgICAgICAgICAgIG9uU29ydEJ5Q2hhbmdlPXtzZXRTb3J0Qnl9CiAgICAgICAgICAgICAgICBzb3J0QXNjPXtzb3J0QXNjfQogICAgICAgICAgICAgICAgb25Tb3J0QXNjQ2hhbmdlPXtzZXRTb3J0QXNjfQogICAgICAgICAgICAgICAgbGF5b3V0TW9kZT17bGF5b3V0TW9kZX0KICAgICAgICAgICAgICAgIG9uTGF5b3V0TW9kZUNoYW5nZT17c2V0TGF5b3V0TW9kZX0KICAgICAgICAgICAgICAgIG9uQWRkQ2x1c3Rlcj17KCkgPT4gc2V0U2hvd0FkZENsdXN0ZXIodHJ1ZSl9CiAgICAgICAgICAgICAgICBvbkNyZWF0ZUNsdXN0ZXJXaXRoQUk9eygpID0+IHsKICAgICAgICAgICAgICAgICAgY3JlYXRlQ2hlY2tLZXlBbmRSdW4oYXN5bmMgKCkgPT4gewogICAgICAgICAgICAgICAgICAgIGNvbnN0IHByb21wdCA9IGF3YWl0IGxvYWRNaXNzaW9uUHJvbXB0KAogICAgICAgICAgICAgICAgICAgICAgJ2NyZWF0ZS1jbHVzdGVyJywKICAgICAgICAgICAgICAgICAgICAgICdIZWxwIG1lIGNyZWF0ZSBhIG5ldyBLdWJlcm5ldGVzIGNsdXN0ZXIuIEFzayBtZSBhYm91dCB0aGUgcHJvdmlkZXIgKGtpbmQsIGszZCwgRUtTLCBHS0UsIEFLUywgT3BlblNoaWZ0KSwgY2x1c3RlciBuYW1lLCBub2RlIGNvdW50LCBhbmQgS3ViZXJuZXRlcyB2ZXJzaW9uLiBUaGVuIGdlbmVyYXRlIGFuZCBleGVjdXRlIHRoZSBhcHByb3ByaWF0ZSBjb21tYW5kcyB0byBjcmVhdGUgdGhlIGNsdXN0ZXIgYW5kIGFkZCBpdCB0byBteSBrdWJlY29uZmlnLicsCiAgICAgICAgICAgICAgICAgICAgKQogICAgICAgICAgICAgICAgICAgIHN0YXJ0TWlzc2lvbih7CiAgICAgICAgICAgICAgICAgICAgICB0aXRsZTogdCgnY2x1c3Rlci5jcmVhdGVDbHVzdGVyV2l0aEFJJyksCiAgICAgICAgICAgICAgICAgICAgICBkZXNjcmlwdGlvbjogJ0FJLWd1aWRlZCBjbHVzdGVyIGNyZWF0aW9uIGFjcm9zcyBhbnkgcHJvdmlkZXInLAogICAgICAgICAgICAgICAgICAgICAgdHlwZTogJ2RlcGxveScsCiAgICAgICAgICAgICAgICAgICAgICBpbml0aWFsUHJvbXB0OiBwcm9tcHQsCiAgICAgICAgICAgICAgICAgICAgICBjb250ZXh0OiBBSV9DTFVTVEVSX0NSRUFUSU9OX0NPTlRFWFQsCiAgICAgICAgICAgICAgICAgICAgfSkKICAgICAgICAgICAgICAgICAgICBvcGVuU2lkZWJhcigpCiAgICAgICAgICAgICAgICAgIH0pCiAgICAgICAgICAgICAgICB9fQogICAgICAgICAgICAgIC8+CiAgICAgICAgICAgICAge2ZpbHRlcmVkQ2x1c3RlcnMubGVuZ3RoID09PSAwICYmICFpc0xvYWRpbmcgJiYgIXNob3dTa2VsZXRvbkNvbnRlbnQgPyAoCiAgICAgICAgICAgICAgICA8RW1wdHlDbHVzdGVyU3RhdGUKICAgICAgICAgICAgICAgICAgb25BZGRDbHVzdGVyPXsoKSA9PiBzZXRTaG93QWRkQ2x1c3Rlcih0cnVlKX0KICAgICAgICAgICAgICAgICAgYWdlbnRDb25uZWN0ZWQ9e2lzQ29ubmVjdGVkfQogICAgICAgICAgICAgICAgICBhZ2VudERlZ3JhZGVkPXtpc0RlZ3JhZGVkfQogICAgICAgICAgICAgICAgICBpbkNsdXN0ZXJNb2RlPXtpc0luQ2x1c3Rlck1vZGUoKX0KICAgICAgICAgICAgICAgIC8+CiAgICAgICAgICAgICAgKSA6ICgKICAgICAgICAgICAgICAgIDxDbHVzdGVyR3JpZAogICAgICAgICAgICAgICAgICBjbHVzdGVycz17ZmlsdGVyZWRDbHVzdGVyc30KICAgICAgICAgICAgICAgICAgbGF5b3V0TW9kZT17bGF5b3V0TW9kZX0KICAgICAgICAgICAgICAgICAgZ3B1QnlDbHVzdGVyPXtncHVCeUNsdXN0ZXJ9CiAgICAgICAgICAgICAgICAgIGlzQ29ubmVjdGVkPXtpc0Nvbm5lY3RlZH0KICAgICAgICAgICAgICAgICAgcGVybWlzc2lvbnNMb2FkaW5nPXtwZXJtaXNzaW9uc0xvYWRpbmd9CiAgICAgICAgICAgICAgICAgIGlzQ2x1c3RlckFkbWluPXtpc0NsdXN0ZXJBZG1pbn0KICAgICAgICAgICAgICAgICAgb25TZWxlY3RDbHVzdGVyPXtzZXRTZWxlY3RlZENsdXN0ZXJ9CiAgICAgICAgICAgICAgICAgIG9uUmVuYW1lQ2x1c3Rlcj17c2V0UmVuYW1pbmdDbHVzdGVyfQogICAgICAgICAgICAgICAgICBvblJlZnJlc2hDbHVzdGVyPXtyZWZyZXNoU2luZ2xlQ2x1c3Rlcn0KICAgICAgICAgICAgICAgICAgb25SZW1vdmVDbHVzdGVyPXtzZXRSZW1vdmluZ0NsdXN0ZXJ9CiAgICAgICAgICAgICAgICAgIG9uUmVvcmRlcj17aGFuZGxlUmVvcmRlcn0KICAgICAgICAgICAgICAgIC8+CiAgICAgICAgICAgICAgKX0KICAgICAgICAgICAgPC8+CiAgICAgICAgICApCiAgICAgICAgKX0KICAgICAgPC9kaXY+CgogICAgICB7LyogQ2x1c3RlciBHcm91cHMgKi99CiAgICAgIDxDbHVzdGVyR3JvdXBzU2VjdGlvbgogICAgICAgIGNsdXN0ZXJzPXtjbHVzdGVyc30KICAgICAgICBjbHVzdGVyR3JvdXBzPXtjbHVzdGVyR3JvdXBzfQogICAgICAgIGFkZENsdXN0ZXJHcm91cD17YWRkQ2x1c3Rlckdyb3VwfQogICAgICAgIGRlbGV0ZUNsdXN0ZXJHcm91cD17ZGVsZXRlQ2x1c3Rlckdyb3VwfQogICAgICAgIHNlbGVjdENsdXN0ZXJHcm91cD17c2VsZWN0Q2x1c3Rlckdyb3VwfQogICAgICAvPgogICAgPC8+CiAgKQp9Cg==
+import { AlertTriangle, ChevronDown, ChevronRight, Scissors, Server } from 'lucide-react'
+import type { TFunction } from 'i18next'
+import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
+import { FilterTabs, ClusterGrid } from './components'
+import { EmptyClusterState } from './EmptyClusterState'
+import { ClusterGroupsSection } from './ClusterGroupsSection'
+import { ClusterCardSkeleton } from '../ui/ClusterCardSkeleton'
+import { refreshSingleCluster } from '../../hooks/useMCP'
+import { isInClusterMode } from '../../hooks/useBackendHealth'
+import type { ClusterInfo } from '../../hooks/mcp/types'
+import type { GPUByCluster, ClusterStats } from './useClusterStats'
+import type { ClusterHealthFilter, ClusterSortField } from './useClusterViewState'
+import type { ClusterLayoutMode } from './components'
+import type { ClusterGroup } from '../../hooks/useGlobalFilters'
+import type { StartMissionParams } from '../../hooks/useMissions.types'
+
+const AI_CLUSTER_CREATION_CONTEXT = {
+  allowMissingLocalTools: true,
+  skipClusterPreflight: true,
+  missionFlow: 'cluster-creation',
+}
+
+export interface ClustersBeforeCardsProps {
+  clusters: ClusterInfo[]
+  filteredClusters: ClusterInfo[]
+  stats: ClusterStats
+  clusterGroundtruthFields: Record<string, number>
+  showClusterGrid: boolean
+  setShowClusterGrid: (v: boolean) => void
+  showSkeletonContent: boolean
+  filter: ClusterHealthFilter
+  setFilter: (f: ClusterHealthFilter) => void
+  sortBy: ClusterSortField
+  setSortBy: (s: ClusterSortField) => void
+  sortAsc: boolean
+  setSortAsc: (v: boolean) => void
+  layoutMode: ClusterLayoutMode
+  setLayoutMode: (m: ClusterLayoutMode) => void
+  gpuByCluster: GPUByCluster
+  isConnected: boolean
+  isDegraded: boolean
+  isLoading: boolean
+  permissionsLoading: boolean
+  isClusterAdmin: (clusterName: string) => boolean
+  clusterGroups: ClusterGroup[]
+  addClusterGroup: (group: Omit<ClusterGroup, 'id'>) => void
+  deleteClusterGroup: (id: string) => void
+  selectClusterGroup: (groupId: string) => void
+  setSelectedCluster: (c: string | null) => void
+  setRenamingCluster: (c: string | null) => void
+  setRemovingCluster: (c: string | null) => void
+  handleReorder: (order: string[]) => void
+  setShowAddCluster: (v: boolean) => void
+  pruneCheckKeyAndRun: (fn: () => void | Promise<void>) => void
+  createCheckKeyAndRun: (fn: () => void | Promise<void>) => void
+  startMission: (params: StartMissionParams) => string
+  openSidebar: () => void
+  t: TFunction
+}
+
+/**
+ * Renders the "before cards" region of the Clusters page:
+ *  - Accessibility groundtruth fields
+ *  - Stale kubeconfig contexts warning banner
+ *  - Collapsible cluster info cards section (FilterTabs + ClusterGrid / EmptyState / skeleton)
+ *  - Cluster groups section
+ *
+ * Extracted from Clusters.tsx (#21886) to reduce the component's line count.
+ * All logic lives in useClustersView; this component is purely presentational.
+ */
+export function ClustersBeforeCards({
+  clusters,
+  filteredClusters,
+  stats,
+  clusterGroundtruthFields,
+  showClusterGrid,
+  setShowClusterGrid,
+  showSkeletonContent,
+  filter,
+  setFilter,
+  sortBy,
+  setSortBy,
+  sortAsc,
+  setSortAsc,
+  layoutMode,
+  setLayoutMode,
+  gpuByCluster,
+  isConnected,
+  isDegraded,
+  isLoading,
+  permissionsLoading,
+  isClusterAdmin,
+  clusterGroups,
+  addClusterGroup,
+  deleteClusterGroup,
+  selectClusterGroup,
+  setSelectedCluster,
+  setRenamingCluster,
+  setRemovingCluster,
+  handleReorder,
+  setShowAddCluster,
+  pruneCheckKeyAndRun,
+  createCheckKeyAndRun,
+  startMission,
+  openSidebar,
+  t,
+}: ClustersBeforeCardsProps) {
+  return (
+    <>
+      {Object.entries(clusterGroundtruthFields).map(([field, value]) => (
+        <span key={field} className="sr-only" data-groundtruth-field={field}>
+          {value}
+        </span>
+      ))}
+
+      {/* Stale Kubeconfig Contexts Banner */}
+      {stats.staleContexts > 0 && (
+        <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg border bg-yellow-500/10 border-yellow-500/20 text-yellow-300">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span className="text-sm flex-1">
+            {stats.staleContexts} kubeconfig context{stats.staleContexts > 1 ? 's' : ''} never connected — these may be deleted clusters.
+          </span>
+          <button
+            onClick={() => {
+              pruneCheckKeyAndRun(async () => {
+                const prompt = await loadMissionPrompt(
+                  'kubeconfig-prune',
+                  'Back up my kubeconfig to a timestamped file, test each context for reachability, show me which are stale, ask for confirmation, then remove the stale ones. Tell me the backup file path.',
+                )
+                startMission({
+                  title: 'Prune Stale Kubeconfig Contexts',
+                  description: 'Safely clean up kubeconfig by removing entries for clusters that no longer exist',
+                  type: 'repair',
+                  initialPrompt: prompt,
+                })
+              })
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-300 text-xs font-medium hover:bg-yellow-500/30 transition-colors whitespace-nowrap"
+          >
+            <Scissors className="w-3.5 h-3.5" />
+            Prune Kubeconfig
+          </button>
+        </div>
+      )}
+
+      {/* Cluster Info Cards — collapsible */}
+      <div className="mb-6">
+        <button
+          onClick={() => setShowClusterGrid(!showClusterGrid)}
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
+        >
+          <Server className="w-4 h-4" />
+          <span>Cluster Info Cards {showSkeletonContent ? '' : `(${filteredClusters.length})`}</span>
+          {showClusterGrid ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </button>
+
+        {showClusterGrid && (
+          showSkeletonContent ? (
+            <>
+              <div className="flex gap-2 mb-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-8 w-24 bg-secondary/60 rounded-lg animate-pulse" />
+                ))}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(3)].map((_, i) => (
+                  <ClusterCardSkeleton key={i} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <FilterTabs
+                stats={stats}
+                filter={filter}
+                onFilterChange={setFilter}
+                sortBy={sortBy}
+                onSortByChange={setSortBy}
+                sortAsc={sortAsc}
+                onSortAscChange={setSortAsc}
+                layoutMode={layoutMode}
+                onLayoutModeChange={setLayoutMode}
+                onAddCluster={() => setShowAddCluster(true)}
+                onCreateClusterWithAI={() => {
+                  createCheckKeyAndRun(async () => {
+                    const prompt = await loadMissionPrompt(
+                      'create-cluster',
+                      'Help me create a new Kubernetes cluster. Ask me about the provider (kind, k3d, EKS, GKE, AKS, OpenShift), cluster name, node count, and Kubernetes version. Then generate and execute the appropriate commands to create the cluster and add it to my kubeconfig.',
+                    )
+                    startMission({
+                      title: t('cluster.createClusterWithAI'),
+                      description: 'AI-guided cluster creation across any provider',
+                      type: 'deploy',
+                      initialPrompt: prompt,
+                      context: AI_CLUSTER_CREATION_CONTEXT,
+                    })
+                    openSidebar()
+                  })
+                }}
+              />
+              {filteredClusters.length === 0 && !isLoading && !showSkeletonContent ? (
+                <EmptyClusterState
+                  onAddCluster={() => setShowAddCluster(true)}
+                  agentConnected={isConnected}
+                  agentDegraded={isDegraded}
+                  inClusterMode={isInClusterMode()}
+                />
+              ) : (
+                <ClusterGrid
+                  clusters={filteredClusters}
+                  layoutMode={layoutMode}
+                  gpuByCluster={gpuByCluster}
+                  isConnected={isConnected}
+                  permissionsLoading={permissionsLoading}
+                  isClusterAdmin={isClusterAdmin}
+                  onSelectCluster={setSelectedCluster}
+                  onRenameCluster={setRenamingCluster}
+                  onRefreshCluster={refreshSingleCluster}
+                  onRemoveCluster={setRemovingCluster}
+                  onReorder={handleReorder}
+                />
+              )}
+            </>
+          )
+        )}
+      </div>
+
+      {/* Cluster Groups */}
+      <ClusterGroupsSection
+        clusters={clusters}
+        clusterGroups={clusterGroups}
+        addClusterGroup={addClusterGroup}
+        deleteClusterGroup={deleteClusterGroup}
+        selectClusterGroup={selectClusterGroup}
+      />
+    </>
+  )
+}
