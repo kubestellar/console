@@ -678,7 +678,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     isFiltered,
   })
 
-  const handleStartAnalysis = () => checkKeyAndRun(() => startMission(analysisMissionConfig))
+  const handleStartAnalysis = () => checkKeyAndRun(() => { startMission(analysisMissionConfig) })
 
   return (
     <div className="h-full flex flex-col relative">
