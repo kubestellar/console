@@ -1,4 +1,5 @@
 import { KeyboardEvent, RefObject } from 'react'
+import type { TFunction } from 'i18next'
 import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Terminal, Send, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
@@ -28,7 +29,7 @@ interface RemediationHeaderProps {
   resourceName: string
   onClose: () => void
   titleId: string
-  t: (key: string, opts?: Record<string, unknown>) => string
+  t: TFunction
 }
 
 export function RemediationHeader({ activeTab, resourceType, resourceName, onClose, titleId, t }: RemediationHeaderProps) {
@@ -70,9 +71,9 @@ interface RemediationTabsProps {
   tabListProps: TabKeyboardNav['tabListProps']
   getTabProps: TabKeyboardNav['getTabProps']
   setActiveTab: (tab: 'ai' | 'shell') => void
-  shellInputRef: RefObject<HTMLInputElement>
+  shellInputRef: RefObject<HTMLInputElement | null>
   focusDelayMs: number
-  t: (key: string) => string
+  t: TFunction
 }
 
 export function RemediationTabs({ activeTab, tabListProps, getTabProps, setActiveTab, shellInputRef, focusDelayMs, t }: RemediationTabsProps) {
@@ -116,8 +117,8 @@ interface RemediationAiOutputProps {
   logs: LogEntry[]
   isLoadingInitialData: boolean
   isRunning: boolean
-  logsEndRef: RefObject<HTMLDivElement>
-  t: (key: string) => string
+  logsEndRef: RefObject<HTMLDivElement | null>
+  t: TFunction
 }
 
 export function RemediationAiOutput({ logs, isLoadingInitialData, isRunning, logsEndRef, t }: RemediationAiOutputProps) {
@@ -200,8 +201,8 @@ interface RemediationShellOutputProps {
   quickCommands: Array<{ label: string; cmd: string }>
   executeCommand: (cmd: string) => void
   isExecuting: boolean
-  logsEndRef: RefObject<HTMLDivElement>
-  t: (key: string) => string
+  logsEndRef: RefObject<HTMLDivElement | null>
+  t: TFunction
 }
 
 export function RemediationShellOutput({ logs, cluster, namespace, quickCommands, executeCommand, isExecuting, logsEndRef, t }: RemediationShellOutputProps) {
@@ -262,11 +263,11 @@ interface RemediationShellInputProps {
   lastFailedCommand: string
   executeCommand: (cmd: string) => void
   isExecuting: boolean
-  shellInputRef: RefObject<HTMLInputElement>
+  shellInputRef: RefObject<HTMLInputElement | null>
   shellCommand: string
   updateShell: (patch: { command: string }) => void
   handleShellKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void
-  t: (key: string) => string
+  t: TFunction
 }
 
 export function RemediationShellInput({
@@ -351,7 +352,7 @@ interface RemediationFooterProps {
   logs: LogEntry[]
   copyLogs: () => void
   downloadLogs: () => void
-  t: (key: string) => string
+  t: TFunction
 }
 
 export function RemediationFooter({
