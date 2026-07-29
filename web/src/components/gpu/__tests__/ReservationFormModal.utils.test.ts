@@ -65,8 +65,10 @@ describe('toRFC3339StartDate', () => {
 
     const [, sign, hh, mm] = match!
     const signedMinutes = (sign === '+' ? 1 : -1) * (Number(hh) * 60 + Number(mm))
-    // toRFC3339StartDate flips the sign of getTimezoneOffset() (minutes-west-of-UTC → offset-east-of-UTC)
-    expect(signedMinutes).toBe(-new Date().getTimezoneOffset())
+    // toRFC3339StartDate flips the sign of getTimezoneOffset() (minutes-west-of-UTC → offset-east-of-UTC).
+    // Adding 0 normalizes a possible -0 (e.g. in UTC, where the offset is zero) to +0 so the
+    // comparison doesn't fail due to Object.is distinguishing -0 from 0.
+    expect(signedMinutes + 0).toBe(-new Date().getTimezoneOffset() + 0)
   })
 
   it('zero-pads single-digit hour and minute components of the offset', () => {
