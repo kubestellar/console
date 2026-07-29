@@ -259,7 +259,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
         return [{
           cluster: cluster.name,
           state,
-          reason: t('common:common.unhealthy'),
+          reason: t('common:unhealthy'),
           reasonDetailed: cluster.errorMessage || t('cards:clusterHealth.clusterHasIssues'),
           severity: 'warning',
         }]
@@ -269,7 +269,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
         return [{
           cluster: cluster.name,
           state,
-          reason: t('common:common.offline'),
+          reason: t('common:offline'),
           reasonDetailed: isClusterTokenExpired(cluster)
             ? t('cards:clusterHealth.tokenExpired')
             : (cluster.errorMessage || t('cards:clusterHealth.offlineCheckNetwork')),
@@ -739,7 +739,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
         <CardSearchInput
           value={search}
           onChange={setSearch}
-          placeholder={t('common:common.searchIssues')}
+          placeholder={t('common:searchIssues')}
           className="flex-1 mb-0!"
         />
         {rootCauseGroups.length > 0 && rootCauseGroups.some(g => g.items.length > 1) && (

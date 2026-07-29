@@ -101,7 +101,12 @@ export function LocalClustersSection() {
 
   const hasVClusterTool = installedTools.some(t => t.name === 'vcluster')
   /** Local cluster tools excluding vcluster (vcluster has its own section) */
-  const localClusterTools = installedTools.filter(t => t.name !== 'vcluster')
+  const localClusterTools = installedTools
+    .filter(t => t.name !== 'vcluster')
+    .map(tool => ({
+      ...tool,
+      version: tool.version ?? 'unknown',
+    }))
 
   // KubeVirt detection: check which connected clusters have the kubevirt namespace
   const kubevirtClusters = (healthyClusters || []).filter(c =>

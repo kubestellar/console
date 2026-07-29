@@ -46,7 +46,7 @@ export function UnifiedItemsList({
     return (
       <div className="flex items-center justify-center h-full py-4 text-sm text-muted-foreground">
         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        {t('common:common.loading', 'Loading...')}
+        {t('common:loading', 'Loading...')}
       </div>
     )
   }
@@ -159,7 +159,7 @@ function OfflineNodeRow({
           )}
         </div>
         <div className="text-red-400 truncate mt-0.5">
-          {rootCause?.details || (node.unschedulable ? t('common:common.cordoned') : node.status)}
+          {rootCause?.details || (node.unschedulable ? t('common:cordoned') : node.status)}
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0 ml-2">
@@ -199,7 +199,7 @@ function ClusterHealthIssueRow({
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-medium text-foreground truncate">{issue.cluster}</span>
           <StatusBadge color={isCritical ? 'red' : 'yellow'} size="xs" className="shrink-0">
-            {issue.state === 'unreachable' ? t('common:common.offline') : t('common:common.unhealthy')}
+            {issue.state === 'unreachable' ? t('common:offline') : t('common:unhealthy')}
           </StatusBadge>
           <ClusterBadge cluster={issue.cluster} size="sm" />
         </div>

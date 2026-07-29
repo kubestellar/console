@@ -38,7 +38,7 @@ export function AIAnalysisPanel({
     return (
       <div className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm text-muted-foreground bg-secondary/30">
         <Loader2 className="w-4 h-4 animate-spin" />
-        {t('common:common.loading', 'Loading...')}
+        {t('common:loading', 'Loading...')}
       </div>
     )
   }
@@ -72,7 +72,7 @@ export function AIAnalysisPanel({
       {filteredTotalIssues === 0 && filteredTotalPredicted === 0 ? (
         <>
           <CheckCircle className="w-4 h-4" />
-          {isFiltered ? t('common:common.noMatchingItems', 'No matching items') : t('cards:consoleOfflineDetection.allHealthy', 'All Healthy')}
+          {isFiltered ? t('common:noMatchingItems', 'No matching items') : t('cards:consoleOfflineDetection.allHealthy', 'All Healthy')}
         </>
       ) : runningMission ? (
         <>

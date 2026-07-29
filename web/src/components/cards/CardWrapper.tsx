@@ -236,7 +236,8 @@ export const CardWrapper = memo(function CardWrapper({
   skeletonRows,
   registerExpandTrigger,
   children }: CardWrapperProps) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t: tCards } = useTranslation('cards')
+  const { t: tCommon } = useTranslation('common')
   const { setFullScreen } = useMissions()
   const [isExpanded, setIsExpanded] = useState(false)
   const { containerSize, expandedContentRef } = useResizeHandle(isExpanded)
@@ -522,10 +523,10 @@ export const CardWrapper = memo(function CardWrapper({
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
 
-  const title = t(`titles.${cardType}`, CARD_TITLES[cardType] || '') || customTitle || cardType
-  const description = t(`descriptions.${cardType}`, CARD_DESCRIPTIONS[cardType] || '')
+  const title = tCards(`titles.${cardType}`, CARD_TITLES[cardType] || '') || customTitle || cardType
+  const description = tCards(`descriptions.${cardType}`, CARD_DESCRIPTIONS[cardType] || '')
   const swapType = pendingSwap?.newType || ''
-  const newTitle = pendingSwap?.newTitle || t(`titles.${swapType}`, CARD_TITLES[swapType] || '') || swapType
+  const newTitle = pendingSwap?.newTitle || tCards(`titles.${swapType}`, CARD_TITLES[swapType] || '') || swapType
 
   // Get icon from prop or registry
   const cardIconConfig = CARD_ICONS[cardType]
@@ -668,7 +669,7 @@ export const CardWrapper = memo(function CardWrapper({
               resolvedIconColor={resolvedIconColor}
               title={title}
               description={description}
-              t={t}
+              t={tCards}
               showDemoIndicator={showDemoIndicator}
               effectiveIsDemoData={effectiveIsDemoData}
               isLive={isLive}
@@ -752,7 +753,7 @@ export const CardWrapper = memo(function CardWrapper({
               onSwapCancel={onSwapCancel}
               showSummary={showSummary}
               lastSummary={lastSummary}
-              summaryLabel={t('common:labels.sinceFocus')}
+              summaryLabel={tCommon('labels.sinceFocus')}
             />
           </div>
           </div>{/* Close outer wrapper for demo corner brackets */}

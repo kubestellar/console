@@ -61,7 +61,7 @@ export function OfflineStatusDisplay({
       >
         <div className="text-xl font-bold text-foreground">{currentClusterIssueCount}</div>
         <div className={cn('text-2xs', currentClusterIssueCount > 0 ? 'text-red-400' : 'text-green-400')}>
-          {t('common:common.issues', { defaultValue: 'Issues' })}
+          {t('common:cluster.issues', { defaultValue: 'Issues' })}
         </div>
       </div>
       <div
