@@ -19773,5 +19773,19 @@
     "line": 107,
     "column": 7,
     "message": "Use <TextArea> from components/ui/TextArea.tsx instead of raw <textarea>."
+  },
+  {
+    "file": "src/components/clusters/components/NamespaceResources.parts.tsx",
+    "rule": "react-refresh/only-export-components",
+    "line": 9,
+    "column": 17,
+    "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+  },
+  {
+    "file": "src/components/layout/ProfileCard.parts.tsx",
+    "rule": "react-refresh/only-export-components",
+    "line": 47,
+    "column": 17,
+    "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
   }
 ]
