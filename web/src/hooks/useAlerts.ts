@@ -84,6 +84,7 @@ export function useAlertRules() {
 
 // Hook for managing Slack webhooks
 export function useSlackWebhooks() {
+  const [error, setError] = useState<Error | null>(null)
   const [webhooks, setWebhooks] = useState<SlackWebhook[]>(() =>
     loadFromStorage<SlackWebhook[]>(
       SLACK_WEBHOOKS_KEY,
@@ -93,7 +94,13 @@ export function useSlackWebhooks() {
   )
 
   useEffect(() => {
-    saveToStorage(SLACK_WEBHOOKS_KEY, webhooks)
+    try {
+      localStorage.setItem(SLACK_WEBHOOKS_KEY, JSON.stringify(webhooks))
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : new Error(String(e))
+      setError(err)
+      console.error(`Failed to save ${SLACK_WEBHOOKS_KEY} to localStorage:`, e)
+    }
   }, [webhooks])
 
   const addWebhook = (name: string, webhookUrl: string, channel?: string) => {
@@ -114,7 +121,8 @@ export function useSlackWebhooks() {
   return {
     webhooks,
     addWebhook,
-    removeWebhook }
+    removeWebhook,
+    error }
 }
 
 // Hook for managing alerts - uses shared context
