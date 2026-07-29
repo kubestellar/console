@@ -1,11 +1,10 @@
-import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, memo, createContext, use, ComponentType, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, memo, createContext, use, Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { Maximize2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 import { CARD_ICONS } from './cardIcons'
 import { BaseModal } from '../../lib/modals'
-import { MS_PER_HOUR } from '../../lib/constants/time'
 import { cn } from '@/lib/cn'
 import { useCardCollapse } from '../../lib/cards/cardHooks'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
@@ -14,8 +13,7 @@ import { useModal } from '../../hooks/useModal'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { CardDataReportContext, ForceLiveContext, type CardDataState } from './CardDataContext'
-import { ChatMessage } from './CardChat'
-import type { CardSkeletonProps } from '@/lib/cards/CardComponents'
+import { type ChatMessage } from './CardChat'
 import { emitCardExpanded, emitCardRefreshed } from '../../lib/analytics'
 import { useMissions } from '../../hooks/useMissions'
 import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
@@ -27,72 +25,22 @@ import { CardMeta } from './CardMeta'
 import { CardToolbar } from './CardToolbar'
 import { InfoTooltip } from './card-wrapper/InfoTooltip'
 import { PendingSwapNotification } from './card-wrapper/PendingSwapNotification'
+import type { CardContainerSize, CardExpandedContextType, CardWrapperProps } from './CardWrapper.types'
+import {
+  MIN_SPIN_DURATION,
+  COLLAPSED_CARDS_STORAGE_KEY,
+  CONTAINER_QUERY_STYLE,
+  DEFAULT_SNOOZE_MS,
+  LAST_UPDATED_TICK_MS,
+  COLLAPSE_DELAY_MS,
+  LARGE_EXPANDED_CARDS,
+  FULLSCREEN_EXPANDED_CARDS,
+} from './CardWrapper.constants'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = safeLazy(() => import('../widgets/WidgetExportModal'), 'WidgetExportModal')
 // Lazy-load the feedback modal (~67 KB) — only loaded when user clicks bug report
 const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestModal'), 'FeatureRequestModal')
 
-
-// Minimum duration to show spin animation (ensures at least one full rotation)
-const CARD_REFRESH_SPINNER_MAX_AGE_MS = 500
-const MIN_SPIN_DURATION = CARD_REFRESH_SPINNER_MAX_AGE_MS
-const COLLAPSED_CARDS_STORAGE_KEY = 'kubestellar-collapsed-cards'
-
-/** CSS container query style for card content responsive breakpoints */
-const CONTAINER_QUERY_STYLE = { containerType: 'inline-size' } as const
-
-/** Default snooze duration for card swaps */
-const DEFAULT_SNOOZE_MS = MS_PER_HOUR
-
-// ---------------------------------------------------------------------------
-// Relative-time formatting for the card header "last updated" label.
-// ---------------------------------------------------------------------------
-/**
- * Re-render interval for the "last updated" label in ms. When SSE refresh
- * fails, the card's lastUpdated prop is frozen at the last successful fetch,
- * so without this ticker the label would render "5d ago" forever (#9104).
- * One minute is enough resolution for an "Xm/Xh/Xd" label and is cheap.
- */
-const LAST_UPDATED_TICK_MS = 60_000
-const COLLAPSE_DELAY_MS = 300
-
-// Cards that need extra-large expanded modal (for maps, complex visualizations, etc.)
-// These use 95vh height and 7xl width instead of the default 80vh/4xl
-const LARGE_EXPANDED_CARDS = new Set([
-  'cluster_comparison',
-  'cluster_resource_tree',
-  // AI-ML cards that need more space when expanded
-  'kvcache_monitor',
-  'pd_disaggregation',
-  'llmd_ai_insights',
-])
-
-// Cards that should be nearly fullscreen when expanded (maps, large visualizations, games)
-const FULLSCREEN_EXPANDED_CARDS = new Set([
-  'cluster_locations',
-  'mobile_browser', // Shows iPad view when expanded
-  // AI-ML visualization cards benefit from full viewport
-  'llmd_flow', 'epp_routing',
-  // All arcade games need fullscreen to fill the entire screen
-  'sudoku_game', 'container_tetris', 'node_invaders', 'kube_snake',
-  'flappy_pod', 'kube_pong', 'kube_kong', 'game_2048', 'kube_man',
-  'kube_galaga', 'kube_chess', 'checkers', 'pod_crosser', 'pod_brothers',
-  'pod_pitfall', 'match_game', 'solitaire', 'kubedle', 'pod_sweeper',
-  'kube_doom', 'kube_kart',
-])
-
-/** Dimensions of the card's content container (updated via ResizeObserver) */
-export interface CardContainerSize {
-  width: number
-  height: number
-}
-
-// Context to expose card expanded state to children
-interface CardExpandedContextType {
-  isExpanded: boolean
-  /** Live dimensions of the expanded modal content container (0x0 when collapsed) */
-  containerSize: CardContainerSize
-}
 const CardExpandedContext = createContext<CardExpandedContextType>({
   isExpanded: false,
   containerSize: { width: 0, height: 0 } })
@@ -138,75 +86,10 @@ function useLazyMount(_rootMargin = '100px') {
   return { ref, isVisible }
 }
 
-/** Flash type for significant data changes */
-export type CardFlashType = 'none' | 'info' | 'warning' | 'error'
-
-interface PendingSwap {
-  newType: string
-  newTitle?: string
-  reason: string
-  swapAt: Date
-}
-
-interface CardWrapperProps {
-  cardId?: string
-  cardType: string
-  title?: string
-  /** Icon to display next to the card title */
-  icon?: ComponentType<{ className?: string }>
-  /** Icon color class (e.g., 'text-purple-400') - defaults to title color */
-  iconColor?: string
-  lastSummary?: string
-  pendingSwap?: PendingSwap
-  chatMessages?: ChatMessage[]
-  dragHandle?: ReactNode
-  /** Whether the card is currently refreshing data */
-  isRefreshing?: boolean
-  /** Last time the card data was updated */
-  lastUpdated?: Date | null
-  /** Whether this card uses demo/mock data instead of real data */
-  isDemoData?: boolean
-  /** Whether this card is showing live/real-time data (for time-series/trend cards) */
-  isLive?: boolean
-  /** Force live mode — suppress demo badge even when global demo mode is on.
-   *  Used by GPU Reservations when running in-cluster with OAuth. */
-  forceLive?: boolean
-  /** Whether data refresh has failed 3+ times consecutively */
-  isFailed?: boolean
-  /** Number of consecutive refresh failures */
-  consecutiveFailures?: number
-  /** Current card width in grid columns (1-12) */
-  cardWidth?: number
-  /** Whether the card is collapsed (showing only header) */
-  isCollapsed?: boolean
-  /** Flash animation type when significant data changes occur */
-  flashType?: CardFlashType
-  /** Callback when collapsed state changes */
-  onCollapsedChange?: (collapsed: boolean) => void
-  onSwap?: (newType: string) => void
-  onSwapCancel?: () => void
-  onConfigure?: () => void
-  onRemove?: () => void
-  onRefresh?: () => void
-  /** Callback when card width is changed */
-  onWidthChange?: (newWidth: number) => void
-  /** Current card height in grid row spans */
-  cardHeight?: number
-  /** Callback when card height is changed */
-  onHeightChange?: (newHeight: number) => void
-  onChatMessage?: (message: string) => Promise<ChatMessage>
-  onChatMessagesChange?: (messages: ChatMessage[]) => void
-  /** Skeleton type to show when loading with no cached data */
-  skeletonType?: CardSkeletonProps['type']
-  /** Number of skeleton rows to show */
-  skeletonRows?: number
-  /** Register a callback to expand the card programmatically (keyboard nav) */
-  registerExpandTrigger?: (expand: () => void) => void
-  children: ReactNode
-}
-
 // Re-export for backwards compatibility — data now lives in cardMetadata.ts and cardIcons.ts
 export { CARD_TITLES, CARD_DESCRIPTIONS } from './cardMetadata'
+// Re-export types so existing importers of CardWrapper don't need to change
+export type { CardContainerSize, CardFlashType } from './CardWrapper.types'
 
 export const CardWrapper = memo(function CardWrapper({
   cardId,
