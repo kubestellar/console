@@ -5,7 +5,7 @@ import { ClusterProgressBanner } from './ClusterProgressBanner'
 
 interface ToolInfo {
   name: string
-  version: string | undefined
+  version?: string
 }
 
 type ClusterProgress = ComponentProps<typeof ClusterProgressBanner>['progress']
