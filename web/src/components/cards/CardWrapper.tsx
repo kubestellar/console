@@ -20,13 +20,12 @@ import { emitCardExpanded, emitCardRefreshed } from '../../lib/analytics'
 import { useMissions } from '../../hooks/useMissions'
 import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
 import { useTimeoutFlag, useConditionalTimeout } from '../../hooks/useTimeoutFlag'
-import { CardErrorFallback, CardFailureBanner } from './CardErrorFallback'
+import { CardFailureBanner } from './CardErrorFallback'
 import { CardLoadingState } from './CardLoadingState'
-import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
-import { CardMeta } from './CardMeta'
-import { CardToolbar } from './CardToolbar'
-import { InfoTooltip } from './card-wrapper/InfoTooltip'
-import { PendingSwapNotification } from './card-wrapper/PendingSwapNotification'
+import { CardHeader } from './CardHeader'
+import { CardFooter } from './CardFooter'
+import { CardErrorBoundary } from './CardErrorBoundary'
+import { useResizeHandle, type CardContainerSize } from './ResizeHandle'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = safeLazy(() => import('../widgets/WidgetExportModal'), 'WidgetExportModal')
 // Lazy-load the feedback modal (~67 KB) — only loaded when user clicks bug report
@@ -80,12 +79,6 @@ const FULLSCREEN_EXPANDED_CARDS = new Set([
   'pod_pitfall', 'match_game', 'solitaire', 'kubedle', 'pod_sweeper',
   'kube_doom', 'kube_kart',
 ])
-
-/** Dimensions of the card's content container (updated via ResizeObserver) */
-export interface CardContainerSize {
-  width: number
-  height: number
-}
 
 // Context to expose card expanded state to children
 interface CardExpandedContextType {
@@ -246,27 +239,7 @@ export const CardWrapper = memo(function CardWrapper({
   const { t } = useTranslation(['cards', 'common'])
   const { setFullScreen } = useMissions()
   const [isExpanded, setIsExpanded] = useState(false)
-  /** Live container dimensions for expanded modal — games use this to scale their boards */
-  const [containerSize, setContainerSize] = useState<CardContainerSize>({ width: 0, height: 0 })
-  const expandedContentRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!isExpanded) {
-      setContainerSize({ width: 0, height: 0 })
-      return
-    }
-    const el = expandedContentRef.current
-    if (!el) return
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const w = Math.round(entry.contentRect.width)
-        const h = Math.round(entry.contentRect.height)
-        // Only update when dimensions actually change to avoid unnecessary rerenders
-        setContainerSize(prev => (prev.width === w && prev.height === h) ? prev : { width: w, height: h })
-      }
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [isExpanded])
+  const { containerSize, expandedContentRef } = useResizeHandle(isExpanded)
   const { isOpen: showBugReport, open: openBugReport, close: closeBugReport } = useModal()
   const { isOpen: showWidgetExport, open: openWidgetExport, close: closeWidgetExport } = useModal()
 
@@ -689,47 +662,39 @@ export const CardWrapper = memo(function CardWrapper({
             onMouseEnter={() => setShowSummary(true)}
             onMouseLeave={() => setShowSummary(false)}
           >
-            {/* Header */}
-            <div data-tour="card-header" className="flex flex-wrap items-center justify-between gap-y-2 border-b border-border/50 px-4 py-3">
-              <div className="flex min-w-0 items-center gap-2">
-                {dragHandle}
-                {ResolvedIcon && <ResolvedIcon className={cn('h-4 w-4 shrink-0', resolvedIconColor)} />}
-                <h2 className="truncate text-sm font-medium text-foreground">{title}</h2>
-                <InfoTooltip text={description || t('messages.descriptionComingSoon', { title })} />
-                <CardMeta
-                  showDemoIndicator={showDemoIndicator}
-                  isDemoData={effectiveIsDemoData}
-                  isLive={isLive}
-                  isFailed={effectiveIsFailed}
-                  consecutiveFailures={effectiveConsecutiveFailures}
-                  showRefreshIndicator={showHeaderRefreshIndicator}
-                  isLoading={effectiveIsLoading}
-                  isVisuallySpinning={isVisuallySpinning}
-                  lastUpdated={effectiveLastUpdated}
-                />
-              </div>
-              <CardToolbar
-                title={title}
-                isCollapsed={isCollapsed}
-                onToggleCollapse={handleToggleCollapse}
-                onRefresh={onRefresh ? handleRefresh : undefined}
-                isRefreshDisabled={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
-                isRefreshSpinning={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
-                isFailed={effectiveIsFailed}
-                consecutiveFailures={effectiveConsecutiveFailures}
-                onExpandFullscreen={handleExpandFullscreen}
-                onOpenBugReport={handleOpenBugReport}
-                cardId={cardId}
-                cardType={cardType}
-                cardWidth={cardWidth}
-                cardHeight={cardHeight}
-                onConfigure={onConfigure}
-                onRemove={onRemove}
-                onWidthChange={onWidthChange}
-                onHeightChange={onHeightChange}
-                onShowWidgetExport={openWidgetExport}
-              />
-            </div>
+            <CardHeader
+              dragHandle={dragHandle}
+              resolvedIcon={ResolvedIcon}
+              resolvedIconColor={resolvedIconColor}
+              title={title}
+              description={description}
+              t={t}
+              showDemoIndicator={showDemoIndicator}
+              effectiveIsDemoData={effectiveIsDemoData}
+              isLive={isLive}
+              effectiveIsFailed={effectiveIsFailed}
+              effectiveConsecutiveFailures={effectiveConsecutiveFailures}
+              showHeaderRefreshIndicator={showHeaderRefreshIndicator}
+              effectiveIsLoading={effectiveIsLoading}
+              isVisuallySpinning={isVisuallySpinning}
+              effectiveLastUpdated={effectiveLastUpdated}
+              isCollapsed={isCollapsed}
+              onToggleCollapse={handleToggleCollapse}
+              onRefresh={onRefresh ? handleRefresh : undefined}
+              isRefreshDisabled={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
+              isRefreshSpinning={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
+              onExpandFullscreen={handleExpandFullscreen}
+              onOpenBugReport={handleOpenBugReport}
+              cardId={cardId}
+              cardType={cardType}
+              cardWidth={cardWidth}
+              cardHeight={cardHeight}
+              onConfigure={onConfigure}
+              onRemove={onRemove}
+              onWidthChange={onWidthChange}
+              onHeightChange={onHeightChange}
+              onShowWidgetExport={openWidgetExport}
+            />
 
             <CardFailureBanner
               cardType={cardType}
@@ -774,36 +739,21 @@ export const CardWrapper = memo(function CardWrapper({
               </div>
             )}
 
-            {/* Demo-mode install CTA — rendered OUTSIDE the scroll container
-                so it is a pinned card footer on every card. Inside the
-                scroller it sat at the flex-box boundary, which put it
-                mid-card whenever content overflowed (min-h-card) and made
-                it scroll with the data on some cards but not others. */}
-            {!isCollapsed && showInstallCta && (
-              <div className="shrink-0 px-4 pb-2">
-                <InstallCTAFlow cardType={cardType} title={title} />
-              </div>
-            )}
-
-            {/* Pending swap notification - hidden when collapsed */}
-            {!isCollapsed && pendingSwap && (
-              <PendingSwapNotification
-                pendingSwap={pendingSwap}
-                newTitle={newTitle}
-                onSnooze={handleSnooze}
-                onSwapNow={handleSwapNow}
-                onCancel={() => onSwapCancel?.()}
-                defaultSnoozeDurationMs={DEFAULT_SNOOZE_MS}
-              />
-            )}
-
-            {/* Hover summary */}
-            {showSummary && lastSummary && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 mx-4 p-3 glass rounded-lg text-sm animate-fade-in-up">
-                <p className="text-xs text-muted-foreground mb-1">{t('common:labels.sinceFocus')}</p>
-                <p className="text-foreground">{lastSummary}</p>
-              </div>
-            )}
+            <CardFooter
+              isCollapsed={isCollapsed}
+              showInstallCta={showInstallCta}
+              cardType={cardType}
+              title={title}
+              pendingSwap={pendingSwap}
+              newTitle={newTitle}
+              defaultSnoozeDurationMs={DEFAULT_SNOOZE_MS}
+              onSnooze={handleSnooze}
+              onSwapNow={handleSwapNow}
+              onSwapCancel={onSwapCancel}
+              showSummary={showSummary}
+              lastSummary={lastSummary}
+              summaryLabel={t('common:labels.sinceFocus')}
+            />
           </div>
           </div>{/* Close outer wrapper for demo corner brackets */}
 
@@ -833,11 +783,9 @@ export const CardWrapper = memo(function CardWrapper({
                   : 'max-h-[calc(80vh-80px)]'
             )}>
               {/* Wrapper ensures children fill available space in expanded mode */}
-              <div ref={expandedContentRef} className="flex flex-1 min-h-0 flex-col">
-                <CardErrorFallback cardId={cardId || cardType}>
-                  {children}
-                </CardErrorFallback>
-              </div>
+              <CardErrorBoundary containerRef={expandedContentRef} cardId={cardId || cardType}>
+                {children}
+              </CardErrorBoundary>
             </BaseModal.Content>
           </BaseModal>
 

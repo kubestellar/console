@@ -1,15 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import { arrayMove } from '@dnd-kit/sortable'
 import { useTranslation } from 'react-i18next'
 import { emitCardDragged } from '../../lib/analytics'
 import { useDashboards } from '../../hooks/useDashboards'
@@ -37,7 +33,7 @@ import { useModalState } from '../../lib/modals'
 import { setAutoRefreshPaused } from '../../lib/cache'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import type { DashboardTemplate } from './templates'
-import { dashboardCollisionDetection, POINTER_SENSOR_ACTIVATION_DISTANCE } from './layout'
+import { dashboardCollisionDetection } from './layout'
 import {
   AUTO_REFRESH_INTERVAL_MS,
   DASHBOARD_STORAGE_KEY,
@@ -71,6 +67,7 @@ import {
   moveCardToDashboardAction,
   moveCardToNewDashboardAction,
 } from './dashboardState.actions'
+import { useDashboardSensors } from './dashboardState.sensors'
 
 export function useDashboardState() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(() => dashboardCache?.dashboard || null)
@@ -225,16 +222,7 @@ export function useDashboardState() {
     expandTriggersRef.current.set(cardId, expand)
   }, [])
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: POINTER_SENSOR_ACTIVATION_DISTANCE,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  )
+  const sensors = useDashboardSensors()
 
   const collisionDetection = dashboardCollisionDetection
 

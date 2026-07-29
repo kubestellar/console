@@ -106,6 +106,7 @@ export function usePersistence() {
       // Silently ignore 401 - user needs to re-authenticate
     } catch (err: unknown) {
       console.error('[usePersistence] Failed to fetch status:', err)
+      setError('Failed to load persistence status')
     }
   }, [isBackendAvailable, hasRealToken, token])
 
@@ -203,6 +204,7 @@ export function usePersistence() {
       }
     } catch (err: unknown) {
       console.error('[usePersistence] Failed to sync:', err)
+      setError('Failed to trigger sync')
     } finally {
       setSyncing(false)
     }

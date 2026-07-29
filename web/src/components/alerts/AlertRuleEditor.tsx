@@ -1,8 +1,6 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Trash2, Server, Bell, BellOff, Bot, Webhook, Siren, ShieldAlert } from 'lucide-react'
-import { Slack } from '@/lib/icons'
+import { Bell, BellOff } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { BaseModal, ConfirmDialog, useModalState } from '../../lib/modals'
 import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR } from '../../lib/constants/time'
@@ -13,6 +11,9 @@ import type {
   AlertSeverity,
   AlertConditionType,
 } from '../../types/alerts'
+import { ConditionBuilder } from './ConditionBuilder'
+import { NotificationChannelSelector } from './NotificationChannelSelector'
+import { AlertPreviewPanel } from './AlertPreviewPanel'
 
 // Validation thresholds for alert conditions
 const PERCENTAGE_MIN = 1 // Minimum percentage threshold
@@ -340,450 +341,38 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
             </div>
           </div>
 
-          {/* Condition */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium text-foreground">{t('alerts.condition')}</h4>
+          <ConditionBuilder
+            conditionType={conditionType}
+            threshold={threshold}
+            duration={duration}
+            weatherCondition={weatherCondition}
+            temperatureThreshold={temperatureThreshold}
+            windSpeedThreshold={windSpeedThreshold}
+            availableClusters={availableClusters}
+            selectedClusters={selectedClusters}
+            conditionTypes={CONDITION_TYPES}
+            durationPresets={DURATION_PRESETS}
+            errors={errors}
+            onConditionTypeChange={setAlertConditionType}
+            onThresholdChange={setThreshold}
+            onDurationChange={setDuration}
+            onWeatherConditionChange={setWeatherCondition}
+            onTemperatureThresholdChange={setTemperatureThreshold}
+            onWindSpeedThresholdChange={setWindSpeedThreshold}
+            onToggleCluster={toggleCluster}
+            t={t}
+          />
 
-            <div>
-              <label className="block text-xs text-muted-foreground mb-2">
-                {t('alerts.conditionType')}
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {CONDITION_TYPES.map(type => (
-                  <button
-                    key={type.value}
-                    onClick={() => setAlertConditionType(type.value)}
-                    className={`p-3 rounded-lg text-left transition-colors ${
-                      conditionType === type.value
-                        ? 'bg-purple-500/20 border border-purple-500/50'
-                        : 'bg-secondary border border-border hover:bg-secondary/80'
-                    }`}
-                    aria-label={`${type.label}: ${type.description}`}
-                    aria-pressed={conditionType === type.value}
-                  >
-                    <span className="text-sm font-medium text-foreground">{type.label}</span>
-                    <span className="block text-xs text-muted-foreground mt-0.5">{type.description}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+          <NotificationChannelSelector
+            channels={channels}
+            error={errors.channels}
+            onAddChannel={addChannel}
+            onRemoveChannel={removeChannel}
+            onUpdateChannel={updateChannel}
+            t={t}
+          />
 
-            {/* Threshold input */}
-            {['gpu_usage', 'memory_pressure'].includes(conditionType) && (
-              <div>
-                <label htmlFor="alertRuleThreshold" className="block text-xs text-muted-foreground mb-1">
-                  {t('alerts.thresholdPercent')}
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="alertRuleThreshold"
-                    name="alertRuleThreshold"
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={threshold}
-                    onChange={e => setThreshold(Number(e.target.value))}
-                    className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
-                      errors.threshold ? 'border-red-500' : 'border-border'
-                    }`}
-                  />
-                  <span className="text-sm text-muted-foreground">%</span>
-                </div>
-                {errors.threshold && (
-                  <span className="block text-xs text-red-400 mt-1">{errors.threshold}</span>
-                )}
-              </div>
-            )}
-
-            {conditionType === 'pod_crash' && (
-              <div>
-                <label htmlFor="alertRuleRestartThreshold" className="block text-xs text-muted-foreground mb-1">
-                  {t('alerts.restartCountThreshold')}
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="alertRuleRestartThreshold"
-                    name="alertRuleRestartThreshold"
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={threshold}
-                    onChange={e => setThreshold(Number(e.target.value))}
-                    className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
-                      errors.threshold ? 'border-red-500' : 'border-border'
-                    }`}
-                  />
-                  <span className="text-sm text-muted-foreground">restarts</span>
-                </div>
-              </div>
-            )}
-
-            {/* Weather alert configuration */}
-            {conditionType === 'weather_alerts' && (
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="alertRuleWeatherCondition" className="block text-xs text-muted-foreground mb-1">
-                    {t('alerts.weatherCondition')}
-                  </label>
-                  <select
-                    id="alertRuleWeatherCondition"
-                    name="alertRuleWeatherCondition"
-                    value={weatherCondition}
-                    onChange={e => setWeatherCondition(e.target.value as typeof weatherCondition)}
-                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="severe_storm">{t('alerts.weather.severeStorm')}</option>
-                    <option value="extreme_heat">{t('alerts.weather.extremeHeat')}</option>
-                    <option value="heavy_rain">{t('alerts.weather.heavyRain')}</option>
-                    <option value="snow">{t('alerts.weather.snow')}</option>
-                    <option value="high_wind">{t('alerts.weather.highWind')}</option>
-                  </select>
-                </div>
-
-                {weatherCondition === 'extreme_heat' && (
-                  <div>
-                    <label htmlFor="alertRuleTemperatureThreshold" className="block text-xs text-muted-foreground mb-1">
-                      {t('alerts.temperatureThreshold')}
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        id="alertRuleTemperatureThreshold"
-                        name="alertRuleTemperatureThreshold"
-                        type="number"
-                        min={-50}
-                        max={150}
-                        value={temperatureThreshold}
-                        onChange={e => setTemperatureThreshold(Number(e.target.value))}
-                        className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
-                          errors.temperatureThreshold ? 'border-red-500' : 'border-border'
-                        }`}
-                      />
-                      <span className="text-sm text-muted-foreground">°F</span>
-                    </div>
-                    {errors.temperatureThreshold && (
-                      <span className="block text-xs text-red-400 mt-1">{errors.temperatureThreshold}</span>
-                    )}
-                  </div>
-                )}
-
-                {weatherCondition === 'high_wind' && (
-                  <div>
-                    <label htmlFor="alertRuleWindSpeedThreshold" className="block text-xs text-muted-foreground mb-1">
-                      {t('alerts.windSpeedThreshold')}
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        id="alertRuleWindSpeedThreshold"
-                        name="alertRuleWindSpeedThreshold"
-                        type="number"
-                        min={1}
-                        max={200}
-                        value={windSpeedThreshold}
-                        onChange={e => setWindSpeedThreshold(Number(e.target.value))}
-                        className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
-                          errors.windSpeedThreshold ? 'border-red-500' : 'border-border'
-                        }`}
-                      />
-                      <span className="text-sm text-muted-foreground">mph</span>
-                    </div>
-                    {errors.windSpeedThreshold && (
-                      <span className="block text-xs text-red-400 mt-1">{errors.windSpeedThreshold}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Duration */}
-            <div>
-              <label htmlFor="alertRuleDuration" className="block text-xs text-muted-foreground mb-1">
-                {t('alerts.durationSeconds')}
-              </label>
-              <div className="flex items-center gap-2 flex-wrap">
-                {DURATION_PRESETS.map(preset => (
-                  <button
-                    key={preset.value}
-                    type="button"
-                    onClick={() => setDuration(preset.value)}
-                    className={`px-2.5 py-1.5 text-xs rounded-lg border transition-colors ${
-                      duration === preset.value
-                        ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                        : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-                <input
-                  id="alertRuleDuration"
-                  name="alertRuleDuration"
-                  type="number"
-                  min={0}
-                  max={3600}
-                  value={duration}
-                  onChange={e => setDuration(Number(e.target.value))}
-                  className="w-20 px-2 py-1.5 text-xs rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
-                />
-                <span className="text-xs text-muted-foreground">{t('alerts.durationHint')}</span>
-              </div>
-            </div>
-
-            {/* Cluster Filter */}
-            {availableClusters.length > 1 && (
-              <div>
-                <label className="block text-xs text-muted-foreground mb-2">
-                  Clusters (leave empty for all)
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {availableClusters.map(cluster => (
-                    <button
-                      key={cluster.name}
-                      onClick={() => toggleCluster(cluster.name)}
-                      className={`px-2 py-1 text-xs rounded-lg flex items-center gap-1 transition-colors ${
-                        selectedClusters.includes(cluster.name)
-                          ? 'bg-purple-500/20 border border-purple-500/50 text-purple-400'
-                          : 'bg-secondary border border-border text-muted-foreground hover:text-foreground'
-                      }`}
-                      aria-label={`${selectedClusters.includes(cluster.name) ? 'Deselect' : 'Select'} cluster ${cluster.name}`}
-                      aria-pressed={selectedClusters.includes(cluster.name)}
-                    >
-                      <Server className="w-3 h-3" aria-hidden="true" />
-                      {cluster.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Notification Channels */}
-          <div className="space-y-4">
-            {/* Issue 9254 — warn when no enabled channel is present so users
-                don't save rules that fire silently. */}
-            {errors.channels && (
-              <div className="p-2 rounded bg-red-500/10 border border-red-500/30 text-xs text-red-400">
-                {errors.channels}
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-foreground">{t('alerts.notificationChannels')}</h4>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => addChannel('browser')}
-                  className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
-                  aria-label="Add browser notification channel"
-                >
-                  <Bell className="w-3 h-3" aria-hidden="true" />
-                  {t('alerts.browser')}
-                </button>
-                <button
-                  onClick={() => addChannel('slack')}
-                  className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
-                  aria-label="Add Slack notification channel"
-                >
-                  <Slack className="w-3 h-3" aria-hidden="true" />
-                  {t('alerts.slack')}
-                </button>
-                <button
-                  onClick={() => addChannel('webhook')}
-                  className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
-                  aria-label="Add webhook notification channel"
-                >
-                  <Webhook className="w-3 h-3" aria-hidden="true" />
-                  {t('alerts.webhook')}
-                </button>
-                <button
-                  onClick={() => addChannel('pagerduty')}
-                  className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
-                  aria-label="Add PagerDuty notification channel"
-                >
-                  <Siren className="w-3 h-3" aria-hidden="true" />
-                  PagerDuty
-                </button>
-                <button
-                  onClick={() => addChannel('opsgenie')}
-                  className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
-                  aria-label="Add OpsGenie notification channel"
-                >
-                  <ShieldAlert className="w-3 h-3" aria-hidden="true" />
-                  OpsGenie
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {channels.map((channel, index) => (
-                <div
-                  key={index}
-                  className="p-3 rounded-lg bg-secondary/30 border border-border/50"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {channel.type === 'browser' && <Bell className="w-4 h-4" aria-hidden="true" />}
-                      {channel.type === 'slack' && <Slack className="w-4 h-4" aria-hidden="true" />}
-                      {channel.type === 'webhook' && <Webhook className="w-4 h-4" aria-hidden="true" />}
-                      {channel.type === 'pagerduty' && <Siren className="w-4 h-4" aria-hidden="true" />}
-                      {channel.type === 'opsgenie' && <ShieldAlert className="w-4 h-4" aria-hidden="true" />}
-                      <span className="text-sm font-medium text-foreground capitalize">
-                        {channel.type}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          updateChannel(index, { enabled: !channel.enabled })
-                        }
-                        className={`px-2 py-1 text-xs rounded transition-colors ${
-                          channel.enabled
-                            ? 'bg-green-500/20 text-green-400'
-                            : 'bg-secondary text-muted-foreground'
-                        }`}
-                        aria-label={`${channel.enabled ? 'Disable' : 'Enable'} ${channel.type} channel`}
-                      >
-                        {channel.enabled ? 'On' : 'Off'}
-                      </button>
-                      {channels.length > 1 && (
-                        <button
-                          onClick={() => removeChannel(index)}
-                          className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
-                          aria-label={`Remove ${channel.type} channel`}
-                        >
-                          <Trash2 className="w-4 h-4" aria-hidden="true" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {channel.type === 'slack' && (
-                    <div className="space-y-2">
-                      <label htmlFor={`alertRuleSlackWebhookUrl-${index}`} className="sr-only">
-                        {t('alerts.slackWebhookUrl')}
-                      </label>
-                      <input
-                        id={`alertRuleSlackWebhookUrl-${index}`}
-                        name={`alertRuleSlackWebhookUrl-${index}`}
-                        type="text"
-                        placeholder={t('alerts.slackWebhookUrlPlaceholder')}
-                        value={channel.config.slackWebhookUrl || ''}
-                        onChange={e =>
-                          updateChannel(index, {
-                            config: { ...channel.config, slackWebhookUrl: e.target.value },
-                          })
-                        }
-                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
-                      />
-                      <label htmlFor={`alertRuleSlackChannel-${index}`} className="sr-only">
-                        {t('alerts.slackChannel')}
-                      </label>
-                      <input
-                        id={`alertRuleSlackChannel-${index}`}
-                        name={`alertRuleSlackChannel-${index}`}
-                        type="text"
-                        placeholder={t('alerts.slackChannelPlaceholder')}
-                        value={channel.config.slackChannel || ''}
-                        onChange={e =>
-                          updateChannel(index, {
-                            config: { ...channel.config, slackChannel: e.target.value },
-                          })
-                        }
-                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                  )}
-
-                  {channel.type === 'webhook' && (
-                    <>
-                      <label htmlFor={`alertRuleWebhookUrl-${index}`} className="sr-only">
-                        {t('alerts.webhookUrl')}
-                      </label>
-                      <input
-                        id={`alertRuleWebhookUrl-${index}`}
-                        name={`alertRuleWebhookUrl-${index}`}
-                        type="text"
-                        placeholder={t('alerts.webhookUrlPlaceholder')}
-                        value={channel.config.webhookUrl || ''}
-                        onChange={e =>
-                          updateChannel(index, {
-                            config: { ...channel.config, webhookUrl: e.target.value },
-                          })
-                        }
-                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
-                      />
-                    </>
-                  )}
-
-                  {channel.type === 'pagerduty' && (
-                    <>
-                      <label htmlFor={`alertRulePagerdutyRoutingKey-${index}`} className="sr-only">
-                        {t('alerts.pagerdutyRoutingKey')}
-                      </label>
-                      <input
-                        id={`alertRulePagerdutyRoutingKey-${index}`}
-                        name={`alertRulePagerdutyRoutingKey-${index}`}
-                        type="password"
-                        placeholder={t('alerts.pagerdutyRoutingKeyPlaceholder')}
-                        value={channel.config.pagerdutyRoutingKey || ''}
-                        onChange={e =>
-                          updateChannel(index, {
-                            config: { ...channel.config, pagerdutyRoutingKey: e.target.value },
-                          })
-                        }
-                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
-                      />
-                    </>
-                  )}
-
-                  {channel.type === 'opsgenie' && (
-                    <>
-                      <label htmlFor={`alertRuleOpsgenieApiKey-${index}`} className="sr-only">
-                        {t('alerts.opsgenieApiKey')}
-                      </label>
-                      <input
-                        id={`alertRuleOpsgenieApiKey-${index}`}
-                        name={`alertRuleOpsgenieApiKey-${index}`}
-                        type="password"
-                        placeholder={t('alerts.opsgenieApiKeyPlaceholder')}
-                        value={channel.config.opsgenieApiKey || ''}
-                        onChange={e =>
-                          updateChannel(index, {
-                            config: { ...channel.config, opsgenieApiKey: e.target.value },
-                          })
-                        }
-                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
-                      />
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* AI Diagnosis */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-foreground">{t('alerts.aiIntegration')}</h4>
-            <button
-              onClick={() => setAiDiagnose(!aiDiagnose)}
-              className={`w-full p-3 rounded-lg text-left transition-colors ${
-                aiDiagnose
-                  ? 'bg-purple-500/20 border border-purple-500/50'
-                  : 'bg-secondary border border-border hover:bg-secondary/80'
-              }`}
-              aria-label={aiDiagnose ? 'Disable AI diagnosis' : 'Enable AI diagnosis'}
-              aria-pressed={aiDiagnose}
-            >
-              <span className="flex items-center gap-2">
-                <Bot className={`w-5 h-5 ${aiDiagnose ? 'text-purple-400' : 'text-muted-foreground'}`} aria-hidden="true" />
-                <span>
-                  <span className="block text-sm font-medium text-foreground">
-                    {t('alerts.aiDiagnosis')}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {t('alerts.aiDiagnosisDesc')}
-                  </span>
-                </span>
-              </span>
-            </button>
-          </div>
+          <AlertPreviewPanel aiDiagnose={aiDiagnose} onToggle={() => setAiDiagnose(!aiDiagnose)} t={t} />
         </div>
       </BaseModal.Content>
 
