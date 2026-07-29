@@ -16,7 +16,7 @@ export function AgentToggleButton({
   hasAvailableAgents,
   currentAgent,
 }: {
-  buttonRef: React.RefObject<HTMLButtonElement>;
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
   compact: boolean;
   isDemoMode: boolean;
   isOpen: boolean;
