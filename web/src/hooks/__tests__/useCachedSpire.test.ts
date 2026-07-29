@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { UseCacheOptions } from '../../lib/cache'
 import { renderHook } from '@testing-library/react'
 
 const mockUseCache = vi.fn()
 vi.mock('../../lib/cache', () => ({
     createCachedHook: vi.fn(),
-    useCache: (args: any) => mockUseCache(args),
+    useCache: (args: UseCacheOptions<unknown>) => mockUseCache(args),
     createCachedHook: (_config: unknown) => () => mockUseCache(_config),
 }))
 

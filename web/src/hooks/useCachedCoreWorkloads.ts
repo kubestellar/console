@@ -89,8 +89,25 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
 
       if (response.exitCode !== 0) return []
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let data: { items?: any[] }
+      interface RawPodSecCtx {
+        privileged?: boolean
+        runAsUser?: number
+        runAsNonRoot?: boolean
+        readOnlyRootFilesystem?: boolean
+        allowPrivilegeEscalation?: boolean
+        capabilities?: { drop?: string[]; add?: string[] }
+      }
+      interface RawPodItem {
+        metadata?: { name?: string; namespace?: string }
+        spec?: {
+          containers?: Array<{ securityContext?: RawPodSecCtx }>
+          securityContext?: RawPodSecCtx
+          hostNetwork?: boolean
+          hostPID?: boolean
+          hostIPC?: boolean
+        }
+      }
+      let data: { items?: RawPodItem[] }
       try {
         data = JSON.parse(response.output)
       } catch {
