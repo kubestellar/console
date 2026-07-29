@@ -86,7 +86,7 @@ export function RootCauseAnalyzer({
     return (
       <div className="flex items-center justify-center h-full text-sm text-muted-foreground py-4">
         <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
-        {search || localClusterFilter.length > 0 ? t('common:noMatchingItems') : t('cards:consoleOfflineDetection.allHealthy')}
+        {search || localClusterFilter.length > 0 ? t('common:common.noMatchingItems') : t('cards:consoleOfflineDetection.allHealthy')}
       </div>
     )
   }

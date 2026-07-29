@@ -11,7 +11,7 @@ interface CardHeaderProps {
   resolvedIconColor: string
   title: string
   description: string
-  t: TFunction
+  t: TFunction<'cards'>
   showDemoIndicator: boolean
   effectiveIsDemoData: boolean
   isLive?: boolean
