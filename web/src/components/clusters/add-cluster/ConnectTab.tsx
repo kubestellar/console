@@ -1,13 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { X, Check, Loader2, ChevronDown, ChevronUp, Shield, KeyRound, Cloud } from 'lucide-react'
-import { CloudProviderIcon } from '../../ui/CloudProviderIcon'
-import { CopyButton } from './CopyButton'
+import { X, Check, Loader2 } from 'lucide-react'
 import { useConnectTabContext } from './ConnectTabContext'
-import type { ConnectStep, CloudProvider } from './types'
+import type { ConnectStep } from './types'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { TextArea } from '../../ui/TextArea'
-import { CLOUD_IAM_COMMANDS, getCloudIAMProviderKey } from './ConnectTab.constants'
+import { AuthTypeSelector, CloudIAMSection, AdvancedOptionsSection } from './ConnectTab.parts'
 
 
 export function ConnectTab() {
@@ -111,44 +109,7 @@ export function ConnectTab() {
           {connectStep === 2 && (
             <div className="space-y-3">
               <label className="text-sm font-medium text-foreground">{t('cluster.connectAuthType')}</label>
-              <div className="grid grid-cols-3 gap-2">
-                <Button
-                  onClick={() => setAuthType('token')}
-                  variant="ghost"
-                  className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
-                    authType === 'token'
-                      ? 'border-purple-500 bg-purple-500/10 text-foreground'
-                      : 'border-border dark:border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
-                  }`}
-                  icon={<KeyRound className="w-4 h-4 shrink-0" />}
-                >
-                  {t('cluster.connectAuthToken')}
-                </Button>
-                <Button
-                  onClick={() => setAuthType('certificate')}
-                  variant="ghost"
-                  className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
-                    authType === 'certificate'
-                      ? 'border-purple-500 bg-purple-500/10 text-foreground'
-                      : 'border-border dark:border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
-                  }`}
-                  icon={<Shield className="w-4 h-4 shrink-0" />}
-                >
-                  {t('cluster.connectAuthCert')}
-                </Button>
-                <Button
-                  onClick={() => setAuthType('cloud-iam')}
-                  variant="ghost"
-                  className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
-                    authType === 'cloud-iam'
-                      ? 'border-purple-500 bg-purple-500/10 text-foreground'
-                      : 'border-border dark:border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
-                  }`}
-                  icon={<Cloud className="w-4 h-4 shrink-0" />}
-                >
-                  {t('cluster.connectAuthIAM')}
-                </Button>
-              </div>
+              <AuthTypeSelector authType={authType} setAuthType={setAuthType} />
 
               {authType === 'token' && (
                 <div className="space-y-1.5">
@@ -192,96 +153,22 @@ export function ConnectTab() {
               )}
 
               {authType === 'cloud-iam' && (
-                <div className="space-y-3">
-                  <div className="text-xs text-muted-foreground">{t('cluster.cloudIAMDesc')}</div>
-
-                  {/* Provider selector */}
-                  <div className="grid grid-cols-4 gap-2">
-                    {(['eks', 'gke', 'aks', 'openshift'] as CloudProvider[]).map((p) => (
-                      <Button
-                        key={p}
-                        onClick={() => setSelectedCloudProvider(p)}
-                        aria-label={t('actions.selectCloudProviderAria', {
-                          provider: t(`cluster.cloudIAMProvider${getCloudIAMProviderKey(p)}`),
-                        })}
-                        variant="ghost"
-                        className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-xs transition-colors ${
-                          selectedCloudProvider === p
-                            ? 'border-purple-500 bg-purple-500/10 text-foreground'
-                            : 'border-border dark:border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        <CloudProviderIcon provider={p} size={20} />
-                        {t(`cluster.cloudIAMProvider${getCloudIAMProviderKey(p)}`)}
-                      </Button>
-                    ))}
-                  </div>
-
-                  {/* Step A: Authenticate */}
-                  <div className="bg-secondary rounded-lg p-4">
-                    <div className="text-xs text-muted-foreground mb-2">{t('cluster.cloudIAMStepAuth')}</div>
-                    <div className="flex items-start justify-between gap-2">
-                      <code className="text-sm text-foreground font-mono">{CLOUD_IAM_COMMANDS[selectedCloudProvider].auth}</code>
-                      <CopyButton text={CLOUD_IAM_COMMANDS[selectedCloudProvider].auth} />
-                    </div>
-                  </div>
-
-                  {/* Step B: Register cluster (skip for OpenShift — oc login does both) */}
-                  {CLOUD_IAM_COMMANDS[selectedCloudProvider].register && (
-                    <div className="bg-secondary rounded-lg p-4">
-                      <div className="text-xs text-muted-foreground mb-2">{t('cluster.cloudIAMStepRegister')}</div>
-                      <div className="flex items-start justify-between gap-2">
-                        <code className="text-sm text-foreground font-mono break-all">{CLOUD_IAM_COMMANDS[selectedCloudProvider].register}</code>
-                        <CopyButton text={CLOUD_IAM_COMMANDS[selectedCloudProvider].register} />
-                      </div>
-                    </div>
-                  )}
-
-                  <p className="text-xs text-muted-foreground bg-secondary/50 rounded-lg p-3 border border-border/30 dark:border-white/5">
-                    {t('cluster.cloudIAMAutoDetect')}
-                  </p>
-                </div>
+                <CloudIAMSection
+                  selectedCloudProvider={selectedCloudProvider}
+                  setSelectedCloudProvider={setSelectedCloudProvider}
+                />
               )}
 
               {/* Advanced options (only for token/certificate) */}
               {authType !== 'cloud-iam' && (
-                <>
-                  <Button
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                    variant="ghost"
-                    size="sm"
-                    icon={showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {t('cluster.connectAdvanced')}
-                  </Button>
-
-                  {showAdvanced && (
-                    <div className="space-y-2 pl-1">
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">{t('cluster.connectCaLabel')}</label>
-                        <TextArea
-                          value={caData}
-                          onChange={(e) => setCaData(e.target.value)}
-                          rows={3}
-                          placeholder="-----BEGIN CERTIFICATE-----"
-                          textAreaSize="lg"
-                          className="dark:border-white/10 focus:border-purple-500 font-mono text-xs"
-                        />
-                      </div>
-                      <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                        {/* eslint-disable-next-line no-restricted-syntax -- no Checkbox component exists yet */}
-                        <input
-                          type="checkbox"
-                          checked={skipTls}
-                          onChange={(e) => setSkipTls(e.target.checked)}
-                          className="rounded border-border dark:border-white/20 bg-secondary"
-                        />
-                        {t('cluster.connectSkipTls')}
-                      </label>
-                    </div>
-                  )}
-                </>
+                <AdvancedOptionsSection
+                  showAdvanced={showAdvanced}
+                  setShowAdvanced={setShowAdvanced}
+                  caData={caData}
+                  setCaData={setCaData}
+                  skipTls={skipTls}
+                  setSkipTls={setSkipTls}
+                />
               )}
 
               <div className="flex justify-between">
