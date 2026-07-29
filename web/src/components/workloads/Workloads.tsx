@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
+import type { TFunction } from 'i18next'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
@@ -120,7 +121,7 @@ function useDeploymentActions({
 }: {
   refetchDeployments: () => void
   showToast: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void
-  t: (key: string, fallback?: string, options?: Record<string, unknown>) => string
+  t: TFunction
 }) {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
 

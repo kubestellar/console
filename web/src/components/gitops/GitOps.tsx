@@ -116,7 +116,7 @@ export function GitOps() {
         selectedCluster={selectedCluster}
         statusFilter={statusFilter}
         onSelectCluster={setSelectedCluster}
-        onSelectStatus={setStatusFilter}
+        onSelectStatus={value => setStatusFilter(value as typeof statusFilter)}
         t={t}
       />
 

@@ -7,7 +7,7 @@ const DEPLOYMENT_ISSUES_ERROR_THRESHOLD = 3
 export interface WorkloadDeployment {
   name: string
   namespace: string
-  cluster: string
+  cluster?: string
   status: string
   replicas: number
   readyReplicas: number
@@ -17,7 +17,7 @@ export interface WorkloadDeployment {
 export interface WorkloadIssue {
   name: string
   namespace: string
-  cluster: string
+  cluster?: string
 }
 
 export interface AppSummary {

@@ -184,7 +184,7 @@ export function AlertBadgeRow({
 export interface AlertBadgeDropdownProps {
   isOpen: boolean
   isMobile: boolean
-  dropdownRef: React.RefObject<HTMLDivElement>
+  dropdownRef: React.RefObject<HTMLDivElement | null>
   stats: AlertStats
   searchQuery: string
   onSearchQueryChange: (value: string) => void

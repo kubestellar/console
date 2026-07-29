@@ -41,7 +41,7 @@ export interface ClustersBeforeCardsProps {
   isDegraded: boolean
   isLoading: boolean
   permissionsLoading: boolean
-  isClusterAdmin: boolean
+  isClusterAdmin: (cluster: string) => boolean
   clusterGroups: ClusterGroup[]
   addClusterGroup: (group: Omit<ClusterGroup, 'id'>) => void
   deleteClusterGroup: (id: string) => void

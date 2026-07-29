@@ -10,7 +10,7 @@ interface UseAlertBadgeStateArgs {
 }
 
 export interface UseAlertBadgeStateResult {
-  dropdownRef: React.RefObject<HTMLDivElement>
+  dropdownRef: React.RefObject<HTMLDivElement | null>
   searchQuery: string
   setSearchQuery: (value: string) => void
   severityFilter: AlertSeverity | 'all'
