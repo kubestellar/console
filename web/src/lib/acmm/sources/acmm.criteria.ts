@@ -1,7 +1,7 @@
 /**
  * ACMM maturity criteria definitions.
  *
- * Extracted from acmm.ts as part of the per-source split (tracked by #15790).
+ * Extracted from acmm.ts as part of the per-source split.
  * Imported by acmm.ts to build the Source export.
  */
 import type { Criterion } from './types'
