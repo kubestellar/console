@@ -4,42 +4,19 @@
  * Formatted, human-readable mission viewer with tabbed sections:
  * Install | Uninstall | Update/Upgrade | Troubleshooting
  * Replaces raw JSON with structured, copy-pasteable content.
+ *
+ * Header actions live in `MissionDetailView.header.tsx`, metadata/links/
+ * prerequisites in `MissionDetailView.meta.tsx`, and the tab strip plus tab
+ * bodies in `MissionDetailView.tabs.tsx`.
  */
 
-import { useState, useEffect, useRef } from 'react'
-import {
-  ArrowLeft,
-  Download,
-  Loader2,
-  Eye,
-  Code,
-  Star,
-  Tag,
-  CheckCircle,
-  Check,
-  AlertTriangle,
-  Trash2,
-  ArrowUpCircle,
-  Wrench,
-  ExternalLink,
-  Shield,
-  MessageSquarePlus,
-  Link } from 'lucide-react'
+import { useState } from 'react'
+import { Download, Trash2, ArrowUpCircle, Wrench, Shield } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '../../lib/cn'
-import { validateExternalUrl } from '../../lib/validateExternalUrl'
-import { StatusBadge } from '../ui/StatusBadge'
-import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
-import { copyToClipboard } from '../../lib/clipboard'
-import {
-  type TabId,
-  type TabDef,
-  type MissionDetailViewProps,
-  SECURITY_MODEL_DOC_URL,
-  SECURITY_AI_DOC_URL,
-  LOADING_SKELETON_COUNT,
-} from './MissionDetailView.types'
-import { CopyButton, StepCard, SectionBadge } from './MissionDetailView.parts'
+import { type TabId, type TabDef, type MissionDetailViewProps } from './MissionDetailView.types'
+import { MissionDetailHeader } from './MissionDetailView.header'
+import { MissionDetailMeta } from './MissionDetailView.meta'
+import { MissionDetailTabNav, MissionDetailTabContent } from './MissionDetailView.tabs'
 
 export function MissionDetailView({
   mission,
@@ -57,24 +34,6 @@ export function MissionDetailView({
   error = null,
   onRetry }: MissionDetailViewProps) {
   const { t } = useTranslation()
-  const [linkCopied, setLinkCopied] = useState(false)
-  const [isImporting, setIsImporting] = useState(false)
-  const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
-    }
-  }, [])
-
-  const handleImport = async () => {
-    setIsImporting(true)
-    try {
-      await Promise.resolve(onImport())
-    } finally {
-      setIsImporting(false)
-    }
-  }
 
   const tabs: TabDef[] = [
     {
@@ -115,104 +74,22 @@ export function MissionDetailView({
   ]
 
   const [activeTab, setActiveTab] = useState<TabId>('install')
-  const activeTabDef = tabs.find((t) => t.id === activeTab) ?? tabs?.[0]
-
-  const typeColors: Record<string, string> = {
-    troubleshoot: 'bg-red-500/10 text-red-400 border-red-500/20',
-    deploy: 'bg-green-500/10 text-green-400 border-green-500/20',
-    upgrade: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    analyze: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    repair: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-    custom: 'bg-purple-500/10 text-purple-400 border-purple-500/20' }
-
-  const qualityScore = mission.metadata?.qualityScore
-  const maturity = mission.metadata?.maturity
-  const projectVersion = mission.metadata?.projectVersion
-  const sourceUrls = mission.metadata?.sourceUrls
+  const activeTabDef = tabs.find((tab) => tab.id === activeTab) ?? tabs?.[0]
 
   return (
     <div className="space-y-5">
-      {/* Back button — hidden when opened from saved missions (no listing context) */}
-      {!hideBackButton && (
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {t('missions.detail.links.backToListing')}
-        </button>
-      )}
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-xl font-semibold text-foreground">{mission.title}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{mission.description}</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {matchScore != null && matchScore > 0 && (
-            <StatusBadge color="purple" size="md" variant="outline" rounded="full">
-              <Star className="w-3 h-3" />
-              {matchScore}% match
-            </StatusBadge>
-          )}
-          {shareUrl && (
-            <button
-              onClick={() => {
-                copyToClipboard(shareUrl)
-                setLinkCopied(true)
-                if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
-                linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
-              }}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors',
-                linkCopied
-                  ? 'border-green-500/30 text-green-400'
-                  : 'border-border text-muted-foreground hover:text-foreground'
-              )}
-              title="Copy shareable link"
-            >
-              {linkCopied ? <Check className="w-3.5 h-3.5" /> : <Link className="w-3.5 h-3.5" />}
-              {linkCopied ? t('missions.detail.actions.copied') : t('missions.detail.actions.share')}
-            </button>
-          )}
-          <button
-            onClick={onToggleRaw}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors',
-              showRaw
-                ? 'bg-secondary border-border text-foreground'
-                : 'border-border text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {showRaw ? <Eye className="w-3.5 h-3.5" /> : <Code className="w-3.5 h-3.5" />}
-            {showRaw ? t('missions.detail.actions.preview') : t('missions.detail.actions.viewRaw')}
-          </button>
-          {onImprove && (
-            <button
-              onClick={onImprove}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 transition-colors"
-              title="Suggest improvements to this AI mission"
-            >
-              <MessageSquarePlus className="w-3.5 h-3.5" />
-              {t('missions.detail.actions.improve')}
-            </button>
-          )}
-          <button
-            onClick={handleImport}
-            disabled={isImporting}
-            className={cn(
-              'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg text-white transition-colors',
-              isImporting
-                ? 'bg-purple-600 cursor-not-allowed'
-                : 'bg-purple-600 hover:bg-purple-500'
-            )}
-          >
-            {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            {importLabel}
-          </button>
-        </div>
-      </div>
+      <MissionDetailHeader
+        mission={mission}
+        showRaw={showRaw}
+        onToggleRaw={onToggleRaw}
+        onImport={onImport}
+        onBack={onBack}
+        onImprove={onImprove}
+        matchScore={matchScore}
+        importLabel={importLabel}
+        hideBackButton={hideBackButton}
+        shareUrl={shareUrl}
+      />
 
       {/* Raw view */}
       {showRaw && rawContent ? (
@@ -221,367 +98,17 @@ export function MissionDetailView({
         </pre>
       ) : (
         <>
-          {/* Metadata bar */}
-          <div className="flex items-center flex-wrap gap-2">
-            <span
-              className={cn(
-                'px-2.5 py-1 text-xs rounded-full border',
-                typeColors[mission.type] || typeColors.custom
-              )}
-            >
-              {mission.type}
-            </span>
-            {mission.category && (
-              <span className="px-2.5 py-1 text-xs rounded-full bg-secondary text-muted-foreground border border-border">
-                {mission.category}
-              </span>
-            )}
-            {mission.cncfProject && (
-              <StatusBadge color="blue" size="md" variant="outline" rounded="full">
-                {mission.cncfProject}
-              </StatusBadge>
-            )}
-            {mission.difficulty && (
-              <StatusBadge color="purple" size="md" variant="outline" rounded="full">
-                {mission.difficulty}
-              </StatusBadge>
-            )}
-            {maturity && (
-              <span
-                className={cn(
-                  'px-2.5 py-1 text-xs rounded-full border',
-                  maturity === 'graduated'
-                    ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                    : maturity === 'incubating'
-                      ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                      : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                )}
-              >
-                {maturity}
-              </span>
-            )}
-            {projectVersion && projectVersion !== 'latest' && (
-              <span className="px-2.5 py-1 text-xs rounded-full bg-secondary text-muted-foreground border border-border">
-                {projectVersion}
-              </span>
-            )}
-            {qualityScore != null && (
-              <span
-                className={cn(
-                  'flex items-center gap-1 px-2.5 py-1 text-xs rounded-full border',
-                  qualityScore >= 80
-                    ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                    : qualityScore >= 60
-                      ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                      : 'bg-red-500/10 text-red-400 border-red-500/20'
-                )}
-              >
-                <Shield className="w-3 h-3" />
-                {qualityScore}/100
-              </span>
-            )}
-            {mission.installMethods?.map((method) => (
-              <span
-                key={method}
-                className="px-2 py-0.5 text-xs rounded-full bg-secondary text-muted-foreground"
-              >
-                {method}
-              </span>
-            ))}
-            {(mission.tags || [])
-              .filter((t) => !['installation', 'configuration', 'cncf'].includes(t))
-              .slice(0, 4)
-              .map((tag) => (
-                <span
-                  key={tag}
-                  className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-secondary text-muted-foreground"
-                >
-                  <Tag className="w-3 h-3" />
-                  {tag}
-                </span>
-              ))}
-          </div>
+          <MissionDetailMeta mission={mission} error={error} onRetry={onRetry} />
 
-          {/* Section completeness badges */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{t('missions.detail.sections.sections')}</span>
-            <SectionBadge present={(mission.steps || []).length > 0} label={t('missions.detail.sections.install')} />
-            <SectionBadge present={(mission.uninstall || []).length > 0} label={t('missions.detail.sections.uninstall')} />
-            <SectionBadge present={(mission.upgrade || []).length > 0} label={t('missions.detail.sections.upgrade')} />
-            <SectionBadge present={(mission.troubleshooting || []).length > 0} label={t('missions.detail.sections.troubleshooting')} />
-          </div>
+          <MissionDetailTabNav tabs={tabs} activeTab={activeTab} onSelectTab={setActiveTab} />
 
-          {/* Source links */}
-          {sourceUrls && (
-            <div className="flex items-center gap-3 text-xs">
-              {validateExternalUrl(sourceUrls.repo) && (
-                <a
-                  href={validateExternalUrl(sourceUrls.repo)!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  {t('missions.detail.links.repository')}
-                </a>
-              )}
-              {validateExternalUrl(sourceUrls.docs) && sourceUrls.docs !== sourceUrls.repo && (
-                <a
-                  href={validateExternalUrl(sourceUrls.docs)!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  {t('missions.detail.links.documentation')}
-                </a>
-              )}
-              {validateExternalUrl(sourceUrls.helm) && (
-                <a
-                  href={validateExternalUrl(sourceUrls.helm)!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  {t('missions.detail.links.helmChart')}
-                </a>
-              )}
-              {validateExternalUrl(sourceUrls.issue) && (
-                <a
-                  href={validateExternalUrl(sourceUrls.issue)!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  {t('missions.detail.links.issue')}
-                </a>
-              )}
-              {validateExternalUrl(sourceUrls.pr) && (
-                <a
-                  href={validateExternalUrl(sourceUrls.pr)!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  {t('missions.detail.links.pullRequest')}
-                </a>
-              )}
-            </div>
-          )}
-
-          {/* Prerequisites */}
-          {mission.prerequisites && mission.prerequisites.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-foreground mb-2">{t('missions.detail.sections.prerequisites')}</h3>
-              <ul className="space-y-1">
-                {mission.prerequisites.map((p, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <CheckCircle className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Error banner — shown when full mission content could not be fetched */}
-          {error && (
-            <div role="alert" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm">
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-              <span className="text-red-400 flex-1">{error}</span>
-              {onRetry && (
-                <button
-                  onClick={onRetry}
-                  className="shrink-0 px-3 py-1 text-xs rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-300 transition-colors"
-                >
-                  {t('missions.detail.sections.retry')}
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Tab navigation */}
-          <div className="border-b border-border">
-            <nav className="flex gap-0 -mb-px">
-              {tabs.map((tab) => {
-                const Icon = tab.icon
-                const hasContent = tab.steps.length > 0
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
-                      activeTab === tab.id
-                        ? 'border-purple-500 text-foreground'
-                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-                      !hasContent && 'opacity-50'
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
-                    {hasContent && (
-                      <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-secondary">
-                        {tab.steps.length}
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </nav>
-          </div>
-
-          {/* Tab content */}
-          <div className="space-y-3">
-            {loading ? (
-              /* Shimmer skeleton placeholders while full mission content loads */
-              Array.from({ length: LOADING_SKELETON_COUNT }).map((_, i) => (
-                <div key={i} className="flex gap-3 p-4 rounded-lg bg-secondary/50 border border-border">
-                  <div className="shrink-0 w-7 h-7 rounded-full animate-shimmer" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 w-1/3 rounded animate-shimmer" />
-                    <div className="h-3 w-full rounded animate-shimmer" />
-                    <div className="h-3 w-2/3 rounded animate-shimmer" />
-                    <div className="h-16 w-full rounded animate-shimmer" />
-                  </div>
-                </div>
-              ))
-            ) : activeTabDef.steps.length > 0 ? (
-              <>
-                {activeTabDef.steps.map((step, i) => (
-                  <StepCard
-                    key={`${activeTab}-${i}`}
-                    step={step}
-                    index={i}
-                    accentColor={activeTabDef.color}
-                  />
-                ))}
-                {activeTab === 'security' && (
-                  <div className="mt-4 p-4 rounded-lg border border-purple-500/20 bg-purple-500/5 text-xs text-muted-foreground space-y-1">
-                    <p>
-                      The bullets above are specific to this mission. For the Console's overall security model — how kc-agent binds,
-                      where AI keys live, what leaves your machine, and how to run air-gapped — read the
-                      {' '}
-                      <a
-                        href={SECURITY_MODEL_DOC_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
-                      >
-                        KubeStellar Console Security Model
-                        <ExternalLink className="w-3 h-3" />
-                      </a>.
-                    </p>
-                    <p>
-                      For the LLM-specific threat model (prompt injection, supply chain, agent drift), see the
-                      {' '}
-                      <a
-                        href={SECURITY_AI_DOC_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
-                      >
-                        AI automation threat model
-                        <ExternalLink className="w-3 h-3" />
-                      </a>.
-                    </p>
-                  </div>
-                )}
-              </>
-            ) : activeTab === 'security' ? (
-              <div className="py-6 px-4 rounded-lg border border-purple-500/20 bg-purple-500/5 text-sm text-muted-foreground space-y-3">
-                <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
-                  <div className="space-y-2">
-                    <p className="font-medium text-foreground">No mission-specific security notes yet</p>
-                    <p>
-                      This mission does not yet include a <code className="font-mono text-foreground/70">security</code> section
-                      in its definition. The Console's overall security posture — kc-agent loopback bind, user-kubeconfig RBAC,
-                      AI-key storage, air-gapped and local-LLM options — applies regardless:
-                    </p>
-                    <p>
-                      <a
-                        href={SECURITY_MODEL_DOC_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
-                      >
-                        Read the KubeStellar Console Security Model
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                      {' · '}
-                      <a
-                        href={SECURITY_AI_DOC_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300"
-                      >
-                        AI automation threat model
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </p>
-                    {onImprove && (
-                      <button
-                        onClick={onImprove}
-                        className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 transition-colors"
-                      >
-                        <MessageSquarePlus className="w-3.5 h-3.5" />
-                        Suggest security notes for this mission
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="py-8 text-center">
-                <AlertTriangle className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">{activeTabDef.emptyMessage}</p>
-                {onImprove && (
-                  <button
-                    onClick={onImprove}
-                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 transition-colors"
-                  >
-                    <MessageSquarePlus className="w-3.5 h-3.5" />
-                    Help improve this section
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Resolution */}
-          {activeTab === 'install' && mission.resolution && (
-            <div className="mt-4 p-4 rounded-lg bg-green-500/5 border border-green-500/20">
-              <h3 className="text-sm font-medium text-green-400 mb-2">
-                <CheckCircle className="w-4 h-4 inline-block mr-1.5" />
-                Expected Result
-              </h3>
-              {mission.resolution.summary && (
-                <p className="text-sm text-muted-foreground">{mission.resolution.summary}</p>
-              )}
-              {mission.resolution.steps && mission.resolution.steps.length > 0 && (
-                <ul className="mt-2 space-y-1 ml-2">
-                  {mission.resolution.steps.map((s, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <span className="text-muted-foreground/50">•</span>
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {mission.resolution.yaml && (
-                <div className="relative mt-2">
-                  <pre className="p-3 rounded-lg bg-secondary border border-border text-xs text-foreground font-mono overflow-x-auto whitespace-pre-wrap">
-                    {mission.resolution.yaml}
-                  </pre>
-                  <CopyButton text={mission.resolution.yaml} />
-                </div>
-              )}
-            </div>
-          )}
+          <MissionDetailTabContent
+            mission={mission}
+            activeTab={activeTab}
+            activeTabDef={activeTabDef}
+            loading={loading}
+            onImprove={onImprove}
+          />
         </>
       )}
     </div>
