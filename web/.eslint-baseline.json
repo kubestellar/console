@@ -6596,6 +6596,13 @@
   {
     "file": "src/components/rbac/CanIChecker.parts.tsx",
     "rule": "no-restricted-syntax",
+    "line": 58,
+    "column": 5,
+    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/components/rbac/CanIChecker.parts.tsx",
+    "rule": "no-restricted-syntax",
     "line": 117,
     "column": 9,
     "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
@@ -6603,57 +6610,8 @@
   {
     "file": "src/components/rbac/CanIChecker.parts.tsx",
     "rule": "no-restricted-syntax",
-    "line": 58,
-    "column": 5,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/rbac/CanIChecker.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 317,
-    "column": 13,
-    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
-  },
-  {
-    "file": "src/components/rbac/CanIChecker.parts.tsx",
-    "rule": "no-restricted-syntax",
     "line": 137,
     "column": 9,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/rbac/CanIChecker.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 349,
-    "column": 13,
-    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
-  },
-  {
-    "file": "src/components/rbac/CanIChecker.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 374,
-    "column": 13,
-    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
-  },
-  {
-    "file": "src/components/rbac/CanIChecker.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 395,
-    "column": 13,
-    "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
-  },
-  {
-    "file": "src/components/rbac/CanIChecker.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 436,
-    "column": 13,
-    "message": "Use <Select> from components/ui/Select.tsx instead of raw <select>."
-  },
-  {
-    "file": "src/components/rbac/CanIChecker.tsx",
-    "rule": "no-restricted-syntax",
-    "line": 456,
-    "column": 13,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {

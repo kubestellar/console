@@ -320,7 +320,7 @@ After installation, ask:
                     <span className="text-xl">{getToolIcon(tool.name)}</span>
                     <div>
                       <p className="font-medium text-foreground">{tool.name}</p>
-                      <p className="text-xs text-muted-foreground">v{tool.version}</p>
+                      <p className="text-xs text-muted-foreground">v{tool.version ?? "?"}</p>
                     </div>
                   </div>
                 </div>

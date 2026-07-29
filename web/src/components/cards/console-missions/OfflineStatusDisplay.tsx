@@ -21,7 +21,7 @@ interface OfflineStatusDisplayProps {
   predictionIntervalMinutes: number
   onDrillToCluster: (cluster: string) => void
   onTriggerAnalysis: () => void
-  t: TFunction<readonly ['cards', 'common']>
+  t: TFunction<['cards', 'common']>
 }
 
 export function OfflineStatusDisplay({
@@ -56,8 +56,8 @@ export function OfflineStatusDisplay({
           }
         }}
         title={currentClusterIssueCount > 0
-          ? t('common:healthCheck.issuesTooltip', { count: currentClusterIssueCount })
-          : t('cards:consoleOfflineDetection.allHealthy')}
+          ? t('common:healthCheck.issuesTooltip', '{{count}} issues detected', { count: currentClusterIssueCount })
+          : t('cards:consoleOfflineDetection.allHealthy', 'All Healthy')}
       >
         <div className="text-xl font-bold text-foreground">{currentClusterIssueCount}</div>
         <div className={cn('text-2xs', currentClusterIssueCount > 0 ? 'text-red-400' : 'text-green-400')}>
@@ -80,7 +80,7 @@ export function OfflineStatusDisplay({
       >
         <div className="text-xl font-bold text-foreground">{gpuIssueCount}</div>
         <div className={cn('text-2xs', gpuIssueCount > 0 ? 'text-yellow-400' : 'text-green-400')}>
-          {t('cards:consoleOfflineDetection.gpuIssues')}
+          {t('cards:consoleOfflineDetection.gpuIssues', 'GPU Issues')}
         </div>
       </div>
       <div
@@ -122,7 +122,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
           'text-2xs flex items-center gap-1',
           totalPredicted > 0 ? 'text-blue-400' : 'text-green-400'
         )}>
-          {t('cards:consoleOfflineDetection.predicted')}
+          {t('cards:consoleOfflineDetection.predicted', 'Predicted')}
           <Info className="w-3 h-3 opacity-60" />
         </div>
       </div>

@@ -22,6 +22,11 @@ vi.mock('../../lib/auth', () => ({
   useAuth: () => ({ token: mockToken }),
 }))
 
+const showToastMock = vi.fn()
+vi.mock('../../components/ui/Toast', () => ({
+  useToast: () => ({ showToast: showToastMock }),
+}))
+
 // Make authFetch delegate to global.fetch so per-test fetch mocks are intercepted
 vi.mock('../../lib/api', () => ({
   authFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
@@ -370,6 +375,10 @@ describe('usePersistence', () => {
 
     expect(testResult!.success).toBe(false)
     expect(testResult!.cluster).toBe('failing-cluster')
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Failed to test connection to failing-cluster',
+      'error'
+    )
   })
 
   // -------------------------------------------------------------------------

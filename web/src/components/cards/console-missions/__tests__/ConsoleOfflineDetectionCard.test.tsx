@@ -15,16 +15,12 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, optsOrDefault?: { defaultValue?: string; count?: number } | string, extraOpts?: Record<string, unknown>) => {
-      // Handle t(key, defaultValue, options) — interpolate the default value string
-      if (typeof optsOrDefault === 'string') {
-        const options = extraOpts ?? {}
-        return Object.entries(options).reduce(
-          (s, [k, v]) => s.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v ?? '')),
-          optsOrDefault,
-        )
-      }
-      const opts = optsOrDefault
-      if (opts?.defaultValue) return String(opts.defaultValue)
+      // Normalize both the legacy t(key, options) and current t(key, defaultValue, options)
+      // i18next call signatures into a single { defaultValue, opts } shape before applying
+      // the key-based overrides below, so both forms produce identical fixture strings.
+      const defaultValue = typeof optsOrDefault === 'string' ? optsOrDefault : optsOrDefault?.defaultValue
+      const opts = typeof optsOrDefault === 'string' ? extraOpts : optsOrDefault
+
       if (key.includes('allHealthy')) return 'All Healthy'
       if (key.includes('gpuIssues')) return 'GPU Issues'
       if (key.includes('predicted')) return 'Predicted'
@@ -33,6 +29,12 @@ vi.mock('react-i18next', () => ({
       }
       if (key.includes('unhealthy')) return 'Unhealthy'
       if (key.includes('offline')) return 'Offline'
+      if (defaultValue) {
+        return Object.entries(opts ?? {}).reduce(
+          (s, [k, v]) => s.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v ?? '')),
+          defaultValue,
+        )
+      }
       return key
     },
   }),

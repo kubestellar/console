@@ -145,7 +145,8 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
 
           // Capabilities not dropped
           if (sc.capabilities?.drop?.length === 0 || !sc.capabilities?.drop) {
-            if ((sc.capabilities?.add?.length ?? 0) > 0) {
+            const addCapabilities = sc.capabilities?.add
+            if (Array.isArray(addCapabilities) && addCapabilities.length > 0) {
               issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Capabilities not dropped', severity: 'medium', details: 'Container not dropping all capabilities' })
             }
           }
