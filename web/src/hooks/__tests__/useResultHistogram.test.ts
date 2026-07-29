@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { useResultHistogram } from '../useResultHistogram'
 import * as authModule from '../../lib/auth'
+import type { AuthContextType } from '../../lib/auth'
 
 vi.mock('../../lib/auth')
 
@@ -26,7 +27,7 @@ describe('useResultHistogram', () => {
       logout: vi.fn(),
       isLoading: false,
       user: null,
-    } as any)
+    } as unknown as AuthContextType)
 
     const { result } = renderHook(() => useResultHistogram())
 
@@ -42,7 +43,7 @@ describe('useResultHistogram', () => {
       logout: vi.fn(),
       isLoading: false,
       user: { id: 'user1' },
-    } as any)
+    } as unknown as AuthContextType)
 
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
@@ -59,7 +60,7 @@ describe('useResultHistogram', () => {
         backend_type: null,
         execution_sequence: null,
       }),
-    } as any)
+    } as unknown as AuthContextType)
 
     renderHook(() => useResultHistogram('pattern'))
 
@@ -80,14 +81,14 @@ describe('useResultHistogram', () => {
       logout: vi.fn(),
       isLoading: false,
       user: { id: 'user1' },
-    } as any)
+    } as unknown as AuthContextType)
 
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       status: 200,
       headers: new Headers(),
       json: async () => ({}),
-    } as any)
+    } as unknown as AuthContextType)
 
     const { result } = renderHook(() => useResultHistogram())
 
