@@ -21,7 +21,7 @@ interface OfflineStatusDisplayProps {
   predictionIntervalMinutes: number
   onDrillToCluster: (cluster: string) => void
   onTriggerAnalysis: () => void
-  t: TFunction<readonly ['cards', 'common']>
+  t: TFunction
 }
 
 export function OfflineStatusDisplay({

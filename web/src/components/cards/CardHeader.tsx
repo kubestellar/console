@@ -11,7 +11,7 @@ interface CardHeaderProps {
   resolvedIconColor: string
   title: string
   description: string
-  t: TFunction<'cards'>
+  t: TFunction
   showDemoIndicator: boolean
   effectiveIsDemoData: boolean
   isLive?: boolean
@@ -78,7 +78,15 @@ export function CardHeader({
         {dragHandle}
         {ResolvedIcon && <ResolvedIcon className={cn('h-4 w-4 shrink-0', resolvedIconColor)} />}
         <h2 className="truncate text-sm font-medium text-foreground">{title}</h2>
-        <InfoTooltip text={description || t('messages.descriptionComingSoon', { title })} />
+        <InfoTooltip
+          text={
+            description ||
+            t('common:messages.descriptionComingSoon', {
+              title,
+              defaultValue: `Description for ${title} coming soon`,
+            })
+          }
+        />
         <CardMeta
           showDemoIndicator={showDemoIndicator}
           isDemoData={effectiveIsDemoData}
