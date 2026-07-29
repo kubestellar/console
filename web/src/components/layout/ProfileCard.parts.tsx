@@ -44,6 +44,7 @@ export interface OAuthStatus {
 // ─── useOAuthStatus ───────────────────────────────────────────────────────────
 // Encapsulates the two OAuth-check effects that were previously in ProfileCard.
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useOAuthStatus(isOpen: boolean): OAuthStatus {
   const [oauthStatus, setOauthStatus] = useState<OAuthStatus>({
     checked: false,
