@@ -65,8 +65,8 @@ vi.mock('../mcp/shared', () => ({
 
 vi.mock('../mcp/clusterCacheRef', () => ({
   clusterCacheRef: mockClusterCacheRef,
-  setClusterCacheRefClusters: vi.fn((clusters: Array<{ name: string; server?: string }> | unknown[]) => {
-    mockClusterCacheRef.clusters = clusters as Array<{ name: string; server?: string }>
+  setClusterCacheRefClusters: vi.fn((clusters: Array<{ name: string; context: string; server?: string }> | unknown[]) => {
+    mockClusterCacheRef.clusters = clusters as Array<{ name: string; context: string; server?: string }>
   }),
 }))
 
