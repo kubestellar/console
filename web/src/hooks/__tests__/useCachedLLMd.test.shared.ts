@@ -16,7 +16,7 @@ import { vi, beforeEach, afterEach } from 'vitest'
 
 const { mockClusterCacheRef } = vi.hoisted(() => ({
   mockClusterCacheRef: {
-    clusters: [] as Array<{ name: string; server?: string }>,
+    clusters: [] as Array<{ name: string; context: string; server?: string }>,
   },
 }))
 
@@ -142,12 +142,12 @@ let mod: typeof import('../useCachedLLMd')
 
 async function loadModule() {
   const shared = await import('../mcp/shared') as {
-    clusterCacheRef: { clusters: Array<{ name: string; server?: string }> }
+    clusterCacheRef: { clusters: Array<{ name: string; context: string; server?: string }> }
   }
   shared.clusterCacheRef.clusters = mockClusterCacheRef.clusters
 
   const clusterCacheRefModule = await import('../mcp/clusterCacheRef') as {
-    setClusterCacheRefClusters: (clusters: Array<{ name: string; server?: string }>) => void
+    setClusterCacheRefClusters: (clusters: Array<{ name: string; context: string; server?: string }>) => void
   }
   clusterCacheRefModule.setClusterCacheRefClusters(mockClusterCacheRef.clusters)
 
@@ -160,16 +160,16 @@ export function setupUseCachedLLMdTestEnv() {
       vi.resetModules()
       vi.clearAllMocks()
       mockClusterCacheRef.clusters = [
-        { name: 'vllm-d', server: 'https://vllm-d.example.com' },
-        { name: 'platform-eval', server: 'https://platform-eval.example.com' },
-        { name: 'cluster-1', server: 'https://cluster-1.example.com' },
-        { name: 'cluster-2', server: 'https://cluster-2.example.com' },
-        { name: 'cluster-a', server: 'https://cluster-a.example.com' },
-        { name: 'cluster-b', server: 'https://cluster-b.example.com' },
-        { name: 'my-cluster', server: 'https://my-cluster.example.com' },
-        { name: 'bad-cluster', server: 'https://bad-cluster.example.com' },
-        { name: 'c1', server: 'https://c1.example.com' },
-        { name: 'c2', server: 'https://c2.example.com' },
+        { name: 'vllm-d', context: 'vllm-d', server: 'https://vllm-d.example.com' },
+        { name: 'platform-eval', context: 'platform-eval', server: 'https://platform-eval.example.com' },
+        { name: 'cluster-1', context: 'cluster-1', server: 'https://cluster-1.example.com' },
+        { name: 'cluster-2', context: 'cluster-2', server: 'https://cluster-2.example.com' },
+        { name: 'cluster-a', context: 'cluster-a', server: 'https://cluster-a.example.com' },
+        { name: 'cluster-b', context: 'cluster-b', server: 'https://cluster-b.example.com' },
+        { name: 'my-cluster', context: 'my-cluster', server: 'https://my-cluster.example.com' },
+        { name: 'bad-cluster', context: 'bad-cluster', server: 'https://bad-cluster.example.com' },
+        { name: 'c1', context: 'c1', server: 'https://c1.example.com' },
+        { name: 'c2', context: 'c2', server: 'https://c2.example.com' },
       ]
 
       // Default useCache: return whatever initialData is provided
