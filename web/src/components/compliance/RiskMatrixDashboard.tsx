@@ -138,14 +138,14 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      <span className="ml-3 text-gray-300">Loading risk matrix…</span>
+      <span className="ml-3 text-muted-foreground">Loading risk matrix…</span>
     </div>
   )
 
   if (error) return (
     <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-lg space-y-3">
       <p className="text-red-400 font-medium">Unable to load risk matrix data</p>
-      <p className="text-sm text-gray-300">{error}</p>
+      <p className="text-sm text-muted-foreground">{error}</p>
       <button
         onClick={fetchData}
         className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 rounded text-sm text-red-300 transition-colors"
@@ -173,38 +173,38 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-            <p className="text-sm text-gray-300">Total Risks</p>
+            <p className="text-sm text-muted-foreground">Total Risks</p>
             <p className="text-2xl font-bold text-white">{summary.total_risks}</p>
           </div>
           <div className="bg-gray-800/50 rounded-lg p-4 border border-red-900/30">
-            <p className="text-sm text-gray-300">Critical</p>
+            <p className="text-sm text-muted-foreground">Critical</p>
             <p className="text-2xl font-bold text-red-400">{summary.critical}</p>
           </div>
           <div className="bg-gray-800/50 rounded-lg p-4 border border-red-700/30">
-            <p className="text-sm text-gray-300">High</p>
+            <p className="text-sm text-muted-foreground">High</p>
             <p className="text-2xl font-bold text-red-300">{summary.high}</p>
           </div>
           <div className="bg-gray-800/50 rounded-lg p-4 border border-orange-700/30">
-            <p className="text-sm text-gray-300">Medium</p>
+            <p className="text-sm text-muted-foreground">Medium</p>
             <p className="text-2xl font-bold text-orange-400">{summary.medium}</p>
           </div>
           <div className="bg-gray-800/50 rounded-lg p-4 border border-green-700/30">
-            <p className="text-sm text-gray-300">Low</p>
+            <p className="text-sm text-muted-foreground">Low</p>
             <p className="text-2xl font-bold text-green-400">{summary.low}</p>
           </div>
           <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-            <p className="text-sm text-gray-300">Trend</p>
+            <p className="text-sm text-muted-foreground">Trend</p>
             <div className="flex items-center gap-1">
               {summary.trend_direction === 'down' ? (
                 <TrendingDown className="w-5 h-5 text-green-400" />
               ) : summary.trend_direction === 'up' ? (
                 <TrendingUp className="w-5 h-5 text-red-400" />
               ) : (
-                <ArrowRight className="w-5 h-5 text-gray-300" />
+                <ArrowRight className="w-5 h-5 text-muted-foreground" />
               )}
               <span className={`text-lg font-bold ${
                 summary.trend_direction === 'down' ? 'text-green-400' :
-                summary.trend_direction === 'up' ? 'text-red-400' : 'text-gray-300'
+                summary.trend_direction === 'up' ? 'text-red-400' : 'text-muted-foreground'
               }`}>{summary.trend_percentage}%</span>
             </div>
           </div>
@@ -215,11 +215,11 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
         {/* Heat Map */}
         <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Risk Heat Map</h2>
-          <p className="text-xs text-gray-300 mb-3">Click a cell to view risks in that zone</p>
+          <p className="text-xs text-muted-foreground mb-3">Click a cell to view risks in that zone</p>
           <div className="flex">
             {/* Y-axis label */}
             <div className="flex flex-col justify-center mr-2">
-              <span className="text-xs text-gray-300 -rotate-90 whitespace-nowrap">← Likelihood →</span>
+              <span className="text-xs text-muted-foreground -rotate-90 whitespace-nowrap">← Likelihood →</span>
             </div>
             <div className="flex-1">
               {/* Grid rows — highest likelihood at top */}
@@ -227,7 +227,7 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
                 const likelihood = MATRIX_SIZE - rowIdx
                 return (
                   <div key={likelihood} className="flex items-center gap-1 mb-1">
-                    <span className="text-xs text-gray-300 w-20 text-right pr-2 truncate">{AXIS_LABELS[likelihood - 1]}</span>
+                    <span className="text-xs text-muted-foreground w-20 text-right pr-2 truncate">{AXIS_LABELS[likelihood - 1]}</span>
                     {Array.from({ length: MATRIX_SIZE }, (_, colIdx) => {
                       const impact = colIdx + 1
                       const cell = heatmapLookup.get(`${likelihood}-${impact}`)
@@ -252,10 +252,10 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
               {/* X-axis labels */}
               <div className="flex gap-1 mt-1 ml-20">
                 {IMPACT_LABELS.map(label => (
-                  <span key={label} className="flex-1 text-center text-xs text-gray-300 truncate">{label}</span>
+                  <span key={label} className="flex-1 text-center text-xs text-muted-foreground truncate">{label}</span>
                 ))}
               </div>
-              <p className="text-xs text-gray-300 text-center mt-1">← Impact →</p>
+              <p className="text-xs text-muted-foreground text-center mt-1">← Impact →</p>
             </div>
           </div>
         </div>
@@ -270,7 +270,7 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
                 </h2>
                 <button
                   onClick={() => setSelectedCell(null)}
-                  className="text-xs text-gray-300 hover:text-white"
+                  className="text-xs text-muted-foreground hover:text-white"
                 >{i18next.t('common:clearSelection', 'Clear selection')}</button>
               </div>
               {selectedRisks.length === 0 ? (
@@ -283,7 +283,7 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
                         <span className="text-sm font-medium text-white">{risk.name}</span>
                         {severityBadge(risk.score)}
                       </div>
-                      <div className="flex gap-4 text-xs text-gray-300">
+                      <div className="flex gap-4 text-xs text-muted-foreground">
                         <span>{risk.category}</span>
                         <span>Owner: {risk.owner}</span>
                         <span className={risk.status === 'Open' ? 'text-yellow-400' : 'text-green-400'}>{risk.status}</span>
@@ -302,7 +302,7 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
                     <span className="text-xs text-gray-500 w-6">{idx + 1}.</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white truncate">{risk.name}</p>
-                      <p className="text-xs text-gray-300">{risk.category} · {risk.owner}</p>
+                      <p className="text-xs text-muted-foreground">{risk.category} · {risk.owner}</p>
                     </div>
                     <div className="text-right">
                       <span className="text-lg font-bold text-white">{risk.score}</span>
@@ -327,7 +327,7 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
                 className="w-full rounded-t bg-gradient-to-t from-orange-600 to-orange-400 transition-all"
                 style={{ height: `${(val / 50) * 100}%` }}
               />
-              <span className="text-xs text-gray-300">M{idx + 1}</span>
+              <span className="text-xs text-muted-foreground">M{idx + 1}</span>
             </div>
           ))}
         </div>
@@ -340,13 +340,13 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
       {/* All risks table */}
       <div className="bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden">
         <div className="p-4 border-b border-gray-700 flex items-center gap-2">
-          <ChevronDown className="w-4 h-4 text-gray-300" />
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
           <h2 className="text-lg font-semibold text-white">All Risks</h2>
           <span className="text-xs text-gray-500 ml-2">({risks.length} total)</span>
         </div>
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-gray-300 border-b border-gray-700">
+            <tr className="text-muted-foreground border-b border-gray-700">
               <th className="text-left p-3">ID</th>
               <th className="text-left p-3">Name</th>
               <th className="text-left p-3">Category</th>
@@ -362,16 +362,16 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
               <tr key={r.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                 <td className="p-3 font-mono text-blue-300">{r.id}</td>
                 <td className="p-3 text-white">{r.name}</td>
-                <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 text-xs">{r.category}</span></td>
-                <td className="p-3 text-center text-gray-300">{r.likelihood}</td>
-                <td className="p-3 text-center text-gray-300">{r.impact}</td>
+                <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-muted-foreground text-xs">{r.category}</span></td>
+                <td className="p-3 text-center text-muted-foreground">{r.likelihood}</td>
+                <td className="p-3 text-center text-muted-foreground">{r.impact}</td>
                 <td className="p-3 text-center font-bold text-white">{r.score}</td>
                 <td className="p-3">{severityBadge(r.score)}</td>
                 <td className="p-3">
                   <span className={`text-xs font-medium ${
                     r.status === 'Open' ? 'text-yellow-400' :
                     r.status === 'Mitigating' ? 'text-blue-400' :
-                    r.status === 'Accepted' ? 'text-gray-300' : 'text-green-400'
+                    r.status === 'Accepted' ? 'text-muted-foreground' : 'text-green-400'
                   }`}>{r.status}</span>
                 </td>
               </tr>
