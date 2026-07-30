@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /** Shared props/helpers for the cluster resource detail modals (CPU, Memory, Storage, GPU). */
 
 export interface ResourceModalProps {

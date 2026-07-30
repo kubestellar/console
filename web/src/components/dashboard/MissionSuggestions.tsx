@@ -240,6 +240,7 @@ export function MissionSuggestions() {
                   onClick={() => setExpandedId(isExpanded ? null : suggestion.id)}
                   aria-expanded={isExpanded}
                   aria-haspopup="menu"
+                  aria-controls={`mission-dropdown-${suggestion.id}`}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:scale-105 ${CHIP_STYLE.border} ${CHIP_STYLE.bg} ${CHIP_STYLE.text}`}
                 >
                   <Icon className="w-3 h-3" />
@@ -310,6 +311,7 @@ export function MissionSuggestions() {
             onClick={() => { setMinimized(true); safeSetItem(STORAGE_KEY_MISSIONS_COLLAPSED, 'true') }}
             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             title="Minimize"
+            aria-label={t('dashboard.missions.minimize')}
           >
             <ChevronUp className="w-3.5 h-3.5" />
           </button>
@@ -333,6 +335,9 @@ export function MissionSuggestions() {
                   else triggerRefs.current.delete(suggestion.id)
                 }}
                 onClick={() => setExpandedId(isExpanded ? null : suggestion.id)}
+                aria-expanded={isExpanded}
+                aria-haspopup="menu"
+                aria-controls={`mission-dropdown-${suggestion.id}`}
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all hover:brightness-110 ${CHIP_STYLE.border} ${CHIP_STYLE.bg} ${CHIP_STYLE.text}`}
               >
                 <Icon className="w-3 h-3" />
