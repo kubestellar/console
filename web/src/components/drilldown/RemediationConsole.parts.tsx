@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { KeyboardEvent, RefObject } from 'react'
+import { KeyboardEvent, RefObject, useEffect } from 'react'
 import type { TFunction } from 'i18next'
 import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Terminal, Send, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -79,6 +79,13 @@ interface RemediationTabsProps {
 }
 
 export function RemediationTabs({ activeTab, tabListProps, getTabProps, setActiveTab, shellInputRef, focusDelayMs, t }: RemediationTabsProps) {
+  useEffect(() => {
+    if (activeTab === 'shell') {
+      const timerId = setTimeout(() => shellInputRef.current?.focus(), focusDelayMs)
+      return () => clearTimeout(timerId)
+    }
+  }, [activeTab, focusDelayMs, shellInputRef])
+  
   return (
     <div {...tabListProps} className="flex border-b border-border">
       <button
@@ -98,7 +105,6 @@ export function RemediationTabs({ activeTab, tabListProps, getTabProps, setActiv
         {...getTabProps('shell')}
         onClick={() => {
           setActiveTab('shell')
-          setTimeout(() => shellInputRef.current?.focus(), focusDelayMs)
         }}
         aria-label={t('remediation.shell')}
         className={cn(
