@@ -7,7 +7,7 @@ import { vi, beforeEach, afterEach } from 'vitest'
 let demoModeValue = false
 const demoModeListeners = new Set<() => void>()
 
-function setDemoMode(val: boolean) {
+function _setDemoMode(val: boolean) {
   demoModeValue = val
   demoModeListeners.forEach(fn => fn())
 }
@@ -46,7 +46,7 @@ vi.mock('../workerRpc', () => ({
 
 /** Offset (ms) to make seeded cache data older than any refresh interval,
  *  ensuring the initial fetch is NOT skipped by the fresh-data guard (#7653). */
-const STALE_AGE_MS = 600_000
+const _STALE_AGE_MS = 600_000
 
 async function importFresh() {
   vi.resetModules()
