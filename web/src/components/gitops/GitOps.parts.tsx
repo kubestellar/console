@@ -206,7 +206,7 @@ export function GitOpsFiltersAndList({ clusters, selectedCluster, statusFilter, 
       />
       <div className="flex items-center gap-2 mb-3">
         <span className="text-sm font-medium text-muted-foreground">{t('gitops.applications')}</span>
-        <StatusBadge color="yellow" size="xs">{t('common:common.demo')}</StatusBadge>
+        <StatusBadge color="yellow" size="xs">{t('common.demo')}</StatusBadge>
       </div>
       <GitOpsAppsList
         filteredApps={filteredApps}
