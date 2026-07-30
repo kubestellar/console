@@ -44,6 +44,7 @@ export function useOperatorDrillDown(
         } catch {
           console.warn('[OperatorDrillDown] Failed to parse CSV JSON output')
           setCsvInfo({ name: currentCSV || operatorName, displayName: operatorName, version: 'Unknown', phase: operatorPhase })
+          setCsvLoading(false)
           return
         }
         const csvName2 = csv.metadata?.name || csvName
@@ -79,6 +80,7 @@ export function useOperatorDrillDown(
         } catch {
           console.warn('[OperatorDrillDown] Failed to parse CRD JSON output')
           setOperatorCRDs([])
+          setCrdsLoading(false)
           return
         }
         const crds = csv.spec?.customresourcedefinitions?.owned || []

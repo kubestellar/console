@@ -17,7 +17,7 @@ vi.mock('../../../hooks/useDrillDownWebSocket', () => ({
   useDrillDownWebSocket: () => ({ runKubectl: mockRunKubectl }),
 }))
 
-import { useOperatorDrillDown } from '../useOperatorDrillDown'
+import { useOperatorDrillDown } from './useOperatorDrillDown'
 
 const CSV_NAME = 'cert-manager.v1.14.0'
 const OPERATOR_NAME = 'cert-manager'
