@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Loader2, GitBranch, CheckCircle, AlertTriangle, FileText, Diff, ChevronLeft, Server, Layers } from 'lucide-react'
+import { Loader2, GitBranch, CheckCircle, AlertTriangle, FileText, Diff, Server, Layers } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { cn } from '../../../lib/cn'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
