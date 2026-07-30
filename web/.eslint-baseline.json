@@ -19878,5 +19878,2378 @@
     "line": 405,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 73,
+    "column": 28,
+    "message": "'getRawAIPredictions' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 28,
+    "message": "'ClusterHealth' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 7,
+    "column": 7,
+    "message": "'OFFLINE_THRESHOLD_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 7,
+    "message": "'AUTO_GENERATED_NAME_LENGTH_THRESHOLD' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 10,
+    "column": 7,
+    "message": "'DEFAULT_MAX_RETRIES' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 11,
+    "column": 7,
+    "message": "'DEFAULT_INITIAL_BACKOFF_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9009,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9010,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 36,
+    "message": "'beforeEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 48,
+    "message": "'afterEach' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 28,
+    "message": "'ClusterHealth' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 7,
+    "column": 7,
+    "message": "'OFFLINE_THRESHOLD_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9,
+    "column": 7,
+    "message": "'CLUSTER_NOTIFY_DEBOUNCE_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9009,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9010,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9011,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9012,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9013,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9014,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9015,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9016,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9017,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9018,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9019,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9020,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9021,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9022,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9023,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9024,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9025,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 73,
+    "column": 28,
+    "message": "'getRawAIPredictions' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 73,
+    "column": 64,
+    "message": "'syncSettingsToBackend' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 73,
+    "column": 28,
+    "message": "'getRawAIPredictions' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 73,
+    "column": 49,
+    "message": "'isWSConnected' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 73,
+    "column": 64,
+    "message": "'syncSettingsToBackend' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 22,
+    "column": 7,
+    "message": "'SYNC_WARNING_MESSAGES' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 102,
+    "column": 10,
+    "message": "'getStoredGroups' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 108,
+    "column": 10,
+    "message": "'mockFetchOk' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 116,
+    "column": 10,
+    "message": "'mockFetchReject' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 121,
+    "column": 10,
+    "message": "'mockFetchStatus' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 22,
+    "column": 7,
+    "message": "'SYNC_WARNING_MESSAGES' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 102,
+    "column": 10,
+    "message": "'getStoredGroups' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance-scoring.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 91,
+    "column": 3,
+    "message": "'registerRefetch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance-scoring.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 92,
+    "column": 3,
+    "message": "'registerCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance-scoring.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 93,
+    "column": 3,
+    "message": "'unregisterCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 91,
+    "column": 3,
+    "message": "'registerRefetch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 92,
+    "column": 3,
+    "message": "'registerCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 93,
+    "column": 3,
+    "message": "'unregisterCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 97,
+    "column": 7,
+    "message": "'CACHE_KEY' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 43,
+    "column": 3,
+    "message": "'SEVERITY_LEVELS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 44,
+    "column": 3,
+    "message": "'STATUS_LEVELS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 45,
+    "column": 3,
+    "message": "'SEVERITY_CONFIG' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 46,
+    "column": 3,
+    "message": "'STATUS_CONFIG' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 43,
+    "column": 3,
+    "message": "'SEVERITY_LEVELS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 44,
+    "column": 3,
+    "message": "'STATUS_LEVELS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 45,
+    "column": 3,
+    "message": "'SEVERITY_CONFIG' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 46,
+    "column": 3,
+    "message": "'STATUS_CONFIG' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 57,
+    "column": 7,
+    "message": "'SAMPLE_ITEMS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 43,
+    "column": 3,
+    "message": "'SEVERITY_LEVELS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 44,
+    "column": 3,
+    "message": "'STATUS_LEVELS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 45,
+    "column": 3,
+    "message": "'SEVERITY_CONFIG' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 46,
+    "column": 3,
+    "message": "'STATUS_CONFIG' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-selections.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 45,
+    "column": 3,
+    "message": "'SEVERITY_CONFIG' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-selections.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 46,
+    "column": 3,
+    "message": "'STATUS_CONFIG' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 57,
+    "column": 7,
+    "message": "'SAMPLE_ITEMS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 109,
+    "column": 10,
+    "message": "'computeSha256' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 117,
+    "column": 7,
+    "message": "'UNTRUSTED_DOWNLOAD_URL' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 152,
+    "column": 10,
+    "message": "'seedInstalledItems' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.filters.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 109,
+    "column": 10,
+    "message": "'computeSha256' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.filters.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 117,
+    "column": 7,
+    "message": "'UNTRUSTED_DOWNLOAD_URL' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 68,
+    "column": 3,
+    "message": "'registerRefetch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 69,
+    "column": 3,
+    "message": "'registerCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 70,
+    "column": 3,
+    "message": "'unregisterCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 58,
+    "column": 3,
+    "message": "'registerRefetch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 59,
+    "column": 3,
+    "message": "'registerCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 60,
+    "column": 3,
+    "message": "'unregisterCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 63,
+    "column": 3,
+    "message": "'STORAGE_KEY_RBAC_CACHE' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 64,
+    "column": 3,
+    "message": "'STORAGE_KEY_RBAC_CACHE_TIME' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 68,
+    "column": 3,
+    "message": "'registerRefetch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 69,
+    "column": 3,
+    "message": "'registerCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 70,
+    "column": 3,
+    "message": "'unregisterCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 73,
+    "column": 3,
+    "message": "'STORAGE_KEY_RBAC_CACHE' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 74,
+    "column": 3,
+    "message": "'STORAGE_KEY_RBAC_CACHE_TIME' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 58,
+    "column": 3,
+    "message": "'registerRefetch' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 59,
+    "column": 3,
+    "message": "'registerCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 60,
+    "column": 3,
+    "message": "'unregisterCacheReset' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 63,
+    "column": 3,
+    "message": "'STORAGE_KEY_RBAC_CACHE' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 64,
+    "column": 3,
+    "message": "'STORAGE_KEY_RBAC_CACHE_TIME' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 34,
+    "column": 28,
+    "message": "'DISCOVERABLE_DASHBOARDS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 34,
+    "column": 53,
+    "message": "'PROTECTED_SIDEBAR_IDS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 35,
+    "column": 15,
+    "message": "'SidebarItem' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 37,
+    "column": 7,
+    "message": "'OLD_STORAGE_KEY' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 38,
+    "column": 7,
+    "message": "'ENABLED_DASHBOARDS_STORAGE_KEY' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.auto-refresh.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 31,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 31,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.loading-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 31,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.shape-demo.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 31,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.shape-demo.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 67,
+    "column": 10,
+    "message": "'makeVulnReportResponse' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.actions.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 27,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.agent.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 22,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'renderHook' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 22,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 27,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.pure.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 10,
+    "message": "'renderHook' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.pure.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 22,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.pure.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 27,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 10,
+    "message": "'useHelmReleases' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 43,
+    "message": "'useHelmValues' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 98,
+    "column": 10,
+    "message": "'makeRelease' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 10,
+    "message": "'useHelmReleases' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 27,
+    "message": "'useHelmHistory' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 98,
+    "column": 10,
+    "message": "'makeRelease' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 115,
+    "column": 10,
+    "message": "'makeHistoryEntry' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 27,
+    "message": "'useHelmHistory' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 85,
+    "column": 43,
+    "message": "'useHelmValues' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 115,
+    "column": 10,
+    "message": "'makeHistoryEntry' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 28,
+    "message": "'ClusterHealth' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 7,
+    "column": 7,
+    "message": "'OFFLINE_THRESHOLD_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 7,
+    "message": "'AUTO_GENERATED_NAME_LENGTH_THRESHOLD' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9,
+    "column": 7,
+    "message": "'CLUSTER_NOTIFY_DEBOUNCE_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 10,
+    "column": 7,
+    "message": "'DEFAULT_MAX_RETRIES' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9009,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9010,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9011,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9012,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9013,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9014,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9015,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9016,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9017,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9018,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9019,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9020,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9021,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9022,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9023,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9024,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9025,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9026,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9027,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9028,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9029,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9030,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9031,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9032,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9033,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9034,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9035,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9036,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 7,
+    "message": "'AUTO_GENERATED_NAME_LENGTH_THRESHOLD' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 10,
+    "column": 7,
+    "message": "'DEFAULT_MAX_RETRIES' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 11,
+    "column": 7,
+    "message": "'DEFAULT_INITIAL_BACKOFF_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 94,
+    "column": 3,
+    "message": "'REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 95,
+    "column": 3,
+    "message": "'CLUSTER_POLL_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9009,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9010,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9011,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9012,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9013,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9014,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9015,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9016,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9017,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9018,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9019,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9020,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9021,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9022,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9023,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9024,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9025,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9026,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 28,
+    "message": "'ClusterHealth' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 7,
+    "message": "'AUTO_GENERATED_NAME_LENGTH_THRESHOLD' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 10,
+    "column": 7,
+    "message": "'DEFAULT_MAX_RETRIES' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 11,
+    "column": 7,
+    "message": "'DEFAULT_INITIAL_BACKOFF_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 92,
+    "column": 3,
+    "message": "'REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9009,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9010,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9011,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9012,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9013,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9014,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9015,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9016,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9017,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9018,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9019,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9020,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9021,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9022,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 28,
+    "message": "'ClusterHealth' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 7,
+    "column": 7,
+    "message": "'OFFLINE_THRESHOLD_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 7,
+    "message": "'AUTO_GENERATED_NAME_LENGTH_THRESHOLD' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9,
+    "column": 7,
+    "message": "'CLUSTER_NOTIFY_DEBOUNCE_MS' is assigned a value but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 92,
+    "column": 3,
+    "message": "'REFRESH_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9009,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9010,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9011,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9012,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9013,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9014,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9015,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9016,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9017,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9018,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9019,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9020,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9021,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9022,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9023,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9024,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9025,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9026,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9027,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9028,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9029,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9030,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9031,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9032,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9033,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9034,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9035,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9036,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9037,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 22,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 124,
+    "column": 3,
+    "message": "'usePods' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 125,
+    "column": 3,
+    "message": "'useAllPods' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 126,
+    "column": 3,
+    "message": "'usePodIssues' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 127,
+    "column": 3,
+    "message": "'useDeploymentIssues' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 22,
+    "message": "'act' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 124,
+    "column": 3,
+    "message": "'usePods' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 125,
+    "column": 3,
+    "message": "'useAllPods' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 126,
+    "column": 3,
+    "message": "'usePodIssues' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 127,
+    "column": 3,
+    "message": "'useDeploymentIssues' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 128,
+    "column": 3,
+    "message": "'useDeployments' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 129,
+    "column": 3,
+    "message": "'useJobs' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 130,
+    "column": 3,
+    "message": "'useHPAs' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 131,
+    "column": 3,
+    "message": "'useReplicaSets' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 132,
+    "column": 3,
+    "message": "'useStatefulSets' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useInsightEnrichment-edge-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 144,
+    "column": 16,
+    "message": "'runAllTimers' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useInsightEnrichment-edge.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 144,
+    "column": 16,
+    "message": "'runAllTimers' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 27,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 35,
+    "message": "'screen' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 43,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 11,
+    "column": 10,
+    "message": "'emitMissionStarted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 11,
+    "column": 30,
+    "message": "'emitMissionCompleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 27,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 35,
+    "message": "'screen' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 43,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 3,
+    "message": "'MISSION_CONTROL_TRIGGER_TIMEOUT_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 7,
+    "column": 3,
+    "message": "'MISSION_TIMEOUT_CHECK_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9009,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 27,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 35,
+    "message": "'screen' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 3,
+    "message": "'MISSION_CONTROL_TRIGGER_TIMEOUT_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 7,
+    "column": 3,
+    "message": "'MISSION_TIMEOUT_CHECK_INTERVAL_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 8,
+    "column": 3,
+    "message": "'MISSION_TIMEOUT_MS' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 27,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 35,
+    "message": "'screen' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 10,
+    "message": "'emitMissionStarted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 30,
+    "message": "'emitMissionCompleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 52,
+    "message": "'emitMissionError' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 27,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 35,
+    "message": "'screen' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 43,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 10,
+    "message": "'emitMissionStarted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 30,
+    "message": "'emitMissionCompleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 27,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 35,
+    "message": "'screen' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 43,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 10,
+    "message": "'emitMissionStarted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 30,
+    "message": "'emitMissionCompleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 27,
+    "message": "'render' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 35,
+    "message": "'screen' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 2,
+    "column": 43,
+    "message": "'waitFor' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 10,
+    "message": "'emitMissionStarted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 6,
+    "column": 30,
+    "message": "'emitMissionCompleted' is defined but never used. Allowed unused vars must match /^_/u."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9005,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9006,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9007,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 9008,
+    "column": 1,
+    "message": "pre-existing violation (baseline resync)"
   }
 ]
