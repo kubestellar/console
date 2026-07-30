@@ -7,7 +7,6 @@ import { ClusterBadge } from '../../ui/ClusterBadge'
 import {
   Settings, Info, Loader2,
   Layers, Server, RefreshCw, Stethoscope,
-  CheckCircle, XCircle, AlertTriangle,
   Package, FileText, ExternalLink, ChevronLeft
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
@@ -19,57 +18,14 @@ import {
   type ResourceContext,
 } from '../../modals'
 import { useTranslation } from 'react-i18next'
-
-interface Props {
-  data: Record<string, unknown>
-}
-
-type TabType = 'overview' | 'csv' | 'crds' | 'ai'
-
-// Operator phase styles
-const getPhaseStyle = (phase: string) => {
-  const lower = phase?.toLowerCase() || ''
-  if (lower === 'succeeded' || lower === 'installed') {
-    return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30', icon: CheckCircle }
-  }
-  if (lower === 'installing' || lower === 'pending' || lower === 'installready') {
-    return { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30', icon: RefreshCw }
-  }
-  if (lower === 'failed' || lower === 'unknown') {
-    return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30', icon: XCircle }
-  }
-  if (lower === 'upgrading' || lower === 'replacing') {
-    return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', icon: RefreshCw }
-  }
-  return { bg: 'bg-secondary', text: 'text-muted-foreground', border: 'border-border', icon: AlertTriangle }
-}
-
-interface CSVInfo {
-  name: string
-  displayName: string
-  version: string
-  phase: string
-  description?: string
-  provider?: string
-  maturity?: string
-  maintainers?: Array<{ name: string; email?: string }>
-  links?: Array<{ name: string; url: string }>
-  installModes?: Array<{ type: string; supported: boolean }>
-}
-
-interface CRDInfo {
-  name: string
-  kind: string
-  version: string
-  description?: string
-}
-
-interface CRDRaw {
-  name: string
-  kind: string
-  version: string
-  description?: string
-}
+import {
+  type Props,
+  type TabType,
+  type CSVInfo,
+  type CRDInfo,
+  type CRDRaw,
+  getPhaseStyle,
+} from './operator-drilldown'
 
 export function OperatorDrillDown({ data }: Props) {
   const { t } = useTranslation()
