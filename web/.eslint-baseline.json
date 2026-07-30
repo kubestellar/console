@@ -19878,5 +19878,2378 @@
     "line": 405,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance-scoring.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance-scoring.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance-scoring.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-selections.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-selections.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.filters.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.filters.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.auto-refresh.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.loading-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.shape-demo.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.shape-demo.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.actions.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.agent.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.pure.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.pure.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.pure.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useInsightEnrichment-edge-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useInsightEnrichment-edge.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1,
+    "column": 1,
+    "message": "baseline sync: pre-existing unused-var violation (untouched by this PR)"
   }
 ]
