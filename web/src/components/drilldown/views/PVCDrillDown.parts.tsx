@@ -14,7 +14,8 @@ export function getStatusColor(status: string): string {
   return 'bg-muted text-muted-foreground'
 }
 
-export function getTabs(t: (key: string, fallback?: string) => unknown): { id: TabType; label: string; icon: typeof Info }[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getTabs(t: (...args: any[]) => unknown): { id: TabType; label: string; icon: typeof Info }[] {
   return [
     { id: 'overview', label: String(t('drilldown.overview', 'Overview')), icon: Info },
     { id: 'describe', label: String(t('drilldown.describe', 'Describe')), icon: Code },
