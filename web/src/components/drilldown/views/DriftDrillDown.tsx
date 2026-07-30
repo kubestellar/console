@@ -6,7 +6,7 @@ import { useMissions } from '../../../hooks/useMissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import {
   GitBranch, Info, Loader2, Server, Stethoscope,
-  AlertTriangle, CheckCircle, XCircle,
+  AlertTriangle, CheckCircle,
   FileText, Layers, ArrowRight, Diff
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
@@ -17,56 +17,13 @@ import {
   type ResourceContext,
 } from '../../modals'
 import { useTranslation } from 'react-i18next'
-
-interface Props {
-  data: Record<string, unknown>
-}
-
-type TabType = 'overview' | 'changes' | 'diff' | 'ai'
-
-// Drift severity styles
-const getDriftSeverityStyle = (severity: string) => {
-  const lower = severity?.toLowerCase() || ''
-  if (lower === 'none' || lower === 'synced') {
-    return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30', icon: CheckCircle }
-  }
-  if (lower === 'low' || lower === 'minor') {
-    return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', icon: AlertTriangle }
-  }
-  if (lower === 'medium' || lower === 'moderate') {
-    return { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30', icon: AlertTriangle }
-  }
-  if (lower === 'high' || lower === 'critical' || lower === 'drifted') {
-    return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30', icon: XCircle }
-  }
-  return { bg: 'bg-secondary', text: 'text-muted-foreground', border: 'border-border', icon: AlertTriangle }
-}
-
-// Change type styles
-const getChangeTypeStyle = (changeType: string) => {
-  const lower = changeType?.toLowerCase() || ''
-  if (lower === 'added' || lower === 'create') {
-    return { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Added' }
-  }
-  if (lower === 'modified' || lower === 'update' || lower === 'changed') {
-    return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Modified' }
-  }
-  if (lower === 'deleted' || lower === 'remove') {
-    return { bg: 'bg-red-500/20', text: 'text-red-400', label: 'Deleted' }
-  }
-  return { bg: 'bg-secondary', text: 'text-muted-foreground', label: changeType }
-}
-
-interface DriftChange {
-  kind: string
-  name: string
-  namespace?: string
-  changeType: 'added' | 'modified' | 'deleted'
-  gitValue?: string
-  clusterValue?: string
-  diff?: string
-  fields?: Array<{ path: string; gitValue: string; clusterValue: string }>
-}
+import {
+  type Props,
+  type TabType,
+  type DriftChange,
+  getDriftSeverityStyle,
+  getChangeTypeStyle,
+} from './drift-drilldown'
 
 export function DriftDrillDown({ data }: Props) {
   const { t } = useTranslation()
