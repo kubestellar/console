@@ -1,9 +1,8 @@
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/cn";
-import { useModalState } from "../../lib/modals";
 import { safeGetItem, safeSetItem } from "../../lib/utils/localStorage";
 import { useProviderConnection } from "../../hooks/useProviderConnection";
 import { AgentApprovalDialog, hasApprovedAgents } from "./AgentApprovalDialog";
@@ -12,6 +11,7 @@ import type { AgentInfo } from "../../types/agent";
 import { PROVIDER_PREREQUISITES } from "../../types/agent";
 import { AgentCardGrid } from "./AgentCardGrid";
 import { CapabilityDetailPanel } from "./CapabilityDetailPanel";
+import { useAgentDropdown } from "./useAgentDropdown";
 
 const PREV_AGENT_KEY = "kc_previous_agent";
 
@@ -59,15 +59,12 @@ export function AgentConfigForm({
   handleInstallMission,
 }: AgentConfigFormProps) {
   const { t } = useTranslation();
-  const { isOpen, close: closeDropdown, toggle: toggleDropdown } = useModalState();
+  const { isOpen, closeDropdown, toggleDropdown, dropdownRef, buttonRef, panelRef, dropdownPos } =
+    useAgentDropdown(isDemoMode);
   const previousAgentRef = useRef<string | null>(
     typeof window !== "undefined" ? safeGetItem(PREV_AGENT_KEY) : null,
   );
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const pendingAgentRef = useRef<string | null>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
   const [showApproval, setShowApproval] = useState(false);
 
   const {
@@ -88,75 +85,7 @@ export function AgentConfigForm({
     ) {
       connectToAgent();
     }
-  }, [
-    isOpen,
-    agents.length,
-    agentsLoading,
-    isDemoMode,
-    connectToAgent,
-    activeBackend,
-  ]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(target) &&
-        (!panelRef.current || !panelRef.current.contains(target))
-      ) {
-        closeDropdown();
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [closeDropdown]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const updatePosition = () => {
-      if (!buttonRef.current) return;
-      const rect = buttonRef.current.getBoundingClientRect();
-      const DROPDOWN_GAP_PX = 4;
-      setDropdownPos({
-        top: rect.bottom + DROPDOWN_GAP_PX,
-        right: window.innerWidth - rect.right,
-      });
-    };
-
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, {
-      capture: true,
-      passive: true,
-    });
-
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, { capture: true });
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        closeDropdown();
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
-    }
-  }, [isOpen, closeDropdown]);
-
-  useEffect(() => {
-    if (isDemoMode) {
-      closeDropdown();
-    }
-  }, [isDemoMode, closeDropdown]);
+  }, [isOpen, agents.length, agentsLoading, isDemoMode, connectToAgent, activeBackend]);
 
   useEffect(() => {
     if (!isOpen && connectionState.phase !== "idle") {
@@ -264,9 +193,7 @@ export function AgentConfigForm({
                     <Sparkles
                       className={cn(
                         "w-4 h-4",
-                        isNoneSelected
-                          ? "text-muted-foreground"
-                          : "text-primary",
+                        isNoneSelected ? "text-muted-foreground" : "text-primary",
                       )}
                     />
                     <div>
@@ -274,9 +201,7 @@ export function AgentConfigForm({
                         {t("agent.aiAgentToggle")}
                       </span>
                       <p className="text-xs text-muted-foreground">
-                        {isNoneSelected
-                          ? t("agent.noneAgentDesc")
-                          : t("agent.aiAgentOnDesc")}
+                        {isNoneSelected ? t("agent.noneAgentDesc") : t("agent.aiAgentOnDesc")}
                       </p>
                     </div>
                   </div>
@@ -287,9 +212,7 @@ export function AgentConfigForm({
                       if (isNoneSelected) {
                         const prev = previousAgentRef.current;
                         const restored = prev
-                          ? sortedAgents.find(
-                              (a) => a.name === prev && a.available,
-                            )
+                          ? sortedAgents.find((a) => a.name === prev && a.available)
                           : undefined;
                         const targetAgent =
                           restored?.name ||
