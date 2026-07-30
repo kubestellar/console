@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 // Modal safety: the filter/settings panels here are inline flyouts, not portal
 // modals — no backdrop to click. Any form state lives in local React state and
 // is only written on explicit save. Treat as closeOnBackdropClick={false}.
@@ -9,13 +8,11 @@ import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardLoadingState } from '../CardDataContext'
 import { useDemoMode } from '../../../hooks/useDemoMode'
-import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps, RSSItemRaw } from './types'
-import { PRESET_FEEDS, CORS_PROXIES } from './constants'
+import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps } from './types'
+import { PRESET_FEEDS } from './constants'
 import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
-import {
-  parseRSSFeed, stripHTML, decodeHTMLEntities,
-  isValidThumbnail } from './RSSParser'
+import { fetchSingleFeed } from './feedFetcher'
 import { formatTimeAgo } from '../../../lib/formatters'
 import { useTranslation } from 'react-i18next'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
@@ -27,8 +24,6 @@ import { FeedItemsList } from './FeedItemsList'
 import { SourceFilterDropdown } from './SourceFilterDropdown'
 import { RSS_DEMO_FEEDS, getDemoRSSItems } from './demoData'
 import { RSS_UI_STRINGS } from './strings'
-
-const MIN_VALID_FEED_LENGTH = 50
 
 type SortByOption = 'date' | 'title'
 
@@ -215,97 +210,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       comparators: SORT_COMPARATORS },
     defaultLimit: 10 })
 
-  // Fetch with timeout helper
-  const fetchWithTimeout = useCallback(async (url: string, timeoutMs: number): Promise<Response> => {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-    try {
-      const response = await fetch(url, { signal: controller.signal })
-      return response
-    } finally {
-      clearTimeout(timeoutId)
-    }
-  }, [])
-
-  // Helper: Fetch a single RSS feed URL
-  const fetchSingleFeed = useCallback(async (feedUrl: string): Promise<FeedItem[]> => {
-    const FETCH_TIMEOUT_MS = 10000
-
-    for (const proxy of CORS_PROXIES) {
-      try {
-        const proxyUrl = proxy.url + encodeURIComponent(feedUrl)
-        const response = await fetchWithTimeout(proxyUrl, FETCH_TIMEOUT_MS)
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`)
-        }
-
-        let items: FeedItem[] = []
-
-        if (proxy.type === 'json-rss2json') {
-          const data = await response.json()
-          if (data.status === 'ok' && data.items) {
-            items = data.items.map((item: RSSItemRaw, idx: number) => {
-              let thumb = item.thumbnail || item.enclosure?.thumbnail || item.enclosure?.link || ''
-              if (!isValidThumbnail(thumb)) thumb = ''
-              if (!thumb && (item.description || item.content)) {
-                const descOrContent = item.description || item.content
-                if (descOrContent) {
-                  const imgMatch = descOrContent.match(/<img[^>]+src=["']([^"']+)["']/)
-                  if (imgMatch && isValidThumbnail(imgMatch[1])) {
-                    thumb = imgMatch[1]
-                  }
-                }
-              }
-              return {
-                id: `${feedUrl}-${item.guid || item.link || idx}`,
-                title: decodeHTMLEntities(item.title || 'Untitled'),
-                link: item.link || '',
-                description: stripHTML(item.description || item.content || '').slice(0, 300),
-                pubDate: item.pubDate ? new Date(item.pubDate) : undefined,
-                author: item.author || '',
-                thumbnail: thumb,
-                subreddit: item.link?.match(/reddit\.com\/r\/([^/]+)/)?.[1] }
-            })
-          } else {
-            throw new Error(data.message || 'Invalid RSS feed')
-          }
-        } else if (proxy.type === 'json-contents') {
-          const data = await response.json()
-          if (data.contents) {
-            let contents = data.contents
-            if (contents.startsWith('data:') && contents.includes('base64,')) {
-              const base64Part = contents.split('base64,')[1]
-              contents = atob(base64Part)
-            }
-            if (contents.includes('<title>500') || contents.includes('Internal Server Error')) {
-              throw new Error('Proxy returned error page')
-            }
-            items = parseRSSFeed(contents, feedUrl)
-          } else {
-            throw new Error('No content in response')
-          }
-        } else {
-          const feedXml = await response.text()
-          if (!feedXml || feedXml.length < MIN_VALID_FEED_LENGTH) {
-            throw new Error('Empty response')
-          }
-          if (feedXml.includes('Internal Server Error') || feedXml.includes('<!DOCTYPE html>') && !feedXml.includes('<rss') && !feedXml.includes('<feed')) {
-            throw new Error('Received error page instead of feed')
-          }
-          items = parseRSSFeed(feedXml, feedUrl)
-        }
-
-        if (items.length > 0) {
-          return items
-        }
-        throw new Error('No items parsed from feed')
-      } catch {
-        continue
-      }
-    }
-    return []
-  }, [fetchWithTimeout])
 
   // Fetch RSS feed (or aggregate) — uses demo data in demo mode
   const fetchFeed = useCallback(async (isManualRefresh = false) => {
@@ -416,7 +320,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [activeFeed?.url, activeFeed?.name, activeFeed?.isAggregate, activeFeed?.sourceUrls, isDemoMode, feeds, fetchSingleFeed])
+  }, [activeFeed?.url, activeFeed?.name, activeFeed?.isAggregate, activeFeed?.sourceUrls, isDemoMode, feeds])
 
   // Fetch on mount — runs once. The fetch is async but the component is
   // long-lived (dashboard card), so stale-setState risk is minimal.

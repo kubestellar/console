@@ -100,7 +100,7 @@ exports[`Kubectl > matches snapshot with clusters 1`] = `
         >
           <svg
             aria-hidden="true"
-            class="lucide lucide-history w-4 h-4"
+            class="lucide lucide-rotate-ccw-clock w-4 h-4"
             fill="none"
             height="24"
             stroke="currentColor"

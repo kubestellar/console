@@ -22,6 +22,7 @@ import {
   type CortexStatusData,
   type CortexSummary,
 } from '../lib/demo/cortex'
+import { HTTP_NOT_FOUND } from '../lib/constants/http'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -30,7 +31,6 @@ import {
 const CACHE_KEY = 'cortex-status'
 const CORTEX_STATUS_ENDPOINT = '/api/cortex/status'
 const DEFAULT_VERSION = 'unknown'
-const NOT_FOUND_STATUS = 404
 
 const EMPTY_METRICS: CortexIngestionMetrics = {
   activeSeries: 0,
@@ -125,7 +125,7 @@ async function fetchJson<T>(
     })
 
     if (!resp.ok) {
-      if (options?.treat404AsEmpty && resp.status === NOT_FOUND_STATUS) {
+      if (options?.treat404AsEmpty && resp.status === HTTP_NOT_FOUND) {
         return { data: null, failed: false }
       }
       return { data: null, failed: true }

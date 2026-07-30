@@ -81,12 +81,20 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Ensure Docker daemon is running
         run: |
-          sudo systemctl start docker || true
-          docker info || true
+          sudo systemctl start docker 2>/dev/null || true
+          for attempt in 1 2 3 4 5; do
+            if docker info > /dev/null 2>&1; then
+              echo "Docker daemon ready."
+              exit 0
+            fi
+            echo "Docker not ready (attempt ${attempt}/5), retrying in 3s..."
+            sleep 3
+          done
+          docker info
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
@@ -95,7 +103,7 @@ jobs:
 
       - name: Log in to GitHub Container Registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -168,7 +176,7 @@ jobs:
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -205,7 +213,13 @@ jobs:
     needs: merge
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: [self-hosted, kc, openshift]
-    timeout-minutes: 20
+    # 20m was too tight: deploy_helm retries up to MAX_ATTEMPTS=2 times, each
+    # bounded by `--timeout 10m` (=20m), plus recover_release (rollback
+    # --timeout 2m / uninstall --timeout 5m) and retry sleeps in between.
+    # That worst case exceeds 20m, causing the job to be cancelled by the
+    # runner before the retry loop can finish. Match deploy-pok-prod's 45m
+    # budget, which uses the same retry pattern.
+    timeout-minutes: 45
     environment: vllm-d
     concurrency:
       group: deploy-vllm-d
@@ -213,7 +227,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0
@@ -650,7 +664,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0

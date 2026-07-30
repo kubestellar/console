@@ -26,6 +26,7 @@ import {
   type BackstageScaffolderTemplate,
   type BackstageStatusData,
 } from '../lib/demo/backstage'
+import { HTTP_NOT_FOUND } from '../lib/constants/http'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -44,8 +45,6 @@ const DEFAULT_DESIRED_REPLICAS = 0
 // Backstage install against a real SCM provider.
 const STALE_CATALOG_WINDOW_HOURS = 6
 const STALE_CATALOG_WINDOW_MS = STALE_CATALOG_WINDOW_HOURS * BACKSTAGE_MS_PER_HOUR
-
-const NOT_FOUND_STATUS = 404
 
 const EMPTY_CATALOG: BackstageCatalogCounts = {
   Component: 0,
@@ -209,7 +208,7 @@ async function fetchBackstageStatus(): Promise<BackstageStatusData> {
   })
 
   if (!resp.ok) {
-    if (resp.status === NOT_FOUND_STATUS) {
+    if (resp.status === HTTP_NOT_FOUND) {
       // Endpoint not yet wired — surface "not-installed" so the cache layer
       // will fall back to demo data instead of flagging a hard failure.
       return buildBackstageStatus({})

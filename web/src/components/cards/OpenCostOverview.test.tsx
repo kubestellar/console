@@ -156,6 +156,12 @@ describe('OpenCostOverview', () => {
     expect(links.some(l => l.getAttribute('href')?.includes('opencost'))).toBe(true)
   })
 
+  // 6. Namespace cost health summary indicator
+  it('renders healthySpend health indicator for namespaces within budget', () => {
+    render(<OpenCostOverview />)
+    expect(screen.getByText(/healthySpend/i)).toBeInTheDocument()
+  })
+
   // 5. Snapshot
   it('matches snapshot', () => {
     const { asFragment } = render(<OpenCostOverview />)

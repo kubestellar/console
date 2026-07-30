@@ -890,6 +890,7 @@
       "testing": "Testing...",
       "connectionSuccess": "Connection successful",
       "connectionFailed": "Connection failed",
+      "connectionFailedFor": "Failed to test connection to {{cluster}}",
       "syncMode": "Sync Mode",
       "primaryOnly": "Primary Only",
       "activePassive": "Active-Passive",
@@ -3346,9 +3347,20 @@
     "events": {
       "failedToLoad": "Failed to load events",
       "noEventsFound": "No events found",
+      "noRecentEvents": "No recent events",
       "totalEvents": "Total Events",
       "noEventsFoundFor": "No events found for {{name}}",
       "eventsExpiredHint": "Events may have expired or require authentication"
+    },
+    "cluster": {
+      "namespacesWithActivity": "Namespaces with Activity",
+      "gpuNodesCount": "GPU Nodes ({{count}})",
+      "gpuNodesCount_one": "GPU Nodes ({{count}})",
+      "gpuNodesCount_other": "GPU Nodes ({{count}})",
+      "namespaceIssueCount": "{{count}} issues",
+      "namespaceIssueCount_one": "{{count}} issue",
+      "namespaceIssueCount_other": "{{count}} issues",
+      "gpuAllocatedSummary": "{{allocated}}/{{total}} GPUs"
     }
   },
   "pagination": {

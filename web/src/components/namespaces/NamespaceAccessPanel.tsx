@@ -106,7 +106,7 @@ export function NamespaceAccessPanel({
       {!isAdmin ? (
         <div className="text-center py-8 text-muted-foreground">
           <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">{t('namespaces.adminRequiredForAccess', 'Admin access required to view role bindings')}</p>
+          <div className="text-sm">{t('namespaces.adminRequiredForAccess', 'Admin access required to view role bindings')}</div>
         </div>
       ) : accessLoading ? (
         <div className="flex items-center justify-center h-20">
@@ -115,7 +115,7 @@ export function NamespaceAccessPanel({
       ) : accessEntries.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">{t('namespaces.noRoleBindings', 'No role bindings found')}</p>
+          <div className="text-sm">{t('namespaces.noRoleBindings', 'No role bindings found')}</div>
         </div>
       ) : (
         <div className="space-y-2">

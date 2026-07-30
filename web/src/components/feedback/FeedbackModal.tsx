@@ -12,16 +12,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
-import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2, Film } from 'lucide-react'
-import { Linkedin } from '@/lib/icons'
+import { X, Bug, Lightbulb, Send, ExternalLink, AlertTriangle, Loader2 } from 'lucide-react'
 import { ConfirmDialog, useModalFocusTrap } from '../../lib/modals'
-import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
-import { emitFeedbackSubmitted, emitLinkedInShare, emitScreenshotAttached, emitScreenshotUploadFailed, emitScreenshotUploadSuccess, getRecentBrowserErrors, getRecentFailedApiCalls } from '../../lib/analytics'
+import { emitFeedbackSubmitted, emitScreenshotAttached, emitScreenshotUploadFailed, emitScreenshotUploadSuccess, getRecentBrowserErrors, getRecentFailedApiCalls } from '../../lib/analytics'
 import { copyBlobToClipboard } from '../../lib/clipboard'
 import { useBranding } from '../../hooks/useBranding'
-import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
 import { compressScreenshot } from '../../lib/imageCompression'
@@ -30,30 +27,13 @@ import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useAuth } from '../../lib/auth'
 import {
   MAX_VIDEO_SIZE_BYTES,
-  ACCEPTED_MEDIA_TYPES,
   ACCEPTED_VIDEO_MIME_TYPES,
-  ATTACHMENT_HELP_TEXT,
   isFeedbackRequestBodyTooLarge,
   isFeedbackRequestBodyLimitError,
 } from './FeatureRequestTypes'
 import { safeRemove, safeSetJSON } from '../../lib/safeLocalStorage'
-import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
-
-type FeedbackType = 'bug' | 'feature'
-
-interface FeedbackModalProps {
-  isOpen: boolean
-  onClose: () => void
-  initialType?: FeedbackType
-}
-
-const DRAFT_KEY = 'feedback-modal-draft'
-
-interface DraftState {
-  type: FeedbackType
-  title: string
-  description: string
-}
+import { type FeedbackType, type FeedbackModalProps, DRAFT_KEY, type DraftState } from './FeedbackModal.types'
+import { FeedbackTabBar, ScreenshotAttacher, FeedbackSuccessView } from './FeedbackModal.parts'
 
 export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: FeedbackModalProps) {
   const { showToast } = useToast()
@@ -74,7 +54,6 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const [isDragOver, setIsDragOver] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
 
   const handleScreenshotFiles = (files: FileList | null) => {
@@ -436,59 +415,16 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         {/* Content */}
         <div className="p-4">
           {success ? (
-            <div className="text-center py-6">
-              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-green-400" />
-              </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">Thank you!</h3>
-              <p className="text-sm text-muted-foreground mb-2">
-                Your {type === 'bug' ? 'bug report' : 'feature suggestion'} has been created as a GitHub issue.
-              </p>
-              <p className="text-sm text-yellow-400 mb-4">
-                +{coins} coins earned!
-              </p>
-
-              {/* Link to the created GitHub issue */}
-              {success.issueUrl && (
-                <a
-                  href={sanitizeUrl(success.issueUrl)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-sm font-medium transition-colors mb-4"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  View issue on GitHub
-                </a>
-              )}
-
-              {/* Screenshot status — embedded as base64 in issue body, processed by GHA */}
-              {screenshots.length > 0 && success && (success.screenshotsUploaded ?? 0) > 0 && (
-                <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <p className="text-xs text-green-400 font-medium">
-                    {(success.screenshotsUploaded ?? 0) === 1
-                      ? 'Screenshot attached to the issue. It will render as an image shortly.'
-                      : `${success.screenshotsUploaded} screenshots attached to the issue. They will render as images shortly.`}
-                  </p>
-                </div>
-              )}
-              {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (
-                <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                  <p className="text-xs text-yellow-400 font-medium">
-                    {success.screenshotsFailed === 1
-                      ? 'Screenshot could not be attached — invalid image format.'
-                      : `${success.screenshotsFailed} screenshots could not be attached — invalid image format.`}
-                  </p>
-                </div>
-              )}
-
-              {/* LinkedIn share suggestion */}
-              <div className="pt-4 border-t border-border">
-                <p className="text-xs text-muted-foreground mb-3">
-                  Love {branding.appShortName}? Share it with your network!
-                </p>
-                <LinkedInShareButton onShare={() => awardCoins('linkedin_share')} />
-              </div>
-            </div>
+            <FeedbackSuccessView
+              type={type}
+              coins={coins}
+              issueUrl={success.issueUrl}
+              screenshotsUploaded={success.screenshotsUploaded}
+              screenshotsFailed={success.screenshotsFailed}
+              screenshotCount={screenshots.length}
+              appShortName={branding.appShortName}
+              onAwardLinkedIn={() => awardCoins('linkedin_share')}
+            />
           ) : (
             <>
               {/* Draft restore notice */}
@@ -498,52 +434,8 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 </div>
               )}
 
-              {/* Type selector — radiogroup with arrow-key navigation (#21301) */}
-              <div
-                role="radiogroup"
-                aria-label={t('feedback.feedbackType', 'Feedback type')}
-                className="flex gap-2 mb-4"
-                onKeyDown={(e) => {
-                  const next = moveFocusByKey(e, { selector: '[role="radio"]:not([disabled])', orientation: 'horizontal' })
-                  const nextType = next?.dataset.radioValue as FeedbackType | undefined
-                  if (nextType) setType(nextType)
-                }}
-              >
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={type === 'bug'}
-                  tabIndex={type === 'bug' ? 0 : -1}
-                  data-radio-value="bug"
-                  onClick={() => setType('bug')}
-                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/70 ${
-                    type === 'bug'
-                      ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                      : 'bg-secondary/30 border-border text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Bug className="w-4 h-4" />
-                  <span className="text-sm font-medium">{t('feedback.bugReport', 'Bug Report')}</span>
-                  <StatusBadge color="yellow">+{REWARD_ACTIONS.bug_report.coins}</StatusBadge>
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={type === 'feature'}
-                  tabIndex={type === 'feature' ? 0 : -1}
-                  data-radio-value="feature"
-                  onClick={() => setType('feature')}
-                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/70 ${
-                    type === 'feature'
-                      ? 'bg-green-500/10 border-green-500/30 text-green-400'
-                      : 'bg-secondary/30 border-border text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Lightbulb className="w-4 h-4" />
-                  <span className="text-sm font-medium">{t('feedback.featureRequest', 'Feature Request')}</span>
-                  <StatusBadge color="yellow">+{REWARD_ACTIONS.feature_suggestion.coins}</StatusBadge>
-                </button>
-              </div>
+              {/* Type selector */}
+              <FeedbackTabBar type={type} setType={setType} />
 
               <form ref={formRef} onSubmit={handleSubmit}>
                 <div className="space-y-4">
@@ -590,86 +482,17 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                   </div>
 
                   {/* Screenshot Upload */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
-                      Screenshots <span className="text-muted-foreground font-normal text-xs">(optional)</span>
-                    </label>
-                    <div
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
-                        isDragOver
-                          ? 'border-purple-400 bg-purple-500/10'
-                          : 'border-border hover:border-muted-foreground'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <ImagePlus className="w-5 h-5 text-muted-foreground" />
-                        <Film className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                      <span className="text-xs text-muted-foreground text-center">Drop images or videos here, or click to browse</span>
-                      <span className="text-2xs text-muted-foreground/70">{ATTACHMENT_HELP_TEXT}</span>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept={ACCEPTED_MEDIA_TYPES}
-                        multiple
-                        onChange={e => {
-                          const files = e.target.files
-                          if (files && files.length > 0) emitScreenshotAttached('file_picker', files.length)
-                          handleScreenshotFiles(files)
-                        }}
-                        className="hidden"
-                      />
-                    </div>
-                    {screenshots.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {screenshots.map((s, i) => (
-                          <div key={i} className="relative group w-20 h-20 shrink-0">
-                            {s.mediaType === 'video' ? (
-                              <div className="w-20 h-20 rounded-lg border border-border bg-black flex items-center justify-center overflow-hidden">
-                                <video src={s.preview} className="w-full h-full object-cover" muted playsInline />
-                                <Film className="absolute w-5 h-5 text-white/80 drop-shadow-md" />
-                              </div>
-                            ) : (
-                              <img
-                                src={s.preview}
-                                alt={`Attachment ${i + 1}`}
-                                className="w-20 h-20 object-cover rounded-lg border border-border"
-                                loading="lazy"
-                                width={80}
-                                height={80}
-                              />
-                            )}
-                            <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 bg-black/60 rounded-lg transition-opacity">
-                              {s.mediaType !== 'video' && (
-                                <button
-                                  type="button"
-                                  onClick={e => { e.stopPropagation(); void copyScreenshotToClipboard(s.preview, i) }}
-                                  className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
-                                  title="Copy to clipboard"
-                                  aria-label="Copy screenshot to clipboard"
-                                >
-                                  {copiedIndex === i ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); removeScreenshot(i) }}
-                                className="p-1.5 rounded-md bg-secondary/80 text-red-400 hover:bg-red-500/20 transition-colors"
-                                title="Remove attachment"
-                                aria-label="Remove screenshot"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <ScreenshotAttacher
+                    screenshots={screenshots}
+                    isDragOver={isDragOver}
+                    copiedIndex={copiedIndex}
+                    onFiles={handleScreenshotFiles}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onCopy={(preview, i) => void copyScreenshotToClipboard(preview, i)}
+                    onRemove={removeScreenshot}
+                  />
 
                   {/* Error message */}
                   {submitError && (
@@ -729,56 +552,4 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   )
 }
 
-// Floating feedback button - positioned above the AI missions toggle
-export function FeedbackButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="fixed bottom-20 right-4 flex items-center gap-2 px-4 py-2.5 rounded-full bg-purple-500 hover:bg-purple-600 text-white shadow-lg transition-all hover:scale-105 z-sticky"
-      title="Submit feedback"
-    >
-      <Lightbulb className="w-4 h-4" />
-      <span className="text-sm font-medium">Feedback</span>
-    </button>
-  )
-}
-
-// LinkedIn share button with coin reward
-export function LinkedInShareButton({ onShare, compact = false }: { onShare?: () => void; compact?: boolean }) {
-  const { t } = useTranslation()
-  const { websiteUrl } = useBranding()
-  const handleShare = () => {
-    const shareTarget = websiteUrl || 'https://kubestellar.io'
-    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareTarget)}`
-    window.open(linkedInUrl, '_blank', 'noopener,noreferrer,width=600,height=600')
-    emitLinkedInShare('feedback_modal')
-    onShare?.()
-  }
-
-  if (compact) {
-    return (
-      <button
-        onClick={handleShare}
-        className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-linkedin/20 hover:bg-linkedin/30 text-linkedin transition-colors"
-        title="Share on LinkedIn"
-      >
-        <Linkedin className="w-4 h-4" />
-        <span>{t('feedback.share')}</span>
-        <StatusBadge color="yellow">+{REWARD_ACTIONS.linkedin_share.coins}</StatusBadge>
-      </button>
-    )
-  }
-
-  return (
-    <button
-      onClick={handleShare}
-      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-linkedin hover:bg-linkedin-dark text-white font-medium transition-colors"
-    >
-      <Linkedin className="w-4 h-4" />
-      <span>{t('feedback.shareOnLinkedIn')}</span>
-      <span className="text-xs px-1.5 py-0.5 rounded bg-foreground/20 text-foreground">
-        +{REWARD_ACTIONS.linkedin_share.coins}
-      </span>
-    </button>
-  )
-}
+export { FeedbackButton, LinkedInShareButton } from './FeedbackModal.actions'

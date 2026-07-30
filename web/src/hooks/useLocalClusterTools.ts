@@ -367,6 +367,7 @@ export function useLocalClusterTools() {
       }
     } catch (err: unknown) {
       console.error(`Failed to check vCluster on ${context}:`, err)
+      setVClustersError(`Failed to check vCluster on ${context}`)
     }
   }
 

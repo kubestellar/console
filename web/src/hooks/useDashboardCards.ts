@@ -35,6 +35,8 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
   // Track whether a reset just happened so the persistence effect can skip one cycle
   const skipPersistRef = useRef(false)
 
+  const [error, setError] = useState<Error | null>(null)
+
   const [cards, setCards] = useState<DashboardCard[]>(() =>
     loadDashboardCardsFromStorage(storageKey, defaultCards),
   )
@@ -52,7 +54,13 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
 
   // Save collapsed state to localStorage
   useEffect(() => {
-    localStorage.setItem(collapsedKey, JSON.stringify(isCollapsed))
+    try {
+      localStorage.setItem(collapsedKey, JSON.stringify(isCollapsed))
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err))
+      setError(e)
+      console.error(`[useDashboardCards] Failed to persist collapsed state for ${collapsedKey}`, err)
+    }
   }, [isCollapsed, collapsedKey])
 
   const toggleCollapsed = () => {
@@ -116,6 +124,7 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
     clearCards,
     resetToDefaults,
     isCustomized,
+    error,
     // Collapsed state
     isCollapsed,
     setIsCollapsed,

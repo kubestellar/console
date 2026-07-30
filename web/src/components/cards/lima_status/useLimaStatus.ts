@@ -3,6 +3,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import { LIMA_DEMO_DATA, type LimaDemoData, type LimaInstance } from './demoData'
 import { authFetch } from '../../../lib/api'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { HTTP_SERVICE_UNAVAILABLE } from '../../../lib/constants/http'
 
 export interface LimaStatus {
   instances: LimaInstance[]
@@ -27,8 +28,6 @@ const INITIAL_DATA: LimaStatus = {
   totalMemoryGB: 0,
   lastCheckTime: new Date().toISOString(),
 }
-
-const STATUS_SERVICE_UNAVAILABLE = 503
 
 interface LimaListResponse {
   limaInstances: LimaInstance[]
@@ -89,7 +88,7 @@ async function fetchLimaStatus(): Promise<LimaStatus> {
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
 
-  if (res.status === STATUS_SERVICE_UNAVAILABLE) {
+  if (res.status === HTTP_SERVICE_UNAVAILABLE) {
     throw new Error('Service unavailable')
   }
 

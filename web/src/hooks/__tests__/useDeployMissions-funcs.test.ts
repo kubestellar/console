@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { __testables } from '../useDeployMissions'
+import type { DeployMission } from '../useDeployMissions.types'
 
 const {
   safeReplicaCount,
@@ -138,7 +139,7 @@ describe('authHeaders', () => {
   })
 })
 
-function makeMission(overrides: Record<string, unknown> = {}) {
+function makeMission(overrides: Partial<DeployMission> = {}): DeployMission {
   return {
     id: 'test-1',
     workload: 'nginx',
@@ -208,7 +209,7 @@ describe('loadMissions', () => {
 
 describe('saveMissions', () => {
   it('saves missions to localStorage', () => {
-    const missions = [makeMission()] as any[]
+    const missions = [makeMission()]
     saveMissions(missions)
     const stored = JSON.parse(localStorage.getItem(MISSIONS_STORAGE_KEY)!)
     expect(stored).toHaveLength(1)
@@ -218,7 +219,7 @@ describe('saveMissions', () => {
   it('truncates to MAX_MISSIONS', () => {
     const many = Array.from({ length: MAX_MISSIONS + 10 }, (_, i) =>
       makeMission({ id: `m-${i}` }),
-    ) as any[]
+    )
     saveMissions(many)
     const stored = JSON.parse(localStorage.getItem(MISSIONS_STORAGE_KEY)!)
     expect(stored).toHaveLength(MAX_MISSIONS)
@@ -232,7 +233,7 @@ describe('saveMissions', () => {
           { cluster: 'c1', status: 'applying', replicas: 1, readyReplicas: 0, logs: ['line1'] },
         ],
       }),
-    ] as any[]
+    ]
     saveMissions(missions)
     const stored = JSON.parse(localStorage.getItem(MISSIONS_STORAGE_KEY)!)
     expect(stored[0].clusterStatuses[0].logs).toBeUndefined()
@@ -246,7 +247,7 @@ describe('saveMissions', () => {
           { cluster: 'c1', status: 'running', replicas: 1, readyReplicas: 1, logs: ['line1'] },
         ],
       }),
-    ] as any[]
+    ]
     saveMissions(missions)
     const stored = JSON.parse(localStorage.getItem(MISSIONS_STORAGE_KEY)!)
     expect(stored[0].clusterStatuses[0].logs).toEqual(['line1'])
@@ -260,7 +261,7 @@ describe('saveMissions', () => {
           { cluster: 'c1', status: 'failed', replicas: 0, readyReplicas: 0, logs: ['error'] },
         ],
       }),
-    ] as any[]
+    ]
     saveMissions(missions)
     const stored = JSON.parse(localStorage.getItem(MISSIONS_STORAGE_KEY)!)
     expect(stored[0].clusterStatuses[0].logs).toEqual(['error'])
@@ -274,7 +275,7 @@ describe('saveMissions', () => {
           { cluster: 'c1', status: 'running', replicas: 1, readyReplicas: 1, logs: ['ok'] },
         ],
       }),
-    ] as any[]
+    ]
     saveMissions(missions)
     const stored = JSON.parse(localStorage.getItem(MISSIONS_STORAGE_KEY)!)
     expect(stored[0].clusterStatuses[0].logs).toEqual(['ok'])

@@ -1,23 +1,23 @@
-import { useState, useEffect, useRef, useCallback, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
-import { useCanI } from '../../../hooks/usePermissions'
-import { ClusterBadge } from '../../ui/ClusterBadge'
-import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, ChevronLeft, Layers, Server, Box, Minus, Plus, RefreshCw } from 'lucide-react'
-import { cn } from '../../../lib/cn'
+import { FileText, Code, Info, Zap, Box } from 'lucide-react'
 import { moveFocusByKey } from '../../../lib/a11y/rovingFocus'
-import { RETRY_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { getHealthColors } from '../../../lib/statusColors'
-import { StatusIndicator } from '../../charts/StatusIndicator'
-import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
-import { copyToClipboard } from '../../../lib/clipboard'
 import { PageErrorBoundary } from '../../PageErrorBoundary'
-import { Button } from '../../ui/Button'
-import { MAX_SCALE_REPLICAS, POD_STATUS_CONFIG } from './deployment-drilldown/types'
-import { classifyScaleError, buildLabelSelector } from './deployment-drilldown/helpers'
-import type { TabType, Props } from './deployment-drilldown/types'
+import {
+  DeploymentHeader,
+  DeploymentOverviewPanel,
+  DeploymentPodsPanel,
+  DeploymentOutputPanel,
+  DeploymentTabs,
+  useCopyFeedback,
+  useDeploymentData,
+  type TabType,
+  type Props,
+} from './deployment-drilldown'
 
 function DeploymentDrillDownContent({ data }: Props) {
   const { t } = useTranslation()
@@ -27,332 +27,33 @@ function DeploymentDrillDownContent({ data }: Props) {
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod, drillToReplicaSet } = useDrillDownActions()
   const { state, pop } = useDrillDown()
+  const { runKubectl } = useDrillDownWebSocket(cluster)
+  const { copiedField, handleCopy } = useCopyFeedback()
 
   const [activeTab, setActiveTab] = useState<TabType>((data.tab as TabType) || 'overview')
-  // data.replicas can be a number OR an object {ready, desired} from DeploymentProgress drill-down.
-  // Extract the numeric value safely to avoid rendering an object as a React child (error #300).
-  const [replicas, setReplicas] = useState<number>(() => {
-    const r = data.replicas
-    if (typeof r === 'number') return r
-    if (r && typeof r === 'object' && 'desired' in r) return Number((r as { desired: number }).desired) || 0
-    return Number(r) || 0
-  })
-  const [readyReplicas, setReadyReplicas] = useState<number>(() => {
-    const r = data.readyReplicas ?? (data.replicas && typeof data.replicas === 'object' && 'ready' in data.replicas ? (data.replicas as { ready: number }).ready : undefined)
-    return Number(r) || 0
-  })
-  const [pods, setPods] = useState<Array<{ name: string; status: string; restarts: number }>>([])
-  const [replicaSets, setReplicaSets] = useState<Array<{ name: string; replicas: number; ready: number }>>([])
-  const [labels, setLabels] = useState<Record<string, string> | null>(null)
-  const [eventsOutput, setEventsOutput] = useState<string | null>(null)
-  const [eventsLoading, setEventsLoading] = useState(false)
-  const [describeOutput, setDescribeOutput] = useState<string | null>(null)
-  const [describeLoading, setDescribeLoading] = useState(false)
-  const [yamlOutput, setYamlOutput] = useState<string | null>(null)
-  const [yamlLoading, setYamlLoading] = useState(false)
-  const [copiedField, setCopiedField] = useState<string | null>(null)
-  const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const refetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [canScale, setCanScale] = useState<boolean | null>(null)
-  const [isScaling, setIsScaling] = useState(false)
-  const [scaleError, setScaleError] = useState<string | null>(null)
-  // Issue 9283: add a Refresh control that clears cached tab outputs and
-  // refetches fresh data from the cluster.
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const { checkPermission } = useCanI()
-  const { runKubectl } = useDrillDownWebSocket(cluster)
 
-  // Track reason/message from the initial click payload but reconcile with
-  // live data: if the live fetch shows the deployment is now healthy
-  // (readyReplicas === replicas), clear stale failure reason/message to
-  // prevent the contradictory "Healthy + DeploymentFailed" display (#4200).
-  const [liveReason, setLiveReason] = useState<string | undefined>(data.reason as string | undefined)
-  const [liveMessage, setLiveMessage] = useState<string | undefined>(data.message as string | undefined)
-
-
-  // Fetch Deployment data
-  const fetchData = async () => {
-    if (!agentConnected) return
-
-    try {
-      const output = await runKubectl(['get', 'deployment', deploymentName, '-n', namespace, '-o', 'json'])
-      if (output) {
-        let deploy
-        try {
-          deploy = JSON.parse(output)
-        } catch {
-          // Batch state updates to prevent flicker
-          setPods([])
-          setReplicaSets([])
-          return
-        }
-        const liveReplicas = deploy.spec?.replicas || 0
-        const liveReady = deploy.status?.readyReplicas || 0
-        
-        // Batch state updates to prevent flicker
-        setReplicas(liveReplicas)
-        setReadyReplicas(liveReady)
-        setLabels(deploy.metadata?.labels || {})
-
-        // Reconcile reason/message with live state (#4200):
-        // If live data shows healthy, clear the stale failure reason/message.
-        // If still unhealthy, derive reason from deployment conditions.
-        if (liveReady === liveReplicas && liveReplicas > 0) {
-          // Batch state updates together
-          setLiveReason(undefined)
-          setLiveMessage(undefined)
-        } else {
-          // Extract current condition from the deployment status
-          const conditions = (deploy.status?.conditions || []) as Array<{ type: string; status: string; reason?: string; message?: string }>
-          const failedCondition = conditions.find(
-            (c: { type: string; status: string }) =>
-              (c.type === 'Available' && c.status === 'False') ||
-              (c.type === 'Progressing' && c.status === 'False') ||
-              (c.type === 'ReplicaFailure' && c.status === 'True')
-          )
-          if (failedCondition) {
-            // Batch state updates together
-            setLiveReason(failedCondition.reason || liveReason)
-            setLiveMessage(failedCondition.message || liveMessage)
-          }
-        }
-
-        // Get ReplicaSets using the deployment's actual selector (matchLabels + matchExpressions)
-        const rsSelector = buildLabelSelector(
-          deploy.spec?.selector?.matchLabels,
-          deploy.spec?.selector?.matchExpressions,
-        )
-        const rsOutput = rsSelector
-          ? await runKubectl(['get', 'replicasets', '-n', namespace, '-l', rsSelector, '-o', 'json'])
-          : null
-        if (rsOutput) {
-          let rsList
-          try {
-            rsList = JSON.parse(rsOutput)
-          } catch {
-            setReplicaSets([])
-            return
-          }
-          const rsInfo = rsList.items?.map((rs: { metadata: { name: string }; spec: { replicas: number }; status: { readyReplicas?: number } }) => ({
-            name: rs.metadata.name,
-            replicas: rs.spec?.replicas || 0,
-            ready: rs.status?.readyReplicas || 0
-          })) || []
-          setReplicaSets(rsInfo)
-        }
-
-        // Get Pods with this deployment's selector (matchLabels + matchExpressions)
-        const selector = buildLabelSelector(
-          deploy.spec?.selector?.matchLabels,
-          deploy.spec?.selector?.matchExpressions,
-        )
-        if (selector) {
-          const podsOutput = await runKubectl(['get', 'pods', '-n', namespace, '-l', selector, '-o', 'json'])
-          if (podsOutput) {
-            let podList
-            try {
-              podList = JSON.parse(podsOutput)
-            } catch {
-              setPods([])
-              return
-            }
-            const podInfo = podList.items?.map((p: { metadata: { name: string }; status: { phase: string; containerStatuses?: Array<{ restartCount: number }> } }) => ({
-              name: p.metadata.name,
-              status: p.status.phase,
-              restarts: p.status.containerStatuses?.reduce((sum: number, c: { restartCount: number }) => sum + c.restartCount, 0) || 0
-            })) || []
-            setPods(podInfo)
-          }
-        }
-      }
-    } catch {
-      // Ignore parse errors
-    }
-  }
-
-  const fetchEvents = async () => {
-    if (!agentConnected || eventsOutput) return
-    setEventsLoading(true)
-    const output = await runKubectl(['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${deploymentName}`, '-o', 'wide'])
-    setEventsOutput(output)
-    setEventsLoading(false)
-  }
-
-  const fetchDescribe = async () => {
-    if (!agentConnected || describeOutput) return
-    setDescribeLoading(true)
-    const output = await runKubectl(['describe', 'deployment', deploymentName, '-n', namespace])
-    setDescribeOutput(output)
-    setDescribeLoading(false)
-  }
-
-  const fetchYaml = async () => {
-    if (!agentConnected || yamlOutput) return
-    setYamlLoading(true)
-    const output = await runKubectl(['get', 'deployment', deploymentName, '-n', namespace, '-o', 'yaml'])
-    setYamlOutput(output)
-    setYamlLoading(false)
-  }
-
-  // Check if user can scale deployments in this namespace
-  const checkScalePermission = useCallback(async () => {
-    try {
-      const result = await checkPermission({
-        cluster,
-        verb: 'patch',
-        resource: 'deployments',
-        namespace,
-        subresource: 'scale',
-      })
-      setCanScale(result.allowed)
-    } catch {
-      // If scale subresource check fails, try checking patch on deployments
-      try {
-        const result = await checkPermission({
-          cluster,
-          verb: 'patch',
-          resource: 'deployments',
-          namespace,
-        })
-        setCanScale(result.allowed)
-      } catch {
-        // When kc-agent is connected, default to allowed when permission check
-        // fails. The agent uses the user's own kubeconfig, so if kubectl scale
-        // works, the check failure is likely a transient API error, not a real
-        // permission denial. Fixes #12417.
-        setCanScale(agentConnected)
-      }
-    }
-  }, [cluster, namespace, checkPermission, agentConnected])
-
-  // Check scale permission on mount
-  useEffect(() => {
-    checkScalePermission()
-  }, [checkScalePermission])
-
-  // Handle scale deployment - directly scales to the specified count
-  const handleScaleTo = async (targetReplicas: number) => {
-    if (!agentConnected || !canScale || targetReplicas === replicas) return
-    if (targetReplicas < 0) return
-    // Allow scaling down even when current replicas exceed the UI limit
-    if (targetReplicas > MAX_SCALE_REPLICAS && targetReplicas > replicas) return
-
-    setIsScaling(true)
-    setScaleError(null)
-
-    try {
-      const output = await runKubectl([
-        'scale',
-        'deployment',
-        deploymentName,
-        '-n',
-        namespace,
-        `--replicas=${targetReplicas}`,
-      ])
-
-      if (output.toLowerCase().includes('scaled') || output.toLowerCase().includes('deployment')) {
-        // Success - update local state immediately
-        setReplicas(targetReplicas)
-        // Refetch data to get updated status
-        if (refetchTimeoutRef.current) {
-          clearTimeout(refetchTimeoutRef.current)
-        }
-        refetchTimeoutRef.current = setTimeout(() => {
-          refetchTimeoutRef.current = null
-          void fetchData()
-        }, RETRY_DELAY_MS)
-      } else if (output.toLowerCase().includes('error') || output.toLowerCase().includes('forbidden')) {
-        // Issue 9284: don't leak raw kubectl stderr — map to a friendly message.
-        setScaleError(t(classifyScaleError(output)))
-      }
-    } catch (err: unknown) {
-      // Issue 9284: don't leak raw stack traces; map through the same helper.
-      setScaleError(t(classifyScaleError(err instanceof Error ? err.message : '')))
-    } finally {
-      setIsScaling(false)
-    }
-  }
-
-  // Increment/decrement handlers that directly trigger scaling
-  const handleDecrement = () => handleScaleTo(replicas - 1)
-  const handleIncrement = () => handleScaleTo(replicas + 1)
-
-  // Issue 9283: Refresh all tab data. The per-tab fetchX helpers
-  // (fetchEvents/fetchDescribe/fetchYaml) short-circuit when their cached
-  // output is already set, so bypass them and re-run the kubectl calls
-  // directly, overwriting the cached state at the end.
-  const handleRefreshAll = async () => {
-    if (!agentConnected || isRefreshing) return
-    setIsRefreshing(true)
-    setEventsLoading(true)
-    setDescribeLoading(true)
-    setYamlLoading(true)
-    try {
-      const [, events, describe, yaml] = await Promise.all([
-        fetchData(),
-        runKubectl(['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${deploymentName}`, '-o', 'wide']),
-        runKubectl(['describe', 'deployment', deploymentName, '-n', namespace]),
-        runKubectl(['get', 'deployment', deploymentName, '-n', namespace, '-o', 'yaml']),
-      ])
-      setEventsOutput(events)
-      setDescribeOutput(describe)
-      setYamlOutput(yaml)
-    } finally {
-      setEventsLoading(false)
-      setDescribeLoading(false)
-      setYamlLoading(false)
-      setIsRefreshing(false)
-    }
-  }
-
-  // Track if we've already loaded data to prevent refetching
-  const hasLoadedRef = useRef(false)
-
-  // Pre-fetch tab data when agent connects
-  // Batched to limit concurrent WebSocket connections (max 2 at a time)
-  useEffect(() => {
-    if (!agentConnected || hasLoadedRef.current) return
-    hasLoadedRef.current = true
-
-    const loadData = async () => {
-      // Batch 1: Overview data (2 concurrent)
-      await Promise.all([
-        fetchData(),
-        fetchEvents(),
-      ])
-
-      // Batch 2: Describe + YAML (2 concurrent, lower priority)
-      await Promise.all([
-        fetchDescribe(),
-        fetchYaml(),
-      ])
-    }
-
-    loadData()
-  }, [agentConnected, fetchData, fetchDescribe, fetchEvents, fetchYaml])
-
-  useEffect(() => {
-    return () => {
-      if (copiedFieldTimeoutRef.current) {
-        clearTimeout(copiedFieldTimeoutRef.current)
-      }
-      if (refetchTimeoutRef.current) {
-        clearTimeout(refetchTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  const handleCopy = (field: string, value: string) => {
-    copyToClipboard(value)
-    setCopiedField(field)
-    if (copiedFieldTimeoutRef.current) {
-      clearTimeout(copiedFieldTimeoutRef.current)
-    }
-    copiedFieldTimeoutRef.current = setTimeout(() => {
-      setCopiedField(null)
-      copiedFieldTimeoutRef.current = null
-    }, UI_FEEDBACK_TIMEOUT_MS)
-  }
+  const {
+    replicas,
+    readyReplicas,
+    pods,
+    replicaSets,
+    labels,
+    eventsOutput,
+    eventsLoading,
+    describeOutput,
+    describeLoading,
+    yamlOutput,
+    yamlLoading,
+    canScale,
+    isScaling,
+    scaleError,
+    isRefreshing,
+    liveReason,
+    liveMessage,
+    handleDecrement,
+    handleIncrement,
+    handleRefreshAll,
+  } = useDeploymentData({ agentConnected, cluster, namespace, deploymentName, data, runKubectl })
 
   const isHealthy = readyReplicas === replicas && replicas > 0
   const healthColors = getHealthColors(isHealthy)
@@ -389,108 +90,29 @@ function DeploymentDrillDownContent({ data }: Props) {
 
   return (
     <div className="flex flex-col h-full -m-6">
-      {/* Header */}
-      <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-6 text-sm">
-          {state.stack.length > 1 && (
-            <button
-              type="button"
-              onClick={pop}
-              className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
-              aria-label={t('drilldown.goBack')}
-              title={t('drilldown.goBack')}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>{t('common.back')}</span>
-            </button>
-          )}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label={`${t('drilldown.fields.namespace')}: ${namespace}`}
-            onClick={() => drillToNamespace(cluster, namespace)}
-            onKeyDown={(event) => handleButtonLikeKeyDown(event, () => drillToNamespace(cluster, namespace))}
-            className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
-          >
-            <Layers className="w-4 h-4 text-purple-400" />
-            <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
-            <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
-            <svg className="w-3 h-3 text-purple-400/70 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label={`${t('drilldown.fields.cluster')}: ${cluster}`}
-            onClick={() => drillToCluster(cluster)}
-            onKeyDown={(event) => handleButtonLikeKeyDown(event, () => drillToCluster(cluster))}
-            className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
-          >
-            <Server className="w-4 h-4 text-blue-400" />
-            <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
-            <ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" />
-            <svg className="w-3 h-3 text-blue-400/70 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </div>
-        {/* Issue 9283: Refresh all tabs — Events/Describe/YAML used to cache
-            forever with no way to refetch. */}
-        <div
-          role="button"
-          tabIndex={!agentConnected || isRefreshing ? -1 : 0}
-          aria-disabled={!agentConnected || isRefreshing}
-          aria-label={t('drilldown.deployment.refreshAll')}
-          onClick={() => {
-            if (agentConnected && !isRefreshing) {
-              handleRefreshAll()
-            }
-          }}
-          onKeyDown={(event) => handleButtonLikeKeyDown(event, handleRefreshAll, !agentConnected || isRefreshing)}
-          title={t('drilldown.deployment.refreshAll')}
-          className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card',
-            !agentConnected || isRefreshing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
-          )}
-        >
-          <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
-          <span>{t('drilldown.deployment.refresh')}</span>
-        </div>
-      </div>
+      <DeploymentHeader
+        cluster={cluster}
+        namespace={namespace}
+        stackDepth={state.stack.length}
+        agentConnected={agentConnected}
+        isRefreshing={isRefreshing}
+        onBack={pop}
+        onDrillToNamespace={() => drillToNamespace(cluster, namespace)}
+        onDrillToCluster={() => drillToCluster(cluster)}
+        onRefreshAll={() => {
+          void handleRefreshAll()
+        }}
+        onButtonLikeKeyDown={handleButtonLikeKeyDown}
+      />
 
-      {/* Tabs */}
-      <div className="border-b border-border px-6">
-        <div className="flex gap-1" role="tablist" aria-label={t('drilldown.deployment.tabs', 'Deployment tabs')} onKeyDown={handleTabKeyDown}>
-          {TABS.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <Button
-                key={tab.id}
-                variant="ghost"
-                id={`deployment-tab-${tab.id}`}
-                data-tab-id={tab.id}
-                role="tab"
-                tabIndex={activeTab === tab.id ? 0 : -1}
-                aria-selected={activeTab === tab.id}
-                aria-controls={`deployment-panel-${tab.id}`}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'rounded-none border-b-2 px-4 py-2 text-sm',
-                  activeTab === tab.id
-                    ? 'text-primary border-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </Button>
-            )
-          })}
-        </div>
-      </div>
+      <DeploymentTabs
+        tabs={TABS}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onTabKeyDown={handleTabKeyDown}
+        ariaLabel={t('drilldown.deployment.tabs', 'Deployment tabs')}
+      />
 
-      {/* Tab Content */}
       <div
         id={`deployment-panel-${activeTab}`}
         role="tabpanel"
@@ -499,281 +121,65 @@ function DeploymentDrillDownContent({ data }: Props) {
         className="flex-1 overflow-y-auto p-6 space-y-6"
       >
         {activeTab === 'overview' && (
-          <div className="space-y-6">
-            {/* Status */}
-            <div className={cn('p-4 rounded-lg border', healthColors.bg, healthColors.border)}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <StatusIndicator status={isHealthy ? 'healthy' : 'warning'} size="lg" />
-                  <div>
-                    <div className="text-lg font-semibold text-foreground">
-                      {isHealthy ? 'Healthy' : 'Degraded'}
-                    </div>
-                    {liveReason && <div className="text-sm text-muted-foreground">{liveReason}</div>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Gauge
-                    value={replicas > 0 ? Math.round((readyReplicas / replicas) * 100) : 0}
-                    max={100}
-                    size="sm"
-                    invertColors
-                  />
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-foreground">{readyReplicas}/{replicas}</div>
-                    <div className="text-xs text-muted-foreground">{t('drilldown.fields.replicasReady')}</div>
-                  </div>
-                </div>
-              </div>
-              {liveMessage && (
-                <div className="mt-3 p-2 rounded bg-card/50 text-sm text-muted-foreground">{liveMessage}</div>
-              )}
-            </div>
-
-            {/* Scale Control */}
-            <div className="p-4 rounded-lg bg-card/50 border border-border">
-              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-purple-400" />
-                Scale Deployment
-              </h3>
-              {scaleError && (
-                <div className="mb-3 p-2 rounded bg-red-500/20 border border-red-500/30 text-red-300 text-sm">
-                  {scaleError}
-                </div>
-              )}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleDecrement}
-                    disabled={!canScale || replicas <= 0 || isScaling}
-                    className={cn(
-                      'p-2 rounded-lg transition-colors',
-                      canScale && replicas > 0 && !isScaling
-                        ? 'bg-secondary hover:bg-secondary/80 text-foreground'
-                        : 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
-                    )}
-                    title={
-                      canScale === false ? 'No permission to scale deployments in this namespace' :
-                        replicas <= 0 ? 'Already at minimum (0 replicas)' :
-                          isScaling ? 'Scaling in progress...' :
-                            `Scale down to ${replicas - 1} replica${replicas - 1 !== 1 ? 's' : ''}`
-                    }
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <div
-                    className={cn(
-                      'w-16 text-center py-2 rounded-lg bg-secondary border border-border text-foreground font-mono text-lg flex items-center justify-center',
-                      isScaling && 'opacity-70'
-                    )}
-                    title={`Current: ${replicas} replica${replicas !== 1 ? 's' : ''}`}
-                  >
-                    {isScaling ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
-                    ) : (
-                      replicas
-                    )}
-                  </div>
-                  <button
-                    onClick={handleIncrement}
-                    disabled={!canScale || replicas >= MAX_SCALE_REPLICAS || isScaling}
-                    className={cn(
-                      'p-2 rounded-lg transition-colors',
-                      canScale && replicas < MAX_SCALE_REPLICAS && !isScaling
-                        ? 'bg-secondary hover:bg-secondary/80 text-foreground'
-                        : 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
-                    )}
-                    title={
-                      canScale === false ? 'No permission to scale deployments in this namespace' :
-                        replicas >= MAX_SCALE_REPLICAS ? `Maximum is ${MAX_SCALE_REPLICAS} replicas` :
-                          isScaling ? 'Scaling in progress...' :
-                            `Scale up to ${replicas + 1} replica${replicas + 1 !== 1 ? 's' : ''}`
-                    }
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="flex-1 text-sm text-muted-foreground">
-                  {canScale === null ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Checking permissions...
-                    </span>
-                  ) : canScale === false ? (
-                    <span className="text-yellow-400">No permission to scale deployments in this namespace</span>
-                  ) : isScaling ? (
-                    <span className="text-purple-400 flex items-center gap-2">
-                      Scaling deployment...
-                    </span>
-                  ) : (
-                    <span>Click +/- to scale (0-{MAX_SCALE_REPLICAS} replicas)</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* ReplicaSets */}
-            {replicaSets.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-3">{t('drilldown.fields.replicaSets')}</h3>
-                <div className="space-y-2">
-                  {replicaSets.map((rs) => (
-                    <button
-                      key={rs.name}
-                      onClick={() => drillToReplicaSet(cluster, namespace, rs.name)}
-                      className="w-full p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 flex items-center justify-between group transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-                        </svg>
-                        <span className="font-mono text-blue-400">{rs.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground">{rs.ready}/{rs.replicas} ready</span>
-                        <svg className="w-4 h-4 text-blue-400/70 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Labels */}
-            {labels && Object.keys(labels).length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-blue-400" />
-                  Labels
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(labels).slice(0, 8).map(([key, value]) => (
-                    <span key={key} className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-400 font-mono">
-                      {key}={value}
-                    </span>
-                  ))}
-                  {Object.keys(labels).length > 8 && (
-                    <span className="text-xs text-muted-foreground">+{Object.keys(labels).length - 8} more</span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <DeploymentOverviewPanel
+            isHealthy={isHealthy}
+            healthColors={healthColors}
+            liveReason={liveReason}
+            liveMessage={liveMessage}
+            replicas={replicas}
+            readyReplicas={readyReplicas}
+            canScale={canScale}
+            isScaling={isScaling}
+            scaleError={scaleError}
+            replicaSets={replicaSets}
+            labels={labels}
+            onScaleDown={handleDecrement}
+            onScaleUp={handleIncrement}
+            onDrillToReplicaSet={(rsName) => drillToReplicaSet(cluster, namespace, rsName)}
+          />
         )}
 
         {activeTab === 'pods' && (
-          <div className="space-y-3">
-            {pods.length > 0 ? (
-              pods.map((pod) => (
-                <button
-                  key={pod.name}
-                  onClick={() => drillToPod(cluster, namespace, pod.name, { status: pod.status, restarts: pod.restarts })}
-                  className="w-full p-3 rounded-lg bg-card/50 border border-border hover:bg-card/80 flex items-center justify-between group transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Box className="w-5 h-5 text-cyan-400" />
-                    <span className="font-mono text-foreground">{pod.name}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                     <span className={cn(
-                       'text-xs px-2 py-1 rounded',
-                       (() => {
-                         const config = POD_STATUS_CONFIG[pod.status] || POD_STATUS_CONFIG.Unknown
-                         return `${config.bg} ${config.text}`
-                       })()
-                     )}>
-                       {pod.status}
-                     </span>
-                    {pod.restarts > 0 && (
-                      <span className="text-xs text-yellow-400">{pod.restarts} restarts</span>
-                    )}
-                    <svg className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </button>
-              ))
-            ) : (
-              <div className="p-4 rounded-lg bg-card/50 border border-border text-center text-muted-foreground">
-                No pods found for this Deployment
-              </div>
-            )}
-          </div>
+          <DeploymentPodsPanel
+            pods={pods}
+            onDrillToPod={(pod) => drillToPod(cluster, namespace, pod.name, { status: pod.status, restarts: pod.restarts })}
+          />
         )}
 
         {activeTab === 'events' && (
-          <div>
-            {eventsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">{t('drilldown.status.fetchingEvents')}</span>
-              </div>
-            ) : eventsOutput ? (
-              <pre className="p-4 rounded-lg bg-black/50 border border-border overflow-auto max-h-[60vh] text-xs text-foreground font-mono whitespace-pre-wrap">
-                {eventsOutput.includes('No resources found') ? 'No events found for this Deployment' : eventsOutput}
-              </pre>
-            ) : (
-              <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-              </div>
-            )}
-          </div>
+          <DeploymentOutputPanel
+            loading={eventsLoading}
+            output={eventsOutput}
+            loadingMessage={t('drilldown.status.fetchingEvents')}
+            notConnectedMessage=""
+            noResourcesMessage="No events found for this Deployment"
+          />
         )}
 
         {activeTab === 'describe' && (
-          <div>
-            {describeLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">{t('drilldown.status.runningDescribe')}</span>
-              </div>
-            ) : describeOutput ? (
-              <div className="relative">
-                <button
-                  onClick={() => handleCopy('describe', describeOutput)}
-                  className="absolute top-2 right-2 px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  {copiedField === 'describe' ? <><Check className="w-3 h-3 text-green-400" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
-                </button>
-                <pre className="p-4 rounded-lg bg-black/50 border border-border overflow-auto max-h-[60vh] text-xs text-foreground font-mono whitespace-pre-wrap">
-                  {describeOutput}
-                </pre>
-              </div>
-            ) : (
-              <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-              </div>
-            )}
-          </div>
+          <DeploymentOutputPanel
+            loading={describeLoading}
+            output={describeOutput}
+            loadingMessage={t('drilldown.status.runningDescribe')}
+            notConnectedMessage=""
+            enableCopy
+            copyField="describe"
+            copiedField={copiedField}
+            onCopy={handleCopy}
+          />
         )}
 
         {activeTab === 'yaml' && (
-          <div>
-            {yamlLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">{t('drilldown.status.fetchingYaml')}</span>
-              </div>
-            ) : yamlOutput ? (
-              <div className="relative">
-                <button
-                  onClick={() => handleCopy('yaml', yamlOutput)}
-                  className="absolute top-2 right-2 px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  {copiedField === 'yaml' ? <><Check className="w-3 h-3 text-green-400" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
-                </button>
-                <pre className="p-4 rounded-lg bg-black/50 border border-border overflow-auto max-h-[60vh] text-xs text-foreground font-mono whitespace-pre-wrap">
-                  {yamlOutput}
-                </pre>
-              </div>
-            ) : (
-              <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-              </div>
-            )}
-          </div>
+          <DeploymentOutputPanel
+            loading={yamlLoading}
+            output={yamlOutput}
+            loadingMessage={t('drilldown.status.fetchingYaml')}
+            notConnectedMessage=""
+            enableCopy
+            copyField="yaml"
+            copiedField={copiedField}
+            onCopy={handleCopy}
+          />
         )}
       </div>
     </div>

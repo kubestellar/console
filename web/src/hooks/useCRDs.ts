@@ -13,13 +13,13 @@ import { useClusters } from './useMCP'
 import { getStoredAuthTokenSync } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { createCachedHook } from '../lib/cache'
+import { HTTP_SERVICE_UNAVAILABLE } from '../lib/constants/http'
 
 // ============================================================================
 // Constants
 // ============================================================================
 
 const CRD_CACHE_KEY = 'crds'
-const STATUS_SERVICE_UNAVAILABLE = 503
 const DEFAULT_DEMO_CLUSTERS = ['us-east-1', 'us-west-2', 'eu-central-1'] as const
 
 // ============================================================================
@@ -99,7 +99,7 @@ async function fetchCRDs(): Promise<CRDData[]> {
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
 
-  if (res.status === STATUS_SERVICE_UNAVAILABLE) {
+  if (res.status === HTTP_SERVICE_UNAVAILABLE) {
     throw new Error('Service unavailable')
   }
 

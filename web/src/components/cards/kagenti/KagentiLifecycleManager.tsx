@@ -54,7 +54,7 @@ function LifecycleSummaryBar({
   colorMap,
 }: {
   label: string
-  icon: typeof Bot
+  icon: React.ComponentType<{ className?: string }>
   states: readonly string[]
   counts: Record<string, number>
   colorMap: Record<string, { bg: string; text: string; border: string }>

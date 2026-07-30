@@ -1,5 +1,4 @@
-/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
-import { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react'
+import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react'
 import {
   TrendingUp, TrendingDown, Clock, BarChart3,
   ChevronDown, ChevronRight, Search as SearchIcon,
@@ -250,7 +249,7 @@ async function searchStocks(query: string): Promise<StockSearchResult[]> {
 // Default stock symbols to track (keeping for backwards compatibility)
 
 // Market status
-function getMarketStatus(t: TFunction<readonly ['cards', 'common']>): { isOpen: boolean; statusText: string } {
+function getMarketStatus(t: TFunction<['cards', 'common']>): { isOpen: boolean; statusText: string } {
   const now = new Date()
   const hour = now.getHours()
   const minutes = now.getMinutes()

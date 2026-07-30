@@ -11,6 +11,7 @@ import { useClusters } from './useMCP'
 import { getStoredAuthTokenSync } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
+import { HTTP_SERVICE_UNAVAILABLE } from '../lib/constants/http'
 
 // ============================================================================
 // Constants
@@ -26,9 +27,6 @@ const FAILURE_THRESHOLD = 3
 
 /** localStorage key for webhooks cache */
 const CACHE_KEY = 'kc-admission-webhooks-cache'
-
-/** HTTP status code returned when the backend has no k8s client */
-const STATUS_SERVICE_UNAVAILABLE = 503
 
 // ============================================================================
 // Types
@@ -145,7 +143,10 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
   const cachedData = useRef(loadFromCache())
   const cachedSnapshot = cachedData.current
   const [webhooks, setWebhooks] = useState<WebhookData[]>(cachedSnapshot?.data || [])
-  const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
+  // Start as false (show loading skeleton) when there is no cached snapshot;
+  // the refetch will flip this to true if the first fetch fails (demo fallback).
+  // Matches the CLAUDE.md card-cache pattern: isDemoFallback must be false while isLoading is true.
+  const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? false)
   const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
@@ -175,7 +176,7 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
         signal: signal ?? AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
-      if (res.status === STATUS_SERVICE_UNAVAILABLE) {
+      if (res.status === HTTP_SERVICE_UNAVAILABLE) {
         throw new Error('Service unavailable')
       }
 

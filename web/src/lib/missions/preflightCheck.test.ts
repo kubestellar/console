@@ -1,10 +1,16 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   classifyKubectlError,
   getRemediationActions,
   resolveRequiredTools,
+  runClusterReadinessCheck,
+  runPreflightCheck,
 } from './preflightCheck'
-import type { PreflightError } from './preflightCheck'
+import type {
+  KubectlExecFn,
+  PreflightError,
+  RequiredOperation,
+} from './preflightCheck'
 
 // =============================================================================
 // classifyKubectlError
@@ -354,5 +360,247 @@ describe('resolveRequiredTools', () => {
     const result = resolveRequiredTools('deploy')
     const kubectlCount = result.filter(t => t === 'kubectl').length
     expect(kubectlCount).toBe(1)
+  })
+})
+
+// =============================================================================
+// runClusterReadinessCheck
+// =============================================================================
+
+const KUBECTL_TIMEOUT_MS = 10_000
+
+function makeExecMock(
+  responses: Array<{ output: string; exitCode: number; error?: string } | Error>,
+): { fn: KubectlExecFn; calls: Array<{ args: string[]; options?: { context?: string; timeout?: number; priority?: boolean } }> } {
+  const calls: Array<{ args: string[]; options?: { context?: string; timeout?: number; priority?: boolean } }> = []
+  let i = 0
+  const fn: KubectlExecFn = vi.fn(async (args, options) => {
+    calls.push({ args, options })
+    const r = responses[i++]
+    if (r === undefined) {
+      throw new Error(`Unexpected extra kubectl call: ${args.join(' ')}`)
+    }
+    if (r instanceof Error) {
+      throw r
+    }
+    return r
+  })
+  return { fn, calls }
+}
+
+describe('runClusterReadinessCheck', () => {
+  it('returns ok when /readyz responds with lowercase "ok"', async () => {
+    const { fn, calls } = makeExecMock([{ output: 'ok', exitCode: 0 }])
+    const result = await runClusterReadinessCheck(fn, 'my-ctx')
+    expect(result).toEqual({ ok: true, context: 'my-ctx' })
+    expect(calls[0].args).toEqual(['get', '--raw', '/readyz'])
+    expect(calls[0].options).toEqual({ context: 'my-ctx', timeout: KUBECTL_TIMEOUT_MS, priority: true })
+  })
+
+  it('matches "ok" case-insensitively (uppercase OK)', async () => {
+    const { fn } = makeExecMock([{ output: 'OK', exitCode: 0 }])
+    const result = await runClusterReadinessCheck(fn)
+    expect(result.ok).toBe(true)
+  })
+
+  it('accepts "ok" embedded in a longer readyz response', async () => {
+    const { fn } = makeExecMock([{ output: '[+]ping ok\nreadyz check passed\n', exitCode: 0 }])
+    const result = await runClusterReadinessCheck(fn)
+    expect(result.ok).toBe(true)
+  })
+
+  it('returns CLUSTER_UNREACHABLE when exit code is non-zero even if output contains "ok"', async () => {
+    const { fn } = makeExecMock([{ output: 'ok', exitCode: 1 }])
+    const result = await runClusterReadinessCheck(fn, 'ctx')
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('CLUSTER_UNREACHABLE')
+    expect(result.context).toBe('ctx')
+  })
+
+  it('returns CLUSTER_UNREACHABLE when output does not contain "ok"', async () => {
+    const { fn } = makeExecMock([{ output: 'not ready', exitCode: 0 }])
+    const result = await runClusterReadinessCheck(fn)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('CLUSTER_UNREACHABLE')
+  })
+
+  it('handles null/undefined output as unreachable (guarded by || "")', async () => {
+    const { fn } = makeExecMock([{ output: '', exitCode: 0 }])
+    const result = await runClusterReadinessCheck(fn)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('CLUSTER_UNREACHABLE')
+  })
+
+  it('classifies thrown Error as CLUSTER_UNREACHABLE with message included', async () => {
+    const { fn } = makeExecMock([new Error('websocket closed')])
+    const result = await runClusterReadinessCheck(fn, 'ctx')
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('CLUSTER_UNREACHABLE')
+    expect(result.error?.message).toContain('websocket closed')
+    expect(result.context).toBe('ctx')
+  })
+
+  it('handles thrown non-Error values (raw strings) without crashing', async () => {
+    const throwingFn: KubectlExecFn = vi.fn(async () => {
+      throw 'raw-string-error'
+    })
+    const result = await runClusterReadinessCheck(throwingFn)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('CLUSTER_UNREACHABLE')
+    expect(result.error?.message).toContain('raw-string-error')
+  })
+})
+
+// =============================================================================
+// runPreflightCheck
+// =============================================================================
+
+describe('runPreflightCheck', () => {
+  it('returns ok when auth can-i --list succeeds and no requiredOps are given', async () => {
+    const { fn, calls } = makeExecMock([{ output: 'pods  [get list]', exitCode: 0 }])
+    const result = await runPreflightCheck(fn, 'ctx')
+    expect(result).toEqual({ ok: true, context: 'ctx' })
+    expect(calls).toHaveLength(1)
+    expect(calls[0].args).toEqual(['auth', 'can-i', '--list', '--no-headers'])
+    expect(calls[0].options).toEqual({ context: 'ctx', timeout: KUBECTL_TIMEOUT_MS, priority: true })
+  })
+
+  it('classifies non-zero exit from auth can-i --list via classifyKubectlError', async () => {
+    const { fn } = makeExecMock([
+      { output: '', exitCode: 1, error: 'x509: certificate has expired' },
+    ])
+    const result = await runPreflightCheck(fn)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('EXPIRED_CREDENTIALS')
+  })
+
+  it('returns ok when every requiredOp resolves to "yes"', async () => {
+    const requiredOps: RequiredOperation[] = [
+      { verb: 'get', resource: 'pods' },
+      { verb: 'create', resource: 'deployments', namespace: 'default' },
+    ]
+    const { fn, calls } = makeExecMock([
+      { output: 'pods  [get list]\ndeployments.apps  [get create]', exitCode: 0 },
+      { output: 'yes\n', exitCode: 0 },
+      { output: 'YES', exitCode: 0 },
+    ])
+    const result = await runPreflightCheck(fn, undefined, requiredOps)
+    expect(result).toEqual({ ok: true, context: undefined })
+    expect(calls[1].args).toEqual(['auth', 'can-i', 'get', 'pods'])
+    expect(calls[2].args).toEqual(['auth', 'can-i', 'create', 'deployments', '-n', 'default'])
+  })
+
+  it('returns RBAC_DENIED with single-op message and details when one required op is denied', async () => {
+    const requiredOps: RequiredOperation[] = [{ verb: 'delete', resource: 'pods', namespace: 'kube-system' }]
+    const { fn } = makeExecMock([
+      { output: 'pods  [get list]', exitCode: 0 },
+      { output: 'no', exitCode: 0 },
+    ])
+    const result = await runPreflightCheck(fn, 'prod', requiredOps)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('RBAC_DENIED')
+    expect(result.error?.message).toContain('delete pods')
+    expect(result.error?.message).toContain('kube-system')
+    expect(result.error?.details).toMatchObject({
+      verb: 'delete',
+      resource: 'pods',
+      namespace: 'kube-system',
+      allowedVerbsForResource: ['get', 'list'],
+    })
+    expect(result.deniedOps).toEqual(requiredOps)
+  })
+
+  it('uses the generic plural message when multiple required ops are denied', async () => {
+    const requiredOps: RequiredOperation[] = [
+      { verb: 'get', resource: 'pods' },
+      { verb: 'create', resource: 'deployments' },
+    ]
+    const { fn } = makeExecMock([
+      { output: '', exitCode: 0 },
+      { output: 'no', exitCode: 0 },
+      { output: 'no', exitCode: 0 },
+    ])
+    const result = await runPreflightCheck(fn, undefined, requiredOps)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('RBAC_DENIED')
+    expect(result.error?.message).toBe(
+      'Your Kubernetes user does not have permission to perform one or more required mission operations.',
+    )
+    expect(result.deniedOps).toHaveLength(2)
+  })
+
+  it('propagates a classified error when a per-op can-i call fails with non-zero exit', async () => {
+    const requiredOps: RequiredOperation[] = [{ verb: 'get', resource: 'pods' }]
+    const { fn } = makeExecMock([
+      { output: '', exitCode: 0 },
+      { output: '', exitCode: 1, error: 'Unable to connect to the server: dial tcp: lookup foo: no such host' },
+    ])
+    const result = await runPreflightCheck(fn, undefined, requiredOps)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('CLUSTER_UNREACHABLE')
+  })
+
+  it('short-circuits on the first denied op — does not call can-i for later ops after a per-op failure', async () => {
+    const requiredOps: RequiredOperation[] = [
+      { verb: 'get', resource: 'pods' },
+      { verb: 'create', resource: 'deployments' },
+    ]
+    const { fn, calls } = makeExecMock([
+      { output: '', exitCode: 0 },
+      { output: '', exitCode: 1, error: 'error: token has expired' },
+    ])
+    const result = await runPreflightCheck(fn, undefined, requiredOps)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('EXPIRED_CREDENTIALS')
+    // list + first can-i = 2 calls; second op must not be attempted after the exit-code failure
+    expect(calls).toHaveLength(2)
+  })
+
+  it('overrides UNKNOWN_EXECUTION_FAILURE to CLUSTER_UNREACHABLE for "not connected" throws', async () => {
+    const throwingFn: KubectlExecFn = vi.fn(async () => {
+      throw new Error('agent is not connected')
+    })
+    const result = await runPreflightCheck(throwingFn, 'ctx')
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('CLUSTER_UNREACHABLE')
+    expect(result.error?.message).toBe('Unable to reach the local agent or Kubernetes cluster.')
+    expect(result.context).toBe('ctx')
+  })
+
+  it('overrides UNKNOWN_EXECUTION_FAILURE to CLUSTER_UNREACHABLE for "timeout" throws', async () => {
+    const throwingFn: KubectlExecFn = vi.fn(async () => {
+      throw new Error('request timeout after 10000ms')
+    })
+    const result = await runPreflightCheck(throwingFn)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('CLUSTER_UNREACHABLE')
+  })
+
+  it('guards against cross-realm Error objects with undefined message (#7317)', async () => {
+    const crossRealmErr = { message: undefined } as unknown as Error
+    const throwingFn: KubectlExecFn = vi.fn(async () => {
+      throw crossRealmErr
+    })
+    const result = await runPreflightCheck(throwingFn)
+    // Must not throw and must not classify the literal string "undefined" — falls through to String(err)
+    expect(result.ok).toBe(false)
+    expect(result.error).toBeDefined()
+    expect(result.error?.message).not.toContain('undefined')
+  })
+
+  it('preserves classified error codes from classifyKubectlError on thrown non-connection errors', async () => {
+    const throwingFn: KubectlExecFn = vi.fn(async () => {
+      throw new Error('x509: certificate has expired or is not yet valid')
+    })
+    const result = await runPreflightCheck(throwingFn)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('EXPIRED_CREDENTIALS')
+  })
+
+  it('does not attempt per-op can-i calls when requiredOps is an empty array', async () => {
+    const { fn, calls } = makeExecMock([{ output: 'pods  [get]', exitCode: 0 }])
+    const result = await runPreflightCheck(fn, undefined, [])
+    expect(result).toEqual({ ok: true, context: undefined })
+    expect(calls).toHaveLength(1)
   })
 })

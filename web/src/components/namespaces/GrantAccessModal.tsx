@@ -52,6 +52,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
   const [granting, setGranting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDropdown, setShowDropdown] = useState(false)
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
 
   // Populate Team subjects from live team data
 
@@ -69,6 +70,17 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
   const availableSubjects = (subjectSource || []).filter(
     name => !existingSubjectNames.has(name)
   );
+
+  // Matches the suggestion list rendered below, plus the optional
+  // "Use <typed text>" entry, so arrow-key navigation can index into
+  // the exact same set of options the user sees.
+  const filteredSubjects = availableSubjects.filter(
+    name => !subjectName || name.toLowerCase().includes(subjectName.toLowerCase())
+  )
+  const showCustomOption = !!subjectName && !availableSubjects.some(
+    n => n.toLowerCase() === subjectName.toLowerCase()
+  )
+  const suggestionCount = filteredSubjects.length + (showCustomOption ? 1 : 0)
 
   const handleGrant = async () => {
     if (!subjectName) return
@@ -107,6 +119,45 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
   const selectSubject = (name: string) => {
     setSubjectName(name)
     setShowDropdown(false)
+    setActiveSuggestionIndex(-1)
+  }
+
+  // Arrow-key navigation for the suggestion dropdown: Down/Up move the
+  // active option, Home/End jump to the ends, Enter selects, Escape closes.
+  const handleSubjectInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showDropdown || suggestionCount === 0) return
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setActiveSuggestionIndex(i => (i + 1) % suggestionCount)
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setActiveSuggestionIndex(i => (i <= 0 ? suggestionCount - 1 : i - 1))
+        break
+      case 'Home':
+        e.preventDefault()
+        setActiveSuggestionIndex(0)
+        break
+      case 'End':
+        e.preventDefault()
+        setActiveSuggestionIndex(suggestionCount - 1)
+        break
+      case 'Enter':
+        if (activeSuggestionIndex >= 0) {
+          e.preventDefault()
+          const name = activeSuggestionIndex < filteredSubjects.length
+            ? filteredSubjects[activeSuggestionIndex]
+            : subjectName
+          selectSubject(name)
+        }
+        break
+      case 'Escape':
+        e.preventDefault()
+        setShowDropdown(false)
+        setActiveSuggestionIndex(-1)
+        break
+    }
   }
 
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
@@ -176,29 +227,38 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
             <div className="relative">
               <input
                 type="text"
+                role="combobox"
+                aria-expanded={showDropdown && suggestionCount > 0}
+                aria-controls="grant-access-subject-listbox"
+                aria-activedescendant={activeSuggestionIndex >= 0 ? `grant-access-subject-option-${activeSuggestionIndex}` : undefined}
                 value={subjectName}
-                onChange={(e) => setSubjectName(e.target.value)}
+                onChange={(e) => { setSubjectName(e.target.value); setActiveSuggestionIndex(-1) }}
                 onFocus={() => setShowDropdown(true)}
+                onKeyDown={handleSubjectInputKeyDown}
                 placeholder={subjectKind === 'User' ? 'Select or type a user...' : subjectKind === 'Group' ? 'Select or type a group...' : subjectKind === 'Team' ? 'Select or type a team...' : 'Select or type a service account...'}
                 className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
               />
               {showDropdown && availableSubjects.length > 0 && (
-                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {availableSubjects
-                    .filter(name => !subjectName || name.toLowerCase().includes(subjectName.toLowerCase()))
-                    .map(name => (
-                      <button
-                        key={name}
-                        onClick={() => selectSubject(name)}
-                        className="w-full px-3 py-2 text-left text-sm text-white hover:bg-secondary/50 transition-colors"
-                      >
-                        {name}
-                      </button>
-                    ))}
-                  {subjectName && !availableSubjects.some(n => n.toLowerCase() === subjectName.toLowerCase()) && (
+                <div id="grant-access-subject-listbox" role="listbox" className="absolute z-10 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredSubjects.map((name, index) => (
                     <button
+                      key={name}
+                      id={`grant-access-subject-option-${index}`}
+                      role="option"
+                      aria-selected={activeSuggestionIndex === index}
+                      onClick={() => selectSubject(name)}
+                      className={`flex w-full items-center min-h-11 px-3 py-2 text-left text-sm text-white hover:bg-secondary/50 transition-colors ${activeSuggestionIndex === index ? 'bg-secondary/50' : ''}`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                  {showCustomOption && (
+                    <button
+                      id={`grant-access-subject-option-${filteredSubjects.length}`}
+                      role="option"
+                      aria-selected={activeSuggestionIndex === filteredSubjects.length}
                       onClick={() => selectSubject(subjectName)}
-                      className="w-full px-3 py-2 text-left text-sm text-blue-400 hover:bg-secondary/50 transition-colors border-t border-border"
+                      className={`flex w-full items-center min-h-11 px-3 py-2 text-left text-sm text-blue-400 hover:bg-secondary/50 transition-colors border-t border-border ${activeSuggestionIndex === filteredSubjects.length ? 'bg-secondary/50' : ''}`}
                     >
                       Use &quot;{subjectName}&quot;
                     </button>
