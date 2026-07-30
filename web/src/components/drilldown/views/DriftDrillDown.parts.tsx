@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { Loader2, GitBranch, CheckCircle, AlertTriangle, FileText, Diff, ChevronLeft, Server, Layers } from 'lucide-react'
+import type { ComponentType } from 'react'
 import { cn } from '../../../lib/cn'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import { Stethoscope } from 'lucide-react'
@@ -11,7 +12,7 @@ type SeverityStyle = {
   bg: string
   text: string
   border: string
-  icon: React.ComponentType<{ className?: string }>
+  icon: ComponentType<{ className?: string }>
 }
 
 interface DriftDrillDownHeaderProps {
@@ -74,7 +75,7 @@ export function DriftDrillDownHeader({
 }
 
 interface DriftTabBarProps {
-  tabs: { id: string; label: string; icon: React.ComponentType<{ className?: string }> }[]
+  tabs: { id: string; label: string; icon: ComponentType<{ className?: string }> }[]
   activeTab: string
   onSelect: (tab: string) => void
 }
@@ -110,17 +111,15 @@ export function DriftTabBar({ tabs, activeTab, onSelect }: DriftTabBarProps) {
 
 interface DriftOverviewTabProps {
   driftedResources: number
-  driftSeverity: string
   gitRepo?: string
   gitBranch?: string
   gitPath?: string
   lastChecked?: string
-  severityStyle: { bg: string; text: string; border: string; icon: string }
+  severityStyle: { bg: string; text: string; border: string; icon: ComponentType<{ className?: string }> }
 }
 
 export function DriftOverviewTab({
   driftedResources,
-  driftSeverity,
   gitRepo,
   gitBranch,
   gitPath,
@@ -219,7 +218,6 @@ interface DriftChangesTabProps {
   changes: DriftChange[] | null
   changesLoading: boolean
   changesError: string | null
-  selectedChange: DriftChange | null
   onChangeClick: (change: DriftChange) => void
   getChangeTypeStyle: (type: string) => { bg: string; text: string; label: string }
 }
@@ -228,7 +226,6 @@ export function DriftChangesTab({
   changes,
   changesLoading,
   changesError,
-  selectedChange,
   onChangeClick,
   getChangeTypeStyle,
 }: DriftChangesTabProps) {
