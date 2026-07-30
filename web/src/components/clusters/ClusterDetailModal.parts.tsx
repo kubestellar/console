@@ -71,7 +71,7 @@ export function ClusterDetailHeader({
           {aliasList.length > 0 && (
             <div
               className="text-xs text-muted-foreground mt-0.5"
-              title={t('clusterDetail.alsoKnownAs', { aliases: aliasList.join(', ') })}
+              title={t('clusterDetail.alsoKnownAs', { aliases: (aliasList || []).join(', ') })}
             >
               {t('clusterDetail.akaLabel')} {headerAliasSummary}
             </div>

@@ -1,17 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
-import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
+import { useState } from 'react'
+import { Info, FileText, Package, Stethoscope } from 'lucide-react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
-import { ClusterBadge } from '../../ui/ClusterBadge'
-import {
-  Settings, Info, Loader2,
-  Layers, Server, RefreshCw, Stethoscope,
-  Package, FileText, ExternalLink, ChevronLeft
-} from 'lucide-react'
-import { cn } from '../../../lib/cn'
-import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
-import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
   useModalAI,
@@ -21,11 +11,17 @@ import { useTranslation } from 'react-i18next'
 import {
   type Props,
   type TabType,
-  type CSVInfo,
-  type CRDInfo,
-  type CRDRaw,
   getPhaseStyle,
 } from './operator-drilldown'
+import {
+  OperatorOverviewTab,
+  OperatorCSVTab,
+  OperatorCRDsTab,
+  OperatorAITab,
+  OperatorDrillDownHeader,
+  OperatorTabBar,
+} from './OperatorDrillDown.parts'
+import { useOperatorDrillDown } from './useOperatorDrillDown'
 
 export function OperatorDrillDown({ data }: Props) {
   const { t } = useTranslation()
@@ -33,7 +29,6 @@ export function OperatorDrillDown({ data }: Props) {
   const namespace = data.namespace as string
   const operatorName = data.operator as string
 
-  // Additional operator data passed from the card
   const subscriptionName = data.subscription as string | undefined
   const operatorPhase = (data.phase as string) || 'Unknown'
   const channel = data.channel as string | undefined
@@ -41,21 +36,16 @@ export function OperatorDrillDown({ data }: Props) {
   const sourceNamespace = data.sourceNamespace as string | undefined
   const currentCSV = data.currentCSV as string | undefined
 
-  const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToCRD } = useDrillDownActions()
   const { state, pop, close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
-  const [csvInfo, setCsvInfo] = useState<CSVInfo | null>(null)
-  const [csvLoading, setCsvLoading] = useState(false)
-  const [operatorCRDs, setOperatorCRDs] = useState<CRDInfo[] | null>(null)
-  const [crdsLoading, setCrdsLoading] = useState(false)
-  const [subscriptionYaml, setSubscriptionYaml] = useState<string | null>(null)
-  const [aiAnalysis] = useState<string | null>(null)
-  const [aiAnalysisLoading] = useState(false)
 
-  // Resource context for AI actions
+  const { csvInfo, csvLoading, operatorCRDs, crdsLoading } = useOperatorDrillDown(
+    cluster, namespace, operatorName, currentCSV, operatorPhase, subscriptionName,
+  )
+
   const resourceContext: ResourceContext = {
     kind: 'Operator',
     name: operatorName,
@@ -64,134 +54,17 @@ export function OperatorDrillDown({ data }: Props) {
     status: operatorPhase,
   }
 
-  // Check for issues
-  const hasIssues = operatorPhase.toLowerCase() === 'failed' ||
-    operatorPhase.toLowerCase() === 'unknown'
+  const hasIssues = operatorPhase.toLowerCase() === 'failed' || operatorPhase.toLowerCase() === 'unknown'
   const issues = hasIssues
     ? [{ name: operatorName, message: `Operator phase: ${operatorPhase}`, severity: 'warning' }]
     : []
 
-  // Use modal AI hook
   const { defaultAIActions, handleAIAction, isAgentConnected } = useModalAI({
     resource: resourceContext,
     issues,
-    additionalContext: {
-      channel,
-      source,
-      currentCSV,
-    },
+    additionalContext: { channel, source, currentCSV },
   })
-  const { runKubectl } = useDrillDownWebSocket(cluster)
 
-
-  // Fetch CSV info
-  const fetchCSVInfo = async () => {
-    if (!agentConnected || csvInfo) return
-    setCsvLoading(true)
-    try {
-      const csvName = currentCSV || operatorName
-      const output = await runKubectl([
-        'get', 'clusterserviceversion', csvName, '-n', namespace, '-o', 'json'
-      ])
-      if (output) {
-        let csv
-        try {
-          csv = JSON.parse(output)
-        } catch {
-          console.warn('[OperatorDrillDown] Failed to parse CSV JSON output')
-          setCsvInfo({
-            name: currentCSV || operatorName,
-            displayName: operatorName,
-            version: 'Unknown',
-            phase: operatorPhase,
-          })
-          return
-        }
-        setCsvInfo({
-          name: csv.metadata?.name || csvName,
-          displayName: csv.spec?.displayName || csv.metadata?.name || csvName,
-          version: csv.spec?.version || 'Unknown',
-          phase: csv.status?.phase || 'Unknown',
-          description: csv.spec?.description,
-          provider: csv.spec?.provider?.name,
-          maturity: csv.spec?.maturity,
-          maintainers: csv.spec?.maintainers,
-          links: csv.spec?.links,
-          installModes: csv.spec?.installModes,
-        })
-      }
-    } catch {
-      // Fallback - create from available data
-      setCsvInfo({
-        name: currentCSV || operatorName,
-        displayName: operatorName,
-        version: 'Unknown',
-        phase: operatorPhase,
-      })
-    }
-    setCsvLoading(false)
-  }
-
-  // Fetch operator CRDs
-  const fetchCRDs = async () => {
-    if (!agentConnected || operatorCRDs) return
-    setCrdsLoading(true)
-    try {
-      const csvName = currentCSV || operatorName
-      const output = await runKubectl([
-        'get', 'clusterserviceversion', csvName, '-n', namespace, '-o', 'json'
-      ])
-      if (output) {
-        let csv
-        try {
-          csv = JSON.parse(output)
-        } catch {
-          console.warn('[OperatorDrillDown] Failed to parse CRD JSON output')
-          setOperatorCRDs([])
-          return
-        }
-        const crds = csv.spec?.customresourcedefinitions?.owned || []
-        setOperatorCRDs(crds.map((crd: CRDRaw) => ({
-          name: crd.name,
-          kind: crd.kind,
-          version: crd.version,
-          description: crd.description,
-        })))
-      }
-    } catch {
-      setOperatorCRDs([])
-    }
-    setCrdsLoading(false)
-  }
-
-  // Fetch subscription YAML
-  const fetchSubscription = async () => {
-    if (!agentConnected || subscriptionYaml) return
-    try {
-      const subName = subscriptionName || operatorName
-      const output = await runKubectl([
-        'get', 'subscription', subName, '-n', namespace, '-o', 'yaml'
-      ])
-      setSubscriptionYaml(output || 'Subscription not found')
-    } catch {
-      setSubscriptionYaml('Error fetching subscription')
-    }
-  }
-
-  // Track if we've already loaded data
-  const hasLoadedRef = useRef(false)
-
-  useEffect(() => {
-    if (!agentConnected || hasLoadedRef.current) return
-    hasLoadedRef.current = true
-
-    const loadData = async () => {
-      await Promise.all([fetchCSVInfo(), fetchCRDs(), fetchSubscription()])
-    }
-    loadData()
-  }, [agentConnected, fetchCSVInfo, fetchCRDs, fetchSubscription])
-
-  // Start AI diagnosis
   const handleDiagnose = () => {
     const prompt = `Analyze this Operator "${operatorName}" in namespace "${namespace}".
 
@@ -220,26 +93,18 @@ Please:
    - "Should I check other operators on this cluster?"
    - "All done"`
 
-    closeDrillDown() // Close panel so mission sidebar is visible
+    closeDrillDown()
     startMission({
       title: `Diagnose Operator: ${operatorName}`,
       description: `Analyze OLM operator health and configuration`,
       type: 'troubleshoot',
       cluster,
       initialPrompt: prompt,
-      context: {
-        kind: 'Operator',
-        name: operatorName,
-        namespace,
-        cluster,
-        phase: operatorPhase,
-        channel,
-      },
+      context: { kind: 'Operator', name: operatorName, namespace, cluster, phase: operatorPhase, channel },
     })
   }
 
   const phaseStyle = getPhaseStyle(operatorPhase)
-  const PhaseIcon = phaseStyle.icon
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
     { id: 'overview', label: t('drilldown.tabs.overview'), icon: Info },
@@ -250,55 +115,17 @@ Please:
 
   return (
     <div className="flex flex-col h-full -m-6">
-      {/* Header */}
-      <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6 text-sm">
-            {state.stack.length > 1 && (
-              <button
-                type="button"
-                onClick={pop}
-                className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
-                aria-label={t('drilldown.goBack')}
-                title={t('drilldown.goBack')}
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>{t('common.back')}</span>
-              </button>
-            )}
-            <button
-              onClick={() => drillToNamespace(cluster, namespace)}
-              className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
-            >
-              <Layers className="w-4 h-4 text-purple-400" />
-              <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
-              <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
-              <svg className="w-3 h-3 text-purple-400/70 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <button
-              onClick={() => drillToCluster(cluster)}
-              className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
-            >
-              <Server className="w-4 h-4 text-blue-400" />
-              <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
-              <ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" />
-              <svg className="w-3 h-3 text-blue-400/70 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
+      <OperatorDrillDownHeader
+        cluster={cluster}
+        namespace={namespace}
+        operatorPhase={operatorPhase}
+        phaseStyle={phaseStyle}
+        canGoBack={state.stack.length > 1}
+        onBack={pop}
+        onNamespaceClick={() => drillToNamespace(cluster, namespace)}
+        onClusterClick={() => drillToCluster(cluster)}
+      />
 
-          {/* Phase badge */}
-          <span className={cn('px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1', phaseStyle.bg, phaseStyle.text, 'border', phaseStyle.border)}>
-            <PhaseIcon className="w-3 h-3" />
-            {operatorPhase}
-          </span>
-        </div>
-      </div>
-
-      {/* AI Action Bar */}
       <div className="px-6 pb-4">
         <AIActionBar
           resource={resourceContext}
@@ -309,295 +136,38 @@ Please:
         />
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-border px-6">
-        <div className="flex gap-1">
-          {TABS.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors',
-                  activeTab === tab.id
-                    ? 'text-primary border-primary'
-                    : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      <OperatorTabBar tabs={TABS} activeTab={activeTab} onSelect={(id) => setActiveTab(id as TabType)} />
 
-      {/* Tab Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {activeTab === 'overview' && (
-          <div className="space-y-6">
-            {/* Operator Info Card */}
-            <div className="p-4 rounded-lg bg-linear-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
-              <div className="flex items-start gap-3">
-                <Settings className="w-8 h-8 text-purple-400 mt-1" />
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {csvInfo?.displayName || operatorName}
-                  </h3>
-                  {csvInfo?.description && (
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{csvInfo.description}</p>
-                  )}
-                  <div className="flex flex-wrap gap-4 mt-3 text-sm text-muted-foreground">
-                    {csvInfo?.version && (
-                      <div className="flex items-center gap-1.5">
-                        <Package className="w-4 h-4" />
-                        <span>Version: {csvInfo.version}</span>
-                      </div>
-                    )}
-                    {channel && (
-                      <div className="flex items-center gap-1.5">
-                        <RefreshCw className="w-4 h-4" />
-                        <span>Channel: {channel}</span>
-                      </div>
-                    )}
-                    {csvInfo?.provider && (
-                      <div className="flex items-center gap-1.5">
-                        <Settings className="w-4 h-4" />
-                        <span>Provider: {csvInfo.provider}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Subscription Info */}
-            <div className="p-4 rounded-lg border border-border bg-card/50">
-              <h4 className="text-sm font-medium text-foreground mb-3">{t('drilldown.operator.subscription')}</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">{t('drilldown.operator.name')}</span>
-                  <span className="ml-2 text-foreground">{subscriptionName || operatorName}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{t('drilldown.operator.channel')}</span>
-                  <span className="ml-2 text-foreground">{channel || 'default'}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{t('drilldown.fields.source')}</span>
-                  <span className="ml-2 text-foreground">{source || 'Unknown'}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{t('drilldown.operator.sourceNs')}</span>
-                  <span className="ml-2 text-foreground">{sourceNamespace || 'Unknown'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-lg border border-border bg-card/50">
-                <div className={cn('text-2xl font-bold', phaseStyle.text)}>
-                  <PhaseIcon className="w-8 h-8" />
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">{t('common.status')}</div>
-              </div>
-              <div className="p-4 rounded-lg border border-border bg-card/50">
-                <div className="text-2xl font-bold text-foreground">{operatorCRDs?.length || '-'}</div>
-                <div className="text-xs text-muted-foreground">{t('drilldown.tabs.crds')}</div>
-              </div>
-              <div className="p-4 rounded-lg border border-border bg-card/50">
-                <div className="text-sm font-mono text-foreground truncate">{csvInfo?.version || '-'}</div>
-                <div className="text-xs text-muted-foreground">{t('common.version')}</div>
-              </div>
-            </div>
-
-            {/* Links */}
-            {csvInfo?.links && csvInfo.links.length > 0 && (
-              <div className="p-4 rounded-lg border border-border bg-card/50">
-                <h4 className="text-sm font-medium text-foreground mb-3">{t('drilldown.operator.links')}</h4>
-                <div className="flex flex-wrap gap-2">
-                  {csvInfo.links.map((link, i) => (
-                    <a
-                      key={i}
-                      href={sanitizeUrl(link.url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-secondary/50 text-sm text-foreground hover:bg-secondary transition-colors"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      {link.name}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <OperatorOverviewTab
+            csvInfo={csvInfo}
+            operatorName={operatorName}
+            channel={channel}
+            source={source}
+            sourceNamespace={sourceNamespace}
+            subscriptionName={subscriptionName}
+            operatorCRDs={operatorCRDs}
+            phaseStyle={phaseStyle}
+          />
         )}
-
         {activeTab === 'csv' && (
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium text-foreground">{t('drilldown.operator.csvDetails')}</h4>
-            {csvLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : csvInfo ? (
-              <div className="space-y-4">
-                <div className="p-4 rounded-lg border border-border bg-card/50">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Name:</span>
-                      <span className="ml-2 text-foreground font-mono">{csvInfo.name}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Display Name:</span>
-                      <span className="ml-2 text-foreground">{csvInfo.displayName}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Version:</span>
-                      <span className="ml-2 text-foreground">{csvInfo.version}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Phase:</span>
-                      <span className={cn('ml-2 px-2 py-0.5 rounded text-xs', phaseStyle.bg, phaseStyle.text)}>{csvInfo.phase}</span>
-                    </div>
-                    {csvInfo.maturity && (
-                      <div>
-                        <span className="text-muted-foreground">Maturity:</span>
-                        <span className="ml-2 text-foreground capitalize">{csvInfo.maturity}</span>
-                      </div>
-                    )}
-                    {csvInfo.provider && (
-                      <div>
-                        <span className="text-muted-foreground">Provider:</span>
-                        <span className="ml-2 text-foreground">{csvInfo.provider}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {csvInfo.maintainers && csvInfo.maintainers.length > 0 && (
-                  <div className="p-4 rounded-lg border border-border bg-card/50">
-                    <h5 className="text-sm font-medium text-foreground mb-2">{t('drilldown.operator.maintainers')}</h5>
-                    <div className="space-y-1">
-                      {csvInfo.maintainers.map((m, i) => (
-                        <div key={i} className="text-sm text-muted-foreground">
-                          {m.name} {m.email && `<${m.email}>`}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {csvInfo.installModes && (
-                  <div className="p-4 rounded-lg border border-border bg-card/50">
-                    <h5 className="text-sm font-medium text-foreground mb-2">{t('drilldown.operator.installModes')}</h5>
-                    <div className="flex flex-wrap gap-2">
-                      {csvInfo.installModes.map((mode) => (
-                        <span
-                          key={mode.type}
-                          className={cn(
-                            'px-2 py-1 rounded text-xs',
-                            mode.supported
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-red-400'
-                          )}
-                        >
-                          {mode.type}: {mode.supported ? t('drilldown.operator.yes') : t('drilldown.operator.no')}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>{t('drilldown.operator.csvNotAvailable')}</p>
-              </div>
-            )}
-          </div>
+          <OperatorCSVTab csvInfo={csvInfo} csvLoading={csvLoading} phaseStyle={phaseStyle} />
         )}
-
         {activeTab === 'crds' && (
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium text-foreground">{t('drilldown.operator.ownedCRDs', { count: operatorCRDs?.length || 0 })}</h4>
-            {crdsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : operatorCRDs && operatorCRDs.length > 0 ? (
-              <div className="space-y-2">
-                {operatorCRDs.map((crd) => (
-                  <div
-                    key={crd.name}
-                    onClick={() => drillToCRD(cluster, crd.name)}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Package className="w-4 h-4 text-purple-400" />
-                      <div>
-                        <span className="text-sm font-medium text-foreground">{crd.kind}</span>
-                        <span className="text-xs text-muted-foreground ml-2">({crd.version})</span>
-                        {crd.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-md">{crd.description}</p>
-                        )}
-                      </div>
-                    </div>
-                    <span className="text-xs text-muted-foreground font-mono">{crd.name}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>{t('drilldown.operator.noCRDs')}</p>
-              </div>
-            )}
-          </div>
+          <OperatorCRDsTab
+            operatorCRDs={operatorCRDs}
+            crdsLoading={crdsLoading}
+            onCRDClick={(crdName) => drillToCRD(cluster, crdName)}
+          />
         )}
-
         {activeTab === 'ai' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <ConsoleAIIcon className="w-5 h-5" />
-                {t('drilldown.ai.title')}
-              </h4>
-              <button
-                onClick={handleDiagnose}
-                disabled={!isAgentConnected}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-              >
-                <Stethoscope className="w-4 h-4" />
-                {t('drilldown.operator.analyzeOperator')}
-              </button>
-            </div>
-
-            {!isAgentConnected ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <ConsoleAIIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>{t('drilldown.ai.notConnected')}</p>
-                <p className="text-xs mt-1">{t('drilldown.ai.configureAgent')}</p>
-              </div>
-            ) : aiAnalysisLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
-              </div>
-            ) : aiAnalysis ? (
-              <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                <pre className="whitespace-pre-wrap text-sm text-foreground">{aiAnalysis}</pre>
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>{t('drilldown.operator.clickAnalyze')}</p>
-                <p className="text-xs mt-1">{t('drilldown.operator.analyzeHint')}</p>
-              </div>
-            )}
-          </div>
+          <OperatorAITab
+            isAgentConnected={isAgentConnected}
+            aiAnalysis={null}
+            aiAnalysisLoading={false}
+            onDiagnose={handleDiagnose}
+          />
         )}
       </div>
     </div>

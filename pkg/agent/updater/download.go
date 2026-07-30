@@ -472,6 +472,20 @@ func downloadFile(url, dest string) error {
 	return nil
 }
 
+// hasParentDirTraversal reports whether the raw archive entry name contains a
+// ".." path component. This is a belt-and-suspenders check against zip-slip
+// (CWE-22) that supplements the Abs/Clean/prefix/Rel checks below and makes
+// the sanitization explicit for CodeQL's go/zipslip sanitizer model
+// (CodeQL alert #1458 / issue #22034).
+func hasParentDirTraversal(name string) bool {
+	// Normalize both path separators to catch Windows-style archive entries.
+	unified := strings.ReplaceAll(name, "\\", "/")
+	if unified == ".." || strings.HasPrefix(unified, "../") || strings.HasSuffix(unified, "/..") {
+		return true
+	}
+	return strings.Contains(unified, "/../")
+}
+
 // safeTarExtract extracts a .tar.gz archive to destDir, validating that no
 // extracted path escapes the destination directory (zip-slip prevention, CWE-22).
 // It also enforces a maximum file size and file count to prevent resource exhaustion.
@@ -520,6 +534,13 @@ func safeTarExtract(ctx context.Context, archivePath, destDir string) error {
 		fileCount++
 		if fileCount > maxFileCount {
 			return fmt.Errorf("archive contains too many files (max %d)", maxFileCount)
+		}
+
+		// Explicit ".." rejection on the raw archive entry name. This is
+		// redundant with the Abs/Clean/prefix/Rel checks below but is the
+		// idiom CodeQL's go/zipslip sanitizer model recognizes (alert #1458).
+		if hasParentDirTraversal(header.Name) {
+			return fmt.Errorf("path traversal in archive: %s", header.Name)
 		}
 
 		cleanName := filepath.Clean(header.Name)

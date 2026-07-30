@@ -276,6 +276,6 @@ metadata:
 
     // Overview must show the updated revision number from the live fetch, not the stale prop
     fireEvent.click(screen.getByRole('button', { name: 'drilldown.tabs.overview' }))
-    await waitFor(() => expect(screen.getByText('Revision: 3')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('drilldown.helm.revision: 3')).toBeInTheDocument())
   })
 })

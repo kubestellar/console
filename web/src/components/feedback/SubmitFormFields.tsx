@@ -2,6 +2,7 @@ import { Eye, Pencil, Maximize2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
+import { TextArea } from '../ui/TextArea'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import rehypeSanitize from 'rehype-sanitize'
@@ -77,7 +78,7 @@ export function SubmitFormFields({
         )}
       </div>
       {descriptionTab === 'write' ? (
-        <textarea
+        <TextArea
           value={description}
           onChange={e => setDescription(e.target.value)}
           onPaste={onPaste}
@@ -90,7 +91,7 @@ export function SubmitFormFields({
           }}
           placeholder={descriptionPlaceholder}
           className={cn(
-            'w-full overflow-y-auto px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm disabled:opacity-60 disabled:cursor-not-allowed',
+            'overflow-y-auto px-3 py-2 focus:ring-purple-500/50 font-mono text-sm',
             DESCRIPTION_EDITOR_HEIGHT_CLASS,
           )}
           disabled={inputsDisabled}

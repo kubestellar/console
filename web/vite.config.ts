@@ -116,7 +116,9 @@ export default defineConfig(({ mode }) => ({
             ['cards-gitops', ['/src/components/cards/ArgoCD', '/src/components/cards/GitOpsDrift', '/src/components/cards/flux_status/', '/src/components/cards/deploy/', '/src/components/cards/deploy-bundle', '/src/components/cards/cardRegistry.gitops']],
             ['cards-observability', ['/src/components/cards/otel_status/', '/src/components/cards/jaeger_status/', '/src/components/cards/cortex_status/', '/src/components/cards/thanos_status/', '/src/components/cards/fluentd_status/', '/src/components/cards/longhorn_status/', '/src/components/cards/rook_status/', '/src/components/cards/cardRegistry.observability']],
             ['cards-security', ['/src/components/cards/kyverno/', '/src/components/cards/opa/', '/src/components/cards/trivy/', '/src/components/cards/kubescape/', '/src/components/cards/spiffe_status/', '/src/components/cards/spire_status/', '/src/components/cards/keycloak_status/', '/src/components/cards/compliance/', '/src/components/cards/intoto_supply_chain/', '/src/components/cards/cardRegistry.security', '/src/components/cards/cardRegistry.compliance']],
-            ['cards-aiml', ['/src/components/cards/llmd/', '/src/components/cards/kuberay_fleet/', '/src/components/cards/kserve_status/', '/src/components/cards/kagent/', '/src/components/cards/kagenti/', '/src/components/cards/cardRegistry.ai']],
+            // Split the largest cards-aiml subfolder (65 files) out to reduce the 328KB chunk
+            ['cards-aiml-llmd', ['/src/components/cards/llmd/']],
+            ['cards-aiml', ['/src/components/cards/kuberay_fleet/', '/src/components/cards/kserve_status/', '/src/components/cards/kagent/', '/src/components/cards/kagenti/', '/src/components/cards/cardRegistry.ai']],
             ['cards-quantum', ['/src/components/cards/quantum/', '/src/components/cards/cardRegistry.quantum']],
             ['cards-networking', ['/src/components/cards/cilium_status/', '/src/components/cards/linkerd_status/', '/src/components/cards/envoy_status/', '/src/components/cards/contour_status/', '/src/components/cards/cni_status/', '/src/components/cards/coredns_status/', '/src/components/cards/nats_status/', '/src/components/cards/grpc_status/']],
             ['cards-platform', ['/src/components/cards/crossplane-status/', '/src/components/cards/knative_status/', '/src/components/cards/keda_status/', '/src/components/cards/dapr_status/', '/src/components/cards/kubevela_status/', '/src/components/cards/harbor_status/', '/src/components/cards/strimzi_status/', '/src/components/cards/volcano_status/', '/src/components/cards/openkruise_status/', '/src/components/cards/cardRegistry.platform']],
@@ -128,6 +130,8 @@ export default defineConfig(({ mode }) => ({
             ['cards-data', ['/src/components/cards/artifact_hub_status/', '/src/components/cards/backstage_status/', '/src/components/cards/rss/', '/src/components/cards/weather/', '/src/components/cards/insights/']],
             ['cards-security-extra', ['/src/components/cards/openfga_status/', '/src/components/cards/openfeature_status/', '/src/components/cards/tuf_status/']],
             // Split cards-platform-extra (632K) into separate chunks by library
+            // Split the 3 heaviest Drasi files (~1.6K of 3.4K lines) out to reduce the 564KB chunk
+            ['cards-drasi-graph', ['/src/components/cards/drasi/DrasiReactiveGraph.tsx', '/src/components/cards/drasi/DrasiReactiveGraphSections.tsx', '/src/components/cards/drasi/DrasiModals.tsx']],
             ['cards-drasi', ['/src/components/cards/drasi/', '/src/components/cards/DrasiPipelineHealth', '/src/components/cards/DrasiPipelines', '/src/components/cards/DrasiTopology']],
             ['cards-karmada', ['/src/components/cards/karmada_status/', '/src/components/cards/openyurt_status/']],
             ['cards-multitenancy', ['/src/components/cards/multi-tenancy/']],
@@ -163,6 +167,7 @@ export default defineConfig(({ mode }) => ({
             ['layout-header', ['/src/components/layout/Header', '/src/components/layout/Sidebar.tsx']],
             ['layout-sidebar-customizer', ['/src/components/layout/SidebarCustomizer', '/src/components/layout/sidebar-customizer/']],
             ['layout-navbar', ['/src/components/layout/navbar/']],
+            ['layout-mission-chat', ['/src/components/layout/mission-sidebar/mission-chat/']],
             ['layout-mission-sidebar', ['/src/components/layout/mission-sidebar/']],
             ['layout-components', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
@@ -297,6 +302,8 @@ export default defineConfig(({ mode }) => ({
           // catch-all so the `vendor-*.js` chunk (required by
           // check-vendor-safety.mjs) is always emitted with meaningful content.
           if (id.includes('/@opentelemetry/')) return 'otel-vendor'
+          // Split @mswjs/interceptors out of msw-vendor to reduce the 408KB chunk
+          if (id.includes('/@mswjs/interceptors/')) return 'msw-interceptors-vendor'
           if (id.includes('/msw/') || id.includes('/mswjs/')) return 'msw-vendor'
           if (id.includes('/@babel/') || id.includes('/babel-')) return 'babel-vendor'
           return 'vendor'
