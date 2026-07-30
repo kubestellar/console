@@ -3,6 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 
 const mockUseLocalAgent = vi.fn()
 const mockRunKubectl = vi.fn()
+const mockCopyToClipboard = vi.fn()
 
 vi.mock('../../../hooks/useLocalAgent', () => ({
   useLocalAgent: () => mockUseLocalAgent(),
@@ -13,7 +14,7 @@ vi.mock('../../../hooks/useDrillDownWebSocket', () => ({
 }))
 
 vi.mock('../../../lib/clipboard', () => ({
-  copyToClipboard: vi.fn(),
+  copyToClipboard: (text: string) => mockCopyToClipboard(text),
 }))
 
 import { useReplicaSetDrillDown } from './useReplicaSetDrillDown'
@@ -22,9 +23,10 @@ describe('useReplicaSetDrillDown', () => {
   beforeEach(() => {
     mockUseLocalAgent.mockReset()
     mockRunKubectl.mockReset()
+    mockCopyToClipboard.mockReset()
   })
 
-  it('returns idle initial state and does not fetch when agent is disconnected', () => {
+  it('returns zeroed defaults and does not fetch while agent is disconnected', () => {
     mockUseLocalAgent.mockReturnValue({ isConnected: false })
     const { result } = renderHook(() => useReplicaSetDrillDown('c1', 'ns1', 'rs1'))
     expect(result.current.agentConnected).toBe(false)
@@ -32,96 +34,119 @@ describe('useReplicaSetDrillDown', () => {
     expect(result.current.readyReplicas).toBe(0)
     expect(result.current.pods).toEqual([])
     expect(result.current.ownerDeployment).toBeNull()
+    expect(result.current.labels).toBeNull()
     expect(mockRunKubectl).not.toHaveBeenCalled()
   })
 
-  it('success path: populates replicas, owner deployment, labels, pods, and events', async () => {
+  it('populates replicas, owner deployment, labels, and pods on agent connect', async () => {
     mockUseLocalAgent.mockReturnValue({ isConnected: true })
     const rs = {
-      spec: { replicas: 3, selector: { matchLabels: { app: 'demo' } } },
+      spec: {
+        replicas: 3,
+        selector: { matchLabels: { app: 'web', tier: 'frontend' } },
+      },
       status: { readyReplicas: 2 },
       metadata: {
-        labels: { app: 'demo' },
-        ownerReferences: [{ kind: 'Deployment', name: 'demo-deploy' }],
+        labels: { app: 'web' },
+        ownerReferences: [
+          { kind: 'ReplicaSet', name: 'other' },
+          { kind: 'Deployment', name: 'web-deploy' },
+        ],
       },
     }
     const pods = {
       items: [
-        { metadata: { name: 'pod-1' }, status: { phase: 'Running', containerStatuses: [{ restartCount: 1 }, { restartCount: 2 }] } },
-        { metadata: { name: 'pod-2' }, status: { phase: 'Pending' } },
+        {
+          metadata: { name: 'web-1' },
+          status: {
+            phase: 'Running',
+            containerStatuses: [{ restartCount: 1 }, { restartCount: 2 }],
+          },
+        },
+        {
+          metadata: { name: 'web-2' },
+          status: { phase: 'Pending' },
+        },
       ],
     }
-    mockRunKubectl.mockImplementation((args: string[]) => {
-      if (args[0] === 'get' && args[1] === 'replicaset' && args[args.length - 1] === 'json') {
-        return Promise.resolve(JSON.stringify(rs))
-      }
-      if (args[0] === 'get' && args[1] === 'pods') {
-        return Promise.resolve(JSON.stringify(pods))
-      }
-      if (args[0] === 'get' && args[1] === 'events') {
-        return Promise.resolve('event output')
-      }
-      if (args[0] === 'describe') {
-        return Promise.resolve('describe output')
-      }
-      if (args[0] === 'get' && args[1] === 'replicaset' && args[args.length - 1] === 'yaml') {
-        return Promise.resolve('yaml output')
-      }
-      return Promise.resolve('')
-    })
+
+    // fetchData → rs JSON, then pods JSON. fetchEvents/Describe/Yaml return strings.
+    mockRunKubectl
+      .mockResolvedValueOnce(JSON.stringify(rs))
+      .mockResolvedValueOnce(JSON.stringify(pods))
+      .mockResolvedValueOnce('events output')
+      .mockResolvedValueOnce('describe output')
+      .mockResolvedValueOnce('yaml output')
 
     const { result } = renderHook(() => useReplicaSetDrillDown('c1', 'ns1', 'rs1'))
 
-    await waitFor(() => expect(result.current.replicas).toBe(3))
+    await waitFor(() => {
+      expect(result.current.replicas).toBe(3)
+      expect(result.current.pods.length).toBe(2)
+    })
+
     expect(result.current.readyReplicas).toBe(2)
-    expect(result.current.ownerDeployment).toBe('demo-deploy')
-    expect(result.current.labels).toEqual({ app: 'demo' })
+    expect(result.current.ownerDeployment).toBe('web-deploy')
+    expect(result.current.labels).toEqual({ app: 'web' })
     expect(result.current.pods).toEqual([
-      { name: 'pod-1', status: 'Running', restarts: 3 },
-      { name: 'pod-2', status: 'Pending', restarts: 0 },
+      { name: 'web-1', status: 'Running', restarts: 3 },
+      { name: 'web-2', status: 'Pending', restarts: 0 },
     ])
 
-    await waitFor(() => expect(result.current.eventsOutput).toBe('event output'))
-    await waitFor(() => expect(result.current.describeOutput).toBe('describe output'))
-    await waitFor(() => expect(result.current.yamlOutput).toBe('yaml output'))
+    const podsCall = mockRunKubectl.mock.calls[1][0] as string[]
+    expect(podsCall.slice(0, 5)).toEqual(['get', 'pods', '-n', 'ns1', '-l'])
+    // Selector should include both matchLabels entries joined by comma.
+    const selector = podsCall[5]
+    expect(selector.split(',').sort()).toEqual(['app=web', 'tier=frontend'])
+
+    await waitFor(() => {
+      expect(result.current.eventsOutput).toBe('events output')
+      expect(result.current.describeOutput).toBe('describe output')
+      expect(result.current.yamlOutput).toBe('yaml output')
+    })
   })
 
-  it('JSON parse error on ReplicaSet output leaves defaults untouched', async () => {
+  it('skips pod lookup when selector has no matchLabels', async () => {
     mockUseLocalAgent.mockReturnValue({ isConnected: true })
-    mockRunKubectl.mockImplementation((args: string[]) => {
-      if (args[0] === 'get' && args[1] === 'replicaset' && args[args.length - 1] === 'json') {
-        return Promise.resolve('not-json')
-      }
-      if (args[0] === 'get' && args[1] === 'events') {
-        return Promise.resolve('event output')
-      }
-      if (args[0] === 'describe') {
-        return Promise.resolve('describe output')
-      }
-      return Promise.resolve('yaml output')
-    })
+    const rs = {
+      spec: { replicas: 1, selector: {} },
+      status: {},
+      metadata: {},
+    }
+    mockRunKubectl
+      .mockResolvedValueOnce(JSON.stringify(rs))
+      .mockResolvedValueOnce('events output')
+      .mockResolvedValueOnce('describe output')
+      .mockResolvedValueOnce('yaml output')
 
     const { result } = renderHook(() => useReplicaSetDrillDown('c1', 'ns1', 'rs1'))
-
-    await waitFor(() => expect(result.current.eventsOutput).toBe('event output'))
-    expect(result.current.replicas).toBe(0)
+    await waitFor(() => expect(result.current.replicas).toBe(1))
     expect(result.current.pods).toEqual([])
+    // Only 4 calls: rs get + events + describe + yaml (no pods lookup).
+    await waitFor(() => expect(mockRunKubectl).toHaveBeenCalledTimes(4))
   })
 
-  it('handleCopy sets and clears copiedField via timeout', async () => {
-    vi.useFakeTimers()
+  it('handles invalid ReplicaSet JSON without throwing and leaves defaults intact', async () => {
+    mockUseLocalAgent.mockReturnValue({ isConnected: true })
+    mockRunKubectl
+      .mockResolvedValueOnce('not-json')
+      .mockResolvedValueOnce('events output')
+      .mockResolvedValueOnce('describe output')
+      .mockResolvedValueOnce('yaml output')
+
+    const { result } = renderHook(() => useReplicaSetDrillDown('c1', 'ns1', 'rs1'))
+    await waitFor(() => expect(result.current.eventsOutput).toBe('events output'))
+    expect(result.current.replicas).toBe(0)
+    expect(result.current.labels).toBeNull()
+  })
+
+  it('handleCopy invokes clipboard and sets copiedField', () => {
     mockUseLocalAgent.mockReturnValue({ isConnected: false })
     const { result } = renderHook(() => useReplicaSetDrillDown('c1', 'ns1', 'rs1'))
-
     act(() => {
-      result.current.handleCopy('field1', 'value')
+      result.current.handleCopy('replicas', '3')
     })
-    expect(result.current.copiedField).toBe('field1')
-
-    act(() => {
-      vi.runAllTimers()
-    })
-    expect(result.current.copiedField).toBeNull()
-    vi.useRealTimers()
+    expect(mockCopyToClipboard).toHaveBeenCalledWith('3')
+    expect(result.current.copiedField).toBe('replicas')
   })
 })

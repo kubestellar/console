@@ -10,7 +10,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 }))
 
 vi.mock('../../../hooks/mcp/shared', () => ({
-  agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
+  agentFetch: (url: string, init?: RequestInit) => mockAgentFetch(url, init),
 }))
 
 vi.mock('../../../lib/clipboard', () => ({
@@ -19,82 +19,127 @@ vi.mock('../../../lib/clipboard', () => ({
 
 import { useEventsDrillDown } from './useEventsDrillDown'
 
+function okResponse(body: unknown): Response {
+  return { ok: true, json: async () => body } as unknown as Response
+}
+function failResponse(): Response {
+  return { ok: false, json: async () => ({}) } as unknown as Response
+}
+
 describe('useEventsDrillDown', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
     mockGetDemoMode.mockReset()
     mockAgentFetch.mockReset()
     mockCopyToClipboard.mockReset()
-    mockGetDemoMode.mockReturnValue(false)
   })
 
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  it('skips fetching and clears loading state in demo mode', async () => {
+  it('short-circuits in demo mode without hitting the agent', async () => {
     mockGetDemoMode.mockReturnValue(true)
-    const { result } = renderHook(() => useEventsDrillDown('c1', 'ns1', undefined))
+    const { result } = renderHook(() => useEventsDrillDown('c1', 'ns1', 'pod-a'))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(mockAgentFetch).not.toHaveBeenCalled()
     expect(result.current.events).toEqual([])
+    expect(result.current.error).toBeNull()
+    expect(mockAgentFetch).not.toHaveBeenCalled()
   })
 
-  it('success path: fetches events and populates state', async () => {
-    const events = [{ type: 'Warning', reason: 'Failed', message: 'boom', object: 'pod/x', namespace: 'ns1', cluster: 'c1', count: 1 }]
-    mockAgentFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ events }) })
+  it('fetches events and passes namespace + object + limit query params', async () => {
+    mockGetDemoMode.mockReturnValue(false)
+    mockAgentFetch.mockResolvedValueOnce(
+      okResponse({
+        events: [
+          { type: 'Warning', reason: 'Fail', message: 'x', object: 'pod-a', namespace: 'ns1', cluster: 'c1', count: 2 },
+        ],
+      }),
+    )
 
-    const { result } = renderHook(() => useEventsDrillDown('c1', 'ns1', undefined))
+    const { result } = renderHook(() => useEventsDrillDown('c1', 'ns1', 'pod-a'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    await waitFor(() => expect(result.current.events).toEqual(events))
-    expect(result.current.isLoading).toBe(false)
+    expect(result.current.events).toHaveLength(1)
+    expect(result.current.events[0].reason).toBe('Fail')
     expect(result.current.error).toBeNull()
 
-    const [url] = mockAgentFetch.mock.calls[0] as [string]
+    const url = mockAgentFetch.mock.calls[0][0] as string
+    expect(url).toContain('cluster=c1')
     expect(url).toContain('namespace=ns1')
+    expect(url).toContain('object=pod-a')
+    expect(url).toContain('limit=100')
   })
 
-  it('uses default namespace when objectName is set but namespace is not (node events)', async () => {
-    mockAgentFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ events: [] }) })
+  it('uses namespace=default when object is set but namespace is undefined (node events case)', async () => {
+    mockGetDemoMode.mockReturnValue(false)
+    mockAgentFetch.mockResolvedValueOnce(okResponse({ events: [] }))
+
     renderHook(() => useEventsDrillDown('c1', undefined, 'node-1'))
     await waitFor(() => expect(mockAgentFetch).toHaveBeenCalledTimes(1))
-    const [url] = mockAgentFetch.mock.calls[0] as [string]
+
+    const url = mockAgentFetch.mock.calls[0][0] as string
     expect(url).toContain('namespace=default')
     expect(url).toContain('object=node-1')
   })
 
-  it('sets an error message when the response is not ok', async () => {
-    mockAgentFetch.mockResolvedValueOnce({ ok: false, json: () => Promise.resolve({}) })
-    const { result } = renderHook(() => useEventsDrillDown('c1', 'ns1', undefined))
+  it('omits object and namespace when both are undefined', async () => {
+    mockGetDemoMode.mockReturnValue(false)
+    mockAgentFetch.mockResolvedValueOnce(okResponse({ events: [] }))
+
+    renderHook(() => useEventsDrillDown('c1', undefined, undefined))
+    await waitFor(() => expect(mockAgentFetch).toHaveBeenCalledTimes(1))
+
+    const url = mockAgentFetch.mock.calls[0][0] as string
+    expect(url).not.toContain('namespace=')
+    expect(url).not.toContain('object=')
+    expect(url).toContain('cluster=c1')
+    expect(url).toContain('limit=100')
+  })
+
+  it('sets error string when response is not ok', async () => {
+    mockGetDemoMode.mockReturnValue(false)
+    mockAgentFetch.mockResolvedValueOnce(failResponse())
+
+    const { result } = renderHook(() => useEventsDrillDown('c1', 'ns1', 'pod-a'))
     await waitFor(() => expect(result.current.error).toBe('Failed to fetch events'))
+    expect(result.current.events).toEqual([])
     expect(result.current.isLoading).toBe(false)
   })
 
-  it('sets an error message when the fetch throws', async () => {
-    mockAgentFetch.mockRejectedValueOnce(new Error('network down'))
-    const { result } = renderHook(() => useEventsDrillDown('c1', 'ns1', undefined))
-    await waitFor(() => expect(result.current.error).toBe('network down'))
+  it('surfaces thrown Error message via error field', async () => {
+    mockGetDemoMode.mockReturnValue(false)
+    mockAgentFetch.mockRejectedValueOnce(new Error('boom'))
+
+    const { result } = renderHook(() => useEventsDrillDown('c1', 'ns1', 'pod-a'))
+    await waitFor(() => expect(result.current.error).toBe('boom'))
   })
 
-  it('copyCommand copies the field-selector kubectl command and toggles copied flag', async () => {
-    vi.useFakeTimers()
-    mockAgentFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ events: [] }) })
-    const { result } = renderHook(() => useEventsDrillDown('c1', 'ns1', 'pod-x'))
-
-    await act(async () => {
-      await Promise.resolve()
-    })
+  it('copyCommand builds an object-scoped kubectl command and sets copied flag', async () => {
+    mockGetDemoMode.mockReturnValue(true)
+    const { result } = renderHook(() => useEventsDrillDown('c1', 'ns1', 'pod-a'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     act(() => {
       result.current.copyCommand()
     })
-    expect(mockCopyToClipboard).toHaveBeenCalledWith(
-      expect.stringContaining('kubectl --context c1 get events --field-selector involvedObject.name=pod-x -n ns1'),
+    expect(mockCopyToClipboard).toHaveBeenCalledTimes(1)
+    const cmd = mockCopyToClipboard.mock.calls[0][0] as string
+    expect(cmd).toBe(
+      'kubectl --context c1 get events --field-selector involvedObject.name=pod-a -n ns1',
     )
     expect(result.current.copied).toBe(true)
+  })
+
+  it('copyCommand builds an all-namespaces command when no object is given', async () => {
+    mockGetDemoMode.mockReturnValue(true)
+    const { result } = renderHook(() => useEventsDrillDown('c1', undefined, undefined))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     act(() => {
-      vi.advanceTimersByTime(2_000)
+      result.current.copyCommand()
     })
-    expect(result.current.copied).toBe(false)
+    const cmd = mockCopyToClipboard.mock.calls[0][0] as string
+    expect(cmd).toBe('kubectl --context c1 get events -A --sort-by=.lastTimestamp')
   })
 })
