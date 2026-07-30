@@ -139,7 +139,6 @@ export function NamespaceDrillDown({ data }: Props) {
                 </span>
               )}
             </button>
-          ))}
         </div>
       </div>
 
