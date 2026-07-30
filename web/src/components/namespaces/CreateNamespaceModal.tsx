@@ -5,6 +5,7 @@ import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 import { agentFetch } from '../../hooks/mcp/shared'
+import { getDefaultClusterSelection } from '../../lib/clusterSelection'
 
 interface CreateNamespaceModalProps {
   clusters: string[]
@@ -15,8 +16,7 @@ interface CreateNamespaceModalProps {
 export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceModalProps) {
   const { t } = useTranslation()
   const [name, setName] = useState('')
-  // clusters[0] ?? '' is safe: JS returns undefined for an empty array, ?? '' provides the fallback
-  const [cluster, setCluster] = useState(clusters[0] ?? '')
+  const [cluster, setCluster] = useState(() => getDefaultClusterSelection(clusters))
   const [teamLabel, setTeamLabel] = useState('')
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)

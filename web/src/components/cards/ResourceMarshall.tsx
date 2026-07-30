@@ -17,12 +17,11 @@ import {
 } from '../../hooks/useDependencies'
 import { cn } from '../../lib/cn'
 import { DEP_CATEGORIES, KIND_ICONS, KNOWN_DEPENDENCY_KINDS } from '../../lib/resourceCategories'
+import { getDefaultClusterSelection } from '../../lib/clusterSelection'
 import { useCardLoadingState } from './CardDataContext'
 import { ClusterSelect } from '../ui/ClusterSelect'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
-
-const SINGLE_VISIBLE_CLUSTER_COUNT = 1
 
 function groupDependencies(deps: ResolvedDependency[]) {
   const groups: { label: string; icon: typeof FileText; deps: ResolvedDependency[] }[] = []
@@ -90,12 +89,13 @@ export function ResourceMarshall() {
   // Dependency resolution
   const { data: depData, isLoading: depLoading, error: depError, resolve, reset } = useResolveDependencies()
 
-  // Auto-select a cluster only when demo mode leaves a single visible choice.
+  const defaultCluster = useMemo(() => getDefaultClusterSelection(clusters), [clusters])
+
   useEffect(() => {
-    if (!demoMode || selectedCluster || clusters.length !== SINGLE_VISIBLE_CLUSTER_COUNT) return
-    // clusters[0] is intentional: only auto-selected when exactly ONE cluster exists (unambiguous choice)
-    setSelectedCluster(clusters[0].name)
-  }, [demoMode, clusters, selectedCluster])
+    if (demoMode && !selectedCluster && defaultCluster) {
+      setSelectedCluster(defaultCluster)
+    }
+  }, [defaultCluster, demoMode, selectedCluster])
 
   useEffect(() => {
     if (demoMode && selectedCluster && availableNamespaces.length > 0 && !selectedNamespace) {
