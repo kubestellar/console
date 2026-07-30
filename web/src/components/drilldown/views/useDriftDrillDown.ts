@@ -42,6 +42,7 @@ export function useDriftDrillDown(
           } catch {
             setChanges([])
             setChangesError('Failed to parse drift data')
+            setChangesLoading(false)
             return
           }
           const items = ksList.items || []
@@ -79,6 +80,7 @@ export function useDriftDrillDown(
         } catch {
           setChanges([])
           setChangesError('Failed to parse ArgoCD data')
+          setChangesLoading(false)
           return
         }
         const apps = appList.items || []

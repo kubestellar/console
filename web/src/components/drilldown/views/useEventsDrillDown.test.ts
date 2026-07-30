@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 
 const mockGetDemoMode = vi.fn()
@@ -28,14 +28,9 @@ function failResponse(): Response {
 
 describe('useEventsDrillDown', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
     mockGetDemoMode.mockReset()
     mockAgentFetch.mockReset()
     mockCopyToClipboard.mockReset()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
   })
 
   it('short-circuits in demo mode without hitting the agent', async () => {
