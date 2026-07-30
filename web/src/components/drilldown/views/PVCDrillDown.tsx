@@ -104,7 +104,7 @@ export function PVCDrillDown({ data }: Props) {
                   <span className="text-muted-foreground">{t('drilldown.capacity', 'Capacity')}</span>
                   <div className="flex items-center gap-1">
                     <span className="text-foreground font-mono">{capacity || 'N/A'}</span>
-                    {capacity && <CopyButton text={capacity} field="capacity" />}
+                    {capacity && <CopyButton text={capacity} field="capacity" copiedField={copiedField} onCopy={handleCopy} />}
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1.5 border-b border-border/50">
@@ -140,14 +140,14 @@ export function PVCDrillDown({ data }: Props) {
                   <span className="text-muted-foreground">{t('drilldown.storageClass', 'Storage Class')}</span>
                   <div className="flex items-center gap-1">
                     <span className="text-foreground font-mono">{storageClass || 'default'}</span>
-                    {storageClass && <CopyButton text={storageClass} field="storageClass" />}
+                    {storageClass && <CopyButton text={storageClass} field="storageClass" copiedField={copiedField} onCopy={handleCopy} />}
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1.5 border-b border-border/50">
                   <span className="text-muted-foreground">{t('drilldown.boundVolume', 'Bound Volume')}</span>
                   <div className="flex items-center gap-1">
                     <span className="text-foreground font-mono text-xs">{volumeName || 'Unbound'}</span>
-                    {volumeName && <CopyButton text={volumeName} field="volumeName" />}
+                    {volumeName && <CopyButton text={volumeName} field="volumeName" copiedField={copiedField} onCopy={handleCopy} />}
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1.5 border-b border-border/50">

@@ -54,7 +54,6 @@ export function PolicyDrillDown({ data }: Props) {
 
   // Use extracted hook for data loading
   const {
-    agentConnected,
     violations,
     violationsLoading,
     policySpec,
@@ -207,7 +206,7 @@ Please:
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="p-4 rounded-lg border border-border bg-card/50">
                 <div className={cn('text-2xl font-bold', statusStyle.text)}>
-                  <StatusIcon className="w-8 h-8" />
+                  <statusStyle.icon className="w-8 h-8" />
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">{t('common.status')}</div>
               </div>
