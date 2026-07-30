@@ -93,6 +93,8 @@ describe('cache module', () => {
 
 
 
+  describe('initPreloadedMeta', () => {
+
       it('populates metadata map from worker data', async () => {
         const { initPreloadedMeta } = await importFresh()
         const meta = {
@@ -496,3 +498,4 @@ describe('cache module', () => {
   
   
 })
+

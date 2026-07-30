@@ -2,12 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions, type StartMissionParams } from './useMissions'
-import {
-  MISSION_TIMEOUT_CHECK_INTERVAL_MS,
-  MISSION_TIMEOUT_MS,
-} from './useMissions.constants'
 import { getDemoMode } from './useDemoMode'
-import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
@@ -149,7 +144,7 @@ const defaultParams = {
 }
 
 /** Start a mission and simulate the WebSocket opening so the mission moves to 'running'. */
-async function startMissionWithConnection(
+async function _startMissionWithConnection(
   result: { current: ReturnType<typeof useMissions> },
   params: StartMissionParams = defaultParams,
 ): Promise<{ missionId: string; requestId: string }> {
@@ -178,7 +173,7 @@ async function flushMissionPreflightChain() {
 }
 
 // ── Pre-seed a mission in localStorage without going through the WS flow ──────
-function seedMission(overrides: Partial<{
+function _seedMission(overrides: Partial<{
   id: string
   status: string
   title: string

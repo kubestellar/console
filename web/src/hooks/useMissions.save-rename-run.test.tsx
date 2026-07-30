@@ -3,7 +3,6 @@ import { renderHook, act } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
-import { emitMissionRated } from '../lib/analytics'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
@@ -151,7 +150,7 @@ const defaultParams = {
 }
 
 /** Start a mission and simulate the WebSocket opening so the mission moves to 'running'. */
-async function startMissionWithConnection(
+async function _startMissionWithConnection(
   result: { current: ReturnType<typeof useMissions> },
 ): Promise<{ missionId: string; requestId: string }> {
   let missionId = ''
