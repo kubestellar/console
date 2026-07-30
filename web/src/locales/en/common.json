@@ -3381,6 +3381,7 @@
   },
   "pagination": {
     "showing": "Showing {{start}}-{{end}} of {{total}}",
+    "pageOf": "Page {{page}} of {{total}}",
     "noItems": "No items",
     "perPage": "Per page:",
     "firstPage": "First page",
