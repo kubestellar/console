@@ -36,6 +36,8 @@ export type SettingsNavGroup = {
   items: SettingsNavItem[]
 }
 
+export type SettingsGroupKey = (typeof SETTINGS_NAV)[number]['groupKey']
+
 // Labels use i18n keys resolved at render time. `as const` on each key keeps the
 // literal string type so it satisfies the typed i18next `t()` signature.
 export const SETTINGS_NAV = [
@@ -216,7 +218,7 @@ export function MobileHeader({ syncStatus }: MobileHeaderProps) {
 }
 
 interface SectionGroupHeaderProps {
-  labelKey: (typeof SETTINGS_NAV)[number]['groupKey']
+  labelKey: SettingsGroupKey
 }
 
 export function SectionGroupHeader({ labelKey }: SectionGroupHeaderProps) {
