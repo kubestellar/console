@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import {
   Loader2, Copy, Check, AlertTriangle,
   Shield, ShieldCheck, Server, User, RefreshCw,
