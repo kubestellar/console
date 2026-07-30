@@ -56,8 +56,6 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
   if (!isOpen) return null
 
-  const isMacPlatform = typeof navigator !== 'undefined' && navigator.platform?.includes('Mac')
-
   return createPortal(
     <div
       className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"

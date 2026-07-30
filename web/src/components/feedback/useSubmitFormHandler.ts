@@ -32,7 +32,7 @@ interface UseSubmitFormHandlerOptions {
   onShowLoginPrompt: () => void
   t: (key: string, defaultValue?: string) => string
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void
-  agentHealth: { version?: string; commitSHA?: string; buildTime?: string; goVersion?: string; os?: string; arch?: string; install_method?: string; clusters?: string[] } | null | undefined
+  agentHealth: { version?: string; commitSHA?: string; buildTime?: string; goVersion?: string; os?: string; arch?: string; install_method?: string; clusters?: number } | null | undefined
   agentStatus: string | undefined
   agentDataErrorCount: number
   agentLastDataError: string | null | undefined

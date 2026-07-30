@@ -32,7 +32,6 @@ export function SubmitFormFields({
   descriptionExample,
   isSubmitting,
   inputsDisabled,
-  isPreviewFullscreen,
   setIsPreviewFullscreen,
   onPaste,
 }: SubmitFormFieldsProps) {

@@ -1,6 +1,5 @@
 import { Settings, ExternalLink, Loader2 } from 'lucide-react'
 import { Github } from '@/lib/icons'
-import { cn } from '@/lib/cn'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
