@@ -1,5 +1,4 @@
 import type { ComponentType, ReactNode } from 'react'
-import type { TFunction } from 'i18next'
 import { cn } from '@/lib/cn'
 import { InfoTooltip } from './card-wrapper/InfoTooltip'
 import { CardMeta } from './CardMeta'
@@ -11,7 +10,9 @@ interface CardHeaderProps {
   resolvedIconColor: string
   title: string
   description: string
-  t: TFunction<['cards', 'common']>
+  // #21775 — Using i18next's TFunction<['cards','common']> triggers "excessively deep generic type"
+  // (TS2589). Accept plain translator signature matching how callers actually use it.
+  t: (key: string, defaultValue?: string, options?: Record<string, unknown>) => string
   showDemoIndicator: boolean
   effectiveIsDemoData: boolean
   isLive?: boolean
