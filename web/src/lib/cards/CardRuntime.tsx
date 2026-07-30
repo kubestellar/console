@@ -36,7 +36,7 @@
  * ```
  */
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, type KeyboardEvent } from 'react'
 import { getIcon } from '../icons'
 import { CardDefinition, CardColumnDefinition } from './types'
 import { useCardData, SortDirection } from './cardHooks'
@@ -370,6 +370,16 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
                     key={idx}
                     className={`border-b border-border/50 ${drillDown ? 'cursor-pointer hover:bg-secondary/50' : ''}`}
                     onClick={() => drillDown && handleItemClick(item)}
+                    {...(drillDown ? {
+                      role: 'button' as const,
+                      tabIndex: 0,
+                      onKeyDown: (event: KeyboardEvent<HTMLTableRowElement>) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          handleItemClick(item)
+                        }
+                      },
+                    } : {})}
                   >
                     {columns?.map(col => (
                       <td
