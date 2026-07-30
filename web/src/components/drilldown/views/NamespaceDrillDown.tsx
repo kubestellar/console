@@ -1,14 +1,21 @@
 import { useState } from 'react'
-import { ChevronRight, Search, Box, Network, HardDrive, Layers, Server } from 'lucide-react'
-import { usePodIssues, useDeploymentIssues, useEvents, useDeployments, useServices, usePods } from '../../../hooks/useMCP'
-import { useCachedPVCs } from '../../../hooks/useCachedData'
+import { Search, Box, Network, HardDrive, Layers, Server } from 'lucide-react'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
-import { StatusIndicator } from '../../charts/StatusIndicator'
-import { StatusBadge } from '../../ui/StatusBadge'
 import { useTranslation } from 'react-i18next'
 import { useTabKeyboardNav } from '../../../hooks/useKeyboardNav'
 import { cn } from '../../../lib/cn'
+import { useNamespaceDrillDown } from './useNamespaceDrillDown'
+import {
+  DeploymentIssueRow,
+  PodIssueRow,
+  EventRow,
+  PodRow,
+  DeploymentRow,
+  ServiceRow,
+  PVCRow,
+  OverviewStats,
+} from './NamespaceDrillDown.parts'
 
 type TabType = 'issues' | 'events' | 'resources'
 type ResourceFilter = 'all' | 'pods' | 'deployments' | 'services' | 'pvcs'
@@ -21,6 +28,7 @@ export function NamespaceDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
+  const clusterShort = cluster.split('/').pop() || cluster
   const { drillToDeployment, drillToPod, drillToEvents, drillToCluster } = useDrillDownActions()
 
   const [activeTab, setActiveTab] = useState<TabType>('issues')
@@ -28,23 +36,15 @@ export function NamespaceDrillDown({ data }: Props) {
   const [resourceSearch, setResourceSearch] = useState('')
   const { tabListProps, getTabProps, getTabPanelProps } = useTabKeyboardNav<TabType>({ tabs: ['issues', 'events', 'resources'], activeTab, onChange: setActiveTab })
 
-  const { issues: allPodIssues } = usePodIssues(cluster)
-  const { issues: allDeploymentIssues } = useDeploymentIssues()
-  const { events } = useEvents(cluster, namespace, 20)
-
-  // Resource hooks for the Resources tab
-  const clusterShort = cluster.split('/').pop() || cluster
-  const { deployments: allDeployments } = useDeployments(clusterShort, namespace)
-  const { services: allServices } = useServices(clusterShort, namespace)
-  const { pvcs: allPVCs } = useCachedPVCs(clusterShort, namespace)
-  const { pods: allPods } = usePods(clusterShort, namespace)
-
-  const podIssues = allPodIssues.filter(p => p.namespace === namespace)
-
-  const deploymentIssues = allDeploymentIssues.filter(d => d.namespace === namespace &&
-      (d.cluster === cluster || d.cluster?.includes(cluster.split('/')[0])))
-
-  const nsEvents = events.filter(e => e.namespace === namespace)
+  const {
+    podIssues,
+    deploymentIssues,
+    nsEvents,
+    allDeployments,
+    allServices,
+    allPVCs,
+    allPods,
+  } = useNamespaceDrillDown(cluster, namespace)
 
   // Filtered resources for the Resources tab
   const filteredDeployments = (() => {
@@ -107,20 +107,11 @@ export function NamespaceDrillDown({ data }: Props) {
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-2">{t('drilldown.namespace.deploymentsWithIssues', 'Deployments with Issues')}</div>
-          <div className="text-2xl font-bold text-foreground">{deploymentIssues.length}</div>
-        </div>
-        <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-2">{t('drilldown.namespace.podsWithIssues', 'Pods with Issues')}</div>
-          <div className="text-2xl font-bold text-foreground">{podIssues.length}</div>
-        </div>
-        <div className="p-4 rounded-lg bg-card/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-2">{t('drilldown.fields.recentEvents')}</div>
-          <div className="text-2xl font-bold text-foreground">{nsEvents.length}</div>
-        </div>
-      </div>
+      <OverviewStats
+        deploymentIssuesCount={deploymentIssues.length}
+        podIssuesCount={podIssues.length}
+        eventsCount={nsEvents.length}
+      />
 
       {/* Tabs */}
       <div className="border-b border-border">
@@ -161,29 +152,11 @@ export function NamespaceDrillDown({ data }: Props) {
               <h3 className="text-lg font-semibold text-foreground mb-4">{t('drilldown.namespace.deploymentIssues', 'Deployment Issues')}</h3>
               <div className="space-y-2">
                 {deploymentIssues.map((issue, i) => (
-                  <div
+                  <DeploymentIssueRow
                     key={i}
+                    issue={issue}
                     onClick={() => drillToDeployment(cluster, namespace, issue.name, { ...issue })}
-                    className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-foreground">{issue.name}</span>
-                          <StatusBadge color="orange" size="xs">
-                            {issue.readyReplicas}/{issue.replicas} ready
-                          </StatusBadge>
-                        </div>
-                        {issue.reason && (
-                          <div className="text-sm text-muted-foreground">Reason: {issue.reason}</div>
-                        )}
-                        {issue.message && (
-                          <div className="text-xs text-orange-400 mt-1">{issue.message}</div>
-                        )}
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0 ml-4" />
-                    </div>
-                  </div>
+                  />
                 ))}
               </div>
             </div>
@@ -195,36 +168,11 @@ export function NamespaceDrillDown({ data }: Props) {
               <h3 className="text-lg font-semibold text-foreground mb-4">{t('drilldown.namespace.podIssues', 'Pod Issues')}</h3>
               <div className="space-y-2">
                 {podIssues.map((issue, i) => (
-                  <div
+                  <PodIssueRow
                     key={i}
+                    issue={issue}
                     onClick={() => drillToPod(cluster, namespace, issue.name, { ...issue })}
-                    className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-foreground">{issue.name}</span>
-                          <StatusBadge color="red" size="xs">
-                            {issue.status}
-                          </StatusBadge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>{issue.restarts} restarts</span>
-                          {issue.reason && <span>• {issue.reason}</span>}
-                        </div>
-                        {(issue.issues?.length ?? 0) > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {issue.issues?.map((iss, j) => (
-                              <StatusBadge key={j} color="red" size="xs">
-                                {iss}
-                              </StatusBadge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0 ml-4" />
-                    </div>
-                  </div>
+                  />
                 ))}
               </div>
             </div>
@@ -256,21 +204,8 @@ export function NamespaceDrillDown({ data }: Props) {
           {nsEvents.length > 0 ? (
             <div className="space-y-2">
               {nsEvents.map((event, i) => (
-                <div
-                  key={i}
-                  className={`p-3 rounded-lg border-l-4 ${
-                    event.type === 'Warning'
-                      ? 'bg-yellow-500/10 border-l-yellow-500'
-                      : 'bg-card/50 border-l-green-500'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <StatusIndicator status={event.type === 'Warning' ? 'warning' : 'healthy'} size="sm" />
-                    <span className="font-medium text-foreground text-sm">{event.reason}</span>
-                    <span className="text-xs text-muted-foreground">on {event.object}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{event.message}</p>
-                </div>
+                <EventRow key={i} event={event} />
+              ))}
               ))}
             </div>
           ) : (
@@ -326,22 +261,7 @@ export function NamespaceDrillDown({ data }: Props) {
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Pods ({filteredPods.length})</h4>
               <div className="space-y-1">
                 {filteredPods.slice(0, 20).map((pod, i) => (
-                  <div
-                    key={i}
-                    onClick={() => drillToPod(cluster, namespace, pod.name, { ...pod })}
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
-                  >
-                    <div className={`w-2 h-2 rounded-full ${pod.status === 'Running' ? 'bg-green-400' : pod.status === 'Pending' ? 'bg-yellow-400' : 'bg-red-400'}`} />
-                    <Box className="w-3 h-3 text-green-400" />
-                    <span className="text-sm text-foreground">{pod.name}</span>
-                    <StatusBadge
-                      color={pod.status === 'Running' ? 'green' : pod.status === 'Pending' ? 'yellow' : 'red'}
-                      size="xs"
-                    >
-                      {pod.status}
-                    </StatusBadge>
-                    <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                  </div>
+                  <PodRow key={i} pod={pod} onClick={() => drillToPod(cluster, namespace, pod.name, { ...pod })} />
                 ))}
                 {filteredPods.length > 20 && (
                   <div className="text-xs text-muted-foreground p-2">+{filteredPods.length - 20} more pods...</div>
@@ -356,18 +276,7 @@ export function NamespaceDrillDown({ data }: Props) {
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Deployments ({filteredDeployments.length})</h4>
               <div className="space-y-1">
                 {filteredDeployments.slice(0, 20).map((dep, i) => (
-                  <div
-                    key={i}
-                    onClick={() => drillToDeployment(cluster, namespace, dep.name, { ...dep })}
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
-                  >
-                    <Box className="w-3 h-3 text-blue-400" />
-                    <span className="text-sm text-foreground">{dep.name}</span>
-                    <span className={`text-xs ${dep.readyReplicas === dep.replicas ? 'text-green-400' : 'text-yellow-400'}`}>
-                      {dep.readyReplicas}/{dep.replicas}
-                    </span>
-                    <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                  </div>
+                  <DeploymentRow key={i} deployment={dep} onClick={() => drillToDeployment(cluster, namespace, dep.name, { ...dep })} />
                 ))}
                 {filteredDeployments.length > 20 && (
                   <div className="text-xs text-muted-foreground p-2">+{filteredDeployments.length - 20} more deployments...</div>
@@ -382,15 +291,7 @@ export function NamespaceDrillDown({ data }: Props) {
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Services ({filteredServices.length})</h4>
               <div className="space-y-1">
                 {filteredServices.slice(0, 20).map((svc, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
-                  >
-                    <Network className="w-3 h-3 text-blue-400" />
-                    <span className="text-sm text-foreground">{svc.name}</span>
-                    <StatusBadge color="blue" size="xs">{svc.type}</StatusBadge>
-                    <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                  </div>
+                  <ServiceRow key={i} service={svc} />
                 ))}
                 {filteredServices.length > 20 && (
                   <div className="text-xs text-muted-foreground p-2">+{filteredServices.length - 20} more services...</div>
@@ -405,21 +306,7 @@ export function NamespaceDrillDown({ data }: Props) {
               <h4 className="text-sm font-medium text-muted-foreground mb-2">PVCs ({filteredPVCs.length})</h4>
               <div className="space-y-1">
                 {filteredPVCs.slice(0, 20).map((pvc, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
-                  >
-                    <HardDrive className="w-3 h-3 text-green-400" />
-                    <span className="text-sm text-foreground">{pvc.name}</span>
-                    <StatusBadge
-                      color={pvc.status === 'Bound' ? 'green' : 'yellow'}
-                      size="xs"
-                    >
-                      {pvc.status}
-                    </StatusBadge>
-                    {pvc.capacity && <span className="text-xs text-muted-foreground">{pvc.capacity}</span>}
-                    <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                  </div>
+                  <PVCRow key={i} pvc={pvc} />
                 ))}
                 {filteredPVCs.length > 20 && (
                   <div className="text-xs text-muted-foreground p-2">+{filteredPVCs.length - 20} more PVCs...</div>
