@@ -1,7 +1,6 @@
 import { WifiOff, CheckCircle, AlertTriangle, X, Pencil, Trash2, Server, ExternalLink, ChevronDown, ChevronRight, FolderOpen, Layers, Loader2, Cpu, MemoryStick, Database } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
-import { Button } from '../ui/Button'
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import {
   CloudProviderIcon,
@@ -20,7 +19,7 @@ interface ClusterDetailHeaderProps {
   clusterName: string
   clusterUser?: string
   clusterInfo: ClusterInfo | undefined
-  health: ClusterHealth | undefined
+  health: ClusterHealth | null | undefined
   isUnreachable: boolean
   isHealthy: boolean
   aliasList: string[]
@@ -142,7 +141,7 @@ export function ClusterDetailHeader({
 interface ClusterStatsCardsProps {
   isUnreachable: boolean
   isLoading: boolean
-  health: ClusterHealth | undefined
+  health: ClusterHealth | null | undefined
   namespaceStats: NamespaceStats[]
   clusterDeployments: Deployment[]
   stableClusterGPUs: GPUNode[]
@@ -308,7 +307,7 @@ export function ClusterStatsCards({
 interface ClusterResourceMetricsProps {
   isUnreachable: boolean
   isLoading: boolean
-  health: ClusterHealth | undefined
+  health: ClusterHealth | null | undefined
   setShowCPUDetail: (v: boolean) => void
   setShowMemoryDetail: (v: boolean) => void
   setShowStorageDetail: (v: boolean) => void
