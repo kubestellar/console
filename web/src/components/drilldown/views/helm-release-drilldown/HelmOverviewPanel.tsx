@@ -1,7 +1,22 @@
-import { Clock, GitBranch, RefreshCw, Ship, Tag, Trash2 } from 'lucide-react'
+import { Clock, GitBranch, RefreshCw, Ship, Tag, Trash2, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../../lib/cn'
 import type { HelmOverviewPanelProps } from './types'
+
+type ReleaseStatus = 'deployed' | 'pending' | 'failed'
+
+const RELEASE_STATUS_CONFIG = {
+  deployed: { icon: CheckCircle, color: 'text-green-400', bgColor: 'bg-green-500/10' },
+  pending: { icon: RefreshCw, color: 'text-yellow-400', bgColor: 'bg-yellow-500/10' },
+  failed: { icon: AlertTriangle, color: 'text-red-400', bgColor: 'bg-red-500/10' },
+} as const
+
+function getReleaseStatus(status?: string): ReleaseStatus {
+  if (status === 'deployed') return 'deployed'
+  if (status === 'pending-install' || status === 'pending-upgrade') return 'pending'
+  if (status === 'failed') return 'failed'
+  return 'deployed'
+}
 
 export function HelmOverviewPanel({
   releaseName,
@@ -18,34 +33,40 @@ export function HelmOverviewPanel({
   onConfirmUninstall,
 }: HelmOverviewPanelProps) {
   const { t } = useTranslation()
+  const status = getReleaseStatus(releaseInfo?.status)
+  const statusConfig = RELEASE_STATUS_CONFIG[status]
+  const StatusIcon = statusConfig.icon
 
   return (
     <div className="space-y-6">
-      <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+      <div className={cn('p-4 rounded-lg border', statusConfig.bgColor, 'border-blue-500/20')}>
         <div className="flex items-start gap-3">
           <Ship className="w-8 h-8 text-blue-400 mt-1" />
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-foreground">{releaseName}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-foreground">{releaseName}</h3>
+              <StatusIcon className={cn('w-4 h-4', statusConfig.color)} aria-label={`Status: ${status}`} />
+            </div>
             <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <GitBranch className="w-4 h-4" />
-                <span>Chart: {chartName || releaseInfo?.chart || t('common.loading')}</span>
+                <span>{t('drilldown.helm.chart')}: {chartName || releaseInfo?.chart || t('common.loading')}</span>
               </div>
               {(chartVersion || releaseInfo?.app_version) && (
                 <div className="flex items-center gap-1.5">
                   <Tag className="w-4 h-4" />
-                  <span>App: {appVersion || releaseInfo?.app_version}</span>
+                  <span>{t('drilldown.helm.appVersion')}: {appVersion || releaseInfo?.app_version}</span>
                 </div>
               )}
               <div className="flex items-center gap-1.5">
                 <RefreshCw className="w-4 h-4" />
-                <span>Revision: {releaseInfo?.revision || releaseRevision || '1'}</span>
+                <span>{t('drilldown.helm.revision')}: {releaseInfo?.revision || releaseRevision || '1'}</span>
               </div>
             </div>
             {releaseInfo?.updated && (
               <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
                 <Clock className="w-3 h-3" />
-                <span>Updated: {new Date(releaseInfo.updated).toLocaleString()}</span>
+                <span>{t('drilldown.helm.updated')}: {new Date(releaseInfo.updated).toLocaleString()}</span>
               </div>
             )}
           </div>
@@ -97,7 +118,7 @@ export function HelmOverviewPanel({
                 onClick={onShowMoreResources}
                 className="text-xs text-primary hover:underline"
               >
-                +{parsedResources.length - 10} more
+                {t('common.moreItems', { count: parsedResources.length - 10 })}
               </button>
             )}
           </div>
@@ -105,9 +126,9 @@ export function HelmOverviewPanel({
       )}
 
       <div className="p-4 rounded-lg border border-red-500/20 bg-red-500/5">
-        <h4 className="text-sm font-medium text-red-400 mb-2">Danger Zone</h4>
+        <h4 className="text-sm font-medium text-red-400 mb-2">{t('drilldown.helm.dangerZone')}</h4>
         <p className="text-xs text-muted-foreground mb-3">
-          Uninstalling this release will remove all associated Kubernetes resources.
+          {t('drilldown.helm.uninstallWarning')}
         </p>
         <button
           onClick={onConfirmUninstall}
@@ -115,7 +136,7 @@ export function HelmOverviewPanel({
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50"
         >
           <Trash2 className="w-4 h-4" />
-          Uninstall Release
+          {t('drilldown.helm.uninstallRelease')}
         </button>
       </div>
     </div>
