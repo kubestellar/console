@@ -3364,7 +3364,9 @@
       "noRecentEvents": "No recent events",
       "totalEvents": "Total Events",
       "noEventsFoundFor": "No events found for {{name}}",
-      "eventsExpiredHint": "Events may have expired or require authentication"
+      "eventsExpiredHint": "Events may have expired or require authentication",
+      "showingRange": "Showing {{from}}–{{to}} of {{total}}",
+      "pageOf": "Page {{page}} of {{total}}"
     },
     "cluster": {
       "namespacesWithActivity": "Namespaces with Activity",
@@ -3377,8 +3379,22 @@
       "gpuAllocatedSummary": "{{allocated}}/{{total}} GPUs"
     }
   },
+  "resourcesDrillDown": {
+    "dragToReorder": "Drag to reorder",
+    "nodePodCount": "{{nodes}} nodes • {{pods}} pods",
+    "offline": "Offline",
+    "noAccelerator": "No {{accelerator}}",
+    "clusters": "Clusters",
+    "clustersWithCount": "Clusters ({{count}})",
+    "capacity": "Capacity",
+    "memoryCapacity": "Memory Capacity",
+    "cores": "{{count}} cores",
+    "utilizedRequested": "{{percent}}% utilized ({{requested}} requested)",
+    "acceleratorAllocated": "{{accelerator}} Allocated"
+  },
   "pagination": {
     "showing": "Showing {{start}}-{{end}} of {{total}}",
+    "pageOf": "Page {{page}} of {{total}}",
     "noItems": "No items",
     "perPage": "Per page:",
     "firstPage": "First page",
