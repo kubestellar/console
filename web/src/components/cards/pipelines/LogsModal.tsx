@@ -10,6 +10,7 @@ import { useEffect, useState, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Copy, Search } from 'lucide-react'
 import { fetchPipelineLog } from '../../../hooks/useGitHubPipelines'
+import { Skeleton } from '../../ui/Skeleton'
 
 /** ms to keep the 'Copied!' label before reverting */
 const COPIED_INDICATOR_MS = 1500
@@ -131,14 +132,24 @@ export function LogsModal({ repo, jobId, title, onClose }: LogsModalProps) {
           </div>
         </div>
 
-        <pre
-          ref={preRef}
-          className="flex-1 min-h-0 overflow-auto bg-black/60 text-xs leading-relaxed font-mono text-muted-foreground p-3 whitespace-pre"
-        >
-          {isLoading && 'Loading log…'}
-          {error && <span className="text-red-400">{error}</span>}
-          {!isLoading && !error && (filteredLog || '(no matching lines)')}
-        </pre>
+        {isLoading ? (
+          <div className="flex-1 min-h-0 overflow-auto bg-black/60 p-3 space-y-2">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <Skeleton key={index} variant="text" className="h-3 bg-white/10" width={`${90 - index * 5}%`} />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="flex-1 min-h-0 overflow-auto bg-black/60 p-3 text-xs text-red-400 font-mono">
+            {error}
+          </div>
+        ) : (
+          <pre
+            ref={preRef}
+            className="flex-1 min-h-0 overflow-auto bg-black/60 text-xs leading-relaxed font-mono text-muted-foreground p-3 whitespace-pre"
+          >
+            {filteredLog || '(no matching lines)'}
+          </pre>
+        )}
       </div>
     </div>,
     document.body

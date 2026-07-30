@@ -11,7 +11,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Plus, X, RotateCcw, Eye } from 'lucide-react'
 import { usePipelineFilter } from './PipelineFilterContext'
 import { cn } from '../../../lib/cn'
-import { isDemoMode } from '../../../lib/demoMode'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 
 /** Extracted user-visible strings */
 const LABEL_ADD_REPO = 'Add repo'
@@ -31,7 +31,7 @@ export function PipelineFilterBar() {
   // the install dialog — we don't give away the full feature for free.
   // The custom event 'open-install' is listened to by Layout.tsx:114
   // which renders the SetupInstructionsDialog.
-  const isDemo = isDemoMode()
+  const isDemo = isDemoMode
   const showInstallGate = useCallback(() => {
     window.dispatchEvent(new CustomEvent('open-install'))
   }, [])
@@ -58,7 +58,7 @@ export function PipelineFilterBar() {
 
   if (!ctx) return null
 
-  const { selectedRepos, toggleRepo, selectAll, repos, hiddenRepos, hasCustomization, addRepo, removeRepo, restoreRepo, resetToDefaults } = ctx
+  const { selectedRepos, toggleRepo, selectAll, repos, hiddenRepos, hasCustomization, addRepo, removeRepo, restoreRepo, resetToDefaults, isDemoMode, lastUpdated } = ctx
   const isAllSelected = selectedRepos.size === 0
 
   function handleAdd() {
@@ -85,6 +85,12 @@ export function PipelineFilterBar() {
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <span className="text-xs text-muted-foreground font-medium">Repos</span>
+      <RefreshIndicator
+        isRefreshing={false}
+        lastUpdated={lastUpdated ? new Date(lastUpdated) : null}
+        size="xs"
+        showLabel={true}
+      />
 
       <div className="flex items-center gap-1 flex-wrap">
         {/* "All" pill — clears the multi-selection */}
@@ -169,7 +175,7 @@ export function PipelineFilterBar() {
         ) : (
           <button
             type="button"
-            onClick={() => isDemo ? showInstallGate() : setShowAdd(true)}
+            onClick={() => isDemoMode ? showInstallGate() : setShowAdd(true)}
             className="px-2 py-1 rounded-full text-xs border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
             title={LABEL_ADD_REPO}
           >
@@ -182,7 +188,7 @@ export function PipelineFilterBar() {
           <div className="relative" ref={manageRef}>
             <button
               type="button"
-              onClick={() => isDemo ? showInstallGate() : setShowManage(!showManage)}
+              onClick={() => isDemoMode ? showInstallGate() : setShowManage(!showManage)}
               className={cn(
                 'px-2 py-1 rounded-full text-xs border transition-colors',
                 showManage ? 'bg-primary/20 text-primary border-primary/40' : 'border-border text-muted-foreground hover:text-foreground',
