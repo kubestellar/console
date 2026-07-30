@@ -6,6 +6,7 @@ import { SimpleResourceRow } from './SimpleResourceRow'
 import { getStatusBgColor, type ResourceKind, type NamespaceResourceRow } from './namespaceResourceUtils'
 
 /** Resource kind icon mapping for the list view. */
+// eslint-disable-next-line react-refresh/only-export-components
 export function getKindIcon(kind: ResourceKind) {
   switch (kind) {
     case 'Pod': return <Box className="w-3.5 h-3.5 text-blue-400" />
