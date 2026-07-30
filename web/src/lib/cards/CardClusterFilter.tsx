@@ -81,6 +81,7 @@ export function CardClusterFilter({
         }}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        aria-label="Filter by cluster"
         className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${selectedClusters.length > 0
           ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
           : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
