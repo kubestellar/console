@@ -3386,7 +3386,8 @@
     "firstPage": "First page",
     "previousPage": "Previous page",
     "nextPage": "Next page",
-    "lastPage": "Last page"
+    "lastPage": "Last page",
+    "pageOf": "Page {{page}} of {{total}}"
   },
   "clusterFilter": {
     "filterByCluster": "Filter by cluster",

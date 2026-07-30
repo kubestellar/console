@@ -34,7 +34,8 @@ export function typeIcon(type: string) {
 }
 
 /** Human-readable label for a security issue type. */
-export function getTypeLabel(type: string, t: (key: string) => unknown): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getTypeLabel(type: string, t: (...args: any[]) => unknown): string {
   const labels: Record<string, string> = {
     privileged: String(t('security.privilegedContainers')),
     root: String(t('security.runAsRoot')),
