@@ -70,7 +70,7 @@ export function ComplianceDrillDown({ data }: Props) {
 
   // Unique values for filter dropdowns
   const uniqueClusters = [...new Set(allRows.map(r => r.cluster))].sort()
-  const uniqueProfiles = useMemo(() => [...new Set(allRows.map(r => r.profile).filter(Boolean))].sort(), [allRows])
+  const uniqueProfiles = useMemo(() => [...new Set(allRows.map(r => r.profile).filter((profile): profile is string => Boolean(profile)))].sort(), [allRows])
   const uniqueStatuses = [...new Set(allRows.map(r => r.status))].sort()
 
   // Filtered rows
