@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import {
   Package, Info, Loader2, Server, Stethoscope,
