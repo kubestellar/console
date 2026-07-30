@@ -1323,6 +1323,7 @@
       "actions": "Recommended Actions for your clusters",
       "repair": "Repair",
       "repairTitle": "AI Repair - automatically fix this issue",
+      "minimize": "Minimize",
       "snoozeTitle": "Snooze for 24 hours",
       "dismiss": "Dismiss",
       "snoozedFor": "Snoozed for {{time}}",

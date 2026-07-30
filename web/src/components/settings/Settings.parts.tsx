@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { type LucideIcon } from 'lucide-react'
 import {
   Cpu,
