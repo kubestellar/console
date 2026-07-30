@@ -1,13 +1,11 @@
 import { useMemo, useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, Server, Layers, Search, Filter } from 'lucide-react'
+import { ChevronLeft, Server, Layers, Search, Filter } from 'lucide-react'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useTranslation } from 'react-i18next'
-import { cn } from '../../../lib/cn'
 import { useEventsDrillDown, TypeFilter } from './useEventsDrillDown'
 import {
   EventsSkeleton,
-  EventsStats,
   EventRow,
   KubectlFallback,
   ErrorState,

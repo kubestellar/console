@@ -1,4 +1,3 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../lib/cn'
 import { ClusterEvent } from './useEventsDrillDown'
@@ -198,18 +197,17 @@ export function Pagination({ currentPage, totalPages, totalCount, onPageChange }
   return (
     <div className="flex items-center justify-between pt-2 text-sm text-muted-foreground border-t border-border">
       <span>
-        {t('drilldown.events.showingRange', {
-          from: (currentPage - 1) * PAGE_SIZE + 1,
-          to: Math.min(currentPage * PAGE_SIZE, totalCount),
+        {t('pagination.showing', {
+          start: (currentPage - 1) * PAGE_SIZE + 1,
+          end: Math.min(currentPage * PAGE_SIZE, totalCount),
           total: totalCount,
-          defaultValue: `Showing ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, totalCount)} of ${totalCount}`,
         })}
       </span>
       <div className="flex items-center gap-1">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          aria-label={t('common.previousPage', 'Previous page')}
+          aria-label={t('pagination.previousPage', 'Previous page')}
           className={cn(
             'p-1.5 rounded-lg transition-colors',
             currentPage === 1
@@ -220,16 +218,15 @@ export function Pagination({ currentPage, totalPages, totalCount, onPageChange }
           <ChevronLeft />
         </button>
         <span className="px-2 tabular-nums">
-          {t('drilldown.events.pageOf', {
+          {t('pagination.pageOf', {
             page: currentPage,
             total: totalPages,
-            defaultValue: `Page ${currentPage} of ${totalPages}`,
           })}
         </span>
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          aria-label={t('common.nextPage', 'Next page')}
+          aria-label={t('pagination.nextPage', 'Next page')}
           className={cn(
             'p-1.5 rounded-lg transition-colors',
             currentPage === totalPages
