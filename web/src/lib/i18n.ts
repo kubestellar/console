@@ -159,8 +159,8 @@ export default i18n
 
 // Type-safe translation namespaces.
 //
-// IMPORTANT: `resources` is intentionally typed as a loose
-// `Record<string, Record<string, unknown>>` shape instead of
+// IMPORTANT: `resources` is intentionally typed via a recursive,
+// non-literal `LooseTranslationNamespace` shape instead of
 // `typeof resources['en']`. Deriving the literal `typeof` type of our
 // translation JSON (common.json + cards.json are ~10k lines combined) and
 // feeding it into i18next's heavily-overloaded `t()` signature triggers a
@@ -174,13 +174,27 @@ export default i18n
 // key union) still crashes at the same scale, because the crash is driven
 // by the size of the derived key/overload space, not the value types. The
 // only reliable fix is to stop deriving a large literal type from the JSON
-// at all. We keep namespace-level typing (`common` | `cards` | `status` |
-// `errors`) for `useTranslation('cards')` etc., but individual key strings
-// passed to `t()` are no longer compile-time validated — invalid keys are
-// caught by the i18n-compliance lint/test scripts and code review instead.
+// at all.
+//
+// `LooseTranslationNamespace` is a self-referential index signature
+// (`[key: string]: string | LooseTranslationNamespace`) rather than an
+// enumeration of every real key, so it can never trigger the scale-based
+// crash regardless of how large the JSON grows. Because it still models
+// "an object whose leaves are eventually strings" at arbitrary nesting
+// depth, i18next's key-path utilities correctly resolve any `t('a.b.c')`
+// call to a `string` return type (so `t(key).toLowerCase()` etc. keep
+// working), unlike a flat `Record<string, unknown>` which caused spurious
+// `never`/`{}` return types for nested and namespaced (`ns:a.b`) keys.
+// Individual key strings passed to `t()` are no longer compile-time
+// validated against the real JSON — invalid keys are caught by the
+// i18n-compliance lint/test scripts and code review instead.
+interface LooseTranslationNamespace {
+  [key: string]: string | LooseTranslationNamespace
+}
+
 declare module 'i18next' {
   interface CustomTypeOptions {
     defaultNS: typeof defaultNS
-    resources: Record<(typeof namespaces)[number], Record<string, unknown>>
+    resources: Record<(typeof namespaces)[number], LooseTranslationNamespace>
   }
 }
