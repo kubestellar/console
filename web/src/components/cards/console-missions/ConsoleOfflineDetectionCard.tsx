@@ -707,6 +707,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
         predictionIntervalMinutes={predictionSettings.interval}
         onDrillToCluster={drillToCluster}
         onTriggerAnalysis={triggerAIAnalysis}
+        t={t}
       />
 
       {/* Card Controls: Search, Cluster Filter, Sort */}

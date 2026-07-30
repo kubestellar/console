@@ -1,5 +1,4 @@
 import type { ComponentType, ReactNode } from 'react'
-import type { TFunction } from 'i18next'
 import { cn } from '@/lib/cn'
 import { InfoTooltip } from './card-wrapper/InfoTooltip'
 import { CardMeta } from './CardMeta'
@@ -11,7 +10,10 @@ interface CardHeaderProps {
   resolvedIconColor: string
   title: string
   description: string
-  t: TFunction<['cards', 'common']>
+  // #21775 — Accept a plain translator signature (rather than the branded
+  // i18next TFunction) so callers can pass a lightweight wrapper without
+  // triggering excessively-deep generic type instantiation (TS2589).
+  t: (key: string, defaultValue?: string, options?: Record<string, unknown>) => string
   showDemoIndicator: boolean
   effectiveIsDemoData: boolean
   isLive?: boolean
