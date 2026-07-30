@@ -127,6 +127,7 @@ For each issue, please:
         onKeyDown={(event) => handleActionKeyDown(event, handleDiagnose)}
         className="p-1 rounded text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 transition-colors"
         title={`Diagnose ${name}`}
+        aria-label={`Diagnose ${name}`}
       >
         <Stethoscope className="w-3.5 h-3.5" />
       </div>
@@ -139,6 +140,7 @@ For each issue, please:
           onKeyDown={(event) => handleActionKeyDown(event, handleRepair)}
           className="p-1 rounded text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
           title={`${repairLabel} ${name}`}
+          aria-label={`${repairLabel} ${name}`}
         >
           <Wrench className="w-3.5 h-3.5" />
         </div>

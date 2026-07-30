@@ -26,6 +26,8 @@ export function CardFilterChips({ chips, activeChip, onChipClick }: CardFilterCh
           <button
             key={chip.id}
             onClick={() => onChipClick(chip.id)}
+            aria-pressed={isActive}
+            aria-label={`Filter by ${chip.label}${chip.count !== undefined ? ` (${chip.count})` : ''}`}
             className={`flex items-center gap-1 px-2 py-1 text-xs rounded-md border transition-colors ${isActive
               ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
               : 'bg-secondary/50 border-border text-muted-foreground hover:text-foreground hover:bg-secondary'

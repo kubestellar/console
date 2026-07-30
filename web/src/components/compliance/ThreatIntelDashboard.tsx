@@ -285,7 +285,7 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
                 <tr key={feed.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                   <td className="p-3 text-white font-medium">{feed.name}</td>
                   <td className="p-3 text-gray-400">{feed.provider}</td>
-                  <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-200 text-xs">{feed.category}</span></td>
+                  <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-foreground text-xs">{feed.category}</span></td>
                   <td className="p-3">
                     <span className={`flex items-center gap-1.5 ${FEED_STATUS_COLORS[feed.status]}`}>
                       {feed.status === 'active' ? <CheckCircle2 className="w-4 h-4" /> :
@@ -322,7 +322,7 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
             <tbody>
               {iocs.map(ioc => (
                 <tr key={ioc.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                  <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-200 text-xs uppercase">{ioc.ioc_type}</span></td>
+                  <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-foreground text-xs uppercase">{ioc.ioc_type}</span></td>
                   <td className="p-3 font-mono text-blue-300 text-xs">{ioc.indicator}</td>
                   <td className="p-3 text-gray-400">{ioc.feed_name}</td>
                   <td className="p-3">
@@ -333,12 +333,12 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
                   <td className="p-3">
                     <span className="flex items-center gap-1.5">
                       {IOC_STATUS_ICON[ioc.status]}
-                      <span className="text-gray-200 capitalize">{(ioc.status ?? '').replace('_', ' ')}</span>
+                      <span className="text-foreground capitalize">{(ioc.status ?? '').replace('_', ' ')}</span>
                     </span>
                   </td>
                   <td className="p-3 text-white">{ioc.matched_resource}</td>
-                  <td className="p-3 text-gray-200">{ioc.cluster}</td>
-                  <td className="p-3 text-gray-200 text-xs">{new Date(ioc.detected_at).toLocaleString()}</td>
+                  <td className="p-3 text-foreground">{ioc.cluster}</td>
+                  <td className="p-3 text-foreground text-xs">{new Date(ioc.detected_at).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
