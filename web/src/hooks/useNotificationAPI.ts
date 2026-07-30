@@ -20,7 +20,12 @@ export function useNotificationAPI() {
   const [error, setError] = useState<string | null>(null)
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem(STORAGE_KEY_AUTH_TOKEN)
+    let token: string | null = null
+    try {
+      token = localStorage.getItem(STORAGE_KEY_AUTH_TOKEN)
+    } catch {
+      // localStorage may be unavailable (e.g. private browsing) — fall back to no token
+    }
     return {
       'Content-Type': 'application/json',
       'X-Requested-With': 'XMLHttpRequest',

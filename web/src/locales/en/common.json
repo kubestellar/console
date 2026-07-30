@@ -94,7 +94,10 @@
     "warning": "Warning",
     "critical": "Critical",
     "swappingTo": "Swapping to \"{{cardName}}\" in 30s",
-    "noClusters": "No clusters available"
+    "noClusters": "No clusters available",
+    "moreItems": "+{{count}} more",
+    "moreItems_one": "+{{count}} more",
+    "moreItems_other": "+{{count}} more"
   },
   "time": {
     "justNow": "just now",
@@ -1323,6 +1326,7 @@
       "actions": "Recommended Actions for your clusters",
       "repair": "Repair",
       "repairTitle": "AI Repair - automatically fix this issue",
+      "minimize": "Minimize",
       "snoozeTitle": "Snooze for 24 hours",
       "dismiss": "Dismiss",
       "snoozedFor": "Snoozed for {{time}}",
@@ -1435,6 +1439,10 @@
       "emptyDescription": "This dashboard is empty. Add cards to start monitoring your clusters.",
       "addCards": "Add Cards",
       "startWithTemplate": "Start with Template"
+    },
+    "status": {
+      "connected": "Connected",
+      "offline": "Offline"
     },
     "delete": {
       "title": "Delete Dashboard",
@@ -3031,6 +3039,7 @@
     },
     "helm": {
       "revisions": "Revisions",
+      "revision": "Revision",
       "totalResources": "Total Resources",
       "deployedResources": "Deployed Resources",
       "releaseValues": "Release Values",
@@ -3044,7 +3053,12 @@
       "analyzeRelease": "Analyze Release",
       "analyzeHint": "AI will analyze the Helm release and suggest improvements",
       "clickAnalyze": "Click \"Analyze Release\" to get AI-powered analysis",
-      "updated": "Updated:"
+      "updated": "Updated",
+      "chart": "Chart",
+      "appVersion": "App",
+      "dangerZone": "Danger Zone",
+      "uninstallWarning": "Uninstalling this release will remove all associated Kubernetes resources.",
+      "uninstallRelease": "Uninstall Release"
     },
     "fields": {
       "namespace": "Namespace:",
@@ -3383,7 +3397,8 @@
     "firstPage": "First page",
     "previousPage": "Previous page",
     "nextPage": "Next page",
-    "lastPage": "Last page"
+    "lastPage": "Last page",
+    "pageOf": "Page {{page}} of {{total}}"
   },
   "clusterFilter": {
     "filterByCluster": "Filter by cluster",

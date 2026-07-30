@@ -1,22 +1,14 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Server, Search, ExternalLink, CheckSquare, Square, MinusSquare } from 'lucide-react'
-import { useAlerts } from '../../hooks/useAlerts'
 import { formatTimeAgo } from '../../lib/formatters'
-import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useMissions } from '../../hooks/useMissions'
-import { useMobile } from '../../hooks/useMobile'
-import { getSeverityIcon, ALERT_SEVERITY_ORDER } from '../../types/alerts'
-import type { AlertSeverity } from '../../types/alerts'
+import { getSeverityIcon } from '../../types/alerts'
 import { CardAIActions } from '../../lib/cards/CardComponents'
-import { ROUTES } from '../../config/routes'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
-import { useModalState } from '../../lib/modals'
 import { Button } from './Button'
 import { Input } from './Input'
-import { groupAlertsForDisplay, type GroupedAlert } from '../../lib/alerts/groupAlertsForDisplay'
 import { VirtualizedList } from './VirtualizedList'
+import { useAlertBadge } from './useAlertBadge'
 
 /** Maximum numeric value to display in the badge before switching to overflow text (e.g. "99+") */
 const BADGE_MAX_COUNT = 99
@@ -77,174 +69,37 @@ export function AnimatedCounter({ value, className }: { value: number; className
   )
 }
 
-
-
 export function AlertBadge() {
   const { t } = useTranslation(['common', 'cards'])
-  const navigate = useNavigate()
-  const { activeAlerts, stats, acknowledgeAlerts, runAIDiagnosis } = useAlerts()
-  const { drillToCluster } = useDrillDownActions()
-  const { missions, setActiveMission, openSidebar } = useMissions()
-  const { isMobile } = useMobile()
-  const { isOpen, close, toggle } = useModalState()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all')
-  const [selectedAlertIds, setSelectedAlertIds] = useState<Set<string>>(new Set())
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        close()
-      }
-    }
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        close()
-      }
-    }
-
-    // Use mousedown for immediate response
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleEscape)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [isOpen, close])
-
-  // Check if a mission exists for an alert
-  const getMissionForAlert = (alert: GroupedAlert) => {
-    if (!alert.aiDiagnosis?.missionId) return null
-    return missions.find(m => m.id === alert.aiDiagnosis?.missionId) || null
-  }
-
-  // Open mission sidebar for an alert
-  const handleOpenMission = (e: React.MouseEvent, alert: GroupedAlert) => {
-    e.stopPropagation()
-    const mission = getMissionForAlert(alert)
-    if (mission) {
-      setActiveMission(mission.id)
-      openSidebar()
-      close()
-    }
-  }
-
-  // Filter and sort alerts
-  const filteredAlerts = useMemo(() => {
-    let result = [...activeAlerts]
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter(a =>
-        a.ruleName.toLowerCase().includes(query) ||
-        a.message.toLowerCase().includes(query) ||
-        (a.cluster?.toLowerCase() || '').includes(query)
-      )
-    }
-
-    // Apply severity filter
-    if (severityFilter !== 'all') {
-      result = result.filter(a => a.severity === severityFilter)
-    }
-
-    // Sort by severity and time
-    return result.sort((a, b) => {
-      const severityDiff = ALERT_SEVERITY_ORDER[a.severity] - ALERT_SEVERITY_ORDER[b.severity]
-      if (severityDiff !== 0) return severityDiff
-      return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
-    })
-  }, [activeAlerts, searchQuery, severityFilter])
-
-  const displayedAlerts = useMemo(
-    () => groupAlertsForDisplay(filteredAlerts),
-    [filteredAlerts]
-  )
-
-  const handleAlertClick = (alert: GroupedAlert) => {
-    close()
-    if (alert.cluster) {
-      drillToCluster(alert.cluster, { alert })
-    }
-  }
-
-  const handleAcknowledge = (e: React.MouseEvent, alertIds: string[]) => {
-    e.stopPropagation()
-    acknowledgeAlerts(alertIds)
-    setSelectedAlertIds(prev => {
-      const next = new Set(prev)
-      for (const alertId of alertIds) {
-        next.delete(alertId)
-      }
-      return next
-    })
-  }
-
-  const handleDiagnose = (e: React.MouseEvent | React.KeyboardEvent<HTMLDivElement>, alertId: string) => {
-    e.stopPropagation()
-    runAIDiagnosis(alertId)
-    close() // Close dialog after starting diagnosis
-  }
-
-  const isGroupSelected = (alertIds: string[]) => alertIds.every(alertId => selectedAlertIds.has(alertId))
-
-  // Toggle selection for a single alert group
-  const toggleAlertSelection = (e: React.MouseEvent, alertIds: string[]) => {
-    e.stopPropagation()
-    setSelectedAlertIds(prev => {
-      const next = new Set(prev)
-      const shouldDeselect = alertIds.every(alertId => next.has(alertId))
-      for (const alertId of alertIds) {
-        if (shouldDeselect) {
-          next.delete(alertId)
-        } else {
-          next.add(alertId)
-        }
-      }
-      return next
-    })
-  }
-
-  // Get IDs of unacknowledged alerts in the current view
-  const unacknowledgedDisplayedIds = displayedAlerts.flatMap(alert => (
-    alert.acknowledgedAt ? [] : alert.alertIds
-  ))
-
-  // Select all unacknowledged alerts in current view
-  const handleSelectAll = () => {
-    setSelectedAlertIds(new Set(unacknowledgedDisplayedIds))
-  }
-
-  // Deselect all
-  const handleDeselectAll = () => {
-    setSelectedAlertIds(new Set())
-  }
-
-  // Acknowledge all selected alerts
-  const handleAcknowledgeSelected = () => {
-    if (selectedAlertIds.size > 0) {
-      acknowledgeAlerts(Array.from(selectedAlertIds))
-      setSelectedAlertIds(new Set())
-    }
-  }
-
-  // Check selection state for Select All button
-  const allSelected = unacknowledgedDisplayedIds.length > 0 &&
-    unacknowledgedDisplayedIds.every(id => selectedAlertIds.has(id))
-  const someSelected = unacknowledgedDisplayedIds.some(id => selectedAlertIds.has(id))
-
-  // Determine badge color based on most severe alert
-  const getBadgeColor = () => {
-    if (stats.critical > 0) return 'bg-red-500'
-    if (stats.warning > 0) return 'bg-orange-500'
-    if (stats.info > 0) return 'bg-blue-500'
-    return 'bg-gray-500 dark:bg-gray-400'
-  }
+  const {
+    isOpen,
+    close,
+    toggle,
+    isMobile,
+    stats,
+    dropdownRef,
+    searchQuery,
+    setSearchQuery,
+    severityFilter,
+    setSeverityFilter,
+    selectedAlertIds,
+    displayedAlerts,
+    getMissionForAlert,
+    handleOpenMission,
+    handleAlertClick,
+    handleAcknowledge,
+    handleDiagnose,
+    isGroupSelected,
+    toggleAlertSelection,
+    unacknowledgedDisplayedIds,
+    handleSelectAll,
+    handleDeselectAll,
+    handleAcknowledgeSelected,
+    handleOpenAlertsPage,
+    allSelected,
+    someSelected,
+    getBadgeColor,
+  } = useAlertBadge()
 
   return (
     <div className="relative" data-tour="alerts">
@@ -342,11 +197,7 @@ export function AlertBadge() {
             {/* Severity Filter - only show when there are alerts */}
             {stats.firing > 0 && (
               <div className="p-2 border-b border-border flex items-center gap-2">
-                <Button
-                  variant={severityFilter === 'all' ? 'accent' : 'ghost'}
-                  size="sm"
-                  onClick={() => setSeverityFilter('all')}
-                >
+                <Button variant={severityFilter === 'all' ? 'accent' : 'ghost'} size="sm" onClick={() => setSeverityFilter('all')}>
                   All ({stats.firing})
                 </Button>
                 <Button
@@ -354,9 +205,7 @@ export function AlertBadge() {
                   size="sm"
                   onClick={() => setSeverityFilter('critical')}
                   aria-label={`Filter by critical alerts (${stats.critical})`}
-                  className={severityFilter === 'critical'
-                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                    : ''}
+                  className={severityFilter === 'critical' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : ''}
                   icon={<span className="w-2 h-2 rounded-full bg-red-500" />}
                 >
                   {stats.critical}
@@ -366,9 +215,7 @@ export function AlertBadge() {
                   size="sm"
                   onClick={() => setSeverityFilter('warning')}
                   aria-label={`Filter by warning alerts (${stats.warning})`}
-                  className={severityFilter === 'warning'
-                    ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'
-                    : ''}
+                  className={severityFilter === 'warning' ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30' : ''}
                   icon={<span className="w-2 h-2 rounded-full bg-orange-500" />}
                 >
                   {stats.warning}
@@ -378,9 +225,7 @@ export function AlertBadge() {
                   size="sm"
                   onClick={() => setSeverityFilter('info')}
                   aria-label={`Filter by info alerts (${stats.info})`}
-                  className={severityFilter === 'info'
-                    ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                    : ''}
+                  className={severityFilter === 'info' ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' : ''}
                   icon={<span className="w-2 h-2 rounded-full bg-blue-500" />}
                 >
                   {stats.info}
@@ -406,7 +251,6 @@ export function AlertBadge() {
                 >
                   {allSelected ? 'Deselect All' : 'Select All'}
                 </Button>
-
                 {selectedAlertIds.size > 0 && (
                   <Button
                     variant="ghost"
@@ -481,21 +325,23 @@ export function AlertBadge() {
                             )}
                           />
                         )}
-                        <span className="text-lg" title={`${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)} severity`} aria-label={`${alert.severity} severity`}>{getSeverityIcon(alert.severity)}</span>
+                        <span
+                          className="text-lg"
+                          title={`${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)} severity`}
+                          aria-label={`${alert.severity} severity`}
+                        >
+                          {getSeverityIcon(alert.severity)}
+                        </span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-foreground truncate">
-                              {alert.ruleName}
-                            </span>
+                            <span className="text-sm font-medium text-foreground truncate">{alert.ruleName}</span>
                             {alert.duplicateCount > 1 && (
                               <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                                 {t('activeAlerts.duplicateCount', { ns: 'cards', count: alert.duplicateCount })}
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                            {alert.message}
-                          </div>
+                          <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{alert.message}</div>
                           <div className="flex items-center gap-3 mt-1">
                             {alert.cluster && (
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -559,10 +405,7 @@ export function AlertBadge() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  close()
-                  navigate(ROUTES.ALERTS)
-                }}
+                onClick={handleOpenAlertsPage}
                 className="text-purple-400 hover:text-purple-300"
               >
                 Open Alerts Dashboard

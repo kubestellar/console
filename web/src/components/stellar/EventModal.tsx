@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { StellarAction, StellarNotification, StellarSolve } from '../../types/stellar'
 import { useStellar } from '../../hooks/useStellar'
-import { useToast } from '../ui/Toast'
 import { BaseModal } from '../../lib/modals'
-import { copyToClipboard } from '../../lib/clipboard'
 import type { PendingAction } from './EventCard'
 import {
   RELATED_EVENT_LIMIT,
@@ -17,9 +15,9 @@ import {
   formatAbsoluteUtc,
   buildInvestigatePrompt,
   matchesSolve,
-  getErrorMessage,
 } from './EventModal.utils'
 import { Badge, Section, Timeline, ListBlock, ActionButton, ConfirmationPanel } from './EventModal.parts'
+import { useEventModalActions } from './useEventModalActions'
 
 interface EventModalProps {
   notification: StellarNotification
@@ -31,35 +29,12 @@ interface EventModalProps {
   onAction?: (prompt: string, action?: PendingAction) => void
 }
 
-type ModalView = 'overview' | 'investigate'
-type ConfirmAction = 'resolve' | 'dismiss' | null
-
 export function EventModal({ notification, allNotifications, pendingActions, solveStatus, solves = [], onClose, onAction }: EventModalProps) {
-  const {
-    notifications,
-    activity,
-    investigateNotification,
-    dismissNotification,
-    startSolve,
-  } = useStellar()
-  const { showToast } = useToast()
+  const { notifications } = useStellar()
 
   const liveNotification = useMemo(() => {
     return (notifications || []).find(item => item.id === notification.id) || notification
   }, [notification, notifications])
-
-  const [view, setView] = useState<ModalView>('overview')
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
-  const [investigationSummary, setInvestigationSummary] = useState(liveNotification.investigationSummary || '')
-  const [dismissalReason, setDismissalReason] = useState(liveNotification.dismissalReason || '')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  useEffect(() => {
-    setView('overview')
-    setConfirmAction(null)
-    setInvestigationSummary(liveNotification.investigationSummary || '')
-    setDismissalReason(liveNotification.dismissalReason || '')
-  }, [liveNotification.id, liveNotification.dismissalReason, liveNotification.investigationSummary])
 
   const allKnownNotifications = useMemo(() => {
     const merged = [...(notifications || []), ...(allNotifications || [])]
@@ -82,18 +57,6 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
       .filter(solve => matchesSolve(liveNotification, solve))
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
   }, [liveNotification, solves])
-
-  const relatedActivity = useMemo(() => {
-    const resourceName = extractResourceName(liveNotification)
-    return (activity || [])
-      .filter(entry => entry.eventId === liveNotification.id || (
-        Boolean(resourceName) &&
-        entry.cluster === liveNotification.cluster &&
-        entry.namespace === liveNotification.namespace &&
-        entry.workload === resourceName
-      ))
-      .slice(0, INVESTIGATION_ACTIVITY_LIMIT)
-  }, [activity, liveNotification])
 
   const resourceName = extractResourceName(liveNotification)
   const affectedResource = liveNotification.affectedResource || [liveNotification.cluster, liveNotification.namespace, resourceName].filter(Boolean).join(' / ') || 'Unknown resource'
@@ -160,55 +123,40 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
       `Auto-resolution: ${autoResolutionSummary.status} — ${autoResolutionSummary.detail}`,
       `Pending approvals: ${pendingApprovalCount}`,
       `Related events: ${(relatedEvents || []).map(item => `${formatAbsoluteUtc(item.createdAt)} — ${item.title}`).join('\n') || 'None'}`,
-      `Related activity: ${(relatedActivity || []).map(item => `${formatAbsoluteUtc(item.ts)} — ${item.title}: ${item.detail || ''}`).join('\n') || 'None'}`,
       `Solve attempts: ${(matchingSolves || []).map(item => `${formatAbsoluteUtc(item.startedAt)} — ${item.status}: ${item.summary || item.error || 'No summary'}`).join('\n') || 'None'}`,
       `Raw detail: ${liveNotification.body || 'None'}`,
     ]
     return (sections || []).join('\n\n')
-  }, [affectedResource, autoResolutionSummary.detail, autoResolutionSummary.status, errorMessage, liveNotification, matchingSolves, pendingActions, relatedActivity, relatedEvents, rootCause])
+  }, [affectedResource, autoResolutionSummary.detail, autoResolutionSummary.status, errorMessage, liveNotification, matchingSolves, pendingActions, relatedEvents, rootCause])
 
-  const handleCopyDetails = async () => {
-    const copied = await copyToClipboard(investigationCopyText)
-    showToast(copied ? 'Investigation details copied' : 'Failed to copy investigation details', copied ? 'success' : 'error')
-  }
+  const {
+    activity,
+    view,
+    setView,
+    confirmAction,
+    setConfirmAction,
+    investigationSummary,
+    setInvestigationSummary,
+    dismissalReason,
+    setDismissalReason,
+    isSubmitting,
+    handleCopyDetails,
+    handleMarkInvestigating,
+    handleResolve,
+    handleDismiss,
+  } = useEventModalActions({ liveNotification, investigationCopyText, onClose })
 
-  const handleMarkInvestigating = async () => {
-    setIsSubmitting(true)
-    try {
-      await investigateNotification(liveNotification.id, investigationSummary.trim() || undefined)
-      showToast('Event marked as investigating', 'info')
-    } catch (error) {
-      showToast(getErrorMessage(error, 'Failed to mark event as investigating'), 'error')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleResolve = async () => {
-    setIsSubmitting(true)
-    try {
-      await startSolve(liveNotification.id)
-      showToast('Attempt started in AI mission', 'success')
-      onClose()
-    } catch (error) {
-      showToast(getErrorMessage(error, 'Failed to start AI mission'), 'error')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleDismiss = async () => {
-    setIsSubmitting(true)
-    try {
-      await dismissNotification(liveNotification.id, dismissalReason.trim() || undefined)
-      showToast('Event removed from escalated list', 'success')
-      onClose()
-    } catch (error) {
-      showToast(getErrorMessage(error, 'Failed to remove event'), 'error')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+  const relatedActivity = useMemo(() => {
+    const resName = extractResourceName(liveNotification)
+    return (activity || [])
+      .filter(entry => entry.eventId === liveNotification.id || (
+        Boolean(resName) &&
+        entry.cluster === liveNotification.cluster &&
+        entry.namespace === liveNotification.namespace &&
+        entry.workload === resName
+      ))
+      .slice(0, INVESTIGATION_ACTIVITY_LIMIT)
+  }, [activity, liveNotification])
 
   const color = severityColor(liveNotification.severity)
   const solveAttemptCount = matchingSolves.length

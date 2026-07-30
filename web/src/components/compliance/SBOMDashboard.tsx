@@ -343,7 +343,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
             <p className="text-xs text-gray-400 uppercase tracking-wider">Total Packages</p>
-            <p className="text-2xl font-bold text-white mt-1">{summary.total_packages}</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{summary.total_packages}</p>
           </div>
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
             <p className="text-xs text-gray-400 uppercase tracking-wider">Vulnerabilities</p>
@@ -359,7 +359,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
               {summary.scan_status === 'completed' && <CheckCircle2 className="w-5 h-5 text-green-400" />}
               {summary.scan_status === 'in_progress' && <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />}
               {summary.scan_status === 'failed' && <XCircle className="w-5 h-5 text-red-400" />}
-              <span className="text-lg font-semibold text-white capitalize">{(summary.scan_status ?? '').replace('_', ' ')}</span>
+              <span className="text-lg font-semibold text-foreground capitalize">{(summary.scan_status ?? '').replace('_', ' ')}</span>
             </div>
           </div>
         </div>
@@ -368,7 +368,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
       {/* License compliance pie chart */}
       {summary && licenseTotal > 0 && (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+          <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
             <FileText className="w-4 h-4 text-blue-400" />
             License Compliance
           </h3>
@@ -401,7 +401,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
               {licensePieData.map(d => (
                 <div key={d.label} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
-                  <span className="text-sm text-muted-foreground">{d.label}: <span className="text-white font-medium">{d.count}</span></span>
+                  <span className="text-sm text-muted-foreground">{d.label}: <span className="text-foreground font-medium">{d.count}</span></span>
                 </div>
               ))}
             </div>
@@ -442,7 +442,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
             <tbody>
               {packages.map((p, i) => (
                 <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/30">
-                  <td className="py-2 px-3 text-white font-mono text-xs">{p.name}</td>
+                  <td className="py-2 px-3 text-foreground font-mono text-xs">{p.name}</td>
                   <td className="py-2 px-3 text-muted-foreground">{p.version}</td>
                   <td className="py-2 px-3 text-muted-foreground">{p.license}</td>
                   <td className="py-2 px-3 text-muted-foreground">{p.ecosystem}</td>
@@ -478,7 +478,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
               {vulnerabilities.map((v) => (
                 <tr key={v.id} className="border-b border-gray-800 hover:bg-gray-800/30">
                   <td className="py-2 px-3 text-blue-400 font-mono text-xs">{v.cve}</td>
-                  <td className="py-2 px-3 text-white">{v.package_name}</td>
+                  <td className="py-2 px-3 text-foreground">{v.package_name}</td>
                   <td className="py-2 px-3">
                     <span className={`px-2 py-0.5 rounded text-xs border ${SEVERITY_BG[v.severity]} ${SEVERITY_COLORS[v.severity]}`}>
                       {v.severity}

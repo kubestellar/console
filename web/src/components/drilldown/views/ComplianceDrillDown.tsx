@@ -7,90 +7,29 @@
  */
 
 import { useState, useMemo } from 'react'
+import { Shield, ChevronLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import {
-  Shield, CheckCircle, XCircle, AlertCircle, Info,
-  ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
-  ChevronsLeft, ChevronsRight,
-  Search, X, Filter } from 'lucide-react'
-import { useTrestle, type OscalControlResult } from '../../../hooks/useTrestle'
+import { useTrestle } from '../../../hooks/useTrestle'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { useDrillDown } from '../../../hooks/useDrillDown'
-import { StatusBadge } from '../../ui/StatusBadge'
-import { Input } from '../../ui/Input'
-import { Select } from '../../ui/Select'
-import { cn } from '../../../lib/cn'
-import { TOUCH_TARGET_HEIGHT_CLASS, TOUCH_TARGET_SIZE_CLASS } from '../../../lib/constants/ui'
-
-interface Props {
-  data: Record<string, unknown>
-}
-
-type SortField = 'controlId' | 'severity' | 'status' | 'cluster' | 'profile'
-type SortDir = 'asc' | 'desc'
-
-/** Controls per page */
-const PAGE_SIZE = 25
-
-const SEVERITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
-const STATUS_ORDER: Record<string, number> = { fail: 0, other: 1, 'not-applicable': 2, pass: 3 }
-
-function normalizeComplianceStatus(status?: string): string {
-  switch (status) {
-    case 'passing':
-      return 'pass'
-    case 'failing':
-      return 'fail'
-    case 'warning':
-    case 'skipped':
-      return 'other'
-    default:
-      return status || ''
-  }
-}
-
-function parseCount(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : null
-  }
-  return null
-}
-
-function severityColor(s?: string): string {
-  switch (s) {
-    case 'critical': return 'text-red-400 bg-red-500/15 border-red-500/30'
-    case 'high': return 'text-orange-400 bg-orange-500/15 border-orange-500/30'
-    case 'medium': return 'text-yellow-400 bg-yellow-500/15 border-yellow-500/30'
-    case 'low': return 'text-blue-400 bg-blue-500/15 border-blue-500/30'
-    default: return 'text-muted-foreground bg-secondary border-border'
-  }
-}
-
-function statusIcon(status: string) {
-  switch (status) {
-    case 'pass': return <CheckCircle className="w-4 h-4 text-green-400" />
-    case 'fail': return <XCircle className="w-4 h-4 text-red-400" />
-    case 'other': return <AlertCircle className="w-4 h-4 text-yellow-400" />
-    case 'not-applicable': return <Info className="w-4 h-4 text-muted-foreground" />
-    default: return <AlertCircle className="w-4 h-4 text-muted-foreground" />
-  }
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case 'pass': return 'Pass'
-    case 'fail': return 'Fail'
-    case 'other': return 'Other'
-    case 'not-applicable': return 'N/A'
-    default: return status
-  }
-}
-
-interface ControlRow extends OscalControlResult {
-  cluster: string
-}
+import {
+  type Props,
+  type SortField,
+  type SortDir,
+  type ControlRow,
+  PAGE_SIZE,
+  SEVERITY_ORDER,
+  STATUS_ORDER,
+  normalizeComplianceStatus,
+  computeSummaryCounts,
+} from './compliance-drilldown'
+import {
+  ComplianceSummaryStats,
+  ComplianceSearchFilters,
+  ComplianceTable,
+  CompliancePagination,
+  ComplianceClusterBreakdown,
+} from './ComplianceDrillDown.parts'
 
 export function ComplianceDrillDown({ data }: Props) {
   const { t } = useTranslation()
@@ -99,25 +38,7 @@ export function ComplianceDrillDown({ data }: Props) {
   const { selectedClusters } = useGlobalFilters()
   const { state, pop } = useDrillDown()
 
-  const summaryCounts = useMemo(() => {
-    const passing = parseCount(data.passing)
-    const failing = parseCount(data.failing)
-    const providedOther = parseCount(data.warning)
-    const totalChecks = parseCount(data.totalChecks)
-    const hasProvidedSummary = passing !== null || failing !== null || providedOther !== null || totalChecks !== null
-    const other = providedOther ?? (totalChecks !== null
-      ? Math.max(0, totalChecks - (passing ?? 0) - (failing ?? 0))
-      : null)
-    const total = totalChecks ?? ((passing ?? 0) + (failing ?? 0) + (other ?? 0))
-
-    return {
-      hasProvidedSummary,
-      passing: passing ?? 0,
-      failing: failing ?? 0,
-      other: other ?? 0,
-      total,
-    }
-  }, [data.failing, data.passing, data.totalChecks, data.warning])
+  const summaryCounts = useMemo(() => computeSummaryCounts(data), [data])
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>(filterStatus)
@@ -149,7 +70,7 @@ export function ComplianceDrillDown({ data }: Props) {
 
   // Unique values for filter dropdowns
   const uniqueClusters = [...new Set(allRows.map(r => r.cluster))].sort()
-  const uniqueProfiles = useMemo(() => [...new Set(allRows.map(r => r.profile).filter(Boolean))].sort(), [allRows])
+  const uniqueProfiles = useMemo(() => [...new Set(allRows.map(r => r.profile).filter((profile): profile is string => Boolean(profile)))].sort(), [allRows])
   const uniqueStatuses = [...new Set(allRows.map(r => r.status))].sort()
 
   // Filtered rows
@@ -176,35 +97,21 @@ export function ComplianceDrillDown({ data }: Props) {
     sorted.sort((a, b) => {
       let cmp = 0
       switch (sortField) {
-        case 'controlId':
-          cmp = a.controlId.localeCompare(b.controlId)
-          break
-        case 'severity':
-          cmp = (SEVERITY_ORDER[a.severity || 'medium'] ?? 2) - (SEVERITY_ORDER[b.severity || 'medium'] ?? 2)
-          break
-        case 'status':
-          cmp = (STATUS_ORDER[a.status] ?? 2) - (STATUS_ORDER[b.status] ?? 2)
-          break
-        case 'cluster':
-          cmp = a.cluster.localeCompare(b.cluster)
-          break
-        case 'profile':
-          cmp = (a.profile || '').localeCompare(b.profile || '')
-          break
+        case 'controlId': cmp = a.controlId.localeCompare(b.controlId); break
+        case 'severity': cmp = (SEVERITY_ORDER[a.severity || 'medium'] ?? 2) - (SEVERITY_ORDER[b.severity || 'medium'] ?? 2); break
+        case 'status': cmp = (STATUS_ORDER[a.status] ?? 2) - (STATUS_ORDER[b.status] ?? 2); break
+        case 'cluster': cmp = a.cluster.localeCompare(b.cluster); break
+        case 'profile': cmp = (a.profile || '').localeCompare(b.profile || ''); break
       }
       return sortDir === 'asc' ? cmp : -cmp
     })
     return sorted
   })()
 
-  // Paginated rows
   const totalPages = Math.ceil(sortedRows.length / PAGE_SIZE)
   const pagedRows = sortedRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-
-  // Reset page when filters change
   const resetPage = () => setPage(0)
 
-  // Sort toggle
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -215,15 +122,7 @@ export function ComplianceDrillDown({ data }: Props) {
     resetPage()
   }
 
-  const SortIndicator = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ChevronUp className="w-3 h-3 opacity-20" />
-    return sortDir === 'asc'
-      ? <ChevronUp className="w-3 h-3" />
-      : <ChevronDown className="w-3 h-3" />
-  }
-
-  // Summary stats — prefer aggregate values passed by the stats overview so the
-  // drill-down matches the clicked stat block even when no OSCAL rows exist.
+  // Summary stats
   const rowPassCount = allRows.filter(r => r.status === 'pass').length
   const rowFailCount = allRows.filter(r => r.status === 'fail').length
   const rowOtherCount = allRows.filter(r => r.status === 'other' || r.status === 'not-applicable').length
@@ -266,321 +165,73 @@ export function ComplianceDrillDown({ data }: Props) {
           </div>
         </div>
 
-        {/* Summary stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          <button
-            onClick={() => { setStatusFilter(''); resetPage() }}
-            className={cn(
-              cn('rounded-lg border p-3 text-left transition-colors', TOUCH_TARGET_HEIGHT_CLASS),
-              !statusFilter ? 'border-teal-500/40 bg-teal-500/10' : 'border-border bg-card/50 hover:border-border/80'
-            )}
-          >
-            <div className="text-xl font-bold text-foreground">{totalCount}</div>
-            <div className="text-xs text-muted-foreground">Total Controls</div>
-          </button>
-          <button
-            onClick={() => { setStatusFilter(statusFilter === 'pass' ? '' : 'pass'); resetPage() }}
-            className={cn(
-              cn('rounded-lg border p-3 text-left transition-colors', TOUCH_TARGET_HEIGHT_CLASS),
-              statusFilter === 'pass' ? 'border-green-500/40 bg-green-500/10' : 'border-border bg-card/50 hover:border-border/80'
-            )}
-          >
-            <div className="text-xl font-bold text-green-400">{passCount}</div>
-            <div className="text-xs text-muted-foreground">Passing</div>
-          </button>
-          <button
-            onClick={() => { setStatusFilter(statusFilter === 'fail' ? '' : 'fail'); resetPage() }}
-            className={cn(
-              cn('rounded-lg border p-3 text-left transition-colors', TOUCH_TARGET_HEIGHT_CLASS),
-              statusFilter === 'fail' ? 'border-red-500/40 bg-red-500/10' : 'border-border bg-card/50 hover:border-border/80'
-            )}
-          >
-            <div className="text-xl font-bold text-red-400">{failCount}</div>
-            <div className="text-xs text-muted-foreground">Failing</div>
-          </button>
-          <button
-            onClick={() => { setStatusFilter(statusFilter === 'other' ? '' : 'other'); resetPage() }}
-            className={cn(
-              cn('rounded-lg border p-3 text-left transition-colors', TOUCH_TARGET_HEIGHT_CLASS),
-              statusFilter === 'other' ? 'border-yellow-500/40 bg-yellow-500/10' : 'border-border bg-card/50 hover:border-border/80'
-            )}
-          >
-            <div className="text-xl font-bold text-yellow-400">{otherCount}</div>
-            <div className="text-xs text-muted-foreground">Other / N/A</div>
-          </button>
-        </div>
+        <ComplianceSummaryStats
+          passCount={passCount}
+          failCount={failCount}
+          otherCount={otherCount}
+          totalCount={totalCount}
+          statusFilter={statusFilter}
+          onClearFilter={() => { setStatusFilter(''); resetPage() }}
+          onPassClick={() => { setStatusFilter(statusFilter === 'pass' ? '' : 'pass'); resetPage() }}
+          onFailClick={() => { setStatusFilter(statusFilter === 'fail' ? '' : 'fail'); resetPage() }}
+          onOtherClick={() => { setStatusFilter(statusFilter === 'other' ? '' : 'other'); resetPage() }}
+        />
 
-        {/* Search + filter toggle */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Input
-              type="text"
-              placeholder="Search by control ID, title, or description..."
-              value={searchQuery}
-              onChange={e => { setSearchQuery(e.target.value); resetPage() }}
-              leadingIcon={<Search className="w-4 h-4" />}
-              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => { setSearchQuery(''); resetPage() }}
-                className={cn('absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-10', TOUCH_TARGET_SIZE_CLASS)}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(
-              'flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors',
-              TOUCH_TARGET_HEIGHT_CLASS,
-              showFilters || activeFilters > 0
-                ? 'border-teal-500/40 bg-teal-500/10 text-teal-400'
-                : 'border-border bg-card/50 text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Filter className="w-4 h-4" />
-            Filters
-            {activeFilters > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-teal-500/20 text-teal-400 text-xs font-medium">
-                {activeFilters}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Filter dropdowns */}
-        {showFilters && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
-            <Select
-              value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); resetPage() }}
-              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
-            >
-              <option value="">{t('drilldown.compliance.allStatuses')}</option>
-              {uniqueStatuses.map(s => (
-                <option key={s} value={s}>{statusLabel(s)}</option>
-              ))}
-            </Select>
-            <Select
-              value={severityFilter}
-              onChange={e => { setSeverityFilter(e.target.value); resetPage() }}
-              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
-            >
-              <option value="">{t('drilldown.compliance.allSeverities')}</option>
-              <option value="critical">{t('drilldown.compliance.critical')}</option>
-              <option value="high">{t('drilldown.compliance.high')}</option>
-              <option value="medium">{t('drilldown.compliance.medium')}</option>
-              <option value="low">{t('drilldown.compliance.low')}</option>
-            </Select>
-            <Select
-              value={clusterFilter}
-              onChange={e => { setClusterFilter(e.target.value); resetPage() }}
-              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
-            >
-              <option value="">{t('drilldown.compliance.allClusters')}</option>
-              {uniqueClusters.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </Select>
-            <Select
-              value={profileFilter}
-              onChange={e => { setProfileFilter(e.target.value); resetPage() }}
-              className={cn('bg-card/50', TOUCH_TARGET_HEIGHT_CLASS)}
-            >
-              <option value="">{t('drilldown.compliance.allProfiles')}</option>
-              {uniqueProfiles.map(p => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </Select>
-
-            {activeFilters > 0 && (
-              <button
-                onClick={() => {
-                  setStatusFilter('')
-                  setSeverityFilter('')
-                  setClusterFilter('')
-                  setProfileFilter('')
-                  setSearchQuery('')
-                  resetPage()
-                }}
-                className={cn('col-span-2 text-left text-xs text-muted-foreground transition-colors hover:text-foreground md:col-span-4', TOUCH_TARGET_HEIGHT_CLASS)}
-              >
-                Clear all filters
-              </button>
-            )}
-          </div>
-        )}
+        <ComplianceSearchFilters
+          searchQuery={searchQuery}
+          showFilters={showFilters}
+          activeFilters={activeFilters}
+          statusFilter={statusFilter}
+          severityFilter={severityFilter}
+          clusterFilter={clusterFilter}
+          profileFilter={profileFilter}
+          uniqueStatuses={uniqueStatuses}
+          uniqueClusters={uniqueClusters}
+          uniqueProfiles={uniqueProfiles}
+          onSearchChange={q => { setSearchQuery(q); resetPage() }}
+          onToggleFilters={() => setShowFilters(!showFilters)}
+          onStatusChange={v => { setStatusFilter(v); resetPage() }}
+          onSeverityChange={v => { setSeverityFilter(v); resetPage() }}
+          onClusterChange={v => { setClusterFilter(v); resetPage() }}
+          onProfileChange={v => { setProfileFilter(v); resetPage() }}
+          onClearAll={() => {
+            setStatusFilter('')
+            setSeverityFilter('')
+            setClusterFilter('')
+            setProfileFilter('')
+            setSearchQuery('')
+            resetPage()
+          }}
+        />
       </div>
 
-      {/* Table */}
-      <div className="flex-1 overflow-y-auto px-6">
-        {pagedRows.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <Shield className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">
-              {isAggregateSummaryOnly ? 'Detailed controls are unavailable for this view' : 'No controls match filters'}
-            </p>
-            <p className="text-xs mt-1">
-              {isAggregateSummaryOnly
-                ? 'The summary totals above match the values from the selected stat block.'
-                : 'Try adjusting your search or filter criteria'}
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-border overflow-hidden">
-            {/* Table header */}
-            <div className="grid grid-cols-[1fr_2fr_100px_100px_120px_120px] gap-px bg-border text-xs font-medium text-muted-foreground">
-              <button onClick={() => toggleSort('controlId')} className="flex min-w-11 min-h-11 items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
-                Control <SortIndicator field="controlId" />
-              </button>
-              <div className="px-3 py-2 min-h-11 bg-card/80">Description</div>
-              <button onClick={() => toggleSort('status')} className="flex min-w-11 min-h-11 items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
-                Status <SortIndicator field="status" />
-              </button>
-              <button onClick={() => toggleSort('severity')} className="flex min-w-11 min-h-11 items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
-                Severity <SortIndicator field="severity" />
-              </button>
-              <button onClick={() => toggleSort('cluster')} className="flex min-w-11 min-h-11 items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
-                Cluster <SortIndicator field="cluster" />
-              </button>
-              <button onClick={() => toggleSort('profile')} className="flex min-w-11 min-h-11 items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
-                Profile <SortIndicator field="profile" />
-              </button>
-            </div>
+      <ComplianceTable
+        pagedRows={pagedRows}
+        sortField={sortField}
+        sortDir={sortDir}
+        isAggregateSummaryOnly={isAggregateSummaryOnly}
+        onSort={toggleSort}
+      />
 
-            {/* Table rows */}
-            {pagedRows.map((row, i) => (
-              <div
-                key={`${row.cluster}-${row.controlId}-${i}`}
-                className={cn(
-                  'grid grid-cols-[1fr_2fr_100px_100px_120px_120px] gap-px text-sm',
-                  row.status === 'fail' ? 'bg-red-500/5' : 'bg-transparent',
-                  'hover:bg-card/40 transition-colors'
-                )}
-              >
-                <div className="px-3 py-2.5 font-mono text-xs font-medium text-foreground truncate">
-                  {row.controlId}
-                </div>
-                <div className="px-3 py-2.5 text-xs text-muted-foreground truncate" title={row.description || row.title}>
-                  {row.title}
-                </div>
-                <div className="px-3 py-2.5 flex items-center gap-1.5">
-                  {statusIcon(row.status)}
-                  <span className="text-xs">{statusLabel(row.status)}</span>
-                </div>
-                <div className="px-3 py-2.5">
-                  {row.severity && (
-                    <span className={cn('px-2 py-0.5 rounded text-xs font-medium border', severityColor(row.severity))}>
-                      {row.severity}
-                    </span>
-                  )}
-                </div>
-                <div className="px-3 py-2.5">
-                  <StatusBadge color="blue" size="xs">
-                    {row.cluster.split('/').pop() || row.cluster}
-                  </StatusBadge>
-                </div>
-                <div className="px-3 py-2.5 text-xs text-muted-foreground truncate" title={row.profile}>
-                  {row.profile || '-'}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Pagination */}
       {totalPages > 1 && (
-        <div className="px-6 py-3 border-t border-border flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Showing {page * PAGE_SIZE + 1}--{Math.min((page + 1) * PAGE_SIZE, sortedRows.length)} of {sortedRows.length} controls
-          </span>
-          <div className="flex items-center gap-1">
-            {/* First/Last use the single-glyph ChevronsLeft/ChevronsRight (double-chevron)
-                instead of two overlapping single chevrons — reads as one control instead of
-                two arrows side-by-side. */}
-            <button
-              onClick={() => setPage(0)}
-              disabled={page === 0}
-              className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
-              title="First page"
-              aria-label="First page"
-            >
-              <ChevronsLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setPage(p => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
-              title="Previous page"
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="px-3 text-xs">
-              Page {page + 1} of {totalPages}
-            </span>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-              className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
-              title="Next page"
-              aria-label="Next page"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setPage(totalPages - 1)}
-              disabled={page >= totalPages - 1}
-              className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
-              title="Last page"
-              aria-label="Last page"
-            >
-              <ChevronsRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        <CompliancePagination
+          page={page}
+          totalPages={totalPages}
+          totalRows={sortedRows.length}
+          onFirst={() => setPage(0)}
+          onPrev={() => setPage(p => Math.max(0, p - 1))}
+          onNext={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+          onLast={() => setPage(totalPages - 1)}
+        />
       )}
 
-      {/* Per-cluster breakdown */}
       {uniqueClusters.length > 1 && (
-        <div className="px-6 py-3 border-t border-border">
-          <p className="text-xs text-muted-foreground mb-2">Per-cluster breakdown</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {uniqueClusters.map(cluster => {
-              const clusterRows = filteredRows.filter(r => r.cluster === cluster)
-              const cPass = clusterRows.filter(r => r.status === 'pass').length
-              const cFail = clusterRows.filter(r => r.status === 'fail').length
-              const cTotal = clusterRows.length
-              const cScore = cTotal > 0 ? Math.round((cPass / cTotal) * 100) : 0
-              return (
-                <button
-                  key={cluster}
-                  onClick={() => { setClusterFilter(clusterFilter === cluster ? '' : cluster); resetPage() }}
-                  className={cn(
-                    'rounded-lg border p-2 text-left transition-colors',
-                    TOUCH_TARGET_HEIGHT_CLASS,
-                    clusterFilter === cluster ? 'border-blue-500/40 bg-blue-500/10' : 'border-border bg-card/50 hover:border-border/80'
-                  )}
-                >
-                  <div className="text-xs font-medium text-foreground truncate">{cluster.split('/').pop() || cluster}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-green-400">{cPass} pass</span>
-                    <span className="text-xs text-red-400">{cFail} fail</span>
-                    <span className={cn(
-                      'text-xs font-bold ml-auto',
-                      cScore >= 80 ? 'text-green-400' : cScore >= 60 ? 'text-yellow-400' : 'text-red-400'
-                    )}>
-                      {cScore}%
-                    </span>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        <ComplianceClusterBreakdown
+          uniqueClusters={uniqueClusters}
+          filteredRows={filteredRows}
+          clusterFilter={clusterFilter}
+          onClusterClick={cluster => { setClusterFilter(clusterFilter === cluster ? '' : cluster); resetPage() }}
+        />
       )}
     </div>
   )
