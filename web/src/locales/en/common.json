@@ -3379,6 +3379,19 @@
       "gpuAllocatedSummary": "{{allocated}}/{{total}} GPUs"
     }
   },
+  "resourcesDrillDown": {
+    "dragToReorder": "Drag to reorder",
+    "nodePodCount": "{{nodes}} nodes • {{pods}} pods",
+    "offline": "Offline",
+    "noAccelerator": "No {{accelerator}}",
+    "clusters": "Clusters",
+    "clustersWithCount": "Clusters ({{count}})",
+    "capacity": "Capacity",
+    "memoryCapacity": "Memory Capacity",
+    "cores": "{{count}} cores",
+    "utilizedRequested": "{{percent}}% utilized ({{requested}} requested)",
+    "acceleratorAllocated": "{{accelerator}} Allocated"
+  },
   "pagination": {
     "showing": "Showing {{start}}-{{end}} of {{total}}",
     "pageOf": "Page {{page}} of {{total}}",
