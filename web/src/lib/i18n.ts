@@ -159,19 +159,26 @@ export default i18n
 
 // Type-safe translation keys
 //
-// NOTE: `resources` is intentionally NOT set here (only `defaultNS` is).
-// Typing `resources` as `typeof resources['en']` forces TypeScript to build
-// t()'s overload set from a union of this repo's ~10k+ translation leaf
-// keys (common.json + cards.json + status.json + errors.json). At that
-// scale, `tsc` hits a known compiler crash ("Debug Failure: No error for
-// last overload signature") whenever a t() call combines a key outside the
-// typed union with an object-typed second argument (interpolation options).
-// See https://github.com/microsoft/TypeScript/issues/63195. Because the
-// crash aborts the whole build (rather than reporting a normal type error)
-// and new invalid-key call sites keep appearing across ~10k keys, leaving
-// `resources` untyped trades compile-time key checking for a build that
-// reliably succeeds. i18next still falls back to the key/defaultValue at
-// runtime for any unresolved key.
+// NOTE: We intentionally do NOT augment `CustomTypeOptions.resources` with
+// `typeof resources['en']`. Doing so makes `tsc -b` crash with an internal
+// compiler assertion failure (not a normal type error):
+//
+//   Error: Debug Failure. No error for last overload signature
+//     at resolveCall / resolveCallExpression / resolveSignature / ...
+//
+// This is a known upstream TypeScript bug (microsoft/TypeScript#63195):
+// react-i18next's heavily-overloaded `t()` function crashes the overload
+// resolver when checked against a `resources` type this large -- our
+// `common.json` + `cards.json` combined are ~10,000 lines / 4800+ leaf keys,
+// well past the threshold that trips it. Narrowing only the leaf *value*
+// types to `string` (instead of removing the augmentation) does not avoid
+// the crash, since the blow-up comes from the size of the *key* union, not
+// the value types.
+//
+// Omitting the `resources` augmentation falls back to i18next's default
+// (untyped) resource typing, which avoids the crash entirely. This loses
+// `t()` key autocompletion/dot-path validation, but is a developer-experience
+// trade-off only -- it does not change any runtime translation behavior.
 declare module 'i18next' {
   interface CustomTypeOptions {
     defaultNS: typeof defaultNS

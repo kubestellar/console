@@ -27,7 +27,6 @@ export function ReplicaSetDrillDown({ data }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
 
   const {
-    agentConnected,
     replicas,
     readyReplicas,
     pods,

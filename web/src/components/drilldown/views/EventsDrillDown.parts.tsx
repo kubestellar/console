@@ -207,7 +207,7 @@ export function Pagination({ currentPage, totalPages, totalCount, onPageChange }
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          aria-label={t('pagination.previousPage')}
+          aria-label={t('pagination.previousPage', 'Previous page')}
           className={cn(
             'p-1.5 rounded-lg transition-colors',
             currentPage === 1
@@ -226,7 +226,7 @@ export function Pagination({ currentPage, totalPages, totalCount, onPageChange }
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          aria-label={t('pagination.nextPage')}
+          aria-label={t('pagination.nextPage', 'Next page')}
           className={cn(
             'p-1.5 rounded-lg transition-colors',
             currentPage === totalPages
