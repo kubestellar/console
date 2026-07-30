@@ -13,6 +13,9 @@
 import { useState, useRef } from 'react'
 import { X } from 'lucide-react'
 import { normalizeRepoInput } from '../../acmm/ACMMProvider'
+import { useDemoMode } from '../../hooks/useDemoMode'
+
+const DEMO_REPO = 'kubestellar/console'
 
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/
 
@@ -28,7 +31,9 @@ interface RepoInputProps {
 }
 
 export function RepoInput({ value, onChange, placeholder, className }: RepoInputProps) {
-  const [input, setInput] = useState(value)
+  const { isDemoMode } = useDemoMode()
+  const effectiveValue = isDemoMode && !value ? DEMO_REPO : value
+  const [input, setInput] = useState(effectiveValue)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -61,10 +66,10 @@ export function RepoInput({ value, onChange, placeholder, className }: RepoInput
             placeholder={placeholder || 'owner/repo or github.com URL'}
             className="w-full text-xs font-mono bg-background/60 border border-border/50 rounded px-2 py-1 focus:outline-hidden focus:border-primary/50"
           />
-          {input && input !== value && (
+          {input && input !== effectiveValue && (
             <button
               type="button"
-              onClick={() => { setInput(value); setError(null) }}
+              onClick={() => { setInput(effectiveValue); setError(null) }}
               className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="w-3 h-3" />
