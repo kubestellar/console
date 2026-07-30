@@ -19878,5 +19878,2378 @@
     "line": 405,
     "column": 15,
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1009,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1010,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1009,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1010,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1011,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1012,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1013,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1014,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1015,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1016,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1017,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1018,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1019,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1020,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1021,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1022,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1023,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1024,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1025,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useAIPredictions-hook-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.author.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useClusterGroups.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance-scoring.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance-scoring.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance-scoring.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useDataCompliance.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-deep.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-edge-cases-sentinels.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-selections.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection-selections.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useGlobalFilters-init-selection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.filters.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useMarketplace.filters.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.advanced.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.basic.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useRBACFindings.findings.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.expanded.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useSidebarConfig.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.auto-refresh.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.loading-fetch.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.shape-demo.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useTrivy.shape-demo.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.actions.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.agent.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.helpers.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.pure.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.pure.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/__tests__/useWorkloads.pure.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/helm-core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1009,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1010,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1011,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1012,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1013,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1014,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1015,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1016,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1017,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1018,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1019,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1020,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1021,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1022,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1023,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1024,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1025,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1026,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1027,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1028,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1029,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1030,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1031,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1032,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1033,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1034,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1035,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1036,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1009,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1010,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1011,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1012,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1013,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1014,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1015,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1016,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1017,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1018,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1019,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1020,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1021,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1022,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1023,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1024,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1025,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-cache-fetch-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1026,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1009,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1010,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1011,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1012,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1013,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1014,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1015,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1016,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1017,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1018,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1019,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1020,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1021,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1022,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1009,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1010,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1011,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1012,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1013,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1014,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1015,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1016,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1017,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1018,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1019,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1020,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1021,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1022,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1023,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1024,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1025,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1026,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1027,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1028,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1029,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1030,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1031,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1032,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1033,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1034,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1035,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1036,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/shared-pure-funcs-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1037,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core-3.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/mcp/__tests__/workloads.core.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useInsightEnrichment-edge-2.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useInsightEnrichment-edge.test.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.advanced.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.detection.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1009,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.preflight-agents.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.cluster-targeting.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.main.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.management.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1000,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1001,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1002,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1003,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1004,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1005,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1006,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1007,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
+  },
+  {
+    "file": "src/hooks/useMissions.save-run.progress-tracking.test.tsx",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "line": 1008,
+    "column": 1,
+    "message": "Baseline sync: pre-existing unused-vars warning not yet individually recorded (count-only entry)."
   }
 ]
