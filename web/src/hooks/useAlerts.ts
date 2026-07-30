@@ -28,8 +28,7 @@ function loadFromStorage<T>(key: string, defaultValue: T, validator?: (value: un
         return parsed
       }
     }
-  } catch (e: unknown) {
-    console.error(`Failed to load ${key} from localStorage:`, e)
+  } catch {
     // Silently fail - localStorage is optional for this hook
   }
   return defaultValue
@@ -89,7 +88,6 @@ export function useSlackWebhooks() {
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e))
       setError(err)
-      console.error(`Failed to save ${SLACK_WEBHOOKS_KEY} to localStorage:`, e)
     }
   }, [webhooks])
 
@@ -212,39 +210,34 @@ export function useSlackNotification() {
             text: `*AI Analysis:*\n${alert.aiDiagnosis.summary}\n\n*Suggestions:*\n${(alert.aiDiagnosis.suggestions || []).map(s => `• ${s}`).join('\n')}` } })
       }
 
-      try {
-        // Route through backend notification service (#5713, Copilot followup)
-        const response = await fetch('/api/notifications/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-          body: JSON.stringify({
-            alert: {
-              id: alert.id,
-              ruleId: alert.ruleId || '',
-              ruleName: alert.ruleName,
-              severity: alert.severity,
-              status: alert.status,
-              message: alert.message,
-              cluster: alert.cluster,
-              resource: alert.resource,
-            },
-            channels: [{
-              type: 'slack',
-              enabled: true,
-              config: { webhookUrl: webhook.webhookUrl },
-            }],
-          }),
-        })
-        if (!response.ok) {
-          const errText = await response.text().catch(() => '')
-          throw new Error(`Notification send failed (${response.status}): ${errText}`)
-        }
-        return true
-      } catch (error: unknown) {
-        console.error('Failed to send Slack notification:', error)
-        throw error
+      // Route through backend notification service (#5713, Copilot followup)
+      const response = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+        body: JSON.stringify({
+          alert: {
+            id: alert.id,
+            ruleId: alert.ruleId || '',
+            ruleName: alert.ruleName,
+            severity: alert.severity,
+            status: alert.status,
+            message: alert.message,
+            cluster: alert.cluster,
+            resource: alert.resource,
+          },
+          channels: [{
+            type: 'slack',
+            enabled: true,
+            config: { webhookUrl: webhook.webhookUrl },
+          }],
+        }),
+      })
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '')
+        throw new Error(`Notification send failed (${response.status}): ${errText}`)
       }
+      return true
     }
 
   return { sendNotification }
