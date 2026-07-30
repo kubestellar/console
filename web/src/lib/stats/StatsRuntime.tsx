@@ -32,7 +32,7 @@
  * ```
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getIcon } from '../icons'
 import { ChevronDown, ChevronRight, Activity, Settings } from 'lucide-react'
@@ -109,10 +109,25 @@ function StatBlock({ block, value, hasData }: StatBlockProps) {
 
   const displayValue = hasData ? value.value : '-'
 
+  const handleActivate = () => {
+    if (isClickable) value.onClick?.()
+  }
+
   return (
     <div
       className={`glass p-4 rounded-lg ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} transition-colors`}
-      onClick={() => isClickable && value.onClick?.()}
+      onClick={handleActivate}
+      {...(isClickable ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        'aria-label': block.tooltip || value.tooltip || block.label,
+        onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            handleActivate()
+          }
+        },
+      } : {})}
       title={block.tooltip || value.tooltip}
     >
       <div className="flex items-center gap-2 mb-2">
