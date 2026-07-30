@@ -42,8 +42,6 @@ import {
   useGlobalFilters,
   SEVERITY_LEVELS,
   STATUS_LEVELS,
-  SEVERITY_CONFIG,
-  STATUS_CONFIG,
 } from '../useGlobalFilters'
 
 // ---------------------------------------------------------------------------
