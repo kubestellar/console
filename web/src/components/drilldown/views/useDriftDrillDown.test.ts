@@ -19,7 +19,7 @@ vi.mock('../../../hooks/useDrillDownWebSocket', () => ({
   useDrillDownWebSocket: () => ({ runKubectl: mockRunKubectl }),
 }))
 
-import { useDriftDrillDown } from '../useDriftDrillDown'
+import { useDriftDrillDown } from './useDriftDrillDown'
 
 const KUSTOMIZATION = 'kustomization'
 const ARGO_APPS = ['applications', 'argoproj.io'].join('.')
