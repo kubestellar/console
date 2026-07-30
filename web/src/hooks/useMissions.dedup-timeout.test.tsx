@@ -31,7 +31,6 @@
     expect(m?.messages.some(msg => msg.content.includes('Mission blocked'))).toBe(true)
     expect(m?.messages.some(msg => msg.content.includes('rm -rf /'))).toBe(true)
   })
-})
 
 // ── Result message deduplication ─────────────────────────────────────────────
 

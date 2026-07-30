@@ -71,7 +71,6 @@
       expect(mission?.status).toBe('failed')
     })
   })
-})
 
 // ── Stream gap detection (tool use) ──────────────────────────────────────────
 

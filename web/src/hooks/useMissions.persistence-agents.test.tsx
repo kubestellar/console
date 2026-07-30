@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions, type StartMissionParams } from './useMissions'
 import {
-  MISSION_CONTROL_TRIGGER_TIMEOUT_MS,
   MISSION_TIMEOUT_CHECK_INTERVAL_MS,
   MISSION_TIMEOUT_MS,
 } from './useMissions.constants'
