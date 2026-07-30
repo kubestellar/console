@@ -63,6 +63,7 @@ export function useCRDDrillDown(cluster: string, crdName: string): UseCRDDrillDo
           setVersions([])
           setConditions([])
           setVersionsError('Failed to parse CRD data')
+          setVersionsLoading(false)
           return
         }
         // Get versions
@@ -118,6 +119,7 @@ export function useCRDDrillDown(cluster: string, crdName: string): UseCRDDrillDo
         } catch {
           setInstances([])
           setInstancesError('Failed to parse instances data')
+          setInstancesLoading(false)
           return
         }
         const items = data.items || []
