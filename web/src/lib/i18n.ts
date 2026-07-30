@@ -157,10 +157,30 @@ configuredI18n.init({
 
 export default i18n
 
-// Type-safe translation keys
+// Type-safe translation namespaces.
+//
+// IMPORTANT: `resources` is intentionally typed as a loose
+// `Record<string, Record<string, unknown>>` shape instead of
+// `typeof resources['en']`. Deriving the literal `typeof` type of our
+// translation JSON (common.json + cards.json are ~10k lines combined) and
+// feeding it into i18next's heavily-overloaded `t()` signature triggers a
+// known TypeScript compiler crash once the resource type crosses a certain
+// scale: `Error: Debug Failure. No error for last overload signature`
+// (see https://github.com/microsoft/TypeScript/issues/63195). This is a
+// real internal `tsc` assertion failure, not a type error in our code, and
+// it aborts the whole build (`tsc -b`) rather than reporting a diagnostic.
+//
+// Widening only the leaf *values* to `string` (keeping the full recursive
+// key union) still crashes at the same scale, because the crash is driven
+// by the size of the derived key/overload space, not the value types. The
+// only reliable fix is to stop deriving a large literal type from the JSON
+// at all. We keep namespace-level typing (`common` | `cards` | `status` |
+// `errors`) for `useTranslation('cards')` etc., but individual key strings
+// passed to `t()` are no longer compile-time validated — invalid keys are
+// caught by the i18n-compliance lint/test scripts and code review instead.
 declare module 'i18next' {
   interface CustomTypeOptions {
     defaultNS: typeof defaultNS
-    resources: typeof resources['en']
+    resources: Record<(typeof namespaces)[number], Record<string, unknown>>
   }
 }

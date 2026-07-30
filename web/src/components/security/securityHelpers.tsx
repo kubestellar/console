@@ -34,14 +34,13 @@ export function typeIcon(type: string) {
 }
 
 /** Human-readable label for a security issue type. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getTypeLabel(type: string, t: (...args: any[]) => string): string {
+export function getTypeLabel(type: string, t: (key: string) => unknown): string {
   const labels: Record<string, string> = {
-    privileged: t('security.privilegedContainers'),
-    root: t('security.runAsRoot'),
-    hostNetwork: t('security.hostNetwork'),
-    hostPID: t('security.hostPID'),
-    noSecurityContext: t('security.noSecurityContext'),
+    privileged: String(t('security.privilegedContainers')),
+    root: String(t('security.runAsRoot')),
+    hostNetwork: String(t('security.hostNetwork')),
+    hostPID: String(t('security.hostPID')),
+    noSecurityContext: String(t('security.noSecurityContext')),
   }
   return labels[type] || type
 }

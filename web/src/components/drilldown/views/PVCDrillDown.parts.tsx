@@ -3,6 +3,7 @@ import { HardDrive, Code, Info, Tag, Loader2, Copy, Check, ChevronLeft, Layers, 
 import { cn } from '../../../lib/cn'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 
 export type TabType = 'overview' | 'describe' | 'yaml'
 
@@ -14,10 +15,10 @@ export function getStatusColor(status: string): string {
   return 'bg-muted text-muted-foreground'
 }
 
-export function getTabs(t: (key: string, fallback?: string) => string): { id: TabType; label: string; icon: typeof Info }[] {
+export function getTabs(t: TFunction): { id: TabType; label: string; icon: typeof Info }[] {
   return [
-    { id: 'overview', label: t('drilldown.overview', 'Overview'), icon: Info },
-    { id: 'describe', label: t('drilldown.describe', 'Describe'), icon: Code },
+    { id: 'overview', label: t('drilldown.tabs.overview', 'Overview'), icon: Info },
+    { id: 'describe', label: t('drilldown.tabs.describe', 'Describe'), icon: Code },
     { id: 'yaml', label: 'YAML', icon: Code },
   ]
 }
