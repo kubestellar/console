@@ -118,7 +118,7 @@ export function HelmOverviewPanel({
                 onClick={onShowMoreResources}
                 className="text-xs text-primary hover:underline"
               >
-                {t('common.moreItems', { count: parsedResources.length - 10 })}
+                {t('labels.moreItems', { count: parsedResources.length - 10 })}
               </button>
             )}
           </div>

@@ -158,9 +158,22 @@ configuredI18n.init({
 export default i18n
 
 // Type-safe translation keys
+//
+// NOTE: `resources` is intentionally NOT set here (only `defaultNS` is).
+// Typing `resources` as `typeof resources['en']` forces TypeScript to build
+// t()'s overload set from a union of this repo's ~10k+ translation leaf
+// keys (common.json + cards.json + status.json + errors.json). At that
+// scale, `tsc` hits a known compiler crash ("Debug Failure: No error for
+// last overload signature") whenever a t() call combines a key outside the
+// typed union with an object-typed second argument (interpolation options).
+// See https://github.com/microsoft/TypeScript/issues/63195. Because the
+// crash aborts the whole build (rather than reporting a normal type error)
+// and new invalid-key call sites keep appearing across ~10k keys, leaving
+// `resources` untyped trades compile-time key checking for a build that
+// reliably succeeds. i18next still falls back to the key/defaultValue at
+// runtime for any unresolved key.
 declare module 'i18next' {
   interface CustomTypeOptions {
     defaultNS: typeof defaultNS
-    resources: typeof resources['en']
   }
 }
