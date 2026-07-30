@@ -1,12 +1,12 @@
 /**
- * Deep branch-coverage tests for useCachedData.ts (part 1 of 3).
+ * Deep branch-coverage tests for useCachedData.ts (part 2 of 3).
  *
  * Tests the internal utility functions (fetchAPI, fetchClusters,
  * fetchFromAllClusters, fetchViaSSE, etc.) and every exported
  * useCached* hook by mocking the underlying cache layer and network.
  *
- * Covers: security issues kubectl scanning, hardware health fetcher, CoreDNS status computation
- * See also: useCachedData.security-gitops.state-2.test.ts, useCachedData.security-gitops.state-3.test.ts
+ * Covers: namespaces fetcher, buildpack images 404 handling, GitOps and RBAC API endpoints
+ * See also: useCachedData.security-gitops.state.test.ts, useCachedData.security-gitops.state-3.test.ts
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
@@ -156,7 +156,7 @@ function makeCacheResult<T>(data: T, overrides?: Record<string, unknown>) {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('useCachedData - part 1', () => {
+describe('useCachedData - part 2', () => {
   let mod: typeof import('../useCachedData')
 
   beforeEach(() => {
@@ -195,241 +195,293 @@ describe('useCachedData - part 1', () => {
   // ========================================================================
   // Security issues via kubectl scanning
   // ========================================================================
-  describe('security issues kubectl scanning', () => {
-    it('useCachedSecurityIssues fetcher: kubectl non-zero exit returns empty', async () => {
+  describe('namespaces fetcher', () => {
+    it('useCachedNamespaces: returns demo data when no cluster in demo mode', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+      mockIsDemoMode.mockReturnValue(true)
+
+      const { useCachedNamespaces } = await loadModule()
+      useCachedNamespaces() // no cluster
+
+      const fetcher = capturedOpts.fetcher as () => Promise<string[]>
+      const namespaces = await fetcher()
+      expect(namespaces).toContain('default')
+      expect(namespaces).toContain('kube-system')
+    })
+
+    it('useCachedNamespaces: fetches from /api/namespaces when cluster provided', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'prod', context: 'prod-ctx', reachable: true }],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+      const nsRes = {
+        ok: true,
+        json: vi.fn().mockResolvedValue([
+          { name: 'production' },
+          { Name: 'staging' },
+          { name: '' }, // empty name filtered out
+        ]),
+      }
+      mockAuthFetch.mockResolvedValue(nsRes)
+
+      const { useCachedNamespaces } = await loadModule()
+      useCachedNamespaces('my-cluster')
+
+      const fetcher = capturedOpts.fetcher as () => Promise<string[]>
+      const namespaces = await fetcher()
+      expect(namespaces).toContain('production')
+      expect(namespaces).toContain('staging')
+      expect(namespaces).not.toContain('')
+      expect(mockAuthFetch).toHaveBeenCalledWith('/api/namespaces?cluster=my-cluster', expect.objectContaining({
+        headers: { Accept: 'application/json' },
       }))
-      mockIsAgentUnavailable.mockReturnValue(false)
-
-      mockKubectlProxy.exec.mockResolvedValue({ exitCode: 1, output: 'error' })
-
-      // Need REST fallback to also fail so we hit the throw path
-      mockIsBackendUnavailable.mockReturnValue(true)
-
-      const { useCachedSecurityIssues } = await loadModule()
-      useCachedSecurityIssues()
-
-      const fetcher = capturedOpts.fetcher as () => Promise<unknown[]>
-      // kubectl returned nothing, REST unavailable => throws
-      await expect(fetcher()).rejects.toThrow('No data source available')
     })
 
-    it('useCachedSecurityIssues fetcher: falls back to REST authFetch', async () => {
+    it('useCachedNamespaces: non-ok response throws', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: { clusters: [] },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
-      mockIsAgentUnavailable.mockReturnValue(true)
-      mockIsBackendUnavailable.mockReturnValue(false)
+      mockAuthFetch.mockResolvedValue({ ok: false, status: 403 })
 
-      // fetchBackendAPI uses raw fetch(), not authFetch
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        ok: true,
-        text: vi.fn().mockResolvedValue(JSON.stringify({ issues: [{ name: 'rest-sec', namespace: 'default', issue: 'Priv', severity: 'high' }] })),
-      }))
+      const { useCachedNamespaces } = await loadModule()
+      useCachedNamespaces('my-cluster')
 
-      const { useCachedSecurityIssues } = await loadModule()
-      useCachedSecurityIssues()
+      const fetcher = capturedOpts.fetcher as () => Promise<string[]>
+      await expect(fetcher()).rejects.toThrow('API error: 403')
+      expect(mockAuthFetch).toHaveBeenNthCalledWith(1, '/api/namespaces?cluster=my-cluster', expect.any(Object))
+      expect(mockAuthFetch).toHaveBeenNthCalledWith(2, '/api/mcp/namespaces?cluster=my-cluster', expect.any(Object))
+    })
+  })
+
+  // ========================================================================
+  // Buildpack images 404 handling
+  // ========================================================================
+  describe('buildpack images 404 handling', () => {
+    it('useCachedBuildpackImages: returns empty array on 404 (no CRDs)', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+
+      // fetchGitOpsAPI will throw with '404' in message
+      const errorRes = { ok: false, status: 404 }
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(errorRes))
+
+      const { useCachedBuildpackImages } = await loadModule()
+      useCachedBuildpackImages()
 
       const fetcher = capturedOpts.fetcher as () => Promise<unknown[]>
-      const issues = await fetcher()
-      expect(issues).toHaveLength(1)
-
-      vi.unstubAllGlobals()
-    })
-})
-
-  // ========================================================================
-  // Hardware health fetcher
-  // ========================================================================
-  describe('hardware health fetcher', () => {
-    it('useCachedHardwareHealth: fetches alerts and inventory from agent', async () => {
-      let capturedOpts: Record<string, unknown> = {}
-      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
-        capturedOpts = opts
-        return makeCacheResult({ alerts: [], inventory: [], nodeCount: 0, lastUpdate: null })
-      })
-
-      const alertsRes = {
-        ok: true,
-        json: vi.fn().mockResolvedValue({ alerts: [{ id: 'a1', severity: 'critical' }], nodeCount: 2, timestamp: new Date().toISOString() }),
-      }
-      const inventoryRes = {
-        ok: true,
-        json: vi.fn().mockResolvedValue({ nodes: [{ nodeName: 'n1', cluster: 'c1' }], timestamp: new Date().toISOString() }),
-      }
-      vi.stubGlobal('fetch', vi.fn()
-        .mockResolvedValueOnce(alertsRes)
-        .mockResolvedValueOnce(inventoryRes))
-
-      const { useCachedHardwareHealth } = await loadModule()
-      useCachedHardwareHealth()
-
-      const fetcher = capturedOpts.fetcher as () => Promise<{ alerts: unknown[]; inventory: unknown[]; nodeCount: number }>
-      const result = await fetcher()
-      expect(result.alerts).toHaveLength(1)
-      expect(result.inventory).toHaveLength(1)
-      expect(result.nodeCount).toBe(1) // inventory nodes.length overrides
+      const images = await fetcher()
+      expect(images).toEqual([])
 
       vi.unstubAllGlobals()
     })
 
-    it('useCachedHardwareHealth: throws when both endpoints fail', async () => {
+    it('useCachedBuildpackImages: rethrows non-404 errors', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
-        return makeCacheResult({ alerts: [], inventory: [], nodeCount: 0, lastUpdate: null })
+        return makeCacheResult([])
       })
 
-      const failedRes = { ok: false, status: 503 }
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(failedRes))
+      const errorRes = { ok: false, status: 500 }
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(errorRes))
 
-      const { useCachedHardwareHealth } = await loadModule()
-      useCachedHardwareHealth()
+      const { useCachedBuildpackImages } = await loadModule()
+      useCachedBuildpackImages()
 
-      const fetcher = capturedOpts.fetcher as () => Promise<unknown>
-      await expect(fetcher()).rejects.toThrow('Device endpoints unavailable')
-
-      vi.unstubAllGlobals()
-    })
-
-    it('useCachedHardwareHealth: handles fetch network errors gracefully', async () => {
-      let capturedOpts: Record<string, unknown> = {}
-      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
-        capturedOpts = opts
-        return makeCacheResult({ alerts: [], inventory: [], nodeCount: 0, lastUpdate: null })
-      })
-
-      // Both fetches throw network errors (caught by .catch(() => null))
-      // The catch in Promise.all turns them to null
-      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network failure')))
-
-      const { useCachedHardwareHealth } = await loadModule()
-      useCachedHardwareHealth()
-
-      const fetcher = capturedOpts.fetcher as () => Promise<unknown>
-      // Both null => !ok && !ok => throws
-      await expect(fetcher()).rejects.toThrow()
-
-      vi.unstubAllGlobals()
-    })
-
-    it('useCachedHardwareHealth: partial success (alerts ok, inventory fails)', async () => {
-      let capturedOpts: Record<string, unknown> = {}
-      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
-        capturedOpts = opts
-        return makeCacheResult({ alerts: [], inventory: [], nodeCount: 0, lastUpdate: null })
-      })
-
-      const alertsRes = {
-        ok: true,
-        json: vi.fn().mockResolvedValue({ alerts: [{ id: 'a1' }], nodeCount: 5, timestamp: new Date().toISOString() }),
-      }
-      const inventoryFail = { ok: false, status: 500 }
-      vi.stubGlobal('fetch', vi.fn()
-        .mockResolvedValueOnce(alertsRes)
-        .mockResolvedValueOnce(inventoryFail))
-
-      const { useCachedHardwareHealth } = await loadModule()
-      useCachedHardwareHealth()
-
-      const fetcher = capturedOpts.fetcher as () => Promise<{ alerts: unknown[]; inventory: unknown[]; nodeCount: number }>
-      const result = await fetcher()
-      expect(result.alerts).toHaveLength(1)
-      expect(result.inventory).toEqual([])
-      expect(result.nodeCount).toBe(5)
+      const fetcher = capturedOpts.fetcher as () => Promise<unknown[]>
+      await expect(fetcher()).rejects.toThrow('500')
 
       vi.unstubAllGlobals()
     })
   })
 
   // ========================================================================
-  // CoreDNS status computation
+  // GitOps and RBAC API endpoints
   // ========================================================================
-  describe('CoreDNS status computation', () => {
-    it('useCachedCoreDNSStatus filters and groups CoreDNS pods by cluster', async () => {
+  describe('GitOps and RBAC API endpoints', () => {
+    it('useCachedHelmReleases uses fetchGitOpsAPI', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
 
-      // Cluster list and pods
-      const clusterRes = { ok: true, text: vi.fn().mockResolvedValue(JSON.stringify({ clusters: [{ name: 'c1', reachable: true }] })) }
-      const podsRes = {
-        ok: true,
-        text: vi.fn().mockResolvedValue(JSON.stringify({
-          pods: [
-            { name: 'coredns-abc', namespace: 'kube-system', status: 'Running', ready: '1/1', restarts: 2, containers: [{ image: 'coredns:v1.11.1' }] },
-            { name: 'coredns-def', namespace: 'kube-system', status: 'Running', ready: '1/1', restarts: 0 },
-            { name: 'nginx-xyz', namespace: 'kube-system', status: 'Running', ready: '1/1', restarts: 0 },
-          ],
-        })),
-      }
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(clusterRes).mockResolvedValueOnce(podsRes))
+      const gitopsRes = { ok: true, text: vi.fn().mockResolvedValue(JSON.stringify({ releases: [{ name: 'prometheus' }] })) }
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(gitopsRes))
 
-      const { useCachedCoreDNSStatus } = await loadModule()
-      useCachedCoreDNSStatus()
+      const { useCachedHelmReleases } = await loadModule()
+      useCachedHelmReleases('prod')
 
-      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ cluster: string; healthy: boolean; totalRestarts: number; pods: unknown[] }>>
-      const result = await fetcher()
+      const fetcher = capturedOpts.fetcher as () => Promise<unknown[]>
+      const releases = await fetcher()
+      expect(releases).toHaveLength(1)
 
-      // Should only include coredns pods, not nginx
-      expect(result).toHaveLength(1)
-      expect(result[0].pods).toHaveLength(2)
-      expect(result[0].healthy).toBe(true)
-      expect(result[0].totalRestarts).toBe(2)
+      // Verify it used /api/gitops/ prefix
+      const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+      expect(calledUrl).toContain('/api/gitops/')
 
       vi.unstubAllGlobals()
     })
 
-    it('useCachedCoreDNSStatus: unhealthy when some pods not Running', async () => {
+    it('fetchGitOpsAPI: throws on non-JSON response', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
 
-      const restRes = {
-        ok: true,
-        text: vi.fn().mockResolvedValue(JSON.stringify({
-          pods: [
-            { name: 'coredns-abc', namespace: 'kube-system', status: 'CrashLoopBackOff', ready: '0/1', restarts: 15, cluster: 'c1' },
-          ],
-        })),
-      }
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(restRes))
+      const badRes = { ok: true, text: vi.fn().mockResolvedValue('not json') }
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(badRes))
 
-      const { useCachedCoreDNSStatus } = await loadModule()
-      useCachedCoreDNSStatus('c1')
+      const { useCachedHelmReleases } = await loadModule()
+      useCachedHelmReleases()
 
-      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ healthy: boolean }>>
-      const result = await fetcher()
-
-      expect(result).toHaveLength(1)
-      expect(result[0].healthy).toBe(false)
+      const fetcher = capturedOpts.fetcher as () => Promise<unknown>
+      await expect(fetcher()).rejects.toThrow('non-JSON')
 
       vi.unstubAllGlobals()
+    })
+
+    it('fetchGitOpsAPI: throws when no token', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+
+      localStorage.removeItem('kc_token')
+
+      const { useCachedHelmReleases } = await loadModule()
+      useCachedHelmReleases()
+
+      const fetcher = capturedOpts.fetcher as () => Promise<unknown>
+      await expect(fetcher()).rejects.toThrow('No authentication token')
+    })
+
+    it('useCachedK8sRoles uses fetchRbacAPI with /api/rbac/ prefix', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+
+      const rbacRes = { ok: true, text: vi.fn().mockResolvedValue(JSON.stringify({ roles: [{ name: 'admin' }] })) }
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(rbacRes))
+
+      const { useCachedK8sRoles } = await loadModule()
+      useCachedK8sRoles('c1', 'ns', { includeSystem: true })
+
+      const fetcher = capturedOpts.fetcher as () => Promise<unknown[]>
+      const roles = await fetcher()
+      expect(roles).toHaveLength(1)
+
+      const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+      expect(calledUrl).toContain('/api/rbac/')
+      expect(calledUrl).toContain('includeSystem=true')
+
+      vi.unstubAllGlobals()
+    })
+
+    it('fetchRbacAPI: throws on non-ok response', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }))
+
+      const { useCachedK8sRoles } = await loadModule()
+      useCachedK8sRoles()
+
+      const fetcher = capturedOpts.fetcher as () => Promise<unknown>
+      await expect(fetcher()).rejects.toThrow('API error: 401')
+
+      vi.unstubAllGlobals()
+    })
+
+    it('fetchRbacAPI: throws on non-JSON response', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: vi.fn().mockResolvedValue('bad json!') }))
+
+      const { useCachedK8sRoles } = await loadModule()
+      useCachedK8sRoles()
+
+      const fetcher = capturedOpts.fetcher as () => Promise<unknown>
+      await expect(fetcher()).rejects.toThrow('non-JSON')
+
+      vi.unstubAllGlobals()
+    })
+
+    it('fetchGitOpsSSE used by helmReleases progressive fetcher', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+
+      mockFetchSSE.mockResolvedValue([{ name: 'sse-release' }])
+
+      const { useCachedHelmReleases } = await loadModule()
+      useCachedHelmReleases() // no cluster
+
+      const progressiveFetcher = capturedOpts.progressiveFetcher as (onProgress: (p: unknown[]) => void) => Promise<unknown[]>
+      const result = await progressiveFetcher(vi.fn())
+      expect(mockFetchSSE).toHaveBeenCalled()
+      expect(result).toHaveLength(1)
+    })
+
+    it('fetchGitOpsSSE: throws when no token', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+
+      localStorage.removeItem('kc_token')
+
+      const { useCachedHelmReleases } = await loadModule()
+      useCachedHelmReleases()
+
+      const progressiveFetcher = capturedOpts.progressiveFetcher as (onProgress: (p: unknown[]) => void) => Promise<unknown[]>
+      await expect(progressiveFetcher(vi.fn())).rejects.toThrow()
+    })
+
+    it('fetchGitOpsSSE: throws when demo-token', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+
+      localStorage.setItem('kc_token', 'demo-token')
+
+      const { useCachedHelmReleases } = await loadModule()
+      useCachedHelmReleases()
+
+      const progressiveFetcher = capturedOpts.progressiveFetcher as (onProgress: (p: unknown[]) => void) => Promise<unknown[]>
+      await expect(progressiveFetcher(vi.fn())).rejects.toThrow('No data source available')
     })
   })
 
   // ========================================================================
-  // Namespaces fetcher (custom endpoint)
+  // coreFetchers direct invocation
   // ========================================================================
 })
