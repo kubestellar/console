@@ -1,4 +1,5 @@
 import { AlertCircle, Check, Clock, Copy, GitBranch, Loader2, Package, RefreshCw } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { BuildpackStatus, KpackBuild, KpackCondition, KpackImageStatus } from './types'
 
 interface ImageDetailsPanelProps {
@@ -22,6 +23,7 @@ export function ImageDetailsPanel({
   copiedField,
   onCopy,
 }: ImageDetailsPanelProps) {
+  const { t } = useTranslation()
   const latestImage = imageInfo?.status?.latestImage || 'N/A'
   const conditions = imageInfo?.status?.conditions || []
   const readyCondition = conditions.find((c: KpackCondition) => c.type === 'Ready')
@@ -84,7 +86,12 @@ export function ImageDetailsPanel({
             <div className="p-4 rounded-lg border border-border bg-card/50">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-medium text-foreground">Latest Image</h4>
-                <button onClick={() => onCopy('image', latestImage)} className="p-1 hover:bg-secondary rounded">
+                <button
+                  type="button"
+                  onClick={() => onCopy('image', latestImage)}
+                  aria-label={t('actions.copy')}
+                  className="p-1 min-h-11 min-w-11 flex items-center justify-center hover:bg-secondary rounded"
+                >
                   {copiedField === 'image' ? (
                     <Check className="w-3 h-3 text-green-400" />
                   ) : (
