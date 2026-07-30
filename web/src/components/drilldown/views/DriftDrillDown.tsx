@@ -156,7 +156,6 @@ Please:
         {activeTab === 'overview' && (
           <DriftOverviewTab
             driftedResources={driftedResources}
-            driftSeverity={driftSeverity}
             gitRepo={gitRepo}
             gitBranch={gitBranch}
             gitPath={gitPath}
@@ -169,7 +168,6 @@ Please:
             changes={changes}
             changesLoading={changesLoading}
             changesError={changesError}
-            selectedChange={selectedChange}
             onChangeClick={handleResourceClick}
             getChangeTypeStyle={getChangeTypeStyle}
           />
