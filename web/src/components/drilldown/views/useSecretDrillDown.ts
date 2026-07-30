@@ -132,7 +132,6 @@ export function useSecretDrillDown(data: Record<string, unknown>): UseSecretDril
 
   // Pre-fetch tab data when agent connects
   // Batched to limit concurrent WebSocket connections (max 2 at a time)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!agentConnected || hasLoadedRef.current) return
     hasLoadedRef.current = true
@@ -143,6 +142,7 @@ export function useSecretDrillDown(data: Record<string, unknown>): UseSecretDril
       await fetchYaml()
     }
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentConnected])
 
   useEffect(() => {

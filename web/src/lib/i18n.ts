@@ -158,9 +158,29 @@ configuredI18n.init({
 export default i18n
 
 // Type-safe translation keys
+//
+// NOTE: We intentionally do NOT augment `CustomTypeOptions.resources` with
+// `typeof resources['en']`. Doing so makes `tsc -b` crash with an internal
+// compiler assertion failure (not a normal type error):
+//
+//   Error: Debug Failure. No error for last overload signature
+//     at resolveCall / resolveCallExpression / resolveSignature / ...
+//
+// This is a known upstream TypeScript bug (microsoft/TypeScript#63195):
+// react-i18next's heavily-overloaded `t()` function crashes the overload
+// resolver when checked against a `resources` type this large -- our
+// `common.json` + `cards.json` combined are ~10,000 lines / 4800+ leaf keys,
+// well past the threshold that trips it. Narrowing only the leaf *value*
+// types to `string` (instead of removing the augmentation) does not avoid
+// the crash, since the blow-up comes from the size of the *key* union, not
+// the value types.
+//
+// Omitting the `resources` augmentation falls back to i18next's default
+// (untyped) resource typing, which avoids the crash entirely. This loses
+// `t()` key autocompletion/dot-path validation, but is a developer-experience
+// trade-off only -- it does not change any runtime translation behavior.
 declare module 'i18next' {
   interface CustomTypeOptions {
     defaultNS: typeof defaultNS
-    resources: typeof resources['en']
   }
 }
