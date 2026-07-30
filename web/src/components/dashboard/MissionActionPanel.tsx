@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Clock, X, Wrench, Stethoscope } from 'lucide-react'
 import type { MissionSuggestion } from '../../hooks/useMissionSuggestions'
@@ -33,6 +34,15 @@ export function MissionActionPanel({
   onDismiss,
 }: MissionActionPanelProps) {
   const { t } = useTranslation()
+  const firstButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Move focus to the first action button when the panel opens so keyboard
+  // users don't have to Tab into the menu after pressing Enter on the trigger.
+  useEffect(() => {
+    if (isExpanded) {
+      firstButtonRef.current?.focus()
+    }
+  }, [isExpanded])
 
   if (!isExpanded) return null
 
@@ -74,6 +84,7 @@ export function MissionActionPanel({
         )}
         <div className="flex flex-wrap gap-1.5">
           <button
+            ref={firstButtonRef}
             onClick={(e) => onAction(e, suggestion)}
             disabled={isProcessing}
             className="flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 bg-primary hover:bg-primary/80 text-white disabled:opacity-50"

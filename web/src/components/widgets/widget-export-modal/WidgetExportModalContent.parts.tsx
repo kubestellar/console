@@ -42,6 +42,7 @@ import {
   getWidgetPreviewScale
 } from './WidgetExportModalPreview'
 import { moveFocusByKey } from '../../../lib/a11y/rovingFocus'
+import { Input } from '../../ui/Input'
 
 interface WidgetExportModalPartsProps {
   cardType?: string
@@ -370,12 +371,12 @@ export function WidgetExportModalParts({
                   </div>
                 </div>
               </div>
-              <input
+              <Input
                 id={API_ENDPOINT_INPUT_ID}
                 type="text"
                 value={apiEndpoint}
                 onChange={(e) => setApiEndpoint(e.target.value)}
-                className="w-full px-3 py-1.5 text-sm bg-secondary rounded border border-border focus:border-purple-500 focus:outline-hidden"
+                className="focus:border-purple-500"
               />
               {isOnPublicSite && (
                 <div className="flex items-center gap-1.5 mt-1.5 text-xs text-yellow-400">
@@ -402,7 +403,7 @@ export function WidgetExportModalParts({
               >
                 {t('widgets.refreshInterval')}
               </label>
-              <input
+              <Input
                 id={REFRESH_INTERVAL_INPUT_ID}
                 type="number"
                 value={refreshInterval}
@@ -415,7 +416,7 @@ export function WidgetExportModalParts({
                   )
                 }
                 min={MIN_REFRESH_INTERVAL_SECONDS}
-                className="w-24 px-3 py-1.5 text-sm bg-secondary rounded border border-border focus:border-purple-500 focus:outline-hidden"
+                className="w-24 focus:border-purple-500"
               />
             </div>
           </div>

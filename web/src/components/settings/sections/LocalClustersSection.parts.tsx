@@ -2,6 +2,8 @@ import { Loader2, Plus, Bot, Plug, Unplug, Trash2, Check, AlertCircle, Monitor, 
 import type { TFunction } from 'i18next'
 import type { VClusterInstance, VClusterClusterStatus, VClusterActionFeedback } from '../../../hooks/useLocalClusterTools'
 import type { ClusterInfo } from '../../../hooks/mcp/types'
+import { Input } from '../../ui/Input'
+import { Select } from '../../ui/Select'
 import { VClusterActionBanner } from './VClusterActionBanner'
 
 /** Namespace where KubeVirt is typically installed */
@@ -114,11 +116,11 @@ export function VClusterSection({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
             <label htmlFor="vcluster-host-cluster" className="text-xs text-muted-foreground font-medium">Host Cluster</label>
-            <select
+            <Select
               id="vcluster-host-cluster"
               value={vclusterHostCluster}
               onChange={(e) => onSetVclusterHostCluster(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
+              className="focus:ring-purple-500/50"
             >
               <option value="" disabled>{t('settings.localClusters.selectHostCluster')}</option>
               {(healthyClusters || []).map(c => {
@@ -130,7 +132,7 @@ export function VClusterSection({
                   </option>
                 )
               })}
-            </select>
+            </Select>
           </div>
           <div className="flex flex-col gap-1 justify-end">
             {(() => {
@@ -157,24 +159,24 @@ export function VClusterSection({
           </div>
           <div className="flex flex-col gap-1">
             <label htmlFor="vcluster-namespace" className="text-xs text-muted-foreground font-medium">Namespace</label>
-            <input
+            <Input
               id="vcluster-namespace"
               type="text"
               value={vclusterNamespace}
               onChange={(e) => setVclusterNamespace(e.target.value)}
               placeholder={t('settings.localClusters.vclusterDefaultNamespace')}
-              className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
+              className="placeholder:text-muted-foreground focus:ring-purple-500/50"
             />
           </div>
           <div className="flex flex-col gap-1">
             <label htmlFor="vcluster-name" className="text-xs text-muted-foreground font-medium">vCluster Name</label>
-            <input
+            <Input
               id="vcluster-name"
               type="text"
               value={vclusterName}
               onChange={(e) => setVclusterName(e.target.value)}
               placeholder="my-vcluster"
-              className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
+              className="placeholder:text-muted-foreground focus:ring-purple-500/50"
             />
           </div>
           <div className="flex items-end">

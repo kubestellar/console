@@ -1,8 +1,10 @@
+/* eslint-disable react-refresh/only-export-components */
 import { KeyboardEvent, RefObject } from 'react'
 import type { TFunction } from 'i18next'
 import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Terminal, Send, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
 import type { useTabKeyboardNav } from '../../hooks/useKeyboardNav'
 import type { LogEntry } from './RemediationConsole.types'
 
@@ -307,7 +309,7 @@ export function RemediationShellInput({
       )}
       <div className="flex items-center gap-2">
         <span className="text-green-400">$</span>
-        <input
+        <Input
           ref={shellInputRef}
           type="text"
           value={shellCommand}
@@ -315,7 +317,7 @@ export function RemediationShellInput({
           onKeyDown={handleShellKeyDown}
           placeholder={t('remediation.enterCommand')}
           disabled={isExecuting}
-          className="flex-1 bg-transparent border-none outline-hidden text-foreground placeholder:text-muted-foreground"
+          className="flex-1 bg-transparent border-none text-foreground placeholder:text-muted-foreground"
           autoFocus
         />
         <div
